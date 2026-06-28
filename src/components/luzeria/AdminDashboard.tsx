@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Users, Target, Package, Clock, CheckCircle, AlertTriangle,
+  Users, Target, Package, Clock, AlertTriangle,
   ChevronLeft, ChevronRight, Trophy, Sparkles, Flame, Crown, Medal,
   X, CheckCircle2, Inbox,
 } from "lucide-react";
@@ -50,7 +50,6 @@ export function AdminDashboard() {
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { selectedMonthKey, selectMonth } = useUI();
   const [period, setPeriod] = useState<Period>("month");
-  const { updateClient } = useApi();
 
   const dashboard = useQuery(adminDashboardQO(selectedMonthKey));
   const top = useQuery(topMembersQO(period, selectedMonthKey));
