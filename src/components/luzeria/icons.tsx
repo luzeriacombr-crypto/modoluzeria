@@ -4,7 +4,8 @@ import {
 } from "lucide-react";
 import type { Status } from "@/lib/luzeria/types";
 
-export const STATUS_ICONS: Record<Status, React.ComponentType<{ className?: string; size?: number }>> = {
+type IconProps = { className?: string; size?: number; style?: React.CSSProperties; color?: string };
+export const STATUS_ICONS: Record<Status, React.ComponentType<IconProps>> = {
   START: Play,
   CRIACAO: Paintbrush,
   REVISAO_ARTE: Eye,
@@ -13,7 +14,7 @@ export const STATUS_ICONS: Record<Status, React.ComponentType<{ className?: stri
 };
 
 export function detectDriveType(url: string): {
-  Icon: React.ComponentType<{ className?: string; size?: number }>;
+  Icon: React.ComponentType<IconProps>;
   label: string;
 } {
   if (!url) return { Icon: LinkIcon, label: "Arquivo" };
