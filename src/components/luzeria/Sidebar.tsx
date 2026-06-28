@@ -14,17 +14,18 @@ import { toast } from "sonner";
 import type { Client } from "@/lib/luzeria/types";
 import luzeriaLogo from "@/assets/luzeria-logo.png.asset.json";
 
-const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Ex-clientes"] as const;
+const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
   "Social Media": "#5BA88A",
   "Pack Digital": "#5BA88A",
+  "Avulsos": "#C8D44E",
   "Ex-clientes": "#E76F51",
 };
 
 export function Sidebar({
   onOpenCustomFields,
   onCreateClient,
-}: { onOpenCustomFields: (c: Client) => void; onCreateClient: () => void }) {
+}: { onOpenCustomFields: (c: Client) => void; onCreateClient: (category?: string) => void }) {
   const me = useMe().data;
   const { data: clients = [] } = useQuery(clientsQO());
   const [search, setSearch] = useState("");
@@ -45,7 +46,10 @@ export function Sidebar({
     for (const arr of byCat.values()) {
       arr.sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name));
     }
-    const known = CATEGORY_ORDER.filter((k) => byCat.has(k)).map((k) => [k, byCat.get(k)!] as const);
+    // Always render Avulsos (even when empty) so admin can use the + button.
+    const known = CATEGORY_ORDER
+      .filter((k) => byCat.has(k) || k === "Avulsos")
+      .map((k) => [k, byCat.get(k) ?? []] as const);
     const extras = [...byCat.entries()].filter(([k]) => !(CATEGORY_ORDER as readonly string[]).includes(k));
     return [...known, ...extras] as Array<readonly [string, Client[]]>;
   }, [filtered]);
@@ -98,7 +102,7 @@ export function Sidebar({
       <div className="px-5 pt-4 pb-2 flex items-center justify-between">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Clientes</span>
         {isAdmin && (
-          <button onClick={onCreateClient} className="text-white/40 hover:text-white transition-colors" title="Novo cliente">
+          <button onClick={() => onCreateClient()} className="text-white/40 hover:text-white transition-colors" title="Novo cliente">
             <Plus size={14} />
           </button>
         )}
@@ -122,6 +126,8 @@ export function Sidebar({
             color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
             defaultOpen={cat !== "Ex-clientes"}
             forceOpen={search.trim().length > 0}
+            count={list.length}
+            onAdd={isAdmin && cat === "Avulsos" ? () => onCreateClient("Avulsos") : undefined}
           >
             {list.map((c) => (
               <ClientRow
@@ -134,6 +140,11 @@ export function Sidebar({
                 categories={allCategories}
               />
             ))}
+            {cat === "Avulsos" && list.length === 0 && (
+              <div className="px-3 py-2 text-[11px] text-white/30">
+                {isAdmin ? "Nenhuma demanda avulsa. Use o + para criar." : "Sem demandas avulsas."}
+              </div>
+            )}
           </CategoryGroup>
         ))}
         {filtered.length === 0 && (
@@ -170,27 +181,33 @@ function NavButton({ icon, label, active, onClick, badge }: { icon: React.ReactN
 }
 
 function CategoryGroup({
-  name, color, children, defaultOpen, forceOpen,
+  name, color, children, defaultOpen, forceOpen, count, onAdd,
 }: {
   name: string; color: string; children: React.ReactNode;
-  defaultOpen?: boolean; forceOpen?: boolean;
+  defaultOpen?: boolean; forceOpen?: boolean; count?: number; onAdd?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? true);
   const isOpen = forceOpen || open;
-  const count = Array.isArray(children) ? (children as any[]).length : 1;
+  const displayCount = count ?? (Array.isArray(children) ? (children as any[]).length : 1);
   return (
     <div className="mb-2">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-white/80 hover:bg-white/5 transition-colors"
-      >
-        {isOpen
-          ? <ChevronDown size={12} className="text-white/40 shrink-0" />
-          : <ChevronRight size={12} className="text-white/40 shrink-0" />}
-        <Folder size={14} style={{ color }} className="shrink-0" />
-        <span className="text-[12px] font-semibold tracking-tight truncate">{name}</span>
-        <span className="ml-auto text-[10px] text-white/40">{count}</span>
-      </button>
+      <div className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-white/80 hover:bg-white/5 transition-colors group">
+        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-1.5 flex-1 min-w-0 text-left">
+          {isOpen
+            ? <ChevronDown size={12} className="text-white/40 shrink-0" />
+            : <ChevronRight size={12} className="text-white/40 shrink-0" />}
+          <Folder size={14} style={{ color }} className="shrink-0" />
+          <span className="text-[12px] font-semibold tracking-tight truncate uppercase">{name}</span>
+          <span className="text-[10px] text-white/40">{displayCount}</span>
+        </button>
+        {onAdd && (
+          <button onClick={(e) => { e.stopPropagation(); onAdd(); }}
+            title="Nova demanda avulsa"
+            className="p-1 rounded text-white/40 hover:text-[#C8D44E] hover:bg-white/5">
+            <Plus size={13} />
+          </button>
+        )}
+      </div>
       {isOpen && <div className="mt-0.5">{children}</div>}
     </div>
   );

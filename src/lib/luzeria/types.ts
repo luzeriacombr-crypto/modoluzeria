@@ -5,7 +5,7 @@ export type Status =
   | "REVISAO_CLIENTE"
   | "FINALIZADO";
 
-export type ContentType = "post" | "reel";
+export type ContentType = "post" | "reel" | "outros";
 
 export interface Comment {
   id: string;
@@ -35,6 +35,7 @@ export interface MonthData {
   key: string;
   posts: ContentItem[];
   reels: ContentItem[];
+  outros: ContentItem[];
 }
 
 export interface CustomFields {

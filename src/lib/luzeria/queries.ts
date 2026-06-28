@@ -1,7 +1,7 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  addAssignee, addComment, createClient, deleteClient, duplicateMonth,
+  addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, duplicateMonth,
   getMe, getMonth, getProductivity, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, updateClient, updateItem, updateMyProfile,
@@ -73,6 +73,8 @@ export function useApi() {
     addAssignee: useMutation({ mutationFn: useServerFn(addAssignee), onSuccess: invalidateAll }),
     removeAssignee: useMutation({ mutationFn: useServerFn(removeAssignee), onSuccess: invalidateAll }),
     addComment: useMutation({ mutationFn: useServerFn(addComment), onSuccess: invalidateAll }),
+    addContentItem: useMutation({ mutationFn: useServerFn(addContentItem), onSuccess: invalidateAll }),
+    deleteItem: useMutation({ mutationFn: useServerFn(deleteItem), onSuccess: invalidateAll }),
     setUserRole: useMutation({ mutationFn: useServerFn(setUserRole), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     setUserActive: useMutation({ mutationFn: useServerFn(setUserActive), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     updateMyProfile: useMutation({ mutationFn: useServerFn(updateMyProfile), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),

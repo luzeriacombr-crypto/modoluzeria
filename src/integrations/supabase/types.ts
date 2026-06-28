@@ -433,7 +433,7 @@ export type Database = {
         | "REVISAO_ARTE"
         | "REVISAO_CLIENTE"
         | "FINALIZADO"
-      content_type: "post" | "reel"
+      content_type: "post" | "reel" | "outros"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -569,7 +569,7 @@ export const Constants = {
         "REVISAO_CLIENTE",
         "FINALIZADO",
       ],
-      content_type: ["post", "reel"],
+      content_type: ["post", "reel", "outros"],
     },
   },
 } as const

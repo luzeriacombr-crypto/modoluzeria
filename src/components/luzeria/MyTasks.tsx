@@ -122,8 +122,14 @@ export function MyTasks() {
                         style={{ backgroundColor: t.clientColor + "33", color: t.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : t.clientColor }}>
                         {t.clientName}
                       </span>
+                      {t.clientCategory === "Avulsos" && (
+                        <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
+                          style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+                          Avulso
+                        </span>
+                      )}
                       <span className="text-[11px] text-white/50 uppercase font-semibold">
-                        {t.type === "post" ? "Post" : "Reels"} {String(t.idx).padStart(2, "0")}
+                        {t.type === "post" ? "Post" : t.type === "reel" ? "Reels" : "Item"} {String(t.idx).padStart(2, "0")}
                       </span>
                       <span className="text-sm text-white truncate flex-1">{t.title}</span>
                     </button>

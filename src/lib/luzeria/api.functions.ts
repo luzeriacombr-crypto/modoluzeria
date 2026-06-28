@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import type { Client, ContentItem, MonthData, Profile, Role, Status } from "./types";
+import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status } from "./types";
 
 /* ============== PROFILES & ROLES ============== */
 
@@ -121,15 +121,30 @@ async function seedMonth(supabase: any, clientId: string, key: string) {
 
 export const createClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { name: string }) => z.object({ name: z.string().trim().min(1).max(80) }).parse(d))
+  .inputValidator((d: { name: string; category?: string; color?: string; icon?: string | null }) =>
+    z.object({
+      name: z.string().trim().min(1).max(80),
+      category: z.string().trim().min(1).max(40).optional(),
+      color: z.string().trim().optional(),
+      icon: z.string().nullable().optional(),
+    }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
+    const insert: any = { name: data.name };
+    if (data.category) insert.category = data.category;
+    if (data.color) insert.color = data.color;
+    if (data.icon !== undefined) insert.icon = data.icon;
     const { data: client, error } = await context.supabase
-      .from("clients").insert({ name: data.name }).select().single();
+      .from("clients").insert(insert).select().single();
     if (error) throw new Error(error.message);
-    const key = monthKey(new Date());
-    await seedMonth(context.supabase, client.id, key);
+    if ((data.category ?? "Social Media") !== "Avulsos") {
+      const key = monthKey(new Date());
+      await seedMonth(context.supabase, client.id, key);
+    } else {
+      // Avulsos: create empty month container so items can be added.
+      await context.supabase.from("months").insert({ client_id: client.id, key: monthKey(new Date()) });
+    }
     return { id: client.id };
   });
 
@@ -196,11 +211,21 @@ export const getMonth = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<MonthData | null> => {
     let { data: month } = await context.supabase
       .from("months").select("id, key").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
+    const { data: clientRow } = await context.supabase
+      .from("clients").select("category").eq("id", data.clientId).maybeSingle();
+    const isAvulso = ((clientRow as any)?.category ?? "Social Media") === "Avulsos";
     if (!month) {
       const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
       if (!isAdmin) return null;
-      const seeded = await seedMonth(context.supabase, data.clientId, data.key);
-      month = { id: seeded.id, key: seeded.key };
+      if (isAvulso) {
+        const { data: m, error } = await context.supabase
+          .from("months").insert({ client_id: data.clientId, key: data.key }).select().single();
+        if (error) throw new Error(error.message);
+        month = { id: m.id, key: m.key };
+      } else {
+        const seeded = await seedMonth(context.supabase, data.clientId, data.key);
+        month = { id: seeded.id, key: seeded.key };
+      }
     }
     const [{ data: items }, { data: assignees }, { data: comments }] = await Promise.all([
       context.supabase.from("content_items").select("*").eq("month_id", month.id).order("type").order("idx"),
@@ -221,7 +246,7 @@ export const getMonth = createServerFn({ method: "GET" })
       itemComments.set(c.item_id, arr);
     });
     const mapped = (items ?? []).map<ContentItem>((it) => ({
-      id: it.id, type: it.type as "post" | "reel", idx: it.idx, title: it.title,
+      id: it.id, type: it.type as ContentType, idx: it.idx, title: it.title,
       status: it.status as Status, copy: it.copy, driveLink: it.drive_link,
       assigneeIds: itemAssignees.get(it.id) ?? [],
       comments: itemComments.get(it.id) ?? [],
@@ -231,6 +256,7 @@ export const getMonth = createServerFn({ method: "GET" })
       id: month.id, key: month.key,
       posts: mapped.filter((i) => i.type === "post"),
       reels: mapped.filter((i) => i.type === "reel"),
+      outros: mapped.filter((i) => i.type === "outros"),
     };
   });
 
@@ -261,6 +287,51 @@ export const addAssignee = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("item_assignees")
       .insert({ item_id: data.itemId, user_id: data.userId });
     if (error && !error.message.includes("duplicate")) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const addContentItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      key: z.string(),
+      type: z.enum(["post", "reel", "outros"]),
+      title: z.string().trim().max(200).optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    let { data: month } = await context.supabase
+      .from("months").select("id").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
+    if (!month) {
+      const { data: m, error } = await context.supabase
+        .from("months").insert({ client_id: data.clientId, key: data.key }).select("id").single();
+      if (error) throw new Error(error.message);
+      month = m;
+    }
+    const { data: maxRow } = await context.supabase
+      .from("content_items").select("idx").eq("month_id", month.id).eq("type", data.type)
+      .order("idx", { ascending: false }).limit(1).maybeSingle();
+    const nextIdx = ((maxRow as any)?.idx ?? 0) + 1;
+    const fallback = data.type === "post" ? `Post ${nextIdx}` : data.type === "reel" ? `Reels ${nextIdx}` : `Item ${nextIdx}`;
+    const { data: inserted, error: iErr } = await context.supabase
+      .from("content_items").insert({
+        month_id: month.id, type: data.type, idx: nextIdx,
+        title: (data.title?.trim() || fallback),
+      }).select("id").single();
+    if (iErr) throw new Error(iErr.message);
+    return { id: inserted.id };
+  });
+
+export const deleteItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("content_items").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
@@ -327,12 +398,13 @@ export const listMyTasks = createServerFn({ method: "GET" })
     if (itemIds.length === 0) return [];
     const { data: items } = await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, month_id, months!inner(client_id, key, clients!inner(id, name, color))")
+      .select("id, type, idx, title, status, month_id, months!inner(client_id, key, clients!inner(id, name, color, category))")
       .in("id", itemIds);
     return (items ?? []).map((it: any) => ({
       id: it.id, type: it.type, idx: it.idx, title: it.title, status: it.status,
       monthKey: it.months.key, clientId: it.months.clients.id,
       clientName: it.months.clients.name, clientColor: it.months.clients.color,
+      clientCategory: it.months.clients.category ?? "Social Media",
     }));
   });
 
