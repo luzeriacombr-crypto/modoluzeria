@@ -650,8 +650,12 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
 
-    const { data: clients } = await context.supabase
+    const { data: clientsAll } = await context.supabase
       .from("clients").select("id, name, color, archived, category").order("name");
+    // "Ex-clientes" não entram nas métricas nem na listagem do dashboard.
+    const clients = (clientsAll ?? []).filter(
+      (c: any) => (c.category ?? "Social Media") !== "Ex-clientes"
+    );
     const { data: months } = await context.supabase
       .from("months").select("id, client_id").eq("key", data.monthKey);
     const monthIds = (months ?? []).map((m) => m.id);
