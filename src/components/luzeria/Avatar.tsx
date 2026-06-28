@@ -1,43 +1,52 @@
-import { cn } from "@/lib/utils";
-import { initial } from "@/lib/luzeria/utils";
+import type { Profile } from "@/lib/luzeria/types";
 
-const COLORS = [
-  "#C8D44E",
-  "#FF8C42",
-  "#4A9EFF",
-  "#B794F4",
-  "#F472B6",
-  "#34D399",
-  "#FBBF24",
-];
-
-function hashColor(name: string): string {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return COLORS[h % COLORS.length];
-}
-
-interface Props {
-  name?: string | null;
+export function Avatar({
+  profile, color, name, size = 28, ring = false,
+}: {
+  profile?: Pick<Profile, "name" | "color" | "icon"> | null;
   color?: string;
+  name?: string;
   size?: number;
-  icon?: string;
-  className?: string;
+  ring?: boolean;
+}) {
+  const c = profile?.color ?? color ?? "#C8D44E";
+  const n = profile?.name ?? name ?? "?";
+  const initial = profile?.icon || n.trim().charAt(0).toUpperCase() || "?";
+  const isWhite = c.toUpperCase() === "#FFFFFF";
+  return (
+    <div
+      className={`rounded-full flex items-center justify-center font-semibold shrink-0 ${ring ? "ring-2 ring-[#1C1C1C]" : ""}`}
+      style={{
+        width: size, height: size,
+        backgroundColor: c,
+        color: isWhite ? "#0D0D0D" : "#0D0D0D",
+        fontSize: Math.round(size * 0.42),
+      }}
+      title={n}
+    >
+      {initial}
+    </div>
+  );
 }
 
-export function Avatar({ name, color, size = 24, icon, className }: Props) {
-  const bg = color ?? (name ? hashColor(name) : "rgba(255,255,255,0.12)");
-  const fontSize = Math.max(10, Math.floor(size * 0.42));
+export function AvatarStack({
+  profiles, size = 28, max = 3,
+}: { profiles: Pick<Profile, "id" | "name" | "color" | "icon">[]; size?: number; max?: number }) {
+  const shown = profiles.slice(0, max);
+  const extra = profiles.length - shown.length;
   return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-[#0D0D0D]",
-        className
+    <div className="flex items-center" title={profiles.map((p) => p.name).join(", ")}>
+      {shown.map((p, i) => (
+        <div key={p.id} style={{ marginLeft: i === 0 ? 0 : -8 }}>
+          <Avatar profile={p} size={size} ring />
+        </div>
+      ))}
+      {extra > 0 && (
+        <div
+          className="rounded-full bg-[#252525] text-white/70 ring-2 ring-[#1C1C1C] flex items-center justify-center font-semibold"
+          style={{ width: size, height: size, fontSize: Math.round(size * 0.38), marginLeft: -8 }}
+        >+{extra}</div>
       )}
-      style={{ width: size, height: size, backgroundColor: bg, fontSize }}
-      title={name ?? undefined}
-    >
-      {icon ? <span style={{ fontSize: size * 0.55 }}>{icon}</span> : name ? initial(name) : "?"}
-    </span>
+    </div>
   );
 }

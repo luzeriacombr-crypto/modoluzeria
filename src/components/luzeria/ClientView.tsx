@@ -1,192 +1,142 @@
-import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Copy, Plus } from "lucide-react";
-import { useLuzeria } from "@/lib/luzeria/store";
-import { ContentRow } from "./ContentRow";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import { useState } from "react";
+import { clientsQO, monthKeysQO, monthQO, profilesQO, useApi } from "@/lib/luzeria/queries";
+import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { formatMonth, shortMonth } from "@/lib/luzeria/utils";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { ContentRow } from "./ContentRow";
+import { formatMonth } from "./Dashboard";
+import { useMe } from "@/lib/luzeria/queries";
 
-type Tab = "posts" | "reels" | "profile";
-
-export function ClientView() {
-  const selectedClientId = useLuzeria((s) => s.selectedClientId);
-  const selectedMonthKey = useLuzeria((s) => s.selectedMonthKey);
-  const clients = useLuzeria((s) => s.clients);
-  const openItem = useLuzeria((s) => s.openItem);
-  const selectMonth = useLuzeria((s) => s.selectMonth);
-  const duplicateMonth = useLuzeria((s) => s.duplicateMonth);
-
-  const [tab, setTab] = useState<Tab>("posts");
-
-  const client = clients.find((c) => c.id === selectedClientId) ?? null;
-
-  const monthKeys = useMemo(() => {
-    if (!client) return [];
-    return Object.keys(client.months).sort();
-  }, [client]);
+export function ClientView({ clientId }: { clientId: string }) {
+  const { data: clients = [] } = useQuery(clientsQO());
+  const client = clients.find((c) => c.id === clientId);
+  const { data: profiles = [] } = useQuery(profilesQO());
+  const { selectedMonthKey, selectMonth } = useUI();
+  const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
+  const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
+  const [tab, setTab] = useState<"posts" | "reels" | "profile">("posts");
+  const me = useMe().data;
+  const isAdmin = me?.role === "master" || me?.role === "setor";
+  const { duplicateMonth, updateClient } = useApi();
 
   if (!client) return null;
-  const month = client.months[selectedMonthKey];
+
+  const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
+  const idx = sortedKeys.indexOf(selectedMonthKey);
+
+  function go(delta: number) {
+    const nextIdx = idx + delta;
+    if (nextIdx >= 0 && nextIdx < sortedKeys.length) selectMonth(sortedKeys[nextIdx]);
+  }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="px-10 py-8 max-w-5xl mx-auto">
       {/* Header */}
-      <header className="border-b border-white/[0.06] px-10 pt-8 pb-5">
-        <div className="flex items-start justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <Avatar name={client.name} color={client.color} icon={client.icon} size={36} />
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight text-white">
-                {client.name}
-              </h1>
-              {client.customFields.niche && (
-                <p className="text-xs text-muted-foreground">
-                  {client.customFields.niche}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              duplicateMonth(client.id, selectedMonthKey);
-              toast.success("Mês duplicado");
-            }}
-            className="inline-flex items-center gap-1.5 rounded bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/10"
-          >
-            <Copy size={12} />
-            Duplicar mês
+      <div className="flex items-center gap-4 mb-2">
+        <Avatar name={client.name} color={client.color} size={40} />
+        <div>
+          <h1 className="text-[24px] font-bold text-white leading-tight">{client.name}</h1>
+          {client.customFields.niche && (
+            <div className="text-[13px] font-semibold mt-0.5" style={{ color: "#C8D44E" }}>{client.customFields.niche}</div>
+          )}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <button onClick={() => go(-1)} disabled={idx <= 0}
+            className="h-8 w-8 flex items-center justify-center rounded-md text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-30 transition">
+            <ChevronLeft size={16} />
           </button>
-        </div>
-
-        {/* Month pills */}
-        <div className="mt-6 flex items-center gap-2 overflow-x-auto pb-1">
-          <MonthArrow direction="prev" />
-          {monthKeys.map((key) => (
-            <button
-              key={key}
-              onClick={() => selectMonth(key)}
-              className={cn(
-                "shrink-0 rounded-full px-3 py-1 text-xs font-medium transition",
-                key === selectedMonthKey
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-white"
-              )}
-            >
-              {shortMonth(key)}
-            </button>
-          ))}
-          <button
-            onClick={() => {
-              // create next month from current
-              duplicateMonth(client.id, selectedMonthKey);
-            }}
-            className="shrink-0 rounded-full bg-white/5 p-1.5 text-muted-foreground transition hover:bg-white/10 hover:text-white"
-            title="Novo mês"
-          >
-            <Plus size={12} />
+          <span className="rounded-md px-3 py-1 text-xs font-bold uppercase" style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
+            {formatMonth(selectedMonthKey)}
+          </span>
+          <button onClick={() => go(1)} disabled={idx >= sortedKeys.length - 1}
+            className="h-8 w-8 flex items-center justify-center rounded-md text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-30 transition">
+            <ChevronRight size={16} />
           </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="mt-6 flex items-center gap-6 border-b border-white/[0.06] -mb-5">
-          {([
-            ["posts", "Posts"],
-            ["reels", "Reels"],
-            ["profile", "Perfil"],
-          ] as Array<[Tab, string]>).map(([k, label]) => (
-            <button
-              key={k}
-              onClick={() => setTab(k)}
-              className={cn(
-                "relative pb-3 text-sm font-medium transition",
-                tab === k ? "text-white" : "text-muted-foreground hover:text-white"
-              )}
-            >
-              {label}
-              {tab === k && (
-                <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary" />
-              )}
+          {isAdmin && (
+            <button onClick={() => duplicateMonth.mutate({ data: { clientId, fromKey: selectedMonthKey } })}
+              className="inline-flex items-center gap-1.5 ml-2 rounded-md px-3 py-1.5 text-xs font-semibold text-white/80 border border-white/10 hover:border-[#C8D44E] hover:text-[#C8D44E] transition">
+              <Copy size={13} /> Duplicar mês
             </button>
-          ))}
+          )}
         </div>
-      </header>
+      </div>
 
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        {tab === "profile" ? (
-          <ProfileTab client={client} />
-        ) : !month ? (
-          <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-            Nenhum mês selecionado.
-          </div>
-        ) : (
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-4 px-4 text-xs text-muted-foreground">
-              {formatMonth(selectedMonthKey)} ·{" "}
-              {tab === "posts" ? month.posts.length : month.reels.length} itens
-            </div>
-            <div className="rounded-lg bg-card/60 py-2">
-              {(tab === "posts" ? month.posts : month.reels).map((item) => (
-                <ContentRow
-                  key={item.id}
-                  clientId={client.id}
-                  monthKey={month.key}
-                  item={item}
-                  onOpen={() => openItem(item.id)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+      {/* Tabs */}
+      <div className="flex items-center gap-6 mt-8 border-b border-white/[0.06]">
+        {(["posts", "reels", "profile"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)}
+            className="relative py-3 text-sm font-semibold transition-colors"
+            style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
+            {t === "posts" ? "Posts" : t === "reels" ? "Reels" : "Perfil do Cliente"}
+            {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "#C8D44E" }} />}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-2">
+        {tab === "posts" && (month?.posts ?? []).map((item, i) =>
+          <ContentRow key={item.id} item={item} profiles={profiles} idx={i + 1} />)}
+        {tab === "reels" && (month?.reels ?? []).map((item, i) =>
+          <ContentRow key={item.id} item={item} profiles={profiles} idx={i + 1} />)}
+        {tab === "profile" && <ProfileTab client={client} profiles={profiles} canEdit={isAdmin}
+          onSave={(patch: Record<string, any>) => updateClient.mutate({ data: { id: client.id, patch } })} />}
       </div>
     </div>
   );
 }
 
-function MonthArrow({ direction }: { direction: "prev" | "next" }) {
-  // visual only, list-driven selection
-  return (
-    <span className="shrink-0 rounded-full p-1.5 text-muted-foreground/40">
-      {direction === "prev" ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
-    </span>
-  );
-}
+function ProfileTab({ client, profiles, canEdit, onSave }: any) {
+  const [niche, setNiche] = useState(client.customFields.niche);
+  const [postsPerWeek, setPostsPerWeek] = useState(client.customFields.postsPerWeek);
+  const [reelsPerWeek, setReelsPerWeek] = useState(client.customFields.reelsPerWeek);
+  const [responsible, setResponsible] = useState(client.customFields.fixedResponsibleId ?? "");
+  const [reviewDay, setReviewDay] = useState(client.customFields.reviewDay);
+  const [notes, setNotes] = useState(client.customFields.notes);
 
-function ProfileTab({ client }: { client: import("@/lib/luzeria/types").Client }) {
-  const fields = client.customFields;
-  const rows: Array<[string, string | number]> = [
-    ["Nicho", fields.niche || "—"],
-    ["Posts por semana", fields.postsPerWeek || "—"],
-    ["Reels por semana", fields.reelsPerWeek || "—"],
-    ["Responsável fixo", fields.fixedResponsible || "—"],
-    ["Dia de revisão", fields.reviewDay || "—"],
-  ];
+  function save() {
+    onSave({
+      niche, posts_per_week: Number(postsPerWeek) || 0,
+      reels_per_week: Number(reelsPerWeek) || 0,
+      fixed_responsible_id: responsible || null,
+      review_day: reviewDay, notes,
+    });
+  }
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="rounded-lg bg-card p-6">
-        <h2 className="mb-4 text-sm font-semibold text-white">Perfil do cliente</h2>
-        <dl className="divide-y divide-white/[0.06]">
-          {rows.map(([k, v]) => (
-            <div key={k} className="flex items-center justify-between py-3 text-sm">
-              <dt className="text-muted-foreground">{k}</dt>
-              <dd className="text-white">{v}</dd>
-            </div>
-          ))}
-        </dl>
+    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl">
+      <Field label="Nicho"><input value={niche} disabled={!canEdit} onChange={(e) => setNiche(e.target.value)} className={inp} /></Field>
+      <Field label="Dia de revisão"><input value={reviewDay} disabled={!canEdit} onChange={(e) => setReviewDay(e.target.value)} className={inp} /></Field>
+      <Field label="Posts / semana"><input type="number" value={postsPerWeek} disabled={!canEdit} onChange={(e) => setPostsPerWeek(e.target.value as any)} className={inp} /></Field>
+      <Field label="Reels / semana"><input type="number" value={reelsPerWeek} disabled={!canEdit} onChange={(e) => setReelsPerWeek(e.target.value as any)} className={inp} /></Field>
+      <Field label="Responsável fixo">
+        <select value={responsible} disabled={!canEdit} onChange={(e) => setResponsible(e.target.value)} className={inp}>
+          <option value="">—</option>
+          {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+      </Field>
+      <div className="md:col-span-2">
+        <Field label="Observações">
+          <textarea value={notes} disabled={!canEdit} onChange={(e) => setNotes(e.target.value)} rows={4} className={inp + " resize-none"} />
+        </Field>
       </div>
-      {fields.notes && (
-        <div className="rounded-lg bg-card p-6">
-          <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Observações
-          </h3>
-          <p className="text-sm text-white/90 whitespace-pre-wrap">{fields.notes}</p>
+      {canEdit && (
+        <div className="md:col-span-2">
+          <button onClick={save} className="rounded-md px-4 py-2 text-sm font-bold transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>Salvar</button>
         </div>
       )}
-      <p className="text-center text-xs text-muted-foreground">
-        Edite estes campos pelo menu “…” do cliente na sidebar.
-      </p>
     </div>
+  );
+}
+
+const inp = "w-full bg-[#1C1C1C] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] transition-colors disabled:opacity-60";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">{label}</span>
+      {children}
+    </label>
   );
 }

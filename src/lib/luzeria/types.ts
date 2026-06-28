@@ -10,25 +10,27 @@ export type ContentType = "post" | "reel";
 export interface Comment {
   id: string;
   text: string;
-  author: string;
-  createdAt: number;
+  authorId: string | null;
+  authorName?: string | null;
+  createdAt: string;
   system?: boolean;
 }
 
 export interface ContentItem {
   id: string;
   type: ContentType;
-  index: number;
+  idx: number;
   title: string;
   status: Status;
-  assignee: string | null;
+  assigneeIds: string[];
   copy: string;
   driveLink: string;
   comments: Comment[];
-  updatedAt: number;
+  updatedAt: string;
 }
 
 export interface MonthData {
+  id: string;
   /** YYYY-MM */
   key: string;
   posts: ContentItem[];
@@ -39,7 +41,7 @@ export interface CustomFields {
   niche: string;
   postsPerWeek: number;
   reelsPerWeek: number;
-  fixedResponsible: string;
+  fixedResponsibleId: string | null;
   reviewDay: string;
   notes: string;
 }
@@ -48,15 +50,33 @@ export interface Client {
   id: string;
   name: string;
   color: string;
-  icon: string; // emoji
+  icon: string | null;
   favorite: boolean;
   archived: boolean;
   customFields: CustomFields;
-  months: Record<string, MonthData>;
-  createdAt: number;
+  createdAt: string;
 }
 
-export const TEAM = ["Jordania", "Lucas", "Marina", "Pedro", "Ana"];
+export type Role = "master" | "setor" | "member";
+
+export interface Profile {
+  id: string;
+  email: string;
+  name: string;
+  color: string;
+  icon: string | null;
+  active: boolean;
+  role: Role;
+}
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  itemId: string | null;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
 
 export const STATUS_META: Record<
   Status,

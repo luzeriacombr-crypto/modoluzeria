@@ -1,137 +1,110 @@
-import { useLuzeria } from "@/lib/luzeria/store";
+import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
+import { clientsQO, monthQO } from "@/lib/luzeria/queries";
+import { STATUS_META, STATUS_ORDER, type Status } from "@/lib/luzeria/types";
+import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { STATUS_META, STATUS_ORDER } from "@/lib/luzeria/types";
-import { formatMonth, currentMonthKey } from "@/lib/luzeria/utils";
-import { ArrowRight, Plus } from "lucide-react";
 
-interface Props {
-  onNewClient: () => void;
-}
-
-export function Dashboard({ onNewClient }: Props) {
-  const allClients = useLuzeria((s) => s.clients);
-  const selectClient = useLuzeria((s) => s.selectClient);
-  const clients = allClients.filter((c) => !c.archived);
+export function Dashboard({ onCreate }: { onCreate: () => void }) {
+  const { data: clients = [] } = useQuery(clientsQO());
+  const active = clients.filter((c) => !c.archived);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-10 py-12">
-      <div className="mb-10 flex items-end justify-between">
+    <div className="p-10 max-w-6xl mx-auto">
+      <div className="flex items-end justify-between mb-10">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">
-            Visão geral
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {clients.length} {clients.length === 1 ? "cliente ativo" : "clientes ativos"}
-          </p>
+          <h1 className="text-[32px] font-bold text-white leading-none tracking-tight">Visão Geral</h1>
+          <p className="text-sm text-white/50 mt-2">{active.length} {active.length === 1 ? "cliente ativo" : "clientes ativos"}</p>
         </div>
-        <button
-          onClick={onNewClient}
-          className="inline-flex items-center gap-2 rounded bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
-        >
-          <Plus size={14} />
-          Novo cliente
+        <button onClick={onCreate}
+          className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold transition-opacity hover:opacity-90"
+          style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
+          <Plus size={16} /> Novo cliente
         </button>
       </div>
 
-      {clients.length === 0 ? (
-        <EmptyState onNewClient={onNewClient} />
+      {active.length === 0 ? (
+        <div className="border border-dashed border-white/10 rounded-lg p-16 text-center">
+          <p className="text-white/50 text-sm">Nenhum cliente cadastrado.</p>
+          <button onClick={onCreate} className="mt-4 text-[#C8D44E] text-sm hover:underline">+ Criar primeiro cliente</button>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {clients.map((c) => {
-            const monthKeys = Object.keys(c.months).sort();
-            const latestKey = monthKeys[monthKeys.length - 1] ?? currentMonthKey();
-            const month = c.months[latestKey];
-            const items = month ? [...month.posts, ...month.reels] : [];
-            const counts = STATUS_ORDER.map(
-              (s) => items.filter((i) => i.status === s).length
-            );
-            const finalized = counts[STATUS_ORDER.indexOf("FINALIZADO")];
-            const pct = items.length ? Math.round((finalized / items.length) * 100) : 0;
-
-            return (
-              <button
-                key={c.id}
-                onClick={() => selectClient(c.id)}
-                className="group flex flex-col gap-5 rounded-lg border border-transparent bg-card p-5 text-left transition-all duration-150 hover:border-primary/60"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <Avatar
-                      name={c.name}
-                      color={c.color}
-                      icon={c.icon}
-                      size={32}
-                    />
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-white">
-                        {c.name}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatMonth(latestKey)}
-                      </div>
-                    </div>
-                  </div>
-                  <ArrowRight
-                    size={14}
-                    className="text-muted-foreground opacity-0 transition group-hover:opacity-100"
-                  />
-                </div>
-
-                <div>
-                  <div className="mb-1.5 flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
-                    <span>Finalizado</span>
-                    <span className="font-semibold text-white">{pct}%</span>
-                  </div>
-                  <div className="h-1 overflow-hidden rounded-full bg-white/5">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all duration-300"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {STATUS_ORDER.map((s, i) => {
-                    const meta = STATUS_META[s];
-                    const n = counts[i];
-                    return (
-                      <div key={s} className="flex items-center gap-1.5" title={`${meta.label}: ${n}`}>
-                        <span
-                          className="h-1.5 w-1.5 rounded-full"
-                          style={{ backgroundColor: meta.color }}
-                        />
-                        <span className="text-[11px] text-muted-foreground">
-                          {n}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </button>
-            );
-          })}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {active.map((c) => <ClientCard key={c.id} clientId={c.id} />)}
         </div>
       )}
     </div>
   );
 }
 
-function EmptyState({ onNewClient }: { onNewClient: () => void }) {
+function ClientCard({ clientId }: { clientId: string }) {
+  const { data: clients = [] } = useQuery(clientsQO());
+  const client = clients.find((c) => c.id === clientId);
+  const monthKey = useUI((s) => s.selectedMonthKey);
+  const { data: month } = useQuery(monthQO(clientId, monthKey));
+  const { selectClient } = useUI();
+
+  if (!client) return null;
+
+  const items = [...(month?.posts ?? []), ...(month?.reels ?? [])];
+  const total = items.length;
+  const done = items.filter((i) => i.status === "FINALIZADO").length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+
+  const counts: Record<Status, number> = { START: 0, CRIACAO: 0, REVISAO_ARTE: 0, REVISAO_CLIENTE: 0, FINALIZADO: 0 };
+  items.forEach((i) => { counts[i.status]++; });
+
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-white/10 py-24">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
-        <Plus size={20} className="text-muted-foreground" />
+    <button onClick={() => selectClient(clientId)}
+      className="group text-left rounded-lg p-5 bg-[#1C1C1C] transition-all duration-200 hover:-translate-y-0.5 relative overflow-hidden"
+      style={{ borderTop: `3px solid ${client.color}` }}
+      onMouseEnter={(e) => e.currentTarget.style.borderTopColor = "#C8D44E"}
+      onMouseLeave={(e) => e.currentTarget.style.borderTopColor = client.color}
+    >
+      <div className="flex items-start gap-3 mb-4">
+        <Avatar name={client.name} color={client.color} size={40} />
+        <div className="min-w-0 flex-1">
+          <div className="text-[18px] font-bold text-white truncate leading-tight">{client.name}</div>
+          {client.customFields.niche && (
+            <div className="text-[12px] text-white/50 truncate mt-0.5">{client.customFields.niche}</div>
+          )}
+        </div>
+        <ProgressRing pct={pct} />
       </div>
-      <h3 className="text-base font-semibold text-white">Sem clientes ainda</h3>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Crie o primeiro cliente para começar.
-      </p>
-      <button
-        onClick={onNewClient}
-        className="mt-6 rounded bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
-      >
-        Novo cliente
-      </button>
+      <div className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{formatMonth(monthKey)}</div>
+      <div className="flex flex-wrap gap-1.5">
+        {STATUS_ORDER.map((s) => {
+          const m = STATUS_META[s];
+          return (
+            <span key={s} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold"
+              style={{ backgroundColor: m.bg, color: m.color, opacity: counts[s] ? 1 : 0.35 }}>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: m.color }} />
+              {counts[s]}
+            </span>
+          );
+        })}
+      </div>
+    </button>
+  );
+}
+
+function ProgressRing({ pct }: { pct: number }) {
+  const size = 44, stroke = 4, r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size/2} cy={size/2} r={r} stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} fill="none" />
+        <circle cx={size/2} cy={size/2} r={r} stroke="#C8D44E" strokeWidth={stroke} fill="none"
+          strokeDasharray={c} strokeDashoffset={c * (1 - pct/100)} strokeLinecap="round" />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">{pct}%</div>
     </div>
   );
+}
+
+export function formatMonth(key: string) {
+  const [y, m] = key.split("-").map(Number);
+  const months = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  return `${months[m - 1]} ${y}`;
 }

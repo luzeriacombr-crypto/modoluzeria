@@ -1,312 +1,228 @@
-import { useEffect, useState } from "react";
-import {
-  ExternalLink,
-  Film,
-  FolderOpen,
-  Grid3x3,
-  Image as ImageIcon,
-  Send,
-  X,
-} from "lucide-react";
-import { useLuzeria } from "@/lib/luzeria/store";
-import { STATUS_ORDER, TEAM } from "@/lib/luzeria/types";
-import { StatusBadge } from "./StatusBadge";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { X, Send, ExternalLink, Plus, Check } from "lucide-react";
+import { clientsQO, monthQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { useUI } from "@/lib/luzeria/ui-store";
+import { STATUS_META, STATUS_ORDER, type Status, type Profile, type ContentItem } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { relativeTime } from "@/lib/luzeria/utils";
-import { cn } from "@/lib/utils";
+import { STATUS_ICONS, detectDriveType } from "./icons";
+
+function findItem(month: any, id: string): ContentItem | undefined {
+  return month?.posts.find((i: any) => i.id === id) ?? month?.reels.find((i: any) => i.id === id);
+}
 
 export function DetailPanel() {
-  const selectedItemId = useLuzeria((s) => s.selectedItemId);
-  const selectedClientId = useLuzeria((s) => s.selectedClientId);
-  const selectedMonthKey = useLuzeria((s) => s.selectedMonthKey);
-  const clients = useLuzeria((s) => s.clients);
-  const closeItem = useLuzeria((s) => s.openItem);
-  const updateItem = useLuzeria((s) => s.updateItem);
-  const setStatus = useLuzeria((s) => s.setStatus);
-  const addComment = useLuzeria((s) => s.addComment);
+  const { selectedItemId, openItem, selectedClientId, selectedMonthKey, flash } = useUI();
+  const { data: month } = useQuery({ ...monthQO(selectedClientId ?? "", selectedMonthKey), enabled: !!selectedClientId && !!selectedItemId });
+  const { data: profiles = [] } = useQuery(profilesQO());
+  const { data: clients = [] } = useQuery(clientsQO());
+  const me = useMe().data;
+  const { setItemStatus, updateItem, addAssignee, removeAssignee, addComment } = useApi();
 
-  const client = clients.find((c) => c.id === selectedClientId) ?? null;
-  const month = client?.months[selectedMonthKey] ?? null;
-  const item =
-    month?.posts.find((i) => i.id === selectedItemId) ??
-    month?.reels.find((i) => i.id === selectedItemId) ??
-    null;
+  const item = useMemo(() => (selectedItemId && month ? findItem(month, selectedItemId) : undefined), [month, selectedItemId]);
+  const client = clients.find((c) => c.id === selectedClientId);
+  const isAdmin = me?.role === "master" || me?.role === "setor";
 
-  const [titleDraft, setTitleDraft] = useState("");
-  const [copyDraft, setCopyDraft] = useState("");
-  const [linkDraft, setLinkDraft] = useState("");
-  const [commentDraft, setCommentDraft] = useState("");
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selectedItemId) return;
+    const h = (e: MouseEvent) => { if (!panelRef.current?.contains(e.target as Node)) openItem(null); };
+    const t = setTimeout(() => document.addEventListener("mousedown", h), 50);
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", h); };
+  }, [selectedItemId, openItem]);
+
+  const [title, setTitle] = useState("");
+  const [copy, setCopy] = useState("");
+  const [drive, setDrive] = useState("");
+  const [comment, setComment] = useState("");
+  const [assignOpen, setAssignOpen] = useState(false);
 
   useEffect(() => {
-    if (item) {
-      setTitleDraft(item.title);
-      setCopyDraft(item.copy);
-      setLinkDraft(item.driveLink);
-      setCommentDraft("");
-    }
-  }, [item?.id]);
+    if (item) { setTitle(item.title); setCopy(item.copy); setDrive(item.driveLink); }
+  }, [item?.id]); // eslint-disable-line
 
-  // ESC closes
-  useEffect(() => {
-    if (!item) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") closeItem(null);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [item, closeItem]);
+  if (!selectedItemId) return null;
+  if (!item) return null;
 
-  if (!item || !client || !month) return null;
-
-  const driveKind = detectDriveKind(item.driveLink);
+  const assignees = item.assigneeIds.map((id) => profiles.find((p) => p.id === id)).filter(Boolean) as Profile[];
+  const { Icon: DriveIcon, label: driveLabel } = detectDriveType(drive);
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div
-        className="absolute inset-0 bg-black/40 transition-opacity duration-150"
-        onClick={() => closeItem(null)}
-      />
-      <aside
-        className="absolute right-0 top-0 flex h-full w-[420px] flex-col overflow-y-auto border-l border-white/10 bg-card animate-in slide-in-from-right duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-6 pt-5 pb-3">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            {item.type === "post" ? "Post" : "Reels"} ·{" "}
-            {String(item.index).padStart(2, "0")}
-          </span>
-          <button
-            onClick={() => closeItem(null)}
-            className="rounded p-1 text-muted-foreground transition hover:bg-white/5 hover:text-white"
-          >
-            <X size={16} />
-          </button>
+    <>
+      <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]" />
+      <div ref={panelRef}
+        className="fixed right-0 top-0 bottom-0 z-50 w-[420px] bg-[#0D0D0D] border-l border-white/10 flex flex-col lz-slide-in overflow-y-auto">
+
+        {/* Header */}
+        <div className="px-6 pt-5 pb-4 border-b border-white/[0.08]">
+          <div className="flex items-start justify-between gap-2">
+            <div className="text-[12px] uppercase font-bold tracking-wider" style={{ color: "#C8D44E" }}>
+              {item.type === "post" ? "Post" : "Reels"} {String(item.idx).padStart(2, "0")}
+              {client && <span className="ml-2 text-white/40 font-semibold">· {client.name}</span>}
+            </div>
+            <button onClick={() => openItem(null)} className="text-white/50 hover:text-white p-1 -mt-1 -mr-1 rounded hover:bg-white/5 transition">
+              <X size={16} />
+            </button>
+          </div>
+          <input value={title} onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => { if (title.trim() && title !== item.title) updateItem.mutate({ data: { id: item.id, patch: { title: title.trim() } } }); }}
+            className="mt-2 w-full bg-transparent text-[20px] font-bold text-white outline-none placeholder:text-white/30" />
         </div>
 
-        {/* Title */}
-        <div className="px-6 pb-4">
-          <input
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={() => {
-              const t = titleDraft.trim();
-              if (t && t !== item.title) {
-                updateItem(client.id, month.key, item.id, { title: t });
-              } else {
-                setTitleDraft(item.title);
-              }
-            }}
-            className="w-full bg-transparent text-lg font-semibold text-white outline-none placeholder:text-muted-foreground focus:outline-none"
-            placeholder="Sem título"
-          />
-        </div>
-
-        {/* Status pills */}
-        <Section>
-          <Label>Status</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {STATUS_ORDER.map((s) => (
-              <button
-                key={s}
-                onClick={() =>
-                  s !== item.status && setStatus(client.id, month.key, item.id, s)
-                }
-                className={cn(
-                  "rounded transition",
-                  s === item.status ? "ring-1 ring-primary" : "opacity-60 hover:opacity-100"
-                )}
-              >
-                <StatusBadge status={s} />
-              </button>
-            ))}
+        {/* Status */}
+        <Section label="Status">
+          <div className="grid grid-cols-2 gap-2">
+            {STATUS_ORDER.map((s) => {
+              const m = STATUS_META[s]; const I = STATUS_ICONS[s];
+              const active = item.status === s;
+              return (
+                <button key={s}
+                  onClick={() => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }}
+                  className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wide transition-all"
+                  style={{
+                    backgroundColor: active ? m.bg : "transparent",
+                    color: active ? m.color : "rgba(255,255,255,0.6)",
+                    border: `1px solid ${active ? m.color : "rgba(255,255,255,0.08)"}`,
+                  }}>
+                  <I size={12} /> {m.label}
+                </button>
+              );
+            })}
           </div>
         </Section>
 
-        {/* Responsável */}
-        <Section>
-          <Label>Responsável</Label>
-          <Select
-            value={item.assignee ?? "__none"}
-            onValueChange={(v) =>
-              updateItem(client.id, month.key, item.id, {
-                assignee: v === "__none" ? null : v,
-              })
-            }
-          >
-            <SelectTrigger className="h-9 w-full bg-white/5 border-white/10">
-              <SelectValue placeholder="Sem responsável" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none">Sem responsável</SelectItem>
-              {TEAM.map((member) => (
-                <SelectItem key={member} value={member}>
-                  <div className="flex items-center gap-2">
-                    <Avatar name={member} size={18} />
-                    {member}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Assignees */}
+        <Section label="Responsáveis">
+          <div className="flex items-center gap-2 flex-wrap">
+            {assignees.map((p) => (
+              <div key={p.id} className="flex items-center gap-1.5 bg-white/5 rounded-full pl-1 pr-2 py-1">
+                <Avatar profile={p} size={22} />
+                <span className="text-xs text-white/80">{p.name}</span>
+                {(isAdmin || p.id === me?.id) && (
+                  <button onClick={() => removeAssignee.mutate({ data: { itemId: item.id, userId: p.id } })}
+                    className="text-white/40 hover:text-red-400 ml-0.5"><X size={12} /></button>
+                )}
+              </div>
+            ))}
+            <div className="relative">
+              <button onClick={() => setAssignOpen((o) => !o)}
+                className="h-8 w-8 rounded-full border border-dashed border-white/20 text-white/40 hover:text-[#C8D44E] hover:border-[#C8D44E] flex items-center justify-center transition-colors">
+                <Plus size={14} />
+              </button>
+              {assignOpen && (
+                <div className="absolute z-50 mt-1 left-0 min-w-[200px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-72 overflow-y-auto">
+                  {profiles.map((p) => {
+                    const has = item.assigneeIds.includes(p.id);
+                    const allowed = isAdmin || p.id === me?.id;
+                    return (
+                      <button key={p.id} disabled={!allowed}
+                        onClick={() => {
+                          if (has) removeAssignee.mutate({ data: { itemId: item.id, userId: p.id } });
+                          else addAssignee.mutate({ data: { itemId: item.id, userId: p.id } });
+                          setAssignOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-left">
+                        <Avatar profile={p} size={22} />
+                        <span className="text-white/80 flex-1">{p.name}</span>
+                        {has && <Check size={13} className="text-[#C8D44E]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </Section>
 
         {/* Copy */}
-        <Section>
-          <Label>Copy</Label>
-          <textarea
-            value={copyDraft}
-            onChange={(e) => setCopyDraft(e.target.value)}
-            onBlur={() =>
-              copyDraft !== item.copy &&
-              updateItem(client.id, month.key, item.id, { copy: copyDraft })
-            }
-            placeholder="Escreva o texto do post..."
-            rows={5}
-            className="w-full resize-none rounded bg-white/[0.03] border border-white/10 px-3 py-2 text-sm text-white outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
-          />
+        <Section label="Copy">
+          <textarea value={copy} onChange={(e) => setCopy(e.target.value)} rows={5}
+            onBlur={() => { if (copy !== item.copy) updateItem.mutate({ data: { id: item.id, patch: { copy } } }); }}
+            placeholder="Escreva a copy..."
+            className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none transition-colors" />
         </Section>
 
-        {/* Arquivos */}
-        <Section>
-          <Label>Arquivos</Label>
-          <input
-            value={linkDraft}
-            onChange={(e) => setLinkDraft(e.target.value)}
-            onBlur={() =>
-              linkDraft !== item.driveLink &&
-              updateItem(client.id, month.key, item.id, { driveLink: linkDraft })
-            }
-            placeholder="Cole link do Google Drive..."
-            className="w-full rounded bg-white/[0.03] border border-white/10 px-3 py-2 text-sm text-white outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
-          />
-          {item.driveLink && (
-            <div className="mt-2 flex items-center justify-between rounded bg-white/[0.03] px-3 py-2">
-              <div className="flex items-center gap-2 text-sm text-white">
-                {driveKind === "video" && <Film size={14} className="text-primary" />}
-                {driveKind === "image" && <ImageIcon size={14} className="text-primary" />}
-                {driveKind === "carousel" && <Grid3x3 size={14} className="text-primary" />}
-                {driveKind === "folder" && <FolderOpen size={14} className="text-primary" />}
-                <span className="text-xs">
-                  {driveKind === "video" && "Vídeo"}
-                  {driveKind === "image" && "Imagem"}
-                  {driveKind === "carousel" && "Carrossel"}
-                  {driveKind === "folder" && "Pasta"}
-                </span>
+        {/* Drive */}
+        <Section label="Arquivos">
+          <input value={drive} onChange={(e) => setDrive(e.target.value)}
+            onBlur={() => { if (drive !== item.driveLink) updateItem.mutate({ data: { id: item.id, patch: { drive_link: drive } } }); }}
+            placeholder="Cole o link do Google Drive..."
+            className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 transition-colors" />
+          {drive && (
+            <div className="mt-2 flex items-center gap-3 rounded-md bg-[#1C1C1C] border border-white/[0.08] px-3 py-2">
+              <DriveIcon size={20} style={{ color: "#C8D44E" }} />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold text-white">{driveLabel}</div>
+                <div className="text-[10px] text-white/40 truncate">{drive}</div>
               </div>
-              <a
-                href={item.driveLink}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-primary transition hover:opacity-80"
-              >
-                Abrir no Drive
-                <ExternalLink size={12} />
+              <a href={drive} target="_blank" rel="noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#C8D44E] hover:underline">
+                <ExternalLink size={12} /> Abrir
               </a>
             </div>
           )}
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            Suporta links de pastas, vídeos e carrosséis do Drive
-          </p>
+          <p className="text-[10px] text-white/40 mt-1.5">Suporta links de pastas, vídeos e carrosséis do Drive.</p>
         </Section>
 
-        {/* Comentários */}
-        <Section last>
-          <Label>Comentários</Label>
-          <div className="space-y-3 mb-3">
-            {item.comments.length === 0 && (
-              <p className="text-xs text-muted-foreground">Nenhum comentário ainda.</p>
-            )}
-            {item.comments
-              .slice()
-              .sort((a, b) => a.createdAt - b.createdAt)
-              .map((c) => (
-                <div key={c.id} className="text-xs">
-                  {c.system ? (
-                    <p className="italic text-muted-foreground">
-                      · {c.text} · {relativeTime(c.createdAt)}
-                    </p>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Avatar name={c.author} size={20} />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-white">{c.author}</span>
-                          <span className="text-muted-foreground">
-                            {relativeTime(c.createdAt)}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-white/80">{c.text}</p>
-                      </div>
-                    </div>
-                  )}
+        {/* Comments */}
+        <Section label="Comentários" last>
+          <div className="space-y-2.5 mb-3">
+            {item.comments.length === 0 && <p className="text-xs text-white/40">Sem comentários ainda.</p>}
+            {item.comments.map((c) => {
+              const author = profiles.find((p) => p.id === c.authorId);
+              if (c.system) return (
+                <div key={c.id} className="rounded-md px-3 py-2 text-[11px] italic"
+                  style={{ backgroundColor: "rgba(200,212,78,0.08)", borderLeft: "2px solid #C8D44E", color: "rgba(255,255,255,0.7)" }}>
+                  <span>{c.text}</span>
+                  <span className="text-white/40 ml-2 not-italic">{relTime(c.createdAt)}</span>
                 </div>
-              ))}
+              );
+              return (
+                <div key={c.id} className="flex gap-2.5">
+                  <Avatar profile={author ?? undefined} size={26} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-semibold text-white">{author?.name ?? "Alguém"}</span>
+                      <span className="text-[10px] text-white/40">{relTime(c.createdAt)}</span>
+                    </div>
+                    <div className="text-xs text-white/80 whitespace-pre-wrap mt-0.5">{c.text}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const text = commentDraft.trim();
-              if (!text) return;
-              addComment(client.id, month.key, item.id, text, "Você");
-              setCommentDraft("");
-            }}
-            className="flex items-center gap-2"
-          >
-            <input
-              value={commentDraft}
-              onChange={(e) => setCommentDraft(e.target.value)}
+          <div className="flex gap-2">
+            <input value={comment} onChange={(e) => setComment(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && comment.trim()) { addComment.mutate({ data: { itemId: item.id, text: comment.trim() } }); setComment(""); } }}
               placeholder="Novo comentário..."
-              className="flex-1 rounded bg-white/[0.03] border border-white/10 px-3 py-2 text-sm text-white outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
-            />
-            <button
-              type="submit"
-              disabled={!commentDraft.trim()}
-              className="rounded bg-primary p-2 text-primary-foreground transition hover:opacity-90 disabled:opacity-30"
-            >
+              className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 transition-colors" />
+            <button disabled={!comment.trim()}
+              onClick={() => { addComment.mutate({ data: { itemId: item.id, text: comment.trim() } }); setComment(""); }}
+              className="px-3 rounded-md text-sm font-bold disabled:opacity-30 transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
               <Send size={14} />
             </button>
-          </form>
+          </div>
         </Section>
-      </aside>
-    </div>
+      </div>
+    </>
   );
 }
 
-function Section({ children, last }: { children: React.ReactNode; last?: boolean }) {
+function Section({ label, children, last }: { label: string; children: React.ReactNode; last?: boolean }) {
   return (
-    <div
-      className={cn(
-        "px-6 py-4",
-        !last && "border-b border-white/[0.06]"
-      )}
-    >
+    <div className={`px-6 py-5 ${last ? "" : "border-b border-white/[0.08]"}`}>
+      <div className="text-[10px] uppercase font-bold tracking-wider mb-3" style={{ color: "#C8D44E" }}>{label}</div>
       {children}
     </div>
   );
 }
 
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-      {children}
-    </div>
-  );
-}
-
-function detectDriveKind(link: string): "video" | "image" | "carousel" | "folder" {
-  if (!link) return "folder";
-  const l = link.toLowerCase();
-  if (l.includes("/folders/")) return "folder";
-  if (/(mp4|mov|avi|webm)/.test(l)) return "video";
-  if (l.includes("carrossel") || l.includes("carousel")) return "carousel";
-  if (/(jpg|jpeg|png|webp|gif)/.test(l)) return "image";
-  if (l.includes("video")) return "video";
-  return "image";
+function relTime(iso: string) {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return "agora";
+  if (diff < 3600) return `há ${Math.floor(diff / 60)}min`;
+  if (diff < 86400) return `há ${Math.floor(diff / 3600)}h`;
+  if (diff < 604800) return `há ${Math.floor(diff / 86400)}d`;
+  return new Date(iso).toLocaleDateString("pt-BR");
 }
