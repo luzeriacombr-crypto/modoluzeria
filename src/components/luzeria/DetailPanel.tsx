@@ -3,12 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { X, Send, ExternalLink, Plus, Check } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { STATUS_META, STATUS_ORDER, type Status, type Profile, type ContentItem } from "@/lib/luzeria/types";
+import { STATUS_META, statusOptionsFor, type Status, type Profile, type ContentItem } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS, detectDriveType } from "./icons";
 
 function findItem(month: any, id: string): ContentItem | undefined {
-  return month?.posts.find((i: any) => i.id === id) ?? month?.reels.find((i: any) => i.id === id);
+  return (
+    month?.posts.find((i: any) => i.id === id) ??
+    month?.reels.find((i: any) => i.id === id) ??
+    month?.outros?.find((i: any) => i.id === id)
+  );
 }
 
 export function DetailPanel() {
@@ -77,7 +81,7 @@ export function DetailPanel() {
         {/* Status */}
         <Section label="Status">
           <div className="grid grid-cols-2 gap-2">
-            {STATUS_ORDER.map((s) => {
+            {statusOptionsFor(item.type).map((s) => {
               const m = STATUS_META[s]; const I = STATUS_ICONS[s];
               const active = item.status === s;
               return (
