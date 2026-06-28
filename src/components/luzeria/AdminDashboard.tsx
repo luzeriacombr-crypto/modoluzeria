@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, Trophy, Sparkles, Flame, Crown, Medal,
   X, CheckCircle2, Inbox,
 } from "lucide-react";
-import { adminDashboardQO, memberFinalizationsQO, topMembersQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { adminDashboardQO, memberFinalizationsQO, topMembersQO, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { Avatar } from "./Avatar";
