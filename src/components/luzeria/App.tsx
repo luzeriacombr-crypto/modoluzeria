@@ -9,6 +9,8 @@ import { ClientView } from "./ClientView";
 import { DetailPanel } from "./DetailPanel";
 import { MyTasks } from "./MyTasks";
 import { SettingsPage } from "./Settings";
+import { StoriesView } from "./StoriesView";
+import { CleaningView } from "./CleaningView";
 import { NotificationsBell } from "./Notifications";
 import { NewClientModal, CustomFieldsModal } from "./Modals";
 import { Avatar } from "./Avatar";
@@ -35,6 +37,8 @@ export function App() {
           {view === "dashboard" && <Dashboard onCreate={() => setCreating(true)} />}
           {view === "client" && selectedClientId && <ClientView clientId={selectedClientId} />}
           {view === "settings" && <SettingsPage />}
+          {view === "stories" && <StoriesView />}
+          {view === "cleaning" && <CleaningView />}
         </main>
       </div>
       <DetailPanel />

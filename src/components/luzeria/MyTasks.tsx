@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, productivityQO, profilesQO, useMe } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, profilesQO, useMe } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Camera, Sparkles } from "lucide-react";
 import { formatMonth, shortMonth } from "@/lib/luzeria/utils";
+import { CLEANING_TASKS } from "./CleaningView";
 
 export function MyTasks() {
   const me = useMe().data;
@@ -21,6 +22,16 @@ export function MyTasks() {
   const { selectClient, selectMonth, openItem } = useUI();
   const monthKey = useUI((s) => s.selectedMonthKey);
   const { data: prod } = useQuery(productivityQO(monthKey, targetId));
+
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  // JS Sunday=0..Saturday=6 → our weekday Monday=0..Saturday=5 (Sunday => -1 skip)
+  const dow = now.getDay();
+  const weekdayIdx = dow === 0 ? -1 : dow - 1;
+  const { data: today } = useQuery({
+    ...myTodayQO(todayStr, weekdayIdx, targetId),
+    enabled: !!targetId,
+  });
 
   const grouped: Record<Status, typeof tasks> = {
     START: [], CRIACAO: [], REVISAO_ARTE: [], REVISAO_CLIENTE: [], FINALIZADO: [],
@@ -52,6 +63,39 @@ export function MyTasks() {
           </div>
         )}
       </div>
+
+      {(today?.stories || (today?.cleaningTaskIdx?.length ?? 0) > 0) && (
+        <div className="space-y-3 mb-8">
+          {today?.stories && (
+            <div className="rounded-lg p-4 flex items-center gap-3"
+              style={{ backgroundColor: "rgba(200,212,78,0.1)", borderLeft: "3px solid #C8D44E" }}>
+              <div className="h-9 w-9 rounded-md flex items-center justify-center" style={{ backgroundColor: "rgba(200,212,78,0.2)", color: "#C8D44E" }}>
+                <Camera size={18} />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-white">Hoje é seu dia de Stories</div>
+                <div className="text-[11px] text-white/60">Publique os stories da Luzeria.</div>
+              </div>
+            </div>
+          )}
+          {(today?.cleaningTaskIdx?.length ?? 0) > 0 && (
+            <div className="rounded-lg p-4 flex items-start gap-3"
+              style={{ backgroundColor: "rgba(200,212,78,0.1)", borderLeft: "3px solid #C8D44E" }}>
+              <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(200,212,78,0.2)", color: "#C8D44E" }}>
+                <Sparkles size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold text-white">Tarefas de limpeza hoje</div>
+                <ul className="mt-1.5 space-y-0.5">
+                  {today!.cleaningTaskIdx.map((ti) => (
+                    <li key={ti} className="text-[11px] text-white/70">• {CLEANING_TASKS[ti]}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {tasks.length === 0 ? (
         <div className="border border-dashed border-white/10 rounded-lg p-16 text-center">
