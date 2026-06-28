@@ -67,7 +67,7 @@ export function Sidebar({
       {/* Logo */}
       <div className="px-5 pt-5 pb-4">
         <img src={luzeriaLogo.url} alt="Luzeria" className="h-7 w-auto object-contain" />
-        <p className="text-[#C8D44E] text-[10px] font-medium tracking-wide mt-2">Você foi chamado para criar</p>
+        <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-2">Você foi chamado para criar</p>
       </div>
       <div className="mx-5 h-px" style={{ backgroundColor: "rgba(200,212,78,0.2)" }} />
 
