@@ -1,105 +1,108 @@
-## Resumo
-Redesign visual completo do app Luzeria + sistema de autenticação com 3 níveis de hierarquia, dashboard pessoal "Minhas Demandas", gerenciamento de colaboradores e notificações em tempo real.
+## Escopo
 
-Toda lógica atual de produção (clientes, meses, posts/reels, status, drive, comentários) é preservada — vai migrar para o backend (Lovable Cloud) para suportar multi-usuário e atribuições múltiplas.
+Mantém toda a arquitetura existente (Supabase, hierarquia de papéis, tabelas, queries TanStack, rotas). Foca em (a) refinamento visual premium "regra dos 3 gradientes", (b) funcionalidades novas pedidas (produtividade, gestos mobile, auto-atribuição, layout mobile completo), (c) ajustes finos na lista, badges, header e tela de login.
 
----
-
-## PARTE 1 — Backend (Lovable Cloud / Supabase)
-
-Habilitar Lovable Cloud. Migrations:
-
-**Auth & roles**
-- `app_role` enum: `master`, `setor`, `member`
-- `profiles` (id=auth.users.id, name, email, color, avatar_icon, active bool) + trigger `handle_new_user`
-- `user_roles` (user_id, role) + função `has_role(uid, role)` SECURITY DEFINER
-- Função `is_admin(uid)` = master OR setor (helper)
-
-**Domínio**
-- `clients` (id, name, color, icon, favorite, archived, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at)
-- `months` (id, client_id, key "YYYY-MM")
-- `content_items` (id, month_id, type post|reel, idx, title, status, copy, drive_link, updated_at)
-- `item_assignees` (item_id, user_id) — múltiplos responsáveis
-- `comments` (id, item_id, author_id, text, is_system bool, created_at)
-- `notifications` (id, user_id, type, item_id, message, read bool, created_at)
-
-**RLS** (todas tabelas com `ENABLE ROW LEVEL SECURITY` + GRANTs explícitos):
-- SELECT: qualquer authenticated (todos veem tudo, conforme spec)
-- INSERT/UPDATE/DELETE em clients/months/items: apenas `is_admin`
-- `item_assignees`: admin pode tudo; membro só pode inserir/deletar `user_id = auth.uid()` (auto-atribuição)
-- `comments`: authenticated insere o próprio; admin deleta
-- `profiles`: SELECT all authenticated; UPDATE master ou self (campos não-críticos)
-- `user_roles`: SELECT authenticated; INSERT/UPDATE/DELETE só master
-- `notifications`: SELECT/UPDATE só do próprio user; INSERT via trigger
-
-**Triggers de notificação**
-- Ao inserir em `item_assignees` → notifica user
-- Ao mudar `status` em `content_items` → notifica todos assignees + cria comment system
-- Ao inserir comment não-system → notifica todos assignees (exceto autor)
-
-**Seed dos 5 colaboradores iniciais**: criar via Supabase Auth Admin com senha temporária (instruir o user a fazer reset). Como não temos as senhas, melhor: criar registros em `profiles` placeholder + roles, e instruir cada um a se cadastrar com o email exato — o trigger `handle_new_user` vincula a row existente pelo email (ou cria role default `member`, e o master promove depois).
-
-Decisão: criar via `supabaseAdmin.auth.admin.createUser` numa server function de seed (executada uma vez pelo master no primeiro acesso) com senha aleatória e enviar magic link. **Simplificação**: deixar master criar via UI de "Novo colaborador" (usando admin API) — os 5 iniciais são inseridos via SQL apenas em `pending_invites` table OU instruímos cadastro manual. **Vou usar**: ao primeiro signup do email `junior.reis@live.com`, trigger atribui role `master` automaticamente; demais emails da lista recebem role pré-definida via tabela `role_assignments_pending` consultada no trigger.
+Não vou recriar componentes que já estão funcionando bem — vou refiná-los.
 
 ---
 
-## PARTE 2 — Frontend Auth
+## 1. Design tokens (`src/styles.css`)
 
-- `/auth`: tela login (email + senha + sign up) estilo Luzeria
-- `_authenticated/` layout (managed) — toda app passa pra dentro
-- `useAuth` hook expõe `user, profile, role, isMaster, isAdmin`
-- `signOut` no rodapé sidebar
+- Trocar `--sidebar-from/to` por **sidebar sólido** `#1A3A2E`. Manter `sidebar-gradient` utility mas apontando para cor sólida (sem quebrar imports).
+- Adicionar utilities: `lz-btn-primary` (gradiente `#C8D44E → #A8B83E` + sombra), `lz-card` (fundo `#1C1C1C` + borda `rgba(255,255,255,0.07)`), `lz-panel` (`#1A1A1A`).
+- Adicionar keyframe `lz-grow-bar` (scaleY 0→1, 300ms ease-out) para barras de produtividade.
+- Header app: classe utility com `backdrop-filter: blur(16px)` e fundo `rgba(13,13,13,0.9)`.
 
-## PARTE 3 — Refatorar store
+## 2. Sidebar (`Sidebar.tsx`)
 
-Substituir Zustand+localStorage por TanStack Query + server functions (`createServerFn` com `requireSupabaseAuth`):
-- `listClients`, `createClient`, `updateClient`, `archiveClient`, `deleteClient`, `duplicateMonth`
-- `listMonth(clientId, monthKey)` → posts + reels + assignees + comments
-- `updateItem`, `setStatus`, `addAssignee`, `removeAssignee`, `addComment`
-- `listNotifications`, `markRead`, `markAllRead`
-- `listProfiles`, `updateRole`, `setActive`, `createCollaborator` (master only)
+- Trocar fundo para sólido `#1A3A2E`.
+- Cliente ativo: já tem a linha left 3px — manter, garantir fundo `rgba(200,212,78,0.12)`.
+- Botão "+ Novo cliente" no header da seção Clientes: aplicar `lz-btn-primary` (mini variante).
+- Avatar branco: quando `color === '#FFFFFF'`, renderizar inicial em `#0D0D0D` (ajustar `Avatar.tsx`).
+- Adicionar `#FFFFFF` à `PRESET_COLORS` em `utils.ts`.
 
-Realtime: subscribe a `notifications` e `content_items` para invalidar queries.
+## 3. Header app + Notificações
 
-## PARTE 4 — Redesign Visual
+- Aplicar `backdrop-blur` no header principal (provavelmente em `App.tsx` ou `ClientView.tsx`).
+- Avatar do usuário: borda 2px `#C8D44E`.
+- Sino (`Notifications.tsx`): badge vermelho `#E5484D` com contador, dropdown com timestamp relativo, "Marcar todas como lidas". Verificar se já existe e refinar.
 
-Atualizar tokens em `src/styles.css`:
-- Sidebar com gradiente vertical `#1A3A2E → #0D1F18`
-- Font Inter via `<link>` em `__root.tsx`
-- Animação `lz-flash` 1.5s, `slide-in` cubic-bezier
-- Borda esquerda 3px accent no cliente ativo
+## 4. Dashboard (`Dashboard.tsx`)
 
-Componentes redesenhados:
-- `Sidebar`: gradiente, separador accent 20%, "Minhas Demandas" no topo com badge, rodapé com perfil + settings + logout
-- `Dashboard`: header "Visão Geral" 32px, cards com borda top na cor + progress ring SVG + 5 chips com contagem
-- `ClientView`: header com avatar 40, mês pill com chevrons, tabs underline
-- `ContentRow` (64px): número accent, stack de avatares sobrepostos com tooltip, botão "+"
-- `DetailPanel`: número uppercase + título 20px, status grid 2x3, stack de responsáveis com dropdown de atribuição, comentários system com left-border accent
-- `MyTasks` page: agrupado por status, chip de cliente, dropdown "Ver como" pra admins
-- `Collaborators` page (só master): lista, toggle ativo, dropdown role, "+ Novo"
-- `NotificationsBell` no header: dropdown com lista, marcar como lida
+- Cards: borda top 3px na cor do cliente, hover `translateY(-2px)` + borda top vira `#C8D44E`.
+- Progress ring: gradiente `#C8D44E → #8FA832` via `<linearGradient>` SVG (único gradiente de elemento).
+- Header "Visão Geral": 40px font-weight 800, subtítulo com contagem em `#C8D44E`.
 
-Cores de avatar incluindo `#FFFFFF` (com texto `#0D0D0D`).
+## 5. Lista de conteúdo (`ContentRow.tsx`)
 
-## PARTE 5 — Microinterações
-- `scale(1.1)` 200ms em badge ao mudar status
-- `translateY(-2px)` hover card
-- Slide-in `cubic-bezier(0.16,1,0.3,1)` no painel
-- `lz-flash` 1.5s na linha atualizada
+- Altura 64px, número 14px bold `#C8D44E`, título 15px medium.
+- Badge: ícone Lucide 12px + texto 11px uppercase bold, cores sólidas conforme spec.
+- Stack de avatares 28px com tooltip; avatar vazio "+" abre dropdown de auto-atribuição (membro) ou atribuição (admin).
+- Drive icon: opacity 0.4 vazio, `#C8D44E` preenchido.
+- Animação `lz-flash` na linha recém-atualizada (já existe — garantir trigger via `lastUpdatedId` no UI store).
+
+## 6. Detail panel (`DetailPanel.tsx`)
+
+- Stack de avatares + botão "+" dropdown com lista de colaboradores.
+- Membro: auto-atribuir/desatribuir somente a si mesmo. Admin: qualquer um.
+- Slide-in `cubic-bezier(0.16,1,0.3,1)` 280ms (já configurado).
+
+## 7. Minhas Demandas / Produtividade (`MyTasks.tsx`)
+
+Adicionar bloco "Produtividade":
+- Server fn `getProductivityStats({ userId, monthKey })` que conta `comments is_system + status FINALIZADO` agrupados por semana do mês, e os últimos 6 meses.
+- Gráfico 4 barras (uma por semana). Barra de maior valor recebe gradiente; demais sólido `rgba(200,212,78,0.25)`. Número acima, hover tooltip com títulos finalizados.
+- Linhas "Melhor semana" e "Média".
+- Histórico 6 meses colapsável (linha do tempo horizontal).
+
+## 8. Tela de login (`auth.tsx`)
+
+- Card central `#1A1A1A`, borda `rgba(200,212,78,0.2)`.
+- Inputs com focus borda `#C8D44E`.
+- Botão "Entrar" com `lz-btn-primary`.
+
+## 9. Configurações (`Settings.tsx`)
+
+Garantir que Master vê:
+- Lista colaboradores (avatar, nome, email, badge de função).
+- Dropdown alterar função.
+- Toggle ativar/desativar.
+- Botão "Ver dashboard do colaborador" → seta `viewAsUserId` no UI store e abre Minhas Demandas.
+- Modal "+ Novo colaborador".
+
+(Setor admin não vê esta tela — botão settings só aparece para Master, já implementado.)
+
+## 10. Mobile (< 768px)
+
+Componente novo `MobileShell.tsx`:
+- Bottom nav fixa com 4 ícones (Demandas, Clientes, Bell, Avatar). Active `#C8D44E`.
+- Lista de clientes em tela cheia ao tocar em "Clientes".
+- Header do cliente: "← Voltar" + avatar 32px + nome + mês.
+- Tabs largura total.
+- Lista 56px, badge só ícone, avatares 24px, sem quebra de linha.
+- Detail: bottom sheet 90vh, drag-to-close (gesture via touch events simples).
+- Swipe left = abrir popover de status; swipe right = marcar como visto (cria notification read).
+
+Detectar mobile via `useIsMobile()` (já existe em `src/hooks/use-mobile.tsx`) e branch no `App.tsx`.
+
+## 11. Microinterações
+
+- Badge pulse 200ms ao mudar status (já existe `lz-pulse`).
+- Card hover translateY (Tailwind transition).
+- `lz-flash` na linha recém-atualizada.
+- Skeleton screens (já existem) — manter.
 
 ---
 
-## Detalhes técnicos
-- Stack: TanStack Start + Supabase + TanStack Query
-- Server functions em `src/lib/*.functions.ts` com `requireSupabaseAuth`
-- Trigger pre-assign roles para os 5 emails iniciais
-- Realtime via canal `postgres_changes` em `notifications` (filtrado por user_id)
-- Validação Zod em todas inputs
-- Loading: skeletons (mantém o princípio existente)
+## Notas técnicas
 
----
+- Sem mudanças de schema. Produtividade é derivada de `comments` (linhas system de status change para `FINALIZADO`) ou `content_items.updated_at WHERE status = 'FINALIZADO'` — usar a segunda, mais simples.
+- `getProductivityStats` é server fn protegida (`requireSupabaseAuth`). Admin pode passar `userId` arbitrário; membro só pode ler o próprio (validar no handler).
+- Manter compatibilidade com `Sidebar` portal menu (recém-corrigido).
+- Não tocar em `client.ts`, `client.server.ts`, `auth-middleware.ts`, `auth-attacher.ts`, `types.ts`.
 
-## Confirmações antes de partir
-1. **OK criar conta dos 5 colaboradores via "self-signup" com role pré-atribuída por email?** Alternativa: master cria todos via admin API depois (mais trabalho de UX).
-2. **OK desativar email confirmation** no Supabase pra acelerar onboarding interno?
-3. **Migrar dados mock atuais (Thamara Leal Jun/2026 etc) para o banco como seed?**
+## Fora do escopo
+
+- Não adiciono OAuth Google (não foi pedido aqui).
+- Não migro para outra arquitetura de gestos (uso touch events nativos, sem libs novas).
+- Não adiciono testes E2E — verificação visual via preview.

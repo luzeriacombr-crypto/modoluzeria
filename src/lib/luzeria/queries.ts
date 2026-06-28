@@ -2,7 +2,7 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/r
 import { useServerFn } from "@tanstack/react-start";
 import {
   addAssignee, addComment, createClient, deleteClient, duplicateMonth,
-  getMe, getMonth, listClients, listMonthKeys, listMyTasks, listNotifications,
+  getMe, getMonth, getProductivity, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, updateClient, updateItem, updateMyProfile,
 } from "./api.functions";
@@ -26,6 +26,12 @@ export const notificationsQO = () =>
   queryOptions({ queryKey: ["notifications"], queryFn: () => listNotifications(), refetchInterval: 60_000 });
 export const myTasksQO = (userId?: string) =>
   queryOptions({ queryKey: ["my-tasks", userId ?? "self"], queryFn: () => listMyTasks({ data: { userId } }) });
+export const productivityQO = (monthKey: string, userId?: string) =>
+  queryOptions({
+    queryKey: ["productivity", userId ?? "self", monthKey],
+    queryFn: () => getProductivity({ data: { userId, monthKey } }),
+    enabled: !!monthKey,
+  });
 
 export function useMe() { return useQuery(meQO()); }
 
