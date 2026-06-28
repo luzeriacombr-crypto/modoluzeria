@@ -228,6 +228,42 @@ export type Database = {
         }
         Relationships: []
       }
+      finalizations: {
+        Row: {
+          finalized_at: string
+          id: string
+          item_id: string | null
+          user_id: string
+        }
+        Insert: {
+          finalized_at?: string
+          id?: string
+          item_id?: string | null
+          user_id: string
+        }
+        Update: {
+          finalized_at?: string
+          id?: string
+          item_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finalizations_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finalizations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_assignees: {
         Row: {
           created_at: string
