@@ -51,27 +51,27 @@ function AuthPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] px-4">
       <Toaster theme="dark" position="bottom-right" />
-      <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-2.5 mb-12">
+      <div className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-8 shadow-2xl"
+        style={{ border: "1px solid rgba(200,212,78,0.2)" }}>
+        <div className="flex items-center justify-center gap-2.5 mb-10">
           <div className="h-10 w-10 rounded-lg flex items-center justify-center text-lg font-bold" style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>L</div>
           <span className="text-white text-2xl font-bold tracking-tight">Luzeria</span>
         </div>
         <h1 className="text-white text-xl font-semibold text-center">
           {mode === "signin" ? "Acesse sua conta" : "Crie sua conta"}
         </h1>
-        <p className="text-white/50 text-sm text-center mt-2 mb-8">Gestão de produção de conteúdo</p>
+        <p className="text-white/50 text-sm text-center mt-2 mb-7">Gestão de produção de conteúdo</p>
         <form onSubmit={submit} className="space-y-3">
           {mode === "signup" && (
             <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Nome completo"
-              className="w-full bg-transparent border border-white/10 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 transition-colors" />
+              className="w-full bg-white/[0.05] border border-white/10 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/40 transition-colors" />
           )}
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Email"
-            className="w-full bg-transparent border border-white/10 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 transition-colors" />
+            className="w-full bg-white/[0.05] border border-white/10 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/40 transition-colors" />
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="Senha"
-            className="w-full bg-transparent border border-white/10 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 transition-colors" />
+            className="w-full bg-white/[0.05] border border-white/10 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/40 transition-colors" />
           <button type="submit" disabled={loading}
-            className="w-full rounded-md py-2.5 mt-2 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
-            style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
+            className="lz-btn-primary w-full rounded-md py-2.5 mt-2 text-sm">
             {loading ? "..." : mode === "signin" ? "Entrar" : "Criar conta"}
           </button>
         </form>
