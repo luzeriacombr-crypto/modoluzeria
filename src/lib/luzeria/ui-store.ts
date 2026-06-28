@@ -5,7 +5,7 @@ interface UI {
   selectedMonthKey: string;
   selectedItemId: string | null;
   recentlyUpdated: string | null;
-  view: "dashboard" | "client" | "my" | "settings" | "stories" | "cleaning" | "admin";
+  view: "client" | "my" | "settings" | "stories" | "cleaning" | "admin";
   viewAsUserId: string | null;
   selectClient: (id: string | null) => void;
   selectMonth: (key: string) => void;
@@ -28,7 +28,7 @@ export const useUI = create<UI>((set) => ({
   view: "my",
   viewAsUserId: null,
   selectClient: (id) =>
-    set({ selectedClientId: id, selectedItemId: null, view: id ? "client" : "dashboard" }),
+    set({ selectedClientId: id, selectedItemId: null, view: id ? "client" : "my" }),
   selectMonth: (key) => set({ selectedMonthKey: key }),
   openItem: (id) => set({ selectedItemId: id }),
   flash: (id) => set({ recentlyUpdated: id }),

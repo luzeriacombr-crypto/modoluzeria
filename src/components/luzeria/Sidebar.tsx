@@ -88,12 +88,6 @@ export function Sidebar({
           />
         )}
         <NavButton
-          icon={<Search size={15} />}
-          label="Visão geral"
-          active={view === "dashboard"}
-          onClick={() => setView("dashboard")}
-        />
-        <NavButton
           icon={<Camera size={15} />}
           label="Stories"
           active={view === "stories"}

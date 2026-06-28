@@ -5,7 +5,7 @@ import { clientsQO, monthKeysQO, monthQO, profilesQO, useApi } from "@/lib/luzer
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { ContentRow } from "./ContentRow";
-import { formatMonth } from "./Dashboard";
+import { formatMonth } from "@/lib/luzeria/utils";
 import { useMe } from "@/lib/luzeria/queries";
 
 export function ClientView({ clientId }: { clientId: string }) {
