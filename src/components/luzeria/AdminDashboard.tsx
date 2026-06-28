@@ -311,16 +311,16 @@ export function AdminDashboard() {
           {byCategory.map((c) => {
             const color = CAT_COLOR[c.name] ?? PALETTE.green;
             return (
-              <div key={c.name} className="relative overflow-hidden rounded-xl p-4 bg-[#161616] border border-white/[0.06]">
+              <div key={c.name} className="relative overflow-hidden rounded-xl p-4 bg-[#161616] border border-white/[0.06] text-center md:text-left">
                 <div className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-20 blur-2xl" style={{ background: color }} />
-                <div className="flex items-center justify-between relative">
+                <div className="flex flex-col md:flex-row items-center justify-between relative">
                   <div className="text-[11px] uppercase tracking-wider font-bold" style={{ color }}>{c.name}</div>
                   <div className="text-white text-sm font-bold tabular-nums">{c.percent}%</div>
                 </div>
                 <div className="mt-2 text-white/60 text-xs">
                   <span className="text-white font-semibold">{c.done}</span> de {c.total} entregues
                 </div>
-                <div className="mt-3 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div className="mt-3 h-1.5 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px] mx-auto md:mx-0">
                   <div className="h-full rounded-full transition-all duration-500"
                     style={{ width: `${c.percent}%`, background: `linear-gradient(90deg, ${color}, ${PALETTE.lime})` }} />
                 </div>
