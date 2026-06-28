@@ -203,7 +203,7 @@ export function AdminDashboard() {
                 key={r.id}
                 disabled={!canOpen}
                 onClick={() => canOpen && setOpenMember({ id: r.id, name: r.name, color: r.color })}
-                className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors text-left ${canOpen ? "hover:bg-white/[0.05] cursor-pointer" : "cursor-default"}`}
+                className={`w-full flex flex-col md:flex-row items-center gap-3 px-2 py-2 rounded-lg transition-colors text-center md:text-left ${canOpen ? "hover:bg-white/[0.05] cursor-pointer" : "cursor-default"}`}
               >
                 <div className="w-8 inline-flex items-center justify-center gap-1 text-[11px] font-bold tabular-nums"
                   style={{ color: rankColor }}>
@@ -211,19 +211,19 @@ export function AdminDashboard() {
                 </div>
                 <Avatar name={r.name} color={r.color} size={30} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-white text-sm font-medium truncate mb-1 flex items-center gap-2">
+                  <div className="text-white text-sm font-medium truncate mb-1 flex flex-col md:flex-row items-center gap-2">
                     {r.name}
                     {r.id === me?.id && (
                       <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded"
                         style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>Você</span>
                     )}
                   </div>
-                  <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px] mx-auto md:mx-0">
                     <div className="h-full rounded-full transition-all duration-500"
                       style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${rankColor}, ${PALETTE.lime})` }} />
                   </div>
                 </div>
-                <div className="text-white font-bold tabular-nums w-10 text-right">{r.count}</div>
+                <div className="text-white font-bold tabular-nums w-10 text-center md:text-right">{r.count}</div>
               </button>
             );
           })}
