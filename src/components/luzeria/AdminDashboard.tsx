@@ -493,13 +493,13 @@ function MetricCard({
   icon, label, value, tone, valueColor,
 }: { icon: React.ReactNode; label: string; value: number | string; tone: string; valueColor?: string }) {
   return (
-    <div className="relative overflow-hidden rounded-xl p-4 transition-transform hover:-translate-y-0.5"
+    <div className="relative overflow-hidden rounded-xl p-4 transition-transform hover:-translate-y-0.5 text-center md:text-left"
       style={{
         background: `linear-gradient(160deg, ${hexA(tone, 0.16)} 0%, rgba(22,22,22,1) 70%)`,
         border: `1px solid ${hexA(tone, 0.22)}`,
       }}>
       <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: tone }} />
-      <div className="relative flex items-center justify-between mb-3">
+      <div className="relative flex items-center justify-center md:justify-between mb-3">
         <div className="h-7 w-7 rounded-md inline-flex items-center justify-center"
           style={{ background: hexA(tone, 0.18), color: tone }}>
           {icon}
