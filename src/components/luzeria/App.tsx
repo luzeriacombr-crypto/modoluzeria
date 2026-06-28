@@ -13,7 +13,6 @@ import { NotificationsBell } from "./Notifications";
 import { NewClientModal, CustomFieldsModal } from "./Modals";
 import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 export function App() {
   const me = useMe();
