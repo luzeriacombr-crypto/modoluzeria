@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import type { Client, ContentItem, MonthData, Profile, Role, Status } from "./types";
+import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status } from "./types";
 
 /* ============== PROFILES & ROLES ============== */
 
