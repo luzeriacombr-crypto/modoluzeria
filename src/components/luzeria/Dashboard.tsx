@@ -9,8 +9,9 @@ interface Props {
 }
 
 export function Dashboard({ onNewClient }: Props) {
-  const clients = useLuzeria((s) => s.clients.filter((c) => !c.archived));
+  const allClients = useLuzeria((s) => s.clients);
   const selectClient = useLuzeria((s) => s.selectClient);
+  const clients = allClients.filter((c) => !c.archived);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-10 py-12">
