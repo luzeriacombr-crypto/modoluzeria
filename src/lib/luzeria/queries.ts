@@ -4,7 +4,7 @@ import {
   addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, duplicateMonth,
   getMe, getMonth, getProductivity, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
-  setUserActive, setUserRole, updateClient, updateItem, updateMyProfile,
+  setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile,
   listStories, upsertStoryDay, getCleaning, upsertCleaningCell, updateCleaningNote, getMyToday,
 } from "./api.functions";
 
@@ -77,6 +77,7 @@ export function useApi() {
     deleteItem: useMutation({ mutationFn: useServerFn(deleteItem), onSuccess: invalidateAll }),
     setUserRole: useMutation({ mutationFn: useServerFn(setUserRole), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     setUserActive: useMutation({ mutationFn: useServerFn(setUserActive), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
+    deleteUser: useMutation({ mutationFn: useServerFn(deleteUser), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     updateMyProfile: useMutation({ mutationFn: useServerFn(updateMyProfile), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
     markNotificationRead: useMutation({ mutationFn: useServerFn(markNotificationRead), onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }) }),
     upsertStoryDay: useMutation({
