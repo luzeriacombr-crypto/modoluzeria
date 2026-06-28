@@ -53,8 +53,9 @@ function ClientCard({ clientId }: { clientId: string }) {
   const done = items.filter((i) => i.status === "FINALIZADO").length;
   const pct = total ? Math.round((done / total) * 100) : 0;
 
-  const counts: Record<Status, number> = { START: 0, CRIACAO: 0, REVISAO_ARTE: 0, REVISAO_CLIENTE: 0, FINALIZADO: 0 };
-  items.forEach((i) => { counts[i.status]++; });
+  const counts: Partial<Record<Status, number>> = {};
+  STATUS_ORDER.forEach((s) => { counts[s] = 0; });
+  items.forEach((i) => { counts[i.status] = (counts[i.status] ?? 0) + 1; });
 
   return (
     <button onClick={() => selectClient(clientId)}
@@ -77,11 +78,12 @@ function ClientCard({ clientId }: { clientId: string }) {
       <div className="flex flex-wrap gap-1.5">
         {STATUS_ORDER.map((s) => {
           const m = STATUS_META[s];
+          const n = counts[s] ?? 0;
           return (
             <span key={s} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold"
-              style={{ backgroundColor: m.bg, color: m.color, opacity: counts[s] ? 1 : 0.35 }}>
+              style={{ backgroundColor: m.bg, color: m.color, opacity: n ? 1 : 0.25 }}>
               <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: m.color }} />
-              {counts[s]}
+              {n}
             </span>
           );
         })}
