@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Users, Target, Package, CheckCircle, AlertTriangle,
   ChevronLeft, ChevronRight, Trophy, Sparkles, Flame, Crown, Medal,
@@ -55,6 +55,18 @@ export function AdminDashboard() {
   const dashboard = useQuery(adminDashboardQO(selectedMonthKey));
   const top = useQuery(topMembersQO(period, selectedMonthKey));
   const [openMember, setOpenMember] = useState<null | { id: string; name: string; color: string }>(null);
+
+  // Modo TV: quando a sidebar está oculta, reflag o dashboard a cada 5 minutos.
+  const sidebarHidden = useUI((s) => s.sidebarHidden);
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!sidebarHidden) return;
+    const id = window.setInterval(() => {
+      qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
+      qc.invalidateQueries({ queryKey: ["top-members"] });
+    }, 5 * 60 * 1000);
+    return () => window.clearInterval(id);
+  }, [sidebarHidden, qc]);
 
   const data = dashboard.data;
   const t = data?.totals;
