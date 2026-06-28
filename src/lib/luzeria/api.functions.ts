@@ -134,9 +134,9 @@ export const createClient = createServerFn({ method: "POST" })
 
 export const updateClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string; patch: Record<string, unknown> }) => d)
+  .inputValidator((d: { id: string; patch: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("clients").update(data.patch).eq("id", data.id);
+    const { error } = await context.supabase.from("clients").update(data.patch as any).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
