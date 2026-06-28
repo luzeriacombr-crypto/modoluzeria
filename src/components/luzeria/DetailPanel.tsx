@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X, Send, ExternalLink, Plus, Check } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, Pencil } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType } from "@/lib/luzeria/types";
@@ -40,9 +40,13 @@ export function DetailPanel() {
   const [drive, setDrive] = useState("");
   const [comment, setComment] = useState("");
   const [assignOpen, setAssignOpen] = useState(false);
+  const [driveEditing, setDriveEditing] = useState(false);
 
   useEffect(() => {
-    if (item) { setTitle(item.title); setCopy(item.copy); setDrive(item.driveLink); }
+    if (item) {
+      setTitle(item.title); setCopy(item.copy); setDrive(item.driveLink);
+      setDriveEditing(!item.driveLink);
+    }
   }, [item?.id]); // eslint-disable-line
 
   if (!selectedItemId) return null;
@@ -178,21 +182,32 @@ export function DetailPanel() {
 
         {/* Drive */}
         <Section label="Arquivos">
-          <input value={drive} onChange={(e) => setDrive(e.target.value)}
-            onBlur={() => { if (drive !== item.driveLink) updateItem.mutate({ data: { id: item.id, patch: { drive_link: drive } } }); }}
-            placeholder="Cole o link do Google Drive..."
-            className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 transition-colors" />
-          {drive && (
-            <div className="mt-2 flex items-center gap-3 rounded-md bg-[#1C1C1C] border border-white/[0.08] px-3 py-2">
-              <DriveIcon size={20} style={{ color: "#C8D44E" }} />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-white">{driveLabel}</div>
-                <div className="text-[10px] text-white/40 truncate">{drive}</div>
-              </div>
+          {driveEditing || !drive ? (
+            <div className="flex items-center gap-2">
+              <input value={drive} onChange={(e) => setDrive(e.target.value)} autoFocus={driveEditing && !!item.driveLink}
+                onBlur={() => {
+                  if (drive !== item.driveLink) updateItem.mutate({ data: { id: item.id, patch: { drive_link: drive } } });
+                  if (drive) setDriveEditing(false);
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                placeholder="Cole o link do Drive..."
+                className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 transition-colors" />
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 rounded-md bg-[#1C1C1C] border border-white/[0.08] px-3 py-2.5">
+              <DriveIcon size={18} style={{ color: "#C8D44E" }} />
               <a href={drive} target="_blank" rel="noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#C8D44E] hover:underline">
-                <ExternalLink size={12} /> Abrir
+                className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-sm font-semibold hover:underline"
+                style={{ color: "#C8D44E" }}>
+                Abrir no Drive
+                <ExternalLink size={13} />
+                <span className="text-[10px] text-white/40 font-normal truncate ml-1">· {driveLabel}</span>
               </a>
+              <button onClick={() => setDriveEditing(true)}
+                title="Editar link"
+                className="text-white/40 hover:text-white p-1 rounded hover:bg-white/5 transition">
+                <Pencil size={13} />
+              </button>
             </div>
           )}
           <p className="text-[10px] text-white/40 mt-1.5">Suporta links de pastas, vídeos e carrosséis do Drive.</p>
