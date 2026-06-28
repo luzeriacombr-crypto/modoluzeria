@@ -160,3 +160,23 @@
 @utility lz-highlight {
   animation: lz-highlight 2s ease-out;
 }
+@utility lz-input {
+  width: 100%;
+  border-radius: 0.375rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #ffffff;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+@utility lz-input {
+  &:focus {
+    border-color: #C8D44E;
+    box-shadow: 0 0 0 1px #C8D44E;
+  }
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
