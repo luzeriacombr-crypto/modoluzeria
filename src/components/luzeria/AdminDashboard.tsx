@@ -489,8 +489,8 @@ function formatFinalized(iso: string) {
 }
 
 function MetricCard({
-  icon, label, value, tone,
-}: { icon: React.ReactNode; label: string; value: number | string; tone: string }) {
+  icon, label, value, tone, valueColor,
+}: { icon: React.ReactNode; label: string; value: number | string; tone: string; valueColor?: string }) {
   return (
     <div className="relative overflow-hidden rounded-xl p-4 transition-transform hover:-translate-y-0.5"
       style={{
@@ -504,7 +504,8 @@ function MetricCard({
           {icon}
         </div>
       </div>
-      <div className="relative text-[34px] font-extrabold leading-none mb-1.5 tabular-nums text-white">
+      <div className="relative text-[34px] font-extrabold leading-none mb-1.5 tabular-nums"
+        style={{ color: valueColor ?? "#ffffff" }}>
         {value}
       </div>
       <div className="relative text-[10.5px] uppercase tracking-wider font-bold" style={{ color: hexA(tone, 0.9) }}>{label}</div>
