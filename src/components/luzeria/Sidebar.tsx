@@ -79,14 +79,12 @@ export function Sidebar({
           active={view === "my"}
           onClick={() => setView("my")}
         />
-        {isAdmin && (
-          <NavButton
-            icon={<BarChart2 size={15} />}
-            label="Dashboard"
-            active={view === "admin"}
-            onClick={() => setView("admin")}
-          />
-        )}
+        <NavButton
+          icon={<BarChart2 size={15} />}
+          label="Dashboard"
+          active={view === "admin"}
+          onClick={() => setView("admin")}
+        />
         <NavButton
           icon={<Camera size={15} />}
           label="Stories"
