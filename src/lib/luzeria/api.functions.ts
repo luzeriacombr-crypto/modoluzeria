@@ -317,6 +317,7 @@ export const getMonth = createServerFn({ method: "GET" })
       assigneeIds: itemAssignees.get(it.id) ?? [],
       comments: itemComments.get(it.id) ?? [],
       updatedAt: it.updated_at,
+      reelType: ((it as any).reel_type ?? null) as any,
     }));
     return {
       id: month.id, key: month.key,
@@ -330,7 +331,7 @@ export const getMonth = createServerFn({ method: "GET" })
 
 export const updateItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string; patch: { title?: string; copy?: string; drive_link?: string } }) => d)
+  .inputValidator((d: { id: string; patch: { title?: string; copy?: string; drive_link?: string; reel_type?: string | null } }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("content_items").update(data.patch).eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -647,9 +648,6 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
   .inputValidator((d: { monthKey: string }) =>
     z.object({ monthKey: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-
     const { data: clientsAll } = await context.supabase
       .from("clients").select("id, name, color, archived, category").order("name");
     // "Ex-clientes" não entram nas métricas nem na listagem do dashboard.
@@ -714,9 +712,6 @@ export const getTopMembers = createServerFn({ method: "GET" })
       monthKey: z.string().regex(/^\d{4}-\d{2}$/),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-
     const [y, m] = data.monthKey.split("-").map(Number);
     const end = new Date(Date.UTC(y, m, 1)); // exclusive end = first day of next month
     let start: Date;
@@ -742,4 +737,51 @@ export const getTopMembers = createServerFn({ method: "GET" })
       .filter((r) => r.count > 0)
       .sort((a, b) => b.count - a.count);
     return { period: data.period, ranking };
+  });
+
+/* ============== MEMBER FINALIZATIONS ============== */
+
+export const getMemberFinalizations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { userId: string; period: "month" | "3m" | "6m" | "year"; monthKey: string }) =>
+    z.object({
+      userId: z.string().uuid(),
+      period: z.enum(["month", "3m", "6m", "year"]),
+      monthKey: z.string().regex(/^\d{4}-\d{2}$/),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    // Membros só veem as próprias finalizações; adm vê de qualquer um.
+    if (data.userId !== context.userId) {
+      const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+      if (!isAdmin) throw new Error("Forbidden");
+    }
+    const [y, m] = data.monthKey.split("-").map(Number);
+    const end = new Date(Date.UTC(y, m, 1));
+    let start: Date;
+    if (data.period === "month") start = new Date(Date.UTC(y, m - 1, 1));
+    else if (data.period === "3m") start = new Date(Date.UTC(y, m - 3, 1));
+    else if (data.period === "6m") start = new Date(Date.UTC(y, m - 6, 1));
+    else start = new Date(Date.UTC(y, 0, 1));
+
+    const { data: rows, error } = await context.supabase
+      .from("finalizations")
+      .select(
+        "finalized_at, content_items!inner(id, type, idx, title, months!inner(key, clients!inner(id, name, color, category)))"
+      )
+      .eq("user_id", data.userId)
+      .gte("finalized_at", start.toISOString())
+      .lt("finalized_at", end.toISOString())
+      .order("finalized_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    return (rows ?? []).map((r: any) => ({
+      itemId: r.content_items.id as string,
+      type: r.content_items.type as ContentType,
+      title: r.content_items.title as string,
+      finalizedAt: r.finalized_at as string,
+      clientId: r.content_items.months.clients.id as string,
+      clientName: r.content_items.months.clients.name as string,
+      clientColor: r.content_items.months.clients.color as string,
+      clientCategory: (r.content_items.months.clients.category ?? "Social Media") as string,
+    }));
   });

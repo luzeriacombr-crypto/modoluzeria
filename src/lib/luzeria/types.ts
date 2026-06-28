@@ -15,6 +15,16 @@ export type Status =
 
 export type ContentType = "post" | "reel" | "outros";
 
+/** Tipos de vídeo exclusivos de Reels. */
+export type ReelType = "lofi" | "facil" | "basico" | "avancado";
+export const REEL_TYPES: ReelType[] = ["lofi", "facil", "basico", "avancado"];
+export const REEL_TYPE_LABEL: Record<ReelType, string> = {
+  lofi: "Lo-fi",
+  facil: "Fácil",
+  basico: "Básico",
+  avancado: "Avançado",
+};
+
 export interface Comment {
   id: string;
   text: string;
@@ -35,6 +45,7 @@ export interface ContentItem {
   driveLink: string;
   comments: Comment[];
   updatedAt: string;
+  reelType?: ReelType | null;
 }
 
 export interface MonthData {

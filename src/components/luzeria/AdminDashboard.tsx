@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Users, Target, Package, CheckCircle, AlertTriangle,
   ChevronLeft, ChevronRight, Trophy, Sparkles, Flame, Crown, Medal,
+  X, CheckCircle2, Inbox,
 } from "lucide-react";
-import { adminDashboardQO, topMembersQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { adminDashboardQO, memberFinalizationsQO, topMembersQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { Avatar } from "./Avatar";
@@ -53,10 +54,7 @@ export function AdminDashboard() {
 
   const dashboard = useQuery(adminDashboardQO(selectedMonthKey));
   const top = useQuery(topMembersQO(period, selectedMonthKey));
-
-  if (!isAdmin) {
-    return <div className="p-10 text-white/40 text-sm">Acesso restrito a administradores.</div>;
-  }
+  const [openMember, setOpenMember] = useState<null | { id: string; name: string; color: string }>(null);
 
   const data = dashboard.data;
   const t = data?.totals;
@@ -277,22 +275,34 @@ export function AdminDashboard() {
               i === 0 ? <Crown size={13} /> :
               i === 1 ? <Medal size={13} /> :
               i === 2 ? <Flame size={13} /> : null;
+            const canOpen = isAdmin || r.id === me?.id;
             return (
-              <div key={r.id} className="flex items-center gap-3 px-2 py-2 rounded-lg transition-colors hover:bg-white/[0.03]">
+              <button
+                key={r.id}
+                disabled={!canOpen}
+                onClick={() => canOpen && setOpenMember({ id: r.id, name: r.name, color: r.color })}
+                className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors text-left ${canOpen ? "hover:bg-white/[0.05] cursor-pointer" : "cursor-default"}`}
+              >
                 <div className="w-8 inline-flex items-center justify-center gap-1 text-[11px] font-bold tabular-nums"
                   style={{ color: rankColor }}>
                   {rankIcon ?? String(i + 1).padStart(2, "0")}
                 </div>
                 <Avatar name={r.name} color={r.color} size={30} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-white text-sm font-medium truncate mb-1">{r.name}</div>
+                  <div className="text-white text-sm font-medium truncate mb-1 flex items-center gap-2">
+                    {r.name}
+                    {r.id === me?.id && (
+                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded"
+                        style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>Você</span>
+                    )}
+                  </div>
                   <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-500"
                       style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${rankColor}, ${PALETTE.lime})` }} />
                   </div>
                 </div>
                 <div className="text-white font-bold tabular-nums w-10 text-right">{r.count}</div>
-              </div>
+              </button>
             );
           })}
           {(top.data?.ranking ?? []).length === 0 && (
@@ -300,8 +310,173 @@ export function AdminDashboard() {
           )}
         </div>
       </div>
+
+      {openMember && (
+        <MemberDetailPanel
+          member={openMember}
+          monthKey={selectedMonthKey}
+          initialPeriod={period}
+          onClose={() => setOpenMember(null)}
+        />
+      )}
     </div>
   );
+}
+
+/* ============== MEMBER DETAIL PANEL ============== */
+
+function MemberDetailPanel({
+  member, monthKey, initialPeriod, onClose,
+}: {
+  member: { id: string; name: string; color: string };
+  monthKey: string;
+  initialPeriod: Period;
+  onClose: () => void;
+}) {
+  const me = useMe().data;
+  const role = me?.role;
+  const roleLabel =
+    role === "master" ? "Adm Master" :
+    role === "setor" ? "Adm de Setor" : "Membro";
+
+  const [period, setPeriod] = useState<Period>(initialPeriod);
+  const [filter, setFilter] = useState<"all" | "post" | "reel" | "outros">("all");
+
+  const q = useQuery(memberFinalizationsQO(member.id, period, monthKey));
+  const list = q.data ?? [];
+  const filtered = filter === "all" ? list : list.filter((t) => t.type === filter);
+
+  const counts = useMemo(() => ({
+    post: list.filter((t) => t.type === "post").length,
+    reel: list.filter((t) => t.type === "reel").length,
+    outros: list.filter((t) => t.type === "outros").length,
+  }), [list]);
+
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (!panelRef.current?.contains(e.target as Node)) onClose(); };
+    const t = setTimeout(() => document.addEventListener("mousedown", h), 50);
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", h); };
+  }, [onClose]);
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px]" />
+      <div ref={panelRef}
+        className="fixed z-50 bg-[#0D0D0D] border-white/10 flex flex-col lz-slide-in
+          inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl border-t
+          md:rounded-none md:border-t-0 md:border-l md:right-0 md:top-0 md:bottom-0 md:left-auto md:w-[480px] md:max-h-none">
+        {/* Header */}
+        <div className="px-6 pt-5 pb-4 border-b border-white/[0.08]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar name={member.name} color={member.color} size={48} />
+              <div className="min-w-0">
+                <div className="text-white font-bold text-[17px] truncate">{member.name}</div>
+                <div className="mt-1 inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded"
+                  style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+                  {roleLabel}
+                </div>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition">
+              <X size={16} />
+            </button>
+          </div>
+          <p className="text-[12px] text-white/60 mt-3">
+            <span className="text-white font-semibold">{list.length}</span> tarefa{list.length === 1 ? "" : "s"} finalizada{list.length === 1 ? "" : "s"} em <span className="text-white/80">{formatMonth(monthKey)}</span>
+          </p>
+        </div>
+
+        {/* Filter chips */}
+        <div className="px-6 pt-4 pb-3 flex items-center gap-2 flex-wrap">
+          {([
+            { id: "all", label: "Todos" },
+            { id: "post", label: "Posts" },
+            { id: "reel", label: "Reels" },
+            { id: "outros", label: "Outros" },
+          ] as const).map((f) => (
+            <button key={f.id} onClick={() => setFilter(f.id)}
+              className="px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors"
+              style={{
+                backgroundColor: filter === f.id ? "#C8D44E" : "rgba(255,255,255,0.06)",
+                color: filter === f.id ? "#0D0D0D" : "rgba(255,255,255,0.7)",
+              }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {q.isLoading && <div className="px-2 py-8 text-center text-white/40 text-xs">Carregando…</div>}
+          {!q.isLoading && filtered.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-14 text-center">
+              <Inbox size={28} className="text-white/20 mb-3" />
+              <p className="text-white/40 text-xs">Nenhuma tarefa finalizada neste período</p>
+            </div>
+          )}
+          <ul className="space-y-1.5">
+            {filtered.map((t) => {
+              const isAvulso = t.clientCategory === "Avulsos";
+              const typeLabel = t.type === "post" ? "POST" : t.type === "reel" ? "REEL" : "OUTRO";
+              return (
+                <li key={t.itemId + t.finalizedAt}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                      <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
+                        style={{
+                          backgroundColor: isAvulso ? "rgba(200,212,78,0.15)" : `${t.clientColor}22`,
+                          color: isAvulso ? "#C8D44E" : t.clientColor,
+                        }}>
+                        {isAvulso ? "AVULSO" : t.clientName}
+                      </span>
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
+                        style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
+                        {typeLabel}
+                      </span>
+                    </div>
+                    <div className="text-white text-sm truncate">{t.title}</div>
+                    <div className="text-[10px] text-white/40 mt-0.5">{formatFinalized(t.finalizedAt)}</div>
+                  </div>
+                  <CheckCircle2 size={18} style={{ color: "#C8D44E" }} className="shrink-0" />
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-white/[0.08] px-6 py-4 space-y-3 bg-[#0D0D0D]">
+          <div className="text-[11px] text-white/60">
+            <span className="text-white font-bold">{counts.post}</span> posts ·{" "}
+            <span className="text-white font-bold">{counts.reel}</span> reels ·{" "}
+            <span className="text-white font-bold">{counts.outros}</span> outros
+          </div>
+          <div className="flex items-center gap-1 bg-[#161616] rounded-md p-1 text-[10px] flex-wrap">
+            {(Object.keys(PERIOD_LABEL) as Period[]).map((p) => (
+              <button key={p} onClick={() => setPeriod(p)}
+                className="px-2.5 py-1.5 rounded transition flex-1"
+                style={{
+                  backgroundColor: period === p ? "#C8D44E" : "transparent",
+                  color: period === p ? "#0D0D0D" : "rgba(255,255,255,0.6)",
+                  fontWeight: period === p ? 700 : 500,
+                }}>
+                {PERIOD_LABEL[p]}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function formatFinalized(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) +
+    " · " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
 function MetricCard({
