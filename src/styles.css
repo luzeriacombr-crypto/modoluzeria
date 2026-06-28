@@ -141,5 +141,22 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Inter", "Segoe UI", sans-serif;
   }
+}
+
+@keyframes lz-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes lz-highlight {
+  0% { background-color: rgba(200, 212, 78, 0.15); }
+  100% { background-color: transparent; }
+}
+@utility lz-pulse {
+  animation: lz-pulse 280ms ease-out;
+}
+@utility lz-highlight {
+  animation: lz-highlight 2s ease-out;
 }
