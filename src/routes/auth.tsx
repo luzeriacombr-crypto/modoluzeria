@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import luzeriaLogo from "@/assets/luzeria-logo-light.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
