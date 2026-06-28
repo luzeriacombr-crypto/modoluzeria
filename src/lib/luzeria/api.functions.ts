@@ -1,12 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status } from "./types";
 
 /* ============== PROFILES & ROLES ============== */
 
 export const listProfiles = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const { data: profiles, error } = await context.supabase
       .from("profiles")
@@ -43,7 +44,7 @@ export const getMe = createServerFn({ method: "GET" })
   });
 
 export const updateMyProfile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { name?: string; color?: string; icon?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -53,7 +54,7 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   });
 
 export const setUserRole = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string; role: Role }) =>
     z.object({ userId: z.string().uuid(), role: z.enum(["master","setor","member"]) }).parse(d))
   .handler(async ({ data, context }) => {
@@ -66,7 +67,7 @@ export const setUserRole = createServerFn({ method: "POST" })
   });
 
 export const setUserActive = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string; active: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -77,7 +78,7 @@ export const setUserActive = createServerFn({ method: "POST" })
   });
 
 export const deleteUser = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string }) =>
     z.object({ userId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
@@ -91,7 +92,7 @@ export const deleteUser = createServerFn({ method: "POST" })
   });
 
 export const adminCreateUser = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { email: string; password: string; name: string; role: Role }) =>
     z.object({
       email: z.string().email(),
@@ -122,7 +123,7 @@ export const adminCreateUser = createServerFn({ method: "POST" })
 /* ============== CLIENTS ============== */
 
 export const listClients = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.from("clients").select("*").order("name");
     if (error) throw new Error(error.message);
@@ -163,7 +164,7 @@ async function seedMonth(supabase: any, clientId: string, key: string) {
 }
 
 export const createClient = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { name: string; category?: string; color?: string; icon?: string | null }) =>
     z.object({
       name: z.string().trim().min(1).max(80),
@@ -192,7 +193,7 @@ export const createClient = createServerFn({ method: "POST" })
   });
 
 export const updateClient = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { id: string; patch: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("clients").update(data.patch as any).eq("id", data.id);
@@ -201,7 +202,7 @@ export const updateClient = createServerFn({ method: "POST" })
   });
 
 export const deleteClient = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("clients").delete().eq("id", data.id);
@@ -210,7 +211,7 @@ export const deleteClient = createServerFn({ method: "POST" })
   });
 
 export const duplicateMonth = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string; fromKey: string }) => d)
   .handler(async ({ data, context }) => {
     const newKey = nextMonthKey(data.fromKey);
@@ -263,7 +264,7 @@ export const duplicateMonth = createServerFn({ method: "POST" })
   });
 
 export const listMonthKeys = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string }) => d)
   .handler(async ({ data, context }) => {
     const { data: months } = await context.supabase
@@ -272,7 +273,7 @@ export const listMonthKeys = createServerFn({ method: "GET" })
   });
 
 export const getMonth = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string; key: string }) => d)
   .handler(async ({ data, context }): Promise<MonthData | null> => {
     let { data: month } = await context.supabase
@@ -330,7 +331,7 @@ export const getMonth = createServerFn({ method: "GET" })
 /* ============== ITEMS ============== */
 
 export const updateItem = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { id: string; patch: { title?: string; copy?: string; drive_link?: string; reel_type?: string | null } }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("content_items").update(data.patch).eq("id", data.id);
@@ -339,7 +340,7 @@ export const updateItem = createServerFn({ method: "POST" })
   });
 
 export const setItemStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { id: string; status: Status }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("content_items").update({ status: data.status }).eq("id", data.id);
@@ -348,7 +349,7 @@ export const setItemStatus = createServerFn({ method: "POST" })
   });
 
 export const addAssignee = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { itemId: string; userId: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("item_assignees")
@@ -358,7 +359,7 @@ export const addAssignee = createServerFn({ method: "POST" })
   });
 
 export const addContentItem = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string }) =>
     z.object({
       clientId: z.string().uuid(),
@@ -392,7 +393,7 @@ export const addContentItem = createServerFn({ method: "POST" })
   });
 
 export const deleteItem = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
@@ -403,7 +404,7 @@ export const deleteItem = createServerFn({ method: "POST" })
   });
 
 export const removeAssignee = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { itemId: string; userId: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("item_assignees")
@@ -413,7 +414,7 @@ export const removeAssignee = createServerFn({ method: "POST" })
   });
 
 export const addComment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { itemId: string; text: string }) =>
     z.object({ itemId: z.string().uuid(), text: z.string().trim().min(1).max(2000) }).parse(d))
   .handler(async ({ data, context }) => {
@@ -426,7 +427,7 @@ export const addComment = createServerFn({ method: "POST" })
 /* ============== NOTIFICATIONS ============== */
 
 export const listNotifications = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const { data } = await context.supabase
       .from("notifications")
@@ -442,7 +443,7 @@ export const listNotifications = createServerFn({ method: "GET" })
   });
 
 export const markNotificationRead = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { id?: string; all?: boolean }) => d)
   .handler(async ({ data, context }) => {
     const q = context.supabase.from("notifications").update({ read: true }).eq("user_id", context.userId);
@@ -454,7 +455,7 @@ export const markNotificationRead = createServerFn({ method: "POST" })
 /* ============== MY TASKS ============== */
 
 export const listMyTasks = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { userId?: string }) => d)
   .handler(async ({ data, context }) => {
     let targetUser = context.userId;
@@ -482,7 +483,7 @@ export const listMyTasks = createServerFn({ method: "GET" })
 /* ============== PRODUCTIVITY ============== */
 
 export const getProductivity = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { userId?: string; monthKey: string }) => d)
   .handler(async ({ data, context }) => {
     let targetUser = context.userId;
@@ -535,7 +536,7 @@ export const getProductivity = createServerFn({ method: "GET" })
 /* ============== STORIES SCHEDULE ============== */
 
 export const listStories = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { monthKey: string }) => d)
   .handler(async ({ data, context }) => {
     const [y, m] = data.monthKey.split("-").map(Number);
@@ -555,7 +556,7 @@ export const listStories = createServerFn({ method: "GET" })
   });
 
 export const upsertStoryDay = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { day: string; userId?: string | null; label?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
@@ -573,7 +574,7 @@ export const upsertStoryDay = createServerFn({ method: "POST" })
   });
 
 export const getMyToday = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { userId?: string; today: string; weekday: number }) => d)
   .handler(async ({ data, context }) => {
     let targetUser = context.userId;
@@ -596,7 +597,7 @@ export const getMyToday = createServerFn({ method: "GET" })
 /* ============== CLEANING ============== */
 
 export const getCleaning = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const [{ data: rows }, { data: settings }] = await Promise.all([
       context.supabase.from("cleaning_schedule").select("id, task_idx, weekday, user_id, label"),
@@ -615,7 +616,7 @@ export const getCleaning = createServerFn({ method: "GET" })
   });
 
 export const upsertCleaningCell = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { taskIdx: number; weekday: number; userId?: string | null; label?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
@@ -634,7 +635,7 @@ export const upsertCleaningCell = createServerFn({ method: "POST" })
   });
 
 export const updateCleaningNote = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { note: string }) => d)
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
@@ -648,7 +649,7 @@ export const updateCleaningNote = createServerFn({ method: "POST" })
 /* ============== ADMIN DASHBOARD ============== */
 
 export const getAdminDashboard = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { monthKey: string }) =>
     z.object({ monthKey: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
   .handler(async ({ data, context }) => {
@@ -709,7 +710,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
   });
 
 export const getTopMembers = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { period: "month" | "3m" | "6m" | "year"; monthKey: string }) =>
     z.object({
       period: z.enum(["month", "3m", "6m", "year"]),
@@ -746,7 +747,7 @@ export const getTopMembers = createServerFn({ method: "GET" })
 /* ============== MEMBER FINALIZATIONS ============== */
 
 export const getMemberFinalizations = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string; period: "month" | "3m" | "6m" | "year"; monthKey: string }) =>
     z.object({
       userId: z.string().uuid(),
