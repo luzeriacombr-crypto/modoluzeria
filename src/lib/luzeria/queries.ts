@@ -5,6 +5,7 @@ import {
   getMe, getMonth, getProductivity, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, updateClient, updateItem, updateMyProfile,
+  listStories, upsertStoryDay, getCleaning, upsertCleaningCell, updateCleaningNote, getMyToday,
 } from "./api.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
@@ -31,6 +32,20 @@ export const productivityQO = (monthKey: string, userId?: string) =>
     queryKey: ["productivity", userId ?? "self", monthKey],
     queryFn: () => getProductivity({ data: { userId, monthKey } }),
     enabled: !!monthKey,
+  });
+
+export const storiesQO = (monthKey: string) =>
+  queryOptions({
+    queryKey: ["stories", monthKey],
+    queryFn: () => listStories({ data: { monthKey } }),
+    enabled: !!monthKey,
+  });
+export const cleaningQO = () =>
+  queryOptions({ queryKey: ["cleaning"], queryFn: () => getCleaning() });
+export const myTodayQO = (today: string, weekday: number, userId?: string) =>
+  queryOptions({
+    queryKey: ["my-today", userId ?? "self", today],
+    queryFn: () => getMyToday({ data: { userId, today, weekday } }),
   });
 
 export function useMe() { return useQuery(meQO()); }
@@ -62,5 +77,17 @@ export function useApi() {
     setUserActive: useMutation({ mutationFn: useServerFn(setUserActive), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     updateMyProfile: useMutation({ mutationFn: useServerFn(updateMyProfile), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
     markNotificationRead: useMutation({ mutationFn: useServerFn(markNotificationRead), onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }) }),
+    upsertStoryDay: useMutation({
+      mutationFn: useServerFn(upsertStoryDay),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["stories"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
+    }),
+    upsertCleaningCell: useMutation({
+      mutationFn: useServerFn(upsertCleaningCell),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
+    }),
+    updateCleaningNote: useMutation({
+      mutationFn: useServerFn(updateCleaningNote),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["cleaning"] }),
+    }),
   };
 }
