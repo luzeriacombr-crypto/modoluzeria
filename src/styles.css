@@ -170,8 +170,6 @@
   color: #ffffff;
   outline: none;
   transition: border-color 150ms ease;
-}
-@utility lz-input {
   &:focus {
     border-color: #C8D44E;
     box-shadow: 0 0 0 1px #C8D44E;
