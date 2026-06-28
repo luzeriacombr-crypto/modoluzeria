@@ -80,7 +80,7 @@ export function ClientView({ clientId }: { clientId: string }) {
         {tab === "reels" && (month?.reels ?? []).map((item, i) =>
           <ContentRow key={item.id} item={item} profiles={profiles} idx={i + 1} />)}
         {tab === "profile" && <ProfileTab client={client} profiles={profiles} canEdit={isAdmin}
-          onSave={(patch) => updateClient.mutate({ data: { id: client.id, patch } })} />}
+          onSave={(patch: Record<string, any>) => updateClient.mutate({ data: { id: client.id, patch } })} />}
       </div>
     </div>
   );
