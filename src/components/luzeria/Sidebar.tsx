@@ -158,10 +158,39 @@ function NavButton({ icon, label, active, onClick, badge }: { icon: React.ReactN
   );
 }
 
-function ClientRow({ client, active, onClick, onOpenCustomFields, canManage }: {
+function CategoryGroup({
+  name, color, children, defaultOpen, forceOpen,
+}: {
+  name: string; color: string; children: React.ReactNode;
+  defaultOpen?: boolean; forceOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen ?? true);
+  const isOpen = forceOpen || open;
+  const count = Array.isArray(children) ? (children as any[]).length : 1;
+  return (
+    <div className="mb-2">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-white/80 hover:bg-white/5 transition-colors"
+      >
+        {isOpen
+          ? <ChevronDown size={12} className="text-white/40 shrink-0" />
+          : <ChevronRight size={12} className="text-white/40 shrink-0" />}
+        <Folder size={14} style={{ color }} className="shrink-0" />
+        <span className="text-[12px] font-semibold tracking-tight truncate">{name}</span>
+        <span className="ml-auto text-[10px] text-white/40">{count}</span>
+      </button>
+      {isOpen && <div className="mt-0.5">{children}</div>}
+    </div>
+  );
+}
+
+function ClientRow({ client, active, onClick, onOpenCustomFields, canManage, categories }: {
   client: Client; active: boolean; onClick: () => void; onOpenCustomFields: () => void; canManage: boolean;
+  categories: string[];
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { updateClient, deleteClient, duplicateMonth } = useApi();
 
@@ -211,6 +240,32 @@ function ClientRow({ client, active, onClick, onOpenCustomFields, canManage }: {
             if (name) updateClient.mutate({ data: { id: client.id, patch: { name } } });
             setMenuOpen(false);
           }}>Renomear</MenuItem>
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setMoveOpen((o) => !o); }}
+              className="w-full text-left px-3 py-2 text-xs text-white/80 hover:bg-white/5 transition-colors flex items-center justify-between"
+            >
+              <span>Mover para categoria</span>
+              <ChevronRight size={12} className="text-white/40" />
+            </button>
+            {moveOpen && (
+              <div className="absolute left-full top-0 ml-1 min-w-[160px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 z-50">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      updateClient.mutate({ data: { id: client.id, patch: { category: cat } } });
+                      setMoveOpen(false); setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-white/80 hover:bg-white/5 transition-colors flex items-center justify-between"
+                  >
+                    <span>{cat}</span>
+                    {client.category === cat && <span className="text-[#C8D44E]">●</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="px-3 py-2">
             <div className="text-[10px] uppercase text-white/40 mb-1.5">Cor</div>
             <div className="flex flex-wrap gap-1.5">
