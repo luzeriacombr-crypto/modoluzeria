@@ -648,9 +648,6 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
   .inputValidator((d: { monthKey: string }) =>
     z.object({ monthKey: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-
     const { data: clientsAll } = await context.supabase
       .from("clients").select("id, name, color, archived, category").order("name");
     // "Ex-clientes" não entram nas métricas nem na listagem do dashboard.
@@ -715,9 +712,6 @@ export const getTopMembers = createServerFn({ method: "GET" })
       monthKey: z.string().regex(/^\d{4}-\d{2}$/),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-
     const [y, m] = data.monthKey.split("-").map(Number);
     const end = new Date(Date.UTC(y, m, 1)); // exclusive end = first day of next month
     let start: Date;
