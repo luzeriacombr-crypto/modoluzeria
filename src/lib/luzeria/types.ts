@@ -53,6 +53,7 @@ export interface Client {
   icon: string | null;
   favorite: boolean;
   archived: boolean;
+  category: string;
   customFields: CustomFields;
   createdAt: string;
 }

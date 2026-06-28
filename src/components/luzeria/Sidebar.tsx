@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Search, Star, MoreHorizontal, LayoutDashboard, Archive, ChevronDown,
+  Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder,
   Settings, LogOut, Plus,
 } from "lucide-react";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -12,6 +12,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Client } from "@/lib/luzeria/types";
 
+const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Ex-clientes"] as const;
+const CATEGORY_COLOR: Record<string, string> = {
+  "Social Media": "#5BA88A",
+  "Pack Digital": "#5BA88A",
+  "Ex-clientes": "#E76F51",
+};
+
 export function Sidebar({
   onOpenCustomFields,
   onCreateClient,
@@ -19,23 +26,34 @@ export function Sidebar({
   const me = useMe().data;
   const { data: clients = [] } = useQuery(clientsQO());
   const [search, setSearch] = useState("");
-  const [showArchived, setShowArchived] = useState(false);
   const { selectedClientId, view, selectClient, setView } = useUI();
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return clients.filter((c) =>
-      (showArchived ? c.archived : !c.archived) &&
-      (!term || c.name.toLowerCase().includes(term))
-    );
-  }, [clients, search, showArchived]);
+    return clients.filter((c) => !term || c.name.toLowerCase().includes(term));
+  }, [clients, search]);
 
-  const sorted = useMemo(
-    () => [...filtered].sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name)),
-    [filtered]
-  );
+  const grouped = useMemo(() => {
+    const byCat = new Map<string, Client[]>();
+    for (const c of filtered) {
+      const cat = c.category || "Social Media";
+      if (!byCat.has(cat)) byCat.set(cat, []);
+      byCat.get(cat)!.push(c);
+    }
+    for (const arr of byCat.values()) {
+      arr.sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name));
+    }
+    const known = CATEGORY_ORDER.filter((k) => byCat.has(k)).map((k) => [k, byCat.get(k)!] as const);
+    const extras = [...byCat.entries()].filter(([k]) => !(CATEGORY_ORDER as readonly string[]).includes(k));
+    return [...known, ...extras] as Array<readonly [string, Client[]]>;
+  }, [filtered]);
 
-  const archivedCount = clients.filter((c) => c.archived).length;
+  const allCategories = useMemo(() => {
+    const set = new Set<string>(CATEGORY_ORDER);
+    clients.forEach((c) => c.category && set.add(c.category));
+    return [...set];
+  }, [clients]);
+
   const isAdmin = me?.role === "master" || me?.role === "setor";
 
   return (
@@ -86,27 +104,31 @@ export function Sidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto pt-2 pb-3 px-2">
-        {sorted.map((c) => (
-          <ClientRow key={c.id} client={c} active={selectedClientId === c.id && view === "client"}
-            onClick={() => selectClient(c.id)}
-            onOpenCustomFields={() => onOpenCustomFields(c)}
-            canManage={isAdmin}
-          />
-        ))}
-        {sorted.length === 0 && (
-          <div className="text-xs text-white/30 text-center mt-6 px-3">
-            {search ? "Nenhum cliente encontrado." : showArchived ? "Sem arquivados." : "Sem clientes ainda."}
-          </div>
-        )}
-
-        {archivedCount > 0 && (
-          <button
-            onClick={() => setShowArchived((s) => !s)}
-            className="mt-3 w-full flex items-center gap-2 px-3 py-2 text-[11px] uppercase tracking-wider text-white/40 hover:text-white/70 transition"
+        {grouped.map(([cat, list]) => (
+          <CategoryGroup
+            key={cat}
+            name={cat}
+            color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
+            defaultOpen={cat !== "Ex-clientes"}
+            forceOpen={search.trim().length > 0}
           >
-            <Archive size={12} />
-            {showArchived ? "Mostrar ativos" : `Arquivados (${archivedCount})`}
-          </button>
+            {list.map((c) => (
+              <ClientRow
+                key={c.id}
+                client={c}
+                active={selectedClientId === c.id && view === "client"}
+                onClick={() => selectClient(c.id)}
+                onOpenCustomFields={() => onOpenCustomFields(c)}
+                canManage={isAdmin}
+                categories={allCategories}
+              />
+            ))}
+          </CategoryGroup>
+        ))}
+        {filtered.length === 0 && (
+          <div className="text-xs text-white/30 text-center mt-6 px-3">
+            {search ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
+          </div>
         )}
       </div>
 
@@ -136,10 +158,39 @@ function NavButton({ icon, label, active, onClick, badge }: { icon: React.ReactN
   );
 }
 
-function ClientRow({ client, active, onClick, onOpenCustomFields, canManage }: {
+function CategoryGroup({
+  name, color, children, defaultOpen, forceOpen,
+}: {
+  name: string; color: string; children: React.ReactNode;
+  defaultOpen?: boolean; forceOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen ?? true);
+  const isOpen = forceOpen || open;
+  const count = Array.isArray(children) ? (children as any[]).length : 1;
+  return (
+    <div className="mb-2">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-white/80 hover:bg-white/5 transition-colors"
+      >
+        {isOpen
+          ? <ChevronDown size={12} className="text-white/40 shrink-0" />
+          : <ChevronRight size={12} className="text-white/40 shrink-0" />}
+        <Folder size={14} style={{ color }} className="shrink-0" />
+        <span className="text-[12px] font-semibold tracking-tight truncate">{name}</span>
+        <span className="ml-auto text-[10px] text-white/40">{count}</span>
+      </button>
+      {isOpen && <div className="mt-0.5">{children}</div>}
+    </div>
+  );
+}
+
+function ClientRow({ client, active, onClick, onOpenCustomFields, canManage, categories }: {
   client: Client; active: boolean; onClick: () => void; onOpenCustomFields: () => void; canManage: boolean;
+  categories: string[];
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { updateClient, deleteClient, duplicateMonth } = useApi();
 
@@ -189,6 +240,32 @@ function ClientRow({ client, active, onClick, onOpenCustomFields, canManage }: {
             if (name) updateClient.mutate({ data: { id: client.id, patch: { name } } });
             setMenuOpen(false);
           }}>Renomear</MenuItem>
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setMoveOpen((o) => !o); }}
+              className="w-full text-left px-3 py-2 text-xs text-white/80 hover:bg-white/5 transition-colors flex items-center justify-between"
+            >
+              <span>Mover para categoria</span>
+              <ChevronRight size={12} className="text-white/40" />
+            </button>
+            {moveOpen && (
+              <div className="absolute left-full top-0 ml-1 min-w-[160px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 z-50">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      updateClient.mutate({ data: { id: client.id, patch: { category: cat } } });
+                      setMoveOpen(false); setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-white/80 hover:bg-white/5 transition-colors flex items-center justify-between"
+                  >
+                    <span>{cat}</span>
+                    {client.category === cat && <span className="text-[#C8D44E]">●</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="px-3 py-2">
             <div className="text-[10px] uppercase text-white/40 mb-1.5">Cor</div>
             <div className="flex flex-wrap gap-1.5">

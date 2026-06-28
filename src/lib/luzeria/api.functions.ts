@@ -86,6 +86,7 @@ export const listClients = createServerFn({ method: "GET" })
     return (data ?? []).map<Client>((c) => ({
       id: c.id, name: c.name, color: c.color, icon: c.icon,
       favorite: c.favorite, archived: c.archived,
+      category: (c as any).category ?? "Social Media",
       customFields: {
         niche: c.niche ?? "",
         postsPerWeek: c.posts_per_week ?? 0,
