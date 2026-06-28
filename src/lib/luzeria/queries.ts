@@ -6,7 +6,7 @@ import {
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile,
   listStories, upsertStoryDay, getCleaning, upsertCleaningCell, updateCleaningNote, getMyToday,
-  adminCreateUser, getAdminDashboard, getTopMembers,
+  adminCreateUser, getAdminDashboard, getTopMembers, getMemberFinalizations,
 } from "./api.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
@@ -61,6 +61,17 @@ export const topMembersQO = (period: "month" | "3m" | "6m" | "year", monthKey: s
     queryKey: ["top-members", period, monthKey],
     queryFn: () => getTopMembers({ data: { period, monthKey } }),
     enabled: !!monthKey,
+  });
+
+export const memberFinalizationsQO = (
+  userId: string,
+  period: "month" | "3m" | "6m" | "year",
+  monthKey: string,
+) =>
+  queryOptions({
+    queryKey: ["member-finalizations", userId, period, monthKey],
+    queryFn: () => getMemberFinalizations({ data: { userId, period, monthKey } }),
+    enabled: !!userId && !!monthKey,
   });
 
 export function useMe() { return useQuery(meQO()); }
