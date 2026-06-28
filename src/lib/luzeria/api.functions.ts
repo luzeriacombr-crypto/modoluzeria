@@ -335,3 +335,56 @@ export const listMyTasks = createServerFn({ method: "GET" })
       clientName: it.months.clients.name, clientColor: it.months.clients.color,
     }));
   });
+
+/* ============== PRODUCTIVITY ============== */
+
+export const getProductivity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { userId?: string; monthKey: string }) => d)
+  .handler(async ({ data, context }) => {
+    let targetUser = context.userId;
+    if (data.userId && data.userId !== context.userId) {
+      const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+      if (!isAdmin) throw new Error("Forbidden");
+      targetUser = data.userId;
+    }
+    const [y, m] = data.monthKey.split("-").map(Number);
+    const start = new Date(Date.UTC(y, m - 1, 1)).toISOString();
+    const end = new Date(Date.UTC(y, m, 1)).toISOString();
+    const { data: assigns } = await context.supabase
+      .from("item_assignees").select("item_id").eq("user_id", targetUser);
+    const itemIds = (assigns ?? []).map((a) => a.item_id);
+    if (itemIds.length === 0) {
+      return { weeks: [0, 0, 0, 0], items: [[], [], [], []] as string[][], total: 0, history: [] };
+    }
+    const { data: done } = await context.supabase
+      .from("content_items").select("id, title, updated_at")
+      .in("id", itemIds).eq("status", "FINALIZADO")
+      .gte("updated_at", start).lt("updated_at", end);
+    const weeks = [0, 0, 0, 0];
+    const items: string[][] = [[], [], [], []];
+    (done ?? []).forEach((it: any) => {
+      const day = new Date(it.updated_at).getUTCDate();
+      const w = Math.min(3, Math.floor((day - 1) / 7));
+      weeks[w]++; items[w].push(it.title);
+    });
+    // 6-month history
+    const histStart = new Date(Date.UTC(y, m - 6, 1)).toISOString();
+    const { data: hist } = await context.supabase
+      .from("content_items").select("updated_at")
+      .in("id", itemIds).eq("status", "FINALIZADO")
+      .gte("updated_at", histStart).lt("updated_at", end);
+    const history: { key: string; count: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(Date.UTC(y, m - 1 - i, 1));
+      const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      history.push({ key: k, count: 0 });
+    }
+    (hist ?? []).forEach((it: any) => {
+      const d = new Date(it.updated_at);
+      const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      const h = history.find((x) => x.key === k);
+      if (h) h.count++;
+    });
+    return { weeks, items, total: (done ?? []).length, history };
+  });
