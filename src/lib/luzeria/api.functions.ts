@@ -224,11 +224,34 @@ export const duplicateMonth = createServerFn({ method: "POST" })
     if (mErr) throw new Error(mErr.message);
     if (fromMonth) {
       const { data: oldItems } = await context.supabase
-        .from("content_items").select("type, idx, title").eq("month_id", fromMonth.id).order("idx");
+        .from("content_items").select("id, type, idx, title").eq("month_id", fromMonth.id).order("idx");
       if (oldItems?.length) {
-        await context.supabase.from("content_items").insert(
-          oldItems.map((it) => ({ month_id: newMonth.id, type: it.type, idx: it.idx, title: it.title }))
-        );
+        // Insert new items in the same shape (status defaults to PLANEJAMENTO).
+        const { data: inserted, error: insErr } = await context.supabase.from("content_items")
+          .insert(oldItems.map((it) => ({
+            month_id: newMonth.id, type: it.type, idx: it.idx, title: it.title,
+            status: "PLANEJAMENTO" as Status,
+          })))
+          .select("id, type, idx");
+        if (insErr) throw new Error(insErr.message);
+        // Carry over assignees by matching (type, idx).
+        const oldIdByKey = new Map<string, string>();
+        oldItems.forEach((it: any) => oldIdByKey.set(`${it.type}:${it.idx}`, it.id));
+        const newIdByKey = new Map<string, string>();
+        (inserted ?? []).forEach((it: any) => newIdByKey.set(`${it.type}:${it.idx}`, it.id));
+        const oldItemIds = [...oldIdByKey.values()];
+        if (oldItemIds.length) {
+          const { data: oldAssign } = await context.supabase
+            .from("item_assignees").select("item_id, user_id").in("item_id", oldItemIds);
+          const rows: { item_id: string; user_id: string }[] = [];
+          (oldAssign ?? []).forEach((a: any) => {
+            const old = oldItems.find((o: any) => o.id === a.item_id);
+            if (!old) return;
+            const newId = newIdByKey.get(`${old.type}:${old.idx}`);
+            if (newId) rows.push({ item_id: newId, user_id: a.user_id });
+          });
+          if (rows.length) await context.supabase.from("item_assignees").insert(rows);
+        }
       }
     } else {
       const items: any[] = [];
@@ -615,4 +638,104 @@ export const updateCleaningNote = createServerFn({ method: "POST" })
       .from("cleaning_settings").upsert({ id: 1, note: data.note, updated_at: new Date().toISOString() });
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/* ============== ADMIN DASHBOARD ============== */
+
+export const getAdminDashboard = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { monthKey: string }) =>
+    z.object({ monthKey: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { data: clients } = await context.supabase
+      .from("clients").select("id, name, color, archived, category").order("name");
+    const { data: months } = await context.supabase
+      .from("months").select("id, client_id").eq("key", data.monthKey);
+    const monthIds = (months ?? []).map((m) => m.id);
+    const monthByClient = new Map<string, string>();
+    (months ?? []).forEach((m) => monthByClient.set(m.client_id, m.id));
+    const { data: items } = monthIds.length
+      ? await context.supabase
+          .from("content_items").select("id, month_id, type, status").in("month_id", monthIds)
+      : { data: [] as any[] };
+
+    type Row = {
+      id: string; name: string; color: string; archived: boolean; category: string;
+      posts: number; reels: number; total: number; done: number; percent: number;
+    };
+    const rows: Row[] = (clients ?? []).map((c: any) => {
+      const mid = monthByClient.get(c.id);
+      const its = mid ? (items ?? []).filter((it: any) => it.month_id === mid) : [];
+      const posts = its.filter((i) => i.type === "post").length;
+      const reels = its.filter((i) => i.type === "reel").length;
+      const total = its.length;
+      const done = its.filter((i) => i.status === "FINALIZADO").length;
+      const percent = total ? Math.round((done / total) * 100) : 0;
+      return {
+        id: c.id, name: c.name, color: c.color, archived: !!c.archived,
+        category: c.category ?? "Social Media",
+        posts, reels, total, done, percent,
+      };
+    });
+
+    const active = rows.filter((r) => !r.archived);
+    const totalPlanned = active.reduce((a, r) => a + r.total, 0);
+    const totalDone = active.reduce((a, r) => a + r.done, 0);
+    const overallPct = totalPlanned ? Math.round((totalDone / totalPlanned) * 100) : 0;
+    const ontime = active.filter((r) => r.total > 0 && r.percent >= 80).length;
+    const behind = active.filter((r) => r.total > 0 && r.percent < 80).length;
+
+    return {
+      monthKey: data.monthKey,
+      totals: {
+        clients: active.length,
+        planned: totalPlanned,
+        done: totalDone,
+        percent: overallPct,
+        ontime,
+        behind,
+      },
+      clients: rows,
+    };
+  });
+
+export const getTopMembers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { period: "month" | "3m" | "6m" | "year"; monthKey: string }) =>
+    z.object({
+      period: z.enum(["month", "3m", "6m", "year"]),
+      monthKey: z.string().regex(/^\d{4}-\d{2}$/),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const [y, m] = data.monthKey.split("-").map(Number);
+    const end = new Date(Date.UTC(y, m, 1)); // exclusive end = first day of next month
+    let start: Date;
+    if (data.period === "month") start = new Date(Date.UTC(y, m - 1, 1));
+    else if (data.period === "3m") start = new Date(Date.UTC(y, m - 3, 1));
+    else if (data.period === "6m") start = new Date(Date.UTC(y, m - 6, 1));
+    else start = new Date(Date.UTC(y, 0, 1));
+
+    const { data: finals } = await context.supabase
+      .from("finalizations").select("user_id")
+      .gte("finalized_at", start.toISOString())
+      .lt("finalized_at", end.toISOString());
+    const counts = new Map<string, number>();
+    (finals ?? []).forEach((f: any) => counts.set(f.user_id, (counts.get(f.user_id) ?? 0) + 1));
+
+    const { data: profiles } = await context.supabase
+      .from("profiles").select("id, name, color, icon");
+    const ranking = (profiles ?? [])
+      .map((p: any) => ({
+        id: p.id, name: p.name, color: p.color, icon: p.icon,
+        count: counts.get(p.id) ?? 0,
+      }))
+      .filter((r) => r.count > 0)
+      .sort((a, b) => b.count - a.count);
+    return { period: data.period, ranking };
   });

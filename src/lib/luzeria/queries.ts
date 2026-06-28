@@ -6,7 +6,7 @@ import {
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile,
   listStories, upsertStoryDay, getCleaning, upsertCleaningCell, updateCleaningNote, getMyToday,
-  adminCreateUser,
+  adminCreateUser, getAdminDashboard, getTopMembers,
 } from "./api.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
@@ -49,6 +49,20 @@ export const myTodayQO = (today: string, weekday: number, userId?: string) =>
     queryFn: () => getMyToday({ data: { userId, today, weekday } }),
   });
 
+export const adminDashboardQO = (monthKey: string) =>
+  queryOptions({
+    queryKey: ["admin-dashboard", monthKey],
+    queryFn: () => getAdminDashboard({ data: { monthKey } }),
+    enabled: !!monthKey,
+  });
+
+export const topMembersQO = (period: "month" | "3m" | "6m" | "year", monthKey: string) =>
+  queryOptions({
+    queryKey: ["top-members", period, monthKey],
+    queryFn: () => getTopMembers({ data: { period, monthKey } }),
+    enabled: !!monthKey,
+  });
+
 export function useMe() { return useQuery(meQO()); }
 
 export function useApi() {
@@ -57,10 +71,15 @@ export function useApi() {
     qc.invalidateQueries({ queryKey: ["month"] });
     qc.invalidateQueries({ queryKey: ["clients"] });
     qc.invalidateQueries({ queryKey: ["my-tasks"] });
+    qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
+    qc.invalidateQueries({ queryKey: ["top-members"] });
   };
   return {
     createClient: useMutation({ mutationFn: useServerFn(createClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) }),
-    updateClient: useMutation({ mutationFn: useServerFn(updateClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) }),
+    updateClient: useMutation({ mutationFn: useServerFn(updateClient), onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
+    } }),
     deleteClient: useMutation({ mutationFn: useServerFn(deleteClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) }),
     duplicateMonth: useMutation({
       mutationFn: useServerFn(duplicateMonth),

@@ -33,10 +33,13 @@ export function MyTasks() {
     enabled: !!targetId,
   });
 
-  const grouped: Record<Status, typeof tasks> = {
-    START: [], CRIACAO: [], REVISAO_ARTE: [], REVISAO_CLIENTE: [], FINALIZADO: [],
-  };
-  tasks.forEach((t) => grouped[t.status as Status].push(t));
+  const grouped: Record<Status, typeof tasks> = Object.fromEntries(
+    STATUS_ORDER.map((s) => [s, [] as typeof tasks])
+  ) as Record<Status, typeof tasks>;
+  tasks.forEach((t) => {
+    const s = t.status as Status;
+    if (grouped[s]) grouped[s].push(t);
+  });
 
   const targetProfile = profiles.find((p) => p.id === targetId);
 

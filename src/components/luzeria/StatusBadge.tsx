@@ -3,8 +3,9 @@ import { STATUS_META, STATUS_ORDER, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 
 export function StatusBadge({
-  status, onChange, size = "sm",
-}: { status: Status; onChange?: (s: Status) => void; size?: "sm" | "md" }) {
+  status, onChange, size = "sm", options,
+}: { status: Status; onChange?: (s: Status) => void; size?: "sm" | "md"; options?: Status[] }) {
+  const list = options ?? STATUS_ORDER;
   const meta = STATUS_META[status];
   const Icon = STATUS_ICONS[status];
   const [open, setOpen] = useState(false);
@@ -41,8 +42,8 @@ export function StatusBadge({
         <span>{meta.label}</span>
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 left-0 min-w-[180px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1">
-          {STATUS_ORDER.map((s) => {
+        <div className="absolute z-50 mt-1 left-0 min-w-[180px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto">
+          {list.map((s) => {
             const m = STATUS_META[s];
             const I = STATUS_ICONS[s];
             return (

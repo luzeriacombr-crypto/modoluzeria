@@ -1,16 +1,23 @@
 import {
-  Play, Paintbrush, Eye, MessageSquare, CheckCircle,
+  FileText, PenLine, Search, MessageSquare, CalendarCheck, CalendarClock, CheckCircle,
+  Paintbrush, Eye, Video, Scissors,
   Film, Image as ImageIcon, Grid3x3, Link as LinkIcon,
 } from "lucide-react";
 import type { Status } from "@/lib/luzeria/types";
 
 type IconProps = { className?: string; size?: number; style?: React.CSSProperties; color?: string };
 export const STATUS_ICONS: Record<Status, React.ComponentType<IconProps>> = {
-  START: Play,
+  PLANEJAMENTO: FileText,
+  COPY: PenLine,
+  REVISAO_INTERNA: Search,
+  REVISAO_CLIENTE: MessageSquare,
+  AGENDAMENTO: CalendarCheck,
+  REVISAO_AGENDAMENTO: CalendarClock,
+  FINALIZADO: CheckCircle,
   CRIACAO: Paintbrush,
   REVISAO_ARTE: Eye,
-  REVISAO_CLIENTE: MessageSquare,
-  FINALIZADO: CheckCircle,
+  EM_GRAVACAO: Video,
+  EM_EDICAO: Scissors,
 };
 
 export function detectDriveType(url: string): {

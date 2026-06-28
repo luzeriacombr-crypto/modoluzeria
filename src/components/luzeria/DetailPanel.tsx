@@ -3,12 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { X, Send, ExternalLink, Plus, Check } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { STATUS_META, STATUS_ORDER, type Status, type Profile, type ContentItem } from "@/lib/luzeria/types";
+import { STATUS_META, statusOptionsFor, type Status, type Profile, type ContentItem } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS, detectDriveType } from "./icons";
 
 function findItem(month: any, id: string): ContentItem | undefined {
-  return month?.posts.find((i: any) => i.id === id) ?? month?.reels.find((i: any) => i.id === id);
+  return (
+    month?.posts.find((i: any) => i.id === id) ??
+    month?.reels.find((i: any) => i.id === id) ??
+    month?.outros?.find((i: any) => i.id === id)
+  );
 }
 
 export function DetailPanel() {
@@ -62,7 +66,7 @@ export function DetailPanel() {
         <div className="px-6 pt-5 pb-4 border-b border-white/[0.08]">
           <div className="flex items-start justify-between gap-2">
             <div className="text-[12px] uppercase font-bold tracking-wider" style={{ color: "#C8D44E" }}>
-              {item.type === "post" ? "Post" : "Reels"} {String(item.idx).padStart(2, "0")}
+              {item.type === "post" ? "Post" : item.type === "reel" ? "Reels" : "Item"} {String(item.idx).padStart(2, "0")}
               {client && <span className="ml-2 text-white/40 font-semibold">· {client.name}</span>}
             </div>
             <button onClick={() => openItem(null)} className="text-white/50 hover:text-white p-1 -mt-1 -mr-1 rounded hover:bg-white/5 transition">
@@ -77,7 +81,7 @@ export function DetailPanel() {
         {/* Status */}
         <Section label="Status">
           <div className="grid grid-cols-2 gap-2">
-            {STATUS_ORDER.map((s) => {
+            {statusOptionsFor(item.type).map((s) => {
               const m = STATUS_META[s]; const I = STATUS_ICONS[s];
               const active = item.status === s;
               return (

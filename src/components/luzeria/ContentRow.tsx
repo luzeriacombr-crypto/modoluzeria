@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link as LinkIcon, MessageCircle, Plus } from "lucide-react";
 import type { ContentItem, Profile } from "@/lib/luzeria/types";
+import { statusOptionsFor } from "@/lib/luzeria/types";
 import { useApi, useMe } from "@/lib/luzeria/queries";
 import { StatusBadge } from "./StatusBadge";
 import { Avatar, AvatarStack } from "./Avatar";
@@ -61,7 +62,7 @@ export function ContentRow({ item, profiles, idx }: {
       )}
 
       <div onClick={(e) => e.stopPropagation()}>
-        <StatusBadge status={item.status}
+        <StatusBadge status={item.status} options={statusOptionsFor(item.type)}
           onChange={(s) => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }} />
       </div>
 

@@ -91,7 +91,7 @@ export function ClientView({ clientId }: { clientId: string }) {
               .map((item, i) => (
                 <div key={item.id} className="group/row relative">
                   <ContentRow item={item} profiles={profiles} idx={i + 1} />
-                  {isAdmin && isAvulso && (
+                  {isAdmin && (
                     <button
                       onClick={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}
                       title="Excluir item"
@@ -101,13 +101,13 @@ export function ClientView({ clientId }: { clientId: string }) {
                   )}
                 </div>
               ))}
-            {isAdmin && isAvulso && (
+            {isAdmin && (
               <button
                 onClick={() => addContentItem.mutate({
                   data: { clientId, key: selectedMonthKey, type: tab === "posts" ? "post" : tab === "reels" ? "reel" : "outros" },
                 })}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold border border-dashed border-white/15 text-white/60 hover:text-[#C8D44E] hover:border-[#C8D44E] transition">
-                <Plus size={13} /> Adicionar {tab === "posts" ? "post" : tab === "reels" ? "reel" : "item"}
+                className="mt-4 ml-4 inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold border border-dashed border-white/15 text-white/60 hover:text-[#C8D44E] hover:border-[#C8D44E] transition">
+                <Plus size={13} /> Adicionar {tab === "posts" ? "Post" : tab === "reels" ? "Reel" : "item"}
               </button>
             )}
             {isAvulso && (tab === "posts" ? month?.posts : tab === "reels" ? month?.reels : month?.outros)?.length === 0 && !isAdmin && (

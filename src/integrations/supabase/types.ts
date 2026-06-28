@@ -228,6 +228,42 @@ export type Database = {
         }
         Relationships: []
       }
+      finalizations: {
+        Row: {
+          finalized_at: string
+          id: string
+          item_id: string | null
+          user_id: string
+        }
+        Insert: {
+          finalized_at?: string
+          id?: string
+          item_id?: string | null
+          user_id: string
+        }
+        Update: {
+          finalized_at?: string
+          id?: string
+          item_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finalizations_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finalizations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_assignees: {
         Row: {
           created_at: string
@@ -433,6 +469,13 @@ export type Database = {
         | "REVISAO_ARTE"
         | "REVISAO_CLIENTE"
         | "FINALIZADO"
+        | "PLANEJAMENTO"
+        | "COPY"
+        | "REVISAO_INTERNA"
+        | "AGENDAMENTO"
+        | "REVISAO_AGENDAMENTO"
+        | "EM_GRAVACAO"
+        | "EM_EDICAO"
       content_type: "post" | "reel" | "outros"
     }
     CompositeTypes: {
@@ -568,6 +611,13 @@ export const Constants = {
         "REVISAO_ARTE",
         "REVISAO_CLIENTE",
         "FINALIZADO",
+        "PLANEJAMENTO",
+        "COPY",
+        "REVISAO_INTERNA",
+        "AGENDAMENTO",
+        "REVISAO_AGENDAMENTO",
+        "EM_GRAVACAO",
+        "EM_EDICAO",
       ],
       content_type: ["post", "reel", "outros"],
     },
