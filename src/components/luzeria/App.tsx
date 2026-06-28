@@ -11,6 +11,7 @@ import { MyTasks } from "./MyTasks";
 import { SettingsPage } from "./Settings";
 import { StoriesView } from "./StoriesView";
 import { CleaningView } from "./CleaningView";
+import { AdminDashboard } from "./AdminDashboard";
 import { NotificationsBell } from "./Notifications";
 import { NewClientModal, CustomFieldsModal } from "./Modals";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +61,7 @@ export function App() {
           {view === "settings" && <SettingsPage />}
           {view === "stories" && <StoriesView />}
           {view === "cleaning" && <CleaningView />}
+          {view === "admin" && <AdminDashboard />}
         </main>
       </div>
       <DetailPanel />
