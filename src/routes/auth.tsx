@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import luzeriaLogo from "@/assets/luzeria-logo-light.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -53,9 +54,8 @@ function AuthPage() {
       <Toaster theme="dark" position="bottom-right" />
       <div className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-8 shadow-2xl"
         style={{ border: "1px solid rgba(200,212,78,0.2)" }}>
-        <div className="flex items-center justify-center gap-2.5 mb-10">
-          <div className="h-10 w-10 rounded-lg flex items-center justify-center text-lg font-bold" style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>L</div>
-          <span className="text-white text-2xl font-bold tracking-tight">Luzeria</span>
+        <div className="flex items-center justify-center mb-10">
+          <img src={luzeriaLogo.url} alt="Luzeria" className="h-10 w-auto object-contain" />
         </div>
         <h1 className="text-white text-xl font-semibold text-center">
           {mode === "signin" ? "Acesse sua conta" : "Crie sua conta"}
