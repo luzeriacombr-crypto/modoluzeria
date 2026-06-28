@@ -170,8 +170,8 @@ export function AdminDashboard() {
       {/* Top members */}
       <div className="rounded-xl bg-[#161616] border border-white/[0.07] p-5 mb-6 relative overflow-hidden">
         <div className="pointer-events-none absolute -top-16 -right-10 h-48 w-48 rounded-full opacity-15 blur-3xl" style={{ background: PALETTE.lime }} />
-        <div className="flex items-center justify-center md:justify-between flex-wrap gap-3 mb-5 relative">
-          <h2 className="text-white font-semibold inline-flex items-center gap-2 text-center">
+        <div className="flex items-center justify-start md:justify-between flex-wrap gap-3 mb-5 relative">
+          <h2 className="text-white font-semibold inline-flex items-center gap-2">
             <Trophy size={16} className="text-[#C8D44E]" />
             Top Membros <span className="text-white/40 font-normal">— {PERIOD_LABEL[period]}</span>
           </h2>
@@ -203,7 +203,7 @@ export function AdminDashboard() {
                 key={r.id}
                 disabled={!canOpen}
                 onClick={() => canOpen && setOpenMember({ id: r.id, name: r.name, color: r.color })}
-                className={`w-full flex flex-col md:flex-row items-center gap-3 px-2 py-2 rounded-lg transition-colors text-center md:text-left ${canOpen ? "hover:bg-white/[0.05] cursor-pointer" : "cursor-default"}`}
+                className={`w-full flex flex-row items-start gap-3 px-2 py-2 rounded-lg transition-colors text-left ${canOpen ? "hover:bg-white/[0.05] cursor-pointer" : "cursor-default"}`}
               >
                 <div className="w-8 inline-flex items-center justify-center gap-1 text-[11px] font-bold tabular-nums"
                   style={{ color: rankColor }}>
@@ -211,19 +211,19 @@ export function AdminDashboard() {
                 </div>
                 <Avatar name={r.name} color={r.color} size={30} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-white text-sm font-medium truncate mb-1 flex flex-col md:flex-row items-center gap-2">
+                  <div className="text-white text-sm font-medium truncate mb-1 flex flex-row items-center gap-2">
                     {r.name}
                     {r.id === me?.id && (
                       <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded"
                         style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>Você</span>
                     )}
                   </div>
-                  <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px] mx-auto md:mx-0">
+                  <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px]">
                     <div className="h-full rounded-full transition-all duration-500"
                       style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${rankColor}, ${PALETTE.lime})` }} />
                   </div>
                 </div>
-                <div className="text-white font-bold tabular-nums w-10 text-center md:text-right">{r.count}</div>
+                <div className="text-white font-bold tabular-nums w-10 text-right">{r.count}</div>
               </button>
             );
           })}
@@ -244,7 +244,7 @@ export function AdminDashboard() {
 
       {/* Clients table */}
       <div className="rounded-xl bg-[#161616] border border-white/[0.07] overflow-hidden mb-6">
-        <div className="px-5 py-3.5 border-b border-white/[0.07] flex items-center justify-center md:justify-start gap-2">
+        <div className="px-5 py-3.5 border-b border-white/[0.07] flex items-center justify-start gap-2">
           <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.lime }} />
           <span className="text-[11px] uppercase tracking-wider text-white/70 font-bold">Clientes</span>
           <span className="text-[11px] text-white/30">— {formatMonth(selectedMonthKey)}</span>
@@ -253,12 +253,12 @@ export function AdminDashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-white/40">
-                <th className="text-center md:text-left px-5 py-2 font-semibold">Cliente</th>
-                <th className="text-center px-3 py-2 font-semibold">Posts</th>
-                <th className="text-center px-3 py-2 font-semibold">Reels</th>
-                <th className="text-center px-3 py-2 font-semibold">Entregues</th>
-                <th className="text-center px-3 py-2 font-semibold">%</th>
-                <th className="text-center md:text-left px-3 py-2 font-semibold">Status</th>
+                <th className="text-left px-5 py-2 font-semibold">Cliente</th>
+                <th className="text-left md:text-center px-3 py-2 font-semibold">Posts</th>
+                <th className="text-left md:text-center px-3 py-2 font-semibold">Reels</th>
+                <th className="text-left md:text-center px-3 py-2 font-semibold">Entregues</th>
+                <th className="text-left md:text-center px-3 py-2 font-semibold">%</th>
+                <th className="text-left px-3 py-2 font-semibold">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -275,19 +275,19 @@ export function AdminDashboard() {
                                     { bg: "rgba(255,68,68,0.15)", color: "#FF4444" };
                 return (
                   <tr key={c.id} className={`border-t border-white/[0.04] ${inactive ? "opacity-40" : ""}`}>
-                    <td className="px-5 py-3 text-center md:text-left">
-                      <div className="flex items-center justify-center md:justify-start gap-3">
+                    <td className="px-5 py-3 text-left">
+                      <div className="flex items-center justify-start gap-3">
                         <Avatar name={c.name} color={c.color} size={26} />
                         <span className="text-white font-medium">{c.name}</span>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-center text-white/80">{c.posts}</td>
-                    <td className="px-3 py-3 text-center text-white/80">{c.reels}</td>
-                    <td className="px-3 py-3 text-center text-white/80">{c.done}</td>
-                    <td className="px-3 py-3 text-center font-semibold" style={{ color: pctColor(c.percent) }}>
+                    <td className="px-3 py-3 text-left md:text-center text-white/80">{c.posts}</td>
+                    <td className="px-3 py-3 text-left md:text-center text-white/80">{c.reels}</td>
+                    <td className="px-3 py-3 text-left md:text-center text-white/80">{c.done}</td>
+                    <td className="px-3 py-3 text-left md:text-center font-semibold" style={{ color: pctColor(c.percent) }}>
                       {c.percent}%
                     </td>
-                    <td className="px-3 py-3 text-center md:text-left">
+                    <td className="px-3 py-3 text-left">
                       <span className="inline-flex items-center justify-center gap-1.5 rounded px-2 py-1 text-[11px] font-semibold"
                         style={{ backgroundColor: statusColor.bg, color: statusColor.color }}>
                         {statusLabel === "Abaixo" && <AlertTriangle size={11} />}
@@ -311,16 +311,16 @@ export function AdminDashboard() {
           {byCategory.map((c) => {
             const color = CAT_COLOR[c.name] ?? PALETTE.green;
             return (
-              <div key={c.name} className="relative overflow-hidden rounded-xl p-4 bg-[#161616] border border-white/[0.06] text-center md:text-left">
+              <div key={c.name} className="relative overflow-hidden rounded-xl p-4 bg-[#161616] border border-white/[0.06] text-left">
                 <div className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-20 blur-2xl" style={{ background: color }} />
-                <div className="flex flex-col md:flex-row items-center justify-between relative">
+                <div className="flex flex-row md:flex-row items-start md:items-center justify-between relative">
                   <div className="text-[11px] uppercase tracking-wider font-bold" style={{ color }}>{c.name}</div>
                   <div className="text-white text-sm font-bold tabular-nums">{c.percent}%</div>
                 </div>
                 <div className="mt-2 text-white/60 text-xs">
                   <span className="text-white font-semibold">{c.done}</span> de {c.total} entregues
                 </div>
-                <div className="mt-3 h-1.5 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px] mx-auto md:mx-0">
+                <div className="mt-3 h-1.5 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px]">
                   <div className="h-full rounded-full transition-all duration-500"
                     style={{ width: `${c.percent}%`, background: `linear-gradient(90deg, ${color}, ${PALETTE.lime})` }} />
                 </div>
