@@ -45,7 +45,12 @@ export const getMe = createServerFn({ method: "GET" })
 
 export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { name?: string; color?: string; icon?: string | null }) => d)
+  .inputValidator((d: { name?: string; color?: string; icon?: string | null }) =>
+    z.object({
+      name: z.string().trim().min(1).max(80).optional(),
+      color: z.string().trim().max(32).optional(),
+      icon: z.string().max(64).nullable().optional(),
+    }).strict().parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("profiles").update(data).eq("id", context.userId);
