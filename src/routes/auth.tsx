@@ -50,9 +50,14 @@ function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] px-4">
+    <div className="min-h-screen flex items-center justify-center px-4 relative">
+      <div className="lz-auth-bg" aria-hidden="true">
+        <div className="lz-auth-bg__blob lz-auth-bg__blob--lime" />
+        <div className="lz-auth-bg__blob lz-auth-bg__blob--green" />
+        <div className="lz-auth-bg__blob lz-auth-bg__blob--dark" />
+      </div>
       <Toaster theme="dark" position="bottom-right" />
-      <div className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-8 shadow-2xl"
+      <div className="relative z-10 w-full max-w-sm bg-[#1A1A1A] rounded-xl p-8 shadow-2xl"
         style={{ border: "1px solid rgba(200,212,78,0.2)" }}>
         <div className="flex flex-col items-center justify-center mb-10">
           <img src={luzeriaLogo.url} alt="Luzeria" className="h-10 w-auto object-contain" />
