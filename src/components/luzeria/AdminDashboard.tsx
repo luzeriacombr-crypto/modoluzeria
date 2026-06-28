@@ -170,8 +170,8 @@ export function AdminDashboard() {
       {/* Top members */}
       <div className="rounded-xl bg-[#161616] border border-white/[0.07] p-5 mb-6 relative overflow-hidden">
         <div className="pointer-events-none absolute -top-16 -right-10 h-48 w-48 rounded-full opacity-15 blur-3xl" style={{ background: PALETTE.lime }} />
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-5 relative">
-          <h2 className="text-white font-semibold inline-flex items-center gap-2">
+        <div className="flex items-center justify-center md:justify-between flex-wrap gap-3 mb-5 relative">
+          <h2 className="text-white font-semibold inline-flex items-center gap-2 text-center">
             <Trophy size={16} className="text-[#C8D44E]" />
             Top Membros <span className="text-white/40 font-normal">— {PERIOD_LABEL[period]}</span>
           </h2>
