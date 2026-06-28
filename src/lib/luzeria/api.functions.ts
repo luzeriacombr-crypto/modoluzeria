@@ -290,6 +290,51 @@ export const addAssignee = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const addContentItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      key: z.string(),
+      type: z.enum(["post", "reel", "outros"]),
+      title: z.string().trim().max(200).optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    let { data: month } = await context.supabase
+      .from("months").select("id").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
+    if (!month) {
+      const { data: m, error } = await context.supabase
+        .from("months").insert({ client_id: data.clientId, key: data.key }).select("id").single();
+      if (error) throw new Error(error.message);
+      month = m;
+    }
+    const { data: maxRow } = await context.supabase
+      .from("content_items").select("idx").eq("month_id", month.id).eq("type", data.type)
+      .order("idx", { ascending: false }).limit(1).maybeSingle();
+    const nextIdx = ((maxRow as any)?.idx ?? 0) + 1;
+    const fallback = data.type === "post" ? `Post ${nextIdx}` : data.type === "reel" ? `Reels ${nextIdx}` : `Item ${nextIdx}`;
+    const { data: inserted, error: iErr } = await context.supabase
+      .from("content_items").insert({
+        month_id: month.id, type: data.type, idx: nextIdx,
+        title: (data.title?.trim() || fallback),
+      }).select("id").single();
+    if (iErr) throw new Error(iErr.message);
+    return { id: inserted.id };
+  });
+
+export const deleteItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("content_items").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const removeAssignee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { itemId: string; userId: string }) => d)
