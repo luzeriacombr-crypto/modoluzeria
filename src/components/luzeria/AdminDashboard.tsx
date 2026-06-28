@@ -120,7 +120,7 @@ export function AdminDashboard() {
 
 
         <div className="relative grid md:grid-cols-[1fr_auto] gap-8 p-6 md:p-8 items-center">
-          <div>
+          <div className="text-center md:text-left flex flex-col items-center md:items-start">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
               style={{ backgroundColor: "rgba(200,212,78,0.15)", color: PALETTE.lime }}>
               <Sparkles size={11} /> Dashboard
@@ -131,7 +131,7 @@ export function AdminDashboard() {
             <p className="mt-2 italic text-white/70 text-sm md:text-base">{message}</p>
 
             {/* Month selector */}
-            <div className="mt-5 inline-flex items-center gap-1 rounded-full bg-black/30 backdrop-blur p-1 border border-white/10">
+            <div className="mt-5 inline-flex items-center gap-1 rounded-full bg-black/30 backdrop-blur p-1 border border-white/10 mx-auto md:mx-0">
               <button onClick={() => selectMonth(shiftMonth(selectedMonthKey, -1))}
                 className="h-8 w-8 rounded-full hover:bg-white/10 text-white/70 flex items-center justify-center transition">
                 <ChevronLeft size={15} />
@@ -147,7 +147,9 @@ export function AdminDashboard() {
           </div>
 
           {/* Big donut */}
-          <BigDonut percent={overall} done={t?.done ?? 0} total={t?.planned ?? 0} />
+          <div className="mx-auto md:mx-0">
+            <BigDonut percent={overall} done={t?.done ?? 0} total={t?.planned ?? 0} />
+          </div>
         </div>
       </div>
 
