@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder,
+  Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Settings, LogOut, Plus, Camera, Sparkles,
 } from "lucide-react";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -79,6 +79,14 @@ export function Sidebar({
           active={view === "my"}
           onClick={() => setView("my")}
         />
+        {isAdmin && (
+          <NavButton
+            icon={<BarChart2 size={15} />}
+            label="Dashboard"
+            active={view === "admin"}
+            onClick={() => setView("admin")}
+          />
+        )}
         <NavButton
           icon={<Search size={15} />}
           label="Visão geral"
