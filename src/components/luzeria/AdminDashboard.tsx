@@ -99,15 +99,16 @@ export function AdminDashboard() {
         style={{
           background:
             "radial-gradient(120% 140% at 0% 0%, rgba(200,212,78,0.18) 0%, rgba(91,168,138,0.10) 35%, rgba(28,28,28,0) 70%), " +
-            "radial-gradient(80% 120% at 100% 100%, rgba(74,158,255,0.16) 0%, rgba(28,28,28,0) 65%), " +
+            "radial-gradient(80% 120% at 100% 100%, rgba(26,58,46,0.55) 0%, rgba(28,28,28,0) 65%), " +
             "linear-gradient(180deg, #161616 0%, #111111 100%)",
           border: "1px solid rgba(200,212,78,0.18)",
         }}>
         {/* Glow blobs */}
         <div className="pointer-events-none absolute -top-20 -left-20 h-64 w-64 rounded-full opacity-30 blur-3xl"
           style={{ background: PALETTE.lime }} />
-        <div className="pointer-events-none absolute -bottom-24 right-10 h-72 w-72 rounded-full opacity-20 blur-3xl"
-          style={{ background: PALETTE.purple }} />
+        <div className="pointer-events-none absolute -bottom-24 right-10 h-72 w-72 rounded-full opacity-25 blur-3xl"
+          style={{ background: "#1A3A2E" }} />
+
 
         <div className="relative grid md:grid-cols-[1fr_auto] gap-8 p-6 md:p-8 items-center">
           <div>
@@ -145,7 +146,7 @@ export function AdminDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
         <MetricCard tone={PALETTE.lime}      icon={<Users size={16} />}          label="Clientes ativos" value={t?.clients ?? 0} />
         <MetricCard tone={PALETTE.blue}      icon={<Target size={16} />}         label="Meta do mês"     value={t?.planned ?? 0} />
-        <MetricCard tone={PALETTE.purple}    icon={<Package size={16} />}        label="Entregues"       value={t?.done ?? 0} />
+        <MetricCard tone={"#1A3A2E"}          icon={<Package size={16} />}        label="Entregues"       value={t?.done ?? 0} />
         <MetricCard tone={PALETTE.green}     icon={<CheckCircle size={16} />}    label="Em dia"          value={t?.ontime ?? 0} />
         <MetricCard tone={PALETTE.coral}     icon={<AlertTriangle size={16} />}  label="Abaixo"          value={t?.behind ?? 0} />
       </div>
