@@ -1,9 +1,17 @@
 export type Status =
-  | "START"
+  | "PLANEJAMENTO"
+  | "COPY"
+  | "REVISAO_INTERNA"
+  | "REVISAO_CLIENTE"
+  | "AGENDAMENTO"
+  | "REVISAO_AGENDAMENTO"
+  | "FINALIZADO"
+  // Post-only
   | "CRIACAO"
   | "REVISAO_ARTE"
-  | "REVISAO_CLIENTE"
-  | "FINALIZADO";
+  // Reel-only
+  | "EM_GRAVACAO"
+  | "EM_EDICAO";
 
 export type ContentType = "post" | "reel" | "outros";
 
@@ -84,42 +92,50 @@ export const STATUS_META: Record<
   Status,
   { label: string; bg: string; color: string; icon: string }
 > = {
-  START: {
-    label: "Start",
-    bg: "rgba(255,255,255,0.1)",
-    color: "#FFFFFF",
-    icon: "Play",
-  },
-  CRIACAO: {
-    label: "Criação da arte",
-    bg: "#3D2B5E",
-    color: "#C9B6FF",
-    icon: "Paintbrush",
-  },
-  REVISAO_ARTE: {
-    label: "Revisão da arte",
-    bg: "#4A2800",
-    color: "#FF8C42",
-    icon: "Eye",
-  },
-  REVISAO_CLIENTE: {
-    label: "Revisão cliente",
-    bg: "#0D2B4A",
-    color: "#4A9EFF",
-    icon: "MessageSquare",
-  },
-  FINALIZADO: {
-    label: "Finalizado",
-    bg: "#1A3A1A",
-    color: "#C8D44E",
-    icon: "CheckCircle",
-  },
+  PLANEJAMENTO:        { label: "Planejamento",        bg: "#1E2A3A", color: "#7EB3FF", icon: "FileText" },
+  COPY:                { label: "Copy",                bg: "#2A1E3A", color: "#B97EFF", icon: "PenLine" },
+  REVISAO_INTERNA:     { label: "Revisão interna",     bg: "#2A2A1E", color: "#FFD97E", icon: "Search" },
+  REVISAO_CLIENTE:     { label: "Revisão cliente",     bg: "#0D2B4A", color: "#4A9EFF", icon: "MessageSquare" },
+  AGENDAMENTO:         { label: "Agendamento",         bg: "#1A2E2A", color: "#7EFFD9", icon: "CalendarCheck" },
+  REVISAO_AGENDAMENTO: { label: "Revisão agendamento", bg: "#2A1E1E", color: "#FF9E7E", icon: "CalendarClock" },
+  FINALIZADO:          { label: "Finalizado",          bg: "#1A3A1A", color: "#C8D44E", icon: "CheckCircle" },
+  CRIACAO:             { label: "Criação de arte",     bg: "#3D2B5E", color: "#C084FC", icon: "Paintbrush" },
+  REVISAO_ARTE:        { label: "Revisão de arte",     bg: "#4A2800", color: "#FF8C42", icon: "Eye" },
+  EM_GRAVACAO:         { label: "Em gravação",         bg: "#1A1A3A", color: "#7E9EFF", icon: "Video" },
+  EM_EDICAO:           { label: "Em edição",           bg: "#2A1A2A", color: "#FF7EE8", icon: "Scissors" },
 };
 
-export const STATUS_ORDER: Status[] = [
-  "START",
-  "CRIACAO",
-  "REVISAO_ARTE",
+/** Status comuns a Posts, Reels e Outros, na ordem do pipeline. */
+export const GLOBAL_STATUS_ORDER: Status[] = [
+  "PLANEJAMENTO",
+  "COPY",
+  "REVISAO_INTERNA",
   "REVISAO_CLIENTE",
+  "AGENDAMENTO",
+  "REVISAO_AGENDAMENTO",
   "FINALIZADO",
 ];
+
+export const POST_EXTRA_STATUS: Status[] = ["CRIACAO", "REVISAO_ARTE"];
+export const REEL_EXTRA_STATUS: Status[] = ["EM_GRAVACAO", "EM_EDICAO"];
+
+/** Ordem usada para listagens gerais (Dashboard, MyTasks). Inclui todos. */
+export const STATUS_ORDER: Status[] = [
+  "PLANEJAMENTO",
+  "COPY",
+  "CRIACAO",
+  "REVISAO_ARTE",
+  "EM_GRAVACAO",
+  "EM_EDICAO",
+  "REVISAO_INTERNA",
+  "REVISAO_CLIENTE",
+  "AGENDAMENTO",
+  "REVISAO_AGENDAMENTO",
+  "FINALIZADO",
+];
+
+export function statusOptionsFor(type: ContentType): Status[] {
+  if (type === "post") return [...GLOBAL_STATUS_ORDER, ...POST_EXTRA_STATUS];
+  if (type === "reel") return [...GLOBAL_STATUS_ORDER, ...REEL_EXTRA_STATUS];
+  return [...GLOBAL_STATUS_ORDER, ...POST_EXTRA_STATUS, ...REEL_EXTRA_STATUS];
+}
