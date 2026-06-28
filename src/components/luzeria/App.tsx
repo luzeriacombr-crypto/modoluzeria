@@ -13,6 +13,7 @@ import { StoriesView } from "./StoriesView";
 import { CleaningView } from "./CleaningView";
 import { NotificationsBell } from "./Notifications";
 import { NewClientModal, CustomFieldsModal } from "./Modals";
+import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
 
@@ -24,6 +25,26 @@ export function App() {
 
   if (me.isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] text-white/40 text-sm">Carregando…</div>;
+  }
+
+  if (me.data && !me.data.active) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] px-4">
+        <div className="max-w-sm w-full bg-[#1A1A1A] rounded-xl p-8 text-center"
+          style={{ border: "1px solid rgba(200,212,78,0.2)" }}>
+          <div className="text-[#C8D44E] text-xs uppercase tracking-wider font-bold mb-3">Aguardando aprovação</div>
+          <h1 className="text-white text-lg font-semibold mb-2">Sua conta está em análise</h1>
+          <p className="text-white/50 text-sm leading-relaxed mb-6">
+            Um Administrador precisa autorizar seu acesso antes que você possa usar o sistema. Você receberá acesso assim que for aprovado.
+          </p>
+          <button
+            onClick={async () => { await supabase.auth.signOut(); window.location.href = "/auth"; }}
+            className="text-xs text-white/60 hover:text-white transition">
+            Sair
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
