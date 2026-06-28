@@ -54,8 +54,9 @@ function AuthPage() {
       <Toaster theme="dark" position="bottom-right" />
       <div className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-8 shadow-2xl"
         style={{ border: "1px solid rgba(200,212,78,0.2)" }}>
-        <div className="flex items-center justify-center mb-10">
+        <div className="flex flex-col items-center justify-center mb-10">
           <img src={luzeriaLogo.url} alt="Luzeria" className="h-10 w-auto object-contain" />
+          <p className="text-[#C8D44E] text-xs font-medium tracking-wide mt-2">Você foi chamado para criar</p>
         </div>
         <h1 className="text-white text-xl font-semibold text-center">
           {mode === "signin" ? "Acesse sua conta" : "Crie sua conta"}
