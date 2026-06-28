@@ -102,7 +102,7 @@ export function Sidebar({
       <div className="px-5 pt-4 pb-2 flex items-center justify-between">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Clientes</span>
         {isAdmin && (
-          <button onClick={onCreateClient} className="text-white/40 hover:text-white transition-colors" title="Novo cliente">
+          <button onClick={() => onCreateClient()} className="text-white/40 hover:text-white transition-colors" title="Novo cliente">
             <Plus size={14} />
           </button>
         )}
