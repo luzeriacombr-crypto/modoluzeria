@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { X, Send, ExternalLink, Plus, Check } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { STATUS_META, statusOptionsFor, type Status, type Profile, type ContentItem } from "@/lib/luzeria/types";
+import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS, detectDriveType } from "./icons";
 
@@ -99,6 +99,31 @@ export function DetailPanel() {
             })}
           </div>
         </Section>
+
+        {/* Reel video type (Reels only) */}
+        {item.type === "reel" && (
+          <Section label="Tipo de vídeo">
+            <div className="flex items-center gap-2 flex-wrap">
+              {REEL_TYPES.map((rt) => {
+                const active = item.reelType === rt;
+                return (
+                  <button key={rt}
+                    onClick={() => updateItem.mutate({
+                      data: { id: item.id, patch: { reel_type: active ? null : rt } },
+                    })}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+                    style={{
+                      backgroundColor: active ? "#C8D44E" : "rgba(255,255,255,0.08)",
+                      color: active ? "#0D0D0D" : "#FFFFFF",
+                      fontWeight: active ? 700 : 500,
+                    }}>
+                    {REEL_TYPE_LABEL[rt as ReelType]}
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+        )}
 
         {/* Assignees */}
         <Section label="Responsáveis">
