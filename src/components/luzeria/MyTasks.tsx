@@ -44,7 +44,7 @@ export function MyTasks() {
     <div className="p-10 max-w-5xl mx-auto">
       <div className="flex items-end justify-between mb-8">
         <div>
-          <h1 className="text-[32px] font-bold text-white leading-none tracking-tight">Minhas Demandas</h1>
+          <h1 className="text-[32px] font-bold text-white leading-none tracking-tight">Coisas para fazer</h1>
           <p className="text-sm text-white/50 mt-2">
             {tasks.length} {tasks.length === 1 ? "tarefa atribuída" : "tarefas atribuídas"}
           </p>
@@ -157,7 +157,7 @@ function ProductivityBlock({ prod, monthKey }: { prod: { weeks: number[]; items:
   return (
     <div className="mt-10 rounded-lg p-6" style={{ background: "#1C1C1C", border: "1px solid rgba(200,212,78,0.15)" }}>
       <div className="flex items-end justify-between mb-1">
-        <h3 className="text-lg font-bold text-white">Produtividade</h3>
+        <h3 className="text-lg font-bold text-white">Como estou indo?</h3>
         <span className="text-xs text-white/40">{formatMonth(monthKey)}</span>
       </div>
       <p className="text-xs text-white/50 mb-6">
