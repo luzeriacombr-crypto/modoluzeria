@@ -57,13 +57,14 @@ export function initial(name: string): string {
 
 export const PRESET_COLORS = [
   "#C8D44E",
-  "#FF8C42",
+  "#FF6B6B",
   "#4A9EFF",
-  "#B794F4",
-  "#F472B6",
-  "#34D399",
-  "#FBBF24",
-  "#F87171",
+  "#FF8C42",
+  "#A855F7",
+  "#10B981",
+  "#F59E0B",
+  "#EC4899",
+  "#FFFFFF",
 ];
 
 export const PRESET_ICONS = [
