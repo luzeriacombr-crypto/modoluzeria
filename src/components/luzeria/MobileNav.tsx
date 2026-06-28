@@ -19,7 +19,7 @@ export function MobileNav() {
   const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (view === "my" || view === "dashboard" || view === "stories" || view === "cleaning") setTab("home");
+    if (view === "my" || view === "stories" || view === "cleaning" || view === "admin") setTab("home");
     if (view === "client") setTab("clients");
   }, [view]);
 
