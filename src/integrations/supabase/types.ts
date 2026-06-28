@@ -17,6 +17,7 @@ export type Database = {
       clients: {
         Row: {
           archived: boolean
+          category: string
           color: string
           created_at: string
           favorite: boolean
@@ -32,6 +33,7 @@ export type Database = {
         }
         Insert: {
           archived?: boolean
+          category?: string
           color?: string
           created_at?: string
           favorite?: boolean
@@ -47,6 +49,7 @@ export type Database = {
         }
         Update: {
           archived?: boolean
+          category?: string
           color?: string
           created_at?: string
           favorite?: boolean
