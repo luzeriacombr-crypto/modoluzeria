@@ -12,7 +12,7 @@ import { PRESET_COLORS } from "@/lib/luzeria/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Client } from "@/lib/luzeria/types";
-import luzeriaLogo from "@/assets/luzeria-logo.png.asset.json";
+import luzeriaLogo from "@/assets/luzeria-sidebar.png.asset.json";
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
