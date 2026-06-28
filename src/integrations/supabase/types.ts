@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      cleaning_schedule: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          task_idx: number
+          updated_at: string
+          user_id: string | null
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          task_idx: number
+          updated_at?: string
+          user_id?: string | null
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          task_idx?: number
+          updated_at?: string
+          user_id?: string | null
+          weekday?: number
+        }
+        Relationships: []
+      }
+      cleaning_settings: {
+        Row: {
+          id: number
+          note: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          note?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          note?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           archived: boolean
@@ -314,6 +362,33 @@ export type Database = {
           icon?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      stories_schedule: {
+        Row: {
+          created_at: string
+          day: string
+          id: string
+          label: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          id?: string
+          label?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          id?: string
+          label?: string | null
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }

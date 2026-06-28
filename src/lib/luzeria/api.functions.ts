@@ -388,3 +388,116 @@ export const getProductivity = createServerFn({ method: "GET" })
     });
     return { weeks, items, total: (done ?? []).length, history };
   });
+
+/* ============== STORIES SCHEDULE ============== */
+
+export const listStories = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { monthKey: string }) => d)
+  .handler(async ({ data, context }) => {
+    const [y, m] = data.monthKey.split("-").map(Number);
+    const start = `${y}-${String(m).padStart(2, "0")}-01`;
+    const endDate = new Date(Date.UTC(y, m, 1));
+    const end = `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, "0")}-01`;
+    const { data: rows, error } = await context.supabase
+      .from("stories_schedule")
+      .select("id, day, user_id, label")
+      .gte("day", start).lt("day", end);
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r: any) => ({
+      id: r.id as string, day: r.day as string,
+      userId: (r.user_id ?? null) as string | null,
+      label: (r.label ?? null) as string | null,
+    }));
+  });
+
+export const upsertStoryDay = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { day: string; userId?: string | null; label?: string | null }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    if (!data.userId && !data.label) {
+      const { error } = await context.supabase.from("stories_schedule").delete().eq("day", data.day);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }
+    const { error } = await context.supabase
+      .from("stories_schedule")
+      .upsert({ day: data.day, user_id: data.userId ?? null, label: data.label ?? null, updated_at: new Date().toISOString() }, { onConflict: "day" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const getMyToday = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { userId?: string; today: string; weekday: number }) => d)
+  .handler(async ({ data, context }) => {
+    let targetUser = context.userId;
+    if (data.userId && data.userId !== context.userId) {
+      const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+      if (!isAdmin) throw new Error("Forbidden");
+      targetUser = data.userId;
+    }
+    const { data: story } = await context.supabase
+      .from("stories_schedule").select("day").eq("day", data.today).eq("user_id", targetUser).maybeSingle();
+    let cleaning: number[] = [];
+    if (data.weekday >= 0 && data.weekday <= 5) {
+      const { data: rows } = await context.supabase
+        .from("cleaning_schedule").select("task_idx").eq("weekday", data.weekday).eq("user_id", targetUser);
+      cleaning = (rows ?? []).map((r: any) => r.task_idx as number);
+    }
+    return { stories: !!story, cleaningTaskIdx: cleaning };
+  });
+
+/* ============== CLEANING ============== */
+
+export const getCleaning = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [{ data: rows }, { data: settings }] = await Promise.all([
+      context.supabase.from("cleaning_schedule").select("id, task_idx, weekday, user_id, label"),
+      context.supabase.from("cleaning_settings").select("note").eq("id", 1).maybeSingle(),
+    ]);
+    return {
+      cells: (rows ?? []).map((r: any) => ({
+        id: r.id as string,
+        taskIdx: r.task_idx as number,
+        weekday: r.weekday as number,
+        userId: (r.user_id ?? null) as string | null,
+        label: (r.label ?? null) as string | null,
+      })),
+      note: (settings?.note ?? "") as string,
+    };
+  });
+
+export const upsertCleaningCell = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { taskIdx: number; weekday: number; userId?: string | null; label?: string | null }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    if (!data.userId && !data.label) {
+      const { error } = await context.supabase
+        .from("cleaning_schedule").delete().eq("task_idx", data.taskIdx).eq("weekday", data.weekday);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }
+    const { error } = await context.supabase
+      .from("cleaning_schedule")
+      .upsert({ task_idx: data.taskIdx, weekday: data.weekday, user_id: data.userId ?? null, label: data.label ?? null, updated_at: new Date().toISOString() }, { onConflict: "task_idx,weekday" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const updateCleaningNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { note: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await context.supabase
+      .from("cleaning_settings").upsert({ id: 1, note: data.note, updated_at: new Date().toISOString() });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Bell, User } from "lucide-react";
+import { LayoutDashboard, Users, Bell, User, Camera, Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -18,7 +18,10 @@ export function MobileNav() {
   const [tab, setTab] = useState<"home" | "clients" | "bell" | "me">("home");
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { if (view === "my" || view === "dashboard") setTab("home"); if (view === "client") setTab("clients"); }, [view]);
+  useEffect(() => {
+    if (view === "my" || view === "dashboard" || view === "stories" || view === "cleaning") setTab("home");
+    if (view === "client") setTab("clients");
+  }, [view]);
 
   if (!isMobile) return null;
 
@@ -77,8 +80,10 @@ export function MobileNav() {
       )}
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around bg-[#1C1C1C] border-t border-white/[0.08]">
-        <NavBtn icon={<LayoutDashboard size={20} />} active={tab === "home" && (view === "my" || view === "dashboard" || view === "client")}
+        <NavBtn icon={<LayoutDashboard size={20} />} active={tab === "home" && view === "my"}
           onClick={() => { setView("my"); setTab("home"); }} />
+        <NavBtn icon={<Camera size={20} />} active={view === "stories"} onClick={() => { setView("stories"); setTab("home"); }} />
+        <NavBtn icon={<Sparkles size={20} />} active={view === "cleaning"} onClick={() => { setView("cleaning"); setTab("home"); }} />
         <NavBtn icon={<Users size={20} />} active={tab === "clients"} onClick={() => setTab("clients")} />
         <NavBtn icon={<Bell size={20} />} badge={unread} active={tab === "bell"} onClick={() => setTab("bell")} />
         <NavBtn icon={me ? <Avatar profile={me} size={22} /> : <User size={20} />} active={tab === "me"} onClick={() => setTab("me")} />

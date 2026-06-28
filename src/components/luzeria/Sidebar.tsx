@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder,
-  Settings, LogOut, Plus,
+  Settings, LogOut, Plus, Camera, Sparkles,
 } from "lucide-react";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -81,6 +81,18 @@ export function Sidebar({
           label="Visão geral"
           active={view === "dashboard"}
           onClick={() => setView("dashboard")}
+        />
+        <NavButton
+          icon={<Camera size={15} />}
+          label="Stories"
+          active={view === "stories"}
+          onClick={() => setView("stories")}
+        />
+        <NavButton
+          icon={<Sparkles size={15} />}
+          label="Limpeza"
+          active={view === "cleaning"}
+          onClick={() => setView("cleaning")}
         />
       </div>
 
