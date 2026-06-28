@@ -171,6 +171,7 @@ export type Database = {
           idx: number
           legacy_assignee: string | null
           month_id: string
+          reel_type: string | null
           status: Database["public"]["Enums"]["content_status"]
           title: string
           type: Database["public"]["Enums"]["content_type"]
@@ -183,6 +184,7 @@ export type Database = {
           idx: number
           legacy_assignee?: string | null
           month_id: string
+          reel_type?: string | null
           status?: Database["public"]["Enums"]["content_status"]
           title?: string
           type: Database["public"]["Enums"]["content_type"]
@@ -195,6 +197,7 @@ export type Database = {
           idx?: number
           legacy_assignee?: string | null
           month_id?: string
+          reel_type?: string | null
           status?: Database["public"]["Enums"]["content_status"]
           title?: string
           type?: Database["public"]["Enums"]["content_type"]
