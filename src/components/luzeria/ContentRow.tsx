@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link as LinkIcon, MessageCircle, Plus } from "lucide-react";
 import type { ContentItem, Profile } from "@/lib/luzeria/types";
-import { statusOptionsFor } from "@/lib/luzeria/types";
+import { statusOptionsFor, REEL_TYPE_LABEL, type ReelType } from "@/lib/luzeria/types";
 import { useApi, useMe } from "@/lib/luzeria/queries";
 import { StatusBadge } from "./StatusBadge";
 import { Avatar, AvatarStack } from "./Avatar";
@@ -56,9 +56,16 @@ export function ContentRow({ item, profiles, idx }: {
       ) : (
         <button
           onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-          className="flex-1 text-left text-[15px] font-medium text-white truncate hover:text-[#C8D44E] transition-colors"
+          className="flex-1 text-left text-[15px] font-medium text-white truncate hover:text-[#C8D44E] transition-colors min-w-0"
           title={item.title}
-        >{item.title}</button>
+        >
+          <span className="truncate">{item.title}</span>
+          {item.type === "reel" && item.reelType && (
+            <span className="ml-2 text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>
+              {REEL_TYPE_LABEL[item.reelType as ReelType]}
+            </span>
+          )}
+        </button>
       )}
 
       <div onClick={(e) => e.stopPropagation()}>
