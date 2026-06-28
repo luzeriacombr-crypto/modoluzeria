@@ -1,16 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
 import { roleLabel } from "./Sidebar";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
+import { UserPlus, X } from "lucide-react";
 
 export function SettingsPage() {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
-  const { setUserRole, setUserActive, deleteUser } = useApi();
+  const { setUserRole, setUserActive, deleteUser, adminCreateUser } = useApi();
   const { setView, setViewAs } = useUI();
+  const [adding, setAdding] = useState(false);
 
   if (me?.role !== "master") {
     return <div className="p-10 text-white/60 text-sm">Acesso restrito ao Administrador Master.</div>;
@@ -29,8 +32,16 @@ export function SettingsPage() {
 
   return (
     <div className="p-10 max-w-4xl mx-auto">
-      <h1 className="text-[32px] font-bold text-white tracking-tight">Colaboradores</h1>
-      <p className="text-sm text-white/50 mt-2 mb-8">Gerencie acessos e funções da equipe.</p>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-[32px] font-bold text-white tracking-tight">Colaboradores</h1>
+          <p className="text-sm text-white/50 mt-2">Gerencie acessos e funções da equipe.</p>
+        </div>
+        <button onClick={() => setAdding(true)}
+          className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
+          <UserPlus size={14} /> Adicionar membro
+        </button>
+      </div>
 
       {pending.length > 0 && (
         <>
@@ -103,6 +114,80 @@ export function SettingsPage() {
       <p className="text-[11px] text-white/30 mt-4">
         Novos cadastros ficam pendentes até a aprovação de um Administrador Master. E-mails pré-cadastrados na equipe inicial entram já aprovados com a função correta.
       </p>
+
+      {adding && (
+        <AddMemberModal
+          loading={adminCreateUser.isPending}
+          onClose={() => setAdding(false)}
+          onSubmit={(payload) => {
+            adminCreateUser.mutate({ data: payload }, {
+              onSuccess: () => { toast.success(`${payload.name} adicionado.`); setAdding(false); },
+              onError: (e: any) => toast.error(e?.message ?? "Erro ao adicionar membro"),
+            });
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function AddMemberModal({ onClose, onSubmit, loading }: {
+  onClose: () => void;
+  loading: boolean;
+  onSubmit: (d: { name: string; email: string; password: string; role: Role }) => void;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<Role>("member");
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-7"
+        style={{ border: "1px solid rgba(200,212,78,0.2)" }}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-white font-semibold">Adicionar membro</h2>
+          <button onClick={onClose} className="text-white/40 hover:text-white transition"><X size={18} /></button>
+        </div>
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit({ name, email, password, role }); }} className="space-y-3">
+          <Field label="Nome">
+            <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={80}
+              className="lz-input" placeholder="Nome do colaborador" />
+          </Field>
+          <Field label="Email (login)">
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+              className="lz-input" placeholder="email@luzeria.com.br" />
+          </Field>
+          <Field label="Senha provisória">
+            <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
+              className="lz-input" placeholder="Mínimo 6 caracteres" />
+          </Field>
+          <Field label="Função">
+            <select value={role} onChange={(e) => setRole(e.target.value as Role)} className="lz-input">
+              <option value="member">Membro</option>
+              <option value="setor">Adm Setor</option>
+              <option value="master">Adm Master</option>
+            </select>
+          </Field>
+          <button type="submit" disabled={loading}
+            className="lz-btn-primary w-full rounded-md py-2.5 mt-2 text-sm disabled:opacity-50">
+            {loading ? "Criando…" : "Criar membro"}
+          </button>
+          <p className="text-[10px] text-white/40 text-center mt-2">
+            O membro já entra ativo. Compartilhe email e senha para o primeiro acesso.
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">{label}</span>
+      <div className="mt-1.5">{children}</div>
+    </label>
   );
 }
