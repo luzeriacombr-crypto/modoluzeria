@@ -90,6 +90,35 @@ export const deleteUser = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminCreateUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { email: string; password: string; name: string; role: Role }) =>
+    z.object({
+      email: z.string().email(),
+      password: z.string().min(6),
+      name: z.string().min(1).max(80),
+      role: z.enum(["master","setor","member"]),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { name: data.name },
+    });
+    if (error) throw new Error(error.message);
+    const uid = created.user?.id;
+    if (!uid) throw new Error("Falha ao criar usuário.");
+    // Trigger handle_new_user already inserted profile + member role. Override:
+    await supabaseAdmin.from("profiles").update({ name: data.name, active: true }).eq("id", uid);
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", uid);
+    await supabaseAdmin.from("user_roles").insert({ user_id: uid, role: data.role });
+    return { ok: true, id: uid };
+  });
+
 /* ============== CLIENTS ============== */
 
 export const listClients = createServerFn({ method: "GET" })
