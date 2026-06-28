@@ -5,7 +5,7 @@ interface UI {
   selectedMonthKey: string;
   selectedItemId: string | null;
   recentlyUpdated: string | null;
-  view: "dashboard" | "client" | "my" | "settings" | "stories" | "cleaning";
+  view: "dashboard" | "client" | "my" | "settings" | "stories" | "cleaning" | "admin";
   viewAsUserId: string | null;
   selectClient: (id: string | null) => void;
   selectMonth: (key: string) => void;
