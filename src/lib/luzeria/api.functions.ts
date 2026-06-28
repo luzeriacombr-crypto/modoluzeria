@@ -76,6 +76,20 @@ export const setUserActive = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const deleteUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { userId: string }) =>
+    z.object({ userId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    if (data.userId === context.userId) throw new Error("Não é possível remover a si mesmo.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /* ============== CLIENTS ============== */
 
 export const listClients = createServerFn({ method: "GET" })
