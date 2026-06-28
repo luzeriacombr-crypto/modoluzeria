@@ -244,7 +244,7 @@ export function AdminDashboard() {
 
       {/* Clients table */}
       <div className="rounded-xl bg-[#161616] border border-white/[0.07] overflow-hidden mb-6">
-        <div className="px-5 py-3.5 border-b border-white/[0.07] flex items-center gap-2">
+        <div className="px-5 py-3.5 border-b border-white/[0.07] flex items-center justify-center md:justify-start gap-2">
           <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.lime }} />
           <span className="text-[11px] uppercase tracking-wider text-white/70 font-bold">Clientes</span>
           <span className="text-[11px] text-white/30">— {formatMonth(selectedMonthKey)}</span>
@@ -253,12 +253,12 @@ export function AdminDashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-white/40">
-                <th className="text-left px-5 py-2 font-semibold">Cliente</th>
-                <th className="px-3 py-2 font-semibold">Posts</th>
-                <th className="px-3 py-2 font-semibold">Reels</th>
-                <th className="px-3 py-2 font-semibold">Entregues</th>
-                <th className="px-3 py-2 font-semibold">%</th>
-                <th className="px-3 py-2 font-semibold text-left">Status</th>
+                <th className="text-center md:text-left px-5 py-2 font-semibold">Cliente</th>
+                <th className="text-center px-3 py-2 font-semibold">Posts</th>
+                <th className="text-center px-3 py-2 font-semibold">Reels</th>
+                <th className="text-center px-3 py-2 font-semibold">Entregues</th>
+                <th className="text-center px-3 py-2 font-semibold">%</th>
+                <th className="text-center md:text-left px-3 py-2 font-semibold">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -275,8 +275,8 @@ export function AdminDashboard() {
                                     { bg: "rgba(255,68,68,0.15)", color: "#FF4444" };
                 return (
                   <tr key={c.id} className={`border-t border-white/[0.04] ${inactive ? "opacity-40" : ""}`}>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
+                    <td className="px-5 py-3 text-center md:text-left">
+                      <div className="flex items-center justify-center md:justify-start gap-3">
                         <Avatar name={c.name} color={c.color} size={26} />
                         <span className="text-white font-medium">{c.name}</span>
                       </div>
@@ -287,8 +287,8 @@ export function AdminDashboard() {
                     <td className="px-3 py-3 text-center font-semibold" style={{ color: pctColor(c.percent) }}>
                       {c.percent}%
                     </td>
-                    <td className="px-3 py-3">
-                      <span className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-semibold"
+                    <td className="px-3 py-3 text-center md:text-left">
+                      <span className="inline-flex items-center justify-center gap-1.5 rounded px-2 py-1 text-[11px] font-semibold"
                         style={{ backgroundColor: statusColor.bg, color: statusColor.color }}>
                         {statusLabel === "Abaixo" && <AlertTriangle size={11} />}
                         {statusLabel}
