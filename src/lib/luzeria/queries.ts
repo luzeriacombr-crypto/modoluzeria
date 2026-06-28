@@ -49,6 +49,20 @@ export const myTodayQO = (today: string, weekday: number, userId?: string) =>
     queryFn: () => getMyToday({ data: { userId, today, weekday } }),
   });
 
+export const adminDashboardQO = (monthKey: string) =>
+  queryOptions({
+    queryKey: ["admin-dashboard", monthKey],
+    queryFn: () => getAdminDashboard({ data: { monthKey } }),
+    enabled: !!monthKey,
+  });
+
+export const topMembersQO = (period: "month" | "3m" | "6m" | "year", monthKey: string) =>
+  queryOptions({
+    queryKey: ["top-members", period, monthKey],
+    queryFn: () => getTopMembers({ data: { period, monthKey } }),
+    enabled: !!monthKey,
+  });
+
 export function useMe() { return useQuery(meQO()); }
 
 export function useApi() {
