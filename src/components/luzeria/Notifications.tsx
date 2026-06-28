@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
 import { notificationsQO, useApi } from "@/lib/luzeria/queries";
+import { useUI } from "@/lib/luzeria/ui-store";
 
 export function NotificationsBell() {
   const { data: list = [] } = useQuery(notificationsQO());
@@ -9,6 +10,7 @@ export function NotificationsBell() {
   const { markNotificationRead } = useApi();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { selectClient, selectMonth, openItem, flash } = useUI();
 
   useEffect(() => {
     if (!open) return;
@@ -29,20 +31,43 @@ export function NotificationsBell() {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-[340px] rounded-lg bg-[#1C1C1C] border border-white/10 shadow-2xl overflow-hidden z-50">
+        <div
+          className="absolute right-0 mt-2 w-[380px] overflow-hidden z-50 lz-notif-pop"
+          style={{
+            background: "#1C1C1C",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 12,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+          }}
+        >
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
             <span className="text-sm font-bold text-white">Notificações</span>
             {unread > 0 && (
               <button onClick={() => markNotificationRead.mutate({ data: { all: true } })}
-                className="text-[11px] text-[#C8D44E] hover:underline">Marcar todas lidas</button>
+                className="text-[11px] text-[#C8D44E] hover:underline">Marcar todas como lidas</button>
             )}
           </div>
-          <div className="max-h-[420px] overflow-y-auto">
+          <div className="max-h-[480px] overflow-y-auto">
             {list.length === 0 && <p className="text-xs text-white/40 px-4 py-6 text-center">Sem notificações.</p>}
-            {list.map((n) => (
-              <button key={n.id}
-                onClick={() => { if (!n.read) markNotificationRead.mutate({ data: { id: n.id } }); }}
-                className="w-full text-left px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors block">
+            {list.map((n: any) => (
+              <button
+                key={n.id}
+                onClick={() => {
+                  if (!n.read) markNotificationRead.mutate({ data: { id: n.id } });
+                  setOpen(false);
+                  if (n.clientId && n.monthKey && n.itemId) {
+                    selectClient(n.clientId);
+                    selectMonth(n.monthKey);
+                    setTimeout(() => { openItem(n.itemId); flash(n.itemId); }, 50);
+                    setTimeout(() => flash(null), 2050);
+                  }
+                }}
+                className="w-full text-left px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors block"
+                style={{
+                  backgroundColor: !n.read ? "rgba(200,212,78,0.06)" : "transparent",
+                  opacity: n.read ? 0.6 : 1,
+                }}
+              >
                 <div className="flex items-start gap-2">
                   {!n.read && <span className="h-1.5 w-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: "#C8D44E" }} />}
                   <div className="flex-1">
