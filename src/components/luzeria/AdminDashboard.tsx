@@ -146,7 +146,7 @@ export function AdminDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
         <MetricCard tone={PALETTE.lime}      icon={<Users size={16} />}          label="Clientes ativos" value={t?.clients ?? 0} />
         <MetricCard tone={PALETTE.blue}      icon={<Target size={16} />}         label="Meta do mês"     value={t?.planned ?? 0} />
-        <MetricCard tone={PALETTE.purple}    icon={<Package size={16} />}        label="Entregues"       value={t?.done ?? 0} />
+        <MetricCard tone={"#1A3A2E"}          icon={<Package size={16} />}        label="Entregues"       value={t?.done ?? 0} />
         <MetricCard tone={PALETTE.green}     icon={<CheckCircle size={16} />}    label="Em dia"          value={t?.ontime ?? 0} />
         <MetricCard tone={PALETTE.coral}     icon={<AlertTriangle size={16} />}  label="Abaixo"          value={t?.behind ?? 0} />
       </div>
