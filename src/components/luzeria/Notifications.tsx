@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
 import { notificationsQO, useApi } from "@/lib/luzeria/queries";
@@ -10,18 +11,26 @@ export function NotificationsBell() {
   const { markNotificationRead } = useApi();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const { selectClient, selectMonth, openItem, flash } = useUI();
 
   useEffect(() => {
     if (!open) return;
-    const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (rect) setPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    const h = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!btnRef.current?.contains(t) && !popRef.current?.contains(t)) setOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen((o) => !o)}
+      <button ref={btnRef} onClick={() => setOpen((o) => !o)}
         className="relative p-2 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition">
         <Bell size={17} />
         {unread > 0 && (
@@ -30,10 +39,13 @@ export function NotificationsBell() {
           </span>
         )}
       </button>
-      {open && (
+      {open && pos && createPortal(
         <div
-          className="absolute right-0 mt-2 w-[380px] overflow-hidden z-50 lz-notif-pop"
+          ref={popRef}
+          className="fixed w-[380px] overflow-hidden z-[100] lz-notif-pop"
           style={{
+            top: pos.top,
+            right: pos.right,
             background: "#1C1C1C",
             border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: 12,
@@ -78,7 +90,8 @@ export function NotificationsBell() {
               </button>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
