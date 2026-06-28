@@ -71,10 +71,15 @@ export function useApi() {
     qc.invalidateQueries({ queryKey: ["month"] });
     qc.invalidateQueries({ queryKey: ["clients"] });
     qc.invalidateQueries({ queryKey: ["my-tasks"] });
+    qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
+    qc.invalidateQueries({ queryKey: ["top-members"] });
   };
   return {
     createClient: useMutation({ mutationFn: useServerFn(createClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) }),
-    updateClient: useMutation({ mutationFn: useServerFn(updateClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) }),
+    updateClient: useMutation({ mutationFn: useServerFn(updateClient), onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
+    } }),
     deleteClient: useMutation({ mutationFn: useServerFn(deleteClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) }),
     duplicateMonth: useMutation({
       mutationFn: useServerFn(duplicateMonth),
