@@ -152,109 +152,18 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      {/* Metric strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+      {/* Metric strip — 4 cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <MetricCard tone={PALETTE.lime}      icon={<Users size={16} />}          label="Clientes ativos" value={t?.clients ?? 0} />
         <MetricCard tone={PALETTE.blue}      icon={<Target size={16} />}         label="Meta do mês"     value={t?.planned ?? 0} />
         <MetricCard tone={"#1A3A2E"}          icon={<Package size={16} />}        label="Entregues"       value={t?.done ?? 0} />
-        <MetricCard tone={PALETTE.green}     icon={<CheckCircle size={16} />}    label="Em dia"          value={t?.ontime ?? 0} />
-        <MetricCard tone={PALETTE.coral}     icon={<AlertTriangle size={16} />}  label="Abaixo"          value={t?.behind ?? 0} />
-      </div>
-
-      {/* Category breakdown */}
-      {byCategory.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-          {byCategory.map((c) => {
-            const color = CAT_COLOR[c.name] ?? PALETTE.green;
-            return (
-              <div key={c.name} className="relative overflow-hidden rounded-xl p-4 bg-[#161616] border border-white/[0.06]">
-                <div className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-20 blur-2xl" style={{ background: color }} />
-                <div className="flex items-center justify-between relative">
-                  <div className="text-[11px] uppercase tracking-wider font-bold" style={{ color }}>{c.name}</div>
-                  <div className="text-white text-sm font-bold tabular-nums">{c.percent}%</div>
-                </div>
-                <div className="mt-2 text-white/60 text-xs">
-                  <span className="text-white font-semibold">{c.done}</span> de {c.total} entregues
-                </div>
-                <div className="mt-3 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                  <div className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${c.percent}%`, background: `linear-gradient(90deg, ${color}, ${PALETTE.lime})` }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Clients table */}
-      <div className="rounded-xl bg-[#161616] border border-white/[0.07] overflow-hidden mb-6">
-        <div className="px-5 py-3.5 border-b border-white/[0.07] flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.lime }} />
-          <span className="text-[11px] uppercase tracking-wider text-white/70 font-bold">Clientes</span>
-          <span className="text-[11px] text-white/30">— {formatMonth(selectedMonthKey)}</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-[10px] uppercase tracking-wider text-white/40">
-                <th className="text-left px-5 py-2 font-semibold">Cliente</th>
-                <th className="px-3 py-2 font-semibold">Ativo</th>
-                <th className="px-3 py-2 font-semibold">Posts</th>
-                <th className="px-3 py-2 font-semibold">Reels</th>
-                <th className="px-3 py-2 font-semibold">Entregues</th>
-                <th className="px-3 py-2 font-semibold">%</th>
-                <th className="px-3 py-2 font-semibold text-left">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data?.clients ?? []).map((c) => {
-                const inactive = c.archived;
-                const statusLabel =
-                  c.total === 0 ? "Sem itens" :
-                  c.percent >= 100 ? "Meta batida" :
-                  c.percent >= 80 ? "Em dia" : "Abaixo";
-                const statusColor =
-                  c.total === 0 ? { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" } :
-                  c.percent >= 100 ? { bg: "rgba(200,212,78,0.15)", color: "#C8D44E" } :
-                  c.percent >= 80 ? { bg: "rgba(74,158,255,0.15)", color: "#4A9EFF" } :
-                                    { bg: "rgba(255,68,68,0.15)", color: "#FF4444" };
-                return (
-                  <tr key={c.id} className={`border-t border-white/[0.04] ${inactive ? "opacity-40" : ""}`}>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={c.name} color={c.color} size={26} />
-                        <span className="text-white font-medium">{c.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      <button
-                        onClick={() => updateClient.mutate({ data: { id: c.id, patch: { archived: !c.archived } } })}
-                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${!c.archived ? "bg-[#C8D44E]" : "bg-white/15"}`}>
-                        <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${!c.archived ? "translate-x-[18px]" : "translate-x-[3px]"}`} />
-                      </button>
-                    </td>
-                    <td className="px-3 py-3 text-center text-white/80">{c.posts}</td>
-                    <td className="px-3 py-3 text-center text-white/80">{c.reels}</td>
-                    <td className="px-3 py-3 text-center text-white/80">{c.done}</td>
-                    <td className="px-3 py-3 text-center font-semibold" style={{ color: pctColor(c.percent) }}>
-                      {c.percent}%
-                    </td>
-                    <td className="px-3 py-3">
-                      <span className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-semibold"
-                        style={{ backgroundColor: statusColor.bg, color: statusColor.color }}>
-                        {statusLabel === "Abaixo" && <AlertTriangle size={11} />}
-                        {statusLabel}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-              {(data?.clients ?? []).length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-8 text-center text-white/40 text-sm">Nenhum cliente.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <MetricCard
+          tone={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "#C8D44E"}
+          icon={<Clock size={16} />}
+          label="Falta"
+          value={((t?.planned ?? 0) - (t?.done ?? 0))}
+          valueColor={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "#C8D44E"}
+        />
       </div>
 
       {/* Top members */}
@@ -330,6 +239,94 @@ export function AdminDashboard() {
           initialPeriod={period}
           onClose={() => setOpenMember(null)}
         />
+      )}
+
+      {/* Clients table */}
+      <div className="rounded-xl bg-[#161616] border border-white/[0.07] overflow-hidden mb-6">
+        <div className="px-5 py-3.5 border-b border-white/[0.07] flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.lime }} />
+          <span className="text-[11px] uppercase tracking-wider text-white/70 font-bold">Clientes</span>
+          <span className="text-[11px] text-white/30">— {formatMonth(selectedMonthKey)}</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-[10px] uppercase tracking-wider text-white/40">
+                <th className="text-left px-5 py-2 font-semibold">Cliente</th>
+                <th className="px-3 py-2 font-semibold">Posts</th>
+                <th className="px-3 py-2 font-semibold">Reels</th>
+                <th className="px-3 py-2 font-semibold">Entregues</th>
+                <th className="px-3 py-2 font-semibold">%</th>
+                <th className="px-3 py-2 font-semibold text-left">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data?.clients ?? []).map((c) => {
+                const inactive = c.archived;
+                const statusLabel =
+                  c.total === 0 ? "Sem itens" :
+                  c.percent >= 100 ? "Meta batida" :
+                  c.percent >= 80 ? "Em dia" : "Abaixo";
+                const statusColor =
+                  c.total === 0 ? { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" } :
+                  c.percent >= 100 ? { bg: "rgba(200,212,78,0.15)", color: "#C8D44E" } :
+                  c.percent >= 80 ? { bg: "rgba(74,158,255,0.15)", color: "#4A9EFF" } :
+                                    { bg: "rgba(255,68,68,0.15)", color: "#FF4444" };
+                return (
+                  <tr key={c.id} className={`border-t border-white/[0.04] ${inactive ? "opacity-40" : ""}`}>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={c.name} color={c.color} size={26} />
+                        <span className="text-white font-medium">{c.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-center text-white/80">{c.posts}</td>
+                    <td className="px-3 py-3 text-center text-white/80">{c.reels}</td>
+                    <td className="px-3 py-3 text-center text-white/80">{c.done}</td>
+                    <td className="px-3 py-3 text-center font-semibold" style={{ color: pctColor(c.percent) }}>
+                      {c.percent}%
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-semibold"
+                        style={{ backgroundColor: statusColor.bg, color: statusColor.color }}>
+                        {statusLabel === "Abaixo" && <AlertTriangle size={11} />}
+                        {statusLabel}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {(data?.clients ?? []).length === 0 && (
+                <tr><td colSpan={6} className="px-5 py-8 text-center text-white/40 text-sm">Nenhum cliente.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Category breakdown */}
+      {byCategory.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+          {byCategory.map((c) => {
+            const color = CAT_COLOR[c.name] ?? PALETTE.green;
+            return (
+              <div key={c.name} className="relative overflow-hidden rounded-xl p-4 bg-[#161616] border border-white/[0.06]">
+                <div className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-20 blur-2xl" style={{ background: color }} />
+                <div className="flex items-center justify-between relative">
+                  <div className="text-[11px] uppercase tracking-wider font-bold" style={{ color }}>{c.name}</div>
+                  <div className="text-white text-sm font-bold tabular-nums">{c.percent}%</div>
+                </div>
+                <div className="mt-2 text-white/60 text-xs">
+                  <span className="text-white font-semibold">{c.done}</span> de {c.total} entregues
+                </div>
+                <div className="mt-3 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${c.percent}%`, background: `linear-gradient(90deg, ${color}, ${PALETTE.lime})` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
