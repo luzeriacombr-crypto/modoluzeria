@@ -17,6 +17,7 @@ import { NewClientModal, CustomFieldsModal } from "./Modals";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
+import luzeriaLogo from "@/assets/luzeria-sidebar.png.asset.json";
 
 export function App() {
   const me = useMe();
@@ -75,7 +76,9 @@ export function App() {
 function Header() {
   const me = useMe().data;
   return (
-    <header className="lz-app-header sticky top-0 z-30 h-14 px-4 md:px-6 flex items-center justify-end gap-2">
+    <header className="lz-app-header sticky top-0 z-30 h-14 px-4 md:px-6 flex items-center gap-2">
+      <img src={luzeriaLogo.url} alt="Luzeria" className="md:hidden h-6 w-auto object-contain" />
+      <div className="flex-1" />
       <NotificationsBell />
       {me && (
         <div className="flex items-center gap-2 pl-2">
