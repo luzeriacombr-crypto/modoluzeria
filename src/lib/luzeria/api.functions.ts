@@ -317,6 +317,7 @@ export const getMonth = createServerFn({ method: "GET" })
       assigneeIds: itemAssignees.get(it.id) ?? [],
       comments: itemComments.get(it.id) ?? [],
       updatedAt: it.updated_at,
+      reelType: ((it as any).reel_type ?? null) as any,
     }));
     return {
       id: month.id, key: month.key,
@@ -330,7 +331,7 @@ export const getMonth = createServerFn({ method: "GET" })
 
 export const updateItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string; patch: { title?: string; copy?: string; drive_link?: string } }) => d)
+  .inputValidator((d: { id: string; patch: { title?: string; copy?: string; drive_link?: string; reel_type?: string | null } }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("content_items").update(data.patch).eq("id", data.id);
     if (error) throw new Error(error.message);
