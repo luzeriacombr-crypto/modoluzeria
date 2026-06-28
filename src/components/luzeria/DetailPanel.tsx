@@ -51,7 +51,12 @@ export function DetailPanel() {
     <>
       <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]" />
       <div ref={panelRef}
-        className="fixed right-0 top-0 bottom-0 z-50 w-[420px] bg-[#0D0D0D] border-l border-white/10 flex flex-col lz-slide-in overflow-y-auto">
+        className="fixed z-50 bg-[#0D0D0D] border-white/10 flex flex-col lz-slide-in overflow-y-auto
+          inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl border-t
+          md:rounded-none md:border-t-0 md:border-l md:right-0 md:top-0 md:bottom-0 md:left-auto md:w-[420px] md:max-h-none">
+        <div className="md:hidden flex justify-center pt-2 pb-1">
+          <div className="h-1 w-10 rounded-full bg-white/20" />
+        </div>
 
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-white/[0.08]">
