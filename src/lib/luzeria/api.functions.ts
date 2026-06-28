@@ -224,11 +224,34 @@ export const duplicateMonth = createServerFn({ method: "POST" })
     if (mErr) throw new Error(mErr.message);
     if (fromMonth) {
       const { data: oldItems } = await context.supabase
-        .from("content_items").select("type, idx, title").eq("month_id", fromMonth.id).order("idx");
+        .from("content_items").select("id, type, idx, title").eq("month_id", fromMonth.id).order("idx");
       if (oldItems?.length) {
-        await context.supabase.from("content_items").insert(
-          oldItems.map((it) => ({ month_id: newMonth.id, type: it.type, idx: it.idx, title: it.title }))
-        );
+        // Insert new items in the same shape (status defaults to PLANEJAMENTO).
+        const { data: inserted, error: insErr } = await context.supabase.from("content_items")
+          .insert(oldItems.map((it) => ({
+            month_id: newMonth.id, type: it.type, idx: it.idx, title: it.title,
+            status: "PLANEJAMENTO" as Status,
+          })))
+          .select("id, type, idx");
+        if (insErr) throw new Error(insErr.message);
+        // Carry over assignees by matching (type, idx).
+        const oldIdByKey = new Map<string, string>();
+        oldItems.forEach((it: any) => oldIdByKey.set(`${it.type}:${it.idx}`, it.id));
+        const newIdByKey = new Map<string, string>();
+        (inserted ?? []).forEach((it: any) => newIdByKey.set(`${it.type}:${it.idx}`, it.id));
+        const oldItemIds = [...oldIdByKey.values()];
+        if (oldItemIds.length) {
+          const { data: oldAssign } = await context.supabase
+            .from("item_assignees").select("item_id, user_id").in("item_id", oldItemIds);
+          const rows: { item_id: string; user_id: string }[] = [];
+          (oldAssign ?? []).forEach((a: any) => {
+            const old = oldItems.find((o: any) => o.id === a.item_id);
+            if (!old) return;
+            const newId = newIdByKey.get(`${old.type}:${old.idx}`);
+            if (newId) rows.push({ item_id: newId, user_id: a.user_id });
+          });
+          if (rows.length) await context.supabase.from("item_assignees").insert(rows);
+        }
       }
     } else {
       const items: any[] = [];
