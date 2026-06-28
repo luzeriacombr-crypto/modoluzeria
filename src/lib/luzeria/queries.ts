@@ -42,8 +42,8 @@ export function useApi() {
     deleteClient: useMutation({ mutationFn: useServerFn(deleteClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) }),
     duplicateMonth: useMutation({
       mutationFn: useServerFn(duplicateMonth),
-      onSuccess: (_d, vars) => {
-        qc.invalidateQueries({ queryKey: ["monthKeys", vars.data.clientId] });
+      onSuccess: (_d, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["monthKeys", vars?.data?.clientId] });
         qc.invalidateQueries({ queryKey: ["month"] });
       },
     }),
