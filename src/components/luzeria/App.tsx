@@ -4,7 +4,6 @@ import { useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { Client } from "@/lib/luzeria/types";
 import { Sidebar } from "./Sidebar";
-import { Dashboard } from "./Dashboard";
 import { ClientView } from "./ClientView";
 import { DetailPanel } from "./DetailPanel";
 import { MyTasks } from "./MyTasks";
@@ -57,7 +56,6 @@ export function App() {
         <Header />
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
           {view === "my" && <MyTasks />}
-          {view === "dashboard" && <Dashboard onCreate={() => setCreating({})} />}
           {view === "client" && selectedClientId && <ClientView clientId={selectedClientId} />}
           {view === "settings" && <SettingsPage />}
           {view === "stories" && <StoriesView />}
