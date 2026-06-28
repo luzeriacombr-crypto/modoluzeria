@@ -66,7 +66,7 @@ export function DetailPanel() {
         <div className="px-6 pt-5 pb-4 border-b border-white/[0.08]">
           <div className="flex items-start justify-between gap-2">
             <div className="text-[12px] uppercase font-bold tracking-wider" style={{ color: "#C8D44E" }}>
-              {item.type === "post" ? "Post" : "Reels"} {String(item.idx).padStart(2, "0")}
+              {item.type === "post" ? "Post" : item.type === "reel" ? "Reels" : "Item"} {String(item.idx).padStart(2, "0")}
               {client && <span className="ml-2 text-white/40 font-semibold">· {client.name}</span>}
             </div>
             <button onClick={() => openItem(null)} className="text-white/50 hover:text-white p-1 -mt-1 -mr-1 rounded hover:bg-white/5 transition">
