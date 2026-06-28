@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { clientsQO, monthKeysQO, monthQO, profilesQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -15,12 +15,16 @@ export function ClientView({ clientId }: { clientId: string }) {
   const { selectedMonthKey, selectMonth } = useUI();
   const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
-  const [tab, setTab] = useState<"posts" | "reels" | "profile">("posts");
+  const [tab, setTab] = useState<"posts" | "reels" | "outros" | "profile">("posts");
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
-  const { duplicateMonth, updateClient } = useApi();
+  const { duplicateMonth, updateClient, addContentItem, deleteItem } = useApi();
 
   if (!client) return null;
+  const isAvulso = client.category === "Avulsos";
+  const tabs = isAvulso
+    ? (["posts", "reels", "outros"] as const)
+    : (["posts", "reels", "profile"] as const);
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
   const idx = sortedKeys.indexOf(selectedMonthKey);
@@ -42,18 +46,24 @@ export function ClientView({ clientId }: { clientId: string }) {
           )}
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <button onClick={() => go(-1)} disabled={idx <= 0}
+          {!isAvulso && <button onClick={() => go(-1)} disabled={idx <= 0}
             className="h-8 w-8 flex items-center justify-center rounded-md text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-30 transition">
             <ChevronLeft size={16} />
-          </button>
-          <span className="rounded-md px-3 py-1 text-xs font-bold uppercase" style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
-            {formatMonth(selectedMonthKey)}
-          </span>
-          <button onClick={() => go(1)} disabled={idx >= sortedKeys.length - 1}
+          </button>}
+          {isAvulso ? (
+            <span className="rounded-md px-3 py-1 text-[10px] font-bold uppercase tracking-wider" style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E", border: "1px solid rgba(200,212,78,0.3)" }}>
+              Avulso
+            </span>
+          ) : (
+            <span className="rounded-md px-3 py-1 text-xs font-bold uppercase" style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
+              {formatMonth(selectedMonthKey)}
+            </span>
+          )}
+          {!isAvulso && <button onClick={() => go(1)} disabled={idx >= sortedKeys.length - 1}
             className="h-8 w-8 flex items-center justify-center rounded-md text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-30 transition">
             <ChevronRight size={16} />
-          </button>
-          {isAdmin && (
+          </button>}
+          {isAdmin && !isAvulso && (
             <button onClick={() => duplicateMonth.mutate({ data: { clientId, fromKey: selectedMonthKey } })}
               className="inline-flex items-center gap-1.5 ml-2 rounded-md px-3 py-1.5 text-xs font-semibold text-white/80 border border-white/10 hover:border-[#C8D44E] hover:text-[#C8D44E] transition">
               <Copy size={13} /> Duplicar mês
@@ -64,21 +74,47 @@ export function ClientView({ clientId }: { clientId: string }) {
 
       {/* Tabs */}
       <div className="flex items-center gap-6 mt-8 border-b border-white/[0.06]">
-        {(["posts", "reels", "profile"] as const).map((t) => (
+        {tabs.map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className="relative py-3 text-sm font-semibold transition-colors"
             style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
-            {t === "posts" ? "Posts" : t === "reels" ? "Reels" : "Perfil do Cliente"}
+            {t === "posts" ? "Posts" : t === "reels" ? "Reels" : t === "outros" ? "Outros" : "Perfil do Cliente"}
             {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "#C8D44E" }} />}
           </button>
         ))}
       </div>
 
       <div className="mt-2">
-        {tab === "posts" && (month?.posts ?? []).map((item, i) =>
-          <ContentRow key={item.id} item={item} profiles={profiles} idx={i + 1} />)}
-        {tab === "reels" && (month?.reels ?? []).map((item, i) =>
-          <ContentRow key={item.id} item={item} profiles={profiles} idx={i + 1} />)}
+        {(tab === "posts" || tab === "reels" || tab === "outros") && (
+          <>
+            {(tab === "posts" ? (month?.posts ?? []) : tab === "reels" ? (month?.reels ?? []) : (month?.outros ?? []))
+              .map((item, i) => (
+                <div key={item.id} className="group/row relative">
+                  <ContentRow item={item} profiles={profiles} idx={i + 1} />
+                  {isAdmin && isAvulso && (
+                    <button
+                      onClick={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}
+                      title="Excluir item"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition">
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            {isAdmin && isAvulso && (
+              <button
+                onClick={() => addContentItem.mutate({
+                  data: { clientId, key: selectedMonthKey, type: tab === "posts" ? "post" : tab === "reels" ? "reel" : "outros" },
+                })}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold border border-dashed border-white/15 text-white/60 hover:text-[#C8D44E] hover:border-[#C8D44E] transition">
+                <Plus size={13} /> Adicionar {tab === "posts" ? "post" : tab === "reels" ? "reel" : "item"}
+              </button>
+            )}
+            {isAvulso && (tab === "posts" ? month?.posts : tab === "reels" ? month?.reels : month?.outros)?.length === 0 && !isAdmin && (
+              <div className="px-4 py-10 text-center text-sm text-white/40">Sem itens nesta aba.</div>
+            )}
+          </>
+        )}
         {tab === "profile" && <ProfileTab client={client} profiles={profiles} canEdit={isAdmin}
           onSave={(patch: Record<string, any>) => updateClient.mutate({ data: { id: client.id, patch } })} />}
       </div>
