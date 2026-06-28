@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder,
@@ -192,13 +193,42 @@ function ClientRow({ client, active, onClick, onOpenCustomFields, canManage, cat
   const [menuOpen, setMenuOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const { updateClient, deleteClient, duplicateMonth } = useApi();
 
   useEffect(() => {
     if (!menuOpen) return;
-    const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setMenuOpen(false); };
+    const h = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (ref.current?.contains(t)) return;
+      if (menuRef.current?.contains(t)) return;
+      setMenuOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) { setMoveOpen(false); return; }
+    function place() {
+      const r = btnRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const menuW = 220;
+      const vw = window.innerWidth;
+      let left = r.right + 6;
+      if (left + menuW > vw - 8) left = Math.max(8, r.left - menuW - 6);
+      const top = Math.min(r.top, window.innerHeight - 360);
+      setMenuPos({ top: Math.max(8, top), left });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
   }, [menuOpen]);
 
   const monthKey = useUI((s) => s.selectedMonthKey);
@@ -207,7 +237,6 @@ function ClientRow({ client, active, onClick, onOpenCustomFields, canManage, cat
     <div ref={ref}
       className="group relative rounded-md transition-colors mx-1"
       style={{ backgroundColor: active ? "rgba(200,212,78,0.12)" : "transparent" }}
-      onMouseLeave={() => setMenuOpen(false)}
     >
       {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r" style={{ backgroundColor: "#C8D44E" }} />}
       <button onClick={onClick}
@@ -226,15 +255,17 @@ function ClientRow({ client, active, onClick, onOpenCustomFields, canManage, cat
           <Star size={13} className={client.favorite ? "fill-[#C8D44E] text-[#C8D44E]" : ""} />
         </button>
         {canManage && (
-          <button onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
+          <button ref={btnRef} onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
             className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white">
             <MoreHorizontal size={14} />
           </button>
         )}
       </div>
 
-      {menuOpen && (
-        <div className="absolute z-50 left-full ml-1 top-0 min-w-[200px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1">
+      {menuOpen && menuPos && createPortal(
+        <div ref={menuRef}
+          style={{ position: "fixed", top: menuPos.top, left: menuPos.left, width: 220 }}
+          className="z-[1000] rounded-md bg-[#1C1C1C] border border-white/10 shadow-2xl py-1 max-h-[80vh] overflow-y-auto">
           <MenuItem onClick={() => {
             const name = prompt("Novo nome", client.name)?.trim();
             if (name) updateClient.mutate({ data: { id: client.id, patch: { name } } });
@@ -249,7 +280,7 @@ function ClientRow({ client, active, onClick, onOpenCustomFields, canManage, cat
               <ChevronRight size={12} className="text-white/40" />
             </button>
             {moveOpen && (
-              <div className="absolute left-full top-0 ml-1 min-w-[160px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 z-50">
+              <div className="mt-1 ml-2 rounded-md bg-[#141414] border border-white/10 py-1">
                 {categories.map((cat) => (
                   <button
                     key={cat}
@@ -305,7 +336,8 @@ function ClientRow({ client, active, onClick, onOpenCustomFields, canManage, cat
             }
             setMenuOpen(false);
           }}>Excluir</MenuItem>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
