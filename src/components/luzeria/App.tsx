@@ -19,7 +19,7 @@ import { MobileNav } from "./MobileNav";
 export function App() {
   const me = useMe();
   const { view, selectedClientId } = useUI();
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState<{ category?: string } | null>(null);
   const [customFor, setCustomFor] = useState<Client | null>(null);
 
   if (me.isLoading) {
@@ -29,12 +29,12 @@ export function App() {
   return (
     <div className="flex min-h-screen bg-[#0D0D0D]" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       <Toaster theme="dark" position="bottom-right" />
-      <div className="hidden md:flex"><Sidebar onOpenCustomFields={setCustomFor} onCreateClient={() => setCreating(true)} /></div>
+      <div className="hidden md:flex"><Sidebar onOpenCustomFields={setCustomFor} onCreateClient={(category) => setCreating({ category })} /></div>
       <div className="flex-1 flex flex-col min-w-0">
         <Header />
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
           {view === "my" && <MyTasks />}
-          {view === "dashboard" && <Dashboard onCreate={() => setCreating(true)} />}
+          {view === "dashboard" && <Dashboard onCreate={() => setCreating({})} />}
           {view === "client" && selectedClientId && <ClientView clientId={selectedClientId} />}
           {view === "settings" && <SettingsPage />}
           {view === "stories" && <StoriesView />}
@@ -43,7 +43,7 @@ export function App() {
       </div>
       <DetailPanel />
       <MobileNav />
-      <NewClientModal open={creating} onClose={() => setCreating(false)} />
+      <NewClientModal open={!!creating} category={creating?.category} onClose={() => setCreating(null)} />
       <CustomFieldsModal client={customFor} onClose={() => setCustomFor(null)} />
     </div>
   );
