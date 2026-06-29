@@ -708,3 +708,83 @@ export const reorganizeAllDriveFiles = createServerFn({ method: "POST" })
     }
     return { ok: true, moved, skipped, errors: errors.slice(0, 20) };
   });
+
+/* ============== PER-CLIENT DELIVERIES FOLDER (Perfil do Cliente) ============== */
+
+async function assertAdmin(supabase: any, userId: string) {
+  const { data: ok } = await supabase.rpc("is_admin", { _user_id: userId });
+  if (!ok) throw new Error("Apenas administradores podem alterar a pasta de entregas.");
+}
+
+export const getClientDeliveriesFolder = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) =>
+    z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const map = await loadClientFolderMap(context.supabase, data.clientId);
+    const folderId = map?.deliveries_folder_id ?? null;
+    return {
+      folderId,
+      webViewUrl: folderId
+        ? `https://drive.google.com/drive/folders/${folderId}`
+        : null,
+    };
+  });
+
+export const setClientDeliveriesFolder = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; folderIdOrUrl: string }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      folderIdOrUrl: z.string().trim().min(5).max(500),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const id = parseDriveId(data.folderIdOrUrl);
+    if (!id) throw new Error("Link/ID do Drive inválido.");
+
+    // Validate the id points to an accessible folder.
+    let meta: any;
+    try {
+      meta = await driveFetch(
+        `/drive/v3/files/${encodeURIComponent(id)}?fields=id,name,mimeType&supportsAllDrives=true`,
+      );
+    } catch (e: any) {
+      throw new Error("Pasta não encontrada no Drive ou sem permissão de acesso.");
+    }
+    if (meta?.mimeType !== FOLDER_MIME) {
+      throw new Error("O link informado não aponta para uma pasta do Drive.");
+    }
+
+    const { error } = await context.supabase
+      .from("client_drive_map")
+      .upsert({
+        client_id: data.clientId,
+        drive_folder_id: id,
+        deliveries_folder_id: id,
+        confirmed_by: context.userId,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "client_id" });
+    if (error) throw new Error(error.message);
+
+    return {
+      ok: true,
+      folderId: id,
+      name: meta?.name ?? null,
+      webViewUrl: `https://drive.google.com/drive/folders/${id}`,
+    };
+  });
+
+export const clearClientDeliveriesFolder = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) =>
+    z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase
+      .from("client_drive_map")
+      .delete()
+      .eq("client_id", data.clientId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
