@@ -70,7 +70,7 @@ export function ReportsTab() {
     { id: "status", label: "Tempo por status", icon: <Activity size={13} /> },
     { id: "retrabalho", label: "Retrabalho", icon: <RotateCcw size={13} /> },
     { id: "qualidade", label: "Qualidade", icon: <Star size={13} /> },
-    { id: "bloqueios", label: "Bloqueios", icon: <AlertOctagon size={13} /> },
+    { id: "bloqueios", label: "Travados", icon: <AlertOctagon size={13} /> },
   ];
 
   function apply() {

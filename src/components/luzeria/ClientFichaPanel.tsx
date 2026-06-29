@@ -92,7 +92,7 @@ export function ClientFichaPanel() {
             <MetricMini icon={<CheckCircle2 size={13} />} label="Finalizados" value={metrics?.finalized ?? 0} color="#C8D44E" />
             <MetricMini
               icon={<AlertOctagon size={13} />}
-              label="Bloqueados"
+              label="Travados"
               value={metrics?.blocked ?? 0}
               color={(metrics?.blocked ?? 0) > 0 ? "#FF6B6B" : undefined}
             />
