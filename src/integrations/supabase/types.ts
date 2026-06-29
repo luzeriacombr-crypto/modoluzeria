@@ -65,6 +65,45 @@ export type Database = {
         }
         Relationships: []
       }
+      cleaning_log: {
+        Row: {
+          created_at: string
+          done_at: string | null
+          done_by: string | null
+          id: string
+          occurrence_date: string
+          status: string
+          task_idx: number
+          updated_at: string
+          user_id: string | null
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          done_at?: string | null
+          done_by?: string | null
+          id?: string
+          occurrence_date: string
+          status: string
+          task_idx: number
+          updated_at?: string
+          user_id?: string | null
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          done_at?: string | null
+          done_by?: string | null
+          id?: string
+          occurrence_date?: string
+          status?: string
+          task_idx?: number
+          updated_at?: string
+          user_id?: string | null
+          weekday?: number
+        }
+        Relationships: []
+      }
       cleaning_schedule: {
         Row: {
           created_at: string
@@ -849,24 +888,33 @@ export type Database = {
         Row: {
           created_at: string
           day: string
+          done_at: string | null
+          done_by: string | null
           id: string
           label: string | null
+          status: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
           created_at?: string
           day: string
+          done_at?: string | null
+          done_by?: string | null
           id?: string
           label?: string | null
+          status?: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           created_at?: string
           day?: string
+          done_at?: string | null
+          done_by?: string | null
           id?: string
           label?: string | null
+          status?: string
           updated_at?: string
           user_id?: string | null
         }
@@ -902,6 +950,7 @@ export type Database = {
           id: string
         }[]
       }
+      auto_mark_missed: { Args: never; Returns: number }
       generate_recurring_for_month: {
         Args: { _month_key?: string }
         Returns: number

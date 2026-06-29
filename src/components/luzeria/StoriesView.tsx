@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Camera } from "lucide-react";
+import { ChevronLeft, ChevronRight, Camera, Check, X } from "lucide-react";
 import { profilesQO, storiesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { AssigneePicker, colorForLabel } from "./AssigneePicker";
@@ -26,12 +26,12 @@ export function StoriesView() {
   const key = monthKey(cursor);
   const { data: rows = [] } = useQuery(storiesQO(key));
   const { data: profiles = [] } = useQuery(profilesQO());
-  const { upsertStoryDay } = useApi();
+  const { upsertStoryDay, setStoryDone } = useApi();
   const [picker, setPicker] = useState<{ rect: DOMRect; day: string } | null>(null);
 
   const byDay = useMemo(() => {
-    const m = new Map<string, { userId: string | null; label: string | null }>();
-    rows.forEach((r) => m.set(r.day, { userId: r.userId, label: r.label }));
+    const m = new Map<string, { userId: string | null; label: string | null; status: "pending" | "done" | "missed" }>();
+    rows.forEach((r) => m.set(r.day, { userId: r.userId, label: r.label, status: r.status }));
     return m;
   }, [rows]);
 
@@ -94,6 +94,8 @@ export function StoriesView() {
           const info = entry ? nameAndColor(entry) : null;
           const isToday = c.key === today;
           const isMine = !!entry?.userId && entry.userId === me?.id;
+          const status = entry?.status ?? "pending";
+          const canToggle = !!entry?.userId && (isMine || isAdmin);
           const bg = info ? info.color + (info.color === "#FFFFFF" ? "33" : "33") : "rgba(255,255,255,0.04)";
           return (
             <button
@@ -103,7 +105,7 @@ export function StoriesView() {
                 if (!isAdmin) return;
                 setPicker({ rect: (e.currentTarget as HTMLElement).getBoundingClientRect(), day: c.key });
               }}
-              className="aspect-square rounded-md p-2 flex flex-col justify-between text-left transition-all"
+              className="aspect-square rounded-md p-2 flex flex-col justify-between text-left transition-all relative"
               style={{
                 backgroundColor: info ? bg : "rgba(28,28,28,0.6)",
                 border: isMine ? "2px solid #C8D44E" : isToday ? "1px solid rgba(200,212,78,0.4)" : "1px solid transparent",
@@ -118,8 +120,36 @@ export function StoriesView() {
                 {info?.profile && <Avatar profile={info.profile} size={18} />}
               </div>
               {info && (
-                <div className="text-[10px] font-semibold truncate" style={{ color: info.color === "#FFFFFF" ? "#FFFFFF" : info.color }}>
-                  {info.name}
+                <div className="flex items-end justify-between gap-1">
+                  <div className="text-[10px] font-semibold truncate" style={{ color: info.color === "#FFFFFF" ? "#FFFFFF" : info.color }}>
+                    {info.name}
+                  </div>
+                  {entry?.userId && (
+                    <span
+                      role={canToggle ? "button" : undefined}
+                      title={status === "done" ? "Feito — clique para desfazer" : status === "missed" ? "Não feito" : isToday ? "Pendente — clique para marcar feito" : "Pendente"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!canToggle) return;
+                        if (status === "missed" && !isAdmin) return;
+                        setStoryDone.mutate({ data: { day: c.key, done: status !== "done" } });
+                      }}
+                      className="h-4 w-4 rounded-full flex items-center justify-center shrink-0"
+                      style={{
+                        backgroundColor:
+                          status === "done" ? "#C8D44E"
+                          : status === "missed" ? "#FF4444"
+                          : "rgba(255,255,255,0.15)",
+                        color: status === "missed" ? "#FFFFFF" : "#0D0D0D",
+                        cursor: canToggle ? "pointer" : "default",
+                        border: status === "pending" ? "1px solid rgba(255,255,255,0.25)" : "none",
+                      }}
+                    >
+                      {status === "done" ? <Check size={10} strokeWidth={3} />
+                        : status === "missed" ? <X size={10} strokeWidth={3} />
+                        : null}
+                    </span>
+                  )}
                 </div>
               )}
             </button>

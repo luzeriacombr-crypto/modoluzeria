@@ -1,55 +1,96 @@
-# Tour guiado de primeiro acesso
 
-Adicionar um tour interativo que aparece automaticamente após o `WelcomeOnboarding` (escolha de avatar) na primeira vez que o colaborador entra. O próprio app destaca cada área e explica o que ela faz, com botões **Anterior**, **Próximo** e **Pular**. Funciona em desktop e mobile.
+## Objetivo
 
-## Como funciona
+Adicionar controle de execução nas escalas de **Limpeza** e **Stories**:
+- Cada responsável vê um botão para marcar **Feito** ou **Pendente**.
+- Se o dia passar e ninguém marcar Feito, o sistema marca automaticamente **Não feito** (vermelho).
+- Status visível para todos; quem alterou e quando ficam registrados.
 
-- Quando `profile.onboarded_at` é preenchido (já existe), olhamos um novo campo `tour_completed_at`. Se for `null`, o tour começa sozinho ao entrar no app.
-- O tour é um overlay escuro com um "recorte" iluminado em volta do elemento atual + um tooltip ao lado com título, descrição curta, contador (ex. "3 de 8") e três botões: Anterior · Pular tour · Próximo.
-- ESC ou clicar fora = pular. No fim aparece "Tudo pronto! Bons trabalhos 💚".
-- Pode ser refeito a qualquer momento pelo botão **"Refazer tour"** na página de Perfil.
+---
 
-## Passos do tour (adaptados por papel)
+## Como vai aparecer
 
-Para **todos os colaboradores**:
-1. Sidebar / categorias — "Aqui ficam seus clientes, organizados por categoria."
-2. Minhas Demandas — "Tudo que é seu aparece aqui. Pílula colorida mostra urgência do prazo."
-3. Aba Minha Semana — "Visão kanban por dia da semana."
-4. Metas do mês (donuts) — "Seu progresso de Posts, Reels e Stories."
-5. Detalhe de um item — "Clique pra abrir checklist, comentar, mudar status, marcar travado."
-6. Menções `@nome` no comentário — "Avisa direto a pessoa."
-7. Notificações (sino) — "Prazos, menções e tarefas novas chegam aqui."
-8. Avatar / Perfil — "Edite foto, cor e refaça este tour quando quiser."
+### Stories (calendário do mês)
+Em cada dia com responsável, no canto inferior do card aparece um selo de status:
+- ⚪ **Pendente** (default) — cinza
+- 🟢 **Feito** — verde `#C8D44E`
+- 🔴 **Não feito** — vermelho `#FF4444` (aplicado automaticamente após o dia)
 
-Passos extras só para **Adm Master / Setor**:
-9. Dashboard — "Métricas, ranking e saúde da operação."
-10. Configurações → Relatório — "Exporte produtividade, lead time, qualidade, travados."
-11. Configurações → Equipe — "Aprovar membros novos e gerenciar acessos."
+Clicar no card abre o picker do responsável (como hoje). Se você for o responsável (ou Master), aparece também um mini-toggle **Feito / Pendente** dentro do picker — ou direto no card via menu de contexto.
 
-Em mobile, os passos que apontam pra sidebar passam a apontar pra bottom nav equivalente.
+Também em **Minhas Demandas → bloco "Hoje é seu dia de Stories"**: ganha botão "Marcar como feito" / "Desfazer".
 
-## Onde aparece o botão "Refazer tour"
+### Limpeza (tabela semanal)
+Cada célula com responsável ganha um pequeno indicador de status à direita (mesmo código de cor). Como a tabela é semanal recorrente, o status é por **ocorrência da semana atual** (segunda → domingo).
 
-- Página de Perfil, abaixo das opções de avatar.
-- Configurações → Geral (Master), bloco "Ajuda".
+No bloco **"Tarefas de limpeza hoje"** em Minhas Demandas: cada item da lista vira uma linha com checkbox **Feito** ao lado.
+
+Filtro visual: na visão "Limpeza" mostra status da semana corrente. Setas de "semana anterior / próxima" para Master consultar histórico (opcional, fora do MVP — apenas semana atual primeiro).
+
+---
+
+## Regras de negócio
+
+- **Quem pode marcar Feito/Pendente:** o responsável da célula/dia, ou Master/Setor.
+- **Não feito é automático:** só é setado pelo sistema, ninguém marca manualmente. Se voltar a marcar Feito num dia anterior, sobrescreve "Não feito".
+- **Auto-marcação:** um job diário às 23:59 BRT varre Stories de ontem e Limpeza de ontem (por dia da semana correspondente) e marca como Não feito tudo que ainda estiver Pendente.
+- **Histórico:** registra `done_at` e `done_by` (quem marcou) para aparecer no relatório.
+
+---
 
 ## Detalhes técnicos
 
-- **Banco**: nova coluna `profiles.tour_completed_at timestamptz null`. Migração pequena, sem mexer em RLS existente (a policy de update do próprio perfil já cobre).
-- **Lib**: usar [`driver.js`](https://driverjs.com/) (~6kb, sem dependências, MIT, suporta dark mode e popovers customizados). Alternativa: escrever um componente próprio com `createPortal` (mais controle, ~150 linhas). Recomendo `driver.js` pra ir mais rápido.
-- **Componente novo**: `src/components/luzeria/AppTour.tsx` — monta os passos com base em `useMe()` (role) e `useIsMobile()`, e dispara via `useEffect` quando `me.tour_completed_at == null`.
-- **Marcadores nos elementos-alvo**: adicionar `data-tour="sidebar"`, `data-tour="my-tasks"`, `data-tour="goals"`, etc. em ~10 lugares já existentes (Sidebar, MyTasks, GoalsWidget, DetailPanel, Notifications, Avatar do header, AdminDashboard, ReportsTab, Settings/Equipe, MobileNav). Mudança mínima, só atributos.
-- **Server fn nova**: `markTourCompleted` em `roadmap.functions.ts` (escreve `tour_completed_at = now()` no próprio perfil via `requireSupabaseAuth`).
-- **Refazer tour**: zera o campo e remonta o componente.
-- **Estilo**: popover com fundo `#1C1C1C`, borda `rgba(255,255,255,0.1)`, accent `#C8D44E` nos botões — combinando com o resto do app.
+### Banco (migração)
 
-## Não muda
+**Stories** — adicionar colunas em `stories_schedule`:
+- `status` text default 'pending' check in ('pending','done','missed')
+- `done_at` timestamptz null
+- `done_by` uuid null
 
-- Fluxo de login, `WelcomeOnboarding` (avatar), permissões, RLS.
-- Nenhum dado existente é afetado — colaboradores que já passaram pelo onboarding **não** veem o tour automaticamente (a migração marca `tour_completed_at = onboarded_at` pra quem já está dentro). Eles podem rodar manualmente pelo Perfil se quiserem.
+**Limpeza** — nova tabela `cleaning_log` (status por ocorrência de semana, já que `cleaning_schedule` é template recorrente):
+```text
+cleaning_log
+  id uuid pk
+  task_idx int
+  weekday int            -- 0..5 (Seg..Sáb)
+  occurrence_date date   -- data real daquela ocorrência (chave única com task_idx+weekday)
+  user_id uuid null      -- snapshot do responsável escalado
+  status text            -- 'done' | 'missed'
+  done_at timestamptz
+  done_by uuid
+  UNIQUE(task_idx, weekday, occurrence_date)
+```
+Status "pending" é implícito (sem linha).
 
-## Confirma antes de começar
+**RLS:** leitura para todos os autenticados; insert/update pelo responsável OU admin.
 
-1. Topa usar `driver.js` ou prefere componente próprio (mais trabalho, zero dependência)?
-2. Quer que o tour rode também pra quem já está no app, ou só pra novos colaboradores (recomendo só novos + botão manual)?
-3. A lista de passos acima cobre bem ou quer incluir/tirar algo (ex: Stories, Limpeza, Ficha do cliente)?
+**GRANTs** padrão para `authenticated` e `service_role`.
+
+### Job automático (pg_cron)
+Novo cron diário às **02:59 UTC** (≈ 23:59 BRT):
+- Stories: `UPDATE stories_schedule SET status='missed' WHERE day < CURRENT_DATE AND status='pending' AND user_id IS NOT NULL`
+- Limpeza: para cada `cleaning_schedule` ativa de `weekday = (ontem)`, se não existir `cleaning_log` da data de ontem → INSERT com `status='missed'`.
+
+### Server functions (em `src/lib/luzeria/api.functions.ts`)
+- `setStoryDone({ day, done: boolean })`
+- `setCleaningDone({ taskIdx, weekday, occurrenceDate, done: boolean })`
+- Query existente `cleaningQO` / `storiesQO` passa a retornar o status.
+
+### Frontend
+- `StoriesView.tsx`: selo de status na célula + ação no picker.
+- `CleaningView.tsx`: bolinha de status na célula (semana corrente).
+- `MyTasks.tsx`: botões "Marcar como feito" nos blocos "Hoje é seu dia de Stories" e "Tarefas de limpeza hoje".
+- Sem mudanças em tipos públicos quebradoras — apenas extensão.
+
+### Relatório (Configurações → Relatório)
+Aba existente ganha contadores rápidos no rodapé: "Stories no mês: X feitos / Y não feitos" e o mesmo para Limpeza. (Implementação leve; expandir depois se quiser.)
+
+---
+
+## Pergunta antes de implementar
+
+Para **Limpeza**, o auto "Não feito" deve considerar:
+- (a) **Só dias úteis Seg–Sáb** (CLEANING_DAYS atual, ignora domingo), OU
+- (b) **Todos os dias** que tenham escala marcada para aquele dia da semana?
+
+Se você não responder, sigo com **(a)** que é o comportamento mais alinhado à escala atual.

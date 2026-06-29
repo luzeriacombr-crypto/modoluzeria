@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, profilesQO, useMe } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, profilesQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Camera, Sparkles, List, CalendarDays, Clock } from "lucide-react";
+import { ChevronDown, ChevronUp, Camera, Sparkles, List, CalendarDays, Clock, Check, X, Circle } from "lucide-react";
 import { formatMonth, shortMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { CLEANING_TASKS } from "./CleaningView";
 import { GoalsWidget } from "./GoalsWidget";
@@ -15,6 +15,7 @@ export function MyTasks() {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
   const isAdmin = me?.role === "master" || me?.role === "setor";
+  const { setStoryDone, setCleaningDone } = useApi();
   const [viewAs, setViewAs] = useState<string>("");
   const targetId = isAdmin && viewAs ? viewAs : me?.id;
   const { data: tasks = [] } = useQuery({
@@ -97,16 +98,40 @@ export function MyTasks() {
       {(today?.stories || (today?.cleaningTaskIdx?.length ?? 0) > 0) && (
         <div className="space-y-3 mb-8">
           {today?.stories && (
-            <div className="rounded-lg p-4 flex items-center gap-3"
-              style={{ backgroundColor: "rgba(200,212,78,0.1)", borderLeft: "3px solid #C8D44E" }}>
-              <div className="h-9 w-9 rounded-md flex items-center justify-center" style={{ backgroundColor: "rgba(200,212,78,0.2)", color: "#C8D44E" }}>
-                <Camera size={18} />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-white">Hoje é seu dia de Stories</div>
-                <div className="text-[11px] text-white/60">Publique os stories da Luzeria.</div>
-              </div>
-            </div>
+            (() => {
+              const ss = today?.storyStatus ?? "pending";
+              const isMe = !isAdmin || !viewAs || viewAs === me?.id;
+              return (
+                <div className="rounded-lg p-4 flex items-center gap-3"
+                  style={{
+                    backgroundColor: ss === "done" ? "rgba(200,212,78,0.08)" : ss === "missed" ? "rgba(255,68,68,0.08)" : "rgba(200,212,78,0.1)",
+                    borderLeft: `3px solid ${ss === "missed" ? "#FF4444" : "#C8D44E"}`,
+                  }}>
+                  <div className="h-9 w-9 rounded-md flex items-center justify-center"
+                    style={{ backgroundColor: ss === "missed" ? "rgba(255,68,68,0.2)" : "rgba(200,212,78,0.2)", color: ss === "missed" ? "#FF4444" : "#C8D44E" }}>
+                    <Camera size={18} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-white">
+                      {ss === "done" ? "Stories de hoje — feito ✓" : ss === "missed" ? "Stories de hoje — não feito" : "Hoje é seu dia de Stories"}
+                    </div>
+                    <div className="text-[11px] text-white/60">Publique os stories da Luzeria.</div>
+                  </div>
+                  {isMe && ss !== "missed" && (
+                    <button
+                      onClick={() => setStoryDone.mutate({ data: { day: todayStr, done: ss !== "done" } })}
+                      className="text-[11px] font-semibold px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 shrink-0"
+                      style={{
+                        backgroundColor: ss === "done" ? "rgba(255,255,255,0.06)" : "#C8D44E",
+                        color: ss === "done" ? "rgba(255,255,255,0.7)" : "#0D0D0D",
+                      }}
+                    >
+                      {ss === "done" ? <><X size={12} /> Desfazer</> : <><Check size={12} /> Marcar feito</>}
+                    </button>
+                  )}
+                </div>
+              );
+            })()
           )}
           {(today?.cleaningTaskIdx?.length ?? 0) > 0 && (
             <div className="rounded-lg p-4 flex items-start gap-3"
@@ -116,10 +141,33 @@ export function MyTasks() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold text-white">Tarefas de limpeza hoje</div>
-                <ul className="mt-1.5 space-y-0.5">
-                  {today!.cleaningTaskIdx.map((ti) => (
-                    <li key={ti} className="text-[11px] text-white/70">• {CLEANING_TASKS[ti]}</li>
-                  ))}
+                <ul className="mt-2 space-y-1.5">
+                  {today!.cleaningTaskIdx.map((ti) => {
+                    const st = (today?.cleaningStatuses ?? []).find((s) => s.taskIdx === ti)?.status ?? "pending";
+                    const isMe = !isAdmin || !viewAs || viewAs === me?.id;
+                    const done = st === "done";
+                    const missed = st === "missed";
+                    return (
+                      <li key={ti} className="flex items-center gap-2">
+                        <button
+                          onClick={() => isMe && !missed && setCleaningDone.mutate({ data: { taskIdx: ti, weekday: weekdayIdx, occurrenceDate: todayStr, done: !done } })}
+                          disabled={!isMe || missed}
+                          className="h-5 w-5 rounded-md flex items-center justify-center shrink-0"
+                          style={{
+                            backgroundColor: done ? "#C8D44E" : missed ? "#FF4444" : "transparent",
+                            border: done || missed ? "none" : "1.5px solid rgba(255,255,255,0.3)",
+                            color: missed ? "#FFFFFF" : "#0D0D0D",
+                            cursor: isMe && !missed ? "pointer" : "default",
+                          }}
+                        >
+                          {done ? <Check size={12} strokeWidth={3} /> : missed ? <X size={12} strokeWidth={3} /> : <Circle size={6} className="opacity-0" />}
+                        </button>
+                        <span className="text-[12px]" style={{ color: done ? "rgba(255,255,255,0.5)" : missed ? "#FF8888" : "rgba(255,255,255,0.85)", textDecoration: done ? "line-through" : "none" }}>
+                          {CLEANING_TASKS[ti]}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             </div>
