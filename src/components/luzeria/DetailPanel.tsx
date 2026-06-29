@@ -577,8 +577,8 @@ export function DetailPanel() {
         open={qualityFor !== null}
         onClose={() => setQualityFor(null)}
         itemTitle={item.title}
-        onConfirm={(rating, note) => {
-          rateItem.mutate({ data: { itemId: item.id, rating, note } }, {
+        onConfirm={(rating) => {
+          rateItem.mutate({ data: { itemId: item.id, rating } }, {
             onSuccess: () => {
               setItemStatus.mutate({ data: { id: item.id, status: qualityFor! } });
               flash(item.id);
