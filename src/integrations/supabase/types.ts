@@ -62,12 +62,127 @@ export type Database = {
         }
         Relationships: []
       }
+      client_contacts: {
+        Row: {
+          client_id: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string
+          position: number
+          role: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          email?: string
+          id?: string
+          name: string
+          phone?: string
+          position?: number
+          role?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string
+          position?: number
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_links: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          label: string
+          link_type: string
+          position: number
+          url: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          label: string
+          link_type?: string
+          position?: number
+          url: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          link_type?: string
+          position?: number
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_secrets: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          label: string
+          position: number
+          value: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          label: string
+          position?: number
+          value: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          position?: number
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_secrets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           archived: boolean
           category: string
           color: string
           created_at: string
+          description: string
           favorite: boolean
           fixed_responsible_id: string | null
           icon: string | null
@@ -84,6 +199,7 @@ export type Database = {
           category?: string
           color?: string
           created_at?: string
+          description?: string
           favorite?: boolean
           fixed_responsible_id?: string | null
           icon?: string | null
@@ -100,6 +216,7 @@ export type Database = {
           category?: string
           color?: string
           created_at?: string
+          description?: string
           favorite?: boolean
           fixed_responsible_id?: string | null
           icon?: string | null
@@ -165,42 +282,54 @@ export type Database = {
       }
       content_items: {
         Row: {
+          blocked_reason: string | null
           copy: string
           drive_link: string
+          due_date: string | null
           editor_id: string | null
+          finished_at: string | null
           id: string
           idx: number
           legacy_assignee: string | null
           month_id: string
           reel_type: string | null
+          started_at: string | null
           status: Database["public"]["Enums"]["content_status"]
           title: string
           type: Database["public"]["Enums"]["content_type"]
           updated_at: string
         }
         Insert: {
+          blocked_reason?: string | null
           copy?: string
           drive_link?: string
+          due_date?: string | null
           editor_id?: string | null
+          finished_at?: string | null
           id?: string
           idx: number
           legacy_assignee?: string | null
           month_id: string
           reel_type?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["content_status"]
           title?: string
           type: Database["public"]["Enums"]["content_type"]
           updated_at?: string
         }
         Update: {
+          blocked_reason?: string | null
           copy?: string
           drive_link?: string
+          due_date?: string | null
           editor_id?: string | null
+          finished_at?: string | null
           id?: string
           idx?: number
           legacy_assignee?: string | null
           month_id?: string
           reel_type?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["content_status"]
           title?: string
           type?: Database["public"]["Enums"]["content_type"]
@@ -495,6 +624,7 @@ export type Database = {
         | "REVISAO_AGENDAMENTO"
         | "EM_GRAVACAO"
         | "EM_EDICAO"
+        | "BLOQUEADO"
       content_type: "post" | "reel" | "outros"
     }
     CompositeTypes: {
@@ -637,6 +767,7 @@ export const Constants = {
         "REVISAO_AGENDAMENTO",
         "EM_GRAVACAO",
         "EM_EDICAO",
+        "BLOQUEADO",
       ],
       content_type: ["post", "reel", "outros"],
     },
