@@ -341,5 +341,27 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["notifications"] });
       },
     }),
+    /* ===== DRIVE FILES ===== */
+    attachDriveFile: useMutation({
+      mutationFn: useServerFn(attachDriveFile),
+      onSuccess: (_d, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["item-files", vars?.data?.itemId] });
+        qc.invalidateQueries({ queryKey: ["month"] });
+      },
+    }),
+    uploadDriveFile: useMutation({
+      mutationFn: useServerFn(uploadDriveFile),
+      onSuccess: (_d, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["item-files", vars?.data?.itemId] });
+        qc.invalidateQueries({ queryKey: ["month"] });
+      },
+    }),
+    detachItemFile: useMutation({
+      mutationFn: useServerFn(detachItemFile),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["item-files"] });
+        qc.invalidateQueries({ queryKey: ["month"] });
+      },
+    }),
   };
 }
