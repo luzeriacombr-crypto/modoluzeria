@@ -27,6 +27,10 @@ import {
   getDriveThumbnail, reorderItemFiles,
   getClientDeliveriesFolder, setClientDeliveriesFolder, clearClientDeliveriesFolder,
 } from "./drive.functions";
+import {
+  getMyNotificationPreferences, setMyNotificationPreferences,
+  runDailyDigestNow, runDeadlineRemindersNow, listCronJobs,
+} from "./automations.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
@@ -232,6 +236,20 @@ export const clientDeliveriesFolderQO = (clientId: string | null) =>
     queryKey: ["client-deliveries-folder", clientId],
     queryFn: () => getClientDeliveriesFolder({ data: { clientId: clientId! } }),
     enabled: !!clientId,
+    staleTime: 30_000,
+  });
+
+export const notificationPrefsQO = () =>
+  queryOptions({
+    queryKey: ["notification-prefs"],
+    queryFn: () => getMyNotificationPreferences(),
+    staleTime: 60_000,
+  });
+
+export const cronJobsQO = () =>
+  queryOptions({
+    queryKey: ["cron-jobs"],
+    queryFn: () => listCronJobs(),
     staleTime: 30_000,
   });
 
