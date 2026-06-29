@@ -34,8 +34,58 @@ function openDriveLink(rawUrl: string) {
   const url = normalizeExternalUrl(rawUrl);
   if (!url) return;
 
-  const opened = window.open(url, "_blank", "noopener,noreferrer");
-  if (opened) opened.opener = null;
+  const features = "noopener,noreferrer";
+  const isLovablePreviewFrame = (() => {
+    try {
+      const ancestors = Array.from(window.location.ancestorOrigins ?? []);
+      const referrerHost = document.referrer ? new URL(document.referrer).hostname : "";
+      return window.top !== window.self && (
+        ancestors.some((origin) => new URL(origin).hostname.endsWith("lovable.dev")) ||
+        referrerHost.endsWith("lovable.dev")
+      );
+    } catch {
+      return window.top !== window.self;
+    }
+  })();
+
+  // Google Drive blocks pages opened from Lovable's sandboxed preview iframe.
+  // In that preview-only case, escape the sandbox by navigating the top window;
+  // in the published/direct app, Drive still opens in a new tab as requested.
+  if (isLovablePreviewFrame && window.top) {
+    try {
+      window.top.location.href = url;
+      return;
+    } catch { /* If top navigation is denied, fall through to normal opening. */ }
+  }
+
+  // When the app runs inside Lovable's preview frame, popups opened from the
+  // framed window can inherit the sandbox and Google Drive blocks the response.
+  // Opening from the top browsing context first makes the new Drive tab escape
+  // that frame; published/direct app usage falls back to the regular opener.
+  try {
+    if (window.top && window.top !== window.self) {
+      const openedFromTop = window.top.open(url, "_blank", features);
+      if (openedFromTop) {
+        try { openedFromTop.opener = null; } catch { /* noop */ }
+        return;
+      }
+    }
+  } catch { /* Cross-origin preview shells may deny top.open; use fallback. */ }
+
+  const opened = window.open(url, "_blank", features);
+  if (opened) {
+    try { opened.opener = null; } catch { /* noop */ }
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.referrerPolicy = "no-referrer";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 export function DetailPanel() {
