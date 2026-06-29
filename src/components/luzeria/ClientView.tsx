@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Copy, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Info, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { clientsQO, monthKeysQO, monthQO, profilesQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -19,6 +19,7 @@ export function ClientView({ clientId }: { clientId: string }) {
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { duplicateMonth, updateClient, addContentItem, deleteItem } = useApi();
+  const openFicha = useUI((s) => s.openFicha);
 
   if (!client) return null;
   const isAvulso = client.category === "Avulsos";
@@ -39,11 +40,20 @@ export function ClientView({ clientId }: { clientId: string }) {
       {/* Header */}
       <div className="flex items-center gap-4 mb-2">
         <Avatar name={client.name} color={client.color} size={40} />
-        <div>
+        <div className="flex items-center gap-2">
+          <div>
           <h1 className="text-[24px] font-bold text-white leading-tight">{client.name}</h1>
           {client.customFields.niche && (
             <div className="text-[13px] font-semibold mt-0.5" style={{ color: "#C8D44E" }}>{client.customFields.niche}</div>
           )}
+          </div>
+          <button
+            onClick={() => openFicha(client.id)}
+            title="Ficha do cliente"
+            className="ml-1 p-1.5 rounded-md text-white/50 hover:text-[#C8D44E] hover:bg-white/5 transition"
+          >
+            <Info size={15} />
+          </button>
         </div>
         <div className="ml-auto flex items-center gap-2">
           {!isAvulso && <button onClick={() => go(-1)} disabled={idx <= 0}
