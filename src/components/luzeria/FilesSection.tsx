@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ExternalLink, Upload, Link2, Trash2, Loader2, FileText, Image as ImageIcon,
-  Film, FolderOpen, Plus, Check,
+  Film, FolderOpen, Plus, Check, GripVertical, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { itemFilesQO, driveThumbnailQO, useApi, useMe } from "@/lib/luzeria/queries";
 
@@ -62,13 +62,58 @@ const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 export function FilesSection({ itemId, canEdit }: { itemId: string; canEdit: boolean }) {
   const { data: files = [], isLoading } = useQuery(itemFilesQO(itemId));
-  const { attachDriveFile, uploadDriveFile, detachItemFile } = useApi();
+  const { attachDriveFile, uploadDriveFile, detachItemFile, reorderItemFiles } = useApi();
   const me = useMe().data;
 
   const [showLink, setShowLink] = useState(false);
   const [linkValue, setLinkValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Local optimistic order (array of file ids). Synced from server data.
+  const [order, setOrder] = useState<string[]>([]);
+  const serverOrderKey = useMemo(() => files.map((f) => f.id).join("|"), [files]);
+  useEffect(() => {
+    setOrder(files.map((f) => f.id));
+  }, [serverOrderKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const filesById = useMemo(
+    () => new Map(files.map((f) => [f.id, f] as const)),
+    [files],
+  );
+  const orderedFiles = useMemo(
+    () => order.map((id) => filesById.get(id)).filter(Boolean) as typeof files,
+    [order, filesById],
+  );
+
+  const dragId = useRef<string | null>(null);
+
+  function persistOrder(next: string[]) {
+    setOrder(next);
+    reorderItemFiles.mutate({ data: { itemId, orderedIds: next } });
+  }
+
+  function moveBy(id: string, delta: number) {
+    const idx = order.indexOf(id);
+    if (idx < 0) return;
+    const target = idx + delta;
+    if (target < 0 || target >= order.length) return;
+    const next = order.slice();
+    [next[idx], next[target]] = [next[target], next[idx]];
+    persistOrder(next);
+  }
+
+  function onDrop(targetId: string) {
+    const sourceId = dragId.current;
+    dragId.current = null;
+    if (!sourceId || sourceId === targetId) return;
+    const next = order.slice();
+    const from = next.indexOf(sourceId);
+    const to = next.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    next.splice(from, 1);
+    next.splice(to, 0, sourceId);
+    persistOrder(next);
+  }
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     setError(null);
@@ -118,14 +163,50 @@ export function FilesSection({ itemId, canEdit }: { itemId: string; canEdit: boo
             <Loader2 size={12} className="animate-spin" /> carregando...
           </div>
         )}
-        {!isLoading && files.length === 0 && (
+        {!isLoading && orderedFiles.length === 0 && (
           <p className="text-[11px] text-white/40 px-1">Nenhum arquivo anexado.</p>
         )}
-        {files.map((f) => (
+        {orderedFiles.map((f, i) => (
           <div
             key={f.id}
-            className="group flex items-center gap-2.5 rounded-md bg-[#1C1C1C] border border-white/[0.08] px-2.5 py-2 hover:border-white/20 transition-colors"
+            draggable={canEdit}
+            onDragStart={(e) => {
+              if (!canEdit) return;
+              dragId.current = f.id;
+              e.dataTransfer.effectAllowed = "move";
+            }}
+            onDragOver={(e) => { if (canEdit) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } }}
+            onDrop={(e) => { if (canEdit) { e.preventDefault(); onDrop(f.id); } }}
+            className="group flex items-center gap-2 rounded-md bg-[#1C1C1C] border border-white/[0.08] px-2 py-2 hover:border-white/20 transition-colors"
           >
+            {canEdit && (
+              <div className="flex flex-col items-center shrink-0 -ml-0.5">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); moveBy(f.id, -1); }}
+                  disabled={i === 0 || reorderItemFiles.isPending}
+                  className="text-white/30 hover:text-[#C8D44E] disabled:opacity-20 disabled:cursor-not-allowed leading-none"
+                  title="Mover para cima"
+                >
+                  <ChevronUp size={12} />
+                </button>
+                <span
+                  className="cursor-grab active:cursor-grabbing text-white/30 hover:text-white/60 leading-none"
+                  title="Arrastar para reordenar"
+                >
+                  <GripVertical size={12} />
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); moveBy(f.id, 1); }}
+                  disabled={i === orderedFiles.length - 1 || reorderItemFiles.isPending}
+                  className="text-white/30 hover:text-[#C8D44E] disabled:opacity-20 disabled:cursor-not-allowed leading-none"
+                  title="Mover para baixo"
+                >
+                  <ChevronDown size={12} />
+                </button>
+              </div>
+            )}
             <FileThumb fileId={f.driveFileId} mime={f.mimeType} name={f.name} />
             <a
               href={f.webViewUrl}
@@ -136,6 +217,15 @@ export function FilesSection({ itemId, canEdit }: { itemId: string; canEdit: boo
               className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-[13px] font-medium text-white hover:text-[#C8D44E] truncate"
               title={f.name}
             >
+              {i === 0 && (
+                <span
+                  className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                  style={{ background: "rgba(200,212,78,0.15)", color: "#C8D44E" }}
+                  title="Aparece na prévia de Mídia"
+                >
+                  Capa
+                </span>
+              )}
               <span className="truncate">{f.name}</span>
               <ExternalLink size={11} className="shrink-0 opacity-50" />
             </a>
