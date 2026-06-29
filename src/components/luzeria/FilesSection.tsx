@@ -329,6 +329,22 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
               {error}
             </p>
           )}
+
+          {missingClientId && (
+            <div className="text-[11px] text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded px-2.5 py-2 flex items-start gap-2">
+              <span className="leading-relaxed flex-1">
+                ⚠ Configure a pasta de entregas no Perfil do Cliente antes de fazer upload.
+              </span>
+              <button
+                type="button"
+                onClick={() => openFicha(clientId ?? missingClientId)}
+                className="shrink-0 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider"
+                style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+              >
+                Abrir perfil
+              </button>
+            </div>
+          )}
         </div>
       )}
 
