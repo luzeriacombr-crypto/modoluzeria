@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link as LinkIcon, MessageCircle, Plus, Scissors } from "lucide-react";
+import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar } from "lucide-react";
 import type { ContentItem, Profile } from "@/lib/luzeria/types";
 import { statusOptionsFor, REEL_TYPE_LABEL, type ReelType } from "@/lib/luzeria/types";
 import { useApi, useMe } from "@/lib/luzeria/queries";
@@ -34,6 +34,12 @@ export function ContentRow({ item, profiles, idx }: {
   const editorInitials = editor
     ? editor.name.trim().split(/\s+/).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("")
     : "";
+  const isOverdue =
+    !!item.dueDate && item.status !== "FINALIZADO" &&
+    new Date(item.dueDate + "T23:59:59").getTime() < Date.now();
+  const dueLabel = item.dueDate
+    ? new Date(item.dueDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+    : null;
 
   function commit() {
     setEditing(false);
@@ -99,6 +105,18 @@ export function ContentRow({ item, profiles, idx }: {
 
       <LinkIcon size={15}
         style={{ color: item.driveLink ? "#C8D44E" : "rgba(255,255,255,0.25)", opacity: item.driveLink ? 1 : 0.4 }} />
+      {dueLabel && (
+        <div
+          className="hidden sm:flex items-center gap-1 text-[11px] font-semibold tabular-nums"
+          title={isOverdue ? "Prazo vencido" : "Prazo"}
+          style={{
+            color: isOverdue ? "#FF6B6B" : "rgba(255,255,255,0.55)",
+          }}
+        >
+          <Calendar size={13} />
+          <span>{dueLabel}</span>
+        </div>
+      )}
       {item.type === "reel" && editor && (
         <div
           className="flex items-center gap-1 text-[11px] font-semibold tabular-nums"
