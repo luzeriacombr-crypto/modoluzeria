@@ -10,6 +10,7 @@ import { UserPlus, X, Settings as SettingsIcon, Star } from "lucide-react";
 import { ReportsTab } from "./ReportsTab";
 import { DriveSettingsTab } from "./DriveSettingsTab";
 import { MemberGoalsTab } from "./MemberGoalsTab";
+import { AutomationsTab } from "./AutomationsTab";
 
 export function SettingsPage() {
   const me = useMe().data;
@@ -17,7 +18,7 @@ export function SettingsPage() {
   const { setUserRole, setUserActive, deleteUser, adminCreateUser } = useApi();
   const { setView, setViewAs } = useUI();
   const [adding, setAdding] = useState(false);
-  const [tab, setTab] = useState<"team" | "report" | "goals" | "drive" | "general">("team");
+  const [tab, setTab] = useState<"team" | "report" | "goals" | "drive" | "automations" | "general">("team");
 
   if (me?.role !== "master") {
     return <div className="p-10 text-white/60 text-sm">Acesso restrito ao Administrador Master.</div>;
@@ -44,6 +45,7 @@ export function SettingsPage() {
              tab === "goals"  ? "Defina a meta mensal de cada colaborador." :
              tab === "report" ? "Relatório consolidado de entregas." :
              tab === "drive"  ? "Integração com Google Drive." :
+             tab === "automations" ? "Lembretes automáticos e jobs do sistema." :
              "Ajustes gerais da operação."}
           </p>
         </div>
@@ -61,6 +63,7 @@ export function SettingsPage() {
           { id: "goals", label: "Metas" },
           { id: "report", label: "Relatório" },
           { id: "drive", label: "Drive" },
+          { id: "automations", label: "Automações" },
           { id: "general", label: "Geral" },
         ].map((t) => {
           const active = tab === (t.id as any);
@@ -80,6 +83,7 @@ export function SettingsPage() {
       {tab === "general" ? <GeneralSettings /> :
        tab === "goals" ? <MemberGoalsTab /> :
        tab === "drive" ? <DriveSettingsTab /> :
+       tab === "automations" ? <AutomationsTab /> :
        tab === "report" ? <ReportsTab /> : (
         <>
       {pending.length > 0 && (
