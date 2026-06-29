@@ -5,6 +5,7 @@ import {
   Film, FolderOpen, Plus, Check, GripVertical, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { itemFilesQO, driveThumbnailQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { useUI } from "@/lib/luzeria/ui-store";
 
 function formatSize(n: number | null | undefined) {
   if (!n || n <= 0) return "";
@@ -60,14 +61,16 @@ function fileToBase64(file: File): Promise<string> {
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
-export function FilesSection({ itemId, canEdit }: { itemId: string; canEdit: boolean }) {
+export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; canEdit: boolean; clientId?: string | null }) {
   const { data: files = [], isLoading } = useQuery(itemFilesQO(itemId));
   const { attachDriveFile, uploadDriveFile, detachItemFile, reorderItemFiles } = useApi();
   const me = useMe().data;
+  const { openFicha } = useUI();
 
   const [showLink, setShowLink] = useState(false);
   const [linkValue, setLinkValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [missingClientId, setMissingClientId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Local optimistic order (array of file ids). Synced from server data.
@@ -115,8 +118,15 @@ export function FilesSection({ itemId, canEdit }: { itemId: string; canEdit: boo
     persistOrder(next);
   }
 
+  function parseDriveError(msg: string | undefined): { kind: "missing"; clientId: string } | { kind: "other"; msg: string } {
+    const m = /^\[DELIVERIES_FOLDER_MISSING:([0-9a-f-]{36})\]\s*(.*)$/i.exec(msg ?? "");
+    if (m) return { kind: "missing", clientId: m[1] };
+    return { kind: "other", msg: msg ?? "Falha na operação." };
+  }
+
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     setError(null);
+    setMissingClientId(null);
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
@@ -135,12 +145,15 @@ export function FilesSection({ itemId, canEdit }: { itemId: string; canEdit: boo
         },
       });
     } catch (err: any) {
-      setError(err?.message ?? "Falha no upload.");
+      const p = parseDriveError(err?.message);
+      if (p.kind === "missing") setMissingClientId(p.clientId);
+      else setError(p.msg);
     }
   }
 
   async function onAttachLink() {
     setError(null);
+    setMissingClientId(null);
     const v = linkValue.trim();
     if (!v) return;
     try {
@@ -148,7 +161,9 @@ export function FilesSection({ itemId, canEdit }: { itemId: string; canEdit: boo
       setLinkValue("");
       setShowLink(false);
     } catch (err: any) {
-      setError(err?.message ?? "Não foi possível vincular o link.");
+      const p = parseDriveError(err?.message);
+      if (p.kind === "missing") setMissingClientId(p.clientId);
+      else setError(p.msg);
     }
   }
 
