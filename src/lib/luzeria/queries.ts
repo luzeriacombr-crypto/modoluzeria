@@ -7,6 +7,7 @@ import {
   setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile,
   listStories, upsertStoryDay, getCleaning, upsertCleaningCell, updateCleaningNote, getMyToday,
   adminCreateUser, getAdminDashboard, getTopMembers, getMemberFinalizations,
+  getReport, getMemberReportDetail,
 } from "./api.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
@@ -72,6 +73,28 @@ export const memberFinalizationsQO = (
     queryKey: ["member-finalizations", userId, period, monthKey],
     queryFn: () => getMemberFinalizations({ data: { userId, period, monthKey } }),
     enabled: !!userId && !!monthKey,
+  });
+
+export type ReportFilters = {
+  userId?: string | null;
+  from: string;
+  to: string;
+  type?: "all" | "post" | "reel" | "outros" | "stories" | "cleaning";
+  clientId?: string | null;
+};
+
+export const reportQO = (filters: ReportFilters) =>
+  queryOptions({
+    queryKey: ["report", filters],
+    queryFn: () => getReport({ data: filters as any }),
+    enabled: !!filters.from && !!filters.to,
+  });
+
+export const memberReportDetailQO = (userId: string, from: string, to: string) =>
+  queryOptions({
+    queryKey: ["member-report-detail", userId, from, to],
+    queryFn: () => getMemberReportDetail({ data: { userId, from, to } }),
+    enabled: !!userId && !!from && !!to,
   });
 
 export function useMe() { return useQuery(meQO()); }
