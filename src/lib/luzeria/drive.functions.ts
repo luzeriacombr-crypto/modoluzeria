@@ -212,7 +212,7 @@ export const uploadDriveFile = createServerFn({ method: "POST" })
       JSON.stringify(metadata) + "\r\n",
       `--${boundary}\r\n`,
       `Content-Type: ${data.mimeType}\r\n`,
-      `Content-Transfer-Encoding: base64\r\n\r\n`,
+      `\r\n`,
     ];
     const head = Buffer.from(parts.join(""), "utf8");
     const tail = Buffer.from(`\r\n--${boundary}--`, "utf8");
