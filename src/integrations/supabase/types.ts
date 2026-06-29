@@ -44,6 +44,27 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       cleaning_schedule: {
         Row: {
           created_at: string
@@ -425,6 +446,38 @@ export type Database = {
             columns: ["month_id"]
             isOneToOne: false
             referencedRelation: "months"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deadline_notifications_log: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          kind: string
+          sent_on: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          kind: string
+          sent_on: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          kind?: string
+          sent_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deadline_notifications_log_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
             referencedColumns: ["id"]
           },
         ]
