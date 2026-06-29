@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
-  Repeat, ListChecks, Zap, Power,
+  Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save,
 } from "lucide-react";
-import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
 
@@ -129,6 +129,11 @@ export function ClientFichaPanel() {
             placeholder={isAdmin ? "Tom de voz, nicho, observações, instruções do cliente…" : "Sem descrição."}
             className="w-full bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none disabled:opacity-70"
           />
+        </Section>
+
+        {/* Deliveries folder (Drive) */}
+        <Section label="Pasta de entregas (Drive)">
+          <DeliveriesFolderBlock clientId={client.id} isAdmin={isAdmin} />
         </Section>
 
         {/* Links */}
