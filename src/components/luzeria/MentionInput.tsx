@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { membersQO } from "@/lib/luzeria/queries";
+import { profilesQO } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
+import type { Profile } from "@/lib/luzeria/types";
 
 interface Props {
   value: string;
@@ -13,7 +14,8 @@ interface Props {
 }
 
 export function MentionInput({ value, onChange, placeholder, className, onSubmit, rows = 2 }: Props) {
-  const { data: members = [] } = useQuery(membersQO());
+  const { data: profiles } = useQuery(profilesQO());
+  const members = (profiles ?? []).filter((p: Profile) => p.active);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [hi, setHi] = useState(0);
@@ -21,7 +23,7 @@ export function MentionInput({ value, onChange, placeholder, className, onSubmit
 
   const matches = open
     ? members
-        .filter((m: any) =>
+        .filter((m) =>
           (m.name ?? "").toLowerCase().includes(query.toLowerCase()) ||
           (m.email ?? "").toLowerCase().includes(query.toLowerCase()))
         .slice(0, 6)
@@ -46,7 +48,7 @@ export function MentionInput({ value, onChange, placeholder, className, onSubmit
     if (m) { setQuery(m[1]); setOpen(true); } else setOpen(false);
   };
 
-  const pickMember = (mem: any) => {
+  const pickMember = (mem: Profile) => {
     const el = ref.current; if (!el) return;
     const cursor = el.selectionStart ?? value.length;
     const before = value.slice(0, cursor).replace(/@([\w\u00C0-\u017F]{0,30})$/, `@[${mem.name}](${mem.id}) `);
@@ -79,11 +81,11 @@ export function MentionInput({ value, onChange, placeholder, className, onSubmit
       />
       {open && matches.length > 0 && (
         <div className="absolute z-50 left-0 right-0 mt-1 bg-[#1C1C1C] border border-white/10 rounded-lg overflow-hidden shadow-2xl">
-          {matches.map((m: any, idx: number) => (
+          {matches.map((m, idx) => (
             <button key={m.id} type="button" onMouseDown={(e) => { e.preventDefault(); pickMember(m); }}
               className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
                 idx === hi ? "bg-[#C8D44E]/10 text-[#C8D44E]" : "text-white/80 hover:bg-white/5"}`}>
-              <Avatar name={m.name} url={m.avatar_url ?? undefined} color={m.avatar_color ?? undefined} size={22} />
+              <Avatar profile={m} size={22} />
               <span className="truncate">{m.name}</span>
             </button>
           ))}
