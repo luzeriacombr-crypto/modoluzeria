@@ -184,7 +184,7 @@ export function DetailPanel() {
         </Section>
 
         {item.status === "BLOQUEADO" && (
-          <Section label="Motivo do bloqueio">
+          <Section label="Motivo do travamento">
             <div className="flex items-start gap-2">
               <AlertOctagon size={16} className="mt-2.5" style={{ color: "#FF6B6B" }} />
               <textarea
