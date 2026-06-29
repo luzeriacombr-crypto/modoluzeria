@@ -1,11 +1,44 @@
 import { useQuery } from "@tanstack/react-query";
-import { goalProgressQO } from "@/lib/luzeria/queries";
+import { goalProgressQO, useMe } from "@/lib/luzeria/queries";
+import { useUI } from "@/lib/luzeria/ui-store";
 import { Target } from "lucide-react";
 
 export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: string }) {
   const { data } = useQuery(goalProgressQO(monthKey, userId));
+  const me = useMe().data;
+  const { setView } = useUI();
   if (!data) return null;
-  if (!data.postsGoal && !data.reelsGoal && !data.storiesGoal) return null;
+
+  const hasGoals = data.postsGoal || data.reelsGoal || data.storiesGoal;
+  if (!hasGoals) {
+    const isSelf = !userId || userId === me?.id;
+    if (!isSelf) return null;
+    return (
+      <div className="rounded-xl bg-[#1C1C1C] border border-white/[0.06] p-4 mb-6 flex items-center gap-3">
+        <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+          <Target size={16} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-white">Sem meta definida este mês</div>
+          <div className="text-[11px] text-white/50 mt-0.5">
+            {me?.role === "master"
+              ? "Defina as metas da equipe em Configurações › Metas."
+              : "Seu adm ainda não definiu suas metas do mês."}
+          </div>
+        </div>
+        {me?.role === "master" && (
+          <button
+            onClick={() => setView("settings")}
+            className="text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-black"
+            style={{ backgroundColor: "#C8D44E" }}
+          >
+            Definir metas
+          </button>
+        )}
+      </div>
+    );
+  }
 
   const items = [
     { label: "Posts", done: data.postsDone, goal: data.postsGoal },
