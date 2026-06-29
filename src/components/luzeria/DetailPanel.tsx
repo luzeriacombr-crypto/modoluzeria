@@ -136,6 +136,12 @@ export function DetailPanel() {
               <X size={16} />
             </button>
           </div>
+          {reworkCount > 0 && (
+            <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+              style={{ backgroundColor: "rgba(255,140,66,0.15)", color: "#FF8C42" }}>
+              <RotateCcw size={10} /> Retrabalho ×{reworkCount}
+            </div>
+          )}
           <input value={title} onChange={(e) => setTitle(e.target.value)}
             onBlur={() => { if (title.trim() && title !== item.title) updateItem.mutate({ data: { id: item.id, patch: { title: title.trim() } } }); }}
             className="mt-2 w-full bg-transparent text-[20px] font-bold text-white outline-none placeholder:text-white/30" />
