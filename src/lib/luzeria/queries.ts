@@ -24,6 +24,7 @@ import {
 } from "./roadmap.functions";
 import {
   listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, detachItemFile,
+  getDriveThumbnail,
 } from "./drive.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
@@ -213,6 +214,16 @@ export const driveSearchQO = (query: string, enabled: boolean) =>
     queryFn: () => searchDriveFiles({ data: { query } }),
     enabled,
     staleTime: 30_000,
+  });
+
+export const driveThumbnailQO = (fileId: string | null | undefined, enabled = true) =>
+  queryOptions({
+    queryKey: ["drive-thumb", fileId],
+    queryFn: () => getDriveThumbnail({ data: { fileId: fileId! } }),
+    enabled: !!fileId && enabled,
+    staleTime: 1000 * 60 * 30,
+    gcTime: 1000 * 60 * 60,
+    retry: false,
   });
 
 export function useMe() { return useQuery(meQO()); }
