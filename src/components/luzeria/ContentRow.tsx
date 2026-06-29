@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link as LinkIcon, MessageCircle, Plus } from "lucide-react";
+import { Link as LinkIcon, MessageCircle, Plus, Scissors } from "lucide-react";
 import type { ContentItem, Profile } from "@/lib/luzeria/types";
 import { statusOptionsFor, REEL_TYPE_LABEL, type ReelType } from "@/lib/luzeria/types";
 import { useApi, useMe } from "@/lib/luzeria/queries";
@@ -28,6 +28,12 @@ export function ContentRow({ item, profiles, idx }: {
   const assignees = item.assigneeIds
     .map((id) => profiles.find((p) => p.id === id))
     .filter(Boolean) as Profile[];
+  const editor = item.type === "reel" && item.editorId
+    ? profiles.find((p) => p.id === item.editorId)
+    : null;
+  const editorInitials = editor
+    ? editor.name.trim().split(/\s+/).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("")
+    : "";
 
   function commit() {
     setEditing(false);
@@ -93,6 +99,16 @@ export function ContentRow({ item, profiles, idx }: {
 
       <LinkIcon size={15}
         style={{ color: item.driveLink ? "#C8D44E" : "rgba(255,255,255,0.25)", opacity: item.driveLink ? 1 : 0.4 }} />
+      {item.type === "reel" && editor && (
+        <div
+          className="flex items-center gap-1 text-[11px] font-semibold tabular-nums"
+          style={{ color: "rgba(255,255,255,0.4)" }}
+          title={`Editor: ${editor.name}`}
+        >
+          <Scissors size={13} />
+          <span>{editorInitials}</span>
+        </div>
+      )}
       <div className="flex items-center gap-1 text-[11px] tabular-nums"
         style={{ color: item.comments.length ? "#C8D44E" : "rgba(255,255,255,0.25)", opacity: item.comments.length ? 1 : 0.4 }}>
         <MessageCircle size={14} />
