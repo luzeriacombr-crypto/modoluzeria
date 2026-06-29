@@ -374,5 +374,12 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["month"] });
       },
     }),
+    reorderItemFiles: useMutation({
+      mutationFn: useServerFn(reorderItemFiles),
+      onSuccess: (_d, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["item-files", vars?.data?.itemId] });
+        qc.invalidateQueries({ queryKey: ["month"] });
+      },
+    }),
   };
 }
