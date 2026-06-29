@@ -5,8 +5,8 @@ import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Camera, Sparkles, List, CalendarDays } from "lucide-react";
-import { formatMonth, shortMonth } from "@/lib/luzeria/utils";
+import { ChevronDown, ChevronUp, Camera, Sparkles, List, CalendarDays, Clock } from "lucide-react";
+import { formatMonth, shortMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { CLEANING_TASKS } from "./CleaningView";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
@@ -41,6 +41,15 @@ export function MyTasks() {
   tasks.forEach((t) => {
     const s = t.status as Status;
     if (grouped[s]) grouped[s].push(t);
+  });
+  // Sort each group by due date asc; nulls last.
+  (Object.keys(grouped) as Status[]).forEach((s) => {
+    grouped[s] = [...grouped[s]].sort((a: any, b: any) => {
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return a.dueDate.localeCompare(b.dueDate);
+    });
   });
 
   const targetProfile = profiles.find((p) => p.id === targetId);
@@ -155,6 +164,7 @@ export function MyTasks() {
                         {t.type === "post" ? "Post" : t.type === "reel" ? "Reels" : "Item"} {String(t.idx).padStart(2, "0")}
                       </span>
                       <span className="text-sm text-white truncate flex-1">{t.title}</span>
+                      <DeadlinePill dueDate={(t as any).dueDate} status={t.status} />
                     </button>
                   ))}
                 </div>
@@ -166,6 +176,20 @@ export function MyTasks() {
 
       {prod && <ProductivityBlock prod={prod} monthKey={monthKey} />}
     </div>
+  );
+}
+
+function DeadlinePill({ dueDate, status }: { dueDate?: string | null; status: string }) {
+  const info = deadlineInfo(dueDate, status);
+  if (info.level === "done") return null;
+  return (
+    <span
+      className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5"
+      style={{ backgroundColor: info.bg, color: info.color }}
+      title={dueDate ? `Prazo: ${dueDate}` : "Sem prazo definido"}
+    >
+      <Clock size={10} /> {info.label}
+    </span>
   );
 }
 

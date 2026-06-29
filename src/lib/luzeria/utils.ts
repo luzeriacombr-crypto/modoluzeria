@@ -81,3 +81,36 @@ export const PRESET_ICONS = [
   "💼",
   "🌸",
 ];
+
+/* ============== DEADLINE INDICATOR ============== */
+export type DeadlineLevel = "overdue" | "urgent" | "soon" | "ok" | "none" | "done";
+
+export interface DeadlineInfo {
+  level: DeadlineLevel;
+  label: string;
+  color: string;
+  bg: string;
+  days: number | null;
+}
+
+export function deadlineInfo(dueDate?: string | null, status?: string): DeadlineInfo {
+  if (status === "FINALIZADO") {
+    return { level: "done", label: "", color: "rgba(255,255,255,0.3)", bg: "rgba(255,255,255,0.05)", days: null };
+  }
+  if (!dueDate) {
+    return { level: "none", label: "Sem prazo", color: "rgba(255,255,255,0.4)", bg: "rgba(255,255,255,0.04)", days: null };
+  }
+  const [y, m, d] = dueDate.split("-").map(Number);
+  const due = new Date(y, (m ?? 1) - 1, d ?? 1); due.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  if (days < 0) {
+    const n = Math.abs(days);
+    return { level: "overdue", label: n === 1 ? "Atrasado 1d" : `Atrasado ${n}d`, color: "#FF4444", bg: "rgba(255,68,68,0.12)", days };
+  }
+  if (days === 0) return { level: "urgent", label: "Vence hoje", color: "#FF4444", bg: "rgba(255,68,68,0.12)", days };
+  if (days === 1) return { level: "urgent", label: "Vence amanhã", color: "#FF4444", bg: "rgba(255,68,68,0.12)", days };
+  if (days <= 3) return { level: "soon", label: `Em ${days} dias`, color: "#F5A623", bg: "rgba(245,166,35,0.12)", days };
+  return { level: "ok", label: `Em ${days} dias`, color: "#C8D44E", bg: "rgba(200,212,78,0.12)", days };
+}

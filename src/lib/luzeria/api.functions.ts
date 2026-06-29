@@ -717,10 +717,11 @@ export const listMyTasks = createServerFn({ method: "GET" })
     if (itemIds.length === 0) return [];
     const { data: items } = await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, month_id, months!inner(client_id, key, clients!inner(id, name, color, category))")
+      .select("id, type, idx, title, status, due_date, month_id, months!inner(client_id, key, clients!inner(id, name, color, category))")
       .in("id", itemIds);
     return (items ?? []).map((it: any) => ({
       id: it.id, type: it.type, idx: it.idx, title: it.title, status: it.status,
+      dueDate: it.due_date ?? null,
       monthKey: it.months.key, clientId: it.months.clients.id,
       clientName: it.months.clients.name, clientColor: it.months.clients.color,
       clientCategory: it.months.clients.category ?? "Social Media",

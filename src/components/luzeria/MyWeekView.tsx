@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { myWeekQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, type Status } from "@/lib/luzeria/types";
+import { deadlineInfo } from "@/lib/luzeria/utils";
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -60,7 +61,10 @@ export function MyWeekView({ userId }: { userId?: string }) {
                   onClick={() => { selectClient(t.clientId); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
                   className="w-full mb-1.5 text-left rounded-md p-2 bg-[#0D0D0D]/60 hover:bg-[#0D0D0D] transition-colors border border-white/[0.04]">
                   <div className="flex items-center gap-1.5 mb-1">
-                    <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: t.clientColor }} />
+                    {(() => {
+                      const di = deadlineInfo(t.dueDate, t.status);
+                      return <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: di.level === "done" || di.level === "none" ? t.clientColor : di.color }} title={di.label || undefined} />;
+                    })()}
                     <span className="text-[9px] uppercase font-bold tracking-wider text-white/50 truncate">{t.clientName}</span>
                     <span className="ml-auto text-[8px] uppercase font-bold tracking-wider rounded px-1 py-px"
                       style={{ backgroundColor: STATUS_META[t.status as Status].bg, color: STATUS_META[t.status as Status].color }}>
