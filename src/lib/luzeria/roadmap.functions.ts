@@ -527,3 +527,173 @@ export const getMemberStatusDuration = createServerFn({ method: "GET" })
       }))
       .sort((a, b) => b.avgHours - a.avgHours);
   });
+
+/* =========================================================
+ * APP SETTINGS
+ * ======================================================= */
+
+export const getAppSettings = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }): Promise<AppSettings> => {
+    const db: any = context.supabase;
+    const { data: rows } = await db.from("app_settings").select("key, value");
+    const map = new Map<string, any>();
+    (rows ?? []).forEach((r: any) => map.set(r.key, r.value));
+    return {
+      requireRatingOnFinalize: map.get("require_rating_on_finalize")?.enabled !== false,
+    };
+  });
+
+export const updateAppSettings = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { requireRatingOnFinalize?: boolean }) =>
+    z.object({ requireRatingOnFinalize: z.boolean().optional() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const db: any = context.supabase;
+    if (data.requireRatingOnFinalize !== undefined) {
+      const { error } = await db.from("app_settings").upsert({
+        key: "require_rating_on_finalize",
+        value: { enabled: data.requireRatingOnFinalize },
+        updated_at: new Date().toISOString(),
+        updated_by: context.userId,
+      }, { onConflict: "key" });
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+/* =========================================================
+ * MY WEEK
+ * ======================================================= */
+
+export const getMyWeek = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId?: string; from: string; to: string }) =>
+    z.object({
+      userId: z.string().uuid().optional(),
+      from: z.string(), to: z.string(),
+    }).parse(d))
+  .handler(async ({ data, context }): Promise<WeekItem[]> => {
+    let targetUser = context.userId;
+    if (data.userId && data.userId !== context.userId) {
+      const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+      if (!isAdmin) throw new Error("Forbidden");
+      targetUser = data.userId;
+    }
+    const { data: assigns } = await context.supabase
+      .from("item_assignees").select("item_id").eq("user_id", targetUser);
+    const ids = (assigns ?? []).map((a) => a.item_id);
+    if (!ids.length) return [];
+    const { data: items } = await context.supabase
+      .from("content_items")
+      .select("id, type, idx, title, status, due_date, months!inner(key, clients!inner(id, name, color))")
+      .in("id", ids)
+      .neq("status", "FINALIZADO");
+    return ((items ?? []) as any[]).map((it) => ({
+      id: it.id, type: it.type, idx: it.idx, title: it.title, status: it.status,
+      clientId: it.months.clients.id,
+      clientName: it.months.clients.name,
+      clientColor: it.months.clients.color,
+      monthKey: it.months.key,
+      dueDate: it.due_date,
+    }));
+  });
+
+/* =========================================================
+ * WORKLOAD (carga de trabalho — itens em aberto)
+ * ======================================================= */
+
+export const getWorkload = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId: string }) =>
+    z.object({ userId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<WorkloadSummary> => {
+    const { data: assigns } = await context.supabase
+      .from("item_assignees").select("item_id").eq("user_id", data.userId);
+    const ids = (assigns ?? []).map((a) => a.item_id);
+    if (!ids.length) return { userId: data.userId, openCount: 0, oldest: [] };
+    const { data: items } = await context.supabase
+      .from("content_items")
+      .select("id, title, updated_at, last_status_change_at, months!inner(clients!inner(name))")
+      .in("id", ids)
+      .neq("status", "FINALIZADO");
+    const arr = ((items ?? []) as any[]).map((it) => {
+      const ref = it.last_status_change_at ?? it.updated_at;
+      const days = Math.max(0, Math.floor((Date.now() - new Date(ref).getTime()) / 86_400_000));
+      return { id: it.id, title: it.title, clientName: it.months?.clients?.name ?? "—", daysOpen: days };
+    }).sort((a, b) => b.daysOpen - a.daysOpen);
+    return { userId: data.userId, openCount: arr.length, oldest: arr.slice(0, 3) };
+  });
+
+/* =========================================================
+ * ITEM TIMELINE (history)
+ * ======================================================= */
+
+export const getItemTimeline = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string }) =>
+    z.object({ itemId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<TimelineEntry[]> => {
+    const db: any = context.supabase;
+    const [{ data: acts }, { data: txs }] = await Promise.all([
+      db.from("activity_log").select("id, actor_id, action, meta, at")
+        .eq("entity_type", "content_item").eq("entity_id", data.itemId)
+        .order("at", { ascending: false }).limit(200),
+      db.from("status_transitions").select("id, from_status, to_status, actor_id, at")
+        .eq("item_id", data.itemId).order("at", { ascending: false }).limit(200),
+    ]);
+    const entries: TimelineEntry[] = [];
+    ((acts ?? []) as any[]).forEach((a) => {
+      let kind: TimelineEntry["kind"] = "system";
+      let text = a.action;
+      if (a.action === "created") { kind = "created"; text = "criou o item"; }
+      else if (a.action === "due_date_changed") {
+        kind = "due";
+        text = `prazo alterado: ${a.meta?.from ?? "—"} → ${a.meta?.to ?? "—"}`;
+      } else if (a.action === "rated") {
+        kind = "rated";
+        text = `avaliou a entrega: ${a.meta?.rating}/5 estrelas`;
+      }
+      entries.push({ id: a.id, at: a.at, actorId: a.actor_id, kind, text, meta: a.meta });
+    });
+    ((txs ?? []) as any[]).forEach((t) => {
+      entries.push({
+        id: t.id, at: t.at, actorId: t.actor_id,
+        kind: "status",
+        text: `mudou status: ${t.from_status ?? "—"} → ${t.to_status}`,
+      });
+    });
+    entries.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+    return entries.slice(0, 80);
+  });
+
+/* =========================================================
+ * COMMENT WITH MENTIONS
+ * ======================================================= */
+
+export const addCommentWithMentions = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; text: string; mentionedUserIds?: string[] }) =>
+    z.object({
+      itemId: z.string().uuid(),
+      text: z.string().trim().min(1).max(2000),
+      mentionedUserIds: z.array(z.string().uuid()).max(20).optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: inserted, error } = await context.supabase.from("comments")
+      .insert({ item_id: data.itemId, author_id: context.userId, text: data.text, is_system: false })
+      .select("id").single();
+    if (error) throw new Error(error.message);
+    const mentions = (data.mentionedUserIds ?? []).filter((u) => u !== context.userId);
+    if (mentions.length) {
+      const db: any = context.supabase;
+      await db.from("mentions").insert(
+        mentions.map((uid) => ({
+          comment_id: inserted.id, mentioned_user_id: uid, item_id: data.itemId,
+        }))
+      );
+    }
+    return { ok: true };
+  });
