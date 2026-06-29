@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Settings, LogOut, Plus, Camera, Sparkles,
+  Settings, LogOut, Plus, Camera, Sparkles, Info,
 } from "lucide-react";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -225,6 +225,7 @@ function ClientRow({ client, active, onClick, onOpenCustomFields, canManage, cat
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const { updateClient, deleteClient, duplicateMonth } = useApi();
+  const openFicha = useUI((s) => s.openFicha);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -278,6 +279,13 @@ function ClientRow({ client, active, onClick, onOpenCustomFields, canManage, cat
       </button>
 
       <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => { e.stopPropagation(); openFicha(client.id); }}
+          title="Ficha do cliente"
+          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-[#C8D44E]"
+        >
+          <Info size={13} />
+        </button>
         <button onClick={(e) => { e.stopPropagation(); updateClient.mutate({ data: { id: client.id, patch: { favorite: !client.favorite } } }); }}
           className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white">
           <Star size={13} className={client.favorite ? "fill-[#C8D44E] text-[#C8D44E]" : ""} />
