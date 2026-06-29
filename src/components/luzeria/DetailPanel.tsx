@@ -48,6 +48,7 @@ export function DetailPanel() {
   const { data: clients = [] } = useQuery(clientsQO());
   const me = useMe().data;
   const { setItemStatus, updateItem, addAssignee, removeAssignee, addCommentWithMentions, rateItem } = useApi();
+  const { data: appSettings } = useQuery(appSettingsQO());
 
   const item = useMemo(() => (selectedItemId && month ? findItem(month, selectedItemId) : undefined), [month, selectedItemId]);
   const client = clients.find((c) => c.id === selectedClientId);
@@ -160,7 +161,15 @@ export function DetailPanel() {
               const active = item.status === s;
               return (
                 <button key={s}
-                  onClick={() => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }}
+                  onClick={() => {
+                    if (s === "FINALIZADO" && appSettings?.requireRatingOnFinalize &&
+                        item.status !== "FINALIZADO" && item.qualityRating == null) {
+                      setQualityFor("FINALIZADO");
+                      return;
+                    }
+                    setItemStatus.mutate({ data: { id: item.id, status: s } });
+                    flash(item.id);
+                  }}
                   className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wide transition-all"
                   style={{
                     backgroundColor: active ? m.bg : "transparent",
