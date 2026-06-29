@@ -458,7 +458,10 @@ export function DetailPanel() {
 
         {/* Drive */}
         <Section label="Arquivos">
-          <FilesSection itemId={item.id} canEdit={canEdit} />
+          <FilesSection
+            itemId={item.id}
+            canEdit={isAdmin || (me ? item.assigneeIds.includes(me.id) : false)}
+          />
         </Section>
 
         {/* Comments */}
