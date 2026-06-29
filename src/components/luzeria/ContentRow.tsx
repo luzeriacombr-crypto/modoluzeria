@@ -51,7 +51,7 @@ export function ContentRow({ item, profiles, idx }: {
 
   return (
     <div
-      className={`group flex items-center gap-3 px-4 h-16 border-b border-white/[0.06] hover:bg-white/[0.02] transition-colors cursor-pointer ${flashed ? "lz-flash" : ""}`}
+      className={`group flex items-center gap-4 px-4 h-[140px] border-b border-white/[0.06] hover:bg-white/[0.02] transition-colors cursor-pointer ${flashed ? "lz-flash" : ""}`}
       onClick={() => openItem(item.id)}
     >
       <span className="text-[14px] font-bold w-7 shrink-0" style={{ color: "#C8D44E" }}>
@@ -148,13 +148,13 @@ function RowThumb({ itemId }: { itemId: string }) {
 
   return (
     <div
-      className="w-[48px] h-[60px] shrink-0 rounded-md overflow-hidden flex items-center justify-center"
+      className="w-[96px] h-[120px] shrink-0 rounded-md overflow-hidden flex items-center justify-center"
       style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}
     >
       {url ? (
         <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
       ) : (
-        <ImageIcon size={20} style={{ color: "rgba(255,255,255,0.2)" }} />
+        <ImageIcon size={32} style={{ color: "rgba(255,255,255,0.2)" }} />
       )}
     </div>
   );
