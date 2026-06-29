@@ -402,8 +402,19 @@ export const uploadDriveFile = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCanWrite(context.supabase, context.userId, data.itemId);
 
+    // Resolve target organized folder (best-effort).
+    let targetParentId: string | null = null;
+    try {
+      targetParentId = await resolveTargetFolderForItem(
+        context.supabase, context.userId, data.itemId, { autoCreate: true },
+      );
+    } catch (e) {
+      console.warn("[drive] upload folder resolution skipped:", (e as any)?.message);
+    }
+
     const boundary = `lz_${Math.random().toString(36).slice(2)}`;
-    const metadata = { name: data.name, mimeType: data.mimeType };
+    const metadata: any = { name: data.name, mimeType: data.mimeType };
+    if (targetParentId) metadata.parents = [targetParentId];
     const bin = Buffer.from(data.base64, "base64");
 
     const parts = [
@@ -419,7 +430,7 @@ export const uploadDriveFile = createServerFn({ method: "POST" })
     const body = Buffer.concat([head, bin, tail]);
 
     const res = await fetch(
-      `${GATEWAY}/upload/drive/v3/files?uploadType=multipart&fields=${encodeURIComponent(DRIVE_FIELDS)}`,
+      `${GATEWAY}/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=${encodeURIComponent(DRIVE_FIELDS)}`,
       {
         method: "POST",
         headers: {
