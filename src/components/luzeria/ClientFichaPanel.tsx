@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
+  Repeat, ListChecks, Zap, Power,
 } from "lucide-react";
-import { clientFichaQO, clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
 
@@ -226,6 +227,20 @@ export function ClientFichaPanel() {
               ))}
               <AddSecretRow clientId={client.id} onSubmit={(d) => api.upsertClientSecret.mutate({ data: d })} />
             </div>
+          </Section>
+        )}
+
+        {/* Onboarding (admin) */}
+        {isAdmin && (
+          <Section label="Onboarding do cliente">
+            <OnboardingBlock clientId={client.id} />
+          </Section>
+        )}
+
+        {/* Recurring (admin) */}
+        {isAdmin && (
+          <Section label="Recorrências" last>
+            <RecurringBlock clientId={client.id} />
           </Section>
         )}
       </div>
