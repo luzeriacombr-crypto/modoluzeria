@@ -51,7 +51,7 @@ export function ContentRow({ item, profiles, idx }: {
 
   return (
     <div
-      className={`group flex items-center gap-3 px-4 h-16 border-b border-white/[0.06] hover:bg-white/[0.02] transition-colors cursor-pointer ${flashed ? "lz-flash" : ""}`}
+      className={`group flex items-center gap-4 px-4 h-[140px] border-b border-white/[0.06] hover:bg-white/[0.02] transition-colors cursor-pointer ${flashed ? "lz-flash" : ""}`}
       onClick={() => openItem(item.id)}
     >
       <span className="text-[14px] font-bold w-7 shrink-0" style={{ color: "#C8D44E" }}>
