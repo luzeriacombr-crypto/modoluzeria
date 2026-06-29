@@ -582,7 +582,7 @@ function OperationHealth({ monthKey }: { monthKey: string }) {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <HealthCard icon={<Clock size={14} />} tone="#4A9EFF" label="Lead time médio" value={formatHours(leadAvg)} sub={`${data?.leadTime.count ?? 0} entregas`} />
-        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "#C8D44E"} label="Bloqueados" value={blocked} sub={blocked > 0 ? "ação necessária" : "sem bloqueios"} valueColor={blocked > 0 ? "#FF6B6B" : "#C8D44E"} />
+        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "#C8D44E"} label="Travados" value={blocked} sub={blocked > 0 ? "precisam de ação" : "tudo fluindo"} valueColor={blocked > 0 ? "#FF6B6B" : "#C8D44E"} />
         <HealthCard icon={<RotateCcw size={14} />} tone={reworkRate > 15 ? "#FF8C42" : "#C8D44E"} label="Taxa de retrabalho" value={`${reworkRate}%`} sub={`${data?.rework.total ?? 0} itens`} />
         <HealthCard icon={<Trophy size={14} />} tone="#C8D44E" label="Qualidade média" value={quality > 0 ? `${quality}/5` : "—"} sub={`${data?.quality.count ?? 0} avaliados`} />
       </div>
