@@ -420,5 +420,23 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["client-deliveries-folder", vars?.data?.clientId] });
       },
     }),
+    setMyNotificationPreferences: useMutation({
+      mutationFn: useServerFn(setMyNotificationPreferences),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["notification-prefs"] }),
+    }),
+    runDailyDigestNow: useMutation({
+      mutationFn: useServerFn(runDailyDigestNow),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["notifications"] });
+        qc.invalidateQueries({ queryKey: ["cron-jobs"] });
+      },
+    }),
+    runDeadlineRemindersNow: useMutation({
+      mutationFn: useServerFn(runDeadlineRemindersNow),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["notifications"] });
+        qc.invalidateQueries({ queryKey: ["cron-jobs"] });
+      },
+    }),
   };
 }
