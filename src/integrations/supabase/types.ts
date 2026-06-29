@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          meta: Json
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          meta?: Json
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          meta?: Json
+        }
+        Relationships: []
+      }
       cleaning_schedule: {
         Row: {
           created_at: string
@@ -136,6 +166,41 @@ export type Database = {
             foreignKeyName: "client_links_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_onboarding: {
+        Row: {
+          checklist: Json
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          checklist?: Json
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          checklist?: Json
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_onboarding_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
@@ -283,6 +348,7 @@ export type Database = {
       content_items: {
         Row: {
           blocked_reason: string | null
+          checklist: Json
           copy: string
           drive_link: string
           due_date: string | null
@@ -290,9 +356,12 @@ export type Database = {
           finished_at: string | null
           id: string
           idx: number
+          last_status_change_at: string | null
           legacy_assignee: string | null
           month_id: string
+          quality_rating: number | null
           reel_type: string | null
+          rework_count: number
           started_at: string | null
           status: Database["public"]["Enums"]["content_status"]
           title: string
@@ -301,6 +370,7 @@ export type Database = {
         }
         Insert: {
           blocked_reason?: string | null
+          checklist?: Json
           copy?: string
           drive_link?: string
           due_date?: string | null
@@ -308,9 +378,12 @@ export type Database = {
           finished_at?: string | null
           id?: string
           idx: number
+          last_status_change_at?: string | null
           legacy_assignee?: string | null
           month_id: string
+          quality_rating?: number | null
           reel_type?: string | null
+          rework_count?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["content_status"]
           title?: string
@@ -319,6 +392,7 @@ export type Database = {
         }
         Update: {
           blocked_reason?: string | null
+          checklist?: Json
           copy?: string
           drive_link?: string
           due_date?: string | null
@@ -326,9 +400,12 @@ export type Database = {
           finished_at?: string | null
           id?: string
           idx?: number
+          last_status_change_at?: string | null
           legacy_assignee?: string | null
           month_id?: string
+          quality_rating?: number | null
           reel_type?: string | null
+          rework_count?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["content_status"]
           title?: string
@@ -435,6 +512,81 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_goals: {
+        Row: {
+          created_at: string
+          id: string
+          month_key: string
+          posts_goal: number
+          reels_goal: number
+          stories_goal: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month_key: string
+          posts_goal?: number
+          reels_goal?: number
+          stories_goal?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month_key?: string
+          posts_goal?: number
+          reels_goal?: number
+          stories_goal?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mentions: {
+        Row: {
+          comment_id: string
+          created_at: string
+          id: string
+          item_id: string | null
+          mentioned_user_id: string
+          read_at: string | null
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          mentioned_user_id: string
+          read_at?: string | null
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          mentioned_user_id?: string
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
             referencedColumns: ["id"]
           },
         ]
@@ -548,6 +700,94 @@ export type Database = {
           onboarded_at?: string | null
         }
         Relationships: []
+      }
+      recurring_templates: {
+        Row: {
+          active: boolean
+          cadence: string
+          client_id: string
+          created_at: string
+          day_of_month: number | null
+          day_of_week: number | null
+          default_assignees: string[]
+          id: string
+          last_generated_at: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          active?: boolean
+          cadence: string
+          client_id: string
+          created_at?: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          default_assignees?: string[]
+          id?: string
+          last_generated_at?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          active?: boolean
+          cadence?: string
+          client_id?: string
+          created_at?: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          default_assignees?: string[]
+          id?: string
+          last_generated_at?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_templates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      status_transitions: {
+        Row: {
+          actor_id: string | null
+          at: string
+          duration_ms: number | null
+          from_status: string | null
+          id: string
+          item_id: string
+          to_status: string
+        }
+        Insert: {
+          actor_id?: string | null
+          at?: string
+          duration_ms?: number | null
+          from_status?: string | null
+          id?: string
+          item_id: string
+          to_status: string
+        }
+        Update: {
+          actor_id?: string | null
+          at?: string
+          duration_ms?: number | null
+          from_status?: string | null
+          id?: string
+          item_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_transitions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stories_schedule: {
         Row: {
