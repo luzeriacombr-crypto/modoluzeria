@@ -892,6 +892,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_recurring_for_month: {
+        Args: { _month_key?: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -901,6 +905,7 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_master: { Args: { _user_id: string }; Returns: boolean }
+      send_deadline_reminders: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "master" | "setor" | "member"
