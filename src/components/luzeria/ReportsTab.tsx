@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Filter, ChevronDown } from "lucide-react";
-import { profilesQO, clientsQO, reportQO, type ReportFilters } from "@/lib/luzeria/queries";
+import {
+  Download, Filter, ChevronDown, Clock, AlertOctagon, RotateCcw, Star,
+  BarChart3, Activity, Layers,
+} from "lucide-react";
+import { profilesQO, clientsQO, reportQO, reportExtrasQO, type ReportFilters } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
-import { REEL_TYPE_LABEL, type ReelType } from "@/lib/luzeria/types";
+import { REEL_TYPE_LABEL, STATUS_META, type ReelType, type Status } from "@/lib/luzeria/types";
 import { exportReportXlsx } from "@/lib/luzeria/report-export";
 import { MemberReportPanel } from "./MemberReportPanel";
 
@@ -53,10 +56,22 @@ export function ReportsTab() {
   }));
 
   const { data: report, isLoading } = useQuery(reportQO(filters));
+  const { data: extras } = useQuery(reportExtrasQO(filters));
 
   const [openMember, setOpenMember] = useState<any | null>(null);
   const [page, setPage] = useState(0);
   const PER = 50;
+
+  type Tab = "produtividade" | "lead" | "status" | "retrabalho" | "qualidade" | "bloqueios";
+  const [tab, setTab] = useState<Tab>("produtividade");
+  const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: "produtividade", label: "Produtividade", icon: <BarChart3 size={13} /> },
+    { id: "lead", label: "Lead time", icon: <Clock size={13} /> },
+    { id: "status", label: "Tempo por status", icon: <Activity size={13} /> },
+    { id: "retrabalho", label: "Retrabalho", icon: <RotateCcw size={13} /> },
+    { id: "qualidade", label: "Qualidade", icon: <Star size={13} /> },
+    { id: "bloqueios", label: "Bloqueios", icon: <AlertOctagon size={13} /> },
+  ];
 
   function apply() {
     const r = rangeFor(pPreset, customFrom, customTo);
@@ -133,7 +148,22 @@ export function ReportsTab() {
       </div>
 
       {isLoading && <p className="text-white/50 text-sm">Carregando…</p>}
-      {report && (
+
+      {/* Sub-tabs */}
+      <div className="mb-6 flex items-center gap-1 overflow-x-auto pb-1">
+        {TABS.map((t) => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-colors"
+            style={{
+              backgroundColor: tab === t.id ? "#C8D44E" : "rgba(255,255,255,0.04)",
+              color: tab === t.id ? "#0D0D0D" : "rgba(255,255,255,0.7)",
+            }}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      {report && tab === "produtividade" && (
         <>
           {/* Seção 1 - Visão geral */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
@@ -263,6 +293,12 @@ export function ReportsTab() {
         </>
       )}
 
+      {extras && tab === "lead" && <LeadTimeView data={extras.leadTime} />}
+      {extras && tab === "status" && <StatusDurationView data={extras.statusDuration} />}
+      {extras && tab === "retrabalho" && <ReworkView data={extras.rework} />}
+      {extras && tab === "qualidade" && <QualityView data={extras.quality} />}
+      {extras && tab === "bloqueios" && <BlockedView data={extras.blocked} />}
+
       {openMember && (
         <MemberReportPanel
           member={openMember}
@@ -271,6 +307,172 @@ export function ReportsTab() {
         />
       )}
     </div>
+  );
+}
+
+/* ============== ROADMAP SUB-VIEWS ============== */
+
+function formatHours(h: number) {
+  if (!h) return "—";
+  if (h < 24) return `${h.toFixed(1)}h`;
+  return `${(h / 24).toFixed(1)}d`;
+}
+
+function LeadTimeView({ data }: { data: any }) {
+  return (
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-3 mb-8">
+        <MetricCard label="Lead time médio" value={formatHours(data.avgHours) as any} accent />
+        <MetricCard label="Entregas analisadas" value={data.count} />
+      </div>
+      <Section title="Top 5 mais rápidas">
+        <LeadTable rows={data.fastest} accent />
+      </Section>
+      <Section title="Top 5 mais lentas">
+        <LeadTable rows={data.slowest} />
+      </Section>
+    </>
+  );
+}
+
+function LeadTable({ rows, accent }: { rows: any[]; accent?: boolean }) {
+  if (!rows.length) return <p className="text-white/40 text-sm px-3 py-6 text-center">Sem dados.</p>;
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="text-[10px] uppercase tracking-wider text-white/50">
+          <th className="text-left px-3 py-2">Tarefa</th>
+          <th className="text-left px-3 py-2">Cliente</th>
+          <th className="text-right px-3 py-2">Tempo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr key={r.id} className="border-t border-white/[0.05]">
+            <td className="px-3 py-2.5 text-white/80 truncate max-w-[300px]">{r.title}</td>
+            <td className="px-3 py-2.5 text-white/60">{r.clientName}</td>
+            <td className="px-3 py-2.5 text-right tabular-nums font-bold"
+              style={{ color: accent ? "#C8D44E" : "#FFFFFF" }}>{formatHours(r.hours)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function StatusDurationView({ data }: { data: any[] }) {
+  if (!data.length) return <p className="text-white/40 text-sm px-3 py-8 text-center">Sem transições registradas.</p>;
+  const max = Math.max(...data.map((d) => d.avgHours));
+  return (
+    <Section title="Tempo médio que cada status consome">
+      <div className="p-4 space-y-3">
+        {data.map((d) => {
+          const meta = STATUS_META[d.status as Status];
+          const pct = max ? (d.avgHours / max) * 100 : 0;
+          return (
+            <div key={d.status}>
+              <div className="flex items-center justify-between mb-1.5 text-xs">
+                <span className="font-semibold" style={{ color: meta?.color ?? "#FFF" }}>{meta?.label ?? d.status}</span>
+                <span className="text-white/60 tabular-nums">{formatHours(d.avgHours)} <span className="text-white/30">· {d.count} transições</span></span>
+              </div>
+              <div className="h-2 rounded-full bg-white/[0.05] overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: meta?.color ?? "#C8D44E" }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
+function ReworkView({ data }: { data: any }) {
+  return (
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-3 mb-8">
+        <MetricCard label="Itens com retrabalho" value={data.total} />
+        <MetricCard label="Taxa de retrabalho" value={`${data.ratePercent}%` as any} accent />
+      </div>
+      <Section title="Itens que mais voltaram">
+        {data.items.length === 0 ? (
+          <p className="text-white/40 text-sm px-3 py-6 text-center">Nenhum retrabalho no período.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-[10px] uppercase tracking-wider text-white/50">
+                <th className="text-left px-3 py-2">Tarefa</th>
+                <th className="text-left px-3 py-2">Cliente</th>
+                <th className="text-left px-3 py-2">Tipo</th>
+                <th className="text-right px-3 py-2">Voltas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((r: any) => (
+                <tr key={r.id} className="border-t border-white/[0.05]">
+                  <td className="px-3 py-2.5 text-white/80 truncate max-w-[280px]">{r.title}</td>
+                  <td className="px-3 py-2.5 text-white/60">{r.clientName}</td>
+                  <td className="px-3 py-2.5 text-white/60 uppercase text-[10px]">{r.type}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums font-bold" style={{ color: "#FF8C42" }}>×{r.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
+    </>
+  );
+}
+
+function QualityView({ data }: { data: any }) {
+  const dist: Record<number, number> = data.distribution ?? {};
+  const total = Object.values(dist).reduce((a: number, b: any) => a + b, 0) as number;
+  return (
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-3 mb-8">
+        <MetricCard label="Nota média" value={data.avg > 0 ? `${data.avg}/5` as any : "—" as any} accent />
+        <MetricCard label="Itens avaliados" value={data.count} />
+      </div>
+      <Section title="Distribuição">
+        <div className="p-4 space-y-2">
+          {[5, 4, 3, 2, 1].map((n) => {
+            const c = dist[n] ?? 0;
+            const pct = total ? (c / total) * 100 : 0;
+            return (
+              <div key={n} className="flex items-center gap-3">
+                <div className="inline-flex items-center gap-0.5 w-20">
+                  {Array.from({ length: n }).map((_, i) => (
+                    <Star key={i} size={11} fill="#C8D44E" color="#C8D44E" />
+                  ))}
+                </div>
+                <div className="flex-1 h-2 rounded-full bg-white/[0.05] overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#C8D44E" }} />
+                </div>
+                <span className="text-xs text-white/60 tabular-nums w-12 text-right">{c}</span>
+              </div>
+            );
+          })}
+        </div>
+      </Section>
+    </>
+  );
+}
+
+function BlockedView({ data }: { data: any[] }) {
+  return (
+    <Section title={`Itens bloqueados agora (${data.length})`}>
+      {data.length === 0 ? (
+        <p className="text-white/40 text-sm px-3 py-8 text-center">Nenhum item bloqueado no momento. 🎉</p>
+      ) : data.map((b) => (
+        <div key={b.id} className="flex items-center gap-3 px-4 py-3 border-t border-white/[0.05]">
+          <AlertOctagon size={14} style={{ color: "#FF6B6B" }} />
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold"
+            style={{ backgroundColor: (b.clientColor ?? "#444") + "33", color: b.clientColor ?? "#FFF" }}>
+            {b.clientName}
+          </span>
+          <span className="text-white text-sm flex-1 truncate">{b.title}</span>
+        </div>
+      ))}
+    </Section>
   );
 }
 

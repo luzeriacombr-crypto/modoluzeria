@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X, Send, ExternalLink, Plus, Check, Pencil, ChevronDown, Copy, Calendar, AlertOctagon } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, Pencil, ChevronDown, Copy, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2 } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType } from "@/lib/luzeria/types";
@@ -68,6 +68,8 @@ export function DetailPanel() {
   const [driveEditing, setDriveEditing] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [driveCopied, setDriveCopied] = useState(false);
+  const [newCheck, setNewCheck] = useState("");
+  const { updateChecklist, rateItem } = useApi();
 
   useEffect(() => {
     if (item) {
@@ -91,6 +93,15 @@ export function DetailPanel() {
   const isOverdue =
     !!item.dueDate && item.status !== "FINALIZADO" &&
     new Date(item.dueDate + "T23:59:59").getTime() < Date.now();
+
+  const checklist = item.checklist ?? [];
+  const checklistDone = checklist.filter((c) => c.done).length;
+  const reworkCount = item.reworkCount ?? 0;
+
+  const itemId = item.id;
+  function saveChecklist(next: typeof checklist) {
+    updateChecklist.mutate({ data: { itemId, checklist: next } });
+  }
 
   const copyDriveLink = async () => {
     if (!normalizedDriveUrl) return;
@@ -125,6 +136,12 @@ export function DetailPanel() {
               <X size={16} />
             </button>
           </div>
+          {reworkCount > 0 && (
+            <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+              style={{ backgroundColor: "rgba(255,140,66,0.15)", color: "#FF8C42" }}>
+              <RotateCcw size={10} /> Retrabalho ×{reworkCount}
+            </div>
+          )}
           <input value={title} onChange={(e) => setTitle(e.target.value)}
             onBlur={() => { if (title.trim() && title !== item.title) updateItem.mutate({ data: { id: item.id, patch: { title: title.trim() } } }); }}
             className="mt-2 w-full bg-transparent text-[20px] font-bold text-white outline-none placeholder:text-white/30" />
@@ -207,6 +224,88 @@ export function DetailPanel() {
             </p>
           )}
         </Section>
+
+        {/* Checklist */}
+        <Section label={`Checklist${checklist.length ? ` · ${checklistDone}/${checklist.length}` : ""}`}>
+          <div className="space-y-1.5">
+            {checklist.map((c, idx) => (
+              <div key={c.id} className="flex items-center gap-2 group">
+                <button
+                  onClick={() => {
+                    const next = checklist.map((x) => x.id === c.id ? { ...x, done: !x.done } : x);
+                    saveChecklist(next);
+                  }}
+                  className="h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-colors"
+                  style={{
+                    borderColor: c.done ? "#C8D44E" : "rgba(255,255,255,0.25)",
+                    backgroundColor: c.done ? "#C8D44E" : "transparent",
+                  }}
+                >
+                  {c.done && <Check size={10} color="#0D0D0D" strokeWidth={3} />}
+                </button>
+                <input
+                  value={c.text}
+                  onChange={(e) => {
+                    const next = checklist.map((x) => x.id === c.id ? { ...x, text: e.target.value } : x);
+                    saveChecklist(next);
+                  }}
+                  className={`flex-1 bg-transparent text-sm outline-none ${c.done ? "line-through text-white/40" : "text-white/90"}`}
+                />
+                <button
+                  onClick={() => saveChecklist(checklist.filter((x) => x.id !== c.id))}
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+            ))}
+            <div className="flex items-center gap-2 mt-1">
+              <ListChecks size={13} className="text-white/30 shrink-0" />
+              <input
+                value={newCheck}
+                onChange={(e) => setNewCheck(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newCheck.trim()) {
+                    const id = (typeof crypto !== "undefined" && (crypto as any).randomUUID)
+                      ? (crypto as any).randomUUID()
+                      : Math.random().toString(36).slice(2);
+                    saveChecklist([...checklist, { id, text: newCheck.trim(), done: false }]);
+                    setNewCheck("");
+                  }
+                }}
+                placeholder="Adicionar subtarefa e dar Enter…"
+                className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/30 border-b border-white/[0.06] focus:border-[#C8D44E] py-1"
+              />
+            </div>
+          </div>
+        </Section>
+
+        {/* Quality */}
+        {(item.status === "FINALIZADO" || item.qualityRating != null) && (
+          <Section label="Qualidade">
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5].map((n) => {
+                const filled = (item.qualityRating ?? 0) >= n;
+                return (
+                  <button
+                    key={n}
+                    disabled={!isAdmin}
+                    onClick={() => rateItem.mutate({ data: { itemId: item.id, rating: item.qualityRating === n ? null : n } })}
+                    className="p-0.5 disabled:cursor-not-allowed transition-transform hover:scale-110 disabled:hover:scale-100"
+                  >
+                    <Star size={20} fill={filled ? "#C8D44E" : "transparent"} color={filled ? "#C8D44E" : "rgba(255,255,255,0.3)"} />
+                  </button>
+                );
+              })}
+              {item.qualityRating != null && (
+                <span className="ml-2 text-xs font-bold text-[#C8D44E]">{item.qualityRating}/5</span>
+              )}
+            </div>
+            {!isAdmin && (
+              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores avaliam a qualidade.</p>
+            )}
+          </Section>
+        )}
 
         {/* Reel video type (Reels only) */}
         {item.type === "reel" && (

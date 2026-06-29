@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
+  Repeat, ListChecks, Zap, Power,
 } from "lucide-react";
-import { clientFichaQO, clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
 
@@ -228,6 +229,20 @@ export function ClientFichaPanel() {
             </div>
           </Section>
         )}
+
+        {/* Onboarding (admin) */}
+        {isAdmin && (
+          <Section label="Onboarding do cliente">
+            <OnboardingBlock clientId={client.id} />
+          </Section>
+        )}
+
+        {/* Recurring (admin) */}
+        {isAdmin && (
+          <Section label="Recorrências" last>
+            <RecurringBlock clientId={client.id} />
+          </Section>
+        )}
       </div>
     </>
   );
@@ -322,6 +337,250 @@ function AddContactRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d:
           className="px-3 py-1.5 rounded-md text-[11px] font-bold disabled:opacity-30"
           style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
         >Salvar</button>
+      </div>
+    </div>
+  );
+}
+
+/* ============== ONBOARDING ============== */
+
+function OnboardingBlock({ clientId }: { clientId: string }) {
+  const api = useApi();
+  const { data: onboarding } = useQuery(clientOnboardingQO(clientId));
+  const [newItem, setNewItem] = useState("");
+  const list = onboarding?.checklist ?? [];
+  const done = list.filter((c) => c.done).length;
+  const allDone = list.length > 0 && done === list.length;
+
+  function save(next: typeof list) {
+    api.updateClientOnboarding.mutate({ data: { clientId, checklist: next } });
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs text-white/60">
+          {list.length ? `${done}/${list.length} concluído` : "Nenhuma etapa cadastrada."}
+        </span>
+        {allDone && (
+          <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+            style={{ backgroundColor: "rgba(200,212,78,0.18)", color: "#C8D44E" }}>
+            <CheckCircle2 size={11} /> Onboarding completo
+          </span>
+        )}
+      </div>
+      <div className="space-y-1.5">
+        {list.map((c) => (
+          <div key={c.id} className="flex items-center gap-2 group">
+            <button
+              onClick={() => save(list.map((x) => x.id === c.id ? { ...x, done: !x.done } : x))}
+              className="h-4 w-4 rounded border flex items-center justify-center shrink-0"
+              style={{
+                borderColor: c.done ? "#C8D44E" : "rgba(255,255,255,0.25)",
+                backgroundColor: c.done ? "#C8D44E" : "transparent",
+              }}
+            >{c.done && <Check size={10} color="#0D0D0D" strokeWidth={3} />}</button>
+            <input
+              value={c.text}
+              onChange={(e) => save(list.map((x) => x.id === c.id ? { ...x, text: e.target.value } : x))}
+              className={`flex-1 bg-transparent text-sm outline-none ${c.done ? "line-through text-white/40" : "text-white/90"}`}
+            />
+            <button
+              onClick={() => save(list.filter((x) => x.id !== c.id))}
+              className="opacity-0 group-hover:opacity-100 p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5"
+            ><Trash2 size={11} /></button>
+          </div>
+        ))}
+        <div className="flex items-center gap-2 mt-1">
+          <ListChecks size={13} className="text-white/30 shrink-0" />
+          <input
+            value={newItem}
+            onChange={(e) => setNewItem(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newItem.trim()) {
+                const id = (typeof crypto !== "undefined" && (crypto as any).randomUUID)
+                  ? (crypto as any).randomUUID() : Math.random().toString(36).slice(2);
+                save([...list, { id, text: newItem.trim(), done: false }]);
+                setNewItem("");
+              }
+            }}
+            placeholder="Ex.: Acesso ao Drive, briefing assinado, identidade visual…"
+            className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/30 border-b border-white/[0.06] focus:border-[#C8D44E] py-1"
+          />
+        </div>
+      </div>
+      {onboarding?.completedAt && (
+        <p className="text-[10px] text-white/40 mt-3">
+          Concluído em {new Date(onboarding.completedAt).toLocaleDateString("pt-BR")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ============== RECURRING ============== */
+
+function RecurringBlock({ clientId }: { clientId: string }) {
+  const api = useApi();
+  const { data: templates = [] } = useQuery(recurringQO(clientId));
+  const { data: profiles = [] } = useQuery(profilesQO());
+  const [adding, setAdding] = useState(false);
+
+  return (
+    <div>
+      <p className="text-[11px] text-white/50 mb-3">
+        Tarefas geradas automaticamente. Use "Gerar agora" para criar os itens dos próximos 14 dias.
+      </p>
+      <div className="space-y-2">
+        {templates.length === 0 && !adding && (
+          <p className="text-xs text-white/40">Nenhuma recorrência cadastrada.</p>
+        )}
+        {templates.map((t) => (
+          <RecurringRow
+            key={t.id}
+            tpl={t}
+            profiles={profiles}
+            onUpdate={(patch) => api.upsertRecurring.mutate({ data: { id: t.id, clientId, type: t.type, title: t.title, cadence: t.cadence, dayOfWeek: t.dayOfWeek, dayOfMonth: t.dayOfMonth, defaultAssignees: t.defaultAssignees, active: t.active, ...patch } })}
+            onDelete={() => { if (confirm(`Excluir recorrência "${t.title}"?`)) api.deleteRecurring.mutate({ data: { id: t.id } }); }}
+          />
+        ))}
+        {adding && (
+          <NewRecurringRow
+            clientId={clientId}
+            profiles={profiles}
+            onSubmit={(d) => { api.upsertRecurring.mutate({ data: d }); setAdding(false); }}
+            onCancel={() => setAdding(false)}
+          />
+        )}
+      </div>
+      <div className="flex items-center gap-2 mt-3">
+        {!adding && (
+          <button onClick={() => setAdding(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 py-2 text-[11px] text-white/50 hover:text-[#C8D44E] hover:border-[#C8D44E]">
+            <Plus size={12} /> Nova recorrência
+          </button>
+        )}
+        {templates.some((t) => t.active) && (
+          <button
+            onClick={() => api.generateRecurring.mutate({ data: { clientId, days: 14 } }, {
+              onSuccess: (r) => toast.success(`${(r as any).generated ?? 0} tarefa(s) geradas`),
+            })}
+            disabled={api.generateRecurring.isPending}
+            className="px-3 py-2 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 disabled:opacity-40"
+            style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}
+          ><Zap size={12} /> {api.generateRecurring.isPending ? "Gerando…" : "Gerar agora"}</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RecurringRow({ tpl, profiles, onUpdate, onDelete }: {
+  tpl: any; profiles: any[]; onUpdate: (p: any) => void; onDelete: () => void;
+}) {
+  const DOW = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const when = tpl.cadence === "weekly"
+    ? `Toda ${DOW[tpl.dayOfWeek ?? 1]}`
+    : `Dia ${tpl.dayOfMonth ?? 1} do mês`;
+  const typeLabel = tpl.type === "post" ? "Post" : tpl.type === "reel" ? "Reel" : "Outro";
+  return (
+    <div className="bg-[#1C1C1C] border border-white/[0.06] rounded-md px-3 py-2.5">
+      <div className="flex items-center gap-2">
+        <Repeat size={13} style={{ color: tpl.active ? "#C8D44E" : "rgba(255,255,255,0.3)" }} />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-white truncate">{tpl.title}</div>
+          <div className="text-[10px] text-white/40">{typeLabel} · {when}</div>
+        </div>
+        <button
+          onClick={() => onUpdate({ active: !tpl.active })}
+          className="p-1 rounded text-white/40 hover:text-[#C8D44E] hover:bg-white/5"
+          title={tpl.active ? "Desativar" : "Ativar"}
+        ><Power size={12} /></button>
+        <button onClick={onDelete} className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5">
+          <Trash2 size={12} />
+        </button>
+      </div>
+      {tpl.defaultAssignees?.length > 0 && (
+        <div className="mt-1.5 flex items-center gap-1 flex-wrap">
+          {tpl.defaultAssignees.map((uid: string) => {
+            const p = profiles.find((x) => x.id === uid);
+            return p ? (
+              <span key={uid} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/70">{p.name}</span>
+            ) : null;
+          })}
+        </div>
+      )}
+      {tpl.lastGeneratedAt && (
+        <div className="text-[10px] text-white/30 mt-1">Última geração: {new Date(tpl.lastGeneratedAt).toLocaleDateString("pt-BR")}</div>
+      )}
+    </div>
+  );
+}
+
+function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
+  clientId: string; profiles: any[]; onSubmit: (d: any) => void; onCancel: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState<"post" | "reel" | "outros">("post");
+  const [cadence, setCadence] = useState<"weekly" | "monthly">("weekly");
+  const [dayOfWeek, setDayOfWeek] = useState(1);
+  const [dayOfMonth, setDayOfMonth] = useState(1);
+  const [assignees, setAssignees] = useState<string[]>([]);
+
+  return (
+    <div className="bg-[#1C1C1C] border border-white/[0.08] rounded-md p-3 space-y-2">
+      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título da tarefa recorrente"
+        className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]" />
+      <div className="grid grid-cols-3 gap-2">
+        <select value={type} onChange={(e) => setType(e.target.value as any)}
+          className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]">
+          <option value="post">Post</option>
+          <option value="reel">Reel</option>
+          <option value="outros">Outro</option>
+        </select>
+        <select value={cadence} onChange={(e) => setCadence(e.target.value as any)}
+          className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]">
+          <option value="weekly">Semanal</option>
+          <option value="monthly">Mensal</option>
+        </select>
+        {cadence === "weekly" ? (
+          <select value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))}
+            className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]">
+            {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d, i) => (
+              <option key={i} value={i}>{d}</option>
+            ))}
+          </select>
+        ) : (
+          <input type="number" min={1} max={31} value={dayOfMonth} onChange={(e) => setDayOfMonth(Number(e.target.value))}
+            className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]" />
+        )}
+      </div>
+      <div>
+        <div className="text-[10px] uppercase tracking-wider text-white/40 mb-1">Responsáveis padrão</div>
+        <div className="flex flex-wrap gap-1.5">
+          {profiles.filter((p) => p.active).map((p) => {
+            const sel = assignees.includes(p.id);
+            return (
+              <button key={p.id}
+                onClick={() => setAssignees((a) => sel ? a.filter((x) => x !== p.id) : [...a, p.id])}
+                className="px-2 py-1 rounded text-[10px] font-semibold transition-colors"
+                style={{ backgroundColor: sel ? "#C8D44E" : "rgba(255,255,255,0.06)", color: sel ? "#0D0D0D" : "#FFFFFF" }}
+              >{p.name}</button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={onCancel} className="text-[11px] text-white/50 hover:text-white px-2 py-1">Cancelar</button>
+        <button disabled={!title.trim()}
+          onClick={() => onSubmit({
+            clientId, type, title: title.trim(), cadence,
+            dayOfWeek: cadence === "weekly" ? dayOfWeek : null,
+            dayOfMonth: cadence === "monthly" ? dayOfMonth : null,
+            defaultAssignees: assignees, active: true,
+          })}
+          className="px-3 py-1.5 rounded-md text-[11px] font-bold disabled:opacity-30"
+          style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>Salvar</button>
       </div>
     </div>
   );
