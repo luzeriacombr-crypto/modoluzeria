@@ -24,7 +24,7 @@ import {
 } from "./roadmap.functions";
 import {
   listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, detachItemFile,
-  getDriveThumbnail,
+  getDriveThumbnail, reorderItemFiles,
 } from "./drive.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
