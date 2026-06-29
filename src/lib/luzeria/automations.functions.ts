@@ -90,11 +90,7 @@ export const listCronJobs = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<CronJobInfo[]> => {
     await ensureMaster(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Use direct SQL via the rpc helper isn't possible without a wrapper; use a read-only system view through PostgREST.
-    // pg_cron tables aren't exposed via Data API by default — so go through a SECURITY DEFINER function.
-    const { data, error } = await supabaseAdmin
-      .from("v_luzeria_cron_jobs" as any)
-      .select("*");
+    const { data, error } = await supabaseAdmin.rpc("luzeria_admin_list_cron_jobs" as any);
     if (error) throw new Error(error.message);
     return ((data ?? []) as any[]).map((r) => ({
       jobname: r.jobname,
