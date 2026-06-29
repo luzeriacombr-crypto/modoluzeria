@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
-import { memberReportDetailQO, profilesQO } from "@/lib/luzeria/queries";
+import { memberReportDetailQO } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
 import { REEL_TYPE_LABEL, type ReelType } from "@/lib/luzeria/types";
 import { roleLabel } from "./Sidebar";
@@ -17,7 +17,6 @@ export function MemberReportPanel({
   onClose: () => void;
 }) {
   const { data } = useQuery(memberReportDetailQO(member.userId, from, to));
-  const { data: profiles = [] } = useQuery(profilesQO());
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) onClose(); };
