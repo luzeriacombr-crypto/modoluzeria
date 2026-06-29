@@ -88,7 +88,7 @@ const CARD_W = 340;
 
 export function AppTour() {
   const me = useMe().data;
-  const api = useApi();
+  const { updateMyProfile } = useApi();
   const setView = useUI((s) => s.setView);
   const [open, setOpen] = useState(false);
   const [stepIdx, setStepIdx] = useState(0);
@@ -156,7 +156,7 @@ export function AppTour() {
     setOpen(false);
     setRect(null);
     if (markDone) {
-      try { await api.updateMyProfile({ data: { tourCompleted: true } }); } catch {}
+      try { await updateMyProfile.mutateAsync({ data: { tourCompleted: true } }); } catch {}
     }
   };
 
