@@ -1,0 +1,1 @@
+INSERT INTO public.app_settings (key, value) VALUES ('drive_root_folder_id', '{"id":"1nr7w3h1EmronypI2gmEafsrqjXQZfhVf","name":"Luzeria - Entregas"}'::jsonb) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
