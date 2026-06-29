@@ -20,6 +20,7 @@ import { MobileNav } from "./MobileNav";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ProfilePage } from "./ProfilePage";
 import { ClientFichaPanel } from "./ClientFichaPanel";
+import { AppTour } from "./AppTour";
 import luzeriaLogo from "@/assets/luzeria-sidebar.png.asset.json";
 
 export function App() {
@@ -90,6 +91,7 @@ export function App() {
       <DetailPanel />
       <ClientFichaPanel />
       <MobileNav />
+      <AppTour />
       {sidebarHidden && (
         <button
           onClick={toggleSidebar}
@@ -138,6 +140,7 @@ function Header({ hidden, onToggleSidebar }: { hidden: boolean; onToggleSidebar:
           onClick={() => setView("profile")}
           className="flex items-center gap-2 pl-2 hover:opacity-90 transition-opacity"
           title="Meu perfil"
+          data-tour="profile-btn"
         >
           <div className="rounded-full p-[2px]" style={{ border: "2px solid #C8D44E" }}>
             <Avatar profile={me} size={26} />
