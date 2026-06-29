@@ -524,3 +524,134 @@ export const getDriveThumbnail = createServerFn({ method: "GET" })
     const ct = res.headers.get("content-type") ?? "image/jpeg";
     return { dataUrl: `data:${ct};base64,${buf.toString("base64")}` };
   });
+
+/* ============== DRIVE CONFIG + ORGANIZE ============== */
+
+async function assertMaster(supabase: any, userId: string) {
+  const { data } = await supabase
+    .from("profiles").select("role").eq("id", userId).maybeSingle();
+  if (data?.role !== "master") {
+    throw new Error("Apenas o Adm Master pode executar esta ação.");
+  }
+}
+
+export const getDriveConfig = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const rootFolderId = await readRootFolderId(context.supabase);
+    return { rootFolderId, default: DEFAULT_ROOT_FOLDER_ID };
+  });
+
+export const setDriveRootFolder = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { folderIdOrUrl: string }) =>
+    z.object({ folderIdOrUrl: z.string().min(5).max(500) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertMaster(context.supabase, context.userId);
+    const id = parseDriveId(data.folderIdOrUrl) ?? data.folderIdOrUrl.trim();
+    // Validate it exists and is a folder.
+    const meta: any = await driveFetch(
+      `/drive/v3/files/${encodeURIComponent(id)}?fields=id,name,mimeType&supportsAllDrives=true`,
+    );
+    if (meta?.mimeType !== FOLDER_MIME) {
+      throw new Error("O ID informado não é uma pasta do Drive.");
+    }
+    const { error } = await context.supabase
+      .from("app_settings")
+      .upsert({ key: "drive_root_folder_id", value: { id, name: meta.name } });
+    if (error) throw new Error(error.message);
+    return { ok: true, id, name: meta.name };
+  });
+
+/** List candidate client folders inside the root (for fuzzy review). */
+export const findClientFolderCandidates = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) =>
+    z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: client } = await context.supabase
+      .from("clients").select("id, name").eq("id", data.clientId).maybeSingle();
+    if (!client) throw new Error("Cliente não encontrado.");
+    const rootId = await readRootFolderId(context.supabase);
+    const folders = await driveListChildFolders(rootId);
+    const target = normalizeName(client.name);
+    const tokens = target.split(" ").filter(Boolean);
+
+    const scored = folders.map((f) => {
+      const n = normalizeName(f.name);
+      let score = 0;
+      if (n === target) score = 100;
+      else if (n.includes(target) || target.includes(n)) score = 75;
+      else {
+        const hits = tokens.filter((t) => t.length > 2 && n.includes(t)).length;
+        score = (hits / Math.max(1, tokens.length)) * 60;
+      }
+      return { id: f.id, name: f.name, score };
+    }).filter((x) => x.score > 25)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8);
+
+    const exact = scored.find((s) => s.score === 100) ?? null;
+    return { clientName: client.name, exact, candidates: scored };
+  });
+
+/** Idempotently ensure the Entregas folder exists for a client. */
+export const ensureClientDeliveriesFolder = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; clientFolderId?: string }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      clientFolderId: z.string().min(5).max(200).optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: client } = await context.supabase
+      .from("clients").select("id, name").eq("id", data.clientId).maybeSingle();
+    if (!client) throw new Error("Cliente não encontrado.");
+    const rootId = await readRootFolderId(context.supabase);
+    const tree = await ensureDeliveriesFolder(
+      context.supabase, client.id, client.name, rootId, context.userId,
+      { autoCreate: true, forceClientFolderId: data.clientFolderId },
+    );
+    return { ok: true, ...tree };
+  });
+
+/** Re-organize every existing attached file into the correct client/month folder. */
+export const reorganizeAllDriveFiles = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    await assertMaster(context.supabase, context.userId);
+    const { data: files } = await context.supabase
+      .from("item_files")
+      .select("id, drive_file_id, item_id, content_items!inner(month_id, months!inner(key, client_id, clients!inner(id, name)))");
+    if (!files?.length) return { ok: true, moved: 0, skipped: 0, errors: [] as string[] };
+
+    const rootId = await readRootFolderId(context.supabase);
+    const folderCache = new Map<string, string>(); // key `${clientId}|${monthLabel}` -> folderId
+    let moved = 0, skipped = 0;
+    const errors: string[] = [];
+
+    for (const f of files as any[]) {
+      try {
+        const months = f.content_items?.months;
+        const client = months?.clients;
+        const label = monthLabelFromKey(months?.key);
+        if (!client?.id || !label) { skipped++; continue; }
+        const cacheKey = `${client.id}|${label}`;
+        let target = folderCache.get(cacheKey) ?? null;
+        if (!target) {
+          const tree = await ensureDeliveriesFolder(
+            context.supabase, client.id, client.name, rootId, context.userId,
+            { autoCreate: true },
+          );
+          if (!tree) { skipped++; continue; }
+          target = await ensureMonthFolder(tree.deliveriesFolderId, label);
+          folderCache.set(cacheKey, target);
+        }
+        await driveMoveTo(f.drive_file_id, target);
+        moved++;
+      } catch (e) {
+        errors.push(`${f.drive_file_id}: ${(e as any)?.message ?? "erro"}`);
+      }
+    }
+    return { ok: true, moved, skipped, errors: errors.slice(0, 20) };
+  });
