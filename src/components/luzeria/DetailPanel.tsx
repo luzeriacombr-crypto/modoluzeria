@@ -98,8 +98,9 @@ export function DetailPanel() {
   const checklistDone = checklist.filter((c) => c.done).length;
   const reworkCount = item.reworkCount ?? 0;
 
+  const itemId = item.id;
   function saveChecklist(next: typeof checklist) {
-    updateChecklist.mutate({ data: { itemId: item.id, checklist: next } });
+    updateChecklist.mutate({ data: { itemId, checklist: next } });
   }
 
   const copyDriveLink = async () => {
