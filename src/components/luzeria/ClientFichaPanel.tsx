@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
-  Repeat, ListChecks, Zap, Power,
+  Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save,
 } from "lucide-react";
-import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
 
@@ -131,6 +131,11 @@ export function ClientFichaPanel() {
           />
         </Section>
 
+        {/* Deliveries folder (Drive) */}
+        <Section label="Pasta de entregas (Drive)">
+          <DeliveriesFolderBlock clientId={client.id} isAdmin={isAdmin} />
+        </Section>
+
         {/* Links */}
         <Section label="Links importantes">
           <div className="space-y-2">
@@ -253,6 +258,102 @@ function Section({ label, children, last }: { label: string; children: React.Rea
     <div className={`px-6 py-5 ${last ? "" : "border-b border-white/[0.08]"}`}>
       <div className="text-[10px] uppercase font-bold tracking-wider mb-3" style={{ color: "#C8D44E" }}>{label}</div>
       {children}
+    </div>
+  );
+}
+
+function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmin: boolean }) {
+  const { data, isLoading } = useQuery(clientDeliveriesFolderQO(clientId));
+  const { setClientDeliveriesFolder, clearClientDeliveriesFolder } = useApi();
+  const [value, setValue] = useState("");
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    setValue(data?.webViewUrl ?? "");
+    setDirty(false);
+  }, [data?.webViewUrl, clientId]);
+
+  function save() {
+    const v = value.trim();
+    if (!v) return;
+    setClientDeliveriesFolder.mutate(
+      { data: { clientId, folderIdOrUrl: v } },
+      {
+        onSuccess: (r: any) => {
+          toast.success(`Pasta de entregas salva${r?.name ? `: ${r.name}` : ""}.`);
+          setDirty(false);
+        },
+        onError: (e: any) => toast.error(e?.message ?? "Falha ao salvar pasta."),
+      },
+    );
+  }
+
+  function clear() {
+    if (!confirm("Remover pasta de entregas deste cliente?")) return;
+    clearClientDeliveriesFolder.mutate(
+      { data: { clientId } },
+      {
+        onSuccess: () => { toast.success("Pasta removida."); setValue(""); setDirty(false); },
+        onError: (e: any) => toast.error(e?.message ?? "Falha ao remover."),
+      },
+    );
+  }
+
+  const openHref = data?.webViewUrl ?? null;
+  const busy = setClientDeliveriesFolder.isPending || clearClientDeliveriesFolder.isPending;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] text-white/50 leading-relaxed">
+        Todos os uploads desse cliente vão para esta pasta, em subpasta <span className="text-white/80">[Mês Ano]</span>.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <FolderOpen size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/40" />
+          <input
+            value={value}
+            disabled={!isAdmin || isLoading || busy}
+            onChange={(e) => { setValue(e.target.value); setDirty(true); }}
+            placeholder="https://drive.google.com/drive/folders/…"
+            className="w-full pl-8 pr-3 py-2 bg-[#1C1C1C] border border-white/[0.08] rounded-md text-xs text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 disabled:opacity-60"
+          />
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={!openHref}
+            onClick={() => openHref && window.open(openHref, "_blank", "noopener,noreferrer")}
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-[11px] font-semibold border border-white/15 text-white/80 hover:text-white hover:border-white/30 disabled:opacity-30 disabled:cursor-not-allowed transition"
+            title="Abrir pasta no Drive"
+          >
+            Abrir pasta <ExternalLink size={11} />
+          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              disabled={!dirty || !value.trim() || busy}
+              onClick={save}
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-[11px] font-bold disabled:opacity-30 transition"
+              style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+            >
+              {setClientDeliveriesFolder.isPending ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Salvar
+            </button>
+          )}
+        </div>
+      </div>
+      {isAdmin && data?.folderId && (
+        <button
+          type="button"
+          onClick={clear}
+          disabled={busy}
+          className="text-[10px] text-white/40 hover:text-red-400 inline-flex items-center gap-1 mt-1"
+        >
+          <Trash2 size={10} /> Remover pasta
+        </button>
+      )}
+      {!isAdmin && !data?.folderId && (
+        <p className="text-[10px] text-white/40">Nenhuma pasta configurada. Peça a um administrador.</p>
+      )}
     </div>
   );
 }

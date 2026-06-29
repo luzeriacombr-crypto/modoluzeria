@@ -26,6 +26,24 @@ function monthLabelFromKey(key: string | null | undefined): string | null {
   return PT_MONTHS[idx];
 }
 
+function monthLabelWithYear(key: string | null | undefined): string | null {
+  if (!key) return null;
+  const m = /^(\d{4})-(\d{2})/.exec(key);
+  if (!m) return null;
+  const idx = Math.max(1, Math.min(12, parseInt(m[2], 10))) - 1;
+  return `${PT_MONTHS[idx]} ${m[1]}`;
+}
+
+/**
+ * Structured error encoded in the message so the UI can parse it.
+ * The client checks for the `[DELIVERIES_FOLDER_MISSING:<clientId>]` prefix.
+ */
+function deliveriesFolderMissingError(clientId: string): Error {
+  return new Error(
+    `[DELIVERIES_FOLDER_MISSING:${clientId}] Configure a pasta de entregas no Perfil do Cliente antes de fazer upload.`,
+  );
+}
+
 function normalizeName(s: string): string {
   return s
     .normalize("NFD")
@@ -215,9 +233,24 @@ async function resolveTargetFolderForItem(
   if (!item) return null;
   const months: any = item.months;
   const client: any = months?.clients;
-  const monthLabel = monthLabelFromKey(months?.key);
-  if (!client?.id || !client?.name || !monthLabel) return null;
+  if (!client?.id || !client?.name) return null;
 
+  // New flow: require an admin-configured deliveries folder per client.
+  const map = await loadClientFolderMap(supabase, client.id);
+  if (map?.deliveries_folder_id) {
+    const label = monthLabelWithYear(months?.key);
+    if (!label) return null;
+    return ensureMonthFolder(map.deliveries_folder_id, label);
+  }
+
+  // Legacy fallback: only used by `reorganizeAllDriveFiles` / `ensureClientDeliveriesFolder`,
+  // which still pass `autoCreate`. Day-to-day uploads from posts/reels reach here
+  // without `forceClientFolderId` and with no map → throw the friendly error.
+  if (!opts.autoCreate && !opts.forceClientFolderId) {
+    throw deliveriesFolderMissingError(client.id);
+  }
+  const monthLabel = monthLabelFromKey(months?.key);
+  if (!monthLabel) return null;
   const rootId = await readRootFolderId(supabase);
   const tree = await ensureDeliveriesFolder(
     supabase, client.id, client.name, rootId, userId, opts,
@@ -348,15 +381,14 @@ export const attachDriveFile = createServerFn({ method: "POST" })
       meta = null;
     }
 
-    // Move into the organized folder (best-effort).
-    try {
-      const target = await resolveTargetFolderForItem(
-        context.supabase, context.userId, data.itemId, { autoCreate: true },
-      );
-      if (target) await driveMoveTo(fileId, target);
-    } catch (e) {
-      // Don't fail the attach if the move fails; just log to console.
-      console.warn("[drive] attach move skipped:", (e as any)?.message);
+    // Move into the configured deliveries folder. If the client has no
+    // deliveries folder yet, fail loudly so the UI prompts the admin.
+    const target = await resolveTargetFolderForItem(
+      context.supabase, context.userId, data.itemId, {},
+    );
+    if (target) {
+      try { await driveMoveTo(fileId, target); }
+      catch (e) { console.warn("[drive] attach move skipped:", (e as any)?.message); }
     }
 
     const row = {
@@ -402,15 +434,11 @@ export const uploadDriveFile = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCanWrite(context.supabase, context.userId, data.itemId);
 
-    // Resolve target organized folder (best-effort).
-    let targetParentId: string | null = null;
-    try {
-      targetParentId = await resolveTargetFolderForItem(
-        context.supabase, context.userId, data.itemId, { autoCreate: true },
-      );
-    } catch (e) {
-      console.warn("[drive] upload folder resolution skipped:", (e as any)?.message);
-    }
+    // Uploads require the client's deliveries folder to be configured;
+    // this throws DELIVERIES_FOLDER_MISSING when it isn't.
+    const targetParentId = await resolveTargetFolderForItem(
+      context.supabase, context.userId, data.itemId, {},
+    );
 
     const boundary = `lz_${Math.random().toString(36).slice(2)}`;
     const metadata: any = { name: data.name, mimeType: data.mimeType };
@@ -679,4 +707,84 @@ export const reorganizeAllDriveFiles = createServerFn({ method: "POST" })
       }
     }
     return { ok: true, moved, skipped, errors: errors.slice(0, 20) };
+  });
+
+/* ============== PER-CLIENT DELIVERIES FOLDER (Perfil do Cliente) ============== */
+
+async function assertAdmin(supabase: any, userId: string) {
+  const { data: ok } = await supabase.rpc("is_admin", { _user_id: userId });
+  if (!ok) throw new Error("Apenas administradores podem alterar a pasta de entregas.");
+}
+
+export const getClientDeliveriesFolder = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) =>
+    z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const map = await loadClientFolderMap(context.supabase, data.clientId);
+    const folderId = map?.deliveries_folder_id ?? null;
+    return {
+      folderId,
+      webViewUrl: folderId
+        ? `https://drive.google.com/drive/folders/${folderId}`
+        : null,
+    };
+  });
+
+export const setClientDeliveriesFolder = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; folderIdOrUrl: string }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      folderIdOrUrl: z.string().trim().min(5).max(500),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const id = parseDriveId(data.folderIdOrUrl);
+    if (!id) throw new Error("Link/ID do Drive inválido.");
+
+    // Validate the id points to an accessible folder.
+    let meta: any;
+    try {
+      meta = await driveFetch(
+        `/drive/v3/files/${encodeURIComponent(id)}?fields=id,name,mimeType&supportsAllDrives=true`,
+      );
+    } catch (e: any) {
+      throw new Error("Pasta não encontrada no Drive ou sem permissão de acesso.");
+    }
+    if (meta?.mimeType !== FOLDER_MIME) {
+      throw new Error("O link informado não aponta para uma pasta do Drive.");
+    }
+
+    const { error } = await context.supabase
+      .from("client_drive_map")
+      .upsert({
+        client_id: data.clientId,
+        drive_folder_id: id,
+        deliveries_folder_id: id,
+        confirmed_by: context.userId,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "client_id" });
+    if (error) throw new Error(error.message);
+
+    return {
+      ok: true,
+      folderId: id,
+      name: meta?.name ?? null,
+      webViewUrl: `https://drive.google.com/drive/folders/${id}`,
+    };
+  });
+
+export const clearClientDeliveriesFolder = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) =>
+    z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase
+      .from("client_drive_map")
+      .delete()
+      .eq("client_id", data.clientId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

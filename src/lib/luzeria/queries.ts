@@ -25,6 +25,7 @@ import {
 import {
   listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, detachItemFile,
   getDriveThumbnail, reorderItemFiles,
+  getClientDeliveriesFolder, setClientDeliveriesFolder, clearClientDeliveriesFolder,
 } from "./drive.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
@@ -226,6 +227,14 @@ export const driveThumbnailQO = (fileId: string | null | undefined, enabled = tr
     retry: false,
   });
 
+export const clientDeliveriesFolderQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["client-deliveries-folder", clientId],
+    queryFn: () => getClientDeliveriesFolder({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
+    staleTime: 30_000,
+  });
+
 export function useMe() { return useQuery(meQO()); }
 
 export function useApi() {
@@ -379,6 +388,18 @@ export function useApi() {
       onSuccess: (_d, vars: any) => {
         qc.invalidateQueries({ queryKey: ["item-files", vars?.data?.itemId] });
         qc.invalidateQueries({ queryKey: ["month"] });
+      },
+    }),
+    setClientDeliveriesFolder: useMutation({
+      mutationFn: useServerFn(setClientDeliveriesFolder),
+      onSuccess: (_d, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["client-deliveries-folder", vars?.data?.clientId] });
+      },
+    }),
+    clearClientDeliveriesFolder: useMutation({
+      mutationFn: useServerFn(clearClientDeliveriesFolder),
+      onSuccess: (_d, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["client-deliveries-folder", vars?.data?.clientId] });
       },
     }),
   };

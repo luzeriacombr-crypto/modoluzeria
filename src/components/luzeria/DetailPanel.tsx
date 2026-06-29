@@ -624,7 +624,7 @@ export function DetailPanel() {
         {/* Files */}
         <ModalSection label="Arquivos" last>
           <div id="lz-files-section">
-            <FilesSection itemId={item.id} canEdit={canEditFiles} />
+            <FilesSection itemId={item.id} canEdit={canEditFiles} clientId={selectedClientId} />
           </div>
         </ModalSection>
           </div>
