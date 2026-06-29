@@ -105,7 +105,7 @@ export function AdminDashboard() {
   return (
     <div className="px-5 md:px-10 py-8 max-w-[1320px] mx-auto">
       {/* HERO */}
-      <div className="relative overflow-hidden rounded-2xl mb-6"
+      <div data-tour="dashboard-hero" className="relative overflow-hidden rounded-2xl mb-6"
         style={{
           background:
             "radial-gradient(120% 140% at 0% 0%, rgba(200,212,78,0.18) 0%, rgba(91,168,138,0.10) 35%, rgba(28,28,28,0) 70%), " +

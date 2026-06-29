@@ -31,6 +31,7 @@ export function NotificationsBell() {
   return (
     <div className="relative" ref={ref}>
       <button ref={btnRef} onClick={() => setOpen((o) => !o)}
+        data-tour="notifications"
         className="relative p-2 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition">
         <Bell size={17} />
         {unread > 0 && (

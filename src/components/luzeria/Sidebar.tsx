@@ -63,7 +63,7 @@ export function Sidebar({
   const isAdmin = me?.role === "master" || me?.role === "setor";
 
   return (
-    <aside className="sidebar-gradient w-[240px] flex flex-col h-screen text-white shrink-0">
+    <aside data-tour="sidebar" className="sidebar-gradient w-[240px] flex flex-col h-screen text-white shrink-0">
       {/* Logo */}
       <div className="px-5 pt-5 pb-4">
         <img src={luzeriaLogo.url} alt="Luzeria" className="h-7 w-auto object-contain" />
