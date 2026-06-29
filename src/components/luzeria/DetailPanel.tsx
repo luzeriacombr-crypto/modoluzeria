@@ -71,7 +71,7 @@ export function DetailPanel() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [driveCopied, setDriveCopied] = useState(false);
   const [newCheck, setNewCheck] = useState("");
-  const { updateChecklist, rateItem } = useApi();
+  const { updateChecklist } = useApi();
 
   useEffect(() => {
     if (item) {
