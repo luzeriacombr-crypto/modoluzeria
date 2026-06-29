@@ -4,8 +4,9 @@ import {
   Users, Target, Package, Clock, AlertTriangle,
   ChevronLeft, ChevronRight, Trophy, Sparkles, Flame, Crown, Medal,
   X, CheckCircle2, Inbox,
+  Activity, AlertOctagon, RotateCcw,
 } from "lucide-react";
-import { adminDashboardQO, memberFinalizationsQO, topMembersQO, useMe } from "@/lib/luzeria/queries";
+import { adminDashboardQO, memberFinalizationsQO, topMembersQO, useMe, reportExtrasQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { Avatar } from "./Avatar";
@@ -168,6 +169,9 @@ export function AdminDashboard() {
           valueColor={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "#C8D44E"}
         />
       </div>
+
+      {/* Saúde da Operação — admin master only */}
+      {me?.role === "master" && <OperationHealth monthKey={selectedMonthKey} />}
 
       {/* Top members */}
       <div className="rounded-xl bg-[#161616] border border-white/[0.07] p-5 mb-6 relative overflow-hidden">
