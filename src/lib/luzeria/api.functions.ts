@@ -23,7 +23,7 @@ export const listProfiles = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: profiles, error } = await context.supabase
       .from("profiles")
-      .select("id, name, color, icon, active, avatar_url, onboarded_at")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at")
       .order("name");
     if (error) throw new Error(error.message);
     const { data: roles } = await context.supabase.from("user_roles").select("user_id, role");
@@ -45,6 +45,7 @@ export const listProfiles = createServerFn({ method: "GET" })
       avatarPath: p.avatar_url ?? null,
       avatarUrl: p.avatar_url ? signed.get(p.avatar_url) ?? null : null,
       onboardedAt: p.onboarded_at ?? null,
+      tourCompletedAt: p.tour_completed_at ?? null,
     }));
   });
 
@@ -53,7 +54,7 @@ export const getMe = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: profile } = await context.supabase
       .from("profiles")
-      .select("id, name, color, icon, active, avatar_url, onboarded_at")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at")
       .eq("id", context.userId).maybeSingle();
     const { data: roleRow } = await context.supabase
       .from("user_roles").select("role").eq("user_id", context.userId).maybeSingle();
@@ -67,29 +68,34 @@ export const getMe = createServerFn({ method: "GET" })
       avatarPath: profile.avatar_url ?? null,
       avatarUrl: profile.avatar_url ? signed.get(profile.avatar_url) ?? null : null,
       onboardedAt: profile.onboarded_at ?? null,
+      tourCompletedAt: (profile as any).tour_completed_at ?? null,
     } satisfies Profile;
   });
 
 export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { name?: string; color?: string; icon?: string | null; avatarPath?: string | null; onboarded?: boolean }) =>
+  .inputValidator((d: { name?: string; color?: string; icon?: string | null; avatarPath?: string | null; onboarded?: boolean; tourCompleted?: boolean }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
       color: z.string().trim().max(32).optional(),
       icon: z.string().max(64).nullable().optional(),
       avatarPath: z.string().trim().max(400).nullable().optional(),
       onboarded: z.boolean().optional(),
+      tourCompleted: z.boolean().optional(),
     }).strict().parse(d))
   .handler(async ({ data, context }) => {
     const update: {
       name?: string; color?: string; icon?: string | null;
       avatar_url?: string | null; onboarded_at?: string;
+      tour_completed_at?: string | null;
     } = {};
     if (data.name !== undefined) update.name = data.name;
     if (data.color !== undefined) update.color = data.color;
     if (data.icon !== undefined) update.icon = data.icon;
     if (data.avatarPath !== undefined) update.avatar_url = data.avatarPath;
     if (data.onboarded) update.onboarded_at = new Date().toISOString();
+    if (data.tourCompleted === true) update.tour_completed_at = new Date().toISOString();
+    if (data.tourCompleted === false) update.tour_completed_at = null;
     if (Object.keys(update).length === 0) return { ok: true };
     const { error } = await context.supabase
       .from("profiles").update(update).eq("id", context.userId);
