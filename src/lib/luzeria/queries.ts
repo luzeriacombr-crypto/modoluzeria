@@ -22,6 +22,9 @@ import {
   getAppSettings, updateAppSettings,
   getMyWeek, getWorkload, getItemTimeline, addCommentWithMentions,
 } from "./roadmap.functions";
+import {
+  listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, detachItemFile,
+} from "./drive.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
@@ -197,6 +200,21 @@ export const itemTimelineQO = (itemId: string | null) =>
     enabled: !!itemId,
   });
 
+export const itemFilesQO = (itemId: string | null) =>
+  queryOptions({
+    queryKey: ["item-files", itemId],
+    queryFn: () => listItemFiles({ data: { itemId: itemId! } }),
+    enabled: !!itemId,
+  });
+
+export const driveSearchQO = (query: string, enabled: boolean) =>
+  queryOptions({
+    queryKey: ["drive-search", query],
+    queryFn: () => searchDriveFiles({ data: { query } }),
+    enabled,
+    staleTime: 30_000,
+  });
+
 export function useMe() { return useQuery(meQO()); }
 
 export function useApi() {
@@ -321,6 +339,28 @@ export function useApi() {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["month"] });
         qc.invalidateQueries({ queryKey: ["notifications"] });
+      },
+    }),
+    /* ===== DRIVE FILES ===== */
+    attachDriveFile: useMutation({
+      mutationFn: useServerFn(attachDriveFile),
+      onSuccess: (_d, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["item-files", vars?.data?.itemId] });
+        qc.invalidateQueries({ queryKey: ["month"] });
+      },
+    }),
+    uploadDriveFile: useMutation({
+      mutationFn: useServerFn(uploadDriveFile),
+      onSuccess: (_d, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["item-files", vars?.data?.itemId] });
+        qc.invalidateQueries({ queryKey: ["month"] });
+      },
+    }),
+    detachItemFile: useMutation({
+      mutationFn: useServerFn(detachItemFile),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["item-files"] });
+        qc.invalidateQueries({ queryKey: ["month"] });
       },
     }),
   };

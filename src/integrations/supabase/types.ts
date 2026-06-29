@@ -608,6 +608,69 @@ export type Database = {
           },
         ]
       }
+      item_files: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          drive_file_id: string
+          icon_url: string | null
+          id: string
+          item_id: string
+          mime_type: string | null
+          name: string
+          size_bytes: number | null
+          sort_order: number
+          thumbnail_url: string | null
+          updated_at: string
+          web_view_url: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          drive_file_id: string
+          icon_url?: string | null
+          id?: string
+          item_id: string
+          mime_type?: string | null
+          name: string
+          size_bytes?: number | null
+          sort_order?: number
+          thumbnail_url?: string | null
+          updated_at?: string
+          web_view_url: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          drive_file_id?: string
+          icon_url?: string | null
+          id?: string
+          item_id?: string
+          mime_type?: string | null
+          name?: string
+          size_bytes?: number | null
+          sort_order?: number
+          thumbnail_url?: string | null
+          updated_at?: string
+          web_view_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_files_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_files_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_goals: {
         Row: {
           created_at: string
