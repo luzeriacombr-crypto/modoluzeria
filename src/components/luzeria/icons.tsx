@@ -1,7 +1,7 @@
 import {
   FileText, PenLine, Search, MessageSquare, CalendarCheck, CalendarClock, CheckCircle,
   Paintbrush, Eye, Video, Scissors,
-  Film, Image as ImageIcon, Grid3x3, Link as LinkIcon,
+  Film, Image as ImageIcon, Grid3x3, Link as LinkIcon, Ban,
 } from "lucide-react";
 import type { Status } from "@/lib/luzeria/types";
 
@@ -14,6 +14,7 @@ export const STATUS_ICONS: Record<Status, React.ComponentType<IconProps>> = {
   AGENDAMENTO: CalendarCheck,
   REVISAO_AGENDAMENTO: CalendarClock,
   FINALIZADO: CheckCircle,
+  BLOQUEADO: Ban,
   CRIACAO: Paintbrush,
   REVISAO_ARTE: Eye,
   EM_GRAVACAO: Video,
