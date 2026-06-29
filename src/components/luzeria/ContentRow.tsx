@@ -148,13 +148,13 @@ function RowThumb({ itemId }: { itemId: string }) {
 
   return (
     <div
-      className="w-10 h-10 shrink-0 rounded-md overflow-hidden flex items-center justify-center"
+      className="w-[48px] h-[60px] shrink-0 rounded-md overflow-hidden flex items-center justify-center"
       style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}
     >
       {url ? (
         <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
       ) : (
-        <ImageIcon size={16} style={{ color: "rgba(255,255,255,0.2)" }} />
+        <ImageIcon size={20} style={{ color: "rgba(255,255,255,0.2)" }} />
       )}
     </div>
   );
