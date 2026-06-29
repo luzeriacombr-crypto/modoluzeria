@@ -275,3 +275,61 @@ function ProductivityBlock({ prod, monthKey }: { prod: { weeks: number[]; items:
     </div>
   );
 }
+
+function DailyTaskCard({
+  icon,
+  title,
+  subtitle,
+  status,
+  canAct,
+  onDone,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  status: "pending" | "done" | "missed";
+  canAct: boolean;
+  onDone: () => void;
+}) {
+  const done = status === "done";
+  const missed = status === "missed";
+  return (
+    <div
+      className="rounded-lg p-4 flex items-center gap-3 transition-opacity"
+      style={{
+        backgroundColor: missed ? "rgba(255,68,68,0.08)" : "rgba(200,212,78,0.1)",
+        borderLeft: `3px solid ${missed ? "#FF4444" : "#C8D44E"}`,
+        opacity: done ? 0.5 : 1,
+      }}
+    >
+      <div
+        className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
+        style={{
+          backgroundColor: missed ? "rgba(255,68,68,0.2)" : "rgba(200,212,78,0.2)",
+          color: missed ? "#FF4444" : "#C8D44E",
+        }}
+      >
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-bold text-white">{title}</div>
+        {subtitle && <div className="text-[11px] text-white/60">{subtitle}</div>}
+      </div>
+      {!missed && (
+        <button
+          onClick={done ? undefined : onDone}
+          disabled={!canAct || done}
+          className="text-[11px] font-semibold px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 shrink-0"
+          style={{
+            backgroundColor: "#C8D44E",
+            color: "#0D0D0D",
+            cursor: done ? "default" : canAct ? "pointer" : "not-allowed",
+          }}
+        >
+          <Check size={12} strokeWidth={3} />
+          {done ? "Feito" : "Marcar feito"}
+        </button>
+      )}
+    </div>
+  );
+}
