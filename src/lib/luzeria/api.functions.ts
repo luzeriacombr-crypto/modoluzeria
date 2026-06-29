@@ -366,6 +366,7 @@ export const getMonth = createServerFn({ method: "GET" })
     const mapped = (items ?? []).map<ContentItem>((it) => ({
       id: it.id, type: it.type as ContentType, idx: it.idx, title: it.title,
       status: it.status as Status, copy: it.copy, driveLink: it.drive_link,
+      caption: ((it as any).caption ?? "") as string,
       assigneeIds: itemAssignees.get(it.id) ?? [],
       comments: itemComments.get(it.id) ?? [],
       updatedAt: it.updated_at,
@@ -394,7 +395,7 @@ export const updateItem = createServerFn({ method: "POST" })
   .inputValidator((d: {
     id: string;
     patch: {
-      title?: string; copy?: string; drive_link?: string;
+      title?: string; copy?: string; caption?: string; drive_link?: string;
       reel_type?: string | null; editor_id?: string | null;
       due_date?: string | null; blocked_reason?: string | null;
     };

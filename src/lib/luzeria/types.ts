@@ -44,6 +44,7 @@ export interface ContentItem {
   assigneeIds: string[];
   copy: string;
   driveLink: string;
+  caption: string;
   comments: Comment[];
   updatedAt: string;
   reelType?: ReelType | null;

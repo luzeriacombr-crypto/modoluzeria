@@ -443,6 +443,7 @@ export type Database = {
       content_items: {
         Row: {
           blocked_reason: string | null
+          caption: string
           checklist: Json
           copy: string
           drive_link: string
@@ -465,6 +466,7 @@ export type Database = {
         }
         Insert: {
           blocked_reason?: string | null
+          caption?: string
           checklist?: Json
           copy?: string
           drive_link?: string
@@ -487,6 +489,7 @@ export type Database = {
         }
         Update: {
           blocked_reason?: string | null
+          caption?: string
           checklist?: Json
           copy?: string
           drive_link?: string
