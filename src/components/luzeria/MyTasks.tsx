@@ -179,6 +179,20 @@ export function MyTasks() {
   );
 }
 
+function DeadlinePill({ dueDate, status }: { dueDate?: string | null; status: string }) {
+  const info = deadlineInfo(dueDate, status);
+  if (info.level === "done") return null;
+  return (
+    <span
+      className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5"
+      style={{ backgroundColor: info.bg, color: info.color }}
+      title={dueDate ? `Prazo: ${dueDate}` : "Sem prazo definido"}
+    >
+      <Clock size={10} /> {info.label}
+    </span>
+  );
+}
+
 function ProductivityBlock({ prod, monthKey }: { prod: { weeks: number[]; items: string[][]; total: number; history: { key: string; count: number }[] }; monthKey: string }) {
   const [showHist, setShowHist] = useState(false);
   const max = Math.max(...prod.weeks, 1);
