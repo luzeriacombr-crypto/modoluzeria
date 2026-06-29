@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { profilesQO, useApi, useMe, appSettingsQO } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
 import { roleLabel } from "./Sidebar";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
-import { UserPlus, X } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star } from "lucide-react";
 import { ReportsTab } from "./ReportsTab";
 
 export function SettingsPage() {
@@ -15,7 +15,7 @@ export function SettingsPage() {
   const { setUserRole, setUserActive, deleteUser, adminCreateUser } = useApi();
   const { setView, setViewAs } = useUI();
   const [adding, setAdding] = useState(false);
-  const [tab, setTab] = useState<"team" | "report">("team");
+  const [tab, setTab] = useState<"team" | "report" | "general">("team");
 
   if (me?.role !== "master") {
     return <div className="p-10 text-white/60 text-sm">Acesso restrito ao Administrador Master.</div>;
@@ -53,6 +53,7 @@ export function SettingsPage() {
         {[
           { id: "team", label: "Equipe" },
           { id: "report", label: "Relatório" },
+          { id: "general", label: "Geral" },
         ].map((t) => {
           const active = tab === (t.id as any);
           return (
@@ -68,7 +69,8 @@ export function SettingsPage() {
         })}
       </div>
 
-      {tab === "report" ? <ReportsTab /> : (
+      {tab === "general" ? <GeneralSettings /> :
+       tab === "report" ? <ReportsTab /> : (
         <>
       {pending.length > 0 && (
         <>
@@ -218,5 +220,44 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">{label}</span>
       <div className="mt-1.5">{children}</div>
     </label>
+  );
+}
+
+function GeneralSettings() {
+  const { data: settings } = useQuery(appSettingsQO());
+  const { updateAppSettings } = useApi();
+  if (!settings) return <div className="text-white/40 text-sm">Carregando…</div>;
+
+  const toggle = (next: boolean) =>
+    updateAppSettings.mutate({ data: { requireRatingOnFinalize: next } }, {
+      onSuccess: () => toast.success("Configuração salva."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+    });
+
+  return (
+    <div className="max-w-2xl">
+      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+        <SettingsIcon size={12} /> Operação
+      </h2>
+      <div className="bg-[#1C1C1C] rounded-lg p-5 flex items-start gap-4">
+        <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+          <Star size={16} />
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-white">Exigir avaliação ao finalizar</div>
+          <div className="text-[11px] text-white/50 mt-1">
+            Ao mudar status de uma tarefa para <span className="text-[#C8D44E] font-semibold">Finalizado</span>,
+            o responsável é obrigado a dar uma nota de qualidade (1–5 estrelas).
+          </div>
+        </div>
+        <button onClick={() => toggle(!settings.requireRatingOnFinalize)}
+          className={`relative h-6 w-11 rounded-full transition-colors ${
+            settings.requireRatingOnFinalize ? "bg-[#C8D44E]" : "bg-white/15"}`}>
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+            settings.requireRatingOnFinalize ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+        </button>
+      </div>
+    </div>
   );
 }

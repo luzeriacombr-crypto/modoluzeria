@@ -19,6 +19,8 @@ import {
   getClientOnboarding, updateClientOnboarding,
   listRecurring, upsertRecurring, deleteRecurring, generateRecurring,
   listActivity, getReportExtras, getMemberStatusDuration,
+  getAppSettings, updateAppSettings,
+  getMyWeek, getWorkload, getItemTimeline, addCommentWithMentions,
 } from "./roadmap.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
@@ -171,6 +173,30 @@ export const memberStatusDurationQO = (userId: string) =>
     enabled: !!userId,
   });
 
+export const appSettingsQO = () =>
+  queryOptions({ queryKey: ["app-settings"], queryFn: () => getAppSettings() });
+
+export const myWeekQO = (from: string, to: string, userId?: string) =>
+  queryOptions({
+    queryKey: ["my-week", userId ?? "self", from, to],
+    queryFn: () => getMyWeek({ data: { userId, from, to } }),
+    enabled: !!from && !!to,
+  });
+
+export const workloadQO = (userId: string) =>
+  queryOptions({
+    queryKey: ["workload", userId],
+    queryFn: () => getWorkload({ data: { userId } }),
+    enabled: !!userId,
+  });
+
+export const itemTimelineQO = (itemId: string | null) =>
+  queryOptions({
+    queryKey: ["item-timeline", itemId],
+    queryFn: () => getItemTimeline({ data: { itemId: itemId! } }),
+    enabled: !!itemId,
+  });
+
 export function useMe() { return useQuery(meQO()); }
 
 export function useApi() {
@@ -277,6 +303,17 @@ export function useApi() {
     generateRecurring: useMutation({
       mutationFn: useServerFn(generateRecurring),
       onSuccess: invalidateAll,
+    }),
+    updateAppSettings: useMutation({
+      mutationFn: useServerFn(updateAppSettings),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["app-settings"] }),
+    }),
+    addCommentWithMentions: useMutation({
+      mutationFn: useServerFn(addCommentWithMentions),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["month"] });
+        qc.invalidateQueries({ queryKey: ["notifications"] });
+      },
     }),
   };
 }

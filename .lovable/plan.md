@@ -1,113 +1,102 @@
+Vou fechar **Autogestão**, **Rastreabilidade** e **Automação** em uma rodada só. Sem mexer no que já existe.
 
-# Roadmap completo — Fases 2, 3, 4 + Relatório expandido
+## 1. Autogestão do membro
 
-Vou entregar tudo em uma sequência única, agrupada por blocos coerentes. A Fase 1 (Ficha, Prazos, Bloqueado, Lead Time) já está no ar e serve de base.
+**Minha Semana** (nova rota dentro de "Minhas Demandas", como aba)
+- Kanban horizontal por dia da semana (Seg → Dom), coluna de "Atrasados" no início
+- Cada card: cliente (badge colorido) · título · tipo · status · ícone de prazo
+- Drag opcional pra trocar `due_date` (clique direito → "Mover para…")
+- Filtro: só meus itens (default), todos do setor (admin)
 
----
+**Metas individuais**
+- Aba "Metas" na página de Perfil — membro define meta mensal por tipo (Posts, Reels, Stories, Outros)
+- Master pode definir/editar meta de qualquer um pela aba Equipe
+- Widget no topo de "Minhas Demandas": ring de progresso por tipo com cor #C8D44E quando ≥ meta, #FF8C42 quando < 70 % do esperado pro dia do mês
 
-## Bloco A — Banco de dados (uma migration)
+**Carga de trabalho**
+- No Ranking do Dashboard e no `MemberDetailPanel`: barrinha "Em aberto agora: N itens" com cor de aviso quando > 8
+- Tooltip lista os 3 mais antigos em aberto
 
-Novas estruturas para suportar todas as fases:
+## 2. Rastreabilidade
 
-- **`content_items`**: `checklist jsonb` (array de `{id, text, done}`), `rework_count int default 0`, `quality_rating smallint` (1–5, opcional), `last_status_change_at timestamptz`.
-- **`status_transitions`**: log imutável de transições (`item_id`, `from_status`, `to_status`, `actor_id`, `duration_ms`, `at`). Alimenta tempo por status, lead time detalhado e retrabalho.
-- **`activity_log`**: ações relevantes (`actor_id`, `entity_type`, `entity_id`, `action`, `meta jsonb`, `at`).
-- **`mentions`**: `comment_id`, `mentioned_user_id`, `read_at` — dispara notificação.
-- **`member_goals`**: `user_id`, `month_key`, `posts_goal`, `reels_goal`, `stories_goal` (Master define).
-- **`recurring_templates`**: `client_id`, `type`, `title`, `cadence` (`weekly|monthly`), `day_of_week`/`day_of_month`, `default_assignees uuid[]`, `active boolean`.
-- **`client_onboarding`**: `client_id`, checklist jsonb com itens default (briefing, acessos, paleta, tom de voz, primeira reunião), `completed_at`.
+**Timeline de atividade por item**
+- Nova seção colapsável no `DetailPanel`: "Histórico" — lê `activity_log` + `status_transitions` + `comments` mesclados por data
+- Linha tipo: avatar · "trocou status PLANEJAMENTO → CRIACAO" · "há 2 h"
+- Inclui criações, mudanças de prazo, ratings, retrabalho, comentários do sistema
 
-Triggers:
-- `trg_status_transitions`: registra cada transição com duração desde a última.
-- `trg_rework_count`: incrementa quando volta de `FINALIZADO` para qualquer outro status, ou de `APROVACAO` para `PRODUCAO`/`PLANEJAMENTO`.
-- `trg_activity_log` em `content_items` (criação, mudança de prazo, atribuição).
+**Menções @nome em comentários**
+- Input de comentário com autocomplete `@` (lista membros ativos)
+- Ao salvar: parse `@uuid` → insere em `mentions` + cria notificação "Você foi mencionado em [item]"
+- Render do comentário destaca menções em #C8D44E
 
-RLS: mesma lógica das tabelas existentes — admin vê tudo, membro vê o que está atribuído ou que criou. `member_goals` e `recurring_templates` só escrita por Master. GRANTs explícitos por tabela.
+**Notificações de prazo**
+- Job diário às 8 h que varre `content_items` com `due_date` entre hoje e amanhã e status ≠ FINALIZADO
+- Cria notificação pra cada `item_assignees`: "Vence hoje" / "Vence amanhã" / "Atrasado"
+- Anti-spam: tabela `deadline_notifications_log (item_id, kind, sent_on date)` única por dia
 
-Cron diário (`/api/public/hooks/recurring`): gera itens a partir de `recurring_templates` ativos para a próxima janela.
+## 3. Automação
 
----
+**Cron real semanal de recorrências**
+- Job toda segunda 6 h chama `generateRecurring` pra cada cliente com template ativo
+- Reusa lógica que já existe no botão manual
+- Server route `/api/public/hooks/recurring-weekly` valida `apikey`
 
-## Bloco B — Fase 2: Autogestão
-
-1. **Minha Semana** (`/_authenticated/minha-semana`): nova rota acessada via sidebar (entre "Minhas Demandas" e Dashboard).
-   - Cabeçalho com nome do dia + clima de produtividade (badge "Carga leve / OK / Pesada" com base em horas estimadas vs. capacidade diária = 6h).
-   - Coluna por dia (Seg→Dom): cards das demandas com prazo dentro da semana, agrupados por status. Drag-and-drop entre dias (atualiza `due_date`).
-   - Botão "Mover atrasados para hoje" no topo.
-2. **Checklists no item** (DetailPanel): nova seção entre "Descrição" e "Drive". Adicionar/marcar/reordenar itens. Barra de progresso `done/total` ao lado do título do item na lista.
-3. **Metas individuais** (visíveis para o próprio membro e para Master): widget no topo de "Minhas Demandas" com 3 barras (Posts/Reels/Stories — atual vs. meta do mês). Master configura em Configurações → Equipe → editar membro.
-4. **Bloqueado em destaque**: card "🚧 Demandas bloqueadas" no topo do Dashboard e de "Minhas Demandas" quando houver — mostra título, cliente e motivo.
-
----
-
-## Bloco C — Fase 3: Dados estratégicos
-
-1. **Tempo por status** (a partir de `status_transitions`): mini-gráfico de barras na Ficha do Cliente (já existente) e por membro (no `MemberDetailPanel`). Mostra tempo médio em cada status.
-2. **Retrabalho**: badge no item (ícone `RotateCcw` + número) quando `rework_count > 0`. Métrica de "Taxa de retrabalho" no Relatório.
-3. **Qualidade**: ao mover para `FINALIZADO`, Master/Setor podem dar nota de 1–5 estrelas (opcional, modal não bloqueante). Média mostrada na Ficha do Cliente e no ranking.
-4. **Log de atividade**: aba "Atividade" dentro do DetailPanel (timeline de mudanças). Lista colapsada por padrão.
-5. **Menções `@nome`**: textarea de comentários com autocomplete; menção gera notificação e fica destacada no comentário.
-
----
-
-## Bloco D — Fase 4: Escala
-
-1. **Tarefas recorrentes**: aba "Recorrência" na Ficha do Cliente. Master cria templates (ex.: "Reels semanal toda terça"). Cron gera 1 semana à frente.
-2. **Onboarding de cliente**: ao criar cliente, popular `client_onboarding` com checklist padrão. Aparece no topo da Ficha enquanto incompleto.
-3. **Status "Em revisão do cliente"**: novo valor de enum (cor cinza-azulado) entre `APROVACAO` e `FINALIZADO`. Não conta como entregue até finalizar.
-
----
-
-## Bloco E — Relatório expandido (Configurações → Relatório, só Master)
-
-Reorganizar em sub-abas dentro da aba Relatório, mantendo os filtros globais (período, cliente, membro):
-
-1. **Visão Geral** — resumo atual + cards de Lead Time médio, Taxa de Retrabalho, Qualidade Média, Tarefas Bloqueadas.
-2. **Lead Time** — distribuição (histograma), top 5 mais rápidos, top 5 mais lentos, comparativo por categoria de cliente.
-3. **Tempo por Status** — média de horas em cada status do pipeline; gráfico de barras horizontais.
-4. **Retrabalho** — itens com `rework_count > 0`, agrupados por membro e por cliente.
-5. **Qualidade** — média por membro, por cliente, distribuição das notas.
-6. **Metas** — % de cumprimento das metas individuais do mês.
-7. **Bloqueios** — itens atualmente bloqueados + histórico de bloqueios resolvidos (tempo médio para desbloquear).
-8. **Atividade** — log filtrável (quem fez o quê e quando).
-
-**Exportação**:
-- Excel: novas abas correspondentes a cada sub-relatório.
-- **PDF**: novo botão "Exportar PDF" usando `@react-pdf/renderer` (compatível com Worker). Layout A4 paisagem, capa com logo Luzeria + período, uma página por sub-relatório.
-
----
-
-## Bloco F — Integrações cruzadas
-
-- **Sidebar**: novo item "Minha Semana" (acima de "Minhas Demandas"); badge vermelho no item quando houver demandas atrasadas.
-- **Notificações**: novos tipos `mention`, `due_soon` (24h antes), `blocked`, `rework`. Worker leve roda a cada 30min via cron para emitir `due_soon`.
-- **MemberDetailPanel**: novas seções de Tempo por Status, Retrabalho e Qualidade.
-- **Dashboard**: card extra "Saúde da operação" (Lead time médio + % retrabalho + bloqueados) abaixo dos 4 cards atuais.
+**Avaliação de qualidade obrigatória ao finalizar**
+- Quando admin troca status pra FINALIZADO sem `quality_rating` definido: abre modal "Avalie esta entrega" antes de fechar
+- Membro comum (não-admin) continua não vendo o campo — só admin avalia
+- Configurável: toggle "Exigir avaliação ao finalizar" em Configurações (default ligado)
 
 ---
 
 ## Detalhes técnicos
 
-- Stack inalterado: TanStack Start + Supabase + Zustand UI store + React Query.
-- Server functions novas em `src/lib/luzeria/*.functions.ts`, agrupadas por domínio (`goals.functions.ts`, `metrics.functions.ts`, `recurring.functions.ts`, `activity.functions.ts`, `mentions.functions.ts`, `quality.functions.ts`). Todas com `requireSupabaseAuth`.
-- Cron jobs via `pg_cron` chamando `/api/public/hooks/recurring` e `/api/public/hooks/due-soon` (assinatura HMAC com novo secret `LUZERIA_CRON_SECRET`).
-- PDF: `bun add @react-pdf/renderer` (Worker-compatível, sem binários nativos).
-- Drag-and-drop em Minha Semana: `@dnd-kit/core` (puro JS, sem binários).
-- Sem mudanças nas tabelas existentes além das colunas novas em `content_items`.
+**Migrations**
+- Nova tabela `deadline_notifications_log (item_id uuid, kind text, sent_on date, unique(item_id, kind, sent_on))` + GRANT/RLS (só service_role escreve, admin lê)
+- Nova coluna `clients.weekly_target_posts`, `weekly_target_reels` (opcional, futuro)
+- Settings flag: usar tabela `app_settings (key, value jsonb)` ou row única em `cleaning_settings` — vou criar `app_settings` dedicada
+
+**Server functions novas** (em `src/lib/luzeria/roadmap.functions.ts`)
+- `getMyWeek({ from, to })` → itens do user agrupados por dia
+- `getMyGoalsProgress(monthKey)` → meta vs entregue por tipo
+- `getItemTimeline(itemId)` → merge de activity_log + status_transitions + comments ordenado desc
+- `createMention({ itemId, commentId, mentionedUserIds })` — chama dentro do save de comment
+- `getAppSettings()` / `updateAppSettings()` (master only)
+
+**Server routes (cron)**
+- `/api/public/hooks/deadline-reminders` (diário 8h)
+- `/api/public/hooks/recurring-weekly` (segundas 6h)
+- Ambos validam `apikey` header com `SUPABASE_PUBLISHABLE_KEY`
+- pg_cron + pg_net (já habilitados — verifico antes)
+
+**UI nova**
+- `src/components/luzeria/MyWeekView.tsx` — kanban por dia
+- `src/components/luzeria/GoalsWidget.tsx` — ring de progresso no header de Minhas Demandas
+- `src/components/luzeria/GoalsEditor.tsx` — usado em Perfil e em MemberDetailPanel
+- `src/components/luzeria/ItemTimeline.tsx` — colapsável no DetailPanel
+- `src/components/luzeria/MentionInput.tsx` — textarea com autocomplete @
+- `src/components/luzeria/QualityModal.tsx` — disparado no finalizar
+- `src/components/luzeria/WorkloadBadge.tsx` — usado no ranking e no MemberDetailPanel
+
+**Mudanças em arquivos existentes**
+- `DetailPanel.tsx`: troca `<textarea>` de comentário pelo `MentionInput`, adiciona seção Timeline, intercepta troca de status pra FINALIZADO pra abrir QualityModal quando flag ligada
+- `MinhasView` (ou equiv.): adiciona tab "Hoje | Minha Semana", insere `GoalsWidget` no topo
+- `ProfilePage.tsx`: adiciona aba "Metas"
+- `Settings.tsx`: nova seção "Geral" com toggle "Exigir avaliação ao finalizar" (só Master)
+- `AdminDashboard.tsx` ranking + `MemberDetailPanel.tsx`: insere `WorkloadBadge`
+
+**Não toco em:** Dashboard hero, sidebar, MobileNav, fluxo de Auth, Stories, Limpeza, Drive link workaround, qualquer integração externa.
 
 ---
 
-## Ordem de execução (uma sessão)
+## Ordem de execução
 
-```text
-1. Migration (Bloco A) → aprovação
-2. Tipos + server functions + queries
-3. Componentes Fase 2 (MinhaSemana, Checklist, Goals widget, BloqueadosCard)
-4. Componentes Fase 3 (Atividade, Menções, Quality modal, badges retrabalho)
-5. Componentes Fase 4 (Recorrência, Onboarding, novo status)
-6. Relatório expandido + export PDF
-7. Cron jobs + secret
-8. Verificação: build + smoke test no preview
-```
+1. Migration (`deadline_notifications_log`, `app_settings`) + GRANT/RLS
+2. Server functions e server routes novas
+3. UI: `GoalsWidget` + `GoalsEditor` + `MyWeekView` + tab em Minhas Demandas
+4. UI: `ItemTimeline` + `MentionInput` no `DetailPanel`
+5. UI: `QualityModal` + toggle em Settings + intercept no DetailPanel
+6. UI: `WorkloadBadge` no ranking e MemberDetailPanel
+7. Cron SQL (pg_cron schedule pros 2 endpoints) — passo final via insert tool
+8. Typecheck e smoke test
 
-Vou avisar antes de mover para cada novo bloco se algo precisar de decisão sua (ex.: itens default do onboarding de cliente, capacidade diária do "clima de produtividade").
+Estima 1 rodada longa. Posso seguir?

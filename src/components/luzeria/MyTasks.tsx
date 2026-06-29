@@ -5,9 +5,11 @@ import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Camera, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, Camera, Sparkles, List, CalendarDays } from "lucide-react";
 import { formatMonth, shortMonth } from "@/lib/luzeria/utils";
 import { CLEANING_TASKS } from "./CleaningView";
+import { GoalsWidget } from "./GoalsWidget";
+import { MyWeekView } from "./MyWeekView";
 
 export function MyTasks() {
   const me = useMe().data;
@@ -42,6 +44,7 @@ export function MyTasks() {
   });
 
   const targetProfile = profiles.find((p) => p.id === targetId);
+  const [view, setView] = useState<"list" | "week">("list");
 
   return (
     <div className="p-10 max-w-5xl mx-auto">
@@ -65,6 +68,21 @@ export function MyTasks() {
             {targetProfile && targetId !== me?.id && <Avatar profile={targetProfile} size={28} />}
           </div>
         )}
+      </div>
+
+      {targetId && <GoalsWidget monthKey={monthKey} userId={targetId} />}
+
+      <div className="inline-flex bg-[#1C1C1C] border border-white/[0.06] rounded-lg p-1 mb-6">
+        {[
+          { id: "list" as const, label: "Lista", Icon: List },
+          { id: "week" as const, label: "Minha Semana", Icon: CalendarDays },
+        ].map((v) => (
+          <button key={v.id} onClick={() => setView(v.id)}
+            className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md transition-colors ${
+              view === v.id ? "bg-[#C8D44E] text-black" : "text-white/60 hover:text-white"}`}>
+            <v.Icon size={12} /> {v.label}
+          </button>
+        ))}
       </div>
 
       {(today?.stories || (today?.cleaningTaskIdx?.length ?? 0) > 0) && (
@@ -100,7 +118,9 @@ export function MyTasks() {
         </div>
       )}
 
-      {tasks.length === 0 ? (
+      {view === "week" ? (
+        <MyWeekView userId={isAdmin && viewAs ? viewAs : undefined} />
+      ) : tasks.length === 0 ? (
         <div className="border border-dashed border-white/10 rounded-lg p-16 text-center">
           <p className="text-white/50 text-sm">Sem tarefas no momento.</p>
         </div>

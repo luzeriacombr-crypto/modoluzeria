@@ -285,3 +285,37 @@ export interface StatusDurationStat {
   avgHours: number;
   count: number;
 }
+
+/** App-wide settings (master-controlled). */
+export interface AppSettings {
+  requireRatingOnFinalize: boolean;
+}
+
+/** Item agrupado por dia da semana para o kanban "Minha Semana". */
+export interface WeekItem {
+  id: string;
+  type: ContentType;
+  idx: number;
+  title: string;
+  status: Status;
+  clientId: string;
+  clientName: string;
+  clientColor: string;
+  monthKey: string;
+  dueDate: string | null;
+}
+
+export interface WorkloadSummary {
+  userId: string;
+  openCount: number;
+  oldest: { id: string; title: string; clientName: string; daysOpen: number }[];
+}
+
+export interface TimelineEntry {
+  id: string;
+  at: string;
+  actorId: string | null;
+  kind: "created" | "status" | "due" | "rated" | "rework" | "comment" | "system";
+  text: string;
+  meta?: Record<string, any>;
+}
