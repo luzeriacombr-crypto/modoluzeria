@@ -729,6 +729,7 @@ export type Database = {
           id: string
           name: string
           onboarded_at: string | null
+          tour_completed_at: string | null
         }
         Insert: {
           active?: boolean
@@ -740,6 +741,7 @@ export type Database = {
           id: string
           name: string
           onboarded_at?: string | null
+          tour_completed_at?: string | null
         }
         Update: {
           active?: boolean
@@ -751,6 +753,7 @@ export type Database = {
           id?: string
           name?: string
           onboarded_at?: string | null
+          tour_completed_at?: string | null
         }
         Relationships: []
       }

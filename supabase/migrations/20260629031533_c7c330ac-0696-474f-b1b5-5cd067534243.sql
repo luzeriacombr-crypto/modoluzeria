@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS tour_completed_at timestamptz NULL;
+UPDATE public.profiles SET tour_completed_at = COALESCE(onboarded_at, now()) WHERE tour_completed_at IS NULL AND onboarded_at IS NOT NULL;
