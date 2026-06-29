@@ -3,7 +3,7 @@ import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import type {
   ChecklistItem, MemberGoalProgress, ClientOnboarding, RecurringTemplate, ActivityEntry,
-  StatusDurationStat, Status,
+  StatusDurationStat, Status, AppSettings, WeekItem, WorkloadSummary, TimelineEntry,
 } from "./types";
 
 /* =========================================================
