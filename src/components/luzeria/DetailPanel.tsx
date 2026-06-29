@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { X, Send, ExternalLink, Plus, Check, Pencil, ChevronDown, Copy, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2 } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType } from "@/lib/luzeria/types";
+import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType, type Status } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS, detectDriveType } from "./icons";
 
@@ -44,7 +44,7 @@ export function DetailPanel() {
   const { data: profiles = [] } = useQuery(profilesQO());
   const { data: clients = [] } = useQuery(clientsQO());
   const me = useMe().data;
-  const { setItemStatus, updateItem, addAssignee, removeAssignee, addComment } = useApi();
+  const { setItemStatus, updateItem, addAssignee, removeAssignee, addCommentWithMentions, rateItem } = useApi();
 
   const item = useMemo(() => (selectedItemId && month ? findItem(month, selectedItemId) : undefined), [month, selectedItemId]);
   const client = clients.find((c) => c.id === selectedClientId);
@@ -62,6 +62,8 @@ export function DetailPanel() {
   const [copy, setCopy] = useState("");
   const [drive, setDrive] = useState("");
   const [comment, setComment] = useState("");
+  const [commentMentions, setCommentMentions] = useState<string[]>([]);
+  const [qualityFor, setQualityFor] = useState<Status | null>(null);
   const [dueDate, setDueDate] = useState("");
   const [blockedReason, setBlockedReason] = useState("");
   const [assignOpen, setAssignOpen] = useState(false);
