@@ -23,16 +23,20 @@ export const listProfiles = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: profiles, error } = await context.supabase
       .from("profiles")
-      .select("id, email, name, color, icon, active, avatar_url, onboarded_at")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at")
       .order("name");
     if (error) throw new Error(error.message);
     const { data: roles } = await context.supabase.from("user_roles").select("user_id, role");
     const roleMap = new Map<string, Role>();
     (roles ?? []).forEach((r) => roleMap.set(r.user_id, r.role as Role));
+    // Emails are only readable by admins via a SECURITY DEFINER RPC.
+    const emailMap = new Map<string, string>();
+    const { data: emailRows } = await context.supabase.rpc("admin_list_profile_emails");
+    (emailRows ?? []).forEach((r: any) => emailMap.set(r.id, r.email));
     const signed = await signAvatarPaths(context.supabase, (profiles ?? []).map((p: any) => p.avatar_url));
     return (profiles ?? []).map<Profile>((p: any) => ({
       id: p.id,
-      email: p.email,
+      email: emailMap.get(p.id) ?? "",
       name: p.name,
       color: p.color,
       icon: p.icon,
@@ -48,13 +52,16 @@ export const getMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: profile } = await context.supabase
-      .from("profiles").select("*").eq("id", context.userId).maybeSingle();
+      .from("profiles")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at")
+      .eq("id", context.userId).maybeSingle();
     const { data: roleRow } = await context.supabase
       .from("user_roles").select("role").eq("user_id", context.userId).maybeSingle();
     if (!profile) return null;
+    const { data: myEmail } = await context.supabase.rpc("get_my_email");
     const signed = await signAvatarPaths(context.supabase, [profile.avatar_url]);
     return {
-      id: profile.id, email: profile.email, name: profile.name,
+      id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
       role: (roleRow?.role ?? "member") as Role,
       avatarPath: profile.avatar_url ?? null,
