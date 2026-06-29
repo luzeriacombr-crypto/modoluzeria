@@ -148,7 +148,7 @@ function RowThumb({ itemId }: { itemId: string }) {
 
   return (
     <div
-      className="w-12 h-15 shrink-0 rounded-md overflow-hidden flex items-center justify-center"
+      className="w-[48px] h-[60px] shrink-0 rounded-md overflow-hidden flex items-center justify-center"
       style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}
     >
       {url ? (
