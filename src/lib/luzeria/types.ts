@@ -133,7 +133,7 @@ export const STATUS_META: Record<
   AGENDAMENTO:         { label: "Agendamento",         bg: "#1A2E2A", color: "#7EFFD9", icon: "CalendarCheck" },
   REVISAO_AGENDAMENTO: { label: "Revisão agendamento", bg: "#2A1E1E", color: "#FF9E7E", icon: "CalendarClock" },
   FINALIZADO:          { label: "Finalizado",          bg: "#1A3A1A", color: "#C8D44E", icon: "CheckCircle" },
-  BLOQUEADO:           { label: "Bloqueado",           bg: "#3A1A1A", color: "#FF6B6B", icon: "Ban" },
+  BLOQUEADO:           { label: "Travado",             bg: "#3A1A1A", color: "#FF6B6B", icon: "Ban" },
   CRIACAO:             { label: "Criação de arte",     bg: "#3D2B5E", color: "#C084FC", icon: "Paintbrush" },
   REVISAO_ARTE:        { label: "Revisão de arte",     bg: "#4A2800", color: "#FF8C42", icon: "Eye" },
   EM_GRAVACAO:         { label: "Em gravação",         bg: "#1A1A3A", color: "#7E9EFF", icon: "Video" },
