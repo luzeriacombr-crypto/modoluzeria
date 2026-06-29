@@ -1093,6 +1093,16 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_master: { Args: { _user_id: string }; Returns: boolean }
+      luzeria_admin_list_cron_jobs: {
+        Args: never
+        Returns: {
+          active: boolean
+          jobname: string
+          last_start: string
+          last_status: string
+          schedule: string
+        }[]
+      }
       send_daily_digest: { Args: never; Returns: number }
       send_deadline_reminders: { Args: never; Returns: number }
     }
