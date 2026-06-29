@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar } from "lucide-react";
+import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar, Image as ImageIcon } from "lucide-react";
 import type { ContentItem, Profile } from "@/lib/luzeria/types";
 import { statusOptionsFor, REEL_TYPE_LABEL, type ReelType } from "@/lib/luzeria/types";
-import { useApi, useMe } from "@/lib/luzeria/queries";
+import { useApi, useMe, itemFilesQO, driveThumbnailQO } from "@/lib/luzeria/queries";
+import { useQuery } from "@tanstack/react-query";
 import { StatusBadge } from "./StatusBadge";
 import { Avatar, AvatarStack } from "./Avatar";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -56,6 +57,8 @@ export function ContentRow({ item, profiles, idx }: {
       <span className="text-[14px] font-bold w-7 shrink-0" style={{ color: "#C8D44E" }}>
         {String(idx).padStart(2, "0")}
       </span>
+
+      <RowThumb itemId={item.id} />
 
       {editing ? (
         <input
@@ -132,6 +135,27 @@ export function ContentRow({ item, profiles, idx }: {
         <MessageCircle size={14} />
         <span>{item.comments.length}</span>
       </div>
+    </div>
+  );
+}
+
+function RowThumb({ itemId }: { itemId: string }) {
+  const filesQ = useQuery(itemFilesQO(itemId));
+  const first = filesQ.data?.[0];
+  const fileId = first?.driveFileId ?? null;
+  const thumbQ = useQuery(driveThumbnailQO(fileId, !!fileId));
+  const url = thumbQ.data?.dataUrl ?? null;
+
+  return (
+    <div
+      className="w-10 h-10 shrink-0 rounded-md overflow-hidden flex items-center justify-center"
+      style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}
+    >
+      {url ? (
+        <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+      ) : (
+        <ImageIcon size={16} style={{ color: "rgba(255,255,255,0.2)" }} />
+      )}
     </div>
   );
 }
