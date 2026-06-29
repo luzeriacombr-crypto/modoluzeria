@@ -4,7 +4,7 @@ import {
   ExternalLink, Upload, Link2, Trash2, Loader2, FileText, Image as ImageIcon,
   Film, FolderOpen, Plus, Check,
 } from "lucide-react";
-import { itemFilesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { itemFilesQO, driveThumbnailQO, useApi, useMe } from "@/lib/luzeria/queries";
 
 function formatSize(n: number | null | undefined) {
   if (!n || n <= 0) return "";
@@ -20,6 +20,29 @@ function MimeIcon({ mime }: { mime?: string | null }) {
   if (m.startsWith("video/")) return <Film size={16} style={{ color: "#C8D44E" }} />;
   if (m.includes("folder")) return <FolderOpen size={16} style={{ color: "#C8D44E" }} />;
   return <FileText size={16} style={{ color: "#C8D44E" }} />;
+}
+
+function isThumbnailable(mime?: string | null) {
+  const m = mime ?? "";
+  return m.startsWith("image/") || m.startsWith("video/") || m === "application/pdf"
+    || m.startsWith("application/vnd.google-apps.");
+}
+
+function FileThumb({ fileId, mime, name }: { fileId: string; mime?: string | null; name: string }) {
+  const enabled = isThumbnailable(mime);
+  const { data, isLoading } = useQuery(driveThumbnailQO(fileId, enabled));
+  const url = data?.dataUrl ?? null;
+  return (
+    <div className="w-10 h-10 shrink-0 rounded-md overflow-hidden bg-[#0D0D0D] border border-white/[0.08] flex items-center justify-center">
+      {url ? (
+        <img src={url} alt={name} className="w-full h-full object-cover" loading="lazy" />
+      ) : isLoading && enabled ? (
+        <Loader2 size={12} className="animate-spin text-white/30" />
+      ) : (
+        <MimeIcon mime={mime} />
+      )}
+    </div>
+  );
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -103,7 +126,7 @@ export function FilesSection({ itemId, canEdit }: { itemId: string; canEdit: boo
             key={f.id}
             className="group flex items-center gap-2.5 rounded-md bg-[#1C1C1C] border border-white/[0.08] px-2.5 py-2 hover:border-white/20 transition-colors"
           >
-            <MimeIcon mime={f.mimeType} />
+            <FileThumb fileId={f.driveFileId} mime={f.mimeType} name={f.name} />
             <a
               href={f.webViewUrl}
               target="_blank"

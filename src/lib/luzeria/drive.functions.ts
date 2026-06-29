@@ -283,3 +283,33 @@ export const detachItemFile = createServerFn({ method: "POST" })
 
 export type ItemFile = Awaited<ReturnType<typeof listItemFiles>>[number];
 export type DriveSearchResult = Awaited<ReturnType<typeof searchDriveFiles>>[number];
+
+/* ============== THUMBNAIL ============== */
+
+/**
+ * Returns a base64 data URL with the Drive thumbnail for a file.
+ * Fetches a fresh thumbnailLink and proxies the bytes server-side so the
+ * browser doesn't need to authenticate against googleusercontent.com.
+ */
+export const getDriveThumbnail = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { fileId: string; size?: number }) =>
+    z.object({
+      fileId: z.string().min(5).max(200),
+      size: z.number().int().min(64).max(1024).optional(),
+    }).parse(d))
+  .handler(async ({ data }) => {
+    const meta: any = await driveFetch(
+      `/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=thumbnailLink,mimeType&supportsAllDrives=true`,
+    );
+    const link: string | undefined = meta?.thumbnailLink;
+    if (!link) return { dataUrl: null as string | null };
+    const sz = data.size ?? 320;
+    const url = link.replace(/=s\d+(-[a-z]+)?$/i, `=s${sz}`);
+    const res = await fetch(url);
+    if (!res.ok) return { dataUrl: null as string | null };
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.byteLength > 2_500_000) return { dataUrl: null as string | null };
+    const ct = res.headers.get("content-type") ?? "image/jpeg";
+    return { dataUrl: `data:${ct};base64,${buf.toString("base64")}` };
+  });
