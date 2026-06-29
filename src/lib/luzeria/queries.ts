@@ -5,7 +5,7 @@ import {
   getMe, getMonth, getProductivity, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile,
-  listStories, upsertStoryDay, getCleaning, upsertCleaningCell, updateCleaningNote, getMyToday,
+  listStories, upsertStoryDay, setStoryDone, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   adminCreateUser, getAdminDashboard, getTopMembers, getMemberFinalizations,
   getReport, getMemberReportDetail,
   getClientFicha,
@@ -240,8 +240,16 @@ export function useApi() {
       mutationFn: useServerFn(upsertStoryDay),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["stories"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
     }),
+    setStoryDone: useMutation({
+      mutationFn: useServerFn(setStoryDone),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["stories"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
+    }),
     upsertCleaningCell: useMutation({
       mutationFn: useServerFn(upsertCleaningCell),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
+    }),
+    setCleaningDone: useMutation({
+      mutationFn: useServerFn(setCleaningDone),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
     }),
     updateCleaningNote: useMutation({
