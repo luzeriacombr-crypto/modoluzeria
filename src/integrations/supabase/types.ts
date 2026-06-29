@@ -193,6 +193,41 @@ export type Database = {
           },
         ]
       }
+      client_drive_map: {
+        Row: {
+          client_id: string
+          confirmed_by: string | null
+          created_at: string
+          deliveries_folder_id: string | null
+          drive_folder_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          confirmed_by?: string | null
+          created_at?: string
+          deliveries_folder_id?: string | null
+          drive_folder_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          confirmed_by?: string | null
+          created_at?: string
+          deliveries_folder_id?: string | null
+          drive_folder_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_drive_map_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_links: {
         Row: {
           client_id: string
