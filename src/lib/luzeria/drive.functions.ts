@@ -495,6 +495,31 @@ export const detachItemFile = createServerFn({ method: "POST" })
 export type ItemFile = Awaited<ReturnType<typeof listItemFiles>>[number];
 export type DriveSearchResult = Awaited<ReturnType<typeof searchDriveFiles>>[number];
 
+/* ============== REORDER ============== */
+
+export const reorderItemFiles = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; orderedIds: string[] }) =>
+    z.object({
+      itemId: z.string().uuid(),
+      orderedIds: z.array(z.string().uuid()).min(1).max(200),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCanWrite(context.supabase, context.userId, data.itemId);
+    // Update each row's sort_order to its index. Scope by item_id to
+    // prevent cross-item writes even if a stray id is passed.
+    for (let i = 0; i < data.orderedIds.length; i++) {
+      const { error } = await context.supabase
+        .from("item_files")
+        .update({ sort_order: i })
+        .eq("id", data.orderedIds[i])
+        .eq("item_id", data.itemId);
+      if (error) throw new Error(error.message);
+    }
+    await syncLegacyDriveLink(context.supabase, data.itemId);
+    return { ok: true };
+  });
+
 /* ============== THUMBNAIL ============== */
 
 /**

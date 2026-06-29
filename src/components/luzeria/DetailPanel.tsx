@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2 } from "lucide-react";
-import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO } from "@/lib/luzeria/queries";
+import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType, type Status } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
@@ -48,22 +48,24 @@ function extractDriveFileId(url: string): string | null {
   return null;
 }
 
-function DrivePreview({ url, onEdit }: { url: string; onEdit: () => void }) {
-  const fileId = extractDriveFileId(url);
-  const { data, isLoading } = useQuery(driveThumbnailQO(fileId, !!fileId));
-  const thumb = data?.dataUrl ?? null;
-  const href = normalizeExternalUrl(url);
+function MediaPreview({ itemId, onEmpty }: { itemId: string; onEmpty: () => void }) {
+  const { data: files = [], isLoading: filesLoading } = useQuery(itemFilesQO(itemId));
+  const first = files[0];
+  const fileId = first?.driveFileId ?? null;
+  const { data: thumbData, isLoading: thumbLoading } = useQuery(driveThumbnailQO(fileId, !!fileId));
+  const thumb = thumbData?.dataUrl ?? null;
+  const href = first ? normalizeExternalUrl(first.webViewUrl) : null;
 
-  if (!url) {
+  if (!filesLoading && !first) {
     return (
       <button
         type="button"
-        onClick={onEdit}
+        onClick={onEmpty}
         className="group w-full h-[200px] rounded-[10px] border border-dashed border-white/15 bg-[#141414] hover:border-[#C8D44E] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-2"
       >
         <Upload size={22} className="text-white/30 group-hover:text-[#C8D44E] transition-colors" />
         <span className="text-xs text-white/40 group-hover:text-white/70 transition-colors">
-          Cole o link do Drive
+          Envie um arquivo ou cole o link do Drive
         </span>
       </button>
     );
@@ -74,21 +76,20 @@ function DrivePreview({ url, onEdit }: { url: string; onEdit: () => void }) {
       href={href ?? "#"}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={(e) => {
-        if (!href) e.preventDefault();
-      }}
+      onClick={(e) => { if (!href) e.preventDefault(); }}
       className="group relative block w-full h-[200px] rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
+      title={first?.name}
     >
       {thumb ? (
-        <img src={thumb} alt="Preview do Drive" className="w-full h-full object-cover" loading="lazy" />
-      ) : isLoading ? (
+        <img src={thumb} alt={first?.name ?? "Preview"} className="w-full h-full object-cover" loading="lazy" />
+      ) : thumbLoading || filesLoading ? (
         <div className="w-full h-full flex items-center justify-center">
           <Loader2 size={18} className="animate-spin text-white/30" />
         </div>
       ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-white/40">
+        <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-white/40 px-4 text-center">
           <ExternalLink size={20} />
-          <span className="text-[11px]">Abrir no Drive</span>
+          <span className="text-[11px] truncate max-w-full">{first?.name ?? "Abrir no Drive"}</span>
         </div>
       )}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/55 transition-colors flex items-center justify-center">
@@ -231,7 +232,7 @@ export function DetailPanel() {
           <div className="md:overflow-y-auto md:border-r md:border-white/[0.06]">
             {/* Drive preview */}
             <ModalSection label="Mídia">
-              <DrivePreview url={drive} onEdit={() => {
+              <MediaPreview itemId={item.id} onEmpty={() => {
                 const el = document.getElementById("lz-files-section");
                 el?.scrollIntoView({ behavior: "smooth", block: "center" });
               }} />

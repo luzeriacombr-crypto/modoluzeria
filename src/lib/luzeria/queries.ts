@@ -24,7 +24,7 @@ import {
 } from "./roadmap.functions";
 import {
   listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, detachItemFile,
-  getDriveThumbnail,
+  getDriveThumbnail, reorderItemFiles,
 } from "./drive.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
@@ -371,6 +371,13 @@ export function useApi() {
       mutationFn: useServerFn(detachItemFile),
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["item-files"] });
+        qc.invalidateQueries({ queryKey: ["month"] });
+      },
+    }),
+    reorderItemFiles: useMutation({
+      mutationFn: useServerFn(reorderItemFiles),
+      onSuccess: (_d, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["item-files", vars?.data?.itemId] });
         qc.invalidateQueries({ queryKey: ["month"] });
       },
     }),
