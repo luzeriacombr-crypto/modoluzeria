@@ -89,6 +89,11 @@ export interface Profile {
   icon: string | null;
   active: boolean;
   role: Role;
+  /** Public/signed URL of the uploaded avatar image, or null. */
+  avatarUrl?: string | null;
+  /** Path inside the `avatars` bucket (raw value stored in DB). */
+  avatarPath?: string | null;
+  onboardedAt?: string | null;
 }
 
 export interface NotificationItem {

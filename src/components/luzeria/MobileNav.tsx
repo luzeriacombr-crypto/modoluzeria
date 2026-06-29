@@ -21,6 +21,7 @@ export function MobileNav() {
   useEffect(() => {
     if (view === "my" || view === "stories" || view === "cleaning" || view === "admin") setTab("home");
     if (view === "client") setTab("clients");
+    if (view === "profile") setTab("me");
   }, [view]);
 
   if (!isMobile) return null;
@@ -67,14 +68,19 @@ export function MobileNav() {
         </div>
       )}
 
-      {tab === "me" && (
+      {tab === "me" && view !== "profile" && (
         <div className="fixed inset-0 z-40 bg-[#0D0D0D] pt-14 pb-20" onClick={() => setTab("home")}>
-          <div className="px-5 py-6 flex flex-col items-center gap-3">
-            {me && <Avatar profile={me} size={64} />}
+          <div className="px-5 py-6 flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+            {me && <Avatar profile={me} size={72} />}
             <div className="text-white font-bold text-base">{me?.name}</div>
             <div className="text-white/50 text-xs">{me?.email}</div>
+            <button
+              onClick={() => { setView("profile"); }}
+              className="mt-6 px-5 py-2 rounded-md text-xs font-bold"
+              style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+            >Editar perfil</button>
             <button onClick={() => supabase.auth.signOut().then(() => (location.href = "/auth"))}
-              className="mt-6 text-xs text-red-400 hover:underline">Sair</button>
+              className="mt-3 text-xs text-red-400 hover:underline">Sair</button>
           </div>
         </div>
       )}
@@ -85,7 +91,7 @@ export function MobileNav() {
         <NavBtn icon={<BarChart2 size={20} />} active={view === "admin"} onClick={() => { setView("admin"); setTab("home"); }} />
         <NavBtn icon={<Users size={20} />} active={tab === "clients"} onClick={() => setTab("clients")} />
         <NavBtn icon={<Bell size={20} />} badge={unread} active={tab === "bell"} onClick={() => setTab("bell")} />
-        <NavBtn icon={me ? <Avatar profile={me} size={22} /> : <User size={20} />} active={tab === "me"} onClick={() => setTab("me")} />
+        <NavBtn icon={me ? <Avatar profile={me} size={22} /> : <User size={20} />} active={tab === "me"} onClick={() => { setView("profile"); }} />
       </nav>
     </>
   );

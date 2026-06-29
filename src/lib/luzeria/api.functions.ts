@@ -6,18 +6,31 @@ import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status
 
 /* ============== PROFILES & ROLES ============== */
 
+/** Generate signed read URLs for avatar storage paths (1 year). */
+async function signAvatarPaths(supabase: any, paths: (string | null | undefined)[]): Promise<Map<string, string>> {
+  const unique = Array.from(new Set(paths.filter((p): p is string => !!p)));
+  const result = new Map<string, string>();
+  if (unique.length === 0) return result;
+  const { data } = await supabase.storage.from("avatars").createSignedUrls(unique, 60 * 60 * 24 * 365);
+  (data ?? []).forEach((r: any) => {
+    if (r?.path && r?.signedUrl) result.set(r.path, r.signedUrl);
+  });
+  return result;
+}
+
 export const listProfiles = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const { data: profiles, error } = await context.supabase
       .from("profiles")
-      .select("id, email, name, color, icon, active")
+      .select("id, email, name, color, icon, active, avatar_url, onboarded_at")
       .order("name");
     if (error) throw new Error(error.message);
     const { data: roles } = await context.supabase.from("user_roles").select("user_id, role");
     const roleMap = new Map<string, Role>();
     (roles ?? []).forEach((r) => roleMap.set(r.user_id, r.role as Role));
-    return (profiles ?? []).map<Profile>((p) => ({
+    const signed = await signAvatarPaths(context.supabase, (profiles ?? []).map((p: any) => p.avatar_url));
+    return (profiles ?? []).map<Profile>((p: any) => ({
       id: p.id,
       email: p.email,
       name: p.name,
@@ -25,6 +38,9 @@ export const listProfiles = createServerFn({ method: "GET" })
       icon: p.icon,
       active: p.active,
       role: roleMap.get(p.id) ?? "member",
+      avatarPath: p.avatar_url ?? null,
+      avatarUrl: p.avatar_url ? signed.get(p.avatar_url) ?? null : null,
+      onboardedAt: p.onboarded_at ?? null,
     }));
   });
 
@@ -36,24 +52,40 @@ export const getMe = createServerFn({ method: "GET" })
     const { data: roleRow } = await context.supabase
       .from("user_roles").select("role").eq("user_id", context.userId).maybeSingle();
     if (!profile) return null;
+    const signed = await signAvatarPaths(context.supabase, [profile.avatar_url]);
     return {
       id: profile.id, email: profile.email, name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
       role: (roleRow?.role ?? "member") as Role,
+      avatarPath: profile.avatar_url ?? null,
+      avatarUrl: profile.avatar_url ? signed.get(profile.avatar_url) ?? null : null,
+      onboardedAt: profile.onboarded_at ?? null,
     } satisfies Profile;
   });
 
 export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { name?: string; color?: string; icon?: string | null }) =>
+  .inputValidator((d: { name?: string; color?: string; icon?: string | null; avatarPath?: string | null; onboarded?: boolean }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
       color: z.string().trim().max(32).optional(),
       icon: z.string().max(64).nullable().optional(),
+      avatarPath: z.string().trim().max(400).nullable().optional(),
+      onboarded: z.boolean().optional(),
     }).strict().parse(d))
   .handler(async ({ data, context }) => {
+    const update: {
+      name?: string; color?: string; icon?: string | null;
+      avatar_url?: string | null; onboarded_at?: string;
+    } = {};
+    if (data.name !== undefined) update.name = data.name;
+    if (data.color !== undefined) update.color = data.color;
+    if (data.icon !== undefined) update.icon = data.icon;
+    if (data.avatarPath !== undefined) update.avatar_url = data.avatarPath;
+    if (data.onboarded) update.onboarded_at = new Date().toISOString();
+    if (Object.keys(update).length === 0) return { ok: true };
     const { error } = await context.supabase
-      .from("profiles").update(data).eq("id", context.userId);
+      .from("profiles").update(update).eq("id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

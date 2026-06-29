@@ -15,7 +15,7 @@ interface UI {
   selectedMonthKey: string;
   selectedItemId: string | null;
   recentlyUpdated: string | null;
-  view: "client" | "my" | "settings" | "stories" | "cleaning" | "admin";
+  view: "client" | "my" | "settings" | "stories" | "cleaning" | "admin" | "profile";
   viewAsUserId: string | null;
   sidebarHidden: boolean;
   selectClient: (id: string | null) => void;

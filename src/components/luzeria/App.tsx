@@ -17,11 +17,13 @@ import { NewClientModal, CustomFieldsModal } from "./Modals";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
+import { WelcomeOnboarding } from "./WelcomeOnboarding";
+import { ProfilePage } from "./ProfilePage";
 import luzeriaLogo from "@/assets/luzeria-sidebar.png.asset.json";
 
 export function App() {
   const me = useMe();
-  const { view, selectedClientId, sidebarHidden, toggleSidebar } = useUI();
+  const { view, selectedClientId, sidebarHidden, toggleSidebar, setView } = useUI();
   const [creating, setCreating] = useState<{ category?: string } | null>(null);
   const [customFor, setCustomFor] = useState<Client | null>(null);
 
@@ -47,6 +49,10 @@ export function App() {
         </div>
       </div>
     );
+  }
+
+  if (me.data && !me.data.onboardedAt) {
+    return <WelcomeOnboarding me={me.data} />;
   }
 
   return (
@@ -77,6 +83,7 @@ export function App() {
           {view === "stories" && <StoriesView />}
           {view === "cleaning" && <CleaningView />}
           {view === "admin" && <AdminDashboard />}
+          {view === "profile" && <ProfilePage />}
         </main>
       </div>
       <DetailPanel />
@@ -103,6 +110,7 @@ export function App() {
 
 function Header({ hidden, onToggleSidebar }: { hidden: boolean; onToggleSidebar: () => void }) {
   const me = useMe().data;
+  const setView = useUI((s) => s.setView);
   return (
     <header
       className="lz-app-header sticky top-0 z-30 px-4 md:px-6 flex items-center gap-2 overflow-hidden"
@@ -124,12 +132,16 @@ function Header({ hidden, onToggleSidebar }: { hidden: boolean; onToggleSidebar:
       <div className="flex-1" />
       <NotificationsBell />
       {me && (
-        <div className="flex items-center gap-2 pl-2">
+        <button
+          onClick={() => setView("profile")}
+          className="flex items-center gap-2 pl-2 hover:opacity-90 transition-opacity"
+          title="Meu perfil"
+        >
           <div className="rounded-full p-[2px]" style={{ border: "2px solid #C8D44E" }}>
             <Avatar profile={me} size={26} />
           </div>
           <span className="hidden md:inline text-xs text-white/70">{me.name}</span>
-        </div>
+        </button>
       )}
     </header>
   );

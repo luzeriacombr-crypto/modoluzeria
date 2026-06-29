@@ -156,7 +156,7 @@ export function Sidebar({
       </div>
 
       {/* Footer user */}
-      <UserFooter onSettings={() => setView("settings")} />
+      <UserFooter onSettings={() => setView("settings")} onProfile={() => setView("profile")} />
     </aside>
   );
 }
@@ -380,7 +380,7 @@ function MenuItem({ children, onClick, destructive }: { children: React.ReactNod
   );
 }
 
-function UserFooter({ onSettings }: { onSettings: () => void }) {
+function UserFooter({ onSettings, onProfile }: { onSettings: () => void; onProfile: () => void }) {
   const me = useMe().data;
   const isMaster = me?.role === "master";
   async function logout() {
@@ -391,14 +391,20 @@ function UserFooter({ onSettings }: { onSettings: () => void }) {
   return (
     <div className="px-3 py-3 border-t border-white/10">
       <div className="flex items-center gap-2.5 px-2 py-1.5">
-        <Avatar profile={me} size={30} />
-        <div className="min-w-0 flex-1">
-          <div className="text-xs font-semibold truncate text-white">{me.name}</div>
-          <span className="inline-block text-[9px] uppercase font-bold mt-0.5 px-1.5 py-0.5 rounded"
-            style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
-            {roleLabel(me.role)}
-          </span>
-        </div>
+        <button
+          onClick={onProfile}
+          className="flex items-center gap-2.5 min-w-0 flex-1 text-left rounded-md p-1 -m-1 hover:bg-white/[0.04] transition-colors"
+          title="Meu perfil"
+        >
+          <Avatar profile={me} size={30} />
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-semibold truncate text-white">{me.name}</div>
+            <span className="inline-block text-[9px] uppercase font-bold mt-0.5 px-1.5 py-0.5 rounded"
+              style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+              {roleLabel(me.role)}
+            </span>
+          </div>
+        </button>
         <div className="flex items-center gap-0.5">
           {isMaster && (
             <button onClick={onSettings} title="Configurações"
