@@ -474,13 +474,14 @@ export const upsertClientLink = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
+    const db: any = context.supabase;
     if (data.id) {
-      const { error } = await context.supabase.from("client_links")
+      const { error } = await db.from("client_links")
         .update({ label: data.label, url: data.url, sort_order: data.sortOrder ?? 0 })
         .eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await context.supabase.from("client_links")
+      const { error } = await db.from("client_links")
         .insert({ client_id: data.clientId, label: data.label, url: data.url, sort_order: data.sortOrder ?? 0 });
       if (error) throw new Error(error.message);
     }
@@ -517,16 +518,17 @@ export const upsertClientContact = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
+    const db: any = context.supabase;
     const payload: any = {
       name: data.name, role: data.role ?? null, email: data.email ?? null,
       phone: data.phone ?? null, notes: data.notes ?? null, sort_order: data.sortOrder ?? 0,
     };
     if (data.id) {
-      const { error } = await context.supabase.from("client_contacts").update(payload).eq("id", data.id);
+      const { error } = await db.from("client_contacts").update(payload).eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
       payload.client_id = data.clientId;
-      const { error } = await context.supabase.from("client_contacts").insert(payload);
+      const { error } = await db.from("client_contacts").insert(payload);
       if (error) throw new Error(error.message);
     }
     return { ok: true };
@@ -556,13 +558,14 @@ export const upsertClientSecret = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
+    const db: any = context.supabase;
     if (data.id) {
-      const { error } = await context.supabase.from("client_secrets")
+      const { error } = await db.from("client_secrets")
         .update({ label: data.label, value: data.value, notes: data.notes ?? null })
         .eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await context.supabase.from("client_secrets")
+      const { error } = await db.from("client_secrets")
         .insert({ client_id: data.clientId, label: data.label, value: data.value, notes: data.notes ?? null });
       if (error) throw new Error(error.message);
     }
