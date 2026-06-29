@@ -94,7 +94,6 @@ export function StoriesView() {
           const info = entry ? nameAndColor(entry) : null;
           const isToday = c.key === today;
           const isMine = !!entry?.userId && entry.userId === me?.id;
-          const isPast = c.key < today;
           const status = entry?.status ?? "pending";
           const canToggle = !!entry?.userId && (isMine || isAdmin);
           const bg = info ? info.color + (info.color === "#FFFFFF" ? "33" : "33") : "rgba(255,255,255,0.04)";
