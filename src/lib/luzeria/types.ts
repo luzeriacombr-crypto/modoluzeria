@@ -6,6 +6,7 @@ export type Status =
   | "AGENDAMENTO"
   | "REVISAO_AGENDAMENTO"
   | "FINALIZADO"
+  | "BLOQUEADO"
   // Post-only
   | "CRIACAO"
   | "REVISAO_ARTE"
@@ -47,6 +48,14 @@ export interface ContentItem {
   updatedAt: string;
   reelType?: ReelType | null;
   editorId?: string | null;
+  /** Optional internal deadline (YYYY-MM-DD). */
+  dueDate?: string | null;
+  /** Set automatically when item leaves PLANEJAMENTO for the first time. */
+  startedAt?: string | null;
+  /** Set automatically when item reaches FINALIZADO. */
+  finishedAt?: string | null;
+  /** Filled when status = BLOQUEADO. */
+  blockedReason?: string | null;
 }
 
 export interface MonthData {
@@ -77,6 +86,8 @@ export interface Client {
   category: string;
   customFields: CustomFields;
   createdAt: string;
+  /** Free-form description for the client profile/ficha. */
+  description?: string | null;
 }
 
 export type Role = "master" | "setor" | "member";
@@ -116,6 +127,7 @@ export const STATUS_META: Record<
   AGENDAMENTO:         { label: "Agendamento",         bg: "#1A2E2A", color: "#7EFFD9", icon: "CalendarCheck" },
   REVISAO_AGENDAMENTO: { label: "Revisão agendamento", bg: "#2A1E1E", color: "#FF9E7E", icon: "CalendarClock" },
   FINALIZADO:          { label: "Finalizado",          bg: "#1A3A1A", color: "#C8D44E", icon: "CheckCircle" },
+  BLOQUEADO:           { label: "Bloqueado",           bg: "#3A1A1A", color: "#FF6B6B", icon: "Ban" },
   CRIACAO:             { label: "Criação de arte",     bg: "#3D2B5E", color: "#C084FC", icon: "Paintbrush" },
   REVISAO_ARTE:        { label: "Revisão de arte",     bg: "#4A2800", color: "#FF8C42", icon: "Eye" },
   EM_GRAVACAO:         { label: "Em gravação",         bg: "#1A1A3A", color: "#7E9EFF", icon: "Video" },
@@ -130,6 +142,7 @@ export const GLOBAL_STATUS_ORDER: Status[] = [
   "REVISAO_CLIENTE",
   "AGENDAMENTO",
   "REVISAO_AGENDAMENTO",
+  "BLOQUEADO",
   "FINALIZADO",
 ];
 
@@ -148,11 +161,60 @@ export const STATUS_ORDER: Status[] = [
   "REVISAO_CLIENTE",
   "AGENDAMENTO",
   "REVISAO_AGENDAMENTO",
+  "BLOQUEADO",
   "FINALIZADO",
 ];
 
 export function statusOptionsFor(type: ContentType): Status[] {
-  if (type === "post") return [...GLOBAL_STATUS_ORDER, ...POST_EXTRA_STATUS];
-  if (type === "reel") return [...GLOBAL_STATUS_ORDER, ...REEL_EXTRA_STATUS];
-  return [...GLOBAL_STATUS_ORDER, ...POST_EXTRA_STATUS, ...REEL_EXTRA_STATUS];
+  // Insert extras right before BLOQUEADO/FINALIZADO so the pipeline reads naturally.
+  const head = GLOBAL_STATUS_ORDER.filter((s) => s !== "BLOQUEADO" && s !== "FINALIZADO");
+  const tail: Status[] = ["BLOQUEADO", "FINALIZADO"];
+  if (type === "post") return [...head, ...POST_EXTRA_STATUS, ...tail];
+  if (type === "reel") return [...head, ...REEL_EXTRA_STATUS, ...tail];
+  return [...head, ...POST_EXTRA_STATUS, ...REEL_EXTRA_STATUS, ...tail];
+}
+
+/* ============== CLIENT PROFILE (Ficha) ============== */
+
+export interface ClientLink {
+  id: string;
+  clientId: string;
+  label: string;
+  url: string;
+  sortOrder: number;
+}
+
+export interface ClientContact {
+  id: string;
+  clientId: string;
+  name: string;
+  role: string | null;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  sortOrder: number;
+}
+
+export interface ClientSecret {
+  id: string;
+  clientId: string;
+  label: string;
+  value: string;
+  notes: string | null;
+}
+
+export interface ClientFicha {
+  description: string;
+  links: ClientLink[];
+  contacts: ClientContact[];
+  /** Only filled for admins (master/setor). */
+  secrets: ClientSecret[];
+  /** Aggregated metrics computed across all months. */
+  metrics: {
+    totalItems: number;
+    finalized: number;
+    blocked: number;
+    avgLeadTimeHours: number | null;
+    lastDeliveryAt: string | null;
+  };
 }

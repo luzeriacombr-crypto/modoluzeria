@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X, Send, ExternalLink, Plus, Check, Pencil, ChevronDown, Copy } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, Pencil, ChevronDown, Copy, Calendar, AlertOctagon } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType } from "@/lib/luzeria/types";
@@ -62,6 +62,8 @@ export function DetailPanel() {
   const [copy, setCopy] = useState("");
   const [drive, setDrive] = useState("");
   const [comment, setComment] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [blockedReason, setBlockedReason] = useState("");
   const [assignOpen, setAssignOpen] = useState(false);
   const [driveEditing, setDriveEditing] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -71,6 +73,8 @@ export function DetailPanel() {
     if (item) {
       setTitle(item.title); setCopy(item.copy); setDrive(item.driveLink);
       setDriveEditing(!item.driveLink);
+      setDueDate(item.dueDate ?? "");
+      setBlockedReason(item.blockedReason ?? "");
     }
   }, [item?.id]); // eslint-disable-line
 
@@ -84,6 +88,9 @@ export function DetailPanel() {
   const activeProfiles = profiles.filter((p) => p.active);
   const normalizedDriveUrl = normalizeExternalUrl(drive);
   const framedPreview = typeof window !== "undefined" && isPreviewFrame();
+  const isOverdue =
+    !!item.dueDate && item.status !== "FINALIZADO" &&
+    new Date(item.dueDate + "T23:59:59").getTime() < Date.now();
 
   const copyDriveLink = async () => {
     if (!normalizedDriveUrl) return;
@@ -143,6 +150,62 @@ export function DetailPanel() {
               );
             })}
           </div>
+        </Section>
+
+        {item.status === "BLOQUEADO" && (
+          <Section label="Motivo do bloqueio">
+            <div className="flex items-start gap-2">
+              <AlertOctagon size={16} className="mt-2.5" style={{ color: "#FF6B6B" }} />
+              <textarea
+                value={blockedReason}
+                onChange={(e) => setBlockedReason(e.target.value)}
+                onBlur={() => {
+                  const v = blockedReason.trim();
+                  if (v !== (item.blockedReason ?? ""))
+                    updateItem.mutate({ data: { id: item.id, patch: { blocked_reason: v || null } } });
+                }}
+                rows={2}
+                placeholder="Ex.: aguardando aprovação do cliente, falta de material…"
+                className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#FF6B6B] focus:ring-1 focus:ring-[#FF6B6B] placeholder:text-white/30 resize-none"
+              />
+            </div>
+          </Section>
+        )}
+
+        <Section label="Prazo">
+          <div className="flex items-center gap-2">
+            <Calendar size={15} style={{ color: isOverdue ? "#FF6B6B" : "#C8D44E" }} />
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              onBlur={() => {
+                const v = dueDate || null;
+                if (v !== (item.dueDate ?? null))
+                  updateItem.mutate({ data: { id: item.id, patch: { due_date: v } } });
+              }}
+              className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
+            />
+            {dueDate && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDueDate("");
+                  updateItem.mutate({ data: { id: item.id, patch: { due_date: null } } });
+                }}
+                className="text-[11px] text-white/40 hover:text-white px-2 py-1 rounded hover:bg-white/5"
+              >Limpar</button>
+            )}
+          </div>
+          {isOverdue && (
+            <p className="mt-1.5 text-[10px] font-semibold" style={{ color: "#FF6B6B" }}>Prazo vencido.</p>
+          )}
+          {item.startedAt && (
+            <p className="text-[10px] text-white/40 mt-1.5">
+              Iniciado em {new Date(item.startedAt).toLocaleDateString("pt-BR")}
+              {item.finishedAt && ` · Finalizado em ${new Date(item.finishedAt).toLocaleDateString("pt-BR")}`}
+            </p>
+          )}
         </Section>
 
         {/* Reel video type (Reels only) */}

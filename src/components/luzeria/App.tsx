@@ -19,6 +19,7 @@ import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ProfilePage } from "./ProfilePage";
+import { ClientFichaPanel } from "./ClientFichaPanel";
 import luzeriaLogo from "@/assets/luzeria-sidebar.png.asset.json";
 
 export function App() {
@@ -87,6 +88,7 @@ export function App() {
         </main>
       </div>
       <DetailPanel />
+      <ClientFichaPanel />
       <MobileNav />
       {sidebarHidden && (
         <button
