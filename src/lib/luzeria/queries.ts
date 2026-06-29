@@ -8,6 +8,10 @@ import {
   listStories, upsertStoryDay, getCleaning, upsertCleaningCell, updateCleaningNote, getMyToday,
   adminCreateUser, getAdminDashboard, getTopMembers, getMemberFinalizations,
   getReport, getMemberReportDetail,
+  getClientFicha,
+  upsertClientLink, deleteClientLink,
+  upsertClientContact, deleteClientContact,
+  upsertClientSecret, deleteClientSecret,
 } from "./api.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
@@ -97,6 +101,13 @@ export const memberReportDetailQO = (userId: string, from: string, to: string) =
     enabled: !!userId && !!from && !!to,
   });
 
+export const clientFichaQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["client-ficha", clientId],
+    queryFn: () => getClientFicha({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
+  });
+
 export function useMe() { return useQuery(meQO()); }
 
 export function useApi() {
@@ -147,6 +158,30 @@ export function useApi() {
     updateCleaningNote: useMutation({
       mutationFn: useServerFn(updateCleaningNote),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["cleaning"] }),
+    }),
+    upsertClientLink: useMutation({
+      mutationFn: useServerFn(upsertClientLink),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+    }),
+    deleteClientLink: useMutation({
+      mutationFn: useServerFn(deleteClientLink),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+    }),
+    upsertClientContact: useMutation({
+      mutationFn: useServerFn(upsertClientContact),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+    }),
+    deleteClientContact: useMutation({
+      mutationFn: useServerFn(deleteClientContact),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+    }),
+    upsertClientSecret: useMutation({
+      mutationFn: useServerFn(upsertClientSecret),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+    }),
+    deleteClientSecret: useMutation({
+      mutationFn: useServerFn(deleteClientSecret),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
     }),
   };
 }
