@@ -23,11 +23,12 @@ export function ProfilePage() {
   }, [me?.id, me?.color, me?.avatarUrl, me?.avatarPath]);
 
   if (!me) return null;
+  const meUser = me;
 
   async function onPickFile(file: File) {
     setUploading(true);
     try {
-      const path = await uploadAvatar(file, me.id);
+      const path = await uploadAvatar(file, meUser.id);
       setAvatarPath(path);
       setAvatarPreview(URL.createObjectURL(file));
       setDirty(true);
@@ -70,7 +71,7 @@ export function ProfilePage() {
           Foto de perfil
         </div>
         <AvatarEditor
-          me={me}
+          me={meUser}
           draftColor={color}
           draftAvatarUrl={avatarPreview}
           uploading={uploading}
