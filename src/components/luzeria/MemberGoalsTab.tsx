@@ -45,7 +45,7 @@ export function MemberGoalsTab() {
   useEffect(() => {
     const next: Record<string, Row> = {};
     activeMembers.forEach((p) => {
-      const g = goals.find((x) => x.userId === p.id);
+      const g = goals.find((x: any) => x.userId === p.id);
       next[p.id] = {
         posts: g?.postsGoal ?? 0,
         reels: g?.reelsGoal ?? 0,
@@ -98,7 +98,7 @@ export function MemberGoalsTab() {
     activeMembers.forEach((p) => {
       const row = draft[p.id];
       if (!row) return;
-      const g = goals.find((x) => x.userId === p.id);
+      const g = goals.find((x: any) => x.userId === p.id);
       const changed = !g || g.postsGoal !== row.posts || g.reelsGoal !== row.reels || g.storiesGoal !== row.stories;
       if (!changed) return;
       n++;
@@ -173,7 +173,7 @@ export function MemberGoalsTab() {
         )}
         {activeMembers.map((p) => {
           const row = draft[p.id] ?? { posts: 0, reels: 0, stories: 0 };
-          const g = goals.find((x) => x.userId === p.id);
+          const g = goals.find((x: any) => x.userId === p.id);
           const dirty = !g
             ? row.posts || row.reels || row.stories
             : g.postsGoal !== row.posts || g.reelsGoal !== row.reels || g.storiesGoal !== row.stories;
