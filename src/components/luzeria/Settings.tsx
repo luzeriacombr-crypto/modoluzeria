@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { profilesQO, useApi, useMe, appSettingsQO } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
 import { roleLabel } from "./Sidebar";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
-import { UserPlus, X } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star } from "lucide-react";
 import { ReportsTab } from "./ReportsTab";
 
 export function SettingsPage() {
@@ -15,7 +15,7 @@ export function SettingsPage() {
   const { setUserRole, setUserActive, deleteUser, adminCreateUser } = useApi();
   const { setView, setViewAs } = useUI();
   const [adding, setAdding] = useState(false);
-  const [tab, setTab] = useState<"team" | "report">("team");
+  const [tab, setTab] = useState<"team" | "report" | "general">("team");
 
   if (me?.role !== "master") {
     return <div className="p-10 text-white/60 text-sm">Acesso restrito ao Administrador Master.</div>;
@@ -53,6 +53,7 @@ export function SettingsPage() {
         {[
           { id: "team", label: "Equipe" },
           { id: "report", label: "Relatório" },
+          { id: "general", label: "Geral" },
         ].map((t) => {
           const active = tab === (t.id as any);
           return (
@@ -68,7 +69,8 @@ export function SettingsPage() {
         })}
       </div>
 
-      {tab === "report" ? <ReportsTab /> : (
+      {tab === "general" ? <GeneralSettings /> :
+       tab === "report" ? <ReportsTab /> : (
         <>
       {pending.length > 0 && (
         <>
