@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X, Send, ExternalLink, Plus, Check, Pencil, ChevronDown } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, Pencil, ChevronDown, Copy } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType } from "@/lib/luzeria/types";
@@ -30,82 +30,12 @@ function normalizeExternalUrl(rawUrl: string) {
   }
 }
 
-function openDriveLink(rawUrl: string) {
-  const url = normalizeExternalUrl(rawUrl);
-  if (!url) return;
-
-  const features = "noopener,noreferrer";
-  const isLovableHost = (value: string) => {
-    try {
-      const hostname = new URL(value).hostname;
-      return (
-        hostname.endsWith("lovable.dev") ||
-        hostname.endsWith("lovable.app") ||
-        hostname.endsWith("lovableproject.com") ||
-        hostname.endsWith("gptengineer.run") ||
-        hostname.endsWith("gpteng.co")
-      );
-    } catch {
-      return /lovable|gptengineer|gpteng/i.test(value);
-    }
-  };
-
-  const isFramed = (() => {
-    try { return window.top !== window.self; }
-    catch { return true; }
-  })();
-
-  const isLovablePreviewFrame = (() => {
-    try {
-      const ancestors = Array.from(window.location.ancestorOrigins ?? []);
-      return isFramed && (
-        isLovableHost(window.location.href) ||
-        ancestors.some(isLovableHost) ||
-        (!!document.referrer && isLovableHost(document.referrer))
-      );
-    } catch {
-      return isFramed;
-    }
-  })();
-
-  // Google Drive blocks pages opened from Lovable's sandboxed preview iframe.
-  // In that preview-only case, escape the sandbox by using top-level navigation;
-  // in the published/direct app, Drive still opens in a new tab as requested.
-  if (isLovablePreviewFrame && window.top) {
-    try {
-      window.top.location.href = url;
-      return;
-    } catch { /* If top navigation is denied, fall through to normal opening. */ }
-  }
-
-  // When the app runs inside Lovable's preview frame, popups opened from the
-  // framed window can inherit the sandbox and Google Drive blocks the response.
-  // Opening from the top browsing context first makes the new Drive tab escape
-  // that frame; published/direct app usage falls back to the regular opener.
+function isPreviewFrame() {
   try {
-    if (window.top && window.top !== window.self) {
-      const openedFromTop = window.top.open(url, "_blank", features);
-      if (openedFromTop) {
-        try { openedFromTop.opener = null; } catch { /* noop */ }
-        return;
-      }
-    }
-  } catch { /* Cross-origin preview shells may deny top.open; use fallback. */ }
-
-  const opened = window.open(url, "_blank", features);
-  if (opened) {
-    try { opened.opener = null; } catch { /* noop */ }
-    return;
+    return window.top !== window.self;
+  } catch {
+    return true;
   }
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.referrerPolicy = "no-referrer";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
 }
 
 export function DetailPanel() {
@@ -135,6 +65,7 @@ export function DetailPanel() {
   const [assignOpen, setAssignOpen] = useState(false);
   const [driveEditing, setDriveEditing] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [driveCopied, setDriveCopied] = useState(false);
 
   useEffect(() => {
     if (item) {
@@ -151,6 +82,19 @@ export function DetailPanel() {
   const editor = item.editorId ? profiles.find((p) => p.id === item.editorId) : null;
   const canSetEditor = isAdmin || (me ? item.assigneeIds.includes(me.id) : false);
   const activeProfiles = profiles.filter((p) => p.active);
+  const normalizedDriveUrl = normalizeExternalUrl(drive);
+  const framedPreview = typeof window !== "undefined" && isPreviewFrame();
+
+  const copyDriveLink = async () => {
+    if (!normalizedDriveUrl) return;
+    try {
+      await navigator.clipboard.writeText(normalizedDriveUrl);
+      setDriveCopied(true);
+      window.setTimeout(() => setDriveCopied(false), 1800);
+    } catch {
+      window.prompt("Copie o link do Drive:", normalizedDriveUrl);
+    }
+  };
 
   return (
     <>
@@ -349,28 +293,48 @@ export function DetailPanel() {
                 className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 transition-colors" />
             </div>
           ) : (
-            <div className="flex items-center gap-3 rounded-md bg-[#1C1C1C] border border-white/[0.08] px-3 py-2.5">
-              <DriveIcon size={18} style={{ color: "#C8D44E" }} />
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  openDriveLink(drive);
-                }}
-                className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-sm font-semibold hover:underline text-left bg-transparent border-0 p-0 cursor-pointer"
-                style={{ color: "#C8D44E" }}>
-                Abrir no Drive
-                <ExternalLink size={13} />
-                <span className="text-[10px] text-white/40 font-normal truncate ml-1">· {driveLabel}</span>
-              </button>
+            <div className="rounded-md bg-[#1C1C1C] border border-white/[0.08] px-3 py-2.5">
+              <div className="flex items-center gap-3">
+                <DriveIcon size={18} style={{ color: "#C8D44E" }} />
+                {normalizedDriveUrl ? (
+                  <a
+                    href={normalizedDriveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    referrerPolicy="no-referrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-sm font-semibold hover:underline text-left"
+                    style={{ color: "#C8D44E" }}>
+                    Abrir no Drive
+                    <ExternalLink size={13} />
+                    <span className="text-[10px] text-white/40 font-normal truncate ml-1">· {driveLabel}</span>
+                  </a>
+                ) : (
+                  <span className="flex-1 text-sm font-semibold text-red-300">Link inválido</span>
+                )}
+                <button
+                  type="button"
+                  disabled={!normalizedDriveUrl}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyDriveLink();
+                  }}
+                  title="Copiar link"
+                  className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-semibold text-white/50 hover:text-[#C8D44E] hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed">
+                  {driveCopied ? <Check size={13} /> : <Copy size={13} />}
+                  {driveCopied ? "Copiado" : "Copiar"}
+                </button>
               <button onClick={() => setDriveEditing(true)}
                 title="Editar link"
                 className="text-white/40 hover:text-white p-1 rounded hover:bg-white/5 transition">
                 <Pencil size={13} />
               </button>
+              </div>
+              {framedPreview && (
+                <p className="mt-2 text-[10px] leading-relaxed text-white/40">
+                  Se o Drive bloquear no preview, use Copiar e cole o link em uma nova aba.
+                </p>
+              )}
             </div>
           )}
           <p className="text-[10px] text-white/40 mt-1.5">Suporta links de pastas, vídeos e carrosséis do Drive.</p>

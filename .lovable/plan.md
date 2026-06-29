@@ -1,27 +1,28 @@
-Do I know what the issue is? Sim.
+Do I know what the issue is? Sim: o erro não parece estar no link salvo, e sim no contexto onde ele é aberto. O Google Drive bloqueia abertura herdada de iframe/sandbox do preview; por isso `window.open` e variações podem continuar gerando `ERR_BLOCKED_BY_RESPONSE` no preview, mesmo com `_blank`.
 
-O problema provável é que, no preview, o app roda dentro de um iframe/sandbox e o Google Drive bloqueia a resposta quando a abertura herda esse contexto. A correção anterior também só detecta parcialmente domínios do preview (`lovable.dev`), mas o preview atual usa `lovable.app`/`lovableproject.com`, então parte da lógica pode não estar entrando no fluxo correto.
+Arquivos isolados:
+- `src/components/luzeria/DetailPanel.tsx`: botão `Abrir no Drive` e função `openDriveLink`.
+- `src/components/luzeria/ContentRow.tsx`: apenas indicador visual de link, sem abertura direta.
 
-Plano de correção:
+Plano de alternativa mais confiável:
 
-1. Centralizar a abertura de links externos do Drive
-   - Criar/ajustar uma função única para normalizar URLs e abrir Drive sempre como navegação externa segura.
-   - Garantir suporte a links colados sem `https://`.
+1. Trocar o botão do Drive para um link real do navegador
+   - Renderizar `Abrir no Drive` como `<a href="..." target="_blank" rel="noopener noreferrer">` em vez de depender só de `window.open`.
+   - Manter `preventDefault` fora desse fluxo para não interferir no comportamento nativo do navegador.
 
-2. Corrigir a detecção do preview/sandbox
-   - Detectar quando o app está em iframe, incluindo `lovable.app`, `lovableproject.com` e outros hosts de preview.
-   - Evitar depender apenas de `lovable.dev`.
+2. Adicionar fallback garantido: copiar link
+   - Ao lado de `Abrir no Drive`, adicionar um botão discreto `Copiar link`.
+   - Se o preview/sandbox bloquear o Drive, o usuário consegue colar o link em uma nova aba manualmente, que é o único método 100% confiável dentro de sandbox restrito.
 
-3. Implementar fallback mais seguro para o preview
-   - No app publicado/acesso direto: manter `window.open(url, '_blank', 'noopener,noreferrer')`.
-   - No preview/sandbox: usar uma rota/intermediário ou navegação externa que não tente carregar o Drive dentro do iframe.
-   - Se popup for bloqueado, exibir um link clicável direto para copiar/abrir manualmente, sem quebrar a interface.
+3. Mostrar aviso apenas quando necessário
+   - Se o app detectar que está dentro do preview/iframe, mostrar uma mensagem pequena: “Se o Drive bloquear no preview, copie o link e cole em uma nova aba.”
+   - No app publicado/acesso direto, manter visual limpo.
 
-4. Aplicar em todos os pontos relevantes
-   - Painel de detalhe (`Abrir no Drive`).
-   - Qualquer outro ícone/botão que represente link de Drive, sem mudar a lógica restante do app.
+4. Preservar a lógica existente
+   - Não alterar dados, permissões, banco, status, responsáveis, editor, comentários ou layout geral.
+   - Apenas mudar a forma de abrir/copiar o link do Drive.
 
-5. Validar o comportamento
-   - Testar clique no botão `Abrir no Drive` no preview.
-   - Confirmar que não há tentativa de iframe/mesma aba interna.
-   - Confirmar que no app direto/publicado continua abrindo em nova aba com `noopener,noreferrer`.
+5. Validar
+   - Confirmar que o link salvo vira uma URL válida com `https://`.
+   - Confirmar que o clique não tenta iframe nem navegação interna.
+   - Confirmar que existe fallback de cópia quando o navegador/preview bloquear o Google Drive.
