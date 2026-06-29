@@ -537,26 +537,56 @@ export function DetailPanel() {
                       <span className="text-xs font-semibold text-white">{author?.name ?? "Alguém"}</span>
                       <span className="text-[10px] text-white/40">{relTime(c.createdAt)}</span>
                     </div>
-                    <div className="text-xs text-white/80 whitespace-pre-wrap mt-0.5">{c.text}</div>
+                    <div className="text-xs text-white/80 whitespace-pre-wrap mt-0.5">{renderMentions(c.text)}</div>
                   </div>
                 </div>
               );
             })}
           </div>
-          <div className="flex gap-2">
-            <input value={comment} onChange={(e) => setComment(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && comment.trim()) { addComment.mutate({ data: { itemId: item.id, text: comment.trim() } }); setComment(""); } }}
-              placeholder="Novo comentário..."
-              className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 transition-colors" />
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <MentionInput value={comment}
+                onChange={(v, ids) => { setComment(v); setCommentMentions(ids); }}
+                onSubmit={() => {
+                  if (!comment.trim()) return;
+                  addCommentWithMentions.mutate({ data: { itemId: item.id, text: comment.trim(), mentionedUserIds: commentMentions } });
+                  setComment(""); setCommentMentions([]);
+                }}
+                placeholder="Novo comentário... use @ para mencionar"
+                rows={2} />
+              <div className="text-[10px] text-white/30 mt-1">Ctrl/⌘ + Enter envia · @ menciona</div>
+            </div>
             <button disabled={!comment.trim()}
-              onClick={() => { addComment.mutate({ data: { itemId: item.id, text: comment.trim() } }); setComment(""); }}
-              className="px-3 rounded-md text-sm font-bold disabled:opacity-30 transition-opacity hover:opacity-90"
+              onClick={() => {
+                addCommentWithMentions.mutate({ data: { itemId: item.id, text: comment.trim(), mentionedUserIds: commentMentions } });
+                setComment(""); setCommentMentions([]);
+              }}
+              className="px-3 py-2 rounded-md text-sm font-bold disabled:opacity-30 transition-opacity hover:opacity-90"
               style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
               <Send size={14} />
             </button>
           </div>
+
+          <div className="mt-5">
+            <ItemTimeline itemId={item.id} />
+          </div>
         </Section>
       </div>
+
+      <QualityModal
+        open={qualityFor !== null}
+        onClose={() => setQualityFor(null)}
+        itemTitle={item.title}
+        onConfirm={(rating, note) => {
+          rateItem.mutate({ data: { itemId: item.id, rating, note } }, {
+            onSuccess: () => {
+              setItemStatus.mutate({ data: { id: item.id, status: qualityFor! } });
+              flash(item.id);
+              setQualityFor(null);
+            },
+          });
+        }}
+      />
     </>
   );
 }
