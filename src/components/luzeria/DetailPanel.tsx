@@ -35,6 +35,28 @@ function openDriveLink(rawUrl: string) {
   if (!url) return;
 
   const features = "noopener,noreferrer";
+  const isLovablePreviewFrame = (() => {
+    try {
+      const ancestors = Array.from(window.location.ancestorOrigins ?? []);
+      const referrerHost = document.referrer ? new URL(document.referrer).hostname : "";
+      return window.top !== window.self && (
+        ancestors.some((origin) => new URL(origin).hostname.endsWith("lovable.dev")) ||
+        referrerHost.endsWith("lovable.dev")
+      );
+    } catch {
+      return window.top !== window.self;
+    }
+  })();
+
+  // Google Drive blocks pages opened from Lovable's sandboxed preview iframe.
+  // In that preview-only case, escape the sandbox by navigating the top window;
+  // in the published/direct app, Drive still opens in a new tab as requested.
+  if (isLovablePreviewFrame && window.top) {
+    try {
+      window.top.location.href = url;
+      return;
+    } catch { /* If top navigation is denied, fall through to normal opening. */ }
+  }
 
   // When the app runs inside Lovable's preview frame, popups opened from the
   // framed window can inherit the sandbox and Google Drive blocks the response.
