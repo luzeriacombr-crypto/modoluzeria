@@ -258,6 +258,25 @@ function GeneralSettings() {
             settings.requireRatingOnFinalize ? "translate-x-[22px]" : "translate-x-0.5"}`} />
         </button>
       </div>
+
+      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
+        <SettingsIcon size={12} /> Ajuda
+      </h2>
+      <div className="bg-[#1C1C1C] rounded-lg p-5 flex items-center gap-4">
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-white">Tour guiado do app</div>
+          <div className="text-[11px] text-white/50 mt-1">
+            Refaça o passo a passo de boas-vindas mostrando as principais áreas da plataforma.
+          </div>
+        </div>
+        <button
+          onClick={() => window.dispatchEvent(new Event("lz:start-tour"))}
+          className="text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-black"
+          style={{ backgroundColor: "#C8D44E" }}
+        >
+          Refazer tour
+        </button>
+      </div>
     </div>
   );
 }
