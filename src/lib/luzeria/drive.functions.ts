@@ -11,17 +11,22 @@ const GATEWAY = "https://connector-gateway.lovable.dev/google_drive";
 const DRIVE_FIELDS =
   "id,name,mimeType,iconLink,thumbnailLink,webViewLink,size,modifiedTime";
 
-function apiKey() {
-  const k = process.env.GOOGLE_DRIVE_API_KEY;
-  if (!k) throw new Error("Conector do Google Drive não está conectado.");
-  return k;
+function gatewayHeaders(): Record<string, string> {
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  const driveKey = process.env.GOOGLE_DRIVE_API_KEY;
+  if (!lovableKey) throw new Error("LOVABLE_API_KEY ausente no servidor.");
+  if (!driveKey) throw new Error("Conector do Google Drive não está conectado.");
+  return {
+    Authorization: `Bearer ${lovableKey}`,
+    "X-Connection-Api-Key": driveKey,
+  };
 }
 
 async function driveFetch(path: string, init: RequestInit = {}) {
   const res = await fetch(`${GATEWAY}${path}`, {
     ...init,
     headers: {
-      Authorization: `Bearer ${apiKey()}`,
+      ...gatewayHeaders(),
       ...(init.headers ?? {}),
     },
   });
@@ -218,7 +223,7 @@ export const uploadDriveFile = createServerFn({ method: "POST" })
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${apiKey()}`,
+          ...gatewayHeaders(),
           "Content-Type": `multipart/related; boundary=${boundary}`,
           "Content-Length": String(body.length),
         },
