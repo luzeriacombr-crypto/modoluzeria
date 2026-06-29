@@ -107,18 +107,6 @@ async function findChildFolderByName(parentId: string, name: string): Promise<st
   return hit?.id ?? null;
 }
 
-async function driveIsChildOf(fileId: string | null | undefined, parentId: string): Promise<boolean> {
-  if (!fileId) return false;
-  try {
-    const meta: any = await driveFetch(
-      `/drive/v3/files/${encodeURIComponent(fileId)}?fields=parents&supportsAllDrives=true`,
-    );
-    return Array.isArray(meta?.parents) && meta.parents.includes(parentId);
-  } catch {
-    return false;
-  }
-}
-
 /** Move a file: add target parent, remove any others. */
 async function driveMoveTo(fileId: string, targetParentId: string) {
   const meta: any = await driveFetch(
@@ -178,12 +166,6 @@ async function ensureDeliveriesFolder(
   const map = await loadClientFolderMap(supabase, clientId);
 
   let clientFolderId = options.forceClientFolderId ?? map?.drive_folder_id ?? null;
-  const forcedClientFolder = Boolean(options.forceClientFolderId);
-
-  if (clientFolderId && !(await driveIsChildOf(clientFolderId, rootId))) {
-    clientFolderId = null;
-  }
-
   if (!clientFolderId) {
     clientFolderId = await findChildFolderByName(rootId, clientName);
     if (!clientFolderId) {
@@ -193,11 +175,7 @@ async function ensureDeliveriesFolder(
   }
 
   let deliveriesFolderId = map?.deliveries_folder_id ?? null;
-  if (deliveriesFolderId && !(await driveIsChildOf(deliveriesFolderId, clientFolderId))) {
-    deliveriesFolderId = null;
-  }
-
-  if (!deliveriesFolderId || forcedClientFolder) {
+  if (!deliveriesFolderId || options.forceClientFolderId) {
     const expected = `Entregas - ${clientName}`;
     deliveriesFolderId = await findChildFolderByName(clientFolderId, expected);
     if (!deliveriesFolderId) {
@@ -607,9 +585,6 @@ export const setDriveRootFolder = createServerFn({ method: "POST" })
       .from("app_settings")
       .upsert({ key: "drive_root_folder_id", value: { id, name: meta.name } });
     if (error) throw new Error(error.message);
-
-    await context.supabase.from("client_drive_map").delete().neq("client_id", "00000000-0000-0000-0000-000000000000");
-
     return { ok: true, id, name: meta.name };
   });
 
