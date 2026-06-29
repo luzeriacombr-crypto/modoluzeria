@@ -892,10 +892,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_list_profile_emails: {
+        Args: never
+        Returns: {
+          email: string
+          id: string
+        }[]
+      }
       generate_recurring_for_month: {
         Args: { _month_key?: string }
         Returns: number
       }
+      get_my_email: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
