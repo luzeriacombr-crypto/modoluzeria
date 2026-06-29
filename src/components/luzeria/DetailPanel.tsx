@@ -258,13 +258,15 @@ export function DetailPanel() {
           ) : (
             <div className="flex items-center gap-3 rounded-md bg-[#1C1C1C] border border-white/[0.08] px-3 py-2.5">
               <DriveIcon size={18} style={{ color: "#C8D44E" }} />
-              <a href={drive} target="_blank" rel="noreferrer"
-                className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-sm font-semibold hover:underline"
+              <button
+                type="button"
+                onClick={() => window.open(drive, "_blank", "noopener,noreferrer")}
+                className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-sm font-semibold hover:underline text-left bg-transparent border-0 p-0 cursor-pointer"
                 style={{ color: "#C8D44E" }}>
                 Abrir no Drive
                 <ExternalLink size={13} />
                 <span className="text-[10px] text-white/40 font-normal truncate ml-1">· {driveLabel}</span>
-              </a>
+              </button>
               <button onClick={() => setDriveEditing(true)}
                 title="Editar link"
                 className="text-white/40 hover:text-white p-1 rounded hover:bg-white/5 transition">
