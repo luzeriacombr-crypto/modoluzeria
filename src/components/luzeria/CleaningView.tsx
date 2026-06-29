@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, Save } from "lucide-react";
+import { Sparkles, Save, Check, X } from "lucide-react";
 import { cleaningQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { AssigneePicker, colorForLabel } from "./AssigneePicker";
 import { Avatar } from "./Avatar";
@@ -26,7 +26,7 @@ export function CleaningView() {
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { data } = useQuery(cleaningQO());
   const { data: profiles = [] } = useQuery(profilesQO());
-  const { upsertCleaningCell, updateCleaningNote } = useApi();
+  const { upsertCleaningCell, updateCleaningNote, setCleaningDone } = useApi();
   const [picker, setPicker] = useState<{ rect: DOMRect; taskIdx: number; weekday: number } | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [noteDirty, setNoteDirty] = useState(false);
@@ -38,6 +38,32 @@ export function CleaningView() {
     (data?.cells ?? []).forEach((c) => m.set(`${c.taskIdx}-${c.weekday}`, { userId: c.userId, label: c.label }));
     return m;
   }, [data]);
+
+  const logMap = useMemo(() => {
+    const m = new Map<string, { status: "done" | "missed"; occurrenceDate: string }>();
+    (data?.weekLog ?? []).forEach((l) => m.set(`${l.taskIdx}-${l.weekday}`, { status: l.status, occurrenceDate: l.occurrenceDate }));
+    return m;
+  }, [data]);
+
+  // Compute current week's occurrence date for each weekday (Monday=0..Saturday=5)
+  const weekDates = useMemo(() => {
+    const base = data?.weekStart ? new Date(`${data.weekStart}T00:00:00`) : (() => {
+      const n = new Date();
+      const dow = n.getDay(); const diff = (dow + 6) % 7;
+      n.setDate(n.getDate() - diff); n.setHours(0, 0, 0, 0); return n;
+    })();
+    const out: string[] = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(base); d.setDate(base.getDate() + i);
+      out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+    }
+    return out;
+  }, [data]);
+
+  const todayStr = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
 
   function info(entry?: { userId: string | null; label: string | null }) {
     if (!entry) return null;
@@ -83,8 +109,13 @@ export function CleaningView() {
                     const entry = cellMap.get(`${ti}-${wi}`);
                     const i = info(entry);
                     const isMine = !!entry?.userId && entry.userId === me?.id;
+                    const occ = weekDates[wi];
+                    const log = logMap.get(`${ti}-${wi}`);
+                    const status: "pending" | "done" | "missed" = log?.status ?? "pending";
+                    const canToggle = !!entry?.userId && (isMine || isAdmin);
                     return (
                       <td key={wi} className="p-1.5 align-top">
+                        <div className="relative">
                         <button
                           disabled={!isAdmin}
                           onClick={(e) => isAdmin && setPicker({ rect: (e.currentTarget as HTMLElement).getBoundingClientRect(), taskIdx: ti, weekday: wi })}
@@ -100,12 +131,45 @@ export function CleaningView() {
                               {i.profile
                                 ? <Avatar profile={i.profile} size={20} />
                                 : <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: i.color }} />}
-                              <span className="text-xs font-medium truncate" style={{ color: i.color === "#FFFFFF" ? "#FFFFFF" : i.color }}>{i.name}</span>
+                              <span className="text-xs font-medium truncate flex-1" style={{ color: i.color === "#FFFFFF" ? "#FFFFFF" : i.color }}>{i.name}</span>
                             </>
                           ) : (
                             <span className="text-white/20 text-xs">—</span>
                           )}
                         </button>
+                        {entry?.userId && (
+                          <button
+                            type="button"
+                            disabled={!canToggle || (status === "missed" && !isAdmin)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!canToggle) return;
+                              if (status === "missed" && !isAdmin) return;
+                              setCleaningDone.mutate({ data: { taskIdx: ti, weekday: wi, occurrenceDate: occ, done: status !== "done" } });
+                            }}
+                            title={
+                              status === "done" ? `Feito (${occ === todayStr ? "hoje" : occ}) — clique para desfazer`
+                              : status === "missed" ? "Não feito"
+                              : occ === todayStr ? "Pendente — marcar como feito"
+                              : occ < todayStr ? "Pendente" : "Aguardando o dia"
+                            }
+                            className="absolute top-1 right-1 h-4 w-4 rounded-full flex items-center justify-center"
+                            style={{
+                              backgroundColor:
+                                status === "done" ? "#C8D44E"
+                                : status === "missed" ? "#FF4444"
+                                : "rgba(255,255,255,0.15)",
+                              color: status === "missed" ? "#FFFFFF" : "#0D0D0D",
+                              cursor: canToggle ? "pointer" : "default",
+                              border: status === "pending" ? "1px solid rgba(255,255,255,0.25)" : "none",
+                            }}
+                          >
+                            {status === "done" ? <Check size={10} strokeWidth={3} />
+                              : status === "missed" ? <X size={10} strokeWidth={3} />
+                              : null}
+                          </button>
+                        )}
+                        </div>
                       </td>
                     );
                   })}
