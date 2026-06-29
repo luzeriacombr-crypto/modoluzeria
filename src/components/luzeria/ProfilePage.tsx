@@ -104,6 +104,20 @@ export function ProfilePage() {
       <p className="text-[11px] text-white/30 mt-4 text-center md:text-right">
         Para alterar nome ou email, fale com um administrador.
       </p>
+
+      <div className="mt-8 pt-6 border-t border-white/[0.06] flex items-center justify-between gap-4">
+        <div>
+          <div className="text-sm font-semibold text-white">Tour guiado do app</div>
+          <div className="text-[11px] text-white/50 mt-1">Refaça o passo a passo de boas-vindas quando quiser.</div>
+        </div>
+        <button
+          onClick={() => window.dispatchEvent(new Event("lz:start-tour"))}
+          className="text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-black shrink-0"
+          style={{ backgroundColor: "#C8D44E" }}
+        >
+          Refazer tour
+        </button>
+      </div>
     </div>
   );
 }

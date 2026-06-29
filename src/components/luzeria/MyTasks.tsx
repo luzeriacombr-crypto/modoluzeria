@@ -56,7 +56,7 @@ export function MyTasks() {
   const [view, setView] = useState<"list" | "week">("list");
 
   return (
-    <div className="p-10 max-w-5xl mx-auto">
+    <div className="p-10 max-w-5xl mx-auto" data-tour="my-tasks">
       <div className="flex items-end justify-between mb-8">
         <div>
           <h1 className="text-[32px] font-bold text-white leading-none tracking-tight">Coisas para fazer</h1>
@@ -79,9 +79,9 @@ export function MyTasks() {
         )}
       </div>
 
-      {targetId && <GoalsWidget monthKey={monthKey} userId={targetId} />}
+      {targetId && <div data-tour="goals"><GoalsWidget monthKey={monthKey} userId={targetId} /></div>}
 
-      <div className="inline-flex bg-[#1C1C1C] border border-white/[0.06] rounded-lg p-1 mb-6">
+      <div className="inline-flex bg-[#1C1C1C] border border-white/[0.06] rounded-lg p-1 mb-6" data-tour="my-week">
         {[
           { id: "list" as const, label: "Lista", Icon: List },
           { id: "week" as const, label: "Minha Semana", Icon: CalendarDays },

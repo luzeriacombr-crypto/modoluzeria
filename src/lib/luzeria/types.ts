@@ -111,6 +111,7 @@ export interface Profile {
   /** Path inside the `avatars` bucket (raw value stored in DB). */
   avatarPath?: string | null;
   onboardedAt?: string | null;
+  tourCompletedAt?: string | null;
 }
 
 export interface NotificationItem {
