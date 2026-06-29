@@ -381,15 +381,14 @@ export const attachDriveFile = createServerFn({ method: "POST" })
       meta = null;
     }
 
-    // Move into the organized folder (best-effort).
-    try {
-      const target = await resolveTargetFolderForItem(
-        context.supabase, context.userId, data.itemId, { autoCreate: true },
-      );
-      if (target) await driveMoveTo(fileId, target);
-    } catch (e) {
-      // Don't fail the attach if the move fails; just log to console.
-      console.warn("[drive] attach move skipped:", (e as any)?.message);
+    // Move into the configured deliveries folder. If the client has no
+    // deliveries folder yet, fail loudly so the UI prompts the admin.
+    const target = await resolveTargetFolderForItem(
+      context.supabase, context.userId, data.itemId, {},
+    );
+    if (target) {
+      try { await driveMoveTo(fileId, target); }
+      catch (e) { console.warn("[drive] attach move skipped:", (e as any)?.message); }
     }
 
     const row = {
@@ -435,15 +434,11 @@ export const uploadDriveFile = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCanWrite(context.supabase, context.userId, data.itemId);
 
-    // Resolve target organized folder (best-effort).
-    let targetParentId: string | null = null;
-    try {
-      targetParentId = await resolveTargetFolderForItem(
-        context.supabase, context.userId, data.itemId, { autoCreate: true },
-      );
-    } catch (e) {
-      console.warn("[drive] upload folder resolution skipped:", (e as any)?.message);
-    }
+    // Uploads require the client's deliveries folder to be configured;
+    // this throws DELIVERIES_FOLDER_MISSING when it isn't.
+    const targetParentId = await resolveTargetFolderForItem(
+      context.supabase, context.userId, data.itemId, {},
+    );
 
     const boundary = `lz_${Math.random().toString(36).slice(2)}`;
     const metadata: any = { name: data.name, mimeType: data.mimeType };
