@@ -15,6 +15,29 @@ function findItem(month: any, id: string): ContentItem | undefined {
   );
 }
 
+function normalizeExternalUrl(rawUrl: string) {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+
+  try {
+    return new URL(trimmed).href;
+  } catch {
+    try {
+      return new URL(`https://${trimmed}`).href;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function openDriveLink(rawUrl: string) {
+  const url = normalizeExternalUrl(rawUrl);
+  if (!url) return;
+
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (opened) opened.opener = null;
+}
+
 export function DetailPanel() {
   const { selectedItemId, openItem, selectedClientId, selectedMonthKey, flash } = useUI();
   const { data: month } = useQuery({ ...monthQO(selectedClientId ?? "", selectedMonthKey), enabled: !!selectedClientId && !!selectedItemId });
@@ -260,7 +283,13 @@ export function DetailPanel() {
               <DriveIcon size={18} style={{ color: "#C8D44E" }} />
               <button
                 type="button"
-                onClick={() => window.open(drive, "_blank", "noopener,noreferrer")}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  openDriveLink(drive);
+                }}
                 className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-sm font-semibold hover:underline text-left bg-transparent border-0 p-0 cursor-pointer"
                 style={{ color: "#C8D44E" }}>
                 Abrir no Drive
