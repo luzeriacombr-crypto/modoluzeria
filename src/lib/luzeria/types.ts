@@ -56,6 +56,12 @@ export interface ContentItem {
   finishedAt?: string | null;
   /** Filled when status = BLOQUEADO. */
   blockedReason?: string | null;
+  /** Checklist embarcada (subtarefas). */
+  checklist?: ChecklistItem[];
+  /** Quantas vezes o item voltou (de FINALIZADO ou REVISAO_*). */
+  reworkCount?: number;
+  /** Nota de qualidade dada quando virou FINALIZADO (1–5). */
+  qualityRating?: number | null;
 }
 
 export interface MonthData {
@@ -217,4 +223,65 @@ export interface ClientFicha {
     avgLeadTimeHours: number | null;
     lastDeliveryAt: string | null;
   };
+}
+
+/* ============== ROADMAP — FASES 2/3/4 ============== */
+
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export interface MemberGoal {
+  userId: string;
+  monthKey: string;
+  postsGoal: number;
+  reelsGoal: number;
+  storiesGoal: number;
+}
+
+export interface MemberGoalProgress extends MemberGoal {
+  postsDone: number;
+  reelsDone: number;
+  storiesDone: number;
+}
+
+export interface ClientOnboarding {
+  id: string;
+  clientId: string;
+  checklist: ChecklistItem[];
+  completedAt: string | null;
+}
+
+export type RecurringCadence = "weekly" | "monthly";
+
+export interface RecurringTemplate {
+  id: string;
+  clientId: string;
+  type: ContentType;
+  title: string;
+  cadence: RecurringCadence;
+  dayOfWeek: number | null;   // 0 (Dom) – 6 (Sáb)
+  dayOfMonth: number | null;  // 1 – 31
+  defaultAssignees: string[];
+  active: boolean;
+  lastGeneratedAt: string | null;
+}
+
+export interface ActivityEntry {
+  id: string;
+  actorId: string | null;
+  entityType: string;
+  entityId: string | null;
+  action: string;
+  meta: Record<string, any>;
+  at: string;
+}
+
+/** Tempo médio gasto em cada status. */
+export interface StatusDurationStat {
+  status: Status;
+  avgHours: number;
+  count: number;
 }

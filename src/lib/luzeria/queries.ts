@@ -13,6 +13,13 @@ import {
   upsertClientContact, deleteClientContact,
   upsertClientSecret, deleteClientSecret,
 } from "./api.functions";
+import {
+  updateChecklist, rateItem,
+  listGoals, setGoals, getGoalProgress,
+  getClientOnboarding, updateClientOnboarding,
+  listRecurring, upsertRecurring, deleteRecurring, generateRecurring,
+  listActivity, getReportExtras, getMemberStatusDuration,
+} from "./roadmap.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
@@ -108,6 +115,62 @@ export const clientFichaQO = (clientId: string | null) =>
     enabled: !!clientId,
   });
 
+/* ====== ROADMAP QUERIES ====== */
+
+export const goalsQO = (monthKey: string) =>
+  queryOptions({
+    queryKey: ["goals", monthKey],
+    queryFn: () => listGoals({ data: { monthKey } }),
+    enabled: !!monthKey,
+  });
+
+export const goalProgressQO = (monthKey: string, userId?: string) =>
+  queryOptions({
+    queryKey: ["goal-progress", userId ?? "self", monthKey],
+    queryFn: () => getGoalProgress({ data: { monthKey, userId } }),
+    enabled: !!monthKey,
+  });
+
+export const clientOnboardingQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["client-onboarding", clientId],
+    queryFn: () => getClientOnboarding({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
+  });
+
+export const recurringQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["recurring", clientId],
+    queryFn: () => listRecurring({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
+  });
+
+export const activityQO = (entityType?: string, entityId?: string, limit?: number) =>
+  queryOptions({
+    queryKey: ["activity", entityType ?? "*", entityId ?? "*", limit ?? 50],
+    queryFn: () => listActivity({ data: { entityType, entityId, limit } }),
+  });
+
+export const reportExtrasQO = (filters: ReportFilters) =>
+  queryOptions({
+    queryKey: ["report-extras", filters],
+    queryFn: () => getReportExtras({
+      data: {
+        from: filters.from, to: filters.to,
+        clientId: filters.clientId ?? null,
+        userId: filters.userId ?? null,
+      },
+    }),
+    enabled: !!filters.from && !!filters.to,
+  });
+
+export const memberStatusDurationQO = (userId: string) =>
+  queryOptions({
+    queryKey: ["member-status-duration", userId],
+    queryFn: () => getMemberStatusDuration({ data: { userId } }),
+    enabled: !!userId,
+  });
+
 export function useMe() { return useQuery(meQO()); }
 
 export function useApi() {
@@ -182,6 +245,38 @@ export function useApi() {
     deleteClientSecret: useMutation({
       mutationFn: useServerFn(deleteClientSecret),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+    }),
+    /* ===== ROADMAP MUTATIONS ===== */
+    updateChecklist: useMutation({
+      mutationFn: useServerFn(updateChecklist),
+      onSuccess: invalidateAll,
+    }),
+    rateItem: useMutation({
+      mutationFn: useServerFn(rateItem),
+      onSuccess: invalidateAll,
+    }),
+    setGoals: useMutation({
+      mutationFn: useServerFn(setGoals),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["goals"] });
+        qc.invalidateQueries({ queryKey: ["goal-progress"] });
+      },
+    }),
+    updateClientOnboarding: useMutation({
+      mutationFn: useServerFn(updateClientOnboarding),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-onboarding"] }),
+    }),
+    upsertRecurring: useMutation({
+      mutationFn: useServerFn(upsertRecurring),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["recurring"] }),
+    }),
+    deleteRecurring: useMutation({
+      mutationFn: useServerFn(deleteRecurring),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["recurring"] }),
+    }),
+    generateRecurring: useMutation({
+      mutationFn: useServerFn(generateRecurring),
+      onSuccess: invalidateAll,
     }),
   };
 }
