@@ -222,3 +222,42 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
+function GeneralSettings() {
+  const { data: settings } = useQuery(appSettingsQO());
+  const { updateAppSettings } = useApi();
+  if (!settings) return <div className="text-white/40 text-sm">Carregando…</div>;
+
+  const toggle = (next: boolean) =>
+    updateAppSettings.mutate({ data: { requireRatingOnFinalize: next } }, {
+      onSuccess: () => toast.success("Configuração salva."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+    });
+
+  return (
+    <div className="max-w-2xl">
+      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+        <SettingsIcon size={12} /> Operação
+      </h2>
+      <div className="bg-[#1C1C1C] rounded-lg p-5 flex items-start gap-4">
+        <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+          <Star size={16} />
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-white">Exigir avaliação ao finalizar</div>
+          <div className="text-[11px] text-white/50 mt-1">
+            Ao mudar status de uma tarefa para <span className="text-[#C8D44E] font-semibold">Finalizado</span>,
+            o responsável é obrigado a dar uma nota de qualidade (1–5 estrelas).
+          </div>
+        </div>
+        <button onClick={() => toggle(!settings.requireRatingOnFinalize)}
+          className={`relative h-6 w-11 rounded-full transition-colors ${
+            settings.requireRatingOnFinalize ? "bg-[#C8D44E]" : "bg-white/15"}`}>
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+            settings.requireRatingOnFinalize ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+        </button>
+      </div>
+    </div>
+  );
+}
