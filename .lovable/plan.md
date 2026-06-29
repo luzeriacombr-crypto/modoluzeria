@@ -1,80 +1,59 @@
-# Integração com Google Drive (conector nativo Lovable)
+# Organização automática no Google Drive
 
-## Por que isso resolve
+Toda vez que alguém anexar um arquivo numa tarefa, o app salva no Drive dentro da estrutura:
 
-- **O erro `ERR_BLOCKED_BY_RESPONSE`** acontece porque o Google bloqueia abrir o Drive dentro de iframe (no preview do Lovable). No site publicado já abre direto. Mesmo assim, vamos garantir que abertura sempre use `window.open(url, '_blank', 'noopener,noreferrer')` e tenha botão de "copiar link" como fallback.
-- **Custo / plano Free:** os arquivos **continuam no SEU Google Drive** (não consomem Storage do Lovable). Cada chamada à API consome um pouquinho de crédito (poucos centavos por mês no uso real), bem abaixo da cota gratuita mensal.
-- **Por ser app interno** (uso exclusivo da equipe), faz total sentido usar **uma conta Google da agência** conectada uma vez. Todos do time veem os mesmos arquivos via app, sem precisar logar individualmente no Google.
+```
+Pasta Raiz (a que você mandou)
+└── <Nome do Cliente>/
+    └── Entregas - <Nome do Cliente>/
+        └── <Mês>/                     ← Janeiro, Fevereiro, ... (mês do conteúdo)
+            └── arquivo.png
+```
 
-## O que muda na interface
+Se faltar qualquer pasta (Cliente, "Entregas - X" ou o mês), o app cria.
 
-### Em cada item (Post / Reel / Outros / Avulso)
-No painel de detalhe, substituo o campo único "Link do Drive" por uma **seção "Arquivos"** com:
-- Botão **"Anexar do Drive"** → abre um seletor (busca arquivo/pasta no Drive da agência por nome).
-- Botão **"Colar link"** → mantém o jeito atual de colar URL do Drive (compatibilidade com itens antigos).
-- Botão **"Enviar do computador"** → faz upload direto pro Drive da agência via API, dentro de uma pasta organizada (ex: `Luzeria App/{Cliente}/{Mês}/{Item}`). O arquivo fica no SEU Drive, não no Lovable.
-- Lista dos arquivos anexados ao item com: thumbnail (quando o Drive fornece), nome, tipo (ícone de imagem/vídeo/pasta/PDF), botão "Abrir no Drive" e botão remover.
+## Comportamento
 
-### Onde já mostra link hoje
-- Lista compacta (linha de cada Post/Reel): ícone do Drive vira chip com nº de arquivos ("3 arquivos") e abre o painel.
-- Migração: links antigos do campo `driveLink` viram o primeiro item da lista de arquivos automaticamente. Nada é perdido.
+**1. Configuração (uma vez)**
+- Salvo o ID da pasta raiz `1LuefYT7TJiUhweGlOoHE31NGkXA2uTww` nas configurações do app.
+- Só Adm Master vê esse campo (em Configurações → Drive) e pode trocar depois.
+
+**2. Match do cliente** (igual ao que combinamos)
+- Procuro subpasta com nome **exatamente igual** ao nome do cliente.
+- Se não achar, procuro candidatas parecidas (ignora maiúsculas/acentos, "contém o nome").
+- O app me pergunta antes: aparece um popup tipo "Não achei 'Padaria do Zé'. Usar 'Padaria Zé'? [Sim] [Criar nova] [Cancelar]". A escolha fica memorizada por cliente (não pergunta de novo).
+- Se eu confirmar **Criar nova**, crio `<Cliente>/Entregas - <Cliente>/` do zero.
+
+**3. Mês**
+- Uso o campo "Mês" do conteúdo (ex.: item de Julho/2026 → pasta `Julho`).
+- Nomes em português completo, capitalizados: Janeiro, Fevereiro, …, Dezembro.
+- Sem ano no nome (você quis simples). Posso mudar pra "Julho 2026" se preferir depois.
+
+**4. Upload pela tela do item**
+- O fluxo atual já manda arquivos via gateway do Drive — só passo a setar o `parents` certo (a pasta do mês) antes de fazer o upload.
+- Vale também pra "Colar link do Drive": eu **movo** o arquivo apontado para a pasta do mês daquele item (se não estiver lá).
+
+**5. Botão "Reorganizar Drive" (só Adm Master)**
+- Em Configurações → Drive, um botão "Reorganizar arquivos antigos".
+- Varre todos os anexos já cadastrados no app (`item_files`) e move cada um para a pasta certa do seu item.
+- Mostra progresso (`Processando 12/87 …`) e um resumo no final: movidos / já-no-lugar / pulados (sem cliente correspondente, pede confirmação).
+- Cliente sem match exato entra numa fila de confirmação manual — você decide na hora se cria nova pasta ou aponta pra existente.
+
+## O que vai mudar no app
+
+- **Configurações → aba "Drive"** (Adm Master): campo "Pasta raiz no Drive" + botão "Reorganizar arquivos antigos".
+- **Anexar arquivo / colar link** na tarefa: sem mudança visual — só passa a salvar no lugar certo automaticamente.
+- **Popup de confirmação** quando o nome do cliente não bate exatamente.
 
 ## Detalhes técnicos
 
-### 1. Conector
-- Solicito linkar o conector **Google Drive** (`google_drive`) — você autoriza com a conta Google da agência uma vez. As credenciais ficam guardadas no Lovable, ninguém do time precisa logar.
+- Nova tabela `client_drive_map (client_id, drive_folder_id)` — guarda o ID da pasta do cliente já confirmado pra não perguntar de novo.
+- Nova coluna `app_settings.drive_root_folder_id`.
+- Server functions novas em `drive.functions.ts`:
+  - `ensureClientFolderTree({ clientId, monthKey, confirmFolderId? })` → retorna o `folderId` do mês, criando o que faltar via Drive API (`files.create` com `mimeType: application/vnd.google-apps.folder`).
+  - `findClientFolderCandidates({ clientId })` → lista candidatas quando não tem match exato.
+  - `reorganizeAllFiles()` → itera `item_files`, chama `ensureClientFolderTree` e usa `files.update?addParents=...&removeParents=...` pra mover.
+- `uploadDriveFile` e `attachDriveFile` passam a chamar `ensureClientFolderTree` e setar `parents` antes do upload / mover o arquivo logo após o attach.
+- Cache de `client_drive_map` evita chamadas extras no Drive a cada upload.
 
-### 2. Banco (1 migration)
-Nova tabela `item_files`:
-```text
-id uuid pk
-item_id uuid fk → content_items(id) on delete cascade
-drive_file_id text         -- ID do arquivo no Drive
-name text
-mime_type text
-icon_url text null         -- iconLink do Drive
-thumbnail_url text null    -- thumbnailLink do Drive (assinado, expira)
-web_view_url text          -- webViewLink (abre no Drive)
-size_bytes bigint null
-added_by uuid fk → profiles(id)
-sort_order int default 0
-created_at timestamptz
-```
-RLS: leitura para autenticados; insert/update/delete para responsáveis do item OU admin (mesma lógica de comentários). GRANTs para `authenticated` e `service_role`.
-
-### 3. Server functions (em `src/lib/luzeria/drive.functions.ts`)
-Tudo via gateway do conector, autenticado, sem expor token Google ao cliente:
-- `searchDriveFiles({ query, pageToken? })` → lista arquivos do Drive da agência.
-- `getDriveFileMeta({ fileId })` → busca metadados (usado quando o user cola link, extrai ID e busca thumbnail/nome).
-- `uploadToDrive({ filename, mimeType, base64, folderPath })` → cria pasta-caminho se não existir e sobe o arquivo.
-- `attachFileToItem({ itemId, driveFileId })` → grava em `item_files`.
-- `removeFileFromItem({ fileId })` → desanexa (não apaga do Drive, só remove o vínculo).
-- `getThumbnailSignedUrl({ fileId })` → renova thumbnail expirada quando precisar.
-
-Permissões verificadas via `requireSupabaseAuth` + checagem de responsável/admin antes de qualquer escrita.
-
-### 4. Frontend
-- `src/components/luzeria/FilesSection.tsx` — nova seção dentro do `DetailPanel`.
-- `src/components/luzeria/DrivePicker.tsx` — modal de busca/seleção no Drive.
-- Substitui o uso atual do campo `driveLink` no `DetailPanel.tsx` e na lista (`ContentRow.tsx`) por essa seção. Mantém o campo antigo como input alternativo dentro do "Colar link".
-- Abertura: SEMPRE `window.open(webViewUrl, '_blank', 'noopener,noreferrer')`. Nunca iframe.
-
-### 5. Limites práticos
-- **Upload pelo app:** limito a 25 MB por arquivo na UI (suficiente pra artes, PDFs, áudios). Vídeos brutos grandes continuam melhor de subir manual no Drive e usar "Anexar do Drive".
-- **Quantidade:** sem limite — vários arquivos por item, ordenáveis.
-- **Onde fica armazenado:** 100% no Google Drive da agência. O Lovable só guarda o ID e metadados (nome, tipo, ícone).
-
-## O que NÃO muda
-- Toda a lógica existente de status, atribuições, comentários, dashboard, ranking, stories, limpeza, etc. fica intacta.
-- Itens antigos com `driveLink` preenchido continuam funcionando — o link aparece como primeiro arquivo da lista após a migração.
-
-## Ordem de execução
-1. Linkar conector Google Drive (você autoriza com a conta da agência).
-2. Migration `item_files` + RLS + GRANTs.
-3. Server functions de Drive.
-4. Componentes `FilesSection` + `DrivePicker`.
-5. Plugar no `DetailPanel` e `ContentRow`, migrar `driveLink` antigos.
-6. QA: testar abrir/anexar/upload no preview e no site publicado.
-
-## Pergunta única antes de começar
-**Pasta raiz no Drive:** quer que o app organize os uploads em `Luzeria App/{Cliente}/{Mês}/...` automaticamente, ou prefere uma pasta única flat tipo `Luzeria App/Uploads/`? Se não responder, sigo com a estrutura organizada por cliente/mês.
+Posso seguir?

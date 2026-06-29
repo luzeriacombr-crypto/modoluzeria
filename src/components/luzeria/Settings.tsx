@@ -8,6 +8,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
 import { UserPlus, X, Settings as SettingsIcon, Star } from "lucide-react";
 import { ReportsTab } from "./ReportsTab";
+import { DriveSettingsTab } from "./DriveSettingsTab";
 
 export function SettingsPage() {
   const me = useMe().data;
@@ -15,7 +16,7 @@ export function SettingsPage() {
   const { setUserRole, setUserActive, deleteUser, adminCreateUser } = useApi();
   const { setView, setViewAs } = useUI();
   const [adding, setAdding] = useState(false);
-  const [tab, setTab] = useState<"team" | "report" | "general">("team");
+  const [tab, setTab] = useState<"team" | "report" | "drive" | "general">("team");
 
   if (me?.role !== "master") {
     return <div className="p-10 text-white/60 text-sm">Acesso restrito ao Administrador Master.</div>;
@@ -53,6 +54,7 @@ export function SettingsPage() {
         {[
           { id: "team", label: "Equipe" },
           { id: "report", label: "Relatório" },
+          { id: "drive", label: "Drive" },
           { id: "general", label: "Geral" },
         ].map((t) => {
           const active = tab === (t.id as any);
@@ -70,6 +72,7 @@ export function SettingsPage() {
       </div>
 
       {tab === "general" ? <GeneralSettings /> :
+       tab === "drive" ? <DriveSettingsTab /> :
        tab === "report" ? <ReportsTab /> : (
         <>
       {pending.length > 0 && (
