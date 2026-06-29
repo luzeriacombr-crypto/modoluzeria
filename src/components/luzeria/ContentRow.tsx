@@ -138,3 +138,24 @@ export function ContentRow({ item, profiles, idx }: {
     </div>
   );
 }
+
+function RowThumb({ itemId }: { itemId: string }) {
+  const filesQ = useQuery(itemFilesQO(itemId));
+  const first = filesQ.data?.[0];
+  const fileId = first?.driveFileId ?? null;
+  const thumbQ = useQuery(driveThumbnailQO(fileId, !!fileId));
+  const url = thumbQ.data?.dataUrl ?? null;
+
+  return (
+    <div
+      className="w-10 h-10 shrink-0 rounded-md overflow-hidden flex items-center justify-center"
+      style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}
+    >
+      {url ? (
+        <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+      ) : (
+        <ImageIcon size={16} style={{ color: "rgba(255,255,255,0.2)" }} />
+      )}
+    </div>
+  );
+}
