@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X, Send, ExternalLink, Plus, Check, Pencil, ChevronDown, Copy, Calendar, AlertOctagon } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, Pencil, ChevronDown, Copy, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2 } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType } from "@/lib/luzeria/types";
@@ -68,6 +68,8 @@ export function DetailPanel() {
   const [driveEditing, setDriveEditing] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [driveCopied, setDriveCopied] = useState(false);
+  const [newCheck, setNewCheck] = useState("");
+  const { updateChecklist, rateItem } = useApi();
 
   useEffect(() => {
     if (item) {
@@ -91,6 +93,14 @@ export function DetailPanel() {
   const isOverdue =
     !!item.dueDate && item.status !== "FINALIZADO" &&
     new Date(item.dueDate + "T23:59:59").getTime() < Date.now();
+
+  const checklist = item.checklist ?? [];
+  const checklistDone = checklist.filter((c) => c.done).length;
+  const reworkCount = item.reworkCount ?? 0;
+
+  function saveChecklist(next: typeof checklist) {
+    updateChecklist.mutate({ data: { itemId: item.id, checklist: next } });
+  }
 
   const copyDriveLink = async () => {
     if (!normalizedDriveUrl) return;
