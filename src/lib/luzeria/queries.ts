@@ -22,6 +22,9 @@ import {
   getAppSettings, updateAppSettings,
   getMyWeek, getWorkload, getItemTimeline, addCommentWithMentions,
 } from "./roadmap.functions";
+import {
+  listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, detachItemFile,
+} from "./drive.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
@@ -195,6 +198,21 @@ export const itemTimelineQO = (itemId: string | null) =>
     queryKey: ["item-timeline", itemId],
     queryFn: () => getItemTimeline({ data: { itemId: itemId! } }),
     enabled: !!itemId,
+  });
+
+export const itemFilesQO = (itemId: string | null) =>
+  queryOptions({
+    queryKey: ["item-files", itemId],
+    queryFn: () => listItemFiles({ data: { itemId: itemId! } }),
+    enabled: !!itemId,
+  });
+
+export const driveSearchQO = (query: string, enabled: boolean) =>
+  queryOptions({
+    queryKey: ["drive-search", query],
+    queryFn: () => searchDriveFiles({ data: { query } }),
+    enabled,
+    staleTime: 30_000,
   });
 
 export function useMe() { return useQuery(meQO()); }
