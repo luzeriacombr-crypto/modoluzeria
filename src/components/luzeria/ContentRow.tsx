@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar } from "lucide-react";
+import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar, Image as ImageIcon } from "lucide-react";
 import type { ContentItem, Profile } from "@/lib/luzeria/types";
 import { statusOptionsFor, REEL_TYPE_LABEL, type ReelType } from "@/lib/luzeria/types";
-import { useApi, useMe } from "@/lib/luzeria/queries";
+import { useApi, useMe, itemFilesQO, driveThumbnailQO } from "@/lib/luzeria/queries";
+import { useQuery } from "@tanstack/react-query";
 import { StatusBadge } from "./StatusBadge";
 import { Avatar, AvatarStack } from "./Avatar";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -56,6 +57,8 @@ export function ContentRow({ item, profiles, idx }: {
       <span className="text-[14px] font-bold w-7 shrink-0" style={{ color: "#C8D44E" }}>
         {String(idx).padStart(2, "0")}
       </span>
+
+      <RowThumb itemId={item.id} />
 
       {editing ? (
         <input
