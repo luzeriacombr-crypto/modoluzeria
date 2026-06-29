@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { UserPlus, X, Settings as SettingsIcon, Star } from "lucide-react";
 import { ReportsTab } from "./ReportsTab";
 import { DriveSettingsTab } from "./DriveSettingsTab";
+import { MemberGoalsTab } from "./MemberGoalsTab";
 
 export function SettingsPage() {
   const me = useMe().data;
@@ -16,7 +17,7 @@ export function SettingsPage() {
   const { setUserRole, setUserActive, deleteUser, adminCreateUser } = useApi();
   const { setView, setViewAs } = useUI();
   const [adding, setAdding] = useState(false);
-  const [tab, setTab] = useState<"team" | "report" | "drive" | "general">("team");
+  const [tab, setTab] = useState<"team" | "report" | "goals" | "drive" | "general">("team");
 
   if (me?.role !== "master") {
     return <div className="p-10 text-white/60 text-sm">Acesso restrito ao Administrador Master.</div>;
@@ -39,7 +40,11 @@ export function SettingsPage() {
         <div>
           <h1 className="text-[32px] font-bold text-white tracking-tight">Configurações</h1>
           <p className="text-sm text-white/50 mt-2">
-            {tab === "team" ? "Gerencie acessos e funções da equipe." : "Relatório consolidado de entregas."}
+            {tab === "team"   ? "Gerencie acessos e funções da equipe." :
+             tab === "goals"  ? "Defina a meta mensal de cada colaborador." :
+             tab === "report" ? "Relatório consolidado de entregas." :
+             tab === "drive"  ? "Integração com Google Drive." :
+             "Ajustes gerais da operação."}
           </p>
         </div>
         {tab === "team" && (
@@ -53,6 +58,7 @@ export function SettingsPage() {
       <div className="flex items-center gap-1 border-b border-white/10 mb-8">
         {[
           { id: "team", label: "Equipe" },
+          { id: "goals", label: "Metas" },
           { id: "report", label: "Relatório" },
           { id: "drive", label: "Drive" },
           { id: "general", label: "Geral" },
@@ -72,6 +78,7 @@ export function SettingsPage() {
       </div>
 
       {tab === "general" ? <GeneralSettings /> :
+       tab === "goals" ? <MemberGoalsTab /> :
        tab === "drive" ? <DriveSettingsTab /> :
        tab === "report" ? <ReportsTab /> : (
         <>
