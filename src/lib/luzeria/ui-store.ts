@@ -18,6 +18,7 @@ interface UI {
   view: "client" | "my" | "settings" | "stories" | "cleaning" | "admin" | "profile";
   viewAsUserId: string | null;
   sidebarHidden: boolean;
+  fichaClientId: string | null;
   selectClient: (id: string | null) => void;
   selectMonth: (key: string) => void;
   openItem: (id: string | null) => void;
@@ -26,6 +27,7 @@ interface UI {
   setViewAs: (id: string | null) => void;
   toggleSidebar: () => void;
   setSidebarHidden: (v: boolean) => void;
+  openFicha: (id: string | null) => void;
 }
 
 function currentMonthKey() {
@@ -41,6 +43,7 @@ export const useUI = create<UI>((set) => ({
   view: "my",
   viewAsUserId: null,
   sidebarHidden: readSidebarHidden(),
+  fichaClientId: null,
   selectClient: (id) =>
     set({ selectedClientId: id, selectedItemId: null, view: id ? "client" : "my" }),
   selectMonth: (key) => set({ selectedMonthKey: key }),
@@ -50,4 +53,5 @@ export const useUI = create<UI>((set) => ({
   setViewAs: (id) => set({ viewAsUserId: id }),
   toggleSidebar: () => set((s) => { const next = !s.sidebarHidden; writeSidebarHidden(next); return { sidebarHidden: next }; }),
   setSidebarHidden: (v) => { writeSidebarHidden(v); set({ sidebarHidden: v }); },
+  openFicha: (id) => set({ fichaClientId: id }),
 }));
