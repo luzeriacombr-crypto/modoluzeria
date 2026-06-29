@@ -167,6 +167,7 @@ export type Database = {
         Row: {
           copy: string
           drive_link: string
+          editor_id: string | null
           id: string
           idx: number
           legacy_assignee: string | null
@@ -180,6 +181,7 @@ export type Database = {
         Insert: {
           copy?: string
           drive_link?: string
+          editor_id?: string | null
           id?: string
           idx: number
           legacy_assignee?: string | null
@@ -193,6 +195,7 @@ export type Database = {
         Update: {
           copy?: string
           drive_link?: string
+          editor_id?: string | null
           id?: string
           idx?: number
           legacy_assignee?: string | null
@@ -204,6 +207,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "content_items_editor_id_fkey"
+            columns: ["editor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "content_items_month_id_fkey"
             columns: ["month_id"]

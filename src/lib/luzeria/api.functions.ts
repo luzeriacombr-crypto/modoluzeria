@@ -324,6 +324,7 @@ export const getMonth = createServerFn({ method: "GET" })
       comments: itemComments.get(it.id) ?? [],
       updatedAt: it.updated_at,
       reelType: ((it as any).reel_type ?? null) as any,
+      editorId: ((it as any).editor_id ?? null) as any,
     }));
     return {
       id: month.id, key: month.key,
@@ -337,7 +338,7 @@ export const getMonth = createServerFn({ method: "GET" })
 
 export const updateItem = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string; patch: { title?: string; copy?: string; drive_link?: string; reel_type?: string | null } }) => d)
+  .inputValidator((d: { id: string; patch: { title?: string; copy?: string; drive_link?: string; reel_type?: string | null; editor_id?: string | null } }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("content_items").update(data.patch).eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -794,4 +795,307 @@ export const getMemberFinalizations = createServerFn({ method: "GET" })
       clientColor: r.content_items.months.clients.color as string,
       clientCategory: (r.content_items.months.clients.category ?? "Social Media") as string,
     }));
+  });
+
+/* ============== ADMIN REPORT ============== */
+
+const reportFiltersSchema = z.object({
+  userId: z.string().uuid().optional().nullable(),
+  from: z.string(),
+  to: z.string(),
+  type: z.enum(["all", "post", "reel", "outros", "stories", "cleaning"]).optional(),
+  clientId: z.string().uuid().optional().nullable(),
+});
+
+export const getReport = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: any) => reportFiltersSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+
+    const fromISO = new Date(data.from).toISOString();
+    const toISO = new Date(data.to).toISOString();
+    const filterUser = data.userId || null;
+    const filterType = data.type ?? "all";
+    const filterClient = data.clientId || null;
+
+    // ---- profiles map ----
+    const { data: profiles } = await context.supabase
+      .from("profiles").select("id, name, color, icon, active");
+    const profileById = new Map<string, any>();
+    (profiles ?? []).forEach((p: any) => profileById.set(p.id, p));
+    const { data: roleRows } = await context.supabase.from("user_roles").select("user_id, role");
+    const roleByUser = new Map<string, string>();
+    (roleRows ?? []).forEach((r: any) => roleByUser.set(r.user_id, r.role));
+
+    // ---- content finalizations (posts/reels/outros) ----
+    let fq = context.supabase
+      .from("finalizations")
+      .select(
+        "id, user_id, finalized_at, content_items!inner(id, type, title, editor_id, reel_type, months!inner(client_id, key, clients!inner(id, name, color, category)))"
+      )
+      .gte("finalized_at", fromISO)
+      .lt("finalized_at", toISO);
+    if (filterUser) fq = fq.eq("user_id", filterUser);
+    const { data: finRows, error: finErr } = await fq;
+    if (finErr) throw new Error(finErr.message);
+
+    type HistRow = {
+      kind: "content" | "stories" | "cleaning";
+      finalizedAt: string;
+      userId: string;
+      type: "post" | "reel" | "outros" | "stories" | "cleaning";
+      title: string;
+      clientId: string | null;
+      clientName: string | null;
+      clientColor: string | null;
+      clientCategory: string | null;
+      reelType: string | null;
+      editorId: string | null;
+    };
+    const history: HistRow[] = [];
+    (finRows ?? []).forEach((r: any) => {
+      const it = r.content_items;
+      if (!it) return;
+      const c = it.months?.clients;
+      const category = c?.category ?? "Social Media";
+      if (filterClient && c?.id !== filterClient) return;
+      if (filterType !== "all" && filterType !== "stories" && filterType !== "cleaning" && it.type !== filterType) return;
+      if ((filterType === "stories" || filterType === "cleaning") && true) return; // skip content for stories/cleaning filter
+      history.push({
+        kind: "content",
+        finalizedAt: r.finalized_at,
+        userId: r.user_id,
+        type: it.type,
+        title: it.title,
+        clientId: c?.id ?? null,
+        clientName: c?.name ?? null,
+        clientColor: c?.color ?? null,
+        clientCategory: category,
+        reelType: it.reel_type ?? null,
+        editorId: it.editor_id ?? null,
+      });
+    });
+
+    // ---- stories ----
+    if (!filterClient && (filterType === "all" || filterType === "stories")) {
+      const fromDay = data.from.slice(0, 10);
+      const toDay = data.to.slice(0, 10);
+      let sq = context.supabase
+        .from("stories_schedule")
+        .select("day, user_id, updated_at")
+        .gte("day", fromDay).lt("day", toDay)
+        .not("user_id", "is", null);
+      if (filterUser) sq = sq.eq("user_id", filterUser);
+      const { data: storyRows } = await sq;
+      (storyRows ?? []).forEach((s: any) => {
+        history.push({
+          kind: "stories",
+          finalizedAt: s.updated_at ?? new Date(s.day + "T12:00:00Z").toISOString(),
+          userId: s.user_id,
+          type: "stories",
+          title: `Stories ${new Date(s.day + "T12:00:00Z").toLocaleDateString("pt-BR")}`,
+          clientId: null, clientName: "STORIES", clientColor: "#7EFFD9", clientCategory: "Stories",
+          reelType: null, editorId: null,
+        });
+      });
+    }
+
+    // ---- cleaning ----
+    if (!filterClient && (filterType === "all" || filterType === "cleaning")) {
+      let cq = context.supabase
+        .from("cleaning_schedule")
+        .select("task_idx, weekday, user_id, updated_at")
+        .not("user_id", "is", null)
+        .gte("updated_at", fromISO).lt("updated_at", toISO);
+      if (filterUser) cq = cq.eq("user_id", filterUser);
+      const { data: cleanRows } = await cq;
+      (cleanRows ?? []).forEach((c: any) => {
+        history.push({
+          kind: "cleaning",
+          finalizedAt: c.updated_at ?? new Date().toISOString(),
+          userId: c.user_id,
+          type: "cleaning",
+          title: `Limpeza · tarefa ${c.task_idx + 1} (dia ${c.weekday})`,
+          clientId: null, clientName: "LIMPEZA", clientColor: "#4A9EFF", clientCategory: "Limpeza",
+          reelType: null, editorId: null,
+        });
+      });
+    }
+
+    history.sort((a, b) => b.finalizedAt.localeCompare(a.finalizedAt));
+
+    // ---- summary ----
+    const contentHist = history.filter((h) => h.kind === "content");
+    const summary = {
+      total: history.length,
+      posts: contentHist.filter((h) => h.type === "post").length,
+      reels: contentHist.filter((h) => h.type === "reel").length,
+      outros: contentHist.filter((h) => h.type === "outros").length,
+      stories: history.filter((h) => h.kind === "stories").length,
+      cleaning: history.filter((h) => h.kind === "cleaning").length,
+    };
+
+    // ---- by member ----
+    const memberAgg = new Map<string, { posts: number; reels: number; outros: number; stories: number; cleaning: number }>();
+    history.forEach((h) => {
+      const k = h.userId;
+      const row = memberAgg.get(k) ?? { posts: 0, reels: 0, outros: 0, stories: 0, cleaning: 0 };
+      if (h.type === "post") row.posts++;
+      else if (h.type === "reel") row.reels++;
+      else if (h.type === "outros") row.outros++;
+      else if (h.type === "stories") row.stories++;
+      else if (h.type === "cleaning") row.cleaning++;
+      memberAgg.set(k, row);
+    });
+    const byMember = [...memberAgg.entries()].map(([userId, v]) => {
+      const p = profileById.get(userId);
+      const total = v.posts + v.reels + v.outros + v.stories + v.cleaning;
+      return {
+        userId,
+        name: p?.name ?? "—",
+        color: p?.color ?? "#888",
+        icon: p?.icon ?? null,
+        role: roleByUser.get(userId) ?? "member",
+        ...v,
+        total,
+      };
+    }).sort((a, b) => b.total - a.total);
+    const teamTotal = byMember.reduce((a, b) => a + b.total, 0);
+    const byMemberWithPct = byMember.map((m) => ({ ...m, pct: teamTotal ? Math.round((m.total / teamTotal) * 100) : 0 }));
+
+    // ---- by editor / format ----
+    const fmtAgg = new Map<string, { lofi: number; facil: number; basico: number; avancado: number }>();
+    contentHist.forEach((h) => {
+      if (h.type !== "reel") return;
+      const eid = h.editorId ?? "__none__";
+      const row = fmtAgg.get(eid) ?? { lofi: 0, facil: 0, basico: 0, avancado: 0 };
+      const rt = (h.reelType as any) as "lofi" | "facil" | "basico" | "avancado" | null;
+      if (rt && row[rt] !== undefined) row[rt]++;
+      fmtAgg.set(eid, row);
+    });
+    const byEditorFormat = [...fmtAgg.entries()].map(([editorId, v]) => {
+      const p = editorId === "__none__" ? null : profileById.get(editorId);
+      const total = v.lofi + v.facil + v.basico + v.avancado;
+      return {
+        editorId: editorId === "__none__" ? null : editorId,
+        name: p?.name ?? "— Sem editor",
+        color: p?.color ?? "#555",
+        icon: p?.icon ?? null,
+        ...v,
+        total,
+      };
+    }).sort((a, b) => b.total - a.total);
+    const formatTotals = byEditorFormat.reduce(
+      (a, r) => ({ lofi: a.lofi + r.lofi, facil: a.facil + r.facil, basico: a.basico + r.basico, avancado: a.avancado + r.avancado }),
+      { lofi: 0, facil: 0, basico: 0, avancado: 0 },
+    );
+
+    // ---- enrich history with names ----
+    const enriched = history.map((h) => ({
+      ...h,
+      userName: profileById.get(h.userId)?.name ?? "—",
+      userColor: profileById.get(h.userId)?.color ?? "#888",
+      editorName: h.editorId ? (profileById.get(h.editorId)?.name ?? null) : null,
+    }));
+
+    return { summary, byMember: byMemberWithPct, byEditorFormat, formatTotals, history: enriched };
+  });
+
+export const getMemberReportDetail = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId: string; from: string; to: string }) =>
+    z.object({ userId: z.string().uuid(), from: z.string(), to: z.string() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+
+    const fromISO = new Date(data.from).toISOString();
+    const toISO = new Date(data.to).toISOString();
+
+    // Monthly (last 6 months from `to`)
+    const to = new Date(data.to);
+    const monthly: { key: string; count: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth() - i, 1));
+      monthly.push({ key: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`, count: 0 });
+    }
+    const monthlyStart = new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth() - 5, 1)).toISOString();
+
+    const { data: finRows } = await context.supabase
+      .from("finalizations")
+      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, months!inner(key, clients!inner(id, name, color, category)))")
+      .eq("user_id", data.userId)
+      .gte("finalized_at", monthlyStart);
+
+    (finRows ?? []).forEach((r: any) => {
+      const d = new Date(r.finalized_at);
+      const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      const h = monthly.find((x) => x.key === k);
+      if (h) h.count++;
+    });
+
+    // Lists within [from, to)
+    const inRange = (r: any) => r.finalized_at >= fromISO && r.finalized_at < toISO;
+    const baseList = (finRows ?? []).filter(inRange).map((r: any) => ({
+      finalizedAt: r.finalized_at,
+      itemId: r.content_items.id,
+      type: r.content_items.type as "post" | "reel" | "outros",
+      title: r.content_items.title,
+      reelType: r.content_items.reel_type ?? null,
+      editorId: r.content_items.editor_id ?? null,
+      clientId: r.content_items.months.clients.id,
+      clientName: r.content_items.months.clients.name,
+      clientColor: r.content_items.months.clients.color,
+    }));
+
+    // Reels edited by this user (editor_id)
+    const { data: editedRows } = await context.supabase
+      .from("finalizations")
+      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, months!inner(clients!inner(id, name, color)))")
+      .eq("content_items.editor_id", data.userId)
+      .gte("finalized_at", fromISO)
+      .lt("finalized_at", toISO);
+    const editedReels = (editedRows ?? [])
+      .filter((r: any) => r.content_items?.type === "reel")
+      .map((r: any) => ({
+        finalizedAt: r.finalized_at,
+        itemId: r.content_items.id,
+        title: r.content_items.title,
+        reelType: r.content_items.reel_type ?? null,
+        clientId: r.content_items.months.clients.id,
+        clientName: r.content_items.months.clients.name,
+        clientColor: r.content_items.months.clients.color,
+      }));
+
+    // Stories / cleaning in range
+    const fromDay = data.from.slice(0, 10);
+    const toDay = data.to.slice(0, 10);
+    const { data: storyRows } = await context.supabase
+      .from("stories_schedule").select("day, updated_at")
+      .eq("user_id", data.userId)
+      .gte("day", fromDay).lt("day", toDay);
+    const stories = (storyRows ?? []).map((s: any) => ({
+      day: s.day,
+      finalizedAt: s.updated_at ?? new Date(s.day + "T12:00:00Z").toISOString(),
+    }));
+
+    const { data: cleanRows } = await context.supabase
+      .from("cleaning_schedule").select("task_idx, weekday, updated_at")
+      .eq("user_id", data.userId)
+      .gte("updated_at", fromISO).lt("updated_at", toISO);
+    const cleaning = (cleanRows ?? []).map((c: any) => ({
+      taskIdx: c.task_idx, weekday: c.weekday, finalizedAt: c.updated_at,
+    }));
+
+    return {
+      monthly,
+      posts: baseList.filter((x) => x.type === "post").sort((a, b) => b.finalizedAt.localeCompare(a.finalizedAt)),
+      reels: baseList.filter((x) => x.type === "reel").sort((a, b) => b.finalizedAt.localeCompare(a.finalizedAt)),
+      outros: baseList.filter((x) => x.type === "outros").sort((a, b) => b.finalizedAt.localeCompare(a.finalizedAt)),
+      editedReels: editedReels.sort((a, b) => b.finalizedAt.localeCompare(a.finalizedAt)),
+      stories: stories.sort((a, b) => b.finalizedAt.localeCompare(a.finalizedAt)),
+      cleaning: cleaning.sort((a, b) => b.finalizedAt.localeCompare(a.finalizedAt)),
+    };
   });

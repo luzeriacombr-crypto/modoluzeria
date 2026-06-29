@@ -7,6 +7,7 @@ import { roleLabel } from "./Sidebar";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
 import { UserPlus, X } from "lucide-react";
+import { ReportsTab } from "./ReportsTab";
 
 export function SettingsPage() {
   const me = useMe().data;
@@ -14,6 +15,7 @@ export function SettingsPage() {
   const { setUserRole, setUserActive, deleteUser, adminCreateUser } = useApi();
   const { setView, setViewAs } = useUI();
   const [adding, setAdding] = useState(false);
+  const [tab, setTab] = useState<"team" | "report">("team");
 
   if (me?.role !== "master") {
     return <div className="p-10 text-white/60 text-sm">Acesso restrito ao Administrador Master.</div>;
@@ -31,18 +33,43 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="p-10 max-w-4xl mx-auto">
-      <div className="flex items-start justify-between mb-8">
+    <div className="p-10 max-w-6xl mx-auto">
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-[32px] font-bold text-white tracking-tight">Colaboradores</h1>
-          <p className="text-sm text-white/50 mt-2">Gerencie acessos e funções da equipe.</p>
+          <h1 className="text-[32px] font-bold text-white tracking-tight">Configurações</h1>
+          <p className="text-sm text-white/50 mt-2">
+            {tab === "team" ? "Gerencie acessos e funções da equipe." : "Relatório consolidado de entregas."}
+          </p>
         </div>
-        <button onClick={() => setAdding(true)}
-          className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
-          <UserPlus size={14} /> Adicionar membro
-        </button>
+        {tab === "team" && (
+          <button onClick={() => setAdding(true)}
+            className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
+            <UserPlus size={14} /> Adicionar membro
+          </button>
+        )}
       </div>
 
+      <div className="flex items-center gap-1 border-b border-white/10 mb-8">
+        {[
+          { id: "team", label: "Equipe" },
+          { id: "report", label: "Relatório" },
+        ].map((t) => {
+          const active = tab === (t.id as any);
+          return (
+            <button key={t.id} onClick={() => setTab(t.id as any)}
+              className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
+              style={{
+                color: active ? "#C8D44E" : "rgba(255,255,255,0.5)",
+                borderColor: active ? "#C8D44E" : "transparent",
+              }}>
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "report" ? <ReportsTab /> : (
+        <>
       {pending.length > 0 && (
         <>
           <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3">
@@ -114,6 +141,8 @@ export function SettingsPage() {
       <p className="text-[11px] text-white/30 mt-4">
         Novos cadastros ficam pendentes até a aprovação de um Administrador Master. E-mails pré-cadastrados na equipe inicial entram já aprovados com a função correta.
       </p>
+        </>
+      )}
 
       {adding && (
         <AddMemberModal

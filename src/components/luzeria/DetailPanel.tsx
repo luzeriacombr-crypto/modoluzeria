@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X, Send, ExternalLink, Plus, Check, Pencil } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, Pencil, ChevronDown } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType } from "@/lib/luzeria/types";
@@ -41,6 +41,7 @@ export function DetailPanel() {
   const [comment, setComment] = useState("");
   const [assignOpen, setAssignOpen] = useState(false);
   const [driveEditing, setDriveEditing] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
     if (item) {
@@ -54,6 +55,9 @@ export function DetailPanel() {
 
   const assignees = item.assigneeIds.map((id) => profiles.find((p) => p.id === id)).filter(Boolean) as Profile[];
   const { Icon: DriveIcon, label: driveLabel } = detectDriveType(drive);
+  const editor = item.editorId ? profiles.find((p) => p.id === item.editorId) : null;
+  const canSetEditor = isAdmin || (me ? item.assigneeIds.includes(me.id) : false);
+  const activeProfiles = profiles.filter((p) => p.active);
 
   return (
     <>
@@ -130,6 +134,64 @@ export function DetailPanel() {
         )}
 
         {/* Assignees */}
+        {item.type === "reel" && (
+          <Section label="Editor">
+            <div className="relative">
+              <button
+                disabled={!canSetEditor}
+                onClick={() => setEditorOpen((o) => !o)}
+                className="w-full flex items-center justify-between gap-2 rounded-md bg-[#1C1C1C] border border-white/[0.08] px-3 py-2.5 text-sm text-white hover:border-[#C8D44E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  {editor ? (
+                    <>
+                      <Avatar profile={editor} size={22} />
+                      <span className="truncate">{editor.name}</span>
+                    </>
+                  ) : (
+                    <span className="text-white/40">Selecionar editor…</span>
+                  )}
+                </span>
+                <ChevronDown size={14} className="text-white/40 shrink-0" />
+              </button>
+              {editorOpen && (
+                <div className="absolute z-50 mt-1 left-0 right-0 rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-72 overflow-y-auto">
+                  {editor && (
+                    <button
+                      onClick={() => {
+                        updateItem.mutate({ data: { id: item.id, patch: { editor_id: null } } });
+                        setEditorOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 text-left text-red-400"
+                    >
+                      <X size={13} /> Remover editor
+                    </button>
+                  )}
+                  {activeProfiles.map((p) => {
+                    const sel = item.editorId === p.id;
+                    return (
+                      <button key={p.id}
+                        onClick={() => {
+                          updateItem.mutate({ data: { id: item.id, patch: { editor_id: p.id } } });
+                          setEditorOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 text-left"
+                      >
+                        <Avatar profile={p} size={22} />
+                        <span className="text-white/80 flex-1">{p.name}</span>
+                        {sel && <Check size={13} className="text-[#C8D44E]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {!canSetEditor && (
+              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores ou responsáveis pela tarefa podem definir o editor.</p>
+            )}
+          </Section>
+        )}
+
         <Section label="Responsáveis">
           <div className="flex items-center gap-2 flex-wrap">
             {assignees.map((p) => (

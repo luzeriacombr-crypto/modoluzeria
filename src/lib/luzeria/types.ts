@@ -46,6 +46,7 @@ export interface ContentItem {
   comments: Comment[];
   updatedAt: string;
   reelType?: ReelType | null;
+  editorId?: string | null;
 }
 
 export interface MonthData {
