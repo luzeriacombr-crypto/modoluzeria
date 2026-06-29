@@ -26,6 +26,25 @@ function monthLabelFromKey(key: string | null | undefined): string | null {
   return PT_MONTHS[idx];
 }
 
+function monthLabelWithYear(key: string | null | undefined): string | null {
+  if (!key) return null;
+  const m = /^(\d{4})-(\d{2})/.exec(key);
+  if (!m) return null;
+  const idx = Math.max(1, Math.min(12, parseInt(m[2], 10))) - 1;
+  return `${PT_MONTHS[idx]} ${m[1]}`;
+}
+
+/** Structured error so the UI can show a friendly CTA. */
+class DeliveriesFolderMissingError extends Error {
+  code = "deliveries_folder_missing" as const;
+  clientId: string;
+  constructor(clientId: string) {
+    super("Configure a pasta de entregas no Perfil do Cliente antes de fazer upload.");
+    this.clientId = clientId;
+  }
+  toJSON() { return { code: this.code, clientId: this.clientId, message: this.message }; }
+}
+
 function normalizeName(s: string): string {
   return s
     .normalize("NFD")
@@ -215,9 +234,24 @@ async function resolveTargetFolderForItem(
   if (!item) return null;
   const months: any = item.months;
   const client: any = months?.clients;
-  const monthLabel = monthLabelFromKey(months?.key);
-  if (!client?.id || !client?.name || !monthLabel) return null;
+  if (!client?.id || !client?.name) return null;
 
+  // New flow: require an admin-configured deliveries folder per client.
+  const map = await loadClientFolderMap(supabase, client.id);
+  if (map?.deliveries_folder_id) {
+    const label = monthLabelWithYear(months?.key);
+    if (!label) return null;
+    return ensureMonthFolder(map.deliveries_folder_id, label);
+  }
+
+  // Legacy fallback: only used by `reorganizeAllDriveFiles` / `ensureClientDeliveriesFolder`,
+  // which still pass `autoCreate`. Day-to-day uploads from posts/reels reach here
+  // without `forceClientFolderId` and with no map → throw the friendly error.
+  if (!opts.autoCreate && !opts.forceClientFolderId) {
+    throw new DeliveriesFolderMissingError(client.id);
+  }
+  const monthLabel = monthLabelFromKey(months?.key);
+  if (!monthLabel) return null;
   const rootId = await readRootFolderId(supabase);
   const tree = await ensureDeliveriesFolder(
     supabase, client.id, client.name, rootId, userId, opts,
