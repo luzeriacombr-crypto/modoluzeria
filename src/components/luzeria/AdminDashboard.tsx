@@ -9,7 +9,6 @@ import { adminDashboardQO, memberFinalizationsQO, topMembersQO, useMe } from "@/
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { Avatar } from "./Avatar";
-import luzeriaLogoHero from "@/assets/luzeria-logo-hero.png.asset.json";
 
 type Period = "month" | "3m" | "6m" | "year";
 const PERIOD_LABEL: Record<Period, string> = {
@@ -126,11 +125,11 @@ export function AdminDashboard() {
               style={{ backgroundColor: "rgba(200,212,78,0.15)", color: PALETTE.lime }}>
               <Sparkles size={11} /> Dashboard
             </div>
-            <img
-              src={luzeriaLogoHero.url}
-              alt="Luzeria"
-              className="mt-3 h-12 md:h-16 w-auto"
-            />
+            <h1
+              className="mt-3 text-white font-bold text-[36px] md:text-[48px] leading-tight tracking-tight"
+            >
+              ENTREGAS
+            </h1>
             <p className="mt-2 italic text-white/70 text-sm md:text-base">{message}</p>
 
             {/* Month selector */}
