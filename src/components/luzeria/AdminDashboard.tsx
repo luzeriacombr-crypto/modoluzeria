@@ -553,3 +553,56 @@ function hexA(hex: string, a: number) {
   const b = parseInt(h.slice(4,6), 16);
   return `rgba(${r},${g},${b},${a})`;
 }
+
+/* ============== OPERATION HEALTH (master only) ============== */
+
+function OperationHealth({ monthKey }: { monthKey: string }) {
+  const [y, m] = monthKey.split("-").map(Number);
+  const from = new Date(Date.UTC(y, m - 1, 1)).toISOString();
+  const to = new Date(Date.UTC(y, m, 1)).toISOString();
+  const { data } = useQuery(reportExtrasQO({ from, to }));
+
+  const leadAvg = data?.leadTime.avgHours ?? 0;
+  const blocked = data?.blocked.length ?? 0;
+  const reworkRate = data?.rework.ratePercent ?? 0;
+  const quality = data?.quality.avg ?? 0;
+
+  function formatHours(h: number) {
+    if (!h) return "—";
+    if (h < 24) return `${h.toFixed(1)}h`;
+    return `${(h / 24).toFixed(1)}d`;
+  }
+
+  return (
+    <div className="rounded-xl bg-[#161616] border border-white/[0.07] p-5 mb-6 relative overflow-hidden">
+      <div className="flex items-center gap-2 mb-4">
+        <Activity size={16} className="text-[#C8D44E]" />
+        <h2 className="text-white font-semibold">Saúde da operação</h2>
+        <span className="text-[10px] text-white/30 ml-1">— mês atual</span>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <HealthCard icon={<Clock size={14} />} tone="#4A9EFF" label="Lead time médio" value={formatHours(leadAvg)} sub={`${data?.leadTime.count ?? 0} entregas`} />
+        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "#C8D44E"} label="Bloqueados" value={blocked} sub={blocked > 0 ? "ação necessária" : "sem bloqueios"} valueColor={blocked > 0 ? "#FF6B6B" : "#C8D44E"} />
+        <HealthCard icon={<RotateCcw size={14} />} tone={reworkRate > 15 ? "#FF8C42" : "#C8D44E"} label="Taxa de retrabalho" value={`${reworkRate}%`} sub={`${data?.rework.total ?? 0} itens`} />
+        <HealthCard icon={<Trophy size={14} />} tone="#C8D44E" label="Qualidade média" value={quality > 0 ? `${quality}/5` : "—"} sub={`${data?.quality.count ?? 0} avaliados`} />
+      </div>
+    </div>
+  );
+}
+
+function HealthCard({ icon, tone, label, value, sub, valueColor }: {
+  icon: React.ReactNode; tone: string; label: string; value: number | string; sub: string; valueColor?: string;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-lg bg-[#1C1C1C] border border-white/[0.06] p-4">
+      <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: tone }} />
+      <div className="relative">
+        <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider" style={{ color: tone }}>
+          {icon} {label}
+        </div>
+        <div className="text-2xl font-bold tabular-nums mt-1.5" style={{ color: valueColor ?? "#FFFFFF" }}>{value}</div>
+        <div className="text-[10px] text-white/40 mt-0.5">{sub}</div>
+      </div>
+    </div>
+  );
+}
