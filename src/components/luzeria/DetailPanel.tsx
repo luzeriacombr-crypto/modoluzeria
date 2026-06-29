@@ -35,21 +35,41 @@ function openDriveLink(rawUrl: string) {
   if (!url) return;
 
   const features = "noopener,noreferrer";
+  const isLovableHost = (value: string) => {
+    try {
+      const hostname = new URL(value).hostname;
+      return (
+        hostname.endsWith("lovable.dev") ||
+        hostname.endsWith("lovable.app") ||
+        hostname.endsWith("lovableproject.com") ||
+        hostname.endsWith("gptengineer.run") ||
+        hostname.endsWith("gpteng.co")
+      );
+    } catch {
+      return /lovable|gptengineer|gpteng/i.test(value);
+    }
+  };
+
+  const isFramed = (() => {
+    try { return window.top !== window.self; }
+    catch { return true; }
+  })();
+
   const isLovablePreviewFrame = (() => {
     try {
       const ancestors = Array.from(window.location.ancestorOrigins ?? []);
-      const referrerHost = document.referrer ? new URL(document.referrer).hostname : "";
-      return window.top !== window.self && (
-        ancestors.some((origin) => new URL(origin).hostname.endsWith("lovable.dev")) ||
-        referrerHost.endsWith("lovable.dev")
+      return isFramed && (
+        isLovableHost(window.location.href) ||
+        ancestors.some(isLovableHost) ||
+        (!!document.referrer && isLovableHost(document.referrer))
       );
     } catch {
-      return window.top !== window.self;
+      return isFramed;
     }
   })();
 
   // Google Drive blocks pages opened from Lovable's sandboxed preview iframe.
-  // In that preview-only case, escape the sandbox by navigating the top window;
+  // In that preview-only case, escape the sandbox by using top-level navigation;
   // in the published/direct app, Drive still opens in a new tab as requested.
   if (isLovablePreviewFrame && window.top) {
     try {
