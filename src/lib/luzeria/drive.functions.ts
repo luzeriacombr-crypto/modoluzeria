@@ -34,15 +34,14 @@ function monthLabelWithYear(key: string | null | undefined): string | null {
   return `${PT_MONTHS[idx]} ${m[1]}`;
 }
 
-/** Structured error so the UI can show a friendly CTA. */
-class DeliveriesFolderMissingError extends Error {
-  code = "deliveries_folder_missing" as const;
-  clientId: string;
-  constructor(clientId: string) {
-    super("Configure a pasta de entregas no Perfil do Cliente antes de fazer upload.");
-    this.clientId = clientId;
-  }
-  toJSON() { return { code: this.code, clientId: this.clientId, message: this.message }; }
+/**
+ * Structured error encoded in the message so the UI can parse it.
+ * The client checks for the `[DELIVERIES_FOLDER_MISSING:<clientId>]` prefix.
+ */
+function deliveriesFolderMissingError(clientId: string): Error {
+  return new Error(
+    `[DELIVERIES_FOLDER_MISSING:${clientId}] Configure a pasta de entregas no Perfil do Cliente antes de fazer upload.`,
+  );
 }
 
 function normalizeName(s: string): string {
@@ -248,7 +247,7 @@ async function resolveTargetFolderForItem(
   // which still pass `autoCreate`. Day-to-day uploads from posts/reels reach here
   // without `forceClientFolderId` and with no map → throw the friendly error.
   if (!opts.autoCreate && !opts.forceClientFolderId) {
-    throw new DeliveriesFolderMissingError(client.id);
+    throw deliveriesFolderMissingError(client.id);
   }
   const monthLabel = monthLabelFromKey(months?.key);
   if (!monthLabel) return null;
