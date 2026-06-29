@@ -99,7 +99,7 @@ export function ClientView({ clientId }: { clientId: string }) {
           <>
             {(tab === "posts" ? (month?.posts ?? []) : tab === "reels" ? (month?.reels ?? []) : (month?.outros ?? []))
               .map((item, i) => (
-                <div key={item.id} className="group/row relative">
+                <div key={item.id} className="group/row relative pr-12">
                   <ContentRow item={item} profiles={profiles} idx={i + 1} />
                   {isAdmin && (
                     <button
