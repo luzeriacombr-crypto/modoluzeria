@@ -11,6 +11,30 @@ const GATEWAY = "https://connector-gateway.lovable.dev/google_drive";
 const DRIVE_FIELDS =
   "id,name,mimeType,iconLink,thumbnailLink,webViewLink,size,modifiedTime";
 
+const DEFAULT_ROOT_FOLDER_ID = "1LuefYT7TJiUhweGlOoHE31NGkXA2uTww";
+const FOLDER_MIME = "application/vnd.google-apps.folder";
+const PT_MONTHS = [
+  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
+];
+
+function monthLabelFromKey(key: string | null | undefined): string | null {
+  if (!key) return null;
+  const m = /^(\d{4})-(\d{2})/.exec(key);
+  if (!m) return null;
+  const idx = Math.max(1, Math.min(12, parseInt(m[2], 10))) - 1;
+  return PT_MONTHS[idx];
+}
+
+function normalizeName(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function gatewayHeaders(): Record<string, string> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   const driveKey = process.env.GOOGLE_DRIVE_API_KEY;
@@ -35,6 +59,171 @@ async function driveFetch(path: string, init: RequestInit = {}) {
     throw new Error(`Drive API ${res.status}: ${txt.slice(0, 240)}`);
   }
   return res.json();
+}
+
+async function driveJson(path: string, init: RequestInit = {}) {
+  return driveFetch(path, init);
+}
+
+/** Create a folder under a parent and return the new folder id. */
+async function driveCreateFolder(name: string, parentId: string): Promise<string> {
+  const body = JSON.stringify({
+    name,
+    mimeType: FOLDER_MIME,
+    parents: [parentId],
+  });
+  const res = await fetch(`${GATEWAY}/drive/v3/files?fields=id,name&supportsAllDrives=true`, {
+    method: "POST",
+    headers: { ...gatewayHeaders(), "Content-Type": "application/json" },
+    body,
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Drive criar pasta falhou (${res.status}): ${t.slice(0, 200)}`);
+  }
+  const j: any = await res.json();
+  return j.id;
+}
+
+/** List immediate folder children under a parent (folders only). */
+async function driveListChildFolders(parentId: string) {
+  const q = `'${parentId}' in parents and mimeType = '${FOLDER_MIME}' and trashed = false`;
+  const params = new URLSearchParams({
+    q,
+    pageSize: "500",
+    fields: "files(id,name)",
+    supportsAllDrives: "true",
+    includeItemsFromAllDrives: "true",
+  });
+  const j: any = await driveFetch(`/drive/v3/files?${params.toString()}`);
+  return (j.files ?? []) as Array<{ id: string; name: string }>;
+}
+
+/** Find a child folder by exact name; return id or null. */
+async function findChildFolderByName(parentId: string, name: string): Promise<string | null> {
+  const target = normalizeName(name);
+  const list = await driveListChildFolders(parentId);
+  const hit = list.find((f) => normalizeName(f.name) === target);
+  return hit?.id ?? null;
+}
+
+/** Move a file: add target parent, remove any others. */
+async function driveMoveTo(fileId: string, targetParentId: string) {
+  const meta: any = await driveFetch(
+    `/drive/v3/files/${fileId}?fields=parents&supportsAllDrives=true`,
+  );
+  const parents: string[] = meta?.parents ?? [];
+  if (parents.includes(targetParentId) && parents.length === 1) return;
+  const params = new URLSearchParams({
+    addParents: targetParentId,
+    fields: "id,parents",
+    supportsAllDrives: "true",
+  });
+  const toRemove = parents.filter((p) => p !== targetParentId);
+  if (toRemove.length) params.set("removeParents", toRemove.join(","));
+  const res = await fetch(`${GATEWAY}/drive/v3/files/${fileId}?${params.toString()}`, {
+    method: "PATCH",
+    headers: { ...gatewayHeaders(), "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Drive mover falhou (${res.status}): ${t.slice(0, 200)}`);
+  }
+}
+
+/* ============== ROOT FOLDER (app settings) ============== */
+
+async function readRootFolderId(supabase: any): Promise<string> {
+  const { data } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "drive_root_folder_id")
+    .maybeSingle();
+  const stored = (data?.value as any)?.id;
+  return (typeof stored === "string" && stored) ? stored : DEFAULT_ROOT_FOLDER_ID;
+}
+
+/* ============== CLIENT / MONTH FOLDER RESOLUTION ============== */
+
+async function loadClientFolderMap(supabase: any, clientId: string) {
+  const { data } = await supabase
+    .from("client_drive_map")
+    .select("drive_folder_id, deliveries_folder_id")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  return data as { drive_folder_id: string; deliveries_folder_id: string | null } | null;
+}
+
+async function ensureDeliveriesFolder(
+  supabase: any,
+  clientId: string,
+  clientName: string,
+  rootId: string,
+  userId: string,
+  options: { autoCreate?: boolean; forceClientFolderId?: string } = {},
+): Promise<{ clientFolderId: string; deliveriesFolderId: string } | null> {
+  const map = await loadClientFolderMap(supabase, clientId);
+
+  let clientFolderId = options.forceClientFolderId ?? map?.drive_folder_id ?? null;
+  if (!clientFolderId) {
+    clientFolderId = await findChildFolderByName(rootId, clientName);
+    if (!clientFolderId) {
+      if (!options.autoCreate) return null;
+      clientFolderId = await driveCreateFolder(clientName, rootId);
+    }
+  }
+
+  let deliveriesFolderId = map?.deliveries_folder_id ?? null;
+  if (!deliveriesFolderId || options.forceClientFolderId) {
+    const expected = `Entregas - ${clientName}`;
+    deliveriesFolderId = await findChildFolderByName(clientFolderId, expected);
+    if (!deliveriesFolderId) {
+      deliveriesFolderId = await driveCreateFolder(expected, clientFolderId);
+    }
+  }
+
+  await supabase.from("client_drive_map").upsert({
+    client_id: clientId,
+    drive_folder_id: clientFolderId,
+    deliveries_folder_id: deliveriesFolderId,
+    confirmed_by: userId,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "client_id" });
+
+  return { clientFolderId, deliveriesFolderId };
+}
+
+async function ensureMonthFolder(parentId: string, monthLabel: string): Promise<string> {
+  const hit = await findChildFolderByName(parentId, monthLabel);
+  if (hit) return hit;
+  return driveCreateFolder(monthLabel, parentId);
+}
+
+/** Resolve the target month folder for an item; null if cannot organize. */
+async function resolveTargetFolderForItem(
+  supabase: any,
+  userId: string,
+  itemId: string,
+  opts: { autoCreate?: boolean; forceClientFolderId?: string } = {},
+): Promise<string | null> {
+  const { data: item } = await supabase
+    .from("content_items")
+    .select("month_id, months!inner(key, client_id, clients!inner(id, name))")
+    .eq("id", itemId)
+    .maybeSingle();
+  if (!item) return null;
+  const months: any = item.months;
+  const client: any = months?.clients;
+  const monthLabel = monthLabelFromKey(months?.key);
+  if (!client?.id || !client?.name || !monthLabel) return null;
+
+  const rootId = await readRootFolderId(supabase);
+  const tree = await ensureDeliveriesFolder(
+    supabase, client.id, client.name, rootId, userId, opts,
+  );
+  if (!tree) return null;
+  return ensureMonthFolder(tree.deliveriesFolderId, monthLabel);
 }
 
 /** Extract a Drive file ID from a URL or return the raw ID. */
