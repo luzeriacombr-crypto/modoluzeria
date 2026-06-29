@@ -1,96 +1,80 @@
+# Integração com Google Drive (conector nativo Lovable)
 
-## Objetivo
+## Por que isso resolve
 
-Adicionar controle de execução nas escalas de **Limpeza** e **Stories**:
-- Cada responsável vê um botão para marcar **Feito** ou **Pendente**.
-- Se o dia passar e ninguém marcar Feito, o sistema marca automaticamente **Não feito** (vermelho).
-- Status visível para todos; quem alterou e quando ficam registrados.
+- **O erro `ERR_BLOCKED_BY_RESPONSE`** acontece porque o Google bloqueia abrir o Drive dentro de iframe (no preview do Lovable). No site publicado já abre direto. Mesmo assim, vamos garantir que abertura sempre use `window.open(url, '_blank', 'noopener,noreferrer')` e tenha botão de "copiar link" como fallback.
+- **Custo / plano Free:** os arquivos **continuam no SEU Google Drive** (não consomem Storage do Lovable). Cada chamada à API consome um pouquinho de crédito (poucos centavos por mês no uso real), bem abaixo da cota gratuita mensal.
+- **Por ser app interno** (uso exclusivo da equipe), faz total sentido usar **uma conta Google da agência** conectada uma vez. Todos do time veem os mesmos arquivos via app, sem precisar logar individualmente no Google.
 
----
+## O que muda na interface
 
-## Como vai aparecer
+### Em cada item (Post / Reel / Outros / Avulso)
+No painel de detalhe, substituo o campo único "Link do Drive" por uma **seção "Arquivos"** com:
+- Botão **"Anexar do Drive"** → abre um seletor (busca arquivo/pasta no Drive da agência por nome).
+- Botão **"Colar link"** → mantém o jeito atual de colar URL do Drive (compatibilidade com itens antigos).
+- Botão **"Enviar do computador"** → faz upload direto pro Drive da agência via API, dentro de uma pasta organizada (ex: `Luzeria App/{Cliente}/{Mês}/{Item}`). O arquivo fica no SEU Drive, não no Lovable.
+- Lista dos arquivos anexados ao item com: thumbnail (quando o Drive fornece), nome, tipo (ícone de imagem/vídeo/pasta/PDF), botão "Abrir no Drive" e botão remover.
 
-### Stories (calendário do mês)
-Em cada dia com responsável, no canto inferior do card aparece um selo de status:
-- ⚪ **Pendente** (default) — cinza
-- 🟢 **Feito** — verde `#C8D44E`
-- 🔴 **Não feito** — vermelho `#FF4444` (aplicado automaticamente após o dia)
-
-Clicar no card abre o picker do responsável (como hoje). Se você for o responsável (ou Master), aparece também um mini-toggle **Feito / Pendente** dentro do picker — ou direto no card via menu de contexto.
-
-Também em **Minhas Demandas → bloco "Hoje é seu dia de Stories"**: ganha botão "Marcar como feito" / "Desfazer".
-
-### Limpeza (tabela semanal)
-Cada célula com responsável ganha um pequeno indicador de status à direita (mesmo código de cor). Como a tabela é semanal recorrente, o status é por **ocorrência da semana atual** (segunda → domingo).
-
-No bloco **"Tarefas de limpeza hoje"** em Minhas Demandas: cada item da lista vira uma linha com checkbox **Feito** ao lado.
-
-Filtro visual: na visão "Limpeza" mostra status da semana corrente. Setas de "semana anterior / próxima" para Master consultar histórico (opcional, fora do MVP — apenas semana atual primeiro).
-
----
-
-## Regras de negócio
-
-- **Quem pode marcar Feito/Pendente:** o responsável da célula/dia, ou Master/Setor.
-- **Não feito é automático:** só é setado pelo sistema, ninguém marca manualmente. Se voltar a marcar Feito num dia anterior, sobrescreve "Não feito".
-- **Auto-marcação:** um job diário às 23:59 BRT varre Stories de ontem e Limpeza de ontem (por dia da semana correspondente) e marca como Não feito tudo que ainda estiver Pendente.
-- **Histórico:** registra `done_at` e `done_by` (quem marcou) para aparecer no relatório.
-
----
+### Onde já mostra link hoje
+- Lista compacta (linha de cada Post/Reel): ícone do Drive vira chip com nº de arquivos ("3 arquivos") e abre o painel.
+- Migração: links antigos do campo `driveLink` viram o primeiro item da lista de arquivos automaticamente. Nada é perdido.
 
 ## Detalhes técnicos
 
-### Banco (migração)
+### 1. Conector
+- Solicito linkar o conector **Google Drive** (`google_drive`) — você autoriza com a conta Google da agência uma vez. As credenciais ficam guardadas no Lovable, ninguém do time precisa logar.
 
-**Stories** — adicionar colunas em `stories_schedule`:
-- `status` text default 'pending' check in ('pending','done','missed')
-- `done_at` timestamptz null
-- `done_by` uuid null
-
-**Limpeza** — nova tabela `cleaning_log` (status por ocorrência de semana, já que `cleaning_schedule` é template recorrente):
+### 2. Banco (1 migration)
+Nova tabela `item_files`:
 ```text
-cleaning_log
-  id uuid pk
-  task_idx int
-  weekday int            -- 0..5 (Seg..Sáb)
-  occurrence_date date   -- data real daquela ocorrência (chave única com task_idx+weekday)
-  user_id uuid null      -- snapshot do responsável escalado
-  status text            -- 'done' | 'missed'
-  done_at timestamptz
-  done_by uuid
-  UNIQUE(task_idx, weekday, occurrence_date)
+id uuid pk
+item_id uuid fk → content_items(id) on delete cascade
+drive_file_id text         -- ID do arquivo no Drive
+name text
+mime_type text
+icon_url text null         -- iconLink do Drive
+thumbnail_url text null    -- thumbnailLink do Drive (assinado, expira)
+web_view_url text          -- webViewLink (abre no Drive)
+size_bytes bigint null
+added_by uuid fk → profiles(id)
+sort_order int default 0
+created_at timestamptz
 ```
-Status "pending" é implícito (sem linha).
+RLS: leitura para autenticados; insert/update/delete para responsáveis do item OU admin (mesma lógica de comentários). GRANTs para `authenticated` e `service_role`.
 
-**RLS:** leitura para todos os autenticados; insert/update pelo responsável OU admin.
+### 3. Server functions (em `src/lib/luzeria/drive.functions.ts`)
+Tudo via gateway do conector, autenticado, sem expor token Google ao cliente:
+- `searchDriveFiles({ query, pageToken? })` → lista arquivos do Drive da agência.
+- `getDriveFileMeta({ fileId })` → busca metadados (usado quando o user cola link, extrai ID e busca thumbnail/nome).
+- `uploadToDrive({ filename, mimeType, base64, folderPath })` → cria pasta-caminho se não existir e sobe o arquivo.
+- `attachFileToItem({ itemId, driveFileId })` → grava em `item_files`.
+- `removeFileFromItem({ fileId })` → desanexa (não apaga do Drive, só remove o vínculo).
+- `getThumbnailSignedUrl({ fileId })` → renova thumbnail expirada quando precisar.
 
-**GRANTs** padrão para `authenticated` e `service_role`.
+Permissões verificadas via `requireSupabaseAuth` + checagem de responsável/admin antes de qualquer escrita.
 
-### Job automático (pg_cron)
-Novo cron diário às **02:59 UTC** (≈ 23:59 BRT):
-- Stories: `UPDATE stories_schedule SET status='missed' WHERE day < CURRENT_DATE AND status='pending' AND user_id IS NOT NULL`
-- Limpeza: para cada `cleaning_schedule` ativa de `weekday = (ontem)`, se não existir `cleaning_log` da data de ontem → INSERT com `status='missed'`.
+### 4. Frontend
+- `src/components/luzeria/FilesSection.tsx` — nova seção dentro do `DetailPanel`.
+- `src/components/luzeria/DrivePicker.tsx` — modal de busca/seleção no Drive.
+- Substitui o uso atual do campo `driveLink` no `DetailPanel.tsx` e na lista (`ContentRow.tsx`) por essa seção. Mantém o campo antigo como input alternativo dentro do "Colar link".
+- Abertura: SEMPRE `window.open(webViewUrl, '_blank', 'noopener,noreferrer')`. Nunca iframe.
 
-### Server functions (em `src/lib/luzeria/api.functions.ts`)
-- `setStoryDone({ day, done: boolean })`
-- `setCleaningDone({ taskIdx, weekday, occurrenceDate, done: boolean })`
-- Query existente `cleaningQO` / `storiesQO` passa a retornar o status.
+### 5. Limites práticos
+- **Upload pelo app:** limito a 25 MB por arquivo na UI (suficiente pra artes, PDFs, áudios). Vídeos brutos grandes continuam melhor de subir manual no Drive e usar "Anexar do Drive".
+- **Quantidade:** sem limite — vários arquivos por item, ordenáveis.
+- **Onde fica armazenado:** 100% no Google Drive da agência. O Lovable só guarda o ID e metadados (nome, tipo, ícone).
 
-### Frontend
-- `StoriesView.tsx`: selo de status na célula + ação no picker.
-- `CleaningView.tsx`: bolinha de status na célula (semana corrente).
-- `MyTasks.tsx`: botões "Marcar como feito" nos blocos "Hoje é seu dia de Stories" e "Tarefas de limpeza hoje".
-- Sem mudanças em tipos públicos quebradoras — apenas extensão.
+## O que NÃO muda
+- Toda a lógica existente de status, atribuições, comentários, dashboard, ranking, stories, limpeza, etc. fica intacta.
+- Itens antigos com `driveLink` preenchido continuam funcionando — o link aparece como primeiro arquivo da lista após a migração.
 
-### Relatório (Configurações → Relatório)
-Aba existente ganha contadores rápidos no rodapé: "Stories no mês: X feitos / Y não feitos" e o mesmo para Limpeza. (Implementação leve; expandir depois se quiser.)
+## Ordem de execução
+1. Linkar conector Google Drive (você autoriza com a conta da agência).
+2. Migration `item_files` + RLS + GRANTs.
+3. Server functions de Drive.
+4. Componentes `FilesSection` + `DrivePicker`.
+5. Plugar no `DetailPanel` e `ContentRow`, migrar `driveLink` antigos.
+6. QA: testar abrir/anexar/upload no preview e no site publicado.
 
----
-
-## Pergunta antes de implementar
-
-Para **Limpeza**, o auto "Não feito" deve considerar:
-- (a) **Só dias úteis Seg–Sáb** (CLEANING_DAYS atual, ignora domingo), OU
-- (b) **Todos os dias** que tenham escala marcada para aquele dia da semana?
-
-Se você não responder, sigo com **(a)** que é o comportamento mais alinhado à escala atual.
+## Pergunta única antes de começar
+**Pasta raiz no Drive:** quer que o app organize os uploads em `Luzeria App/{Cliente}/{Mês}/...` automaticamente, ou prefere uma pasta única flat tipo `Luzeria App/Uploads/`? Se não responder, sigo com a estrutura organizada por cliente/mês.
