@@ -74,7 +74,10 @@ export const updateMyProfile = createServerFn({ method: "POST" })
       onboarded: z.boolean().optional(),
     }).strict().parse(d))
   .handler(async ({ data, context }) => {
-    const update: Record<string, any> = {};
+    const update: {
+      name?: string; color?: string; icon?: string | null;
+      avatar_url?: string | null; onboarded_at?: string;
+    } = {};
     if (data.name !== undefined) update.name = data.name;
     if (data.color !== undefined) update.color = data.color;
     if (data.icon !== undefined) update.icon = data.icon;
