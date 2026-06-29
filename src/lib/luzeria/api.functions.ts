@@ -806,13 +806,16 @@ export const listStories = createServerFn({ method: "GET" })
     const end = `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, "0")}-01`;
     const { data: rows, error } = await context.supabase
       .from("stories_schedule")
-      .select("id, day, user_id, label")
+      .select("id, day, user_id, label, status, done_at, done_by")
       .gte("day", start).lt("day", end);
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
       id: r.id as string, day: r.day as string,
       userId: (r.user_id ?? null) as string | null,
       label: (r.label ?? null) as string | null,
+      status: (r.status ?? "pending") as "pending" | "done" | "missed",
+      doneAt: (r.done_at ?? null) as string | null,
+      doneBy: (r.done_by ?? null) as string | null,
     }));
   });
 
@@ -834,6 +837,32 @@ export const upsertStoryDay = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const setStoryDone = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { day: string; done: boolean }) =>
+    z.object({
+      day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      done: z.boolean(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    // Check responsibility or admin
+    const { data: row, error: selErr } = await context.supabase
+      .from("stories_schedule")
+      .select("id, user_id")
+      .eq("day", data.day).maybeSingle();
+    if (selErr) throw new Error(selErr.message);
+    if (!row) throw new Error("Sem escala para esse dia");
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin && row.user_id !== context.userId) throw new Error("Forbidden");
+    const patch = data.done
+      ? { status: "done", done_at: new Date().toISOString(), done_by: context.userId }
+      : { status: "pending", done_at: null, done_by: null };
+    const { error } = await context.supabase
+      .from("stories_schedule").update(patch).eq("id", row.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const getMyToday = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId?: string; today: string; weekday: number }) => d)
@@ -845,14 +874,29 @@ export const getMyToday = createServerFn({ method: "GET" })
       targetUser = data.userId;
     }
     const { data: story } = await context.supabase
-      .from("stories_schedule").select("day").eq("day", data.today).eq("user_id", targetUser).maybeSingle();
+      .from("stories_schedule").select("day, status").eq("day", data.today).eq("user_id", targetUser).maybeSingle();
     let cleaning: number[] = [];
+    let cleaningStatuses: { taskIdx: number; status: "done" | "missed" }[] = [];
     if (data.weekday >= 0 && data.weekday <= 5) {
       const { data: rows } = await context.supabase
         .from("cleaning_schedule").select("task_idx").eq("weekday", data.weekday).eq("user_id", targetUser);
       cleaning = (rows ?? []).map((r: any) => r.task_idx as number);
+      if (cleaning.length > 0) {
+        const { data: logs } = await context.supabase
+          .from("cleaning_log")
+          .select("task_idx, status")
+          .eq("occurrence_date", data.today)
+          .eq("weekday", data.weekday)
+          .in("task_idx", cleaning);
+        cleaningStatuses = (logs ?? []).map((r: any) => ({ taskIdx: r.task_idx, status: r.status }));
+      }
     }
-    return { stories: !!story, cleaningTaskIdx: cleaning };
+    return {
+      stories: !!story,
+      storyStatus: (story?.status ?? null) as "pending" | "done" | "missed" | null,
+      cleaningTaskIdx: cleaning,
+      cleaningStatuses,
+    };
   });
 
 /* ============== CLEANING ============== */
@@ -860,9 +904,21 @@ export const getMyToday = createServerFn({ method: "GET" })
 export const getCleaning = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
-    const [{ data: rows }, { data: settings }] = await Promise.all([
+    // Compute Monday-based week start in UTC
+    const now = new Date();
+    const dow = now.getUTCDay(); // 0=Sun..6=Sat
+    const diffToMon = (dow + 6) % 7;
+    const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - diffToMon));
+    const sunday = new Date(monday); sunday.setUTCDate(monday.getUTCDate() + 6);
+    const weekStart = monday.toISOString().slice(0, 10);
+    const weekEnd = sunday.toISOString().slice(0, 10);
+
+    const [{ data: rows }, { data: settings }, { data: logs }] = await Promise.all([
       context.supabase.from("cleaning_schedule").select("id, task_idx, weekday, user_id, label"),
       context.supabase.from("cleaning_settings").select("note").eq("id", 1).maybeSingle(),
+      context.supabase.from("cleaning_log")
+        .select("task_idx, weekday, occurrence_date, status, done_at, done_by")
+        .gte("occurrence_date", weekStart).lte("occurrence_date", weekEnd),
     ]);
     return {
       cells: (rows ?? []).map((r: any) => ({
@@ -873,6 +929,15 @@ export const getCleaning = createServerFn({ method: "GET" })
         label: (r.label ?? null) as string | null,
       })),
       note: (settings?.note ?? "") as string,
+      weekStart,
+      weekLog: (logs ?? []).map((r: any) => ({
+        taskIdx: r.task_idx as number,
+        weekday: r.weekday as number,
+        occurrenceDate: r.occurrence_date as string,
+        status: r.status as "done" | "missed",
+        doneAt: (r.done_at ?? null) as string | null,
+        doneBy: (r.done_by ?? null) as string | null,
+      })),
     };
   });
 
@@ -891,6 +956,51 @@ export const upsertCleaningCell = createServerFn({ method: "POST" })
     const { error } = await context.supabase
       .from("cleaning_schedule")
       .upsert({ task_idx: data.taskIdx, weekday: data.weekday, user_id: data.userId ?? null, label: data.label ?? null, updated_at: new Date().toISOString() }, { onConflict: "task_idx,weekday" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setCleaningDone = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { taskIdx: number; weekday: number; occurrenceDate: string; done: boolean }) =>
+    z.object({
+      taskIdx: z.number().int().min(0),
+      weekday: z.number().int().min(0).max(6),
+      occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      done: z.boolean(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    // Validate responsibility (responsible scheduled OR admin)
+    const [{ data: isAdmin }, { data: cell }] = await Promise.all([
+      context.supabase.rpc("is_admin", { _user_id: context.userId }),
+      context.supabase.from("cleaning_schedule")
+        .select("user_id").eq("task_idx", data.taskIdx).eq("weekday", data.weekday).maybeSingle(),
+    ]);
+    if (!isAdmin && cell?.user_id !== context.userId) throw new Error("Forbidden");
+
+    if (!data.done) {
+      // Mark back to pending: remove the log row
+      const { error } = await context.supabase
+        .from("cleaning_log")
+        .delete()
+        .eq("task_idx", data.taskIdx)
+        .eq("weekday", data.weekday)
+        .eq("occurrence_date", data.occurrenceDate);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }
+
+    const { error } = await context.supabase
+      .from("cleaning_log")
+      .upsert({
+        task_idx: data.taskIdx,
+        weekday: data.weekday,
+        occurrence_date: data.occurrenceDate,
+        user_id: cell?.user_id ?? null,
+        status: "done",
+        done_at: new Date().toISOString(),
+        done_by: context.userId,
+      }, { onConflict: "task_idx,weekday,occurrence_date" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
