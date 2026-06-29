@@ -348,6 +348,17 @@ export const attachDriveFile = createServerFn({ method: "POST" })
       meta = null;
     }
 
+    // Move into the organized folder (best-effort).
+    try {
+      const target = await resolveTargetFolderForItem(
+        context.supabase, context.userId, data.itemId, { autoCreate: true },
+      );
+      if (target) await driveMoveTo(fileId, target);
+    } catch (e) {
+      // Don't fail the attach if the move fails; just log to console.
+      console.warn("[drive] attach move skipped:", (e as any)?.message);
+    }
+
     const row = {
       item_id: data.itemId,
       drive_file_id: fileId,
