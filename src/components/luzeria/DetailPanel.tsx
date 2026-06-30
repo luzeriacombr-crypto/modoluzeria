@@ -336,33 +336,55 @@ export function DetailPanel() {
           <div className="md:overflow-y-auto">
             {/* Status */}
             <ModalSection label="Status">
-          <div className="flex flex-col gap-2">
-            {statusOptionsFor(item.type).map((s) => {
-              const m = STATUS_META[s]; const I = STATUS_ICONS[s];
-              const active = item.status === s;
-              return (
-                <button key={s}
-                  onClick={() => {
-                    if (s === "PRONTO_PARA_PUBLICAR" && appSettings?.requireRatingOnFinalize &&
-                        item.status !== "PRONTO_PARA_PUBLICAR" && item.qualityRating == null) {
-                      setQualityFor("PRONTO_PARA_PUBLICAR");
-                      return;
-                    }
-                    setItemStatus.mutate({ data: { id: item.id, status: s } });
-                    flash(item.id);
-                  }}
-                  className="w-full flex items-center gap-3 rounded-md px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all"
+              <div className="relative" ref={statusRef}>
+                <button
+                  onClick={() => setStatusOpen((o) => !o)}
+                  className="w-full flex items-center justify-between gap-3 rounded-md px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all"
                   style={{
-                    backgroundColor: active ? m.bg : "rgba(255,255,255,0.05)",
-                    color: active ? m.color : "rgba(255,255,255,0.6)",
-                    border: `1px solid ${active ? m.color : "rgba(255,255,255,0.08)"}`,
+                    backgroundColor: STATUS_META[item.status].bg,
+                    color: STATUS_META[item.status].color,
+                    border: `1px solid ${STATUS_META[item.status].color}`,
                   }}>
-                  <I size={16} /> {m.label}
+                  <span className="flex items-center gap-3">
+                    {(() => {
+                      const I = STATUS_ICONS[item.status];
+                      return <I size={16} />;
+                    })()}
+                    {STATUS_META[item.status].label}
+                  </span>
+                  <ChevronDown size={16} className={`transition-transform ${statusOpen ? "rotate-180" : ""}`} />
                 </button>
-              );
-            })}
-          </div>
-        </ModalSection>
+                {statusOpen && (
+                  <div className="absolute z-50 left-0 right-0 mt-1 rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto">
+                    {statusOptionsFor(item.type).map((s) => {
+                      const m = STATUS_META[s]; const I = STATUS_ICONS[s];
+                      const active = item.status === s;
+                      return (
+                        <button key={s}
+                          onClick={() => {
+                            if (s === "PRONTO_PARA_PUBLICAR" && appSettings?.requireRatingOnFinalize &&
+                                item.status !== "PRONTO_PARA_PUBLICAR" && item.qualityRating == null) {
+                              setQualityFor("PRONTO_PARA_PUBLICAR");
+                              setStatusOpen(false);
+                              return;
+                            }
+                            setItemStatus.mutate({ data: { id: item.id, status: s } });
+                            setStatusOpen(false);
+                            flash(item.id);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all"
+                          style={{
+                            backgroundColor: active ? m.bg : "transparent",
+                            color: active ? m.color : "rgba(255,255,255,0.6)",
+                          }}>
+                          <I size={16} /> {m.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </ModalSection>
 
         {/* Responsáveis */}
         <ModalSection label="Responsáveis">
