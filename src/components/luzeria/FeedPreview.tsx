@@ -198,6 +198,7 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const PUBLIC_PREVIEW_BASE = "https://modoluzeria.lovable.app";
   async function generate() {
     const r = await getOrCreateShareToken.mutateAsync({ data: { clientId, monthId } });
     setToken(r.token); setOpen(true);
@@ -208,7 +209,7 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
   }
   function copyLink() {
     if (!token) return;
-    const url = `${window.location.origin}/preview/${token}`;
+    const url = `${PUBLIC_PREVIEW_BASE}/preview/${token}`;
     navigator.clipboard.writeText(url);
     setCopied(true); setTimeout(() => setCopied(false), 1500);
   }
@@ -236,7 +237,7 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
           <div className="flex items-stretch gap-1.5">
             <input
               readOnly
-              value={`${window.location.origin}/preview/${token}`}
+              value={`${PUBLIC_PREVIEW_BASE}/preview/${token}`}
               onFocus={(e) => e.currentTarget.select()}
               className="flex-1 text-[12px] px-2.5 py-2 rounded-md outline-none"
               style={{ background: "#0D0D0D", color: "#fff", border: "1px solid rgba(255,255,255,0.08)" }}
