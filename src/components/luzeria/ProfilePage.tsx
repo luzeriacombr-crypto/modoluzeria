@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Mail, Bell, Calendar } from "lucide-react";
+import { Mail, Bell, Calendar, User, Lock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useMe, useApi, notificationPrefsQO } from "@/lib/luzeria/queries";
 import { AvatarEditor, ColorPicker, showAvatarError, uploadAvatar } from "./AvatarEditor";
@@ -8,7 +8,7 @@ import { roleLabel } from "./Sidebar";
 
 export function ProfilePage() {
   const me = useMe().data;
-  const { updateMyProfile, setMyNotificationPreferences } = useApi();
+  const { updateMyProfile, setMyNotificationPreferences, updateMyAccount } = useApi();
   const { data: prefs } = useQuery(notificationPrefsQO());
   const [color, setColor] = useState<string>(me?.color ?? "#C8D44E");
   const [avatarPath, setAvatarPath] = useState<string | null>(me?.avatarPath ?? null);
@@ -104,8 +104,23 @@ export function ProfilePage() {
       </div>
 
       <p className="text-[11px] text-white/30 mt-4 text-center md:text-right">
-        Para alterar nome ou email, fale com um administrador.
+        A foto e a cor são visuais. Para alterar nome, email ou senha, use a seção abaixo.
       </p>
+
+      <AccountSection
+        initialName={me.name}
+        initialEmail={me.email}
+        loading={updateMyAccount.isPending}
+        onSave={(payload) =>
+          updateMyAccount.mutate(
+            { data: payload },
+            {
+              onSuccess: () => toast.success("Dados da conta atualizados."),
+              onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar"),
+            },
+          )
+        }
+      />
 
       <div className="mt-8 bg-[#1C1C1C] rounded-lg p-6 md:p-8">
         <div className="text-[10px] uppercase font-bold tracking-wider text-white/50 mb-5">
