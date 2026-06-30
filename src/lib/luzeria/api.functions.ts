@@ -443,6 +443,14 @@ export const getMonth = createServerFn({ method: "GET" })
       qualityRating: ((it as any).quality_rating ?? null) as any,
       feedOrder: ((it as any).feed_order ?? null) as any,
     }));
+    const coverPaths = (items ?? []).map((it: any) => it.cover_path).filter(Boolean);
+    const signedCovers = await signCoverPaths(context.supabase, coverPaths);
+    mapped.forEach((m, idx) => {
+      const raw = (items ?? [])[idx] as any;
+      m.coverPath = raw?.cover_path ?? null;
+      m.coverSource = (raw?.cover_source ?? null) as any;
+      m.coverUrl = raw?.cover_path ? signedCovers.get(raw.cover_path) ?? null : null;
+    });
     return {
       id: month.id, key: month.key,
       posts: mapped.filter((i) => i.type === "post"),
