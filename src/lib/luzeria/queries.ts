@@ -6,7 +6,7 @@ import {
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile,
   listStories, upsertStoryDay, setStoryDone, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
-  adminCreateUser, getAdminDashboard, getTopMembers, getMemberFinalizations,
+  adminCreateUser, adminSendPasswordReset, getAdminDashboard, getTopMembers, getMemberFinalizations,
   getReport, getMemberReportDetail,
   getClientFicha,
   upsertClientLink, deleteClientLink,
