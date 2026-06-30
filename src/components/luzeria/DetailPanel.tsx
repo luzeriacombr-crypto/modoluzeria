@@ -141,6 +141,7 @@ export function DetailPanel() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [newCheck, setNewCheck] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
+  const [coverOpen, setCoverOpen] = useState(false);
   const statusRef = useRef<HTMLDivElement>(null);
   const { updateChecklist } = useApi();
 
@@ -242,10 +243,24 @@ export function DetailPanel() {
           <div className="md:overflow-y-auto md:border-r md:border-white/[0.06]">
             {/* Drive preview */}
             <ModalSection label="Mídia">
-              <MediaPreview itemId={item.id} onEmpty={() => {
-                const el = document.getElementById("lz-files-section");
-                el?.scrollIntoView({ behavior: "smooth", block: "center" });
-              }} />
+              <MediaPreview
+                itemId={item.id}
+                coverUrl={item.coverUrl ?? null}
+                onEmpty={() => {
+                  const el = document.getElementById("lz-files-section");
+                  el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
+              />
+              {item.type === "reel" && canEditFiles && (
+                <button
+                  type="button"
+                  onClick={() => setCoverOpen(true)}
+                  className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider text-white/80 hover:text-[#0D0D0D] bg-white/[0.04] hover:bg-[#C8D44E] border border-white/10 hover:border-[#C8D44E] transition-colors"
+                >
+                  <ImagePlus size={14} />
+                  {item.coverPath ? "Trocar capa do Reel" : "Definir capa do Reel"}
+                </button>
+              )}
             </ModalSection>
 
             {/* Briefing (era Copy) */}
