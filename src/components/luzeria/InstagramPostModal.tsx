@@ -241,7 +241,7 @@ export function InstagramPostModal({
           </div>
 
           {/* Caption + feedback scroll area */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 text-sm">
+          <div className="flex-1 md:overflow-y-auto px-4 py-3 text-sm">
             {/* Caption */}
             {item.caption ? (
               <div className="text-[14px] leading-relaxed text-neutral-800 whitespace-pre-wrap">
