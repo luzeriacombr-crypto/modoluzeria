@@ -1357,27 +1357,30 @@ export const getReport = createServerFn({ method: "GET" })
     };
 
     // ---- by member ----
-    const memberAgg = new Map<string, { posts: number; reels: number; outros: number; stories: number; cleaning: number }>();
+    const memberAgg = new Map<string, { posts: number; reels: number; outros: number; stories: number; cleaning: number; lateCount: number; lateDaysSum: number }>();
     history.forEach((h) => {
       const k = h.userId;
-      const row = memberAgg.get(k) ?? { posts: 0, reels: 0, outros: 0, stories: 0, cleaning: 0 };
+      const row = memberAgg.get(k) ?? { posts: 0, reels: 0, outros: 0, stories: 0, cleaning: 0, lateCount: 0, lateDaysSum: 0 };
       if (h.type === "post") row.posts++;
       else if (h.type === "reel") row.reels++;
       else if (h.type === "outros") row.outros++;
       else if (h.type === "stories") row.stories++;
       else if (h.type === "cleaning") row.cleaning++;
+      if (h.kind === "content" && h.lateDays > 0) { row.lateCount++; row.lateDaysSum += h.lateDays; }
       memberAgg.set(k, row);
     });
     const byMember = [...memberAgg.entries()].map(([userId, v]) => {
       const p = profileById.get(userId);
       const total = v.posts + v.reels + v.outros + v.stories + v.cleaning;
+      const { lateDaysSum, ...rest } = v;
       return {
         userId,
         name: p?.name ?? "—",
         color: p?.color ?? "#888",
         icon: p?.icon ?? null,
         role: roleByUser.get(userId) ?? "member",
-        ...v,
+        ...rest,
+        avgLateDays: v.lateCount > 0 ? Math.round((lateDaysSum / v.lateCount) * 10) / 10 : 0,
         total,
       };
     }).sort((a, b) => b.total - a.total);
