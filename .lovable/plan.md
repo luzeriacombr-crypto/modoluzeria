@@ -1,22 +1,29 @@
-Adicionar uma saudação estilizada no topo da página Minhas Demandas, replicando o visual do badge "Dashboard" da página Dashboard.
 
-### O que será feito
+## Objetivo
+Refazer apenas a aba "Clientes" do `MobileNav.tsx` (versão mobile) para ficar visualmente alinhada ao resto do app.
 
-1. Editar `src/components/luzeria/MyTasks.tsx`.
-2. Inserir, acima do título "Coisas para fazer", um badge com o texto:
-   `Olá, {primeira letra maiúscula do nome}! 🤩`
-3. O badge usará o mesmo estilo do badge "Dashboard" em `AdminDashboard.tsx`:
-   - fundo verde translúcido (`rgba(200,212,78,0.15)`),
-   - texto na cor principal `#C8D44E`,
-   - formato arredondado (pill),
-   - fonte em caixa alta, tracking amplo e tamanho reduzido.
-4. Garantir que o nome do usuário tenha a primeira letra sempre maiúscula, mesmo que salvo em minúsculas no perfil.
-5. Verificar no preview que a saudação aparece corretamente tanto no desktop quanto no mobile, sem quebrar o layout existente (incluindo o seletor "Ver como" para admins).
+## Mudanças (somente `src/components/luzeria/MobileNav.tsx`)
 
-### Arquivos envolvidos
+1. **Agrupar por categoria** na ordem: Social Media → Pack Digital → Avulsos → Ex-clientes (e quaisquer extras no final). Mesma lógica usada na sidebar (`c.category || "Social Media"`, filtra `!c.archived`).
 
-- `src/components/luzeria/MyTasks.tsx` (único arquivo alterado)
+2. **Header de cada seção**: pill discreto no topo do grupo
+   - Texto: nome da categoria em uppercase + contador
+   - Cor do texto: a mesma usada na sidebar (`Social Media`/`Pack Digital` = `#5BA88A`, `Avulsos` = `#C8D44E`, `Ex-clientes` = `#E76F51`)
+   - Pequena barra/linha divisória abaixo, bem leve
 
-### Critério de aceite
+3. **Card de cliente** (substitui o `<li>` atual):
+   - Grid de 1 coluna, gap 10px, padding lateral 16px
+   - Cada card: `rounded-2xl`, padding 14px, altura confortável (~64px)
+   - Fundo: cor do cliente com alpha baixo (~15%), usando `color-mix(in oklab, <c.color> 18%, transparent)`
+   - Borda sutil: `color-mix(in oklab, <c.color> 35%, transparent)` com 1px
+   - Conteúdo: Avatar (36px) + nome em branco semibold + estrela `#C8D44E` se favorito + chevron `›` à direita em branco/40%
+   - `active:scale-[0.98]` para feedback de toque
 
-- O usuário vê "Olá, Nome! 🤩" dentro de um badge verde arredondado logo acima de "Coisas para fazer" ao abrir "Minhas Demandas".
+4. **Estado vazio por grupo**: se a categoria não tem clientes (ex.: Avulsos), pula a seção (não exibe header). Se nenhum cliente, mantém mensagem central.
+
+5. **Header da tela**: manter "Clientes" sticky atual; adicionar contagem total à direita em `text-white/40`.
+
+## Fora do escopo
+- Desktop não muda.
+- Lógica de seleção (`selectClient` / `setTab("home")`) e demais views intactas.
+- Sem alterações em store, queries ou estilos globais.
