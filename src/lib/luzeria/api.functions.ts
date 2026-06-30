@@ -193,6 +193,37 @@ export const adminSendPasswordReset = createServerFn({ method: "POST" })
 
 /* ============== CLIENTS ============== */
 
+export const updateMyAccount = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { name?: string; email?: string; password?: string }) =>
+    z.object({
+      name: z.string().trim().min(1).max(80).optional(),
+      email: z.string().trim().email().max(255).optional(),
+      password: z.string().min(6).max(128).optional(),
+    }).strict().parse(d))
+  .handler(async ({ data, context }) => {
+    if (!data.name && !data.email && !data.password) return { ok: true };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const authUpdate: { email?: string; password?: string } = {};
+    if (data.email) authUpdate.email = data.email;
+    if (data.password) authUpdate.password = data.password;
+    if (authUpdate.email || authUpdate.password) {
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(context.userId, {
+        ...authUpdate,
+        email_confirm: true,
+      });
+      if (error) throw new Error(error.message);
+    }
+    const profileUpdate: { name?: string; email?: string } = {};
+    if (data.name) profileUpdate.name = data.name;
+    if (data.email) profileUpdate.email = data.email;
+    if (Object.keys(profileUpdate).length > 0) {
+      const { error } = await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", context.userId);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
 export const listClients = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
