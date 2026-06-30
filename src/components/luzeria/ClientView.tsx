@@ -128,7 +128,7 @@ export function ClientView({ clientId }: { clientId: string }) {
         )}
         {tab === "profile" && <ProfileTab client={client} profiles={profiles} canEdit={isAdmin}
           onSave={(patch: Record<string, any>) => updateClient.mutate({ data: { id: client.id, patch } })} />}
-        {tab === "feed" && month && <FeedPreview month={month} />}
+        {tab === "feed" && month && <FeedPreview month={month} client={client} />}
       </div>
     </div>
   );
