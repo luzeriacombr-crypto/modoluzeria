@@ -627,7 +627,7 @@ export function DetailPanel() {
 
         {/* Quality */}
         {showQuality && (
-          <ModalSection label="Qualidade">
+          <ModalSection label="QUALIDADE DA ARTE">
             <div className="flex items-center gap-2">
               {[1, 2, 3, 4, 5].map((n) => {
                 const filled = (item.qualityRating ?? 0) >= n;
