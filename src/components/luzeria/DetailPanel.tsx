@@ -327,7 +327,7 @@ export function DetailPanel() {
           <div className="md:overflow-y-auto">
             {/* Status */}
             <ModalSection label="Status">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             {statusOptionsFor(item.type).map((s) => {
               const m = STATUS_META[s]; const I = STATUS_ICONS[s];
               const active = item.status === s;
@@ -342,13 +342,13 @@ export function DetailPanel() {
                     setItemStatus.mutate({ data: { id: item.id, status: s } });
                     flash(item.id);
                   }}
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wide transition-all"
+                  className="w-full flex items-center gap-3 rounded-md px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all"
                   style={{
                     backgroundColor: active ? m.bg : "rgba(255,255,255,0.05)",
                     color: active ? m.color : "rgba(255,255,255,0.6)",
                     border: `1px solid ${active ? m.color : "rgba(255,255,255,0.08)"}`,
                   }}>
-                  <I size={12} /> {m.label}
+                  <I size={16} /> {m.label}
                 </button>
               );
             })}
