@@ -115,7 +115,11 @@ export function InstagramPostModal({
   useEffect(() => {
     if (isPublic && composerOpen && detailsRef.current) {
       const el = detailsRef.current;
-      setTimeout(() => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }), 50);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        });
+      });
     }
   }, [isPublic, composerOpen]);
 
