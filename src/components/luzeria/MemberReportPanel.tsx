@@ -128,6 +128,12 @@ function ListBlock({ title, items, renderRight }: {
               <span className="text-white/50 truncate w-24">{it.clientName ?? "—"}</span>
               <span className="text-white/80 flex-1 truncate">{it.title}</span>
               {renderRight(it)}
+              {it.lateDays > 0 && (
+                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0"
+                  style={{ backgroundColor: "rgba(255,107,107,0.18)", color: "#FF6B6B" }}>
+                  Atraso {it.lateDays}d
+                </span>
+              )}
               <span className="text-white/40 text-[10px] shrink-0">{new Date(it.finalizedAt).toLocaleDateString("pt-BR")}</span>
             </div>
           ))}
