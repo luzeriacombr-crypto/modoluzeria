@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Heart, MessageCircle, Play, Send, Share2, X, Bookmark, ExternalLink, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, MessageCircle, Play, Send, Share2, X, Bookmark, ExternalLink, Calendar, Pencil } from "lucide-react";
 import { driveThumbnailQO, publicDriveThumbQO } from "@/lib/luzeria/queries";
 
 /* ------------ Shared types ------------ */
@@ -106,6 +106,9 @@ export function InstagramPostModal({
   const [author, setAuthor] = useState(initialAuthorName ?? "");
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const isPublic = mode.kind === "public";
+  const feedbackLabel = isPublic ? "Sugestões" : "Comentários";
 
   // Lock scroll & ESC
   useEffect(() => {
@@ -128,7 +131,7 @@ export function InstagramPostModal({
     const a = author.trim(); const t = text.trim();
     if (!a || !t) return;
     setSubmitting(true);
-    try { await onSubmitFeedback(a, t); setText(""); }
+    try { await onSubmitFeedback(a, t); setText(""); setComposerOpen(false); }
     finally { setSubmitting(false); }
   }
 
@@ -268,10 +271,12 @@ export function InstagramPostModal({
             {/* Feedback list */}
             <div className="mt-5 pt-4 border-t border-neutral-200">
               <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-500 mb-3">
-                Comentários · {item.feedback.length}
+                {feedbackLabel} · {item.feedback.length}
               </div>
               {item.feedback.length === 0 ? (
-                <div className="text-[13px] text-neutral-400">Nenhum comentário ainda.</div>
+                <div className="text-[13px] text-neutral-400">
+                  {isPublic ? "Nenhuma sugestão ainda." : "Nenhum comentário ainda."}
+                </div>
               ) : (
                 <div className="space-y-3">
                   {item.feedback.map((f) => (
@@ -286,22 +291,24 @@ export function InstagramPostModal({
             </div>
           </div>
 
-          {/* IG-style action bar */}
-          <div className="border-t border-neutral-200 px-4 pt-3 pb-1">
-            <div className="flex items-center gap-4 text-neutral-800">
-              <Heart size={22} />
-              <MessageCircle size={22} />
-              <Send size={22} />
-              <div className="flex-1" />
-              <Bookmark size={22} />
+          {/* IG-style action bar — somente no modo interno */}
+          {!isPublic && (
+            <div className="border-t border-neutral-200 px-4 pt-3 pb-1">
+              <div className="flex items-center gap-4 text-neutral-800">
+                <Heart size={22} />
+                <MessageCircle size={22} />
+                <Send size={22} />
+                <div className="flex-1" />
+                <Bookmark size={22} />
+              </div>
+              <div className="mt-2 text-[11px] text-neutral-500">
+                {item.dueDate ? `Prevista para ${formatDateBR(item.dueDate)}` : "Sem data definida"}
+              </div>
             </div>
-            <div className="mt-2 text-[11px] text-neutral-500">
-              {item.dueDate ? `Prevista para ${formatDateBR(item.dueDate)}` : "Sem data definida"}
-            </div>
-          </div>
+          )}
 
-          {/* Comment composer */}
-          {canComment && onSubmitFeedback && (
+          {/* Composer interno (equipe) */}
+          {!isPublic && canComment && onSubmitFeedback && (
             <div className="border-t border-neutral-200 px-4 py-3 bg-white">
               {!initialAuthorName && (
                 <input
@@ -331,6 +338,56 @@ export function InstagramPostModal({
               </div>
             </div>
           )}
+
+          {/* Composer público: "Sugerir alteração" */}
+          {isPublic && canComment && onSubmitFeedback && (
+            <div className="border-t border-neutral-200 px-4 py-3 bg-white">
+              {!composerOpen ? (
+                <button
+                  onClick={() => setComposerOpen(true)}
+                  className="w-full inline-flex items-center justify-center gap-2 text-[14px] font-semibold py-2.5 rounded-md transition"
+                  style={{ background: "#0D0D0D", color: "#fff" }}
+                >
+                  <Pencil size={15} /> Sugerir alteração
+                </button>
+              ) : (
+                <div>
+                  {!initialAuthorName && (
+                    <input
+                      type="text"
+                      value={author}
+                      onChange={(e) => setAuthor(e.target.value)}
+                      placeholder="Seu nome"
+                      className="w-full text-[13px] px-3 py-2 mb-2 border border-neutral-200 rounded-md outline-none focus:border-neutral-400"
+                      maxLength={60}
+                    />
+                  )}
+                  <textarea
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder="Descreva sua sugestão de alteração…"
+                    rows={3}
+                    className="w-full text-[14px] px-3 py-2 border border-neutral-200 rounded-md outline-none focus:border-neutral-400 resize-none"
+                    maxLength={1000}
+                    autoFocus
+                  />
+                  <div className="mt-2 flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => { setComposerOpen(false); setText(""); }}
+                      className="text-[13px] font-medium text-neutral-500 hover:text-neutral-800 px-3 py-1.5"
+                    >Cancelar</button>
+                    <button
+                      onClick={submit}
+                      disabled={submitting || !author.trim() || !text.trim()}
+                      className="text-[13px] font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50"
+                      style={{ background: "#C8D44E", color: "#0D0D0D" }}
+                    >{submitting ? "Enviando…" : "Enviar sugestão"}</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {!canComment && (
             <div className="border-t border-neutral-200 px-4 py-3 text-[12px] text-neutral-500 bg-white">
               <Share2 size={12} className="inline mr-1.5" />
