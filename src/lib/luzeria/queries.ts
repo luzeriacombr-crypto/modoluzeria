@@ -10,6 +10,8 @@ import {
   updateMyAccount,
   getReport, getMemberReportDetail,
   updateFeedOrder,
+  setItemCover,
+  uploadItemCover,
   getClientFicha,
   upsertClientLink, deleteClientLink,
   upsertClientContact, deleteClientContact,
@@ -27,7 +29,7 @@ import {
 } from "./roadmap.functions";
 import {
   listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, detachItemFile,
-  getDriveThumbnail, reorderItemFiles,
+  getDriveThumbnail, getDriveFileBytes, reorderItemFiles,
   getClientDeliveriesFolder, setClientDeliveriesFolder, clearClientDeliveriesFolder,
 } from "./drive.functions";
 import {
@@ -293,6 +295,14 @@ export function useApi() {
     deleteItem: useMutation({ mutationFn: useServerFn(deleteItem), onSuccess: invalidateAll }),
     updateFeedOrder: useMutation({
       mutationFn: useServerFn(updateFeedOrder),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
+    }),
+    setItemCover: useMutation({
+      mutationFn: useServerFn(setItemCover),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
+    }),
+    uploadItemCover: useMutation({
+      mutationFn: useServerFn(uploadItemCover),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
     }),
     setUserRole: useMutation({ mutationFn: useServerFn(setUserRole), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
