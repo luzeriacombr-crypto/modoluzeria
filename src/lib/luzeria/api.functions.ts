@@ -429,6 +429,7 @@ export const getMonth = createServerFn({ method: "GET" })
       checklist: ((it as any).checklist ?? []) as any,
       reworkCount: ((it as any).rework_count ?? 0) as any,
       qualityRating: ((it as any).quality_rating ?? null) as any,
+      feedOrder: ((it as any).feed_order ?? null) as any,
     }));
     return {
       id: month.id, key: month.key,
@@ -453,6 +454,38 @@ export const updateItem = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("content_items").update(data.patch).eq("id", data.id);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const updateFeedOrder = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { monthId: string; orderedItemIds: string[] }) =>
+    z.object({
+      monthId: z.string().uuid(),
+      orderedItemIds: z.array(z.string().uuid()).max(500),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Apenas admins podem reordenar o feed.");
+    // Update each item's feed_order to its position in the array.
+    // Items not in the list are reset to null so they fall to the end.
+    const { data: existing } = await context.supabase
+      .from("content_items").select("id").eq("month_id", data.monthId);
+    const allIds = (existing ?? []).map((x: any) => x.id);
+    const ordered = data.orderedItemIds.filter((id) => allIds.includes(id));
+    const updates = ordered.map((id, pos) =>
+      context.supabase.from("content_items").update({ feed_order: pos }).eq("id", id),
+    );
+    const missing = allIds.filter((id) => !ordered.includes(id));
+    if (missing.length) {
+      updates.push(
+        context.supabase.from("content_items").update({ feed_order: null }).in("id", missing) as any,
+      );
+    }
+    const results = await Promise.all(updates);
+    for (const r of results) {
+      if ((r as any)?.error) throw new Error((r as any).error.message);
+    }
     return { ok: true };
   });
 

@@ -5,6 +5,7 @@ import { clientsQO, monthKeysQO, monthQO, profilesQO, useApi } from "@/lib/luzer
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { ContentRow } from "./ContentRow";
+import { FeedPreview } from "./FeedPreview";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { useMe } from "@/lib/luzeria/queries";
 
@@ -15,7 +16,7 @@ export function ClientView({ clientId }: { clientId: string }) {
   const { selectedMonthKey, selectMonth } = useUI();
   const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
-  const [tab, setTab] = useState<"posts" | "reels" | "outros" | "profile">("posts");
+  const [tab, setTab] = useState<"posts" | "reels" | "outros" | "feed" | "profile">("posts");
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { duplicateMonth, updateClient, addContentItem, deleteItem } = useApi();
@@ -24,8 +25,8 @@ export function ClientView({ clientId }: { clientId: string }) {
   if (!client) return null;
   const isAvulso = client.category === "Avulsos";
   const tabs = isAvulso
-    ? (["posts", "reels", "outros"] as const)
-    : (["posts", "reels", "profile"] as const);
+    ? (["posts", "reels", "outros", "feed"] as const)
+    : (["posts", "reels", "feed", "profile"] as const);
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
   const idx = sortedKeys.indexOf(selectedMonthKey);
@@ -88,7 +89,7 @@ export function ClientView({ clientId }: { clientId: string }) {
           <button key={t} onClick={() => setTab(t)}
             className="relative py-3 text-sm font-semibold transition-colors"
             style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
-            {t === "posts" ? "Posts" : t === "reels" ? "Reels" : t === "outros" ? "Outros" : "Perfil do Cliente"}
+            {t === "posts" ? "Posts" : t === "reels" ? "Reels" : t === "outros" ? "Outros" : t === "feed" ? "Preview de Feed" : "Perfil do Cliente"}
             {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "#C8D44E" }} />}
           </button>
         ))}
@@ -127,6 +128,7 @@ export function ClientView({ clientId }: { clientId: string }) {
         )}
         {tab === "profile" && <ProfileTab client={client} profiles={profiles} canEdit={isAdmin}
           onSave={(patch: Record<string, any>) => updateClient.mutate({ data: { id: client.id, patch } })} />}
+        {tab === "feed" && month && <FeedPreview month={month} />}
       </div>
     </div>
   );

@@ -63,6 +63,8 @@ export interface ContentItem {
   reworkCount?: number;
   /** Nota de qualidade dada quando virou PRONTO_PARA_PUBLICAR (1–5). */
   qualityRating?: number | null;
+  /** Posição na aba "Preview de Feed" (independente de `idx`). */
+  feedOrder?: number | null;
 }
 
 export interface MonthData {

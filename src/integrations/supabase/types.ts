@@ -449,6 +449,7 @@ export type Database = {
           drive_link: string
           due_date: string | null
           editor_id: string | null
+          feed_order: number | null
           finished_at: string | null
           id: string
           idx: number
@@ -472,6 +473,7 @@ export type Database = {
           drive_link?: string
           due_date?: string | null
           editor_id?: string | null
+          feed_order?: number | null
           finished_at?: string | null
           id?: string
           idx: number
@@ -495,6 +497,7 @@ export type Database = {
           drive_link?: string
           due_date?: string | null
           editor_id?: string | null
+          feed_order?: number | null
           finished_at?: string | null
           id?: string
           idx?: number
