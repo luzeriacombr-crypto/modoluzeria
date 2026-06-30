@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Mail, Bell, Calendar } from "lucide-react";
+import { Mail, Bell, Calendar, User, Lock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useMe, useApi, notificationPrefsQO } from "@/lib/luzeria/queries";
 import { AvatarEditor, ColorPicker, showAvatarError, uploadAvatar } from "./AvatarEditor";
@@ -8,7 +8,7 @@ import { roleLabel } from "./Sidebar";
 
 export function ProfilePage() {
   const me = useMe().data;
-  const { updateMyProfile, setMyNotificationPreferences } = useApi();
+  const { updateMyProfile, setMyNotificationPreferences, updateMyAccount } = useApi();
   const { data: prefs } = useQuery(notificationPrefsQO());
   const [color, setColor] = useState<string>(me?.color ?? "#C8D44E");
   const [avatarPath, setAvatarPath] = useState<string | null>(me?.avatarPath ?? null);
@@ -104,8 +104,23 @@ export function ProfilePage() {
       </div>
 
       <p className="text-[11px] text-white/30 mt-4 text-center md:text-right">
-        Para alterar nome ou email, fale com um administrador.
+        A foto e a cor são visuais. Para alterar nome, email ou senha, use a seção abaixo.
       </p>
+
+      <AccountSection
+        initialName={me.name}
+        initialEmail={me.email}
+        loading={updateMyAccount.isPending}
+        onSave={(payload) =>
+          updateMyAccount.mutate(
+            { data: payload },
+            {
+              onSuccess: () => toast.success("Dados da conta atualizados."),
+              onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar"),
+            },
+          )
+        }
+      />
 
       <div className="mt-8 bg-[#1C1C1C] rounded-lg p-6 md:p-8">
         <div className="text-[10px] uppercase font-bold tracking-wider text-white/50 mb-5">
@@ -183,5 +198,87 @@ function PrefRow({ icon, title, description, value, disabled, onChange }: {
         }`} />
       </button>
     </div>
+  );
+}
+
+function AccountSection({ initialName, initialEmail, loading, onSave }: {
+  initialName: string;
+  initialEmail: string;
+  loading: boolean;
+  onSave: (payload: { name?: string; email?: string; password?: string }) => void;
+}) {
+  const [name, setName] = useState(initialName);
+  const [email, setEmail] = useState(initialEmail);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+
+  useEffect(() => { setName(initialName); }, [initialName]);
+  useEffect(() => { setEmail(initialEmail); }, [initialEmail]);
+
+  const nameChanged = name.trim() !== initialName && name.trim().length > 0;
+  const emailChanged = email.trim() !== initialEmail && /\S+@\S+\.\S+/.test(email);
+  const passwordSet = password.length > 0;
+  const dirty = nameChanged || emailChanged || passwordSet;
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (passwordSet) {
+      if (password.length < 6) { toast.error("A senha precisa ter ao menos 6 caracteres."); return; }
+      if (password !== confirm) { toast.error("As senhas não coincidem."); return; }
+    }
+    const payload: { name?: string; email?: string; password?: string } = {};
+    if (nameChanged) payload.name = name.trim();
+    if (emailChanged) payload.email = email.trim();
+    if (passwordSet) payload.password = password;
+    onSave(payload);
+    setPassword(""); setConfirm("");
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-8 bg-[#1C1C1C] rounded-lg p-6 md:p-8 space-y-5">
+      <div className="text-[10px] uppercase font-bold tracking-wider text-white/50">
+        Dados da conta
+      </div>
+      <AccountField icon={<User size={14} />} label="Nome">
+        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80}
+          className="lz-input" placeholder="Seu nome" />
+      </AccountField>
+      <AccountField icon={<Mail size={14} />} label="Email (login)">
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255}
+          className="lz-input" placeholder="voce@luzeria.com.br" />
+      </AccountField>
+      <AccountField icon={<Lock size={14} />} label="Nova senha (opcional)">
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password" minLength={6}
+          className="lz-input" placeholder="Mínimo 6 caracteres" />
+      </AccountField>
+      {passwordSet && (
+        <AccountField icon={<Lock size={14} />} label="Confirmar nova senha">
+          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
+            autoComplete="new-password" className="lz-input" placeholder="Repita a senha" />
+        </AccountField>
+      )}
+      <div className="flex justify-end">
+        <button type="submit" disabled={!dirty || loading}
+          className="text-sm font-bold px-6 py-2.5 rounded-md transition-opacity hover:opacity-90 disabled:opacity-40"
+          style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
+          {loading ? "Salvando…" : "Salvar conta"}
+        </button>
+      </div>
+      <p className="text-[11px] text-white/30">
+        Ao alterar email ou senha você continua logado nesta sessão, mas use os novos dados no próximo login.
+      </p>
+    </form>
+  );
+}
+
+function AccountField({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="text-[10px] uppercase font-bold tracking-wider text-white/50 inline-flex items-center gap-1.5">
+        <span style={{ color: "#C8D44E" }}>{icon}</span> {label}
+      </span>
+      <div className="mt-1.5">{children}</div>
+    </label>
   );
 }
