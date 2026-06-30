@@ -152,6 +152,13 @@ export function DetailPanel() {
     }
   }, [item?.id]); // eslint-disable-line
 
+  useEffect(() => {
+    if (!statusOpen) return;
+    const h = (e: MouseEvent) => { if (!statusRef.current?.contains(e.target as Node)) setStatusOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [statusOpen]);
+
   if (!selectedItemId) return null;
   if (!item) return null;
 
