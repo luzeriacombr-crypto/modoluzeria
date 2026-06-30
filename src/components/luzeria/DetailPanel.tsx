@@ -692,6 +692,14 @@ export function DetailPanel() {
           });
         }}
       />
+
+      {coverOpen && (
+        <ReelCoverEditor
+          itemId={item.id}
+          currentCoverUrl={item.coverUrl ?? null}
+          onClose={() => setCoverOpen(false)}
+        />
+      )}
     </div>
   );
 }
