@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2 } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType, type Status } from "@/lib/luzeria/types";
@@ -10,6 +10,7 @@ import { MentionInput, renderMentions } from "./MentionInput";
 import { ItemTimeline } from "./ItemTimeline";
 import { QualityModal } from "./QualityModal";
 import { FilesSection } from "./FilesSection";
+import { ReelCoverEditor } from "./ReelCoverEditor";
 
 function findItem(month: any, id: string): ContentItem | undefined {
   return (
@@ -48,15 +49,15 @@ function extractDriveFileId(url: string): string | null {
   return null;
 }
 
-function MediaPreview({ itemId, onEmpty }: { itemId: string; onEmpty: () => void }) {
+function MediaPreview({ itemId, onEmpty, coverUrl }: { itemId: string; onEmpty: () => void; coverUrl: string | null }) {
   const { data: files = [], isLoading: filesLoading } = useQuery(itemFilesQO(itemId));
   const first = files[0];
   const fileId = first?.driveFileId ?? null;
-  const { data: thumbData, isLoading: thumbLoading } = useQuery(driveThumbnailQO(fileId, !!fileId));
-  const thumb = thumbData?.dataUrl ?? null;
+  const { data: thumbData, isLoading: thumbLoading } = useQuery(driveThumbnailQO(fileId, !!fileId && !coverUrl));
+  const thumb = coverUrl ?? thumbData?.dataUrl ?? null;
   const href = first ? normalizeExternalUrl(first.webViewUrl) : null;
 
-  if (!filesLoading && !first) {
+  if (!filesLoading && !first && !coverUrl) {
     return (
       <button
         type="button"
