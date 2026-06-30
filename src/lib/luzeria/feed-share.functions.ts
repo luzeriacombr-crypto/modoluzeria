@@ -252,13 +252,13 @@ export const getPublicDriveThumbnail = createServerFn({ method: "GET" })
       .select("month_id, revoked_at")
       .eq("token", data.token).maybeSingle();
     if (!tok || tok.revoked_at) return { dataUrl: null as string | null };
-    // Make sure the fileId belongs to a content_item under this month
-    const { data: hit } = await supabaseAdmin
-      .from("item_files")
-      .select("id, content_items!inner(month_id)")
-      .eq("drive_file_id", data.fileId).limit(1).maybeSingle();
-    // (don't error if not found — still allow optimistic; but enforce strictly)
-    if (!hit) return { dataUrl: null as string | null };
+    // Make sure the fileId belongs to an item_file whose item is in this token's month.
+    const { data: fileRow } = await supabaseAdmin
+      .from("item_files").select("item_id").eq("drive_file_id", data.fileId).limit(1).maybeSingle();
+    if (!fileRow) return { dataUrl: null as string | null };
+    const { data: itemRow } = await supabaseAdmin
+      .from("content_items").select("month_id").eq("id", fileRow.item_id).maybeSingle();
+    if (!itemRow || itemRow.month_id !== tok.month_id) return { dataUrl: null as string | null };
     const dataUrl = await fetchThumbDataUrl(data.fileId, data.size ?? 720);
     return { dataUrl };
   });
