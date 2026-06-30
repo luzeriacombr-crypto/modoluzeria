@@ -5,8 +5,8 @@ export type Status =
   | "REVISAO_CLIENTE"
   | "AGENDAMENTO"
   | "REVISAO_AGENDAMENTO"
-  | "FINALIZADO"
-  | "BLOQUEADO"
+  | "PRONTO_PARA_PUBLICAR"
+  | "TRAVADO"
   // Post-only
   | "CRIACAO"
   | "REVISAO_ARTE"
