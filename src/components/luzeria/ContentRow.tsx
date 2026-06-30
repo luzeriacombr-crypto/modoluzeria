@@ -58,7 +58,7 @@ export function ContentRow({ item, profiles, idx }: {
         {String(idx).padStart(2, "0")}
       </span>
 
-      <RowThumb itemId={item.id} />
+      <RowThumb itemId={item.id} coverUrl={item.coverUrl ?? null} />
 
       {editing ? (
         <input
@@ -139,12 +139,12 @@ export function ContentRow({ item, profiles, idx }: {
   );
 }
 
-function RowThumb({ itemId }: { itemId: string }) {
-  const filesQ = useQuery(itemFilesQO(itemId));
+function RowThumb({ itemId, coverUrl }: { itemId: string; coverUrl: string | null }) {
+  const filesQ = useQuery({ ...itemFilesQO(itemId), enabled: !coverUrl });
   const first = filesQ.data?.[0];
   const fileId = first?.driveFileId ?? null;
-  const thumbQ = useQuery(driveThumbnailQO(fileId, !!fileId));
-  const url = thumbQ.data?.dataUrl ?? null;
+  const thumbQ = useQuery(driveThumbnailQO(fileId, !!fileId && !coverUrl));
+  const url = coverUrl ?? thumbQ.data?.dataUrl ?? null;
 
   return (
     <div

@@ -18,6 +18,18 @@ async function signAvatarPaths(supabase: any, paths: (string | null | undefined)
   return result;
 }
 
+/** Generate signed read URLs for reel-cover storage paths (1 year). */
+async function signCoverPaths(supabase: any, paths: (string | null | undefined)[]): Promise<Map<string, string>> {
+  const unique = Array.from(new Set(paths.filter((p): p is string => !!p)));
+  const result = new Map<string, string>();
+  if (unique.length === 0) return result;
+  const { data } = await supabase.storage.from("reel-covers").createSignedUrls(unique, 60 * 60 * 24 * 365);
+  (data ?? []).forEach((r: any) => {
+    if (r?.path && r?.signedUrl) result.set(r.path, r.signedUrl);
+  });
+  return result;
+}
+
 export const listProfiles = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
@@ -431,6 +443,14 @@ export const getMonth = createServerFn({ method: "GET" })
       qualityRating: ((it as any).quality_rating ?? null) as any,
       feedOrder: ((it as any).feed_order ?? null) as any,
     }));
+    const coverPaths = (items ?? []).map((it: any) => it.cover_path).filter(Boolean);
+    const signedCovers = await signCoverPaths(context.supabase, coverPaths);
+    mapped.forEach((m, idx) => {
+      const raw = (items ?? [])[idx] as any;
+      m.coverPath = raw?.cover_path ?? null;
+      m.coverSource = (raw?.cover_source ?? null) as any;
+      m.coverUrl = raw?.cover_path ? signedCovers.get(raw.cover_path) ?? null : null;
+    });
     return {
       id: month.id, key: month.key,
       posts: mapped.filter((i) => i.type === "post"),
@@ -487,6 +507,82 @@ export const updateFeedOrder = createServerFn({ method: "POST" })
       if ((r as any)?.error) throw new Error((r as any).error.message);
     }
     return { ok: true };
+  });
+
+/* ============== ITEM COVER (Reels) ============== */
+
+async function assertCanEditCover(supabase: any, userId: string, itemId: string) {
+  const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: userId });
+  if (isAdmin) return;
+  const { data: row } = await supabase
+    .from("item_assignees").select("user_id").eq("item_id", itemId).eq("user_id", userId).maybeSingle();
+  if (!row) throw new Error("Sem permissão para editar a capa deste item.");
+}
+
+export const setItemCover = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; coverPath: string | null; coverSource: "frame" | "upload" | null }) =>
+    z.object({
+      itemId: z.string().uuid(),
+      coverPath: z.string().trim().max(400).nullable(),
+      coverSource: z.enum(["frame", "upload"]).nullable(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCanEditCover(context.supabase, context.userId, data.itemId);
+    // Fetch previous cover to clean up old file
+    const { data: prev } = await context.supabase
+      .from("content_items").select("cover_path").eq("id", data.itemId).maybeSingle();
+    const prevPath = (prev as any)?.cover_path as string | null;
+    const { error } = await context.supabase
+      .from("content_items")
+      .update({ cover_path: data.coverPath, cover_source: data.coverSource })
+      .eq("id", data.itemId);
+    if (error) throw new Error(error.message);
+    if (prevPath && prevPath !== data.coverPath) {
+      await context.supabase.storage.from("reel-covers").remove([prevPath]).catch(() => {});
+    }
+    return { ok: true };
+  });
+
+export const uploadItemCover = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; base64: string; contentType: string; source: "frame" | "upload" }) =>
+    z.object({
+      itemId: z.string().uuid(),
+      base64: z.string().min(1).max(15_000_000), // ~10 MB image
+      contentType: z.string().min(3).max(80),
+      source: z.enum(["frame", "upload"]),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCanEditCover(context.supabase, context.userId, data.itemId);
+    const ext = data.contentType.includes("png") ? "png"
+      : data.contentType.includes("webp") ? "webp"
+      : "jpg";
+    const path = `${data.itemId}/${Date.now()}.${ext}`;
+    const bin = Buffer.from(data.base64, "base64");
+    const { error: upErr } = await context.supabase.storage
+      .from("reel-covers")
+      .upload(path, bin, { contentType: data.contentType, upsert: false });
+    if (upErr) throw new Error(upErr.message);
+
+    // Remove previous cover if exists
+    const { data: prev } = await context.supabase
+      .from("content_items").select("cover_path").eq("id", data.itemId).maybeSingle();
+    const prevPath = (prev as any)?.cover_path as string | null;
+
+    const { error } = await context.supabase
+      .from("content_items")
+      .update({ cover_path: path, cover_source: data.source })
+      .eq("id", data.itemId);
+    if (error) throw new Error(error.message);
+
+    if (prevPath && prevPath !== path) {
+      await context.supabase.storage.from("reel-covers").remove([prevPath]).catch(() => {});
+    }
+
+    const { data: signed } = await context.supabase.storage
+      .from("reel-covers").createSignedUrl(path, 60 * 60 * 24 * 365);
+    return { ok: true, coverPath: path, coverUrl: signed?.signedUrl ?? null };
   });
 
 /* ============== CLIENT FICHA ============== */

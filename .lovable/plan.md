@@ -1,45 +1,47 @@
-## Nova aba "Preview de Feed" por cliente
+## Capa customizada para Reels
 
-Aba estilo grid do Instagram (3 colunas) com posts e reels do mês selecionado que estão em **Pronto para publicar**. Ordem do feed é independente da ordem nas abas Posts/Reels e é salva por mês.
+Permitir definir a **capa do Reel** de duas formas: capturando um frame do vídeo ou subindo uma imagem separada. A capa escolhida passa a ser usada em todos os pontos onde hoje aparece a miniatura do item.
 
-### Mudanças
+### Banco
+- Nova coluna `content_items.cover_url text` (URL pública da imagem da capa).
+- Nova coluna `content_items.cover_source text` (`"frame" | "upload"`) só para referência/UI.
+- Novo bucket de storage `reel-covers` (público, para leitura via `<img>`).
+- Policies: insert/update/delete restritos a admin (master/setor) e membros responsáveis pelo item.
 
-**Banco (migration)**
-- Nova coluna `content_items.feed_order int` (nullable). Itens sem ordem definida caem no final por `idx`.
-- Não mexe nas policies existentes (mesmo padrão das outras colunas de `content_items`).
+### Backend — `src/lib/luzeria/api.functions.ts`
+- `getMonth` passa a retornar `coverUrl` e `coverSource` em cada item.
+- Nova serverFn `setItemCover({ itemId, coverUrl, coverSource })` para gravar/limpar capa.
+- Nova serverFn `uploadItemCover({ itemId, fileBase64, contentType })` que grava no bucket `reel-covers` e devolve a URL pública (usada tanto para upload de imagem quanto para o frame capturado pelo navegador).
 
-**Backend** — `src/lib/luzeria/api.functions.ts`
-- `getMonth` passa a retornar `feedOrder` em cada item.
-- Nova serverFn `updateFeedOrder({ monthId, orderedItemIds[] })` que grava `feed_order = posição` em lote. Permissão: admin (master/setor).
+### Tipos & queries
+- `src/lib/luzeria/types.ts`: `coverUrl?: string`, `coverSource?: "frame" | "upload"` em `ContentItem`.
+- `src/lib/luzeria/queries.ts`: hooks `setItemCover` e `uploadItemCover`, invalidando `month`, `item-files` e `feed`.
 
-**Tipos & queries** — `src/lib/luzeria/types.ts`, `queries.ts`
-- Adicionar `feedOrder?: number` em `ContentItem`.
-- Hook `updateFeedOrder` no `useApi()` com invalidação do mês.
+### UI — onde a capa aparece
+1. **`FeedPreview.tsx`**: se `coverUrl` existir, usar como thumb da célula (preferência sobre primeira mídia do Drive).
+2. **`ContentRow.tsx` (`RowThumb`)**: idem — `coverUrl` ganha prioridade.
+3. **`DetailPanel.tsx`** (modal de detalhe): preview de mídia (aspect 4/5) mostra `coverUrl` quando definido.
 
-**UI** — `src/components/luzeria/ClientView.tsx`
-- Nova tab `"feed"` (label "Preview de Feed") em todos os clientes (social media, pack digital e avulsos), entre "Reels" e "Perfil do Cliente" (ou no fim para avulsos).
-- Renderiza novo componente `<FeedPreview />`.
+### UI — editor de capa (novo)
+Novo componente `src/components/luzeria/ReelCoverEditor.tsx`, acessível por um botão **"Definir capa"** ao lado/abaixo do `MediaPreview` no `DetailPanel`, **apenas para itens type `reel`**.
 
-**Novo componente** — `src/components/luzeria/FeedPreview.tsx`
-- Combina `month.posts + month.reels` filtrando `status === "PRONTO_PARA_PUBLICAR"`.
-- Ordena por `feedOrder` (asc, nulls last → por tipo+idx).
-- Garante mínimo de 12 células: completa com placeholders vazios estilo IG (quadrado cinza vazio).
-- Grid 3 colunas, gap 2px, células `aspect-square`, estilo perfil do Instagram.
-- Thumbnail = primeira imagem do item (mesma fonte do `RowThumb` em `ContentRow`). Sem mídia → placeholder com nº do item e badge "POST"/"REEL".
-- Ícone overlay no canto: câmera para carrossel (>1 mídia), reels (filme) para reels.
-- Click numa célula abre o `DetailPanel` daquele item (via `useUI().openDetail`).
+Modal com duas abas:
+- **Frame do vídeo**:
+  - `<video>` oculto carrega a primeira mídia do item que for vídeo (busca em `item_files` por mime começando em `video/`; se nenhum existir, mostra estado vazio com CTA pra anexar vídeo).
+  - Scrubber (`<input type="range">` de 0 → `duration`) sincronizado com `video.currentTime`.
+  - Botão "Capturar frame" desenha o frame atual num `<canvas>` (mesmo tamanho do vídeo), exporta como JPEG via `canvas.toBlob`, converte para base64 e chama `uploadItemCover` com `coverSource: "frame"`.
+- **Upload de imagem**:
+  - `<input type="file" accept="image/*">`, preview, valida ≤ 5 MB, chama `uploadItemCover` com `coverSource: "upload"`.
 
-**Reordenação**
-- Desktop: drag-and-drop nativo HTML5 (`draggable`, `onDragStart/Over/Drop`) — sem dependência nova. Visual: célula arrastada fica com opacidade reduzida, alvo de drop ganha outline `#C8D44E`.
-- Apenas usuários admin (master/setor) podem arrastar; membros só visualizam.
-- Mobile: drag desabilitado; mostra apenas visualização (touch listeners não ativam draggable).
-- Ao soltar, chama `updateFeedOrder.mutate` com a nova sequência de IDs. Placeholders vazios não entram na ordem.
+Ambas as abas mostram preview da capa atual e botão "Remover capa" (chama `setItemCover` com `coverUrl: null`).
 
-**Importante:** a aba "Preview de Feed" NÃO altera `idx` dos itens nas abas Posts/Reels — só persiste em `feed_order`.
+Permissões: só admin (master/setor) ou responsáveis do item podem editar a capa — espelha as policies do storage.
 
 ### Detalhes técnicos
+- Captura de frame: precisa `video.crossOrigin = "anonymous"` para o canvas não ficar "tainted". URLs do Drive já são servidas com CORS adequado pelo proxy interno de `drive.functions.ts` (sem mudança nele).
+- Storage path: `reel-covers/{item_id}/{timestamp}.jpg`. Ao definir nova capa, apagar arquivo anterior do bucket pra não acumular lixo.
+- Fallback: quando `coverUrl` for null, comportamento atual (primeira mídia ou placeholder) permanece intacto.
+- Mobile: o editor abre normalmente; scrubber funciona com touch (HTML range nativo).
 
-- Migration: `ALTER TABLE public.content_items ADD COLUMN feed_order int;` + index `(month_id, feed_order)`.
-- Reordenação otimista: atualiza cache do React Query antes da resposta para drag fluido.
-- Quando um item sai de "Pronto para publicar", some do feed automaticamente (filtro client-side). `feed_order` permanece salvo, então se voltar reaparece na mesma posição relativa.
-- Placeholders são puramente visuais (não persistidos).
+### Não muda
+- Posts continuam só com a primeira mídia como thumb (sem editor de capa). Se você quiser estender pra Posts/Carrosséis também, é só pedir.

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2 } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType, type Status } from "@/lib/luzeria/types";
@@ -10,6 +10,7 @@ import { MentionInput, renderMentions } from "./MentionInput";
 import { ItemTimeline } from "./ItemTimeline";
 import { QualityModal } from "./QualityModal";
 import { FilesSection } from "./FilesSection";
+import { ReelCoverEditor } from "./ReelCoverEditor";
 
 function findItem(month: any, id: string): ContentItem | undefined {
   return (
@@ -48,15 +49,15 @@ function extractDriveFileId(url: string): string | null {
   return null;
 }
 
-function MediaPreview({ itemId, onEmpty }: { itemId: string; onEmpty: () => void }) {
+function MediaPreview({ itemId, onEmpty, coverUrl }: { itemId: string; onEmpty: () => void; coverUrl: string | null }) {
   const { data: files = [], isLoading: filesLoading } = useQuery(itemFilesQO(itemId));
   const first = files[0];
   const fileId = first?.driveFileId ?? null;
-  const { data: thumbData, isLoading: thumbLoading } = useQuery(driveThumbnailQO(fileId, !!fileId));
-  const thumb = thumbData?.dataUrl ?? null;
+  const { data: thumbData, isLoading: thumbLoading } = useQuery(driveThumbnailQO(fileId, !!fileId && !coverUrl));
+  const thumb = coverUrl ?? thumbData?.dataUrl ?? null;
   const href = first ? normalizeExternalUrl(first.webViewUrl) : null;
 
-  if (!filesLoading && !first) {
+  if (!filesLoading && !first && !coverUrl) {
     return (
       <button
         type="button"
@@ -140,6 +141,7 @@ export function DetailPanel() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [newCheck, setNewCheck] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
+  const [coverOpen, setCoverOpen] = useState(false);
   const statusRef = useRef<HTMLDivElement>(null);
   const { updateChecklist } = useApi();
 
@@ -241,10 +243,24 @@ export function DetailPanel() {
           <div className="md:overflow-y-auto md:border-r md:border-white/[0.06]">
             {/* Drive preview */}
             <ModalSection label="Mídia">
-              <MediaPreview itemId={item.id} onEmpty={() => {
-                const el = document.getElementById("lz-files-section");
-                el?.scrollIntoView({ behavior: "smooth", block: "center" });
-              }} />
+              <MediaPreview
+                itemId={item.id}
+                coverUrl={item.coverUrl ?? null}
+                onEmpty={() => {
+                  const el = document.getElementById("lz-files-section");
+                  el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
+              />
+              {item.type === "reel" && canEditFiles && (
+                <button
+                  type="button"
+                  onClick={() => setCoverOpen(true)}
+                  className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider text-white/80 hover:text-[#0D0D0D] bg-white/[0.04] hover:bg-[#C8D44E] border border-white/10 hover:border-[#C8D44E] transition-colors"
+                >
+                  <ImagePlus size={14} />
+                  {item.coverPath ? "Trocar capa do Reel" : "Definir capa do Reel"}
+                </button>
+              )}
             </ModalSection>
 
             {/* Briefing (era Copy) */}
@@ -676,6 +692,14 @@ export function DetailPanel() {
           });
         }}
       />
+
+      {coverOpen && (
+        <ReelCoverEditor
+          itemId={item.id}
+          currentCoverUrl={item.coverUrl ?? null}
+          onClose={() => setCoverOpen(false)}
+        />
+      )}
     </div>
   );
 }
