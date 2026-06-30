@@ -515,11 +515,24 @@ export function DetailPanel() {
                     onClick={() => updateItem.mutate({
                       data: { id: item.id, patch: { reel_type: active ? null : rt } },
                     })}
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-[1.05] hover:brightness-110"
                     style={{
                       backgroundColor: active ? "#C8D44E" : "rgba(255,255,255,0.08)",
                       color: active ? "#0D0D0D" : "#FFFFFF",
                       fontWeight: active ? 700 : 500,
+                      border: active ? "1px solid #C8D44E" : "1px solid rgba(255,255,255,0.08)",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.backgroundColor = "rgba(200,212,78,0.15)";
+                        e.currentTarget.style.borderColor = "rgba(200,212,78,0.4)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
+                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                      }
                     }}>
                     {REEL_TYPE_LABEL[rt as ReelType]}
                   </button>
