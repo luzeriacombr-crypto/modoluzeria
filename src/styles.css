@@ -171,6 +171,28 @@
     font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     font-feature-settings: "cv11", "ss01";
   }
+
+  /* Default tactile feedback for any clickable element that doesn't override it */
+  button, [role="button"], a, summary, label[for], select, [data-clickable] {
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease,
+                box-shadow 180ms ease, transform 160ms ease, opacity 150ms ease, filter 160ms ease;
+  }
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]), a[href], summary,
+  label[for], select:not(:disabled), [data-clickable] {
+    cursor: pointer;
+  }
+  button:disabled, [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+  button:not(:disabled):active, [role="button"]:not([aria-disabled="true"]):active {
+    transform: scale(0.97);
+  }
+  /* Focus ring for keyboard navigation */
+  button:focus-visible, [role="button"]:focus-visible, a:focus-visible,
+  input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: 2px solid #C8D44E;
+    outline-offset: 2px;
+  }
 }
 
 @keyframes lz-pulse {
