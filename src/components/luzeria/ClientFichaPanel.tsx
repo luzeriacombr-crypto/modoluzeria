@@ -27,11 +27,6 @@ export function ClientFichaPanel() {
   const { fichaClientId, openFicha } = useUI();
   const { data: clients = [] } = useQuery(clientsQO());
   const client = clients.find((c) => c.id === fichaClientId);
-  const { data: ficha } = useQuery(clientFichaQO(fichaClientId));
-  const me = useMe().data;
-  const isAdmin = me?.role === "master" || me?.role === "setor";
-  const isMaster = me?.role === "master";
-  const api = useApi();
 
   const panelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -41,12 +36,7 @@ export function ClientFichaPanel() {
     return () => document.removeEventListener("keydown", onKey);
   }, [fichaClientId, openFicha]);
 
-  const [description, setDescription] = useState("");
-  useEffect(() => { setDescription(ficha?.description ?? ""); }, [ficha?.description]);
-
   if (!fichaClientId || !client) return null;
-
-  const metrics = ficha?.metrics;
 
   return (
     <>
@@ -85,6 +75,31 @@ export function ClientFichaPanel() {
           </div>
         </div>
 
+        <ClientFichaContent clientId={client.id} />
+      </div>
+    </>
+  );
+}
+
+/** Reusable Ficha body — used both inside the slide-in panel and inline as a tab. */
+export function ClientFichaContent({ clientId }: { clientId: string }) {
+  const { data: clients = [] } = useQuery(clientsQO());
+  const { data: profiles = [] } = useQuery(profilesQO());
+  const client = clients.find((c) => c.id === clientId);
+  const { data: ficha } = useQuery(clientFichaQO(clientId));
+  const me = useMe().data;
+  const isAdmin = me?.role === "master" || me?.role === "setor";
+  const isMaster = me?.role === "master";
+  const api = useApi();
+
+  const [description, setDescription] = useState("");
+  useEffect(() => { setDescription(ficha?.description ?? ""); }, [ficha?.description]);
+
+  if (!client) return null;
+  const metrics = ficha?.metrics;
+
+  return (
+    <>
         {/* Metrics */}
         <Section label="Métricas">
           <div className="grid grid-cols-2 gap-2">
@@ -129,6 +144,11 @@ export function ClientFichaPanel() {
             placeholder={isAdmin ? "Tom de voz, nicho, observações, instruções do cliente…" : "Sem descrição."}
             className="w-full bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none disabled:opacity-70"
           />
+        </Section>
+
+        {/* Configuração do cliente (campos do antigo Perfil) */}
+        <Section label="Configuração do cliente">
+          <ClientConfigBlock client={client} profiles={profiles} canEdit={isAdmin} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
         </Section>
 
         {/* Deliveries folder (Drive) */}
@@ -248,8 +268,83 @@ export function ClientFichaPanel() {
             <RecurringBlock clientId={client.id} />
           </Section>
         )}
-      </div>
     </>
+  );
+}
+
+/* ============== CONFIGURAÇÃO (antigo Perfil) ============== */
+function ClientConfigBlock({ client, profiles, canEdit, onSave }: {
+  client: any; profiles: any[]; canEdit: boolean; onSave: (patch: Record<string, any>) => void;
+}) {
+  const [niche, setNiche] = useState<string>(client.customFields.niche ?? "");
+  const [postsPerWeek, setPostsPerWeek] = useState<string | number>(client.customFields.postsPerWeek ?? 0);
+  const [reelsPerWeek, setReelsPerWeek] = useState<string | number>(client.customFields.reelsPerWeek ?? 0);
+  const [responsible, setResponsible] = useState<string>(client.customFields.fixedResponsibleId ?? "");
+  const [reviewDay, setReviewDay] = useState<string>(client.customFields.reviewDay ?? "");
+  const [notes, setNotes] = useState<string>(client.customFields.notes ?? "");
+
+  useEffect(() => {
+    setNiche(client.customFields.niche ?? "");
+    setPostsPerWeek(client.customFields.postsPerWeek ?? 0);
+    setReelsPerWeek(client.customFields.reelsPerWeek ?? 0);
+    setResponsible(client.customFields.fixedResponsibleId ?? "");
+    setReviewDay(client.customFields.reviewDay ?? "");
+    setNotes(client.customFields.notes ?? "");
+  }, [client.id]);
+
+  function save() {
+    onSave({
+      niche, posts_per_week: Number(postsPerWeek) || 0,
+      reels_per_week: Number(reelsPerWeek) || 0,
+      fixed_responsible_id: responsible || null,
+      review_day: reviewDay, notes,
+    });
+    toast.success("Configuração salva");
+  }
+
+  const inp = "w-full bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] transition-colors disabled:opacity-60";
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <ConfigField label="Nicho">
+        <input value={niche} disabled={!canEdit} onChange={(e) => setNiche(e.target.value)} className={inp} />
+      </ConfigField>
+      <ConfigField label="Dia de revisão">
+        <input value={reviewDay} disabled={!canEdit} onChange={(e) => setReviewDay(e.target.value)} className={inp} />
+      </ConfigField>
+      <ConfigField label="Posts / semana">
+        <input type="number" value={postsPerWeek} disabled={!canEdit} onChange={(e) => setPostsPerWeek(e.target.value)} className={inp} />
+      </ConfigField>
+      <ConfigField label="Reels / semana">
+        <input type="number" value={reelsPerWeek} disabled={!canEdit} onChange={(e) => setReelsPerWeek(e.target.value)} className={inp} />
+      </ConfigField>
+      <ConfigField label="Responsável fixo">
+        <select value={responsible} disabled={!canEdit} onChange={(e) => setResponsible(e.target.value)} className={inp}>
+          <option value="">—</option>
+          {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+      </ConfigField>
+      <div className="sm:col-span-2">
+        <ConfigField label="Observações">
+          <textarea value={notes} disabled={!canEdit} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} />
+        </ConfigField>
+      </div>
+      {canEdit && (
+        <div className="sm:col-span-2">
+          <button onClick={save} className="rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>Salvar configuração</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConfigField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">{label}</span>
+      {children}
+    </label>
   );
 }
 

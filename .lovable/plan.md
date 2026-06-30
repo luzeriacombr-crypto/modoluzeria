@@ -1,65 +1,31 @@
-# Preview de Feed estilo Instagram + compartilhamento com cliente
+## Mudança
 
-Transformar a aba **Preview de Feed** em algo muito próximo de um perfil real do Instagram, com modal de publicação, link público para o cliente e comentários por publicação.
+Hoje, dentro de cada cliente existem duas coisas parecidas:
 
-## 1. Grid estilo Instagram (interno)
+- A aba **"Perfil do Cliente"** (última aba ao lado de Posts / Reels / Preview de Feed) com formulário de nicho, posts/semana, reels/semana, responsável fixo, dia de revisão e observações.
+- A **"Ficha do Cliente"** que abre em painel lateral (botão de informação ao lado do nome do cliente, e também acessado pela sidebar e por outros pontos) — muito mais completa: métricas, descrição, pasta de entregas no Drive, links, contatos, senhas, onboarding e recorrências.
 
-Manter o grid 3 colunas atual, mas com refinamentos:
-- Badges de carrossel (ícone de pilha), Reel (ícone de play) e cover no canto superior direito, exatamente como o IG.
-- Hover: overlay escuro com contagem de comentários do cliente (se houver).
-- Clique em qualquer cell → abre o **modal de publicação** (novo, separado do DetailPanel de gestão).
+Vou **remover a aba "Perfil do Cliente"** e colocar a **Ficha do Cliente no lugar dela**, agora como aba inline (não mais como painel lateral).
 
-## 2. Modal de publicação (look IG)
+## O que muda na interface
 
-Modal centralizado, fundo **branco**, duas colunas no desktop / empilhado no mobile, sem nenhum dado interno (status, atribuições, briefing, qualidade — nada disso). Apenas:
+- Em cada cliente (Social Media e Pack Digital), as abas passam a ser:
+  `Posts · Reels · Preview de Feed · Ficha do Cliente`
+- Clientes da categoria **Avulsos** continuam com `Posts · Reels · Outros · Preview de Feed` (não tinham Perfil, não terão Ficha como aba — segue acessível pelos atalhos existentes).
+- A aba **Ficha do Cliente** mostra exatamente o conteúdo que hoje aparece no painel lateral: métricas, "Sobre", pasta de entregas no Drive, links importantes, contatos, senhas e acessos (admins), onboarding e recorrências.
+- Os campos do antigo "Perfil" (nicho, posts/semana, reels/semana, responsável fixo, dia de revisão, observações) **continuam editáveis** — vou incluí-los como uma seção "Configuração do cliente" dentro da própria Ficha, para não perder funcionalidade.
+- O **botão de informação (ⓘ)** ao lado do nome do cliente, que hoje abre o painel lateral, passa a simplesmente **levar para a aba Ficha do Cliente** (mantém o atalho).
+- Os outros pontos que abrem a Ficha como painel lateral (sidebar via menu de três pontinhos, mensagens de "pasta não configurada" no Drive) **continuam funcionando como painel lateral** — assim quem está em outra tela não precisa entrar no cliente para ver/editar a ficha.
 
-- **Esquerda:** mídia em 4:5
-  - Post único: imagem.
-  - Carrossel: slider com setas + dots (swipe no mobile).
-  - Reel: thumbnail da capa com botão play → abre o vídeo numa nova aba (link do Drive).
-- **Direita:**
-  - Header com logo/nome do cliente (avatar circular + @handle).
-  - Legenda completa com "... mais" expansível.
-  - Data e horário previstos de publicação (`dueDate` + horário se houver).
-  - Bloco de **comentários do cliente** (lista + caixa para novo comentário).
+## Resumo técnico
 
-## 3. Link público de compartilhamento
-
-Botão **"Compartilhar preview"** no topo da aba (visível só para admin/setor). Gera/copia um link único do tipo:
-
-```
-/preview/<token>
-```
-
-- Token aleatório armazenado por mês+cliente (tabela nova `feed_share_tokens`).
-- Rota **pública** (sem login), renderiza exatamente o mesmo grid + modal IG-style, **somente leitura para o conteúdo**, mas com comentários habilitados.
-- Pode ser revogado ("Gerar novo link") no mesmo botão.
-
-## 4. Comentários do cliente
-
-- Nova tabela `client_feedback` por item: nome do cliente (texto livre), texto, data.
-- No link público: o cliente digita o nome uma vez (salvo em localStorage) e comenta em qualquer publicação.
-- Internamente: aparece dentro do modal IG da aba Preview **e** como uma nova seção "Feedback do cliente" no DetailPanel de gestão da publicação, para a equipe ver e responder no fluxo de revisão.
-- Notificação interna: quando o cliente comenta, todos os assignees do item recebem notificação ("Cliente comentou em ...").
-
-## Detalhes técnicos
-
-- **Banco (migração):**
-  - `feed_share_tokens(client_id, month_id, token unique, created_by, revoked_at)` + GRANTs + RLS (admin gerencia; SELECT por token via server fn pública).
-  - `client_feedback(item_id, author_name, text, created_at)` + GRANTs + RLS (insert público via server fn que valida token; SELECT autenticado para a equipe).
-- **Server fns** (`src/lib/luzeria/api.functions.ts`):
-  - `getOrCreateShareToken({clientId, monthId})` – admin.
-  - `revokeShareToken({token})` – admin.
-  - `getPublicFeed({token})` – pública, retorna apenas dados necessários (itens PRONTO_PARA_PUBLICAR + ordem + caption + dueDate + arquivos/cover; nada interno).
-  - `addClientFeedback({token, itemId, name, text})` – pública, valida token.
-  - `listClientFeedback({itemId})` – autenticada para equipe.
-- **Frontend:**
-  - Novo `InstagramPostModal.tsx` (reutilizado interno e público).
-  - Nova rota pública `src/routes/preview.$token.tsx` (sem auth, SSR ok).
-  - Atualizar `FeedPreview.tsx`: botão Compartilhar + abertura do novo modal em vez do DetailPanel.
-  - Adicionar seção "Feedback do cliente" no `DetailPanel.tsx`.
-
-## Fora de escopo (não vou fazer agora)
-- Reproduzir vídeo embutido no modal (mantém abrir em nova aba via Drive, evita problemas de CORS/streaming).
-- Login do cliente / aprovação formal (apenas comentários por enquanto).
-- Expiração automática do link (só revogação manual).
+- `src/components/luzeria/ClientView.tsx`
+  - Troca a aba `"profile"` por `"ficha"` na lista de abas (somente para Social Media e Pack Digital).
+  - Renderiza um novo componente `ClientFichaTab` quando `tab === "ficha"`.
+  - O botão de info ao lado do nome chama `setTab("ficha")` em vez de `openFicha(client.id)`.
+  - Remove `ProfileTab` e helpers exclusivos (`Field`, `inp`) do arquivo.
+- `src/components/luzeria/ClientFichaPanel.tsx`
+  - Extrai o corpo (métricas, sobre, pasta de entregas, links, contatos, senhas, onboarding, recorrências) para um componente compartilhado `ClientFichaContent({ clientId })` que não depende do `useUI().fichaClientId` nem da estrutura de painel lateral (sem header de fechar, sem fundo modal).
+  - Acrescenta a seção "Configuração do cliente" com os campos do antigo Perfil (nicho, posts/semana, reels/semana, responsável fixo, dia de revisão, observações), usando o mesmo `updateClient`.
+  - `ClientFichaPanel` continua existindo e simplesmente envolve `ClientFichaContent` com a UI de painel lateral, para que sidebar e atalhos externos continuem funcionando.
+- Nenhuma mudança em backend, store, queries ou rotas.
