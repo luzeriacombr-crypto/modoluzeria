@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Heart, MessageCircle, Play, Send, Share2, X, Bookmark, ExternalLink, Calendar, Pencil } from "lucide-react";
@@ -109,6 +109,20 @@ export function InstagramPostModal({
   const [composerOpen, setComposerOpen] = useState(false);
   const isPublic = mode.kind === "public";
   const feedbackLabel = isPublic ? "Sugestões" : "Comentários";
+  const detailsRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to composer buttons when opened (mobile public view)
+  useEffect(() => {
+    if (isPublic && composerOpen && detailsRef.current) {
+      const el = detailsRef.current;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        });
+      });
+    }
+  }, [isPublic, composerOpen]);
+
 
   // Lock scroll & ESC
   useEffect(() => {
@@ -223,7 +237,7 @@ export function InstagramPostModal({
         </div>
 
         {/* RIGHT: details */}
-        <div className="flex-1 flex flex-col min-h-0 max-h-full md:max-h-[92vh] bg-white">
+        <div ref={detailsRef} className="flex-1 flex flex-col min-h-0 max-h-full md:max-h-[92vh] bg-white overflow-y-auto md:overflow-hidden">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-200">
             <div
@@ -241,7 +255,7 @@ export function InstagramPostModal({
           </div>
 
           {/* Caption + feedback scroll area */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 text-sm">
+          <div className="flex-1 md:overflow-y-auto px-4 py-3 text-sm">
             {/* Caption */}
             {item.caption ? (
               <div className="text-[14px] leading-relaxed text-neutral-800 whitespace-pre-wrap">
@@ -341,14 +355,14 @@ export function InstagramPostModal({
 
           {/* Composer público: "Sugerir alteração" */}
           {isPublic && canComment && onSubmitFeedback && (
-            <div className="border-t border-neutral-200 px-4 py-3 bg-white">
+            <div className={`border-t border-neutral-200 px-4 py-4 ${composerOpen ? "pb-12" : "pb-10"} md:py-3 md:pb-6 bg-white`}>
               {!composerOpen ? (
                 <button
                   onClick={() => setComposerOpen(true)}
-                  className="w-full inline-flex items-center justify-center gap-2 text-[14px] font-semibold py-2.5 rounded-md transition"
-                  style={{ background: "#0D0D0D", color: "#fff" }}
+                  className="w-full inline-flex items-center justify-center gap-2 text-[15px] font-semibold py-4 min-h-[56px] rounded-md transition active:scale-[0.98]"
+                  style={{ background: "#C8D44E", color: "#0D0D0D" }}
                 >
-                  <Pencil size={15} /> Sugerir alteração
+                  <Pencil size={17} /> Sugerir alteração
                 </button>
               ) : (
                 <div>
@@ -358,7 +372,7 @@ export function InstagramPostModal({
                       value={author}
                       onChange={(e) => setAuthor(e.target.value)}
                       placeholder="Seu nome"
-                      className="w-full text-[13px] px-3 py-2 mb-2 border border-neutral-200 rounded-md outline-none focus:border-neutral-400"
+                      className="w-full text-[13px] px-3 py-2.5 mb-2 border border-neutral-200 rounded-md outline-none focus:border-neutral-400"
                       maxLength={60}
                     />
                   )}
@@ -367,19 +381,18 @@ export function InstagramPostModal({
                     onChange={(e) => setText(e.target.value)}
                     placeholder="Descreva sua sugestão de alteração…"
                     rows={3}
-                    className="w-full text-[14px] px-3 py-2 border border-neutral-200 rounded-md outline-none focus:border-neutral-400 resize-none"
+                    className="w-full text-[14px] px-3 py-2.5 border border-neutral-200 rounded-md outline-none focus:border-neutral-400 resize-none"
                     maxLength={1000}
-                    autoFocus
                   />
-                  <div className="mt-2 flex items-center justify-end gap-2">
+                  <div className="mt-4 flex items-center justify-end gap-2">
                     <button
                       onClick={() => { setComposerOpen(false); setText(""); }}
-                      className="text-[13px] font-medium text-neutral-500 hover:text-neutral-800 px-3 py-1.5"
+                      className="text-[13px] font-medium text-neutral-500 hover:text-neutral-800 px-3 py-3"
                     >Cancelar</button>
                     <button
                       onClick={submit}
                       disabled={submitting || !author.trim() || !text.trim()}
-                      className="text-[13px] font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50"
+                      className="text-[14px] font-semibold px-5 py-3 rounded-md transition disabled:opacity-50"
                       style={{ background: "#C8D44E", color: "#0D0D0D" }}
                     >{submitting ? "Enviando…" : "Enviar sugestão"}</button>
                   </div>
