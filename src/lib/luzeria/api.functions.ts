@@ -509,6 +509,82 @@ export const updateFeedOrder = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/* ============== ITEM COVER (Reels) ============== */
+
+async function assertCanEditCover(supabase: any, userId: string, itemId: string) {
+  const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: userId });
+  if (isAdmin) return;
+  const { data: row } = await supabase
+    .from("item_assignees").select("user_id").eq("item_id", itemId).eq("user_id", userId).maybeSingle();
+  if (!row) throw new Error("Sem permissão para editar a capa deste item.");
+}
+
+export const setItemCover = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; coverPath: string | null; coverSource: "frame" | "upload" | null }) =>
+    z.object({
+      itemId: z.string().uuid(),
+      coverPath: z.string().trim().max(400).nullable(),
+      coverSource: z.enum(["frame", "upload"]).nullable(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCanEditCover(context.supabase, context.userId, data.itemId);
+    // Fetch previous cover to clean up old file
+    const { data: prev } = await context.supabase
+      .from("content_items").select("cover_path").eq("id", data.itemId).maybeSingle();
+    const prevPath = (prev as any)?.cover_path as string | null;
+    const { error } = await context.supabase
+      .from("content_items")
+      .update({ cover_path: data.coverPath, cover_source: data.coverSource })
+      .eq("id", data.itemId);
+    if (error) throw new Error(error.message);
+    if (prevPath && prevPath !== data.coverPath) {
+      await context.supabase.storage.from("reel-covers").remove([prevPath]).catch(() => {});
+    }
+    return { ok: true };
+  });
+
+export const uploadItemCover = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; base64: string; contentType: string; source: "frame" | "upload" }) =>
+    z.object({
+      itemId: z.string().uuid(),
+      base64: z.string().min(1).max(15_000_000), // ~10 MB image
+      contentType: z.string().min(3).max(80),
+      source: z.enum(["frame", "upload"]),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCanEditCover(context.supabase, context.userId, data.itemId);
+    const ext = data.contentType.includes("png") ? "png"
+      : data.contentType.includes("webp") ? "webp"
+      : "jpg";
+    const path = `${data.itemId}/${Date.now()}.${ext}`;
+    const bin = Buffer.from(data.base64, "base64");
+    const { error: upErr } = await context.supabase.storage
+      .from("reel-covers")
+      .upload(path, bin, { contentType: data.contentType, upsert: false });
+    if (upErr) throw new Error(upErr.message);
+
+    // Remove previous cover if exists
+    const { data: prev } = await context.supabase
+      .from("content_items").select("cover_path").eq("id", data.itemId).maybeSingle();
+    const prevPath = (prev as any)?.cover_path as string | null;
+
+    const { error } = await context.supabase
+      .from("content_items")
+      .update({ cover_path: path, cover_source: data.source })
+      .eq("id", data.itemId);
+    if (error) throw new Error(error.message);
+
+    if (prevPath && prevPath !== path) {
+      await context.supabase.storage.from("reel-covers").remove([prevPath]).catch(() => {});
+    }
+
+    const { data: signed } = await context.supabase.storage
+      .from("reel-covers").createSignedUrl(path, 60 * 60 * 24 * 365);
+    return { ok: true, coverPath: path, coverUrl: signed?.signedUrl ?? null };
+  });
+
 /* ============== CLIENT FICHA ============== */
 
 export const getClientFicha = createServerFn({ method: "GET" })
