@@ -1,19 +1,21 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Film, Image as ImageIcon, Layers } from "lucide-react";
+import { Check, Copy as CopyIcon, Film, Image as ImageIcon, Layers, RefreshCw, Share2 } from "lucide-react";
 import { itemFilesQO, driveThumbnailQO, useApi, useMe } from "@/lib/luzeria/queries";
-import { useUI } from "@/lib/luzeria/ui-store";
-import type { ContentItem, MonthData } from "@/lib/luzeria/types";
+import type { Client, ContentItem, MonthData } from "@/lib/luzeria/types";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { InstagramPostModal, type IGModalItem } from "./InstagramPostModal";
 
 type FeedItem = ContentItem & { _key: string };
 
-export function FeedPreview({ month }: { month: MonthData }) {
+export function FeedPreview({ month, client }: { month: MonthData; client: Client }) {
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const isMobile = useIsMobile();
   const canDrag = isAdmin && !isMobile;
   const { updateFeedOrder } = useApi();
+
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
   const ready = useMemo(() => {
     const all = [...month.posts, ...month.reels].filter(
@@ -75,9 +77,14 @@ export function FeedPreview({ month }: { month: MonthData }) {
     <div className="mt-6">
       {/* IG-style "profile" header */}
       <div className="mx-auto max-w-[640px] px-4">
-        <div className="text-[12px] uppercase tracking-wider text-white/40 font-semibold mb-3">
-          Preview de feed · {cells.items.length} publicaç{cells.items.length === 1 ? "ão" : "ões"}
-          {canDrag && <span className="ml-2 text-white/30 normal-case tracking-normal">— arraste para reordenar</span>}
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+          <div className="text-[12px] uppercase tracking-wider text-white/40 font-semibold">
+            Preview de feed · {cells.items.length} publicaç{cells.items.length === 1 ? "ão" : "ões"}
+            {canDrag && <span className="ml-2 text-white/30 normal-case tracking-normal">— arraste para reordenar</span>}
+          </div>
+          {isAdmin && (
+            <ShareButton clientId={client.id} monthId={month.id} />
+          )}
         </div>
         <div className="grid grid-cols-3 gap-[3px] bg-black/30 p-[3px] rounded-md">
           {cells.items.map((item) => (
@@ -92,6 +99,7 @@ export function FeedPreview({ month }: { month: MonthData }) {
               onDragLeave={() => { if (overId === item.id) setOverId(null); }}
               onDrop={() => onDrop(item.id)}
               onDragEnd={() => { setDragId(null); setOverId(null); }}
+              onOpen={() => setActiveItemId(item.id)}
             />
           ))}
           {Array.from({ length: cells.placeholders }).map((_, i) => (
@@ -105,13 +113,20 @@ export function FeedPreview({ month }: { month: MonthData }) {
           ))}
         </div>
       </div>
+      {activeItemId && (
+        <InternalPostModal
+          item={orderedItems.find((i) => i.id === activeItemId)!}
+          client={client}
+          onClose={() => setActiveItemId(null)}
+        />
+      )}
     </div>
   );
 }
 
 function FeedCell({
   item, draggable, isDragging, isOver,
-  onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
+  onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd, onOpen,
 }: {
   item: FeedItem;
   draggable: boolean;
@@ -122,8 +137,8 @@ function FeedCell({
   onDragLeave: () => void;
   onDrop: () => void;
   onDragEnd: () => void;
+  onOpen: () => void;
 }) {
-  const openItem = useUI((s) => s.openItem);
   const cover = item.coverUrl ?? null;
   const filesQ = useQuery({ ...itemFilesQO(item.id), enabled: !cover });
   const first = filesQ.data?.[0];
@@ -142,7 +157,7 @@ function FeedCell({
       onDragLeave={draggable ? onDragLeave : undefined}
       onDrop={draggable ? onDrop : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
-      onClick={() => openItem(item.id)}
+      onClick={onOpen}
       className="relative aspect-square overflow-hidden group transition"
       style={{
         background: "#1C1C1C",
