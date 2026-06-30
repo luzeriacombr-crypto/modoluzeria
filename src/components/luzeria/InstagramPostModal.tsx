@@ -383,7 +383,6 @@ export function InstagramPostModal({
                     rows={3}
                     className="w-full text-[14px] px-3 py-2.5 border border-neutral-200 rounded-md outline-none focus:border-neutral-400 resize-none"
                     maxLength={1000}
-                    autoFocus
                   />
                   <div className="mt-4 flex items-center justify-end gap-2">
                     <button
