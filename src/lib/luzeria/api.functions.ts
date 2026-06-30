@@ -763,6 +763,52 @@ export const markNotificationRead = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const listMyMentions = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: mens } = await context.supabase
+      .from("mentions")
+      .select("id, item_id, comment_id, created_at, read_at, comments(text, author_id, profiles:author_id(name, color)), content_items(id, type, idx, title, status, month_id, months(key, clients(id, name, color, category)))")
+      .eq("mentioned_user_id", context.userId)
+      .is("read_at", null)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    return (mens ?? [])
+      .filter((m: any) => m.content_items && m.content_items.months?.clients)
+      .map((m: any) => {
+        const it = m.content_items;
+        const c = it.months.clients;
+        return {
+          mentionId: m.id,
+          itemId: it.id,
+          type: it.type as "post" | "reel" | "outros",
+          idx: it.idx as number,
+          title: it.title as string,
+          status: it.status as string,
+          monthKey: it.months.key as string,
+          clientId: c.id as string,
+          clientName: c.name as string,
+          clientColor: c.color as string,
+          clientCategory: (c.category ?? "Social Media") as string,
+          mentionedAt: m.created_at as string,
+          authorName: (m.comments?.profiles?.name ?? null) as string | null,
+          snippet: ((m.comments?.text ?? "") as string).replace(/@\[([^\]]+)\]\([0-9a-f-]{36}\)/g, "@$1").slice(0, 140),
+        };
+      });
+  });
+
+export const markMentionRead = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { mentionId?: string; itemId?: string; all?: boolean }) => d)
+  .handler(async ({ data, context }) => {
+    let q = context.supabase.from("mentions").update({ read_at: new Date().toISOString() }).eq("mentioned_user_id", context.userId);
+    if (data.mentionId) q = q.eq("id", data.mentionId);
+    else if (data.itemId) q = q.eq("item_id", data.itemId);
+    else q = q.is("read_at", null);
+    await q;
+    return { ok: true };
+  });
+
 /* ============== MY TASKS ============== */
 
 export const listMyTasks = createServerFn({ method: "GET" })
