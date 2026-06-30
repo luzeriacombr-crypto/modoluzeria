@@ -36,6 +36,10 @@ import {
   getMyNotificationPreferences, setMyNotificationPreferences,
   runDailyDigestNow, runDeadlineRemindersNow, listCronJobs,
 } from "./automations.functions";
+import {
+  getOrCreateShareToken, rotateShareToken, listClientFeedback,
+  getPublicFeed, getPublicDriveThumbnail, addPublicFeedback,
+} from "./feed-share.functions";
 
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
@@ -260,6 +264,32 @@ export const cronJobsQO = () =>
     staleTime: 30_000,
   });
 
+export const clientFeedbackQO = (itemId: string | null) =>
+  queryOptions({
+    queryKey: ["client-feedback", itemId],
+    queryFn: () => listClientFeedback({ data: { itemId: itemId! } }),
+    enabled: !!itemId,
+    staleTime: 15_000,
+  });
+
+export const publicFeedQO = (token: string | null) =>
+  queryOptions({
+    queryKey: ["public-feed", token],
+    queryFn: () => getPublicFeed({ data: { token: token! } }),
+    enabled: !!token,
+    staleTime: 30_000,
+  });
+
+export const publicDriveThumbQO = (token: string, fileId: string | null) =>
+  queryOptions({
+    queryKey: ["public-drive-thumb", token, fileId],
+    queryFn: () => getPublicDriveThumbnail({ data: { token, fileId: fileId! } }),
+    enabled: !!token && !!fileId,
+    staleTime: 1000 * 60 * 30,
+    gcTime: 1000 * 60 * 60,
+    retry: false,
+  });
+
 export function useMe() { return useQuery(meQO()); }
 
 export function useApi() {
@@ -465,6 +495,13 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["notifications"] });
         qc.invalidateQueries({ queryKey: ["cron-jobs"] });
       },
+    }),
+    /* ===== FEED SHARE ===== */
+    getOrCreateShareToken: useMutation({ mutationFn: useServerFn(getOrCreateShareToken) }),
+    rotateShareToken: useMutation({ mutationFn: useServerFn(rotateShareToken) }),
+    addPublicFeedback: useMutation({
+      mutationFn: useServerFn(addPublicFeedback),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["public-feed"] }),
     }),
   };
 }
