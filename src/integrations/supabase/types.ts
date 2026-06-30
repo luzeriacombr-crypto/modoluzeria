@@ -446,6 +446,8 @@ export type Database = {
           caption: string
           checklist: Json
           copy: string
+          cover_path: string | null
+          cover_source: string | null
           drive_link: string
           due_date: string | null
           editor_id: string | null
@@ -470,6 +472,8 @@ export type Database = {
           caption?: string
           checklist?: Json
           copy?: string
+          cover_path?: string | null
+          cover_source?: string | null
           drive_link?: string
           due_date?: string | null
           editor_id?: string | null
@@ -494,6 +498,8 @@ export type Database = {
           caption?: string
           checklist?: Json
           copy?: string
+          cover_path?: string | null
+          cover_source?: string | null
           drive_link?: string
           due_date?: string | null
           editor_id?: string | null
