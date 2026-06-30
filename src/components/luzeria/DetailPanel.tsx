@@ -61,7 +61,7 @@ function MediaPreview({ itemId, onEmpty }: { itemId: string; onEmpty: () => void
       <button
         type="button"
         onClick={onEmpty}
-        className="group w-full h-[200px] rounded-[10px] border border-dashed border-white/15 bg-[#141414] hover:border-[#C8D44E] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-2"
+        className="group w-full aspect-[4/5] rounded-[10px] border border-dashed border-white/15 bg-[#141414] hover:border-[#C8D44E] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-2"
       >
         <Upload size={22} className="text-white/30 group-hover:text-[#C8D44E] transition-colors" />
         <span className="text-xs text-white/40 group-hover:text-white/70 transition-colors">
@@ -77,7 +77,7 @@ function MediaPreview({ itemId, onEmpty }: { itemId: string; onEmpty: () => void
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => { if (!href) e.preventDefault(); }}
-      className="group relative block w-full h-[200px] rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
+      className="group relative block w-full aspect-[4/5] rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
       title={first?.name}
     >
       {thumb ? (
