@@ -1,11 +1,19 @@
-import { LayoutDashboard, Users, Bell, User, BarChart2 } from "lucide-react";
+import { LayoutDashboard, Users, Bell, User, BarChart2, ChevronRight, Star } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { useMe, notificationsQO, clientsQO, useApi } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
+
+const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
+const CATEGORY_COLOR: Record<string, string> = {
+  "Social Media": "#5BA88A",
+  "Pack Digital": "#5BA88A",
+  "Avulsos": "#C8D44E",
+  "Ex-clientes": "#E76F51",
+};
 
 export function MobileNav() {
   const isMobile = useIsMobile();
@@ -17,6 +25,22 @@ export function MobileNav() {
   const unread = notes.filter((n) => !n.read).length;
   const [tab, setTab] = useState<"home" | "clients" | "bell" | "me">("home");
   const sheetRef = useRef<HTMLDivElement>(null);
+
+  const activeClients = useMemo(() => clients.filter((c) => !c.archived), [clients]);
+  const grouped = useMemo(() => {
+    const byCat = new Map<string, typeof activeClients>();
+    for (const c of activeClients) {
+      const cat = c.category || "Social Media";
+      if (!byCat.has(cat)) byCat.set(cat, [] as any);
+      byCat.get(cat)!.push(c);
+    }
+    for (const arr of byCat.values()) {
+      arr.sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name));
+    }
+    const known = CATEGORY_ORDER.filter((k) => byCat.has(k)).map((k) => [k, byCat.get(k)!] as const);
+    const extras = [...byCat.entries()].filter(([k]) => !(CATEGORY_ORDER as readonly string[]).includes(k));
+    return [...known, ...extras] as Array<readonly [string, typeof activeClients]>;
+  }, [activeClients]);
 
   useEffect(() => {
     if (view === "my" || view === "stories" || view === "cleaning" || view === "admin") setTab("home");
@@ -30,20 +54,56 @@ export function MobileNav() {
     <>
       {tab === "clients" && view !== "client" && (
         <div className="fixed inset-0 z-40 bg-[#0D0D0D] pt-14 pb-20 overflow-y-auto">
-          <div className="px-5 py-4 border-b border-white/[0.06] sticky top-14 bg-[#0D0D0D]">
+          <div className="px-5 py-4 border-b border-white/[0.06] sticky top-14 bg-[#0D0D0D] z-10 flex items-end justify-between">
             <h2 className="text-lg font-bold text-white">Clientes</h2>
+            <span className="text-xs text-white/40">{activeClients.length}</span>
           </div>
-          <ul>
-            {clients.filter((c) => !c.archived).map((c) => (
-              <li key={c.id}>
-                <button onClick={() => { selectClient(c.id); setTab("home"); }}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.04] hover:bg-white/[0.03] text-left">
-                  <Avatar name={c.name} color={c.color} size={32} />
-                  <span className="text-sm text-white truncate flex-1">{c.name}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          {activeClients.length === 0 && (
+            <p className="text-xs text-white/40 px-5 py-10 text-center">Sem clientes ainda.</p>
+          )}
+          <div className="px-4 pt-4 pb-6 space-y-6">
+            {grouped.map(([cat, list]) => {
+              const color = CATEGORY_COLOR[cat] ?? "#5BA88A";
+              return (
+                <section key={cat}>
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color }}
+                    >
+                      {cat}
+                    </span>
+                    <span className="text-[10px] text-white/30">{list.length}</span>
+                    <span
+                      className="flex-1 h-px ml-1"
+                      style={{ backgroundColor: `color-mix(in oklab, ${color} 25%, transparent)` }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {list.map((c) => {
+                      const cc = c.color || "#5BA88A";
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => { selectClient(c.id); setTab("home"); }}
+                          className="w-full flex items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition-transform active:scale-[0.98]"
+                          style={{
+                            backgroundColor: `color-mix(in oklab, ${cc} 18%, transparent)`,
+                            border: `1px solid color-mix(in oklab, ${cc} 35%, transparent)`,
+                          }}
+                        >
+                          <Avatar name={c.name} color={cc} size={36} />
+                          <span className="text-sm font-semibold text-white truncate flex-1">{c.name}</span>
+                          {c.favorite && <Star size={14} className="text-[#C8D44E] fill-[#C8D44E] shrink-0" />}
+                          <ChevronRight size={16} className="text-white/40 shrink-0" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         </div>
       )}
 
