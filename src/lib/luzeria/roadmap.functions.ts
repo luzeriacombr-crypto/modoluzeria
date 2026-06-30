@@ -125,7 +125,7 @@ export const getGoalProgress = createServerFn({ method: "GET" })
     if (ids.length) {
       const { data: done } = await context.supabase
         .from("content_items").select("type")
-        .in("id", ids).eq("status", "FINALIZADO")
+        .in("id", ids).eq("status", "PRONTO_PARA_PUBLICAR")
         .gte("updated_at", start).lt("updated_at", end);
       (done ?? []).forEach((it: any) => {
         if (it.type === "post") postsDone++;
@@ -416,7 +416,7 @@ export const getReportExtras = createServerFn({ method: "GET" })
     // ---- Lead time ----
     const leadHours: { id: string; title: string; clientName: string; hours: number }[] = [];
     pool.forEach((it) => {
-      if (it.status === "FINALIZADO" && it.started_at && it.finished_at) {
+      if (it.status === "PRONTO_PARA_PUBLICAR" && it.started_at && it.finished_at) {
         const h = (new Date(it.finished_at).getTime() - new Date(it.started_at).getTime()) / 3_600_000;
         if (h > 0) leadHours.push({
           id: it.id, title: it.title,
@@ -432,7 +432,7 @@ export const getReportExtras = createServerFn({ method: "GET" })
     const slowest = [...leadHours].sort((a, b) => b.hours - a.hours).slice(0, 5);
 
     // ---- Bloqueios ----
-    const currentlyBlocked = pool.filter((it) => it.status === "BLOQUEADO")
+    const currentlyBlocked = pool.filter((it) => it.status === "TRAVADO")
       .map((it) => ({
         id: it.id, title: it.title,
         clientName: it.months?.clients?.name ?? "—",
@@ -590,7 +590,7 @@ export const getMyWeek = createServerFn({ method: "GET" })
       .from("content_items")
       .select("id, type, idx, title, status, due_date, months!inner(key, clients!inner(id, name, color))")
       .in("id", ids)
-      .neq("status", "FINALIZADO");
+      .neq("status", "PRONTO_PARA_PUBLICAR");
     return ((items ?? []) as any[]).map((it) => ({
       id: it.id, type: it.type, idx: it.idx, title: it.title, status: it.status,
       clientId: it.months.clients.id,
@@ -618,7 +618,7 @@ export const getWorkload = createServerFn({ method: "GET" })
       .from("content_items")
       .select("id, title, updated_at, last_status_change_at, months!inner(clients!inner(name))")
       .in("id", ids)
-      .neq("status", "FINALIZADO");
+      .neq("status", "PRONTO_PARA_PUBLICAR");
     const arr = ((items ?? []) as any[]).map((it) => {
       const ref = it.last_status_change_at ?? it.updated_at;
       const days = Math.max(0, Math.floor((Date.now() - new Date(ref).getTime()) / 86_400_000));

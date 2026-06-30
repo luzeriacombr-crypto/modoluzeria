@@ -447,7 +447,7 @@ export const getClientFicha = createServerFn({ method: "GET" })
       totalItems = (items ?? []).length;
       let sumHours = 0, leadCount = 0;
       (items ?? []).forEach((it: any) => {
-        if (it.status === "FINALIZADO") {
+        if (it.status === "PRONTO_PARA_PUBLICAR") {
           finalized++;
           if (it.finished_at) {
             if (!lastDeliveryAt || it.finished_at > lastDeliveryAt) lastDeliveryAt = it.finished_at;
@@ -457,7 +457,7 @@ export const getClientFicha = createServerFn({ method: "GET" })
             if (diffMs > 0) { sumHours += diffMs / 3_600_000; leadCount++; }
           }
         }
-        if (it.status === "BLOQUEADO") blocked++;
+        if (it.status === "TRAVADO") blocked++;
       });
       if (leadCount > 0) avgLeadTimeHours = Math.round((sumHours / leadCount) * 10) / 10;
     }
@@ -765,7 +765,7 @@ export const getProductivity = createServerFn({ method: "GET" })
     }
     const { data: done } = await context.supabase
       .from("content_items").select("id, title, updated_at")
-      .in("id", itemIds).eq("status", "FINALIZADO")
+      .in("id", itemIds).eq("status", "PRONTO_PARA_PUBLICAR")
       .gte("updated_at", start).lt("updated_at", end);
     const weeks = [0, 0, 0, 0];
     const items: string[][] = [[], [], [], []];
@@ -778,7 +778,7 @@ export const getProductivity = createServerFn({ method: "GET" })
     const histStart = new Date(Date.UTC(y, m - 6, 1)).toISOString();
     const { data: hist } = await context.supabase
       .from("content_items").select("updated_at")
-      .in("id", itemIds).eq("status", "FINALIZADO")
+      .in("id", itemIds).eq("status", "PRONTO_PARA_PUBLICAR")
       .gte("updated_at", histStart).lt("updated_at", end);
     const history: { key: string; count: number }[] = [];
     for (let i = 5; i >= 0; i--) {
@@ -1051,7 +1051,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       const posts = its.filter((i) => i.type === "post").length;
       const reels = its.filter((i) => i.type === "reel").length;
       const total = its.length;
-      const done = its.filter((i) => i.status === "FINALIZADO").length;
+      const done = its.filter((i) => i.status === "PRONTO_PARA_PUBLICAR").length;
       const percent = total ? Math.round((done / total) * 100) : 0;
       return {
         id: c.id, name: c.name, color: c.color, archived: !!c.archived,

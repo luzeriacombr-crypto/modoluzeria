@@ -159,7 +159,7 @@ export function DetailPanel() {
   const canEditFiles = isAdmin || (me ? item.assigneeIds.includes(me.id) : false);
   const activeProfiles = profiles.filter((p) => p.active);
   const isOverdue =
-    !!item.dueDate && item.status !== "FINALIZADO" &&
+    !!item.dueDate && item.status !== "PRONTO_PARA_PUBLICAR" &&
     new Date(item.dueDate + "T23:59:59").getTime() < Date.now();
 
   const checklist = item.checklist ?? [];
@@ -171,7 +171,7 @@ export function DetailPanel() {
     updateChecklist.mutate({ data: { itemId, checklist: next } });
   }
 
-  const showQuality = item.status === "FINALIZADO" || item.qualityRating != null;
+  const showQuality = item.status === "PRONTO_PARA_PUBLICAR" || item.qualityRating != null;
 
   return (
     <div
@@ -334,9 +334,9 @@ export function DetailPanel() {
               return (
                 <button key={s}
                   onClick={() => {
-                    if (s === "FINALIZADO" && appSettings?.requireRatingOnFinalize &&
-                        item.status !== "FINALIZADO" && item.qualityRating == null) {
-                      setQualityFor("FINALIZADO");
+                    if (s === "PRONTO_PARA_PUBLICAR" && appSettings?.requireRatingOnFinalize &&
+                        item.status !== "PRONTO_PARA_PUBLICAR" && item.qualityRating == null) {
+                      setQualityFor("PRONTO_PARA_PUBLICAR");
                       return;
                     }
                     setItemStatus.mutate({ data: { id: item.id, status: s } });
@@ -519,7 +519,7 @@ export function DetailPanel() {
           )}
         </ModalSection>
 
-        {item.status === "BLOQUEADO" && (
+        {item.status === "TRAVADO" && (
           <ModalSection label="Motivo do travamento">
             <div className="flex items-start gap-2">
               <AlertOctagon size={16} className="mt-2.5" style={{ color: "#FF6B6B" }} />
