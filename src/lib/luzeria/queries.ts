@@ -9,6 +9,7 @@ import {
   adminCreateUser, adminSendPasswordReset, getAdminDashboard, getTopMembers, getMemberFinalizations,
   updateMyAccount,
   getReport, getMemberReportDetail,
+  updateFeedOrder,
   getClientFicha,
   upsertClientLink, deleteClientLink,
   upsertClientContact, deleteClientContact,
