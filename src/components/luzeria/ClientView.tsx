@@ -6,6 +6,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { ContentRow } from "./ContentRow";
 import { FeedPreview } from "./FeedPreview";
+import { ClientFichaContent } from "./ClientFichaPanel";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { useMe } from "@/lib/luzeria/queries";
 
@@ -16,17 +17,16 @@ export function ClientView({ clientId }: { clientId: string }) {
   const { selectedMonthKey, selectMonth } = useUI();
   const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
-  const [tab, setTab] = useState<"posts" | "reels" | "outros" | "feed" | "profile">("posts");
+  const [tab, setTab] = useState<"posts" | "reels" | "outros" | "feed" | "ficha">("posts");
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
-  const { duplicateMonth, updateClient, addContentItem, deleteItem } = useApi();
-  const openFicha = useUI((s) => s.openFicha);
+  const { duplicateMonth, addContentItem, deleteItem } = useApi();
 
   if (!client) return null;
   const isAvulso = client.category === "Avulsos";
   const tabs = isAvulso
     ? (["posts", "reels", "outros", "feed"] as const)
-    : (["posts", "reels", "feed", "profile"] as const);
+    : (["posts", "reels", "feed", "ficha"] as const);
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
   const idx = sortedKeys.indexOf(selectedMonthKey);
@@ -49,7 +49,7 @@ export function ClientView({ clientId }: { clientId: string }) {
           )}
           </div>
           <button
-            onClick={() => openFicha(client.id)}
+            onClick={() => setTab(isAvulso ? "feed" : "ficha")}
             title="Ficha do cliente"
             className="ml-1 p-1.5 rounded-md text-white/50 hover:text-[#C8D44E] hover:bg-white/5 transition"
           >
@@ -89,7 +89,7 @@ export function ClientView({ clientId }: { clientId: string }) {
           <button key={t} onClick={() => setTab(t)}
             className="relative py-3 text-sm font-semibold transition-colors"
             style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
-            {t === "posts" ? "Posts" : t === "reels" ? "Reels" : t === "outros" ? "Outros" : t === "feed" ? "Preview de Feed" : "Perfil do Cliente"}
+            {t === "posts" ? "Posts" : t === "reels" ? "Reels" : t === "outros" ? "Outros" : t === "feed" ? "Preview de Feed" : "Ficha do Cliente"}
             {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "#C8D44E" }} />}
           </button>
         ))}
@@ -126,65 +126,13 @@ export function ClientView({ clientId }: { clientId: string }) {
             )}
           </>
         )}
-        {tab === "profile" && <ProfileTab client={client} profiles={profiles} canEdit={isAdmin}
-          onSave={(patch: Record<string, any>) => updateClient.mutate({ data: { id: client.id, patch } })} />}
+        {tab === "ficha" && (
+          <div className="mt-2 -mx-10 md:mx-0 md:rounded-lg md:overflow-hidden md:border md:border-white/[0.06]">
+            <ClientFichaContent clientId={client.id} />
+          </div>
+        )}
         {tab === "feed" && month && <FeedPreview month={month} client={client} />}
       </div>
     </div>
-  );
-}
-
-function ProfileTab({ client, profiles, canEdit, onSave }: any) {
-  const [niche, setNiche] = useState(client.customFields.niche);
-  const [postsPerWeek, setPostsPerWeek] = useState(client.customFields.postsPerWeek);
-  const [reelsPerWeek, setReelsPerWeek] = useState(client.customFields.reelsPerWeek);
-  const [responsible, setResponsible] = useState(client.customFields.fixedResponsibleId ?? "");
-  const [reviewDay, setReviewDay] = useState(client.customFields.reviewDay);
-  const [notes, setNotes] = useState(client.customFields.notes);
-
-  function save() {
-    onSave({
-      niche, posts_per_week: Number(postsPerWeek) || 0,
-      reels_per_week: Number(reelsPerWeek) || 0,
-      fixed_responsible_id: responsible || null,
-      review_day: reviewDay, notes,
-    });
-  }
-
-  return (
-    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl">
-      <Field label="Nicho"><input value={niche} disabled={!canEdit} onChange={(e) => setNiche(e.target.value)} className={inp} /></Field>
-      <Field label="Dia de revisão"><input value={reviewDay} disabled={!canEdit} onChange={(e) => setReviewDay(e.target.value)} className={inp} /></Field>
-      <Field label="Posts / semana"><input type="number" value={postsPerWeek} disabled={!canEdit} onChange={(e) => setPostsPerWeek(e.target.value as any)} className={inp} /></Field>
-      <Field label="Reels / semana"><input type="number" value={reelsPerWeek} disabled={!canEdit} onChange={(e) => setReelsPerWeek(e.target.value as any)} className={inp} /></Field>
-      <Field label="Responsável fixo">
-        <select value={responsible} disabled={!canEdit} onChange={(e) => setResponsible(e.target.value)} className={inp}>
-          <option value="">—</option>
-          {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-      </Field>
-      <div className="md:col-span-2">
-        <Field label="Observações">
-          <textarea value={notes} disabled={!canEdit} onChange={(e) => setNotes(e.target.value)} rows={4} className={inp + " resize-none"} />
-        </Field>
-      </div>
-      {canEdit && (
-        <div className="md:col-span-2">
-          <button onClick={save} className="rounded-md px-4 py-2 text-sm font-bold transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>Salvar</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-const inp = "w-full bg-[#1C1C1C] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] transition-colors disabled:opacity-60";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">{label}</span>
-      {children}
-    </label>
   );
 }
