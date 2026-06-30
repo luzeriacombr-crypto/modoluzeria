@@ -291,6 +291,10 @@ export function useApi() {
     addComment: useMutation({ mutationFn: useServerFn(addComment), onSuccess: invalidateAll }),
     addContentItem: useMutation({ mutationFn: useServerFn(addContentItem), onSuccess: invalidateAll }),
     deleteItem: useMutation({ mutationFn: useServerFn(deleteItem), onSuccess: invalidateAll }),
+    updateFeedOrder: useMutation({
+      mutationFn: useServerFn(updateFeedOrder),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
+    }),
     setUserRole: useMutation({ mutationFn: useServerFn(setUserRole), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     setUserActive: useMutation({ mutationFn: useServerFn(setUserActive), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     deleteUser: useMutation({ mutationFn: useServerFn(deleteUser), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
