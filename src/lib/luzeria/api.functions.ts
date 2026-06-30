@@ -313,6 +313,15 @@ export const deleteClient = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+function computeLateDays(dueDate: string | null | undefined, finalizedAt: string | null | undefined): number {
+  if (!dueDate || !finalizedAt) return 0;
+  // dueDate is YYYY-MM-DD; treat as end-of-day UTC.
+  const due = new Date(dueDate + "T23:59:59Z").getTime();
+  const fin = new Date(finalizedAt).getTime();
+  if (Number.isNaN(due) || Number.isNaN(fin) || fin <= due) return 0;
+  return Math.ceil((fin - due) / 86400000);
+}
+
 export const duplicateMonth = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string; fromKey: string }) => d)
