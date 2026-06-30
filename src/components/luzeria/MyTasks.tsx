@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, profilesQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, profilesQO, myMentionsQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Camera, Sparkles, List, CalendarDays, Clock, Check, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Camera, Sparkles, List, CalendarDays, Clock, Check, X, AtSign } from "lucide-react";
 import { formatMonth, shortMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { CLEANING_TASKS } from "./CleaningView";
 import { GoalsWidget } from "./GoalsWidget";
@@ -15,14 +15,16 @@ export function MyTasks() {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
   const isAdmin = me?.role === "master" || me?.role === "setor";
-  const { setStoryDone, setCleaningDone } = useApi();
+  const { setStoryDone, setCleaningDone, markMentionRead } = useApi();
   const [viewAs, setViewAs] = useState<string>("");
   const targetId = isAdmin && viewAs ? viewAs : me?.id;
   const { data: tasks = [] } = useQuery({
     ...myTasksQO(targetId),
     enabled: !!targetId,
   });
-  const { selectClient, selectMonth, openItem } = useUI();
+  const { selectClient, selectMonth, openItem, flash } = useUI();
+  const isMeView = !isAdmin || !viewAs || viewAs === me?.id;
+  const { data: mentions = [] } = useQuery({ ...myMentionsQO(), enabled: isMeView });
   const monthKey = useUI((s) => s.selectedMonthKey);
   const { data: prod } = useQuery(productivityQO(monthKey, targetId));
 
@@ -88,6 +90,51 @@ export function MyTasks() {
       </div>
 
       {targetId && <div data-tour="goals"><GoalsWidget monthKey={monthKey} userId={targetId} /></div>}
+
+      {isMeView && mentions.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="rounded p-1" style={{ backgroundColor: "rgba(200,212,78,0.18)", color: "#C8D44E" }}>
+              <AtSign size={11} />
+            </span>
+            <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Mencionado em</h2>
+            <span className="text-[11px] text-white/40">· {mentions.length}</span>
+          </div>
+          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
+            {mentions.map((m: any) => (
+              <button
+                key={m.mentionId}
+                onClick={() => {
+                  markMentionRead.mutate({ data: { mentionId: m.mentionId } });
+                  selectClient(m.clientId);
+                  selectMonth(m.monthKey);
+                  setTimeout(() => { openItem(m.itemId); flash(m.itemId); }, 30);
+                  setTimeout(() => flash(null), 2050);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left border-b border-white/[0.05] last:border-b-0"
+              >
+                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider shrink-0"
+                  style={{ backgroundColor: "rgba(200,212,78,0.18)", color: "#C8D44E" }}>
+                  @MENÇÃO
+                </span>
+                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
+                  style={{ backgroundColor: m.clientColor + "33", color: m.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : m.clientColor }}>
+                  {m.clientName}
+                </span>
+                <span className="text-[11px] text-white/50 uppercase font-semibold shrink-0">
+                  {m.type === "post" ? "Post" : m.type === "reel" ? "Reels" : "Item"} {String(m.idx).padStart(2, "0")}
+                </span>
+                <span className="text-sm text-white/90 truncate flex-1">
+                  {m.authorName ? <span className="text-white/50">{m.authorName}: </span> : null}{m.snippet || m.title}
+                </span>
+                <span className="text-[10px] text-white/40 shrink-0 tabular-nums">
+                  {new Date(m.mentionedAt).toLocaleDateString("pt-BR")}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="inline-flex bg-[#1C1C1C] border border-white/[0.06] rounded-lg p-1 mb-6" data-tour="my-week">
         {[

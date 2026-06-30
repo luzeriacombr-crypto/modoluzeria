@@ -13,6 +13,7 @@ import {
   upsertClientLink, deleteClientLink,
   upsertClientContact, deleteClientContact,
   upsertClientSecret, deleteClientSecret,
+  listMyMentions, markMentionRead,
 } from "./api.functions";
 import {
   updateChecklist, rateItem,
@@ -50,6 +51,8 @@ export const monthKeysQO = (clientId: string) =>
   });
 export const notificationsQO = () =>
   queryOptions({ queryKey: ["notifications"], queryFn: () => listNotifications(), refetchInterval: 60_000 });
+export const myMentionsQO = () =>
+  queryOptions({ queryKey: ["my-mentions"], queryFn: () => listMyMentions(), refetchInterval: 60_000 });
 export const myTasksQO = (userId?: string) =>
   queryOptions({ queryKey: ["my-tasks", userId ?? "self"], queryFn: () => listMyTasks({ data: { userId } }) });
 export const productivityQO = (monthKey: string, userId?: string) =>
@@ -295,6 +298,13 @@ export function useApi() {
     updateMyProfile: useMutation({ mutationFn: useServerFn(updateMyProfile), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
     updateMyAccount: useMutation({ mutationFn: useServerFn(updateMyAccount), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
     markNotificationRead: useMutation({ mutationFn: useServerFn(markNotificationRead), onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }) }),
+    markMentionRead: useMutation({
+      mutationFn: useServerFn(markMentionRead),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["my-mentions"] });
+        qc.invalidateQueries({ queryKey: ["notifications"] });
+      },
+    }),
     upsertStoryDay: useMutation({
       mutationFn: useServerFn(upsertStoryDay),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["stories"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },

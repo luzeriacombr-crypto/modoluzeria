@@ -313,6 +313,15 @@ export const deleteClient = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+function computeLateDays(dueDate: string | null | undefined, finalizedAt: string | null | undefined): number {
+  if (!dueDate || !finalizedAt) return 0;
+  // dueDate is YYYY-MM-DD; treat as end-of-day UTC.
+  const due = new Date(dueDate + "T23:59:59Z").getTime();
+  const fin = new Date(finalizedAt).getTime();
+  if (Number.isNaN(due) || Number.isNaN(fin) || fin <= due) return 0;
+  return Math.ceil((fin - due) / 86400000);
+}
+
 export const duplicateMonth = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string; fromKey: string }) => d)
@@ -328,33 +337,22 @@ export const duplicateMonth = createServerFn({ method: "POST" })
     if (mErr) throw new Error(mErr.message);
     if (fromMonth) {
       const { data: oldItems } = await context.supabase
-        .from("content_items").select("id, type, idx, title").eq("month_id", fromMonth.id).order("idx");
+        .from("content_items").select("type, idx").eq("month_id", fromMonth.id);
       if (oldItems?.length) {
-        // Insert new items in the same shape (status defaults to PLANEJAMENTO).
-        const { data: inserted, error: insErr } = await context.supabase.from("content_items")
-          .insert(oldItems.map((it) => ({
-            month_id: newMonth.id, type: it.type, idx: it.idx, title: it.title,
-            status: "PLANEJAMENTO" as Status,
-          })))
-          .select("id, type, idx");
-        if (insErr) throw new Error(insErr.message);
-        // Carry over assignees by matching (type, idx).
-        const oldIdByKey = new Map<string, string>();
-        oldItems.forEach((it: any) => oldIdByKey.set(`${it.type}:${it.idx}`, it.id));
-        const newIdByKey = new Map<string, string>();
-        (inserted ?? []).forEach((it: any) => newIdByKey.set(`${it.type}:${it.idx}`, it.id));
-        const oldItemIds = [...oldIdByKey.values()];
-        if (oldItemIds.length) {
-          const { data: oldAssign } = await context.supabase
-            .from("item_assignees").select("item_id, user_id").in("item_id", oldItemIds);
-          const rows: { item_id: string; user_id: string }[] = [];
-          (oldAssign ?? []).forEach((a: any) => {
-            const old = oldItems.find((o: any) => o.id === a.item_id);
-            if (!old) return;
-            const newId = newIdByKey.get(`${old.type}:${old.idx}`);
-            if (newId) rows.push({ item_id: newId, user_id: a.user_id });
-          });
-          if (rows.length) await context.supabase.from("item_assignees").insert(rows);
+        // Copy only the QUANTITY per type (post/reel/outros).
+        // No titles, no assignees, no due dates, no comments, no files.
+        const counts: Record<string, number> = {};
+        oldItems.forEach((it: any) => { counts[it.type] = (counts[it.type] ?? 0) + 1; });
+        const rows: any[] = [];
+        (["post", "reel", "outros"] as const).forEach((t) => {
+          const n = counts[t] ?? 0;
+          for (let i = 1; i <= n; i++) {
+            rows.push({ month_id: newMonth.id, type: t, idx: i, title: "", status: "PLANEJAMENTO" as Status });
+          }
+        });
+        if (rows.length) {
+          const { error: insErr } = await context.supabase.from("content_items").insert(rows);
+          if (insErr) throw new Error(insErr.message);
         }
       }
     } else {
@@ -762,6 +760,52 @@ export const markNotificationRead = createServerFn({ method: "POST" })
     const q = context.supabase.from("notifications").update({ read: true }).eq("user_id", context.userId);
     if (data.id) await q.eq("id", data.id);
     else await q.eq("read", false);
+    return { ok: true };
+  });
+
+export const listMyMentions = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: mens } = await context.supabase
+      .from("mentions")
+      .select("id, item_id, comment_id, created_at, read_at, comments(text, author_id, profiles:author_id(name, color)), content_items(id, type, idx, title, status, month_id, months(key, clients(id, name, color, category)))")
+      .eq("mentioned_user_id", context.userId)
+      .is("read_at", null)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    return (mens ?? [])
+      .filter((m: any) => m.content_items && m.content_items.months?.clients)
+      .map((m: any) => {
+        const it = m.content_items;
+        const c = it.months.clients;
+        return {
+          mentionId: m.id,
+          itemId: it.id,
+          type: it.type as "post" | "reel" | "outros",
+          idx: it.idx as number,
+          title: it.title as string,
+          status: it.status as string,
+          monthKey: it.months.key as string,
+          clientId: c.id as string,
+          clientName: c.name as string,
+          clientColor: c.color as string,
+          clientCategory: (c.category ?? "Social Media") as string,
+          mentionedAt: m.created_at as string,
+          authorName: (m.comments?.profiles?.name ?? null) as string | null,
+          snippet: ((m.comments?.text ?? "") as string).replace(/@\[([^\]]+)\]\([0-9a-f-]{36}\)/g, "@$1").slice(0, 140),
+        };
+      });
+  });
+
+export const markMentionRead = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { mentionId?: string; itemId?: string; all?: boolean }) => d)
+  .handler(async ({ data, context }) => {
+    let q = context.supabase.from("mentions").update({ read_at: new Date().toISOString() }).eq("mentioned_user_id", context.userId);
+    if (data.mentionId) q = q.eq("id", data.mentionId);
+    else if (data.itemId) q = q.eq("item_id", data.itemId);
+    else q = q.is("read_at", null);
+    await q;
     return { ok: true };
   });
 
@@ -1251,7 +1295,7 @@ export const getReport = createServerFn({ method: "GET" })
     let fq = context.supabase
       .from("finalizations")
       .select(
-        "id, user_id, finalized_at, content_items!inner(id, type, title, editor_id, reel_type, months!inner(client_id, key, clients!inner(id, name, color, category)))"
+        "id, user_id, finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(client_id, key, clients!inner(id, name, color, category)))"
       )
       .gte("finalized_at", fromISO)
       .lt("finalized_at", toISO);
@@ -1271,6 +1315,7 @@ export const getReport = createServerFn({ method: "GET" })
       clientCategory: string | null;
       reelType: string | null;
       editorId: string | null;
+      lateDays: number;
     };
     const history: HistRow[] = [];
     (finRows ?? []).forEach((r: any) => {
@@ -1281,6 +1326,7 @@ export const getReport = createServerFn({ method: "GET" })
       if (filterClient && c?.id !== filterClient) return;
       if (filterType !== "all" && filterType !== "stories" && filterType !== "cleaning" && it.type !== filterType) return;
       if ((filterType === "stories" || filterType === "cleaning") && true) return; // skip content for stories/cleaning filter
+      const lateDays = computeLateDays(it.due_date, r.finalized_at);
       history.push({
         kind: "content",
         finalizedAt: r.finalized_at,
@@ -1293,6 +1339,7 @@ export const getReport = createServerFn({ method: "GET" })
         clientCategory: category,
         reelType: it.reel_type ?? null,
         editorId: it.editor_id ?? null,
+        lateDays,
       });
     });
 
@@ -1315,7 +1362,7 @@ export const getReport = createServerFn({ method: "GET" })
           type: "stories",
           title: `Stories ${new Date(s.day + "T12:00:00Z").toLocaleDateString("pt-BR")}`,
           clientId: null, clientName: "STORIES", clientColor: "#7EFFD9", clientCategory: "Stories",
-          reelType: null, editorId: null,
+          reelType: null, editorId: null, lateDays: 0,
         });
       });
     }
@@ -1337,7 +1384,7 @@ export const getReport = createServerFn({ method: "GET" })
           type: "cleaning",
           title: `Limpeza · tarefa ${c.task_idx + 1} (dia ${c.weekday})`,
           clientId: null, clientName: "LIMPEZA", clientColor: "#4A9EFF", clientCategory: "Limpeza",
-          reelType: null, editorId: null,
+          reelType: null, editorId: null, lateDays: 0,
         });
       });
     }
@@ -1356,27 +1403,30 @@ export const getReport = createServerFn({ method: "GET" })
     };
 
     // ---- by member ----
-    const memberAgg = new Map<string, { posts: number; reels: number; outros: number; stories: number; cleaning: number }>();
+    const memberAgg = new Map<string, { posts: number; reels: number; outros: number; stories: number; cleaning: number; lateCount: number; lateDaysSum: number }>();
     history.forEach((h) => {
       const k = h.userId;
-      const row = memberAgg.get(k) ?? { posts: 0, reels: 0, outros: 0, stories: 0, cleaning: 0 };
+      const row = memberAgg.get(k) ?? { posts: 0, reels: 0, outros: 0, stories: 0, cleaning: 0, lateCount: 0, lateDaysSum: 0 };
       if (h.type === "post") row.posts++;
       else if (h.type === "reel") row.reels++;
       else if (h.type === "outros") row.outros++;
       else if (h.type === "stories") row.stories++;
       else if (h.type === "cleaning") row.cleaning++;
+      if (h.kind === "content" && h.lateDays > 0) { row.lateCount++; row.lateDaysSum += h.lateDays; }
       memberAgg.set(k, row);
     });
     const byMember = [...memberAgg.entries()].map(([userId, v]) => {
       const p = profileById.get(userId);
       const total = v.posts + v.reels + v.outros + v.stories + v.cleaning;
+      const { lateDaysSum, ...rest } = v;
       return {
         userId,
         name: p?.name ?? "—",
         color: p?.color ?? "#888",
         icon: p?.icon ?? null,
         role: roleByUser.get(userId) ?? "member",
-        ...v,
+        ...rest,
+        avgLateDays: v.lateCount > 0 ? Math.round((lateDaysSum / v.lateCount) * 10) / 10 : 0,
         total,
       };
     }).sort((a, b) => b.total - a.total);
@@ -1443,7 +1493,7 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
 
     const { data: finRows } = await context.supabase
       .from("finalizations")
-      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, months!inner(key, clients!inner(id, name, color, category)))")
+      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(key, clients!inner(id, name, color, category)))")
       .eq("user_id", data.userId)
       .gte("finalized_at", monthlyStart);
 
@@ -1466,12 +1516,13 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
       clientId: r.content_items.months.clients.id,
       clientName: r.content_items.months.clients.name,
       clientColor: r.content_items.months.clients.color,
+      lateDays: computeLateDays(r.content_items.due_date, r.finalized_at),
     }));
 
     // Reels edited by this user (editor_id)
     const { data: editedRows } = await context.supabase
       .from("finalizations")
-      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, months!inner(clients!inner(id, name, color)))")
+      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(clients!inner(id, name, color)))")
       .eq("content_items.editor_id", data.userId)
       .gte("finalized_at", fromISO)
       .lt("finalized_at", toISO);
@@ -1485,6 +1536,7 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
         clientId: r.content_items.months.clients.id,
         clientName: r.content_items.months.clients.name,
         clientColor: r.content_items.months.clients.color,
+        lateDays: computeLateDays(r.content_items.due_date, r.finalized_at),
       }));
 
     // Stories / cleaning in range
