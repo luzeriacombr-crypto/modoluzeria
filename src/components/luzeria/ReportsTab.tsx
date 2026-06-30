@@ -185,12 +185,13 @@ export function ReportsTab() {
                   <th className="text-right px-2 py-2">Stories</th>
                   <th className="text-right px-2 py-2">Limpeza</th>
                   <th className="text-right px-2 py-2">Total</th>
+                  <th className="text-right px-2 py-2">Atrasadas</th>
                   <th className="text-right px-3 py-2">% do time</th>
                 </tr>
               </thead>
               <tbody>
                 {report.byMember.length === 0 && (
-                  <tr><td colSpan={8} className="px-3 py-4 text-white/40 text-center">Sem entregas no período.</td></tr>
+                  <tr><td colSpan={9} className="px-3 py-4 text-white/40 text-center">Sem entregas no período.</td></tr>
                 )}
                 {report.byMember.map((m: any, i: number) => (
                   <tr key={m.userId}
@@ -206,6 +207,15 @@ export function ReportsTab() {
                     <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.stories}</td>
                     <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.cleaning}</td>
                     <td className="text-right px-2 py-2.5 font-bold tabular-nums" style={{ color: i === 0 ? "#C8D44E" : "#FFF" }}>{m.total}</td>
+                    <td className="text-right px-2 py-2.5 tabular-nums">
+                      {m.lateCount > 0 ? (
+                        <span title={`Média de atraso: ${m.avgLateDays} dia(s)`} className="font-bold" style={{ color: "#FF6B6B" }}>
+                          {m.lateCount}
+                        </span>
+                      ) : (
+                        <span className="text-white/30">0</span>
+                      )}
+                    </td>
                     <td className="text-right px-3 py-2.5 text-white/60 tabular-nums">{m.pct}%</td>
                   </tr>
                 ))}
