@@ -67,7 +67,7 @@ export function MyTasks() {
               return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
             })()}! 🤩
           </div>
-          <h1 className="text-[32px] font-bold text-white leading-none tracking-tight">Coisas para fazer</h1>
+          <h1 className="text-[24px] sm:text-[32px] font-bold text-white leading-none tracking-tight whitespace-nowrap">Coisas para fazer</h1>
           <p className="text-sm text-white/50 mt-2">
             {tasks.length} {tasks.length === 1 ? "tarefa atribuída" : "tarefas atribuídas"}
           </p>
