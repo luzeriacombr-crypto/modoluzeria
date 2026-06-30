@@ -1109,19 +1109,18 @@ export type Database = {
     Enums: {
       app_role: "master" | "setor" | "member"
       content_status:
-        | "START"
-        | "CRIACAO"
-        | "REVISAO_ARTE"
-        | "REVISAO_CLIENTE"
-        | "FINALIZADO"
         | "PLANEJAMENTO"
         | "COPY"
-        | "REVISAO_INTERNA"
-        | "AGENDAMENTO"
-        | "REVISAO_AGENDAMENTO"
+        | "CRIACAO"
+        | "REVISAO_ARTE"
         | "EM_GRAVACAO"
         | "EM_EDICAO"
-        | "BLOQUEADO"
+        | "REVISAO_INTERNA"
+        | "REVISAO_CLIENTE"
+        | "AGENDAMENTO"
+        | "REVISAO_AGENDAMENTO"
+        | "TRAVADO"
+        | "PRONTO_PARA_PUBLICAR"
       content_type: "post" | "reel" | "outros"
     }
     CompositeTypes: {
@@ -1252,19 +1251,18 @@ export const Constants = {
     Enums: {
       app_role: ["master", "setor", "member"],
       content_status: [
-        "START",
-        "CRIACAO",
-        "REVISAO_ARTE",
-        "REVISAO_CLIENTE",
-        "FINALIZADO",
         "PLANEJAMENTO",
         "COPY",
-        "REVISAO_INTERNA",
-        "AGENDAMENTO",
-        "REVISAO_AGENDAMENTO",
+        "CRIACAO",
+        "REVISAO_ARTE",
         "EM_GRAVACAO",
         "EM_EDICAO",
-        "BLOQUEADO",
+        "REVISAO_INTERNA",
+        "REVISAO_CLIENTE",
+        "AGENDAMENTO",
+        "REVISAO_AGENDAMENTO",
+        "TRAVADO",
+        "PRONTO_PARA_PUBLICAR",
       ],
       content_type: ["post", "reel", "outros"],
     },

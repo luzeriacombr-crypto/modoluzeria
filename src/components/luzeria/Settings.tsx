@@ -290,7 +290,7 @@ function GeneralSettings() {
         <div className="flex-1">
           <div className="text-sm font-semibold text-white">Exigir avaliação ao finalizar</div>
           <div className="text-[11px] text-white/50 mt-1">
-            Ao mudar status de uma tarefa para <span className="text-[#C8D44E] font-semibold">Finalizado</span>,
+            Ao mudar status de uma tarefa para <span className="text-[#C8D44E] font-semibold">Pronto para publicar</span>,
             o responsável é obrigado a dar uma nota de qualidade (1–5 estrelas).
           </div>
         </div>

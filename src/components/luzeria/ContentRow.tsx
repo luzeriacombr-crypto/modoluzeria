@@ -36,7 +36,7 @@ export function ContentRow({ item, profiles, idx }: {
     ? editor.name.trim().split(/\s+/).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("")
     : "";
   const isOverdue =
-    !!item.dueDate && item.status !== "FINALIZADO" &&
+    !!item.dueDate && item.status !== "PRONTO_PARA_PUBLICAR" &&
     new Date(item.dueDate + "T23:59:59").getTime() < Date.now();
   const dueLabel = item.dueDate
     ? new Date(item.dueDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })

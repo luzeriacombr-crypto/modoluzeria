@@ -5,8 +5,8 @@ export type Status =
   | "REVISAO_CLIENTE"
   | "AGENDAMENTO"
   | "REVISAO_AGENDAMENTO"
-  | "FINALIZADO"
-  | "BLOQUEADO"
+  | "PRONTO_PARA_PUBLICAR"
+  | "TRAVADO"
   // Post-only
   | "CRIACAO"
   | "REVISAO_ARTE"
@@ -53,15 +53,15 @@ export interface ContentItem {
   dueDate?: string | null;
   /** Set automatically when item leaves PLANEJAMENTO for the first time. */
   startedAt?: string | null;
-  /** Set automatically when item reaches FINALIZADO. */
+  /** Set automatically when item reaches PRONTO_PARA_PUBLICAR. */
   finishedAt?: string | null;
-  /** Filled when status = BLOQUEADO. */
+  /** Filled when status = TRAVADO. */
   blockedReason?: string | null;
   /** Checklist embarcada (subtarefas). */
   checklist?: ChecklistItem[];
-  /** Quantas vezes o item voltou (de FINALIZADO ou REVISAO_*). */
+  /** Quantas vezes o item voltou (de PRONTO_PARA_PUBLICAR ou REVISAO_*). */
   reworkCount?: number;
-  /** Nota de qualidade dada quando virou FINALIZADO (1–5). */
+  /** Nota de qualidade dada quando virou PRONTO_PARA_PUBLICAR (1–5). */
   qualityRating?: number | null;
 }
 
@@ -134,12 +134,12 @@ export const STATUS_META: Record<
   REVISAO_CLIENTE:     { label: "Revisão cliente",     bg: "#0D2B4A", color: "#4A9EFF", icon: "MessageSquare" },
   AGENDAMENTO:         { label: "Agendamento",         bg: "#1A2E2A", color: "#7EFFD9", icon: "CalendarCheck" },
   REVISAO_AGENDAMENTO: { label: "Revisão agendamento", bg: "#2A1E1E", color: "#FF9E7E", icon: "CalendarClock" },
-  FINALIZADO:          { label: "Finalizado",          bg: "#1A3A1A", color: "#C8D44E", icon: "CheckCircle" },
-  BLOQUEADO:           { label: "Travado",             bg: "#3A1A1A", color: "#FF6B6B", icon: "Ban" },
+  PRONTO_PARA_PUBLICAR: { label: "Pronto para publicar", bg: "#1A3A1A", color: "#C8D44E", icon: "CheckCircle" },
+  TRAVADO:             { label: "Travado",             bg: "#3A1A1A", color: "#FF6B6B", icon: "Ban" },
   CRIACAO:             { label: "Criação de arte",     bg: "#3D2B5E", color: "#C084FC", icon: "Paintbrush" },
   REVISAO_ARTE:        { label: "Revisão de arte",     bg: "#4A2800", color: "#FF8C42", icon: "Eye" },
   EM_GRAVACAO:         { label: "Em gravação",         bg: "#1A1A3A", color: "#7E9EFF", icon: "Video" },
-  EM_EDICAO:           { label: "Em edição",           bg: "#2A1A2A", color: "#FF7EE8", icon: "Scissors" },
+  EM_EDICAO:           { label: "Em edição",         bg: "#2A1A2A", color: "#FF7EE8", icon: "Scissors" },
 };
 
 /** Status comuns a Posts, Reels e Outros, na ordem do pipeline. */
@@ -150,8 +150,8 @@ export const GLOBAL_STATUS_ORDER: Status[] = [
   "REVISAO_CLIENTE",
   "AGENDAMENTO",
   "REVISAO_AGENDAMENTO",
-  "BLOQUEADO",
-  "FINALIZADO",
+  "TRAVADO",
+  "PRONTO_PARA_PUBLICAR",
 ];
 
 export const POST_EXTRA_STATUS: Status[] = ["CRIACAO", "REVISAO_ARTE"];
@@ -169,17 +169,46 @@ export const STATUS_ORDER: Status[] = [
   "REVISAO_CLIENTE",
   "AGENDAMENTO",
   "REVISAO_AGENDAMENTO",
-  "BLOQUEADO",
-  "FINALIZADO",
+  "TRAVADO",
+  "PRONTO_PARA_PUBLICAR",
 ];
 
 export function statusOptionsFor(type: ContentType): Status[] {
-  // Insert extras right before BLOQUEADO/FINALIZADO so the pipeline reads naturally.
-  const head = GLOBAL_STATUS_ORDER.filter((s) => s !== "BLOQUEADO" && s !== "FINALIZADO");
-  const tail: Status[] = ["BLOQUEADO", "FINALIZADO"];
-  if (type === "post") return [...head, ...POST_EXTRA_STATUS, ...tail];
-  if (type === "reel") return [...head, ...REEL_EXTRA_STATUS, ...tail];
-  return [...head, ...POST_EXTRA_STATUS, ...REEL_EXTRA_STATUS, ...tail];
+  const base: Status[] = [
+    "PLANEJAMENTO",
+    "COPY",
+    "REVISAO_INTERNA",
+    "REVISAO_CLIENTE",
+    "AGENDAMENTO",
+    "REVISAO_AGENDAMENTO",
+  ];
+  const tail: Status[] = ["TRAVADO", "PRONTO_PARA_PUBLICAR"];
+  if (type === "post") {
+    return [
+      "PLANEJAMENTO",
+      "COPY",
+      ...POST_EXTRA_STATUS,
+      ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
+      ...tail,
+    ];
+  }
+  if (type === "reel") {
+    return [
+      "PLANEJAMENTO",
+      "COPY",
+      ...REEL_EXTRA_STATUS,
+      ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
+      ...tail,
+    ];
+  }
+  return [
+    "PLANEJAMENTO",
+    "COPY",
+    ...POST_EXTRA_STATUS,
+    ...REEL_EXTRA_STATUS,
+    ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
+    ...tail,
+  ];
 }
 
 /* ============== CLIENT PROFILE (Ficha) ============== */
