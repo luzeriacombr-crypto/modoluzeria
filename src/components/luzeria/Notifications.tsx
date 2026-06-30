@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { notificationsQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function NotificationsBell() {
   const { data: list = [] } = useQuery(notificationsQO());
@@ -15,18 +16,21 @@ export function NotificationsBell() {
   const popRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const { selectClient, selectMonth, openItem, flash } = useUI();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!open) return;
-    const rect = btnRef.current?.getBoundingClientRect();
-    if (rect) setPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    if (!isMobile) {
+      const rect = btnRef.current?.getBoundingClientRect();
+      if (rect) setPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
     const h = (e: MouseEvent) => {
       const t = e.target as Node;
       if (!btnRef.current?.contains(t) && !popRef.current?.contains(t)) setOpen(false);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
-  }, [open]);
+  }, [open, isMobile]);
 
   return (
     <div className="relative" ref={ref}>
@@ -40,27 +44,43 @@ export function NotificationsBell() {
           </span>
         )}
       </button>
-      {open && pos && createPortal(
+      {open && (isMobile || pos) && createPortal(
+        <>
+          {isMobile && (
+            <div
+              className="fixed inset-0 z-[99] bg-black/60"
+              onClick={() => setOpen(false)}
+            />
+          )}
         <div
           ref={popRef}
-          className="fixed w-[380px] overflow-hidden z-[100] lz-notif-pop"
-          style={{
-            top: pos.top,
-            right: pos.right,
+          className={isMobile ? "fixed inset-0 z-[100] flex flex-col lz-notif-pop" : "fixed w-[380px] overflow-hidden z-[100] lz-notif-pop"}
+          style={isMobile ? {
+            background: "#1C1C1C",
+          } : {
+            top: pos!.top,
+            right: pos!.right,
             background: "#1C1C1C",
             border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: 12,
             boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
           }}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-            <span className="text-sm font-bold text-white">Notificações</span>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] shrink-0">
+            <div className="flex items-center gap-2">
+              {isMobile && (
+                <button onClick={() => setOpen(false)} className="p-1 -ml-1 text-white/60 hover:text-white">
+                  <X size={18} />
+                </button>
+              )}
+              <span className="text-sm font-bold text-white">Notificações</span>
+            </div>
             {unread > 0 && (
               <button onClick={() => markNotificationRead.mutate({ data: { all: true } })}
                 className="text-[11px] text-[#C8D44E] hover:underline">Marcar todas como lidas</button>
             )}
           </div>
-          <div className="max-h-[480px] overflow-y-auto">
+          <div className={isMobile ? "flex-1 overflow-y-auto" : "max-h-[480px] overflow-y-auto"}>
             {list.length === 0 && <p className="text-xs text-white/40 px-4 py-6 text-center">Sem notificações.</p>}
             {list.map((n: any) => (
               <button
@@ -91,7 +111,8 @@ export function NotificationsBell() {
               </button>
             ))}
           </div>
-        </div>,
+        </div>
+        </>,
         document.body
       )}
     </div>
