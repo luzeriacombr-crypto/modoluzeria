@@ -60,6 +60,13 @@ export function MyTasks() {
     <div className="p-10 max-w-5xl mx-auto" data-tour="my-tasks">
       <div className="flex items-end justify-between mb-8">
         <div>
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2"
+            style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+            Olá, {(() => {
+              const raw = (me?.name ?? "você").trim().split(" ")[0];
+              return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+            })()}! 🤩
+          </div>
           <h1 className="text-[32px] font-bold text-white leading-none tracking-tight">Coisas para fazer</h1>
           <p className="text-sm text-white/50 mt-2">
             {tasks.length} {tasks.length === 1 ? "tarefa atribuída" : "tarefas atribuídas"}
