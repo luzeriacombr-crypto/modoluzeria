@@ -18,6 +18,18 @@ async function signAvatarPaths(supabase: any, paths: (string | null | undefined)
   return result;
 }
 
+/** Generate signed read URLs for reel-cover storage paths (1 year). */
+async function signCoverPaths(supabase: any, paths: (string | null | undefined)[]): Promise<Map<string, string>> {
+  const unique = Array.from(new Set(paths.filter((p): p is string => !!p)));
+  const result = new Map<string, string>();
+  if (unique.length === 0) return result;
+  const { data } = await supabase.storage.from("reel-covers").createSignedUrls(unique, 60 * 60 * 24 * 365);
+  (data ?? []).forEach((r: any) => {
+    if (r?.path && r?.signedUrl) result.set(r.path, r.signedUrl);
+  });
+  return result;
+}
+
 export const listProfiles = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
