@@ -89,7 +89,7 @@ export function ClientFichaPanel() {
         <Section label="Métricas">
           <div className="grid grid-cols-2 gap-2">
             <MetricMini icon={<FileText size={13} />} label="Itens totais" value={metrics?.totalItems ?? 0} />
-            <MetricMini icon={<CheckCircle2 size={13} />} label="Finalizados" value={metrics?.finalized ?? 0} color="#C8D44E" />
+            <MetricMini icon={<CheckCircle2 size={13} />} label="Prontos" value={metrics?.finalized ?? 0} color="#C8D44E" />
             <MetricMini
               icon={<AlertOctagon size={13} />}
               label="Travados"

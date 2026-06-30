@@ -514,7 +514,7 @@ export function DetailPanel() {
           {item.startedAt && (
             <p className="text-[10px] text-white/40 mt-1.5">
               Iniciado em {new Date(item.startedAt).toLocaleDateString("pt-BR")}
-              {item.finishedAt && ` · Finalizado em ${new Date(item.finishedAt).toLocaleDateString("pt-BR")}`}
+              {item.finishedAt && ` · Publicado em ${new Date(item.finishedAt).toLocaleDateString("pt-BR")}`}
             </p>
           )}
         </ModalSection>
