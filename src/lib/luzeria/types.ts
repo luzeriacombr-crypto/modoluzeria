@@ -53,15 +53,15 @@ export interface ContentItem {
   dueDate?: string | null;
   /** Set automatically when item leaves PLANEJAMENTO for the first time. */
   startedAt?: string | null;
-  /** Set automatically when item reaches FINALIZADO. */
+  /** Set automatically when item reaches PRONTO_PARA_PUBLICAR. */
   finishedAt?: string | null;
-  /** Filled when status = BLOQUEADO. */
+  /** Filled when status = TRAVADO. */
   blockedReason?: string | null;
   /** Checklist embarcada (subtarefas). */
   checklist?: ChecklistItem[];
-  /** Quantas vezes o item voltou (de FINALIZADO ou REVISAO_*). */
+  /** Quantas vezes o item voltou (de PRONTO_PARA_PUBLICAR ou REVISAO_*). */
   reworkCount?: number;
-  /** Nota de qualidade dada quando virou FINALIZADO (1–5). */
+  /** Nota de qualidade dada quando virou PRONTO_PARA_PUBLICAR (1–5). */
   qualityRating?: number | null;
 }
 
