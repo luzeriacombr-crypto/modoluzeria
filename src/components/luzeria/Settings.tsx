@@ -6,7 +6,7 @@ import type { Role } from "@/lib/luzeria/types";
 import { roleLabel } from "./Sidebar";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
-import { UserPlus, X, Settings as SettingsIcon, Star } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, Info } from "lucide-react";
 import { ReportsTab } from "./ReportsTab";
 import { DriveSettingsTab } from "./DriveSettingsTab";
 import { MemberGoalsTab } from "./MemberGoalsTab";
@@ -119,6 +119,7 @@ export function SettingsPage() {
 
       <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3">
         Equipe ativa <span className="text-white/30">({active.length})</span>
+        <RolesInfo />
       </h2>
       <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
         {active.map((p) => (
