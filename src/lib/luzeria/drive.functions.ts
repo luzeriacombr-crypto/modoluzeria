@@ -578,6 +578,35 @@ export const getDriveThumbnail = createServerFn({ method: "GET" })
     return { dataUrl: `data:${ct};base64,${buf.toString("base64")}` };
   });
 
+/**
+ * Returns a base64 data URL for the raw file bytes (used for client-side
+ * video frame capture). Limited to ~40 MB to keep the response sane.
+ */
+export const getDriveFileBytes = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { fileId: string }) =>
+    z.object({ fileId: z.string().min(5).max(200) }).parse(d))
+  .handler(async ({ data }) => {
+    const meta: any = await driveFetch(
+      `/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=mimeType,size,name&supportsAllDrives=true`,
+    );
+    const size = meta?.size ? Number(meta.size) : 0;
+    if (size && size > 40_000_000) {
+      throw new Error("Arquivo muito grande para captura de frame (limite 40 MB).");
+    }
+    const res = await fetch(
+      `${GATEWAY}/drive/v3/files/${encodeURIComponent(data.fileId)}?alt=media&supportsAllDrives=true`,
+      { headers: gatewayHeaders() },
+    );
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(`Drive download falhou (${res.status}): ${t.slice(0, 200)}`);
+    }
+    const buf = Buffer.from(await res.arrayBuffer());
+    const ct = meta?.mimeType ?? res.headers.get("content-type") ?? "application/octet-stream";
+    return { dataUrl: `data:${ct};base64,${buf.toString("base64")}`, mimeType: ct, name: meta?.name ?? "video" };
+  });
+
 /* ============== DRIVE CONFIG + ORGANIZE ============== */
 
 async function assertMaster(supabase: any, userId: string) {
