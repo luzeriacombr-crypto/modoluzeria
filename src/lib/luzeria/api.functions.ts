@@ -170,6 +170,27 @@ export const adminCreateUser = createServerFn({ method: "POST" })
     return { ok: true, id: uid };
   });
 
+export const adminSendPasswordReset = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId: string }) =>
+    z.object({ userId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile, error: pErr } = await supabaseAdmin
+      .from("profiles").select("email").eq("id", data.userId).maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    if (!profile?.email) throw new Error("Email não encontrado para este usuário.");
+    const siteUrl = process.env.SITE_URL || process.env.SUPABASE_URL || "";
+    const { error } = await supabaseAdmin.auth.admin.generateLink({
+      type: "recovery",
+      email: profile.email,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, email: profile.email };
+  });
+
 /* ============== CLIENTS ============== */
 
 export const listClients = createServerFn({ method: "GET" })
