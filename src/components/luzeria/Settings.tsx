@@ -238,6 +238,56 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function RolesInfo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-block ml-2 align-middle">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="inline-flex items-center justify-center h-4 w-4 rounded-full text-white/50 hover:text-[#C8D44E] transition"
+        aria-label="Diferença entre funções"
+      >
+        <Info size={13} />
+      </button>
+      {open && (
+        <div
+          className="absolute z-30 right-0 mt-2 w-[320px] bg-[#1A1A1A] rounded-lg p-4 normal-case tracking-normal"
+          style={{ border: "1px solid rgba(200,212,78,0.2)", boxShadow: "0 12px 32px rgba(0,0,0,0.5)" }}
+        >
+          <div className="text-[11px] font-bold uppercase tracking-wider text-[#C8D44E] mb-3">
+            Diferença entre funções
+          </div>
+          <div className="space-y-3">
+            <div>
+              <div className="text-xs font-semibold text-white">Adm Master</div>
+              <div className="text-[11px] text-white/60 mt-0.5 leading-relaxed">
+                Acesso total. Gerencia equipe (aprovar, criar, remover), define metas, configura Drive,
+                vê relatórios, dashboard completo e demandas de qualquer colaborador.
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-white">Adm Setor</div>
+              <div className="text-[11px] text-white/60 mt-0.5 leading-relaxed">
+                Gestão operacional. Cria e edita clientes, posts, reels e avulsos, atribui responsáveis
+                e acompanha o dashboard. Não gerencia equipe nem configurações sensíveis.
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-white">Membro</div>
+              <div className="text-[11px] text-white/60 mt-0.5 leading-relaxed">
+                Executa as próprias demandas. Vê "Minhas Demandas", atualiza status, comenta, anexa
+                arquivos e acompanha sua meta pessoal. Não edita clientes nem outros colaboradores.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </span>
+  );
+}
+
 function GeneralSettings() {
   const { data: settings } = useQuery(appSettingsQO());
   const { updateAppSettings } = useApi();
