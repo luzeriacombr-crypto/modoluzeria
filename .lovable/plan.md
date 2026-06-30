@@ -1,26 +1,7 @@
-Trocar a lista de status vertical do painel de detalhes por um dropdown compacto: mostra só o status ativo, e ao clicar abre um menu flutuante com todas as opções. Ao escolher, o menu fecha e exibe o novo status.
+Alterar o preview de mídia no `DetailPanel.tsx` (componente `MediaPreview`) para usar proporção 4:5 (vertical, formato de feed do Instagram) em vez da altura fixa atual de 200px.
 
-### O que será feito
+## Mudança
 
-1. **Substituir lista expandida por botão dropdown** em `src/components/luzeria/DetailPanel.tsx`:
-   - Estado local `open` para controlar abertura/fechamento do menu.
-   - Botão fechado mostra ícone + label do status atual, com cor de fundo do `STATUS_META` e largura total da seção.
-   - Ao clicar, abre menu flutuante posicionado abaixo, com as opções em lista vertical.
+Em `src/components/luzeria/DetailPanel.tsx`, nas duas variantes do `MediaPreview` (estado vazio + estado com arquivo), trocar `h-[200px]` por `aspect-[4/5]` mantendo `w-full`. Isso fará o bloco crescer verticalmente respeitando a largura da coluna, exibindo o conteúdo no mesmo formato dos posts/carrosséis.
 
-2. **Manter lógica existente**:
-   - Seleção continua usando `setItemStatus.mutate`.
-   - Ao escolher `PRONTO_PARA_PUBLICAR` com avaliação obrigatória ativa, exibe o diálogo de nota antes de confirmar.
-
-3. **Design do menu flutuante**:
-   - Cada opção ocupa uma linha inteira com ícone à esquerda e texto uppercase bold.
-   - Opção ativa recebe fundo sólido da sua cor.
-   - Opções inativas ficam com fundo `rgba(255,255,255,0.05)`.
-   - Menu usa fundo escuro (#1C1C1C), borda sutil, sombra e z-index adequado para não ser cortado pelo modal.
-
-4. **Fechamento automático**:
-   - Clique fora do menu fecha as opções.
-   - Após selecionar, o menu fecha.
-
-5. **Verificação**:
-   - Build (`bun run build`) e typecheck passam sem erro.
-   - Testar no painel de detalhes de Posts e Reels para confirmar que o dropdown abre, seleciona e ocupa menos espaço.
+Nada mais muda — borda tracejada, cores, ícone de upload, comportamento de clique e a thumbnail (`object-cover`) permanecem iguais.
