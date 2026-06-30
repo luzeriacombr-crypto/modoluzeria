@@ -228,6 +228,41 @@ export type Database = {
           },
         ]
       }
+      client_feedback: {
+        Row: {
+          author_name: string
+          created_at: string
+          id: string
+          item_id: string
+          share_token: string | null
+          text: string
+        }
+        Insert: {
+          author_name: string
+          created_at?: string
+          id?: string
+          item_id: string
+          share_token?: string | null
+          text: string
+        }
+        Update: {
+          author_name?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          share_token?: string | null
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_feedback_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_links: {
         Row: {
           client_id: string
@@ -585,6 +620,51 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
         }
         Relationships: []
+      }
+      feed_share_tokens: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          month_id: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month_id: string
+          revoked_at?: string | null
+          token: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month_id?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_share_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_share_tokens_month_id_fkey"
+            columns: ["month_id"]
+            isOneToOne: false
+            referencedRelation: "months"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finalizations: {
         Row: {
