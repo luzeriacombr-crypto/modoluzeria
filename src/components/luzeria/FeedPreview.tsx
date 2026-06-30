@@ -190,3 +190,123 @@ function FeedCell({
     </button>
   );
 }
+
+/* ============ Share button ============ */
+function ShareButton({ clientId, monthId }: { clientId: string; monthId: string }) {
+  const { getOrCreateShareToken, rotateShareToken } = useApi();
+  const [open, setOpen] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function generate() {
+    const r = await getOrCreateShareToken.mutateAsync({ data: { clientId, monthId } });
+    setToken(r.token); setOpen(true);
+  }
+  async function rotate() {
+    const r = await rotateShareToken.mutateAsync({ data: { clientId, monthId } });
+    setToken(r.token); setCopied(false);
+  }
+  function copyLink() {
+    if (!token) return;
+    const url = `${window.location.origin}/preview/${token}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true); setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={generate}
+        disabled={getOrCreateShareToken.isPending}
+        className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full transition"
+        style={{ background: "#C8D44E", color: "#0D0D0D" }}
+      >
+        <Share2 size={13} />
+        Compartilhar preview
+      </button>
+      {open && token && (
+        <div
+          className="absolute right-0 mt-2 z-50 w-[340px] rounded-xl p-3 shadow-2xl"
+          style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.08)" }}
+        >
+          <div className="text-[11px] uppercase tracking-wider text-white/40 font-semibold mb-2">
+            Link público do preview
+          </div>
+          <div className="flex items-stretch gap-1.5">
+            <input
+              readOnly
+              value={`${window.location.origin}/preview/${token}`}
+              onFocus={(e) => e.currentTarget.select()}
+              className="flex-1 text-[12px] px-2.5 py-2 rounded-md outline-none"
+              style={{ background: "#0D0D0D", color: "#fff", border: "1px solid rgba(255,255,255,0.08)" }}
+            />
+            <button
+              onClick={copyLink}
+              className="px-2.5 rounded-md text-[12px] font-semibold inline-flex items-center gap-1"
+              style={{ background: "#C8D44E", color: "#0D0D0D" }}
+            >
+              {copied ? <Check size={14} /> : <CopyIcon size={14} />}
+              {copied ? "Copiado" : "Copiar"}
+            </button>
+          </div>
+          <div className="mt-2 flex items-center justify-between">
+            <button
+              onClick={rotate}
+              disabled={rotateShareToken.isPending}
+              className="text-[11px] text-white/60 hover:text-white inline-flex items-center gap-1"
+            >
+              <RefreshCw size={11} /> Gerar novo link (revoga o anterior)
+            </button>
+            <button onClick={() => setOpen(false)} className="text-[11px] text-white/40 hover:text-white">Fechar</button>
+          </div>
+          <div className="mt-2 text-[10.5px] text-white/40 leading-snug">
+            Quem tiver o link vê apenas as publicações prontas e pode deixar comentários.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============ Internal IG-style modal (uses team comments? no — feedback only) ============ */
+function InternalPostModal({
+  item, client, onClose,
+}: { item: FeedItem; client: Client; onClose: () => void }) {
+  const filesQ = useQuery(itemFilesQO(item.id));
+  const igItem: IGModalItem = useMemo(() => {
+    const files = (filesQ.data ?? []).map((f) => ({
+      id: f.id, driveFileId: f.driveFileId, mimeType: f.mimeType, webViewUrl: f.webViewUrl,
+    }));
+    return {
+      id: item.id,
+      type: item.type,
+      title: item.title,
+      caption: item.caption ?? "",
+      dueDate: item.dueDate ?? null,
+      coverUrl: item.coverUrl ?? null,
+      files,
+      feedback: [], // populated below
+    };
+  }, [filesQ.data, item]);
+
+  // Lazy load client feedback (team view only)
+  const fbQ = useFeedbackForItem(item.id);
+  const enriched: IGModalItem = { ...igItem, feedback: fbQ.data ?? [] };
+
+  return (
+    <InstagramPostModal
+      item={enriched}
+      client={{ name: client.name, color: client.color }}
+      mode={{ kind: "internal" }}
+      canComment={false}
+      onClose={onClose}
+    />
+  );
+}
+
+function useFeedbackForItem(itemId: string) {
+  // Inline import to avoid extra top-level dep
+  const { clientFeedbackQO } = require("@/lib/luzeria/queries") as typeof import("@/lib/luzeria/queries");
+  return useQuery(clientFeedbackQO(itemId));
+}
