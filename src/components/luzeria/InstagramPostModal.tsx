@@ -233,7 +233,7 @@ export function InstagramPostModal({
         </div>
 
         {/* RIGHT: details */}
-        <div className="flex-1 flex flex-col min-h-0 max-h-full md:max-h-[92vh] bg-white overflow-y-auto md:overflow-hidden">
+        <div ref={detailsRef} className="flex-1 flex flex-col min-h-0 max-h-full md:max-h-[92vh] bg-white overflow-y-auto md:overflow-hidden">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-200">
             <div
