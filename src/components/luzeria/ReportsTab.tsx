@@ -284,6 +284,12 @@ export function ReportsTab() {
                 {h.type === "reel" && h.editorName && (
                   <span className="text-[10px] text-white/50 shrink-0">✂ {h.editorName}</span>
                 )}
+                {h.lateDays > 0 && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0"
+                    style={{ backgroundColor: "rgba(255,107,107,0.18)", color: "#FF6B6B" }}>
+                    Atraso {h.lateDays}d
+                  </span>
+                )}
               </div>
             ))}
             {histPage.total > PER && (
