@@ -7,6 +7,7 @@ import {
   setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile,
   listStories, upsertStoryDay, setStoryDone, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   adminCreateUser, adminSendPasswordReset, getAdminDashboard, getTopMembers, getMemberFinalizations,
+  updateMyAccount,
   getReport, getMemberReportDetail,
   getClientFicha,
   upsertClientLink, deleteClientLink,
@@ -292,6 +293,7 @@ export function useApi() {
     adminCreateUser: useMutation({ mutationFn: useServerFn(adminCreateUser), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     adminSendPasswordReset: useMutation({ mutationFn: useServerFn(adminSendPasswordReset) }),
     updateMyProfile: useMutation({ mutationFn: useServerFn(updateMyProfile), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
+    updateMyAccount: useMutation({ mutationFn: useServerFn(updateMyAccount), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
     markNotificationRead: useMutation({ mutationFn: useServerFn(markNotificationRead), onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }) }),
     upsertStoryDay: useMutation({
       mutationFn: useServerFn(upsertStoryDay),
