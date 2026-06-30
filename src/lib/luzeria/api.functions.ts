@@ -1447,7 +1447,7 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
 
     const { data: finRows } = await context.supabase
       .from("finalizations")
-      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, months!inner(key, clients!inner(id, name, color, category)))")
+      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(key, clients!inner(id, name, color, category)))")
       .eq("user_id", data.userId)
       .gte("finalized_at", monthlyStart);
 
@@ -1470,12 +1470,13 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
       clientId: r.content_items.months.clients.id,
       clientName: r.content_items.months.clients.name,
       clientColor: r.content_items.months.clients.color,
+      lateDays: computeLateDays(r.content_items.due_date, r.finalized_at),
     }));
 
     // Reels edited by this user (editor_id)
     const { data: editedRows } = await context.supabase
       .from("finalizations")
-      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, months!inner(clients!inner(id, name, color)))")
+      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(clients!inner(id, name, color)))")
       .eq("content_items.editor_id", data.userId)
       .gte("finalized_at", fromISO)
       .lt("finalized_at", toISO);
@@ -1489,6 +1490,7 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
         clientId: r.content_items.months.clients.id,
         clientName: r.content_items.months.clients.name,
         clientColor: r.content_items.months.clients.color,
+        lateDays: computeLateDays(r.content_items.due_date, r.finalized_at),
       }));
 
     // Stories / cleaning in range
