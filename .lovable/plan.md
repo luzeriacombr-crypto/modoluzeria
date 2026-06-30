@@ -1,31 +1,43 @@
-## Mudança
+## Problema 1 — Cliente não consegue abrir sem login
 
-Hoje, dentro de cada cliente existem duas coisas parecidas:
+O botão "Compartilhar preview" copia o link usando `window.location.origin`. Quando você está dentro do editor do Lovable, a origem é o domínio interno de pré-visualização (`id-preview--...lovableproject.com`), que **exige login do Lovable** — por isso o modo anônimo não abriu. A rota `/preview/$token` em si já é 100% pública (não tem `requireSupabaseAuth`).
 
-- A aba **"Perfil do Cliente"** (última aba ao lado de Posts / Reels / Preview de Feed) com formulário de nicho, posts/semana, reels/semana, responsável fixo, dia de revisão e observações.
-- A **"Ficha do Cliente"** que abre em painel lateral (botão de informação ao lado do nome do cliente, e também acessado pela sidebar e por outros pontos) — muito mais completa: métricas, descrição, pasta de entregas no Drive, links, contatos, senhas, onboarding e recorrências.
+**Correção:** o link copiado vai sempre apontar para o domínio público publicado (`https://modoluzeria.lovable.app/preview/<token>`), independentemente de onde você clicou em "Compartilhar". Isso garante que qualquer pessoa, em qualquer navegador, abra direto sem autenticação.
 
-Vou **remover a aba "Perfil do Cliente"** e colocar a **Ficha do Cliente no lugar dela**, agora como aba inline (não mais como painel lateral).
+## Problema 2 — Modal igual ao Instagram, sem botões mexíveis
 
-## O que muda na interface
+Hoje o modal mostra ícones decorativos do Instagram (coração, balão de comentário, avião, salvar) e um campo "Adicione um comentário…". No modo público vou:
 
-- Em cada cliente (Social Media e Pack Digital), as abas passam a ser:
-  `Posts · Reels · Preview de Feed · Ficha do Cliente`
-- Clientes da categoria **Avulsos** continuam com `Posts · Reels · Outros · Preview de Feed` (não tinham Perfil, não terão Ficha como aba — segue acessível pelos atalhos existentes).
-- A aba **Ficha do Cliente** mostra exatamente o conteúdo que hoje aparece no painel lateral: métricas, "Sobre", pasta de entregas no Drive, links importantes, contatos, senhas e acessos (admins), onboarding e recorrências.
-- Os campos do antigo "Perfil" (nicho, posts/semana, reels/semana, responsável fixo, dia de revisão, observações) **continuam editáveis** — vou incluí-los como uma seção "Configuração do cliente" dentro da própria Ficha, para não perder funcionalidade.
-- O **botão de informação (ⓘ)** ao lado do nome do cliente, que hoje abre o painel lateral, passa a simplesmente **levar para a aba Ficha do Cliente** (mantém o atalho).
-- Os outros pontos que abrem a Ficha como painel lateral (sidebar via menu de três pontinhos, mensagens de "pasta não configurada" no Drive) **continuam funcionando como painel lateral** — assim quem está em outra tela não precisa entrar no cliente para ver/editar a ficha.
+- **Esconder** a barra de ações (Heart / MessageCircle / Send / Bookmark) — elas não fazem nada e confundem o cliente.
+- **Esconder** o composer atual ("Adicione um comentário…" + botão Publicar).
+- **Mostrar** um único botão destacado: **"Sugerir alteração"**.
+- Ao clicar, abre o campo de texto com placeholder **"Descreva sua sugestão de alteração…"** + (na primeira vez) campo de nome. Botão final **"Enviar sugestão"**.
+- Comentários já enviados continuam listados como "Sugestões" (rótulo da seção atualizado).
+- No modo interno (equipe logada), a UI permanece como está hoje.
 
-## Resumo técnico
+## Detalhes técnicos
 
-- `src/components/luzeria/ClientView.tsx`
-  - Troca a aba `"profile"` por `"ficha"` na lista de abas (somente para Social Media e Pack Digital).
-  - Renderiza um novo componente `ClientFichaTab` quando `tab === "ficha"`.
-  - O botão de info ao lado do nome chama `setTab("ficha")` em vez de `openFicha(client.id)`.
-  - Remove `ProfileTab` e helpers exclusivos (`Field`, `inp`) do arquivo.
-- `src/components/luzeria/ClientFichaPanel.tsx`
-  - Extrai o corpo (métricas, sobre, pasta de entregas, links, contatos, senhas, onboarding, recorrências) para um componente compartilhado `ClientFichaContent({ clientId })` que não depende do `useUI().fichaClientId` nem da estrutura de painel lateral (sem header de fechar, sem fundo modal).
-  - Acrescenta a seção "Configuração do cliente" com os campos do antigo Perfil (nicho, posts/semana, reels/semana, responsável fixo, dia de revisão, observações), usando o mesmo `updateClient`.
-  - `ClientFichaPanel` continua existindo e simplesmente envolve `ClientFichaContent` com a UI de painel lateral, para que sidebar e atalhos externos continuem funcionando.
-- Nenhuma mudança em backend, store, queries ou rotas.
+### `src/components/luzeria/FeedPreview.tsx`
+- Adicionar constante `PUBLIC_PREVIEW_BASE = "https://modoluzeria.lovable.app"`.
+- Substituir os dois usos de `${window.location.origin}/preview/${token}` por `${PUBLIC_PREVIEW_BASE}/preview/${token}` (no input read-only e no `copyLink`).
+
+### `src/components/luzeria/InstagramPostModal.tsx`
+- Detectar modo público via prop `mode.kind === "public"`.
+- Quando público:
+  - Não renderizar o bloco da action bar (linhas dos ícones IG).
+  - Substituir o composer pelo fluxo "Sugerir alteração":
+    - Estado `composerOpen` (default `false`).
+    - Botão primário "Sugerir alteração" (com ícone de lápis) → abre o composer.
+    - Composer: nome (se não houver `initialAuthorName`) + `textarea` (3 linhas) com placeholder "Descreva sua sugestão de alteração…" + botões "Cancelar" e "Enviar sugestão".
+    - Após envio bem-sucedido, fecha o composer, mantém o nome salvo (já existe via `localStorage`).
+  - Trocar título da seção de comentários para "Sugestões · N" e textos vazios equivalentes ("Nenhuma sugestão ainda.").
+- Quando interno (`mode.kind === "internal"`): manter exatamente o layout atual (action bar IG + composer simples).
+
+### Sem alterações em
+- `src/lib/luzeria/feed-share.functions.ts` (server fns já são públicas e validam token).
+- `src/routes/preview.$token.tsx` (já está correto; só herda os novos textos do modal).
+- Backend / RLS / triggers.
+
+## Fora de escopo
+- Não vou trocar o domínio publicado nem mexer em config de publicação.
+- Não vou alterar o fluxo interno da equipe (só o modal em modo público).
