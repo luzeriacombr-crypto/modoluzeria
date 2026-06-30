@@ -351,7 +351,7 @@ export function InstagramPostModal({
 
           {/* Composer público: "Sugerir alteração" */}
           {isPublic && canComment && onSubmitFeedback && (
-            <div className="border-t border-neutral-200 px-4 py-4 pb-10 md:py-3 md:pb-6 bg-white">
+            <div className={`border-t border-neutral-200 px-4 py-4 ${composerOpen ? "pb-12" : "pb-10"} md:py-3 md:pb-6 bg-white`}>
               {!composerOpen ? (
                 <button
                   onClick={() => setComposerOpen(true)}
