@@ -65,6 +65,12 @@ export interface ContentItem {
   qualityRating?: number | null;
   /** Posição na aba "Preview de Feed" (independente de `idx`). */
   feedOrder?: number | null;
+  /** Caminho da capa customizada no bucket `reel-covers` (storage). */
+  coverPath?: string | null;
+  /** URL assinada da capa para uso direto em <img>. */
+  coverUrl?: string | null;
+  /** Origem: frame capturado do vídeo ou imagem enviada. */
+  coverSource?: "frame" | "upload" | null;
 }
 
 export interface MonthData {
