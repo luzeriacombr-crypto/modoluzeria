@@ -109,6 +109,16 @@ export function InstagramPostModal({
   const [composerOpen, setComposerOpen] = useState(false);
   const isPublic = mode.kind === "public";
   const feedbackLabel = isPublic ? "Sugestões" : "Comentários";
+  const detailsRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to composer buttons when opened (mobile public view)
+  useEffect(() => {
+    if (isPublic && composerOpen && detailsRef.current) {
+      const el = detailsRef.current;
+      setTimeout(() => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }), 50);
+    }
+  }, [isPublic, composerOpen]);
+
 
   // Lock scroll & ESC
   useEffect(() => {
