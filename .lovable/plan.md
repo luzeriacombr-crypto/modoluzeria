@@ -1,47 +1,48 @@
-## Capa customizada para Reels
 
-Permitir definir a **capa do Reel** de duas formas: capturando um frame do vídeo ou subindo uma imagem separada. A capa escolhida passa a ser usada em todos os pontos onde hoje aparece a miniatura do item.
+# Fluidez de hover em todo o app
 
-### Banco
-- Nova coluna `content_items.cover_url text` (URL pública da imagem da capa).
-- Nova coluna `content_items.cover_source text` (`"frame" | "upload"`) só para referência/UI.
-- Novo bucket de storage `reel-covers` (público, para leitura via `<img>`).
-- Policies: insert/update/delete restritos a admin (master/setor) e membros responsáveis pelo item.
+## Objetivo
+Garantir que praticamente todo elemento clicável (botões, abas, linhas, cards de cliente, ícones de ação, items de sidebar, dropdowns) tenha um feedback visual claro ao passar o mouse — sem mudar nenhuma lógica nem layout.
 
-### Backend — `src/lib/luzeria/api.functions.ts`
-- `getMonth` passa a retornar `coverUrl` e `coverSource` em cada item.
-- Nova serverFn `setItemCover({ itemId, coverUrl, coverSource })` para gravar/limpar capa.
-- Nova serverFn `uploadItemCover({ itemId, fileBase64, contentType })` que grava no bucket `reel-covers` e devolve a URL pública (usada tanto para upload de imagem quanto para o frame capturado pelo navegador).
+## Princípios visuais (padrão único para o app inteiro)
+- **Transições suaves**: `transition-all duration-200 ease-out` como base.
+- **Botão accent (#C8D44E)**: hover deixa levemente mais brilhante + leve `scale-[1.02]` + sombra suave esverdeada.
+- **Botão secundário / ghost**: fundo passa de transparente para `rgba(255,255,255,0.06)` e borda/texto ganham +20% de opacidade.
+- **Botão destrutivo**: hover vermelho mais saturado + leve glow.
+- **Ícones de ação (ex: 3 pontinhos, lixeira, edit, X)**: ganham fundo circular `rgba(255,255,255,0.08)` + ícone fica branco puro.
+- **Linhas de conteúdo (Posts/Reels) e itens de lista**: fundo passa de `#1C1C1C` para `#242424` + leve `translate-x-[2px]` indicando interatividade.
+- **Cards (cliente, dashboard, métricas)**: borda fica accent translúcida + sombra elevada + `scale-[1.01]`.
+- **Tabs/abas**: a aba não-ativa ganha underline animado tipo `story-link` ao hover.
+- **Itens da sidebar**: fundo `rgba(255,255,255,0.05)` + ícone com leve translação à direita.
+- **Links de texto**: underline animado de esquerda para direita.
+- **Cursor**: garantir `cursor-pointer` em tudo que for clicável (algumas divs hoje não têm).
 
-### Tipos & queries
-- `src/lib/luzeria/types.ts`: `coverUrl?: string`, `coverSource?: "frame" | "upload"` em `ContentItem`.
-- `src/lib/luzeria/queries.ts`: hooks `setItemCover` e `uploadItemCover`, invalidando `month`, `item-files` e `feed`.
+## Onde aplicar
+Vou varrer e padronizar nestes componentes:
+- `Sidebar.tsx` — itens de cliente, categorias, botões de ação.
+- `MobileNav.tsx` — cards de cliente e bottom nav.
+- `ContentRow.tsx` — linhas de Posts/Reels (hover na linha inteira + nos ícones).
+- `DetailPanel.tsx` — botões do modal, dropdown de status, ações de capa.
+- `AdminDashboard.tsx` — cards de métrica, ranking, toggle.
+- `MyTasks.tsx`, `MyWeekView.tsx`, `StoriesView.tsx`, `CleaningView.tsx` — cards de tarefa e botões "Marcar feito".
+- `Notifications.tsx`, `MentionInput.tsx` — itens da lista.
+- `Settings.tsx`, `ProfilePage.tsx`, `AvatarEditor.tsx` — botões de admin e formulário.
+- `FeedPreview.tsx`, `FilesSection.tsx`, `ReelCoverEditor.tsx` — células e botões.
+- `StatusBadge.tsx`, `Avatar.tsx`, `WorkloadBadge.tsx` — quando clicáveis.
+- `Modals.tsx`, `QualityModal.tsx`, `AssigneePicker.tsx` — botões e opções.
 
-### UI — onde a capa aparece
-1. **`FeedPreview.tsx`**: se `coverUrl` existir, usar como thumb da célula (preferência sobre primeira mídia do Drive).
-2. **`ContentRow.tsx` (`RowThumb`)**: idem — `coverUrl` ganha prioridade.
-3. **`DetailPanel.tsx`** (modal de detalhe): preview de mídia (aspect 4/5) mostra `coverUrl` quando definido.
+## Como vou implementar (técnico)
+1. Adicionar utilitários reutilizáveis em `src/styles.css`:
+   - `@utility btn-hover-accent` (botão accent)
+   - `@utility btn-hover-ghost` (botão fantasma)
+   - `@utility icon-hover` (ícone com fundo circular ao hover)
+   - `@utility row-hover` (linhas de lista)
+   - `@utility card-hover` (cards)
+   - Reaproveitar `.story-link` (já existe) para links de texto.
+2. Aplicar essas classes nos componentes acima, substituindo hovers ad-hoc inconsistentes.
+3. Garantir `cursor-pointer` e `transition` em elementos clicáveis que hoje não têm.
+4. Respeitar `disabled:` (sem hover quando desabilitado) e `prefers-reduced-motion` (sem scale/translate).
 
-### UI — editor de capa (novo)
-Novo componente `src/components/luzeria/ReelCoverEditor.tsx`, acessível por um botão **"Definir capa"** ao lado/abaixo do `MediaPreview` no `DetailPanel`, **apenas para itens type `reel`**.
-
-Modal com duas abas:
-- **Frame do vídeo**:
-  - `<video>` oculto carrega a primeira mídia do item que for vídeo (busca em `item_files` por mime começando em `video/`; se nenhum existir, mostra estado vazio com CTA pra anexar vídeo).
-  - Scrubber (`<input type="range">` de 0 → `duration`) sincronizado com `video.currentTime`.
-  - Botão "Capturar frame" desenha o frame atual num `<canvas>` (mesmo tamanho do vídeo), exporta como JPEG via `canvas.toBlob`, converte para base64 e chama `uploadItemCover` com `coverSource: "frame"`.
-- **Upload de imagem**:
-  - `<input type="file" accept="image/*">`, preview, valida ≤ 5 MB, chama `uploadItemCover` com `coverSource: "upload"`.
-
-Ambas as abas mostram preview da capa atual e botão "Remover capa" (chama `setItemCover` com `coverUrl: null`).
-
-Permissões: só admin (master/setor) ou responsáveis do item podem editar a capa — espelha as policies do storage.
-
-### Detalhes técnicos
-- Captura de frame: precisa `video.crossOrigin = "anonymous"` para o canvas não ficar "tainted". URLs do Drive já são servidas com CORS adequado pelo proxy interno de `drive.functions.ts` (sem mudança nele).
-- Storage path: `reel-covers/{item_id}/{timestamp}.jpg`. Ao definir nova capa, apagar arquivo anterior do bucket pra não acumular lixo.
-- Fallback: quando `coverUrl` for null, comportamento atual (primeira mídia ou placeholder) permanece intacto.
-- Mobile: o editor abre normalmente; scrubber funciona com touch (HTML range nativo).
-
-### Não muda
-- Posts continuam só com a primeira mídia como thumb (sem editor de capa). Se você quiser estender pra Posts/Carrosséis também, é só pedir.
+## Fora do escopo
+- Nenhuma alteração em lógica, dados, rotas, permissões ou layout.
+- Sem trocar paleta, fontes ou componentes existentes — só adicionar a camada de feedback.
