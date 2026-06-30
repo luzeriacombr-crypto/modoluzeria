@@ -174,12 +174,41 @@ export const STATUS_ORDER: Status[] = [
 ];
 
 export function statusOptionsFor(type: ContentType): Status[] {
-  // Insert extras right before TRAVADO/PRONTO_PARA_PUBLICAR so the pipeline reads naturally.
-  const head = GLOBAL_STATUS_ORDER.filter((s) => s !== "TRAVADO" && s !== "PRONTO_PARA_PUBLICAR");
+  const base: Status[] = [
+    "PLANEJAMENTO",
+    "COPY",
+    "REVISAO_INTERNA",
+    "REVISAO_CLIENTE",
+    "AGENDAMENTO",
+    "REVISAO_AGENDAMENTO",
+  ];
   const tail: Status[] = ["TRAVADO", "PRONTO_PARA_PUBLICAR"];
-  if (type === "post") return [...head, ...POST_EXTRA_STATUS, ...tail];
-  if (type === "reel") return [...head, ...REEL_EXTRA_STATUS, ...tail];
-  return [...head, ...POST_EXTRA_STATUS, ...REEL_EXTRA_STATUS, ...tail];
+  if (type === "post") {
+    return [
+      "PLANEJAMENTO",
+      "COPY",
+      ...POST_EXTRA_STATUS,
+      ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
+      ...tail,
+    ];
+  }
+  if (type === "reel") {
+    return [
+      "PLANEJAMENTO",
+      "COPY",
+      ...REEL_EXTRA_STATUS,
+      ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
+      ...tail,
+    ];
+  }
+  return [
+    "PLANEJAMENTO",
+    "COPY",
+    ...POST_EXTRA_STATUS,
+    ...REEL_EXTRA_STATUS,
+    ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
+    ...tail,
+  ];
 }
 
 /* ============== CLIENT PROFILE (Ficha) ============== */
