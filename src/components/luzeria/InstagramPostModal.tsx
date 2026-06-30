@@ -341,14 +341,14 @@ export function InstagramPostModal({
 
           {/* Composer público: "Sugerir alteração" */}
           {isPublic && canComment && onSubmitFeedback && (
-            <div className="border-t border-neutral-200 px-4 py-3 bg-white">
+            <div className="border-t border-neutral-200 px-4 py-4 pb-8 md:py-3 md:pb-6 bg-white">
               {!composerOpen ? (
                 <button
                   onClick={() => setComposerOpen(true)}
-                  className="w-full inline-flex items-center justify-center gap-2 text-[14px] font-semibold py-2.5 rounded-md transition"
-                  style={{ background: "#0D0D0D", color: "#fff" }}
+                  className="w-full inline-flex items-center justify-center gap-2 text-[14px] font-semibold py-3.5 min-h-[52px] rounded-md transition active:scale-[0.98]"
+                  style={{ background: "#C8D44E", color: "#0D0D0D" }}
                 >
-                  <Pencil size={15} /> Sugerir alteração
+                  <Pencil size={16} /> Sugerir alteração
                 </button>
               ) : (
                 <div>
@@ -371,15 +371,15 @@ export function InstagramPostModal({
                     maxLength={1000}
                     autoFocus
                   />
-                  <div className="mt-2 flex items-center justify-end gap-2">
+                  <div className="mt-3 flex items-center justify-end gap-2">
                     <button
                       onClick={() => { setComposerOpen(false); setText(""); }}
-                      className="text-[13px] font-medium text-neutral-500 hover:text-neutral-800 px-3 py-1.5"
+                      className="text-[13px] font-medium text-neutral-500 hover:text-neutral-800 px-3 py-2.5"
                     >Cancelar</button>
                     <button
                       onClick={submit}
                       disabled={submitting || !author.trim() || !text.trim()}
-                      className="text-[13px] font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50"
+                      className="text-[13px] font-semibold px-4 py-2.5 rounded-md transition disabled:opacity-50"
                       style={{ background: "#C8D44E", color: "#0D0D0D" }}
                     >{submitting ? "Enviando…" : "Enviar sugestão"}</button>
                   </div>
