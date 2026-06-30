@@ -124,11 +124,12 @@ function FeedCell({
   onDragEnd: () => void;
 }) {
   const openItem = useUI((s) => s.openItem);
-  const filesQ = useQuery(itemFilesQO(item.id));
+  const cover = item.coverUrl ?? null;
+  const filesQ = useQuery({ ...itemFilesQO(item.id), enabled: !cover });
   const first = filesQ.data?.[0];
   const fileId = first?.driveFileId ?? null;
-  const thumbQ = useQuery(driveThumbnailQO(fileId, !!fileId));
-  const url = thumbQ.data?.dataUrl ?? null;
+  const thumbQ = useQuery(driveThumbnailQO(fileId, !!fileId && !cover));
+  const url = cover ?? thumbQ.data?.dataUrl ?? null;
   const isCarousel = (filesQ.data?.length ?? 0) > 1;
   const isReel = item.type === "reel";
 
