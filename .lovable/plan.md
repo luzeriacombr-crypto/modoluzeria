@@ -1,29 +1,15 @@
 
-## Objetivo
-Refazer apenas a aba "Clientes" do `MobileNav.tsx` (versão mobile) para ficar visualmente alinhada ao resto do app.
+## Mudanças em `src/components/luzeria/MobileNav.tsx` (aba Clientes mobile)
 
-## Mudanças (somente `src/components/luzeria/MobileNav.tsx`)
+1. **Header "Clientes" não-flutuante**: o overlay já tem `pt-14` mas o header sticky com `bg-[#0D0D0D]` está deixando o conteúdo aparecer atrás por causa de `z-index`/transparência. Vou:
+   - Trocar o container externo: remover `pt-14` e mover o header para fora da área scrollável (estrutura flex coluna: header fixo no topo + área `flex-1 overflow-y-auto`).
+   - Header com fundo sólido `#0D0D0D` e `border-b` mais visível, sem `sticky`.
 
-1. **Agrupar por categoria** na ordem: Social Media → Pack Digital → Avulsos → Ex-clientes (e quaisquer extras no final). Mesma lógica usada na sidebar (`c.category || "Social Media"`, filtra `!c.archived`).
+2. **Grid de 2 colunas** dentro de cada categoria:
+   - `grid grid-cols-2 gap-2.5`
+   - Card menor: padding reduzido (`px-3 py-2.5`), avatar 32px, nome em `text-xs font-semibold` com `truncate`, remove o chevron (não cabe bem em 2 colunas) e mantém apenas a estrela de favorito no canto superior direito quando aplicável.
+   - Mantém o fundo tintado com a cor do cliente (`color-mix` 18%) e borda 35%.
 
-2. **Header de cada seção**: pill discreto no topo do grupo
-   - Texto: nome da categoria em uppercase + contador
-   - Cor do texto: a mesma usada na sidebar (`Social Media`/`Pack Digital` = `#5BA88A`, `Avulsos` = `#C8D44E`, `Ex-clientes` = `#E76F51`)
-   - Pequena barra/linha divisória abaixo, bem leve
+3. **Header de categoria**: continua igual (pill + linha), ocupando largura total acima do grid.
 
-3. **Card de cliente** (substitui o `<li>` atual):
-   - Grid de 1 coluna, gap 10px, padding lateral 16px
-   - Cada card: `rounded-2xl`, padding 14px, altura confortável (~64px)
-   - Fundo: cor do cliente com alpha baixo (~15%), usando `color-mix(in oklab, <c.color> 18%, transparent)`
-   - Borda sutil: `color-mix(in oklab, <c.color> 35%, transparent)` com 1px
-   - Conteúdo: Avatar (36px) + nome em branco semibold + estrela `#C8D44E` se favorito + chevron `›` à direita em branco/40%
-   - `active:scale-[0.98]` para feedback de toque
-
-4. **Estado vazio por grupo**: se a categoria não tem clientes (ex.: Avulsos), pula a seção (não exibe header). Se nenhum cliente, mantém mensagem central.
-
-5. **Header da tela**: manter "Clientes" sticky atual; adicionar contagem total à direita em `text-white/40`.
-
-## Fora do escopo
-- Desktop não muda.
-- Lógica de seleção (`selectClient` / `setTab("home")`) e demais views intactas.
-- Sem alterações em store, queries ou estilos globais.
+Sem outras mudanças (desktop, lógica, store intactos).
