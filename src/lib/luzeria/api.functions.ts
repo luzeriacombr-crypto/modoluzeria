@@ -429,6 +429,7 @@ export const getMonth = createServerFn({ method: "GET" })
       checklist: ((it as any).checklist ?? []) as any,
       reworkCount: ((it as any).rework_count ?? 0) as any,
       qualityRating: ((it as any).quality_rating ?? null) as any,
+      feedOrder: ((it as any).feed_order ?? null) as any,
     }));
     return {
       id: month.id, key: month.key,
