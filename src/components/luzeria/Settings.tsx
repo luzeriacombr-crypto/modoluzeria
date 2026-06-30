@@ -6,7 +6,7 @@ import type { Role } from "@/lib/luzeria/types";
 import { roleLabel } from "./Sidebar";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
-import { UserPlus, X, Settings as SettingsIcon, Star } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, KeyRound } from "lucide-react";
 import { ReportsTab } from "./ReportsTab";
 import { DriveSettingsTab } from "./DriveSettingsTab";
 import { MemberGoalsTab } from "./MemberGoalsTab";
@@ -15,7 +15,7 @@ import { AutomationsTab } from "./AutomationsTab";
 export function SettingsPage() {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
-  const { setUserRole, setUserActive, deleteUser, adminCreateUser } = useApi();
+  const { setUserRole, setUserActive, deleteUser, adminCreateUser, adminSendPasswordReset } = useApi();
   const { setView, setViewAs } = useUI();
   const [adding, setAdding] = useState(false);
   const [tab, setTab] = useState<"team" | "report" | "goals" | "drive" | "automations" | "general">("team");
@@ -32,6 +32,14 @@ export function SettingsPage() {
     deleteUser.mutate({ data: { userId: id } }, {
       onSuccess: () => toast.success("Colaborador removido."),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
+    });
+  };
+
+  const handleResetPassword = (id: string, name: string, email: string) => {
+    if (!confirm(`Enviar link de redefinição de senha para ${name} (${email})?`)) return;
+    adminSendPasswordReset.mutate({ data: { userId: id } }, {
+      onSuccess: (res: any) => toast.success(`Email enviado para ${res?.email ?? email}.`),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao enviar email"),
     });
   };
 
@@ -146,6 +154,12 @@ export function SettingsPage() {
             </label>
             <button onClick={() => { setViewAs(p.id); setView("my"); }}
               className="text-[11px] text-white/60 hover:text-[#C8D44E] transition">Ver demandas</button>
+            <button onClick={() => handleResetPassword(p.id, p.name, p.email)}
+              disabled={adminSendPasswordReset.isPending}
+              title="Enviar link de redefinição de senha por email"
+              className="text-[11px] text-white/60 hover:text-[#C8D44E] transition inline-flex items-center gap-1 disabled:opacity-40">
+              <KeyRound size={12} /> Resetar senha
+            </button>
             <button onClick={() => handleRemove(p.id, p.name)} disabled={p.id === me.id}
               className="text-[11px] text-white/40 hover:text-red-400 transition disabled:opacity-30 disabled:cursor-not-allowed">
               Remover
