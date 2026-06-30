@@ -328,33 +328,22 @@ export const duplicateMonth = createServerFn({ method: "POST" })
     if (mErr) throw new Error(mErr.message);
     if (fromMonth) {
       const { data: oldItems } = await context.supabase
-        .from("content_items").select("id, type, idx, title").eq("month_id", fromMonth.id).order("idx");
+        .from("content_items").select("type, idx").eq("month_id", fromMonth.id);
       if (oldItems?.length) {
-        // Insert new items in the same shape (status defaults to PLANEJAMENTO).
-        const { data: inserted, error: insErr } = await context.supabase.from("content_items")
-          .insert(oldItems.map((it) => ({
-            month_id: newMonth.id, type: it.type, idx: it.idx, title: it.title,
-            status: "PLANEJAMENTO" as Status,
-          })))
-          .select("id, type, idx");
-        if (insErr) throw new Error(insErr.message);
-        // Carry over assignees by matching (type, idx).
-        const oldIdByKey = new Map<string, string>();
-        oldItems.forEach((it: any) => oldIdByKey.set(`${it.type}:${it.idx}`, it.id));
-        const newIdByKey = new Map<string, string>();
-        (inserted ?? []).forEach((it: any) => newIdByKey.set(`${it.type}:${it.idx}`, it.id));
-        const oldItemIds = [...oldIdByKey.values()];
-        if (oldItemIds.length) {
-          const { data: oldAssign } = await context.supabase
-            .from("item_assignees").select("item_id, user_id").in("item_id", oldItemIds);
-          const rows: { item_id: string; user_id: string }[] = [];
-          (oldAssign ?? []).forEach((a: any) => {
-            const old = oldItems.find((o: any) => o.id === a.item_id);
-            if (!old) return;
-            const newId = newIdByKey.get(`${old.type}:${old.idx}`);
-            if (newId) rows.push({ item_id: newId, user_id: a.user_id });
-          });
-          if (rows.length) await context.supabase.from("item_assignees").insert(rows);
+        // Copy only the QUANTITY per type (post/reel/outros).
+        // No titles, no assignees, no due dates, no comments, no files.
+        const counts: Record<string, number> = {};
+        oldItems.forEach((it: any) => { counts[it.type] = (counts[it.type] ?? 0) + 1; });
+        const rows: any[] = [];
+        (["post", "reel", "outros"] as const).forEach((t) => {
+          const n = counts[t] ?? 0;
+          for (let i = 1; i <= n; i++) {
+            rows.push({ month_id: newMonth.id, type: t, idx: i, title: "", status: "PLANEJAMENTO" as Status });
+          }
+        });
+        if (rows.length) {
+          const { error: insErr } = await context.supabase.from("content_items").insert(rows);
+          if (insErr) throw new Error(insErr.message);
         }
       }
     } else {
