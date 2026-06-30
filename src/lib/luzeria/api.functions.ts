@@ -1240,7 +1240,7 @@ export const getReport = createServerFn({ method: "GET" })
     let fq = context.supabase
       .from("finalizations")
       .select(
-        "id, user_id, finalized_at, content_items!inner(id, type, title, editor_id, reel_type, months!inner(client_id, key, clients!inner(id, name, color, category)))"
+        "id, user_id, finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(client_id, key, clients!inner(id, name, color, category)))"
       )
       .gte("finalized_at", fromISO)
       .lt("finalized_at", toISO);
@@ -1260,6 +1260,7 @@ export const getReport = createServerFn({ method: "GET" })
       clientCategory: string | null;
       reelType: string | null;
       editorId: string | null;
+      lateDays: number;
     };
     const history: HistRow[] = [];
     (finRows ?? []).forEach((r: any) => {
@@ -1270,6 +1271,7 @@ export const getReport = createServerFn({ method: "GET" })
       if (filterClient && c?.id !== filterClient) return;
       if (filterType !== "all" && filterType !== "stories" && filterType !== "cleaning" && it.type !== filterType) return;
       if ((filterType === "stories" || filterType === "cleaning") && true) return; // skip content for stories/cleaning filter
+      const lateDays = computeLateDays(it.due_date, r.finalized_at);
       history.push({
         kind: "content",
         finalizedAt: r.finalized_at,
@@ -1282,6 +1284,7 @@ export const getReport = createServerFn({ method: "GET" })
         clientCategory: category,
         reelType: it.reel_type ?? null,
         editorId: it.editor_id ?? null,
+        lateDays,
       });
     });
 
@@ -1304,7 +1307,7 @@ export const getReport = createServerFn({ method: "GET" })
           type: "stories",
           title: `Stories ${new Date(s.day + "T12:00:00Z").toLocaleDateString("pt-BR")}`,
           clientId: null, clientName: "STORIES", clientColor: "#7EFFD9", clientCategory: "Stories",
-          reelType: null, editorId: null,
+          reelType: null, editorId: null, lateDays: 0,
         });
       });
     }
@@ -1326,7 +1329,7 @@ export const getReport = createServerFn({ method: "GET" })
           type: "cleaning",
           title: `Limpeza · tarefa ${c.task_idx + 1} (dia ${c.weekday})`,
           clientId: null, clientName: "LIMPEZA", clientColor: "#4A9EFF", clientCategory: "Limpeza",
-          reelType: null, editorId: null,
+          reelType: null, editorId: null, lateDays: 0,
         });
       });
     }
