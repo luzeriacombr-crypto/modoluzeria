@@ -4,6 +4,7 @@ import { z } from "zod";
 
 const UPLOAD_BASE = "https://www.googleapis.com/upload/drive/v3";
 const TOKEN_URL   = "https://oauth2.googleapis.com/token";
+const DRIVE_BASE  = "https://www.googleapis.com/drive/v3";
 
 const DRIVE_FIELDS =
   "id,name,mimeType,iconLink,thumbnailLink,webViewLink,size,modifiedTime";
