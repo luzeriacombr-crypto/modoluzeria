@@ -148,7 +148,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
 
         {/* Configuração do cliente (campos do antigo Perfil) */}
         <Section label="Configuração do cliente">
-          <ClientConfigBlock client={client} profiles={profiles} canEdit={isAdmin} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
+          <ClientConfigBlock client={client} profiles={profiles} canEdit={isAdmin} isMaster={isMaster} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
         </Section>
 
         {/* Deliveries folder (Drive) */}
@@ -273,8 +273,8 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
 }
 
 /* ============== CONFIGURAÇÃO (antigo Perfil) ============== */
-function ClientConfigBlock({ client, profiles, canEdit, onSave }: {
-  client: any; profiles: any[]; canEdit: boolean; onSave: (patch: Record<string, any>) => void;
+function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
+  client: any; profiles: any[]; canEdit: boolean; isMaster?: boolean; onSave: (patch: Record<string, any>) => void;
 }) {
   const [niche, setNiche] = useState<string>(client.customFields.niche ?? "");
   const [postsPerWeek, setPostsPerWeek] = useState<string | number>(client.customFields.postsPerWeek ?? 0);
@@ -327,7 +327,7 @@ function ClientConfigBlock({ client, profiles, canEdit, onSave }: {
           {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </ConfigField>
-      {canEdit && (
+      {isMaster && (
         <ConfigField label="Valor do contrato (R$)">
           <input
             type="text"
