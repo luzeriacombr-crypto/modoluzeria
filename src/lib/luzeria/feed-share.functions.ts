@@ -151,15 +151,30 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     const { client, month, items: rawItems, files: rawFiles, feedback: rawFeedback } = r;
     if (!client || !month) return null;
 
+    // Support both flat (files/feedback as top-level arrays with item_id)
+    // and nested (files/feedback embedded inside each item) structures
+    const flatFiles: any[] = Array.isArray(rawFiles) ? rawFiles : [];
+    const flatFeedback: any[] = Array.isArray(rawFeedback) ? rawFeedback : [];
+
     const filesByItem = new Map<string, any[]>();
-    (rawFiles ?? []).forEach((f: any) => {
+    flatFiles.forEach((f: any) => {
       const arr = filesByItem.get(f.item_id) ?? [];
       arr.push(f); filesByItem.set(f.item_id, arr);
     });
     const fbByItem = new Map<string, any[]>();
-    (rawFeedback ?? []).forEach((f: any) => {
+    flatFeedback.forEach((f: any) => {
       const arr = fbByItem.get(f.item_id) ?? [];
       arr.push(f); fbByItem.set(f.item_id, arr);
+    });
+
+    // If files were nested inside items, extract them
+    (rawItems ?? []).forEach((it: any) => {
+      if (Array.isArray(it.files) && it.files.length > 0 && !filesByItem.has(it.id)) {
+        filesByItem.set(it.id, it.files);
+      }
+      if (Array.isArray(it.feedback) && it.feedback.length > 0 && !fbByItem.has(it.id)) {
+        fbByItem.set(it.id, it.feedback);
+      }
     });
 
     const sorted = (rawItems ?? []).slice().sort((a: any, b: any) => {
@@ -171,9 +186,13 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     });
 
     const gridThumbs = await Promise.all(sorted.map(async (it: any) => {
-      const f0 = (filesByItem.get(it.id) ?? [])[0];
+      const itemFiles = filesByItem.get(it.id) ?? [];
+      const f0 = itemFiles[0];
       if (!f0) return null;
-      return await fetchThumbDataUrl(f0.drive_file_id, 480);
+      // Support both snake_case (drive_file_id) and camelCase (driveFileId)
+      const driveId = f0.drive_file_id ?? f0.driveFileId;
+      if (!driveId) return null;
+      return await fetchThumbDataUrl(driveId, 480);
     }));
 
     return {
@@ -193,10 +212,16 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         coverUrl: null,
         gridThumb: gridThumbs[i],
         files: (filesByItem.get(it.id) ?? []).map((f: any) => ({
-          id: f.id, driveFileId: f.drive_file_id, mimeType: f.mime_type, webViewUrl: f.web_view_url,
+          id: f.id,
+          driveFileId: f.drive_file_id ?? f.driveFileId,
+          mimeType: f.mime_type ?? f.mimeType,
+          webViewUrl: f.web_view_url ?? f.webViewUrl,
         })),
         feedback: (fbByItem.get(it.id) ?? []).map((f: any) => ({
-          id: f.id, authorName: f.author_name, text: f.text, createdAt: f.created_at,
+          id: f.id,
+          authorName: f.author_name ?? f.authorName,
+          text: f.text,
+          createdAt: f.created_at ?? f.createdAt,
         })),
       })),
     };
