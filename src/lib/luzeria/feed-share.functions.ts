@@ -138,60 +138,31 @@ export const getPublicFeed = createServerFn({ method: "GET" })
   .inputValidator((d: { token: string }) =>
     z.object({ token: z.string().min(8).max(60) }).parse(d))
   .handler(async ({ data }): Promise<PublicFeedPayload | null> => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: tok } = await supabaseAdmin
-      .from("feed_share_tokens")
-      .select("client_id, month_id, revoked_at")
-      .eq("token", data.token).maybeSingle();
-    if (!tok || tok.revoked_at) return null;
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+    );
 
-    const [{ data: client }, { data: month }] = await Promise.all([
-      supabaseAdmin.from("clients").select("name, color, description").eq("id", tok.client_id).maybeSingle(),
-      supabaseAdmin.from("months").select("key").eq("id", tok.month_id).maybeSingle(),
-    ]);
+    const { data: result, error } = await supabase.rpc("get_public_feed", { _token: data.token });
+    if (error || !result) return null;
+
+    const r = result as any;
+    const { client, month, items: rawItems, files: rawFiles, feedback: rawFeedback } = r;
     if (!client || !month) return null;
 
-    const { data: items } = await supabaseAdmin
-      .from("content_items")
-      .select("id, type, idx, title, caption, due_date, feed_order, cover_path")
-      .eq("month_id", tok.month_id)
-      .eq("status", "PRONTO_PARA_PUBLICAR");
-
-    const ids = (items ?? []).map((i: any) => i.id);
-    const [{ data: files }, { data: feedback }] = await Promise.all([
-      ids.length
-        ? supabaseAdmin.from("item_files")
-            .select("id, item_id, drive_file_id, mime_type, web_view_url, sort_order, created_at")
-            .in("item_id", ids).order("sort_order").order("created_at")
-        : Promise.resolve({ data: [] as any[] }),
-      ids.length
-        ? supabaseAdmin.from("client_feedback")
-            .select("id, item_id, author_name, text, created_at")
-            .in("item_id", ids).order("created_at", { ascending: false })
-        : Promise.resolve({ data: [] as any[] }),
-    ]);
-
     const filesByItem = new Map<string, any[]>();
-    (files ?? []).forEach((f: any) => {
+    (rawFiles ?? []).forEach((f: any) => {
       const arr = filesByItem.get(f.item_id) ?? [];
       arr.push(f); filesByItem.set(f.item_id, arr);
     });
     const fbByItem = new Map<string, any[]>();
-    (feedback ?? []).forEach((f: any) => {
+    (rawFeedback ?? []).forEach((f: any) => {
       const arr = fbByItem.get(f.item_id) ?? [];
       arr.push(f); fbByItem.set(f.item_id, arr);
     });
 
-    // Sign covers
-    const coverPaths = Array.from(new Set((items ?? []).map((i: any) => i.cover_path).filter(Boolean) as string[]));
-    const signedCovers = new Map<string, string>();
-    if (coverPaths.length) {
-      const { data: sig } = await supabaseAdmin.storage.from("reel-covers")
-        .createSignedUrls(coverPaths, 60 * 60 * 24 * 7);
-      (sig ?? []).forEach((r: any) => { if (r?.path && r?.signedUrl) signedCovers.set(r.path, r.signedUrl); });
-    }
-
-    const sorted = (items ?? []).slice().sort((a: any, b: any) => {
+    const sorted = (rawItems ?? []).slice().sort((a: any, b: any) => {
       const ao = a.feed_order ?? Number.POSITIVE_INFINITY;
       const bo = b.feed_order ?? Number.POSITIVE_INFINITY;
       if (ao !== bo) return ao - bo;
@@ -199,9 +170,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       return a.idx - b.idx;
     });
 
-    // Fetch grid thumbnail for each item (cover for reels, first file for posts)
     const gridThumbs = await Promise.all(sorted.map(async (it: any) => {
-      if (it.cover_path && signedCovers.has(it.cover_path)) return signedCovers.get(it.cover_path)!;
       const f0 = (filesByItem.get(it.id) ?? [])[0];
       if (!f0) return null;
       return await fetchThumbDataUrl(f0.drive_file_id, 480);
@@ -211,7 +180,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       client: {
         name: client.name as string,
         color: (client.color as string) ?? "#C8D44E",
-        description: (client as any).description ?? null,
+        description: client.description ?? null,
       },
       month: { key: month.key as string },
       items: sorted.map((it: any, i: number) => ({
@@ -221,7 +190,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         title: it.title,
         caption: it.caption ?? "",
         dueDate: it.due_date ?? null,
-        coverUrl: it.cover_path ? signedCovers.get(it.cover_path) ?? null : null,
+        coverUrl: null,
         gridThumb: gridThumbs[i],
         files: (filesByItem.get(it.id) ?? []).map((f: any) => ({
           id: f.id, driveFileId: f.drive_file_id, mimeType: f.mime_type, webViewUrl: f.web_view_url,
@@ -243,19 +212,18 @@ export const getPublicDriveThumbnail = createServerFn({ method: "GET" })
       size: z.number().int().min(64).max(1280).optional(),
     }).parse(d))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: tok } = await supabaseAdmin
-      .from("feed_share_tokens")
-      .select("month_id, revoked_at")
-      .eq("token", data.token).maybeSingle();
-    if (!tok || tok.revoked_at) return { dataUrl: null as string | null };
-    // Make sure the fileId belongs to an item_file whose item is in this token's month.
-    const { data: fileRow } = await supabaseAdmin
-      .from("item_files").select("item_id").eq("drive_file_id", data.fileId).limit(1).maybeSingle();
-    if (!fileRow) return { dataUrl: null as string | null };
-    const { data: itemRow } = await supabaseAdmin
-      .from("content_items").select("month_id").eq("id", fileRow.item_id).maybeSingle();
-    if (!itemRow || itemRow.month_id !== tok.month_id) return { dataUrl: null as string | null };
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+    );
+    // verify_public_token_file: SECURITY DEFINER function that checks the token is valid
+    // and the fileId belongs to an item in the token's month
+    const { data: ok } = await supabase.rpc("verify_public_token_file", {
+      _token: data.token,
+      _file_id: data.fileId,
+    });
+    if (!ok) return { dataUrl: null as string | null };
     const dataUrl = await fetchThumbDataUrl(data.fileId, data.size ?? 720);
     return { dataUrl };
   });
@@ -271,31 +239,26 @@ export const addPublicFeedback = createServerFn({ method: "POST" })
       text: z.string().trim().min(1).max(1000),
     }).parse(d))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: tok } = await supabaseAdmin
-      .from("feed_share_tokens")
-      .select("month_id, revoked_at")
-      .eq("token", data.token).maybeSingle();
-    if (!tok || tok.revoked_at) throw new Error("Link inválido ou revogado.");
-    // Item must belong to the same month_id as the token
-    const { data: item } = await supabaseAdmin
-      .from("content_items").select("month_id").eq("id", data.itemId).maybeSingle();
-    if (!item || item.month_id !== tok.month_id) throw new Error("Publicação inválida.");
-    const { data: row, error } = await supabaseAdmin
-      .from("client_feedback")
-      .insert({
-        item_id: data.itemId,
-        author_name: data.authorName,
-        text: data.text,
-        share_token: data.token,
-      })
-      .select("id, author_name, text, created_at")
-      .single();
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+    );
+    // add_public_feedback: SECURITY DEFINER function that validates token + item ownership
+    // and inserts into client_feedback, returning the new row
+    const { data: row, error } = await supabase.rpc("add_public_feedback", {
+      _token: data.token,
+      _item_id: data.itemId,
+      _author_name: data.authorName,
+      _text: data.text,
+    });
     if (error) throw new Error(error.message);
+    if (!row) throw new Error("Link inválido ou revogado.");
+    const r = row as any;
     return {
-      id: row.id as string,
-      authorName: row.author_name as string,
-      text: row.text as string,
-      createdAt: row.created_at as string,
+      id: r.id as string,
+      authorName: r.author_name as string,
+      text: r.text as string,
+      createdAt: r.created_at as string,
     };
   });
