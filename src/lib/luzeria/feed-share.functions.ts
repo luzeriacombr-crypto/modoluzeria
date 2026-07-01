@@ -185,6 +185,20 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       return a.idx - b.idx;
     });
 
+    console.log("[getPublicFeed] items:", sorted.length, "filesByItem keys:", filesByItem.size);
+
+    const gridThumbs = await Promise.all(sorted.map(async (it: any) => {
+      const itemFiles = filesByItem.get(it.id) ?? [];
+      const f0 = itemFiles[0];
+      if (!f0) { console.log("[getPublicFeed] no file for item", it.id); return null; }
+      const driveId = f0.drive_file_id ?? f0.driveFileId;
+      if (!driveId) { console.log("[getPublicFeed] no driveId for item", it.id); return null; }
+      console.log("[getPublicFeed] fetching thumb for", driveId);
+      const thumb = await fetchThumbDataUrl(driveId, 480);
+      console.log("[getPublicFeed] thumb result:", thumb ? "ok" : "null");
+      return thumb;
+    }));
+
     return {
       client: {
         name: client.name as string,
@@ -192,7 +206,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         description: client.description ?? null,
       },
       month: { key: month.key as string },
-      items: sorted.map((it: any) => ({
+      items: sorted.map((it: any, i: number) => ({
         id: it.id,
         type: it.type,
         idx: it.idx,
@@ -200,7 +214,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         caption: it.caption ?? "",
         dueDate: it.due_date ?? null,
         coverUrl: null,
-        gridThumb: null,
+        gridThumb: gridThumbs[i],
         files: (filesByItem.get(it.id) ?? []).map((f: any) => ({
           id: f.id,
           driveFileId: f.drive_file_id ?? f.driveFileId,
