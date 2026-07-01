@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { publicFeedQO } from "@/lib/luzeria/queries";
-import { addPublicFeedback } from "@/lib/luzeria/feed-share.functions";
+import { addPublicFeedback, getPublicDriveThumbnail } from "@/lib/luzeria/feed-share.functions";
 import { Film, Layers } from "lucide-react";
 import { InstagramPostModal, type IGModalItem } from "@/components/luzeria/InstagramPostModal";
 
@@ -82,26 +82,12 @@ function PublicPreviewPage() {
         ) : (
           <div className="grid grid-cols-3 gap-[3px] bg-black/30 p-[3px] rounded-md">
             {items.map((it) => (
-              <button
+              <PublicGridCell
                 key={it.id}
+                item={it}
+                token={token}
                 onClick={() => setActiveId(it.id)}
-                className="relative aspect-square overflow-hidden group"
-                style={{ background: "#1C1C1C" }}
-              >
-                {it.gridThumb ? (
-                  <img src={it.gridThumb} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full grid place-items-center text-white/30 text-[10px] font-bold uppercase">
-                    {it.type === "reel" ? "Reel" : "Post"}
-                  </div>
-                )}
-                {(it.type === "reel" || it.files.length > 1) && (
-                  <div className="absolute top-1.5 right-1.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                    {it.type === "reel" ? <Film size={16} /> : <Layers size={16} />}
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
-              </button>
+              />
             ))}
           </div>
         )}
@@ -127,6 +113,51 @@ function PublicPreviewPage() {
         />
       )}
     </div>
+  );
+}
+
+function PublicGridCell({ item, token, onClick }: {
+  item: { id: string; type: string; files: { driveFileId: string }[] };
+  token: string;
+  onClick: () => void;
+}) {
+  const getDriveThumbnail = useServerFn(getPublicDriveThumbnail);
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  const firstFileId = item.files[0]?.driveFileId ?? null;
+
+  useEffect(() => {
+    if (!firstFileId) return;
+    let cancelled = false;
+    getDriveThumbnail({ data: { token, fileId: firstFileId, size: 480 } })
+      .then((r) => { if (!cancelled) setThumbUrl(r.dataUrl ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [firstFileId, token]);
+
+  const isReel = item.type === "reel";
+  const isCarousel = item.files.length > 1;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative aspect-square overflow-hidden group"
+      style={{ background: "#1C1C1C" }}
+    >
+      {thumbUrl ? (
+        <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full grid place-items-center text-white/30 text-[10px] font-bold uppercase">
+          {isReel ? "Reel" : "Post"}
+        </div>
+      )}
+      {(isReel || isCarousel) && (
+        <div className="absolute top-1.5 right-1.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+          {isReel ? <Film size={16} /> : <Layers size={16} />}
+        </div>
+      )}
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
+    </button>
   );
 }
 

@@ -185,16 +185,6 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       return a.idx - b.idx;
     });
 
-    const gridThumbs = await Promise.all(sorted.map(async (it: any) => {
-      const itemFiles = filesByItem.get(it.id) ?? [];
-      const f0 = itemFiles[0];
-      if (!f0) return null;
-      // Support both snake_case (drive_file_id) and camelCase (driveFileId)
-      const driveId = f0.drive_file_id ?? f0.driveFileId;
-      if (!driveId) return null;
-      return await fetchThumbDataUrl(driveId, 480);
-    }));
-
     return {
       client: {
         name: client.name as string,
@@ -202,7 +192,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         description: client.description ?? null,
       },
       month: { key: month.key as string },
-      items: sorted.map((it: any, i: number) => ({
+      items: sorted.map((it: any) => ({
         id: it.id,
         type: it.type,
         idx: it.idx,
@@ -210,7 +200,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         caption: it.caption ?? "",
         dueDate: it.due_date ?? null,
         coverUrl: null,
-        gridThumb: gridThumbs[i],
+        gridThumb: null,
         files: (filesByItem.get(it.id) ?? []).map((f: any) => ({
           id: f.id,
           driveFileId: f.drive_file_id ?? f.driveFileId,
