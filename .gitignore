@@ -34,3 +34,4 @@ dist-ssr
 get-refresh-token.mjs
 dev.sh
 preview.sh
+.vercel
