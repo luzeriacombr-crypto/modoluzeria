@@ -376,6 +376,7 @@ export type Database = {
           archived: boolean
           category: string
           color: string
+          contract_value: number | null
           created_at: string
           description: string
           favorite: boolean
@@ -393,6 +394,7 @@ export type Database = {
           archived?: boolean
           category?: string
           color?: string
+          contract_value?: number | null
           created_at?: string
           description?: string
           favorite?: boolean
@@ -410,6 +412,7 @@ export type Database = {
           archived?: boolean
           category?: string
           color?: string
+          contract_value?: number | null
           created_at?: string
           description?: string
           favorite?: boolean
@@ -623,6 +626,7 @@ export type Database = {
       }
       feed_share_tokens: {
         Row: {
+          client_approved_at: string | null
           client_id: string
           created_at: string
           created_by: string | null
@@ -632,6 +636,7 @@ export type Database = {
           token: string
         }
         Insert: {
+          client_approved_at?: string | null
           client_id: string
           created_at?: string
           created_by?: string | null
@@ -641,6 +646,7 @@ export type Database = {
           token: string
         }
         Update: {
+          client_approved_at?: string | null
           client_id?: string
           created_at?: string
           created_by?: string | null
@@ -1066,7 +1072,10 @@ export type Database = {
       status_transitions: {
         Row: {
           actor_id: string | null
+          assignee_ids: string[] | null
           at: string
+          changed_by: string | null
+          created_at: string
           duration_ms: number | null
           from_status: string | null
           id: string
@@ -1075,7 +1084,10 @@ export type Database = {
         }
         Insert: {
           actor_id?: string | null
+          assignee_ids?: string[] | null
           at?: string
+          changed_by?: string | null
+          created_at?: string
           duration_ms?: number | null
           from_status?: string | null
           id?: string
@@ -1084,7 +1096,10 @@ export type Database = {
         }
         Update: {
           actor_id?: string | null
+          assignee_ids?: string[] | null
           at?: string
+          changed_by?: string | null
+          created_at?: string
           duration_ms?: number | null
           from_status?: string | null
           id?: string
@@ -1092,6 +1107,13 @@ export type Database = {
           to_status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "status_transitions_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "status_transitions_item_id_fkey"
             columns: ["item_id"]
