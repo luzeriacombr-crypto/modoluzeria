@@ -1,52 +1,32 @@
-## Criar função SQL `get_public_feed` (SECURITY DEFINER)
+## Edge Function: `admin-auth-operations`
 
-### Objetivo
-Expor os dados do preview público via uma função SQL única, em vez de depender apenas do server function `getPublicFeed`. Assim o feed pode ser lido diretamente via `supabase.rpc('get_public_feed', { _token })` (útil para clientes públicos e para simplificar o backend).
+Criar `supabase/functions/admin-auth-operations/index.ts` e fazer deploy.
 
-### Assinatura
-```sql
-public.get_public_feed(_token text) RETURNS jsonb
-```
-- `SECURITY DEFINER`, `STABLE`, `SET search_path = public`.
-- Retorna `NULL` se o token não existir ou estiver revogado (`revoked_at IS NOT NULL`).
+### Fluxo do handler (POST JSON)
 
-### Estrutura do JSON retornado
-```jsonc
-{
-  "client": { "name", "color", "description" },
-  "month":  { "key" },
-  "items": [
-    {
-      "id", "type", "idx", "title", "caption",
-      "due_date", "feed_order", "cover_path",
-      "files": [
-        { "id", "drive_file_id", "mime_type", "web_view_url", "sort_order" }
-      ],
-      "feedback": [
-        { "id", "author_name", "text", "created_at" }
-      ]
-    }
-  ]
-}
-```
-- Filtro dos itens: `month_id = token.month_id AND status = 'PRONTO_PARA_PUBLICAR'`.
-- Ordem dos itens: `feed_order NULLS LAST, type (post antes de reel), idx`.
-- Ordem dos arquivos: `sort_order, created_at`.
-- Ordem do feedback: `created_at DESC`.
+1. CORS: responder `OPTIONS` com `Access-Control-Allow-*`.
+2. Ler `Authorization: Bearer <jwt>` do header. Sem token → 401.
+3. Criar `supabaseUser` (URL + anon key, `global.headers.Authorization`) e chamar `supabaseUser.auth.getUser()` para obter `user.id`. Falha → 401.
+4. Criar `supabaseAdmin` (URL + `SUPABASE_SERVICE_ROLE_KEY`).
+5. Chamar `supabaseAdmin.rpc('is_master', { _user_id: user.id })`. Se `false` → 403.
+6. Ler `{ operation, ...params }` do body e despachar:
+   - `createUser` `{ email, password, name, role }` → `admin.createUser({ email, password, email_confirm: true, user_metadata: { name } })`. Se `role` vier, inserir/atualizar `user_roles` via `supabaseAdmin.from('user_roles').upsert({ user_id, role })`.
+   - `deleteUser` `{ targetUserId }` → `admin.deleteUser(targetUserId)`.
+   - `sendPasswordReset` `{ email }` → `admin.generateLink({ type: 'recovery', email })` (retorna `action_link`).
+   - `updateUser` `{ targetUserId, email?, password?, name? }` → `admin.updateUserById(targetUserId, { email, password, user_metadata: name ? { name } : undefined })`.
+   - Operação desconhecida → 400.
+7. Respostas: `{ success: true, data }` em sucesso, `{ success: false, error: string }` em erro (status 200/4xx/500 conforme caso), sempre com headers CORS + `content-type: application/json`.
 
-Observação: URLs assinadas de capa (`reel-covers`) e thumbs do Drive **continuam** sendo geradas no server function (precisam de service role e chamada HTTP externa). O SQL devolve apenas `cover_path` e `drive_file_id`.
+### Config
 
-### Segurança
-- `SECURITY DEFINER` + `search_path = public` (padrão do projeto).
-- `REVOKE ALL ... FROM PUBLIC` e depois `GRANT EXECUTE ON FUNCTION public.get_public_feed(text) TO anon, authenticated`.
-  - Justificativa: o token já é o mecanismo de autorização; sem token válido a função retorna `NULL`.
-- Só lê dados; nenhuma escrita.
-- Não retorna colunas sensíveis (nada de `client_secrets`, `email`, `user_id` de assignees, etc.).
+Sem entrada em `supabase/config.toml` — funções gerenciadas já sobem com `verify_jwt = false` por padrão; a verificação de JWT/master é feita manualmente dentro do handler (necessário para poder ler o body e retornar JSON estruturado em vez de 401 opaco).
 
-### Arquivos
-- Migração SQL nova criando a função com os `GRANT/REVOKE` acima. Nenhum código de aplicação é alterado neste passo.
+Secrets já disponíveis: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (anon), `SUPABASE_SERVICE_ROLE_KEY`.
 
-### Fora de escopo
-- Não alterar `feed-share.functions.ts` nem a rota `/preview/$token`.
-- Não gerar signed URLs nem thumbnails dentro do SQL.
-- Não adicionar endpoint público de escrita (feedback continua via server function existente).
+### Deploy
+
+Após criar o arquivo, chamar `supabase--deploy_edge_functions` com `["admin-auth-operations"]` e validar rapidamente com `supabase--curl_edge_functions` (uma chamada sem token deve retornar 401; uma com token de master deve responder à operação).
+
+### Observação
+
+A lógica equivalente já existe nos server functions do app (`src/lib/luzeria/api.functions.ts`) e continua funcionando — a Edge Function é adicional, pensada para chamadas externas ao app. Nenhum código de frontend é alterado.
