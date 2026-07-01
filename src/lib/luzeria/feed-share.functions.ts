@@ -185,18 +185,13 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       return a.idx - b.idx;
     });
 
-    console.log("[getPublicFeed] items:", sorted.length, "filesByItem keys:", filesByItem.size);
-
     const gridThumbs = await Promise.all(sorted.map(async (it: any) => {
       const itemFiles = filesByItem.get(it.id) ?? [];
       const f0 = itemFiles[0];
-      if (!f0) { console.log("[getPublicFeed] no file for item", it.id); return null; }
+      if (!f0) return null;
       const driveId = f0.drive_file_id ?? f0.driveFileId;
-      if (!driveId) { console.log("[getPublicFeed] no driveId for item", it.id); return null; }
-      console.log("[getPublicFeed] fetching thumb for", driveId);
-      const thumb = await fetchThumbDataUrl(driveId, 480);
-      console.log("[getPublicFeed] thumb result:", thumb ? "ok" : "null");
-      return thumb;
+      if (!driveId) return null;
+      return await fetchThumbDataUrl(driveId, 480);
     }));
 
     return {
