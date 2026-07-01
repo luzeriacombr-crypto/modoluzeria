@@ -139,17 +139,35 @@ export const setUserActive = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+async function callAdminEdgeFn(
+  supabase: any,
+  operation: string,
+  params: Record<string, unknown>,
+): Promise<any> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error("Sessão inválida.");
+  const url = `${process.env.SUPABASE_URL}/functions/v1/admin-auth-operations`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+      "apikey": process.env.SUPABASE_PUBLISHABLE_KEY!,
+    },
+    body: JSON.stringify({ operation, ...params }),
+  });
+  const json = await res.json() as any;
+  if (!json.success) throw new Error(json.error || "Erro na operação de admin.");
+  return json.data;
+}
+
 export const deleteUser = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string }) =>
     z.object({ userId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
-    if (!isMaster) throw new Error("Forbidden");
     if (data.userId === context.userId) throw new Error("Não é possível remover a si mesmo.");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
-    if (error) throw new Error(error.message);
+    await callAdminEdgeFn(context.supabase, "deleteUser", { targetUserId: data.userId });
     return { ok: true };
   });
 
@@ -163,23 +181,13 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       role: z.enum(["master","setor","member"]),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
-    if (!isMaster) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+    const result = await callAdminEdgeFn(context.supabase, "createUser", {
       email: data.email,
       password: data.password,
-      email_confirm: true,
-      user_metadata: { name: data.name },
+      name: data.name,
+      role: data.role,
     });
-    if (error) throw new Error(error.message);
-    const uid = created.user?.id;
-    if (!uid) throw new Error("Falha ao criar usuário.");
-    // Trigger handle_new_user already inserted profile + member role. Override:
-    await supabaseAdmin.from("profiles").update({ name: data.name, active: true }).eq("id", uid);
-    await supabaseAdmin.from("user_roles").delete().eq("user_id", uid);
-    await supabaseAdmin.from("user_roles").insert({ user_id: uid, role: data.role });
-    return { ok: true, id: uid };
+    return { ok: true, id: result?.id };
   });
 
 export const adminSendPasswordReset = createServerFn({ method: "POST" })
@@ -187,20 +195,10 @@ export const adminSendPasswordReset = createServerFn({ method: "POST" })
   .inputValidator((d: { userId: string }) =>
     z.object({ userId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
-    if (!isMaster) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: profile, error: pErr } = await supabaseAdmin
-      .from("profiles").select("email").eq("id", data.userId).maybeSingle();
-    if (pErr) throw new Error(pErr.message);
-    if (!profile?.email) throw new Error("Email não encontrado para este usuário.");
-    const siteUrl = process.env.SITE_URL || process.env.SUPABASE_URL || "";
-    const { error } = await supabaseAdmin.auth.admin.generateLink({
-      type: "recovery",
-      email: profile.email,
+    const result = await callAdminEdgeFn(context.supabase, "sendPasswordReset", {
+      targetUserId: data.userId,
     });
-    if (error) throw new Error(error.message);
-    return { ok: true, email: profile.email };
+    return { ok: true, email: result?.email };
   });
 
 /* ============== CLIENTS ============== */
@@ -215,24 +213,12 @@ export const updateMyAccount = createServerFn({ method: "POST" })
     }).strict().parse(d))
   .handler(async ({ data, context }) => {
     if (!data.name && !data.email && !data.password) return { ok: true };
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const authUpdate: { email?: string; password?: string } = {};
-    if (data.email) authUpdate.email = data.email;
-    if (data.password) authUpdate.password = data.password;
-    if (authUpdate.email || authUpdate.password) {
-      const { error } = await supabaseAdmin.auth.admin.updateUserById(context.userId, {
-        ...authUpdate,
-        email_confirm: true,
-      });
-      if (error) throw new Error(error.message);
-    }
-    const profileUpdate: { name?: string; email?: string } = {};
-    if (data.name) profileUpdate.name = data.name;
-    if (data.email) profileUpdate.email = data.email;
-    if (Object.keys(profileUpdate).length > 0) {
-      const { error } = await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", context.userId);
-      if (error) throw new Error(error.message);
-    }
+    await callAdminEdgeFn(context.supabase, "updateUser", {
+      targetUserId: context.userId,
+      email: data.email,
+      password: data.password,
+      name: data.name,
+    });
     return { ok: true };
   });
 
