@@ -198,7 +198,7 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const PUBLIC_PREVIEW_BASE = "https://modoluzeria.lovable.app";
+  const PUBLIC_PREVIEW_BASE = "https://modo.luzeriaestudio.com.br";
   async function generate() {
     const r = await getOrCreateShareToken.mutateAsync({ data: { clientId, monthId } });
     setToken(r.token); setOpen(true);
