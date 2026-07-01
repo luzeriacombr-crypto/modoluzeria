@@ -140,18 +140,19 @@ export const setUserActive = createServerFn({ method: "POST" })
   });
 
 async function callAdminEdgeFn(
-  supabase: any,
   operation: string,
   params: Record<string, unknown>,
 ): Promise<any> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) throw new Error("Sessão inválida.");
+  const { getRequest } = await import("@tanstack/react-start/server");
+  const request = getRequest();
+  const authHeader = request?.headers?.get("authorization") ?? "";
+  if (!authHeader.startsWith("Bearer ")) throw new Error("Sessão inválida.");
   const url = `${process.env.SUPABASE_URL}/functions/v1/admin-auth-operations`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${session.access_token}`,
+      "Authorization": authHeader,
       "apikey": process.env.SUPABASE_PUBLISHABLE_KEY!,
     },
     body: JSON.stringify({ operation, ...params }),
@@ -167,7 +168,7 @@ export const deleteUser = createServerFn({ method: "POST" })
     z.object({ userId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     if (data.userId === context.userId) throw new Error("Não é possível remover a si mesmo.");
-    await callAdminEdgeFn(context.supabase, "deleteUser", { targetUserId: data.userId });
+    await callAdminEdgeFn("deleteUser", { targetUserId: data.userId });
     return { ok: true };
   });
 
@@ -181,7 +182,7 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       role: z.enum(["master","setor","member"]),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    const result = await callAdminEdgeFn(context.supabase, "createUser", {
+    const result = await callAdminEdgeFn("createUser", {
       email: data.email,
       password: data.password,
       name: data.name,
@@ -195,7 +196,7 @@ export const adminSendPasswordReset = createServerFn({ method: "POST" })
   .inputValidator((d: { userId: string }) =>
     z.object({ userId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const result = await callAdminEdgeFn(context.supabase, "sendPasswordReset", {
+    const result = await callAdminEdgeFn("sendPasswordReset", {
       targetUserId: data.userId,
     });
     return { ok: true, email: result?.email };
@@ -213,7 +214,7 @@ export const updateMyAccount = createServerFn({ method: "POST" })
     }).strict().parse(d))
   .handler(async ({ data, context }) => {
     if (!data.name && !data.email && !data.password) return { ok: true };
-    await callAdminEdgeFn(context.supabase, "updateUser", {
+    await callAdminEdgeFn("updateUser", {
       targetUserId: context.userId,
       email: data.email,
       password: data.password,
