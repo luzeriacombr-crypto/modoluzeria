@@ -286,3 +286,23 @@ export const addPublicFeedback = createServerFn({ method: "POST" })
       createdAt: r.created_at as string,
     };
   });
+
+/* ============ PUBLIC: approve feed ============ */
+
+export const approvePublicFeed = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) =>
+    z.object({ token: z.string().min(8).max(60) }).parse(d))
+  .handler(async ({ data }) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+    );
+    const { error } = await supabase
+      .from("feed_share_tokens")
+      .update({ client_approved_at: new Date().toISOString() })
+      .eq("token", data.token)
+      .is("revoked_at", null);
+    if (error) throw new Error(error.message);
+    return { ok: true, approvedAt: new Date().toISOString() };
+  });

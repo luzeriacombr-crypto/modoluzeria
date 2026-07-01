@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { publicFeedQO } from "@/lib/luzeria/queries";
-import { addPublicFeedback } from "@/lib/luzeria/feed-share.functions";
+import { addPublicFeedback, approvePublicFeed } from "@/lib/luzeria/feed-share.functions";
 import { Film, Layers } from "lucide-react";
 import { InstagramPostModal, type IGModalItem } from "@/components/luzeria/InstagramPostModal";
 
@@ -21,6 +21,9 @@ function PublicPreviewPage() {
     return localStorage.getItem("lz_public_author") ?? "";
   });
   const addFb = useServerFn(addPublicFeedback);
+  const approveFeed = useServerFn(approvePublicFeed);
+  const [approved, setApproved] = useState<boolean>(false);
+  const [approving, setApproving] = useState(false);
 
   const formattedMonth = useMemo(() => formatMonth(q.data?.month.key), [q.data?.month.key]);
 
@@ -91,7 +94,40 @@ function PublicPreviewPage() {
           </div>
         )}
 
-        <div className="mt-10 text-center text-white/30 text-[11px]">
+        {/* Approval button */}
+        {items.length > 0 && (
+          <div className="mt-8 rounded-xl p-5 text-center" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.08)" }}>
+            {approved ? (
+              <div>
+                <div className="text-2xl mb-2">✅</div>
+                <div className="text-white font-bold text-base">Feed aprovado!</div>
+                <div className="text-white/50 text-sm mt-1">Sua aprovação foi registrada com sucesso.</div>
+              </div>
+            ) : (
+              <div>
+                <div className="text-white font-semibold text-sm mb-1">Tudo certo com o conteúdo?</div>
+                <div className="text-white/50 text-xs mb-4">Ao aprovar, a Luzeria Estúdio recebe uma confirmação formal.</div>
+                <button
+                  onClick={async () => {
+                    setApproving(true);
+                    try {
+                      await approveFeed({ data: { token } });
+                      setApproved(true);
+                    } catch {}
+                    setApproving(false);
+                  }}
+                  disabled={approving}
+                  className="px-6 py-2.5 rounded-full text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+                  style={{ background: "#C8D44E", color: "#0D0D0D" }}
+                >
+                  {approving ? "Registrando…" : "✓ Aprovar feed de " + formattedMonth}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="mt-6 text-center text-white/30 text-[11px]">
           Apresentado por <span className="font-semibold" style={{ color: "#C8D44E" }}>Luzeria Estúdio</span>
         </div>
       </div>

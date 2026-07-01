@@ -770,8 +770,27 @@ export const setItemStatus = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string; status: Status }) => d)
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("content_items").update({ status: data.status }).eq("id", data.id);
+    // Fetch current status + assignees before changing
+    const { data: current } = await context.supabase
+      .from("content_items")
+      .select("status, item_assignees(user_id)")
+      .eq("id", data.id)
+      .maybeSingle();
+
+    const { error } = await context.supabase
+      .from("content_items").update({ status: data.status }).eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    // Log transition (fire-and-forget, don't block on error)
+    const assigneeIds = (current?.item_assignees ?? []).map((a: any) => a.user_id);
+    context.supabase.from("status_transitions").insert({
+      item_id: data.id,
+      from_status: current?.status ?? null,
+      to_status: data.status,
+      changed_by: context.userId,
+      assignee_ids: assigneeIds,
+    }).then(() => {});
+
     return { ok: true };
   });
 

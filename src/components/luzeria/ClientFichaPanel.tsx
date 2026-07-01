@@ -282,6 +282,7 @@ function ClientConfigBlock({ client, profiles, canEdit, onSave }: {
   const [responsible, setResponsible] = useState<string>(client.customFields.fixedResponsibleId ?? "");
   const [reviewDay, setReviewDay] = useState<string>(client.customFields.reviewDay ?? "");
   const [notes, setNotes] = useState<string>(client.customFields.notes ?? "");
+  const [contractValue, setContractValue] = useState<string>((client as any).contractValue ? String((client as any).contractValue) : "");
 
   useEffect(() => {
     setNiche(client.customFields.niche ?? "");
@@ -290,6 +291,7 @@ function ClientConfigBlock({ client, profiles, canEdit, onSave }: {
     setResponsible(client.customFields.fixedResponsibleId ?? "");
     setReviewDay(client.customFields.reviewDay ?? "");
     setNotes(client.customFields.notes ?? "");
+    setContractValue((client as any).contractValue ? String((client as any).contractValue) : "");
   }, [client.id]);
 
   function save() {
@@ -298,6 +300,7 @@ function ClientConfigBlock({ client, profiles, canEdit, onSave }: {
       reels_per_week: Number(reelsPerWeek) || 0,
       fixed_responsible_id: responsible || null,
       review_day: reviewDay, notes,
+      contract_value: contractValue ? Number(contractValue.replace(",", ".")) : null,
     });
     toast.success("Configuração salva");
   }
@@ -324,6 +327,18 @@ function ClientConfigBlock({ client, profiles, canEdit, onSave }: {
           {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </ConfigField>
+      {canEdit && (
+        <ConfigField label="Valor do contrato (R$)">
+          <input
+            type="text"
+            inputMode="decimal"
+            placeholder="Ex: 1500,00"
+            value={contractValue}
+            onChange={(e) => setContractValue(e.target.value)}
+            className={inp}
+          />
+        </ConfigField>
+      )}
       <div className="sm:col-span-2">
         <ConfigField label="Observações">
           <textarea value={notes} disabled={!canEdit} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} />
