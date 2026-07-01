@@ -1173,6 +1173,7 @@ export type Database = {
         Returns: number
       }
       get_my_email: { Args: never; Returns: string }
+      get_public_feed: { Args: { _token: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
