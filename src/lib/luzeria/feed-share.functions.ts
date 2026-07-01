@@ -1,15 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
+import { getAccessToken } from "./drive.functions";
 
-/** Connector gateway base for Google Drive. */
-const GATEWAY = "https://connector-gateway.lovable.dev/google_drive";
-function gatewayHeaders() {
-  return {
-    Authorization: `Bearer ${process.env.LOVABLE_API_KEY ?? ""}`,
-    "X-Connection-Api-Key": process.env.GOOGLE_DRIVE_API_KEY ?? "",
-  };
-}
+const DRIVE_BASE = "https://www.googleapis.com/drive/v3";
 
 function randomToken(len = 22): string {
   const alphabet = "abcdefghijkmnopqrstuvwxyz23456789";
@@ -21,7 +15,10 @@ function randomToken(len = 22): string {
 }
 
 async function driveFetch(path: string) {
-  const r = await fetch(`${GATEWAY}${path}`, { headers: gatewayHeaders() });
+  const token = await getAccessToken();
+  const r = await fetch(`${DRIVE_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!r.ok) throw new Error(`Drive ${r.status}`);
   return r.json() as Promise<any>;
 }

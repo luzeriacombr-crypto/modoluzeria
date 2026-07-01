@@ -21,7 +21,7 @@ import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ProfilePage } from "./ProfilePage";
 import { ClientFichaPanel } from "./ClientFichaPanel";
 import { AppTour } from "./AppTour";
-import luzeriaLogo from "@/assets/luzeria-sidebar.png.asset.json";
+import luzeriaLogo from "@/assets/luzeria-sidebar.png";
 
 export function App() {
   const me = useMe();
@@ -132,7 +132,7 @@ function Header({ hidden, onToggleSidebar }: { hidden: boolean; onToggleSidebar:
       >
         {hidden ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
       </button>
-      <img src={luzeriaLogo.url} alt="Luzeria" className="md:hidden h-6 w-auto object-contain" />
+      <img src={luzeriaLogo} alt="Luzeria" className="md:hidden h-6 w-auto object-contain" />
       <div className="flex-1" />
       <NotificationsBell />
       {me && (

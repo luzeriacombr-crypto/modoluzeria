@@ -2,14 +2,48 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 
-/**
- * Google Drive integration via Lovable connector gateway.
- * The connector proxies Drive v3 REST endpoints using a project-level API key.
- */
+const UPLOAD_BASE = "https://www.googleapis.com/upload/drive/v3";
+const TOKEN_URL   = "https://oauth2.googleapis.com/token";
 
-const GATEWAY = "https://connector-gateway.lovable.dev/google_drive";
 const DRIVE_FIELDS =
   "id,name,mimeType,iconLink,thumbnailLink,webViewLink,size,modifiedTime";
+
+// In-memory token cache — reused until 5 min before expiry.
+let _tokenCache: { token: string; expiresAt: number } | null = null;
+
+export async function getAccessToken(): Promise<string> {
+  if (_tokenCache && _tokenCache.expiresAt > Date.now() + 300_000) {
+    return _tokenCache.token;
+  }
+  const clientId     = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error("Credenciais do Google Drive ausentes no servidor (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN).");
+  }
+  const res = await fetch(TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type:    "refresh_token",
+      refresh_token: refreshToken,
+      client_id:     clientId,
+      client_secret: clientSecret,
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Erro ao obter token do Google (${res.status}): ${t.slice(0, 200)}`);
+  }
+  const json: any = await res.json();
+  _tokenCache = { token: json.access_token, expiresAt: Date.now() + json.expires_in * 1000 };
+  return _tokenCache.token;
+}
+
+async function driveHeaders(extra: Record<string, string> = {}): Promise<Record<string, string>> {
+  const token = await getAccessToken();
+  return { Authorization: `Bearer ${token}`, ...extra };
+}
 
 const DEFAULT_ROOT_FOLDER_ID = "1LuefYT7TJiUhweGlOoHE31NGkXA2uTww";
 const FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -53,22 +87,11 @@ function normalizeName(s: string): string {
     .trim();
 }
 
-function gatewayHeaders(): Record<string, string> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const driveKey = process.env.GOOGLE_DRIVE_API_KEY;
-  if (!lovableKey) throw new Error("LOVABLE_API_KEY ausente no servidor.");
-  if (!driveKey) throw new Error("Conector do Google Drive não está conectado.");
-  return {
-    Authorization: `Bearer ${lovableKey}`,
-    "X-Connection-Api-Key": driveKey,
-  };
-}
-
 async function driveFetch(path: string, init: RequestInit = {}) {
-  const res = await fetch(`${GATEWAY}${path}`, {
+  const res = await fetch(`https://www.googleapis.com${path}`, {
     ...init,
     headers: {
-      ...gatewayHeaders(),
+      ...await driveHeaders(),
       ...(init.headers ?? {}),
     },
   });
@@ -90,9 +113,9 @@ async function driveCreateFolder(name: string, parentId: string): Promise<string
     mimeType: FOLDER_MIME,
     parents: [parentId],
   });
-  const res = await fetch(`${GATEWAY}/drive/v3/files?fields=id,name&supportsAllDrives=true`, {
+  const res = await fetch(`${DRIVE_BASE}/files?fields=id,name&supportsAllDrives=true`, {
     method: "POST",
-    headers: { ...gatewayHeaders(), "Content-Type": "application/json" },
+    headers: { ...await driveHeaders(), "Content-Type": "application/json" },
     body,
   });
   if (!res.ok) {
@@ -139,9 +162,9 @@ async function driveMoveTo(fileId: string, targetParentId: string) {
   });
   const toRemove = parents.filter((p) => p !== targetParentId);
   if (toRemove.length) params.set("removeParents", toRemove.join(","));
-  const res = await fetch(`${GATEWAY}/drive/v3/files/${fileId}?${params.toString()}`, {
+  const res = await fetch(`${DRIVE_BASE}/files/${fileId}?${params.toString()}`, {
     method: "PATCH",
-    headers: { ...gatewayHeaders(), "Content-Type": "application/json" },
+    headers: { ...await driveHeaders(), "Content-Type": "application/json" },
     body: "{}",
   });
   if (!res.ok) {
@@ -458,11 +481,11 @@ export const uploadDriveFile = createServerFn({ method: "POST" })
     const body = Buffer.concat([head, bin, tail]);
 
     const res = await fetch(
-      `${GATEWAY}/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=${encodeURIComponent(DRIVE_FIELDS)}`,
+      `${UPLOAD_BASE}/files?uploadType=multipart&supportsAllDrives=true&fields=${encodeURIComponent(DRIVE_FIELDS)}`,
       {
         method: "POST",
         headers: {
-          ...gatewayHeaders(),
+          ...await driveHeaders(),
           "Content-Type": `multipart/related; boundary=${boundary}`,
           "Content-Length": String(body.length),
         },
@@ -595,8 +618,8 @@ export const getDriveFileBytes = createServerFn({ method: "GET" })
       throw new Error("Arquivo muito grande para captura de frame (limite 40 MB).");
     }
     const res = await fetch(
-      `${GATEWAY}/drive/v3/files/${encodeURIComponent(data.fileId)}?alt=media&supportsAllDrives=true`,
-      { headers: gatewayHeaders() },
+      `${DRIVE_BASE}/files/${encodeURIComponent(data.fileId)}?alt=media&supportsAllDrives=true`,
+      { headers: await driveHeaders() },
     );
     if (!res.ok) {
       const t = await res.text().catch(() => "");

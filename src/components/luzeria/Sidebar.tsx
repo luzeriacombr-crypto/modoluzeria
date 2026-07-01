@@ -12,7 +12,7 @@ import { PRESET_COLORS } from "@/lib/luzeria/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Client } from "@/lib/luzeria/types";
-import luzeriaLogo from "@/assets/luzeria-sidebar.png.asset.json";
+import luzeriaLogo from "@/assets/luzeria-sidebar.png";
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
@@ -66,7 +66,7 @@ export function Sidebar({
     <aside data-tour="sidebar" className="sidebar-gradient w-[240px] flex flex-col h-screen text-white shrink-0">
       {/* Logo */}
       <div className="px-5 pt-5 pb-4">
-        <img src={luzeriaLogo.url} alt="Luzeria" className="h-7 w-auto object-contain" />
+        <img src={luzeriaLogo} alt="Luzeria" className="h-7 w-auto object-contain" />
         <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-2">Você foi chamado para criar</p>
       </div>
       <div className="mx-5 h-px" style={{ backgroundColor: "rgba(200,212,78,0.2)" }} />
