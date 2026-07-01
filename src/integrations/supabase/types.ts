@@ -1160,6 +1160,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_public_feedback: {
+        Args: {
+          _author_name: string
+          _item_id: string
+          _text: string
+          _token: string
+        }
+        Returns: Json
+      }
       admin_list_profile_emails: {
         Args: never
         Returns: {
@@ -1195,6 +1204,10 @@ export type Database = {
       }
       send_daily_digest: { Args: never; Returns: number }
       send_deadline_reminders: { Args: never; Returns: number }
+      verify_public_token_file: {
+        Args: { _file_id: string; _token: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "master" | "setor" | "member"
