@@ -61,8 +61,7 @@ export const runDailyDigestNow = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     await ensureMaster(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.rpc("send_daily_digest" as any);
+    const { data, error } = await context.supabase.rpc("send_daily_digest" as any);
     if (error) throw new Error(error.message);
     return { ok: true, sent: data ?? 0 };
   });
@@ -71,8 +70,7 @@ export const runDeadlineRemindersNow = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     await ensureMaster(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.rpc("send_deadline_reminders" as any);
+    const { data, error } = await context.supabase.rpc("send_deadline_reminders" as any);
     if (error) throw new Error(error.message);
     return { ok: true, sent: data ?? 0 };
   });
@@ -89,8 +87,7 @@ export const listCronJobs = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }): Promise<CronJobInfo[]> => {
     await ensureMaster(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.rpc("luzeria_admin_list_cron_jobs" as any);
+    const { data, error } = await context.supabase.rpc("luzeria_admin_list_cron_jobs" as any);
     if (error) throw new Error(error.message);
     return ((data ?? []) as any[]).map((r) => ({
       jobname: r.jobname,
