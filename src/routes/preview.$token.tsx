@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { publicFeedQO } from "@/lib/luzeria/queries";
-import { addPublicFeedback, getPublicDriveThumbnail } from "@/lib/luzeria/feed-share.functions";
+import { addPublicFeedback } from "@/lib/luzeria/feed-share.functions";
 import { Film, Layers } from "lucide-react";
 import { InstagramPostModal, type IGModalItem } from "@/components/luzeria/InstagramPostModal";
 
@@ -85,7 +85,6 @@ function PublicPreviewPage() {
               <PublicGridCell
                 key={it.id}
                 item={it}
-                token={token}
                 onClick={() => setActiveId(it.id)}
               />
             ))}
@@ -116,24 +115,16 @@ function PublicPreviewPage() {
   );
 }
 
-function PublicGridCell({ item, token, onClick }: {
+function driveThumbnailUrl(fileId: string, size = 480) {
+  return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w${size}`;
+}
+
+function PublicGridCell({ item, onClick }: {
   item: { id: string; type: string; files: { driveFileId: string }[] };
-  token: string;
   onClick: () => void;
 }) {
-  const getDriveThumbnail = useServerFn(getPublicDriveThumbnail);
-  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const firstFileId = item.files[0]?.driveFileId ?? null;
-
-  useEffect(() => {
-    if (!firstFileId) return;
-    let cancelled = false;
-    getDriveThumbnail({ data: { token, fileId: firstFileId, size: 480 } })
-      .then((r) => { if (!cancelled) setThumbUrl(r.dataUrl ?? null); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [firstFileId, token]);
-
+  const thumbUrl = firstFileId ? driveThumbnailUrl(firstFileId, 480) : null;
   const isReel = item.type === "reel";
   const isCarousel = item.files.length > 1;
 
@@ -145,7 +136,7 @@ function PublicGridCell({ item, token, onClick }: {
       style={{ background: "#1C1C1C" }}
     >
       {thumbUrl ? (
-        <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+        <img src={thumbUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
       ) : (
         <div className="w-full h-full grid place-items-center text-white/30 text-[10px] font-bold uppercase">
           {isReel ? "Reel" : "Post"}
