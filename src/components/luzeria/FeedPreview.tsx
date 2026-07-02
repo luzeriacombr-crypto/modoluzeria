@@ -21,7 +21,6 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
     "REVISAO_CLIENTE",
     "AGENDAMENTO",
     "REVISAO_AGENDAMENTO",
-    "TRAVADO",
     "PRONTO_PARA_PUBLICAR",
   ]);
 
