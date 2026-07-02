@@ -446,10 +446,10 @@ export const getMonth = createServerFn({ method: "GET" })
       id: month.id, key: month.key,
       posts: mapped.filter((i) => i.type === "post"),
       reels: mapped.filter((i) => i.type === "reel"),
-      outros: mapped.filter((i) => i.type === "outros"),
-      gravacoes: mapped.filter((i) => i.type === "gravacao"),
-      roteiros: mapped.filter((i) => i.type === "roteiro"),
-      sistemas: mapped.filter((i) => i.type === "sistema"),
+      outros: mapped.filter((i) => i.type === "outros" && !["gravacao", "roteiro", "sistema"].includes((i as any).reelType ?? "")),
+      gravacoes: mapped.filter((i) => i.type === "outros" && (i as any).reelType === "gravacao"),
+      roteiros: mapped.filter((i) => i.type === "outros" && (i as any).reelType === "roteiro"),
+      sistemas: mapped.filter((i) => i.type === "outros" && (i as any).reelType === "sistema"),
     };
   });
 
@@ -834,16 +834,21 @@ export const addContentItem = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       month = m;
     }
+    // 'gravacao', 'roteiro', 'sistema' are not in the DB enum — store as 'outros' with reel_type as discriminator
+    const SUBTYPE_MAP: Record<string, string> = { gravacao: "gravacao", roteiro: "roteiro", sistema: "sistema" };
+    const dbType = SUBTYPE_MAP[data.type] ? "outros" : data.type;
+    const subType = SUBTYPE_MAP[data.type] ?? null;
     const { data: maxRow } = await context.supabase
-      .from("content_items").select("idx").eq("month_id", month.id).eq("type", data.type)
+      .from("content_items").select("idx").eq("month_id", month.id).eq("type", dbType)
       .order("idx", { ascending: false }).limit(1).maybeSingle();
     const nextIdx = ((maxRow as any)?.idx ?? 0) + 1;
     const typeLabels: Record<string, string> = { post: "Post", reel: "Reel", outros: "Item", gravacao: "Gravação", roteiro: "Roteiro", sistema: "Sistema" };
     const fallback = `${typeLabels[data.type] ?? "Item"} ${nextIdx}`;
     const insertRow: Record<string, any> = {
-      month_id: month.id, type: data.type, idx: nextIdx,
+      month_id: month.id, type: dbType, idx: nextIdx,
       title: (data.title?.trim() || fallback),
     };
+    if (subType) insertRow.reel_type = subType;
     if (data.dueDate) insertRow.due_date = data.dueDate;
     if (data.notes) insertRow.copy = data.notes;
     if (data.location) insertRow.drive_link = data.location;
