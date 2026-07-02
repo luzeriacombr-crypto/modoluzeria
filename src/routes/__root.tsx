@@ -8,7 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { initOneSignal, setOneSignalUserId } from "@/lib/luzeria/push-notifications";
+import { setOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
@@ -93,9 +93,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/e7QY06Epe0dgUbddzZcyI2ZSr3I2/social-images/social-1782677722941-Frame_1_(1).webp" },
     ],
     links: [
+      { rel: "stylesheet", href: appCss },
+    ],
+    scripts: [
+      // OneSignal Web SDK — must load before app scripts
       {
-        rel: "stylesheet",
-        href: appCss,
+        src: "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js",
+        defer: true,
+      },
+      {
+        children: `window.OneSignalDeferred = window.OneSignalDeferred || [];
+OneSignalDeferred.push(async function(OneSignal) {
+  await OneSignal.init({
+    appId: "ec59cdb7-8660-4a15-b023-1886d2b4c76d",
+    notifyButton: { enable: false },
+    allowLocalhostAsSecureOrigin: true,
+  });
+});`,
       },
     ],
   }),
@@ -123,18 +137,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
-    if (!appId) return;
-    initOneSignal(appId);
-    // Inject OneSignal SDK script
-    if (!document.getElementById("onesignal-sdk")) {
-      const s = document.createElement("script");
-      s.id = "onesignal-sdk";
-      s.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
-      s.defer = true;
-      document.head.appendChild(s);
-    }
-    // Bind logged-in user so OneSignal knows who to notify
+    // After SDK init, identify the logged-in user so OneSignal can target them by Supabase user ID
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) setOneSignalUserId(data.user.id);
     });
@@ -142,7 +145,6 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
   );
