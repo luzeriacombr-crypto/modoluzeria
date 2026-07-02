@@ -177,7 +177,7 @@ function PublicGridCell({ item, onClick }: {
       style={{ background: "#1C1C1C" }}
     >
       {thumbUrl ? (
-        <img src={thumbUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+        <img src={thumbUrl} alt="" loading="lazy" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
       ) : (
         <div className="w-full h-full grid place-items-center text-white/30 text-[10px] font-bold uppercase">
           {isReel ? "Reel" : "Post"}

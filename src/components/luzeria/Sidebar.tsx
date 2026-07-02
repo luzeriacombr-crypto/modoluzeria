@@ -5,7 +5,7 @@ import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Settings, LogOut, Plus, Camera, Sparkles, Info,
 } from "lucide-react";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
@@ -138,7 +138,6 @@ export function Sidebar({
                 key={c.id}
                 client={c}
                 active={pathname === `/cliente/${c.id}`}
-                onClick={() => navigate({ to: "/cliente/$clientId", params: { clientId: c.id } })}
                 onOpenCustomFields={() => onOpenCustomFields(c)}
                 canManage={isAdmin}
                 categories={allCategories}
@@ -217,8 +216,8 @@ function CategoryGroup({
   );
 }
 
-function ClientRow({ client, active, onClick, onOpenCustomFields, canManage, categories }: {
-  client: Client; active: boolean; onClick: () => void; onOpenCustomFields: () => void; canManage: boolean;
+function ClientRow({ client, active, onOpenCustomFields, canManage, categories }: {
+  client: Client; active: boolean; onOpenCustomFields: () => void; canManage: boolean;
   categories: string[];
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -271,15 +270,18 @@ function ClientRow({ client, active, onClick, onOpenCustomFields, canManage, cat
       style={{ backgroundColor: active ? "rgba(200,212,78,0.12)" : "transparent" }}
     >
       {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r" style={{ backgroundColor: "#C8D44E" }} />}
-      <button onClick={onClick}
+      <Link
+        to="/cliente/$clientId"
+        params={{ clientId: client.id }}
+        preload="intent"
+        className="w-full flex items-center gap-2.5 pl-3 pr-9 py-2 text-left transition-colors"
         onMouseEnter={(e) => { if (!active) (e.currentTarget.parentElement as HTMLElement).style.backgroundColor = "rgba(255,255,255,0.05)"; }}
         onMouseLeave={(e) => { if (!active) (e.currentTarget.parentElement as HTMLElement).style.backgroundColor = "transparent"; }}
-        className="w-full flex items-center gap-2.5 pl-3 pr-9 py-2 text-left transition-colors"
       >
         <Avatar name={client.name} color={client.color} size={26} avatarUrl={client.photoUrl} />
         <span className="text-sm truncate text-white/90 flex-1">{client.name}</span>
         {client.favorite && <Star size={12} className="text-[#C8D44E] fill-[#C8D44E]" />}
-      </button>
+      </Link>
 
       <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
         <button

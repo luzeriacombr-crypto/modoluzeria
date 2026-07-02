@@ -60,7 +60,7 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
   });
   const url = fallback ?? (mode.kind === "public" ? (file.thumbUrl ?? null) : null) ?? internalQ.data?.dataUrl ?? null;
   return url ? (
-    <img src={url} alt="" className="w-full h-full object-cover" />
+    <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
   ) : (
     <div className="w-full h-full bg-neutral-100 animate-pulse" />
   );
