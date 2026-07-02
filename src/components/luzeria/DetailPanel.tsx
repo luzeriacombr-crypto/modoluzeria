@@ -16,7 +16,10 @@ function findItem(month: any, id: string): ContentItem | undefined {
   return (
     month?.posts.find((i: any) => i.id === id) ??
     month?.reels.find((i: any) => i.id === id) ??
-    month?.outros?.find((i: any) => i.id === id)
+    month?.outros?.find((i: any) => i.id === id) ??
+    month?.gravacoes?.find((i: any) => i.id === id) ??
+    month?.roteiros?.find((i: any) => i.id === id) ??
+    month?.sistemas?.find((i: any) => i.id === id)
   );
 }
 

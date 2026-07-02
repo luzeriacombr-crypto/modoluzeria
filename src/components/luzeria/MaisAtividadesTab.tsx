@@ -3,7 +3,6 @@ import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIc
 import { toast } from "sonner";
 import { useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { ContentRow } from "./ContentRow";
 import type { ContentItem, Profile } from "@/lib/luzeria/types";
 
 type ActivityType = "gravacao" | "roteiro" | "sistema" | "outros";
@@ -117,22 +116,20 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
             {!isCollapsed && items.length > 0 && (
               <div className="space-y-0.5">
                 {items.map((item, i) => (
-                  <div key={item.id} className="group/row relative pr-20">
-                    <ContentRow item={item} profiles={profiles} idx={i + 1} />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition">
-                      <button
-                        onClick={() => openItem(item.id)}
-                        title="Editar"
-                        className="p-1.5 rounded text-white/40 hover:text-[#C8D44E] hover:bg-white/5 transition"
-                      >
+                  <div key={item.id} className="group/row flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-white/[0.03] transition cursor-pointer" onClick={() => openItem(item.id)}>
+                    <span className="text-[11px] font-bold text-white/30 w-5 text-right shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="flex-1 text-sm text-white truncate">{item.title}</span>
+                    {item.dueDate && (
+                      <span className="flex items-center gap-1 text-[11px] text-white/40 shrink-0">
+                        <Calendar size={11} /> {new Date(item.dueDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => openItem(item.id)} title="Editar" className="p-1.5 rounded text-white/40 hover:text-[#C8D44E] hover:bg-white/5 transition">
                         <Pencil size={13} />
                       </button>
                       {isAdmin && (
-                        <button
-                          onClick={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}
-                          title="Excluir"
-                          className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition"
-                        >
+                        <button onClick={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }} title="Excluir" className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition">
                           <Trash2 size={13} />
                         </button>
                       )}
