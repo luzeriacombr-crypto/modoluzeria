@@ -52,16 +52,15 @@ function relativeTime(iso: string) {
 }
 
 function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMode; fallback?: string | null }) {
-  // If file is a video and we don't have a custom cover, try drive thumbnail.
   const enabled = !fallback;
+  // Public mode: use proxy endpoint directly (no base64 server round-trip)
+  const proxyUrl = mode.kind === "public" && file.driveFileId
+    ? `/api/thumb/${file.driveFileId}`
+    : null;
   const internalQ = useQuery({
     ...driveThumbnailQO(file.driveFileId, mode.kind === "internal" && enabled),
   });
-  const publicQ = useQuery({
-    ...publicDriveThumbQO(mode.kind === "public" ? mode.token : "", file.driveFileId),
-    enabled: mode.kind === "public" && enabled && !!file.driveFileId,
-  });
-  const url = fallback ?? internalQ.data?.dataUrl ?? publicQ.data?.dataUrl ?? null;
+  const url = fallback ?? proxyUrl ?? internalQ.data?.dataUrl ?? null;
   return url ? (
     <img src={url} alt="" className="w-full h-full object-cover" />
   ) : (
