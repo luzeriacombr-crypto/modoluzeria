@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plus, Trash2, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User } from "lucide-react";
+import { toast } from "sonner";
 import { useApi } from "@/lib/luzeria/queries";
-import { Avatar } from "./Avatar";
 import { ContentRow } from "./ContentRow";
 import type { ContentItem, Profile } from "@/lib/luzeria/types";
 
@@ -91,11 +91,20 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                 monthKey={monthKey}
                 profiles={profiles}
                 onSubmit={async (vals) => {
-                  const { id } = await addContentItem.mutateAsync({ data: { clientId, key: monthKey, type, ...vals } });
-                  if (vals.assigneeId && id) {
-                    await addAssignee.mutateAsync({ data: { itemId: id, userId: vals.assigneeId } });
+                  try {
+                    const { assigneeId, ...itemVals } = vals;
+                    const result = await addContentItem.mutateAsync({
+                      data: { clientId, key: monthKey, type, ...itemVals },
+                    });
+                    const newId = (result as any)?.id;
+                    if (assigneeId && newId) {
+                      await addAssignee.mutateAsync({ data: { itemId: newId, userId: assigneeId } });
+                    }
+                    toast.success(`${cfg.label} registrada com sucesso`);
+                    setOpenForm(null);
+                  } catch (e: any) {
+                    toast.error(e?.message ?? "Erro ao registrar. Tente novamente.");
                   }
-                  setOpenForm(null);
                 }}
                 onCancel={() => setOpenForm(null)}
                 loading={addContentItem.isPending || addAssignee.isPending}
