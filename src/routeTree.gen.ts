@@ -12,6 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedStoriesRouteImport } from './routes/_authenticated/stories'
+import { Route as AuthenticatedLimpezaRouteImport } from './routes/_authenticated/limpeza'
+import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
+import { Route as AuthenticatedClienteClientIdRouteImport } from './routes/_authenticated/cliente.$clientId'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
 
 const AuthRoute = AuthRouteImport.update({
@@ -28,6 +35,41 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMinhasTarefasRoute = AuthenticatedMinhasTarefasRouteImport.update({
+  id: '/minhas-tarefas',
+  path: '/minhas-tarefas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStoriesRoute = AuthenticatedStoriesRouteImport.update({
+  id: '/stories',
+  path: '/stories',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLimpezaRoute = AuthenticatedLimpezaRouteImport.update({
+  id: '/limpeza',
+  path: '/limpeza',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedConfiguracoesRoute = AuthenticatedConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedClienteClientIdRoute = AuthenticatedClienteClientIdRouteImport.update({
+  id: '/cliente/$clientId',
+  path: '/cliente/$clientId',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const PreviewTokenRoute = PreviewTokenRouteImport.update({
   id: '/preview/$token',
   path: '/preview/$token',
@@ -38,11 +80,25 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/preview/$token': typeof PreviewTokenRoute
+  '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/stories': typeof AuthenticatedStoriesRoute
+  '/limpeza': typeof AuthenticatedLimpezaRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
+  '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/': typeof AuthenticatedIndexRoute
+  '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/stories': typeof AuthenticatedStoriesRoute
+  '/limpeza': typeof AuthenticatedLimpezaRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
+  '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -50,18 +106,52 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/stories': typeof AuthenticatedStoriesRoute
+  '/_authenticated/limpeza': typeof AuthenticatedLimpezaRoute
+  '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
+  '/_authenticated/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/preview/$token'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/preview/$token'
+    | '/minhas-tarefas'
+    | '/admin'
+    | '/stories'
+    | '/limpeza'
+    | '/configuracoes'
+    | '/perfil'
+    | '/cliente/$clientId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/preview/$token' | '/'
+  to:
+    | '/auth'
+    | '/preview/$token'
+    | '/'
+    | '/minhas-tarefas'
+    | '/admin'
+    | '/stories'
+    | '/limpeza'
+    | '/configuracoes'
+    | '/perfil'
+    | '/cliente/$clientId'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
     | '/preview/$token'
     | '/_authenticated/'
+    | '/_authenticated/minhas-tarefas'
+    | '/_authenticated/admin'
+    | '/_authenticated/stories'
+    | '/_authenticated/limpeza'
+    | '/_authenticated/configuracoes'
+    | '/_authenticated/perfil'
+    | '/_authenticated/cliente/$clientId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -100,15 +190,78 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PreviewTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/minhas-tarefas': {
+      id: '/_authenticated/minhas-tarefas'
+      path: '/minhas-tarefas'
+      fullPath: '/minhas-tarefas'
+      preLoaderRoute: typeof AuthenticatedMinhasTarefasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stories': {
+      id: '/_authenticated/stories'
+      path: '/stories'
+      fullPath: '/stories'
+      preLoaderRoute: typeof AuthenticatedStoriesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/limpeza': {
+      id: '/_authenticated/limpeza'
+      path: '/limpeza'
+      fullPath: '/limpeza'
+      preLoaderRoute: typeof AuthenticatedLimpezaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/configuracoes': {
+      id: '/_authenticated/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/perfil': {
+      id: '/_authenticated/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof AuthenticatedPerfilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cliente/$clientId': {
+      id: '/_authenticated/cliente/$clientId'
+      path: '/cliente/$clientId'
+      fullPath: '/cliente/$clientId'
+      preLoaderRoute: typeof AuthenticatedClienteClientIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedStoriesRoute: typeof AuthenticatedStoriesRoute
+  AuthenticatedLimpezaRoute: typeof AuthenticatedLimpezaRoute
+  AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
+  AuthenticatedClienteClientIdRoute: typeof AuthenticatedClienteClientIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedStoriesRoute: AuthenticatedStoriesRoute,
+  AuthenticatedLimpezaRoute: AuthenticatedLimpezaRoute,
+  AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
+  AuthenticatedClienteClientIdRoute: AuthenticatedClienteClientIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

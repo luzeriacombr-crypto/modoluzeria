@@ -1,31 +1,25 @@
 import { useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, Menu } from "lucide-react";
+import { Outlet, useNavigate } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { Client } from "@/lib/luzeria/types";
 import { Sidebar } from "./Sidebar";
-import { ClientView } from "./ClientView";
 import { DetailPanel } from "./DetailPanel";
-import { MyTasks } from "./MyTasks";
-import { SettingsPage } from "./Settings";
-import { StoriesView } from "./StoriesView";
-import { CleaningView } from "./CleaningView";
-import { AdminDashboard } from "./AdminDashboard";
 import { NotificationsBell } from "./Notifications";
 import { NewClientModal, CustomFieldsModal } from "./Modals";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
-import { ProfilePage } from "./ProfilePage";
 import { ClientFichaPanel } from "./ClientFichaPanel";
 import { AppTour } from "./AppTour";
 import luzeriaLogo from "@/assets/luzeria-sidebar.png";
 
 export function App() {
   const me = useMe();
-  const { view, selectedClientId, sidebarHidden, toggleSidebar, setView } = useUI();
+  const { sidebarHidden, toggleSidebar } = useUI();
   const [creating, setCreating] = useState<{ category?: string } | null>(null);
   const [customFor, setCustomFor] = useState<Client | null>(null);
 
@@ -79,13 +73,7 @@ export function App() {
       <div className="flex-1 flex flex-col min-w-0">
         <Header hidden={sidebarHidden} onToggleSidebar={toggleSidebar} />
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
-          {view === "my" && <MyTasks />}
-          {view === "client" && selectedClientId && <ClientView clientId={selectedClientId} />}
-          {view === "settings" && <SettingsPage />}
-          {view === "stories" && <StoriesView />}
-          {view === "cleaning" && <CleaningView />}
-          {view === "admin" && <AdminDashboard />}
-          {view === "profile" && <ProfilePage />}
+          <Outlet />
         </main>
       </div>
       <DetailPanel />
@@ -114,7 +102,7 @@ export function App() {
 
 function Header({ hidden, onToggleSidebar }: { hidden: boolean; onToggleSidebar: () => void }) {
   const me = useMe().data;
-  const setView = useUI((s) => s.setView);
+  const navigate = useNavigate();
   return (
     <header
       className="lz-app-header sticky top-0 z-30 px-4 md:px-6 flex items-center gap-2 overflow-hidden"
@@ -137,7 +125,7 @@ function Header({ hidden, onToggleSidebar }: { hidden: boolean; onToggleSidebar:
       <NotificationsBell />
       {me && (
         <button
-          onClick={() => setView("profile")}
+          onClick={() => navigate({ to: "/perfil" })}
           className="flex items-center gap-2 pl-2 hover:opacity-90 transition-opacity"
           title="Meu perfil"
           data-tour="profile-btn"

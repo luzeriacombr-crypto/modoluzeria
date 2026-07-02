@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, ArrowLeft, ArrowRight, Check, Sparkles } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { useMe, useApi } from "@/lib/luzeria/queries";
-import { useUI } from "@/lib/luzeria/ui-store";
 
 type Role = "master" | "setor" | "member";
 
@@ -89,7 +89,7 @@ const CARD_W = 340;
 export function AppTour() {
   const me = useMe().data;
   const { updateMyProfile } = useApi();
-  const setView = useUI((s) => s.setView);
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [stepIdx, setStepIdx] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -119,8 +119,9 @@ export function AppTour() {
   // Switch view when step requires it.
   useEffect(() => {
     if (!open || !step) return;
-    if (step.view) setView(step.view as any);
-  }, [open, step, setView]);
+    if (step.view === "admin") navigate({ to: "/admin" });
+    else if (step.view === "settings") navigate({ to: "/configuracoes" });
+  }, [open, step, navigate]);
 
   // Track target rect.
   useLayoutEffect(() => {

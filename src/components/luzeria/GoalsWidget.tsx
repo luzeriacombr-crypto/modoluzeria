@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { goalProgressQO, useMe } from "@/lib/luzeria/queries";
-import { useUI } from "@/lib/luzeria/ui-store";
 import { Target } from "lucide-react";
 
 export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: string }) {
   const { data } = useQuery(goalProgressQO(monthKey, userId));
   const me = useMe().data;
-  const { setView } = useUI();
+  const navigate = useNavigate();
   if (!data) return null;
 
   const hasGoals = data.postsGoal || data.reelsGoal || data.storiesGoal;
@@ -29,7 +29,7 @@ export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: s
         </div>
         {me?.role === "master" && (
           <button
-            onClick={() => setView("settings")}
+            onClick={() => navigate({ to: "/configuracoes" })}
             className="text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-black"
             style={{ backgroundColor: "#C8D44E" }}
           >

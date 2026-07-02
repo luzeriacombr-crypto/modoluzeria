@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { profilesQO, useApi, useMe, appSettingsQO } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
@@ -16,7 +17,8 @@ export function SettingsPage() {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
   const { setUserRole, setUserActive, deleteUser, adminCreateUser, adminSendPasswordReset } = useApi();
-  const { setView, setViewAs } = useUI();
+  const { setViewAs } = useUI();
+  const navigate = useNavigate();
   const [adding, setAdding] = useState(false);
   const [tab, setTab] = useState<"team" | "report" | "goals" | "drive" | "automations" | "general">("team");
 
@@ -152,7 +154,7 @@ export function SettingsPage() {
                 onChange={(e) => setUserActive.mutate({ data: { userId: p.id, active: e.target.checked } })} />
               Ativo
             </label>
-            <button onClick={() => { setViewAs(p.id); setView("my"); }}
+            <button onClick={() => { setViewAs(p.id); navigate({ to: "/minhas-tarefas" }); }}
               className="text-[11px] text-white/60 hover:text-[#C8D44E] transition">Ver demandas</button>
             <button onClick={() => handleResetPassword(p.id, p.name, p.email)}
               disabled={adminSendPasswordReset.isPending}

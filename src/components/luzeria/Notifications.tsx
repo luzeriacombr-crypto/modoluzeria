@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, X } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { notificationsQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -15,7 +16,8 @@ export function NotificationsBell() {
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
-  const { selectClient, selectMonth, openItem, flash } = useUI();
+  const { selectMonth, openItem, flash } = useUI();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -89,7 +91,7 @@ export function NotificationsBell() {
                   if (!n.read) markNotificationRead.mutate({ data: { id: n.id } });
                   setOpen(false);
                   if (n.clientId && n.monthKey && n.itemId) {
-                    selectClient(n.clientId);
+                    navigate({ to: "/cliente/$clientId", params: { clientId: n.clientId } });
                     selectMonth(n.monthKey);
                     setTimeout(() => { openItem(n.itemId); flash(n.itemId); }, 50);
                     setTimeout(() => flash(null), 2050);

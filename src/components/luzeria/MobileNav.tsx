@@ -1,6 +1,7 @@
 import { LayoutDashboard, Users, User, BarChart2, Star } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useRef, useMemo } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { useMe, clientsQO } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
@@ -17,11 +18,16 @@ const CATEGORY_COLOR: Record<string, string> = {
 
 export function MobileNav() {
   const isMobile = useIsMobile();
-  const { view, setView, selectClient } = useUI();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const me = useMe().data;
   const { data: clients = [] } = useQuery(clientsQO());
-  const [tab, setTab] = useState<"home" | "clients" | "me">("home");
+  const [showClients, setShowClients] = useState(false);
+  const [showMe, setShowMe] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
+
+  const isClientPath = pathname.startsWith("/cliente/");
+  const tab = showClients ? "clients" : showMe ? "me" : "home";
 
   const activeClients = useMemo(() => clients.filter((c) => !c.archived), [clients]);
   const grouped = useMemo(() => {
@@ -39,17 +45,11 @@ export function MobileNav() {
     return [...known, ...extras] as Array<readonly [string, typeof activeClients]>;
   }, [activeClients]);
 
-  useEffect(() => {
-    if (view === "my" || view === "stories" || view === "cleaning" || view === "admin") setTab("home");
-    if (view === "client") setTab("clients");
-    if (view === "profile") setTab("me");
-  }, [view]);
-
   if (!isMobile) return null;
 
   return (
     <>
-      {tab === "clients" && view !== "client" && (
+      {showClients && !isClientPath && (
         <div className="fixed inset-0 z-40 bg-[#0D0D0D] pt-14 pb-20 flex flex-col">
           <div className="px-5 py-4 border-b border-white/[0.08] bg-[#0D0D0D] flex items-end justify-between shrink-0">
             <h2 className="text-lg font-bold text-white">Clientes</h2>
@@ -82,7 +82,7 @@ export function MobileNav() {
                       return (
                         <button
                           key={c.id}
-                          onClick={() => { selectClient(c.id); setTab("home"); }}
+                          onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: c.id } }); setShowClients(false); }}
                           className="relative w-full flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left transition-transform active:scale-[0.98] min-w-0"
                           style={{
                             backgroundColor: `color-mix(in oklab, ${cc} 18%, transparent)`,
@@ -103,14 +103,14 @@ export function MobileNav() {
         </div>
       )}
 
-      {tab === "me" && view !== "profile" && (
-        <div className="fixed inset-0 z-40 bg-[#0D0D0D] pt-14 pb-20" onClick={() => setTab("home")}>
+      {showMe && pathname !== "/perfil" && (
+        <div className="fixed inset-0 z-40 bg-[#0D0D0D] pt-14 pb-20" onClick={() => setShowMe(false)}>
           <div className="px-5 py-6 flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
             {me && <Avatar profile={me} size={72} />}
             <div className="text-white font-bold text-base">{me?.name}</div>
             <div className="text-white/50 text-xs">{me?.email}</div>
             <button
-              onClick={() => { setView("profile"); }}
+              onClick={() => { navigate({ to: "/perfil" }); setShowMe(false); }}
               className="mt-6 px-5 py-2 rounded-md text-xs font-bold"
               style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
             >Editar perfil</button>
@@ -121,11 +121,15 @@ export function MobileNav() {
       )}
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around bg-[#1C1C1C] border-t border-white/[0.08]">
-        <NavBtn icon={<LayoutDashboard size={20} />} active={tab === "home" && view === "my"}
-          onClick={() => { setView("my"); setTab("home"); }} />
-        <NavBtn icon={<BarChart2 size={20} />} active={view === "admin"} onClick={() => { setView("admin"); setTab("home"); }} />
-        <NavBtn icon={<Users size={20} />} active={tab === "clients"} onClick={() => setTab("clients")} />
-        <NavBtn icon={me ? <Avatar profile={me} size={22} /> : <User size={20} />} active={tab === "me"} onClick={() => { setView("profile"); }} />
+        <NavBtn icon={<LayoutDashboard size={20} />} active={pathname === "/minhas-tarefas"}
+          onClick={() => { navigate({ to: "/minhas-tarefas" }); setShowClients(false); setShowMe(false); }} />
+        <NavBtn icon={<BarChart2 size={20} />} active={pathname === "/admin"}
+          onClick={() => { navigate({ to: "/admin" }); setShowClients(false); setShowMe(false); }} />
+        <NavBtn icon={<Users size={20} />} active={tab === "clients" || isClientPath}
+          onClick={() => { setShowClients((v) => !v); setShowMe(false); }} />
+        <NavBtn icon={me ? <Avatar profile={me} size={22} /> : <User size={20} />}
+          active={tab === "me" || pathname === "/perfil"}
+          onClick={() => { setShowMe((v) => !v); setShowClients(false); }} />
       </nav>
     </>
   );

@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { App } from "@/components/luzeria/App";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/")({
-  component: App,
+  ssr: false,
+  beforeLoad: () => { throw redirect({ to: "/minhas-tarefas" }); },
+  component: () => null,
 });

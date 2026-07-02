@@ -5,6 +5,7 @@ import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Settings, LogOut, Plus, Camera, Sparkles, Info,
 } from "lucide-react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
@@ -29,7 +30,9 @@ export function Sidebar({
   const me = useMe().data;
   const { data: clients = [] } = useQuery(clientsQO());
   const [search, setSearch] = useState("");
-  const { selectedClientId, view, selectClient, setView } = useUI();
+  const { selectedClientId } = useUI();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -76,26 +79,26 @@ export function Sidebar({
         <NavButton
           icon={<LayoutDashboard size={15} />}
           label="Minhas demandas"
-          active={view === "my"}
-          onClick={() => setView("my")}
+          active={pathname === "/minhas-tarefas"}
+          onClick={() => navigate({ to: "/minhas-tarefas" })}
         />
         <NavButton
           icon={<BarChart2 size={15} />}
           label="Dashboard"
-          active={view === "admin"}
-          onClick={() => setView("admin")}
+          active={pathname === "/admin"}
+          onClick={() => navigate({ to: "/admin" })}
         />
         <NavButton
           icon={<Camera size={15} />}
           label="Stories"
-          active={view === "stories"}
-          onClick={() => setView("stories")}
+          active={pathname === "/stories"}
+          onClick={() => navigate({ to: "/stories" })}
         />
         <NavButton
           icon={<Sparkles size={15} />}
           label="Limpeza"
-          active={view === "cleaning"}
-          onClick={() => setView("cleaning")}
+          active={pathname === "/limpeza"}
+          onClick={() => navigate({ to: "/limpeza" })}
         />
       </div>
 
@@ -134,8 +137,8 @@ export function Sidebar({
               <ClientRow
                 key={c.id}
                 client={c}
-                active={selectedClientId === c.id && view === "client"}
-                onClick={() => selectClient(c.id)}
+                active={pathname === `/cliente/${c.id}`}
+                onClick={() => navigate({ to: "/cliente/$clientId", params: { clientId: c.id } })}
                 onOpenCustomFields={() => onOpenCustomFields(c)}
                 canManage={isAdmin}
                 categories={allCategories}
@@ -156,7 +159,7 @@ export function Sidebar({
       </div>
 
       {/* Footer user */}
-      <UserFooter onSettings={() => setView("settings")} onProfile={() => setView("profile")} />
+      <UserFooter onSettings={() => navigate({ to: "/configuracoes" })} onProfile={() => navigate({ to: "/perfil" })} />
     </aside>
   );
 }

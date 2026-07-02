@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { myWeekQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
@@ -22,7 +23,8 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 export function MyWeekView({ userId }: { userId?: string }) {
   const { start, end, days } = weekRange();
   const { data: items = [] } = useQuery(myWeekQO(iso(start), iso(end), userId));
-  const { selectClient, selectMonth, openItem } = useUI();
+  const { selectMonth, openItem } = useUI();
+  const navigate = useNavigate();
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const byDay: Record<string, typeof items> = {};
@@ -58,7 +60,7 @@ export function MyWeekView({ userId }: { userId?: string }) {
                 <div className="text-[10px] text-white/20 mt-3">—</div>
               ) : list.map((t) => (
                 <button key={t.id}
-                  onClick={() => { selectClient(t.clientId); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
+                  onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId } }); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
                   className="w-full mb-1.5 text-left rounded-md p-2 bg-[#0D0D0D]/60 hover:bg-[#0D0D0D] transition-colors border border-white/[0.04]">
                   <div className="flex items-center gap-1.5 mb-1">
                     {(() => {
@@ -84,7 +86,7 @@ export function MyWeekView({ userId }: { userId?: string }) {
           <div className="bg-[#1C1C1C] rounded-lg divide-y divide-white/[0.04]">
             {noDate.map((t) => (
               <button key={t.id}
-                onClick={() => { selectClient(t.clientId); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
+                onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId } }); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.03] text-left">
                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: t.clientColor }} />
                 <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">{t.clientName}</span>

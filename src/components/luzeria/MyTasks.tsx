@@ -5,6 +5,7 @@ import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { ChevronDown, ChevronUp, Camera, Sparkles, List, CalendarDays, Clock, Check, X, AtSign } from "lucide-react";
 import { formatMonth, shortMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { CLEANING_TASKS } from "./CleaningView";
@@ -22,7 +23,8 @@ export function MyTasks() {
     ...myTasksQO(targetId),
     enabled: !!targetId,
   });
-  const { selectClient, selectMonth, openItem, flash } = useUI();
+  const { selectMonth, openItem, flash } = useUI();
+  const navigate = useNavigate();
   const isMeView = !isAdmin || !viewAs || viewAs === me?.id;
   const { data: mentions = [] } = useQuery({ ...myMentionsQO(), enabled: isMeView });
   const monthKey = useUI((s) => s.selectedMonthKey);
@@ -106,7 +108,7 @@ export function MyTasks() {
                 key={m.mentionId}
                 onClick={() => {
                   markMentionRead.mutate({ data: { mentionId: m.mentionId } });
-                  selectClient(m.clientId);
+                  navigate({ to: "/cliente/$clientId", params: { clientId: m.clientId } });
                   selectMonth(m.monthKey);
                   setTimeout(() => { openItem(m.itemId); flash(m.itemId); }, 30);
                   setTimeout(() => flash(null), 2050);
@@ -207,7 +209,7 @@ export function MyTasks() {
                 <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
                   {grouped[s].map((t) => (
                     <button key={t.id}
-                      onClick={() => { selectClient(t.clientId); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
+                      onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId } }); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left border-b border-white/[0.05] last:border-b-0">
                       <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
                         style={{ backgroundColor: t.clientColor + "33", color: t.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : t.clientColor }}>
