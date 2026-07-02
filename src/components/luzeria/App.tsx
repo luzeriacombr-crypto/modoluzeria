@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PanelLeftClose, PanelLeftOpen, Menu } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Outlet, useNavigate } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { useMe } from "@/lib/luzeria/queries";
@@ -71,7 +71,7 @@ export function App() {
         </div>
       </div>
       <div className="flex-1 flex flex-col min-w-0">
-        <Header hidden={sidebarHidden} onToggleSidebar={toggleSidebar} />
+        <Header sidebarHidden={sidebarHidden} onToggleSidebar={toggleSidebar} />
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
           <Outlet />
         </main>
@@ -80,45 +80,23 @@ export function App() {
       <ClientFichaPanel />
       <MobileNav />
       <AppTour />
-      {sidebarHidden && (
-        <button
-          onClick={toggleSidebar}
-          aria-label="Reabrir sidebar"
-          className="hidden md:flex fixed bottom-6 left-6 z-40 items-center justify-center h-11 w-11 rounded-full text-white hover:bg-black/70 transition-colors"
-          style={{
-            background: "rgba(0,0,0,0.5)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.1)",
-          }}
-        >
-          <Menu size={18} />
-        </button>
-      )}
       <NewClientModal open={!!creating} category={creating?.category} onClose={() => setCreating(null)} />
       <CustomFieldsModal client={customFor} onClose={() => setCustomFor(null)} />
     </div>
   );
 }
 
-function Header({ hidden, onToggleSidebar }: { hidden: boolean; onToggleSidebar: () => void }) {
+function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; onToggleSidebar: () => void }) {
   const me = useMe().data;
   const navigate = useNavigate();
   return (
-    <header
-      className="lz-app-header sticky top-0 z-30 px-4 md:px-6 flex items-center gap-2 overflow-hidden"
-      style={{
-        height: hidden ? 0 : 56,
-        opacity: hidden ? 0 : 1,
-        pointerEvents: hidden ? "none" : "auto",
-        transition: "height 250ms ease, opacity 200ms ease",
-      }}
-    >
+    <header className="lz-app-header sticky top-0 z-30 px-4 md:px-6 flex items-center gap-2 h-14">
       <button
         onClick={onToggleSidebar}
-        aria-label={hidden ? "Mostrar sidebar" : "Ocultar sidebar"}
+        aria-label={sidebarHidden ? "Mostrar sidebar" : "Ocultar sidebar"}
         className="hidden md:flex items-center justify-center h-8 w-8 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition-colors"
       >
-        {hidden ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        {sidebarHidden ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
       </button>
       <img src={luzeriaLogo} alt="Luzeria" className="md:hidden h-6 w-auto object-contain" />
       <div className="flex-1" />
