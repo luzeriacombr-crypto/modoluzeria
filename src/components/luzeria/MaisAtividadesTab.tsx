@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Plus, Trash2, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User } from "lucide-react";
 import { useApi } from "@/lib/luzeria/queries";
+import { Avatar } from "./Avatar";
 import { ContentRow } from "./ContentRow";
-import type { ContentItem } from "@/lib/luzeria/types";
-import type { Profile } from "@/lib/luzeria/types";
+import type { ContentItem, Profile } from "@/lib/luzeria/types";
 
 type ActivityType = "gravacao" | "roteiro" | "sistema" | "outros";
 
@@ -28,7 +28,7 @@ interface Props {
 }
 
 export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sistemas, outros, profiles, isAdmin }: Props) {
-  const { addContentItem, deleteItem } = useApi();
+  const { addContentItem, addAssignee, deleteItem } = useApi();
   const [openForm, setOpenForm] = useState<ActivityType | null>(null);
   const [collapsed, setCollapsed] = useState<Record<ActivityType, boolean>>({
     gravacao: false, roteiro: false, sistema: false, outros: false,
@@ -89,12 +89,16 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                 cfg={cfg}
                 clientId={clientId}
                 monthKey={monthKey}
+                profiles={profiles}
                 onSubmit={async (vals) => {
-                  await addContentItem.mutateAsync({ data: { clientId, key: monthKey, type, ...vals } });
+                  const { id } = await addContentItem.mutateAsync({ data: { clientId, key: monthKey, type, ...vals } });
+                  if (vals.assigneeId && id) {
+                    await addAssignee.mutateAsync({ data: { itemId: id, userId: vals.assigneeId } });
+                  }
                   setOpenForm(null);
                 }}
                 onCancel={() => setOpenForm(null)}
-                loading={addContentItem.isPending}
+                loading={addContentItem.isPending || addAssignee.isPending}
               />
             )}
 
@@ -129,13 +133,14 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
 }
 
 function ActivityForm({
-  type, cfg, onSubmit, onCancel, loading,
+  type, cfg, profiles, onSubmit, onCancel, loading,
 }: {
   type: ActivityType;
   cfg: { label: string; hasLocation: boolean; dateLabel: string };
   clientId: string;
   monthKey: string;
-  onSubmit: (vals: { title: string; dueDate?: string; location?: string; notes?: string }) => Promise<void>;
+  profiles: Profile[];
+  onSubmit: (vals: { title: string; dueDate?: string; location?: string; notes?: string; assigneeId?: string }) => Promise<void>;
   onCancel: () => void;
   loading: boolean;
 }) {
@@ -143,6 +148,7 @@ function ActivityForm({
   const [dueDate, setDueDate] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
 
   const inp = "w-full bg-[#1A1A1A] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] transition-colors placeholder:text-white/30";
 
@@ -153,6 +159,7 @@ function ActivityForm({
       dueDate: dueDate || undefined,
       location: cfg.hasLocation && location.trim() ? location.trim() : undefined,
       notes: notes.trim() || undefined,
+      assigneeId: assigneeId || undefined,
     });
   }
 
@@ -188,6 +195,18 @@ function ActivityForm({
             />
           </div>
         )}
+      </div>
+
+      <div>
+        <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/40 mb-1">
+          <User size={11} /> Responsável
+        </label>
+        <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className={inp}>
+          <option value="">— Sem responsável</option>
+          {profiles.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
       </div>
 
       <div>
