@@ -10,6 +10,7 @@ export type IGModalFile = {
   driveFileId: string;
   mimeType: string | null;
   webViewUrl?: string | null;
+  thumbUrl?: string | null;
 };
 export type IGModalFeedback = { id: string; authorName: string; text: string; createdAt: string };
 export type IGModalItem = {
@@ -53,14 +54,11 @@ function relativeTime(iso: string) {
 
 function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMode; fallback?: string | null }) {
   const enabled = !fallback;
-  // Public mode: use proxy endpoint directly (no base64 server round-trip)
-  const proxyUrl = mode.kind === "public" && file.driveFileId
-    ? `/api/thumb/${file.driveFileId}`
-    : null;
+  // Public mode: thumbUrl is pre-fetched Drive CDN URL, no server round-trip needed
   const internalQ = useQuery({
     ...driveThumbnailQO(file.driveFileId, mode.kind === "internal" && enabled),
   });
-  const url = fallback ?? proxyUrl ?? internalQ.data?.dataUrl ?? null;
+  const url = fallback ?? (mode.kind === "public" ? (file.thumbUrl ?? null) : null) ?? internalQ.data?.dataUrl ?? null;
   return url ? (
     <img src={url} alt="" className="w-full h-full object-cover" />
   ) : (

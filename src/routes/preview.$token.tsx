@@ -162,11 +162,10 @@ function driveThumbnailUrl(fileId: string, size = 480) {
 }
 
 function PublicGridCell({ item, onClick }: {
-  item: { id: string; type: string; files: { driveFileId: string }[] };
+  item: { id: string; type: string; gridThumb?: string | null; files: { driveFileId: string }[] };
   onClick: () => void;
 }) {
-  const firstFileId = item.files[0]?.driveFileId ?? null;
-  const thumbUrl = firstFileId ? driveThumbnailUrl(firstFileId, 480) : null;
+  const thumbUrl = item.gridThumb ?? null;
   const isReel = item.type === "reel";
   const isCarousel = item.files.length > 1;
 

@@ -115,6 +115,7 @@ export type PublicFeedFile = {
   driveFileId: string;
   mimeType: string | null;
   webViewUrl: string | null;
+  thumbUrl: string | null;
 };
 export type PublicFeedItem = {
   id: string;
@@ -185,6 +186,33 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       return a.idx - b.idx;
     });
 
+    // Collect all unique Drive file IDs and fetch thumbnail URLs in parallel
+    const allDriveIds = new Set<string>();
+    for (const it of sorted) {
+      for (const f of (filesByItem.get(it.id) ?? [])) {
+        const id = f.drive_file_id ?? f.driveFileId;
+        if (id) allDriveIds.add(id);
+      }
+    }
+    const thumbUrls = new Map<string, string>();
+    try {
+      const token = await getAccessToken();
+      await Promise.all(
+        [...allDriveIds].map(async (fileId) => {
+          try {
+            const res = await fetch(
+              `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=thumbnailLink&supportsAllDrives=true`,
+              { headers: { Authorization: `Bearer ${token}` } },
+            );
+            if (!res.ok) return;
+            const meta = await res.json();
+            const link: string | undefined = meta?.thumbnailLink;
+            if (link) thumbUrls.set(fileId, link.replace(/=s\d+(-[a-z]+)?$/i, "=s720"));
+          } catch { /* skip */ }
+        }),
+      );
+    } catch { /* skip if Drive auth unavailable */ }
+
     return {
       client: {
         name: client.name as string,
@@ -192,32 +220,33 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         description: client.description ?? null,
       },
       month: { key: month.key as string },
-      items: sorted.map((it: any) => ({
-        id: it.id,
-        type: it.type,
-        idx: it.idx,
-        title: it.title,
-        caption: it.caption ?? "",
-        dueDate: it.due_date ?? null,
-        coverUrl: null,
-        gridThumb: (() => {
-          const f0 = (filesByItem.get(it.id) ?? [])[0];
-          const driveId = f0?.drive_file_id ?? f0?.driveFileId;
-          return driveId ? `/api/thumb/${driveId}` : null;
-        })(),
-        files: (filesByItem.get(it.id) ?? []).map((f: any) => ({
+      items: sorted.map((it: any) => {
+        const files = (filesByItem.get(it.id) ?? []).map((f: any) => ({
           id: f.id,
           driveFileId: f.drive_file_id ?? f.driveFileId,
           mimeType: f.mime_type ?? f.mimeType,
           webViewUrl: f.web_view_url ?? f.webViewUrl,
-        })),
-        feedback: (fbByItem.get(it.id) ?? []).map((f: any) => ({
-          id: f.id,
-          authorName: f.author_name ?? f.authorName,
-          text: f.text,
-          createdAt: f.created_at ?? f.createdAt,
-        })),
-      })),
+          thumbUrl: thumbUrls.get(f.drive_file_id ?? f.driveFileId) ?? null,
+        }));
+        const gridThumb = files[0]?.thumbUrl ?? null;
+        return {
+          id: it.id,
+          type: it.type,
+          idx: it.idx,
+          title: it.title,
+          caption: it.caption ?? "",
+          dueDate: it.due_date ?? null,
+          coverUrl: null,
+          gridThumb,
+          files,
+          feedback: (fbByItem.get(it.id) ?? []).map((f: any) => ({
+            id: f.id,
+            authorName: f.author_name ?? f.authorName,
+            text: f.text,
+            createdAt: f.created_at ?? f.createdAt,
+          })),
+        };
+      }),
     };
   });
 
