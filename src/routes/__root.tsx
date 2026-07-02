@@ -109,11 +109,6 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
-        <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-        <script dangerouslySetInnerHTML={{ __html: `window.OneSignalDeferred = window.OneSignalDeferred || [];
-OneSignalDeferred.push(async function(OneSignal) {
-  await OneSignal.init({ appId: "ec59cdb7-8660-4a15-b023-1886d2b4c76d" });
-});` }} />
       </head>
       <body>
         {children}
@@ -127,7 +122,19 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    // After SDK init, identify the logged-in user so OneSignal can target them by Supabase user ID
+    // Inject OneSignal SDK and init client-side only
+    (window as any).OneSignalDeferred = (window as any).OneSignalDeferred || [];
+    (window as any).OneSignalDeferred.push(async (OneSignal: any) => {
+      await OneSignal.init({ appId: "ec59cdb7-8660-4a15-b023-1886d2b4c76d" });
+    });
+    if (!document.getElementById("onesignal-sdk")) {
+      const s = document.createElement("script");
+      s.id = "onesignal-sdk";
+      s.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
+      s.defer = true;
+      document.head.appendChild(s);
+    }
+    // Identify logged-in user
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) setOneSignalUserId(data.user.id);
     });
