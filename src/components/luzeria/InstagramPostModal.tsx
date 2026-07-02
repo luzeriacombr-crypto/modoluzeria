@@ -76,6 +76,7 @@ export function InstagramPostModal({
   canComment,
   onClose,
   onSubmitFeedback,
+  onApproveItem,
   initialAuthorName,
 }: {
   item: IGModalItem;
@@ -84,6 +85,7 @@ export function InstagramPostModal({
   canComment: boolean;
   onClose: () => void;
   onSubmitFeedback?: (author: string, text: string) => Promise<void> | void;
+  onApproveItem?: () => Promise<void> | void;
   initialAuthorName?: string;
 }) {
   // Carousel state
@@ -107,6 +109,8 @@ export function InstagramPostModal({
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [itemApproved, setItemApproved] = useState(false);
+  const [itemApproving, setItemApproving] = useState(false);
   const isPublic = mode.kind === "public";
   const feedbackLabel = isPublic ? "Sugestões" : "Comentários";
   const detailsRef = useRef<HTMLDivElement>(null);
@@ -353,17 +357,40 @@ export function InstagramPostModal({
             </div>
           )}
 
-          {/* Composer público: "Sugerir alteração" */}
-          {isPublic && canComment && onSubmitFeedback && (
+          {/* Composer público: aprovar ou sugerir alteração */}
+          {isPublic && canComment && (
             <div className={`border-t border-neutral-200 px-4 py-4 ${composerOpen ? "pb-12" : "pb-10"} md:py-3 md:pb-6 bg-white`}>
-              {!composerOpen ? (
-                <button
-                  onClick={() => setComposerOpen(true)}
-                  className="w-full inline-flex items-center justify-center gap-2 text-[15px] font-semibold py-4 min-h-[56px] rounded-md transition active:scale-[0.98]"
-                  style={{ background: "#C8D44E", color: "#0D0D0D" }}
-                >
-                  <Pencil size={17} /> Sugerir alteração
-                </button>
+              {itemApproved ? (
+                <div className="text-center py-2">
+                  <div className="text-2xl mb-1">✅</div>
+                  <div className="text-[14px] font-bold text-neutral-800">Publicação aprovada!</div>
+                  <div className="text-[12px] text-neutral-500 mt-0.5">Agradecemos sua confirmação.</div>
+                </div>
+              ) : !composerOpen ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      if (!onApproveItem) return;
+                      setItemApproving(true);
+                      try { await onApproveItem(); setItemApproved(true); } catch {}
+                      setItemApproving(false);
+                    }}
+                    disabled={itemApproving || !onApproveItem}
+                    className="flex-1 inline-flex items-center justify-center gap-2 text-[14px] font-semibold py-3.5 rounded-md transition active:scale-[0.98] disabled:opacity-50"
+                    style={{ background: "#C8D44E", color: "#0D0D0D" }}
+                  >
+                    {itemApproving ? "Aprovando…" : "✓ Aprovar post"}
+                  </button>
+                  {onSubmitFeedback && (
+                    <button
+                      onClick={() => setComposerOpen(true)}
+                      className="flex-1 inline-flex items-center justify-center gap-2 text-[14px] font-semibold py-3.5 rounded-md border-2 transition active:scale-[0.98]"
+                      style={{ borderColor: "#C8D44E", color: "#0D0D0D" }}
+                    >
+                      <Pencil size={16} /> Sugerir alteração
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div>
                   {!initialAuthorName && (

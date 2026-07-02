@@ -126,6 +126,10 @@ export interface Client {
   createdAt: string;
   /** Free-form description for the client profile/ficha. */
   description?: string | null;
+  /** Signed URL for the client's avatar photo (stored in avatars bucket under clients/ prefix). */
+  photoUrl?: string | null;
+  /** Raw storage path in the avatars bucket. */
+  photoPath?: string | null;
 }
 
 export type Role = "master" | "setor" | "member";

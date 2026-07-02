@@ -276,7 +276,7 @@ function ClientRow({ client, active, onClick, onOpenCustomFields, canManage, cat
         onMouseLeave={(e) => { if (!active) (e.currentTarget.parentElement as HTMLElement).style.backgroundColor = "transparent"; }}
         className="w-full flex items-center gap-2.5 pl-3 pr-9 py-2 text-left transition-colors"
       >
-        <Avatar name={client.name} color={client.color} size={26} />
+        <Avatar name={client.name} color={client.color} size={26} avatarUrl={client.photoUrl} />
         <span className="text-sm truncate text-white/90 flex-1">{client.name}</span>
         {client.favorite && <Star size={12} className="text-[#C8D44E] fill-[#C8D44E]" />}
       </button>

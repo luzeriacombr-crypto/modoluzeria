@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { publicFeedQO } from "@/lib/luzeria/queries";
-import { addPublicFeedback, approvePublicFeed } from "@/lib/luzeria/feed-share.functions";
+import { addPublicFeedback, approvePublicFeed, approvePublicItem } from "@/lib/luzeria/feed-share.functions";
 import { Film, Layers } from "lucide-react";
 import { InstagramPostModal, type IGModalItem } from "@/components/luzeria/InstagramPostModal";
 
@@ -22,6 +22,7 @@ function PublicPreviewPage() {
   });
   const addFb = useServerFn(addPublicFeedback);
   const approveFeed = useServerFn(approvePublicFeed);
+  const approveItem = useServerFn(approvePublicItem);
   const [approved, setApproved] = useState<boolean>(false);
   const [approving, setApproving] = useState(false);
 
@@ -140,6 +141,11 @@ function PublicPreviewPage() {
           canComment
           initialAuthorName={savedName || undefined}
           onClose={() => setActiveId(null)}
+          onApproveItem={async () => {
+            const author = savedName || "Cliente";
+            await approveItem({ data: { token, itemId: activeItem!.id, authorName: author } });
+            await q.refetch();
+          }}
           onSubmitFeedback={async (author, text) => {
             await addFb({ data: { token, itemId: activeItem!.id, authorName: author, text } });
             try { localStorage.setItem("lz_public_author", author); setSavedName(author); } catch {}

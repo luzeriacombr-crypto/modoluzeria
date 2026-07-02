@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
-  Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save,
+  Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save, Camera,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -283,7 +284,9 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
   const [responsible, setResponsible] = useState<string>(client.customFields.fixedResponsibleId ?? "");
   const [reviewDay, setReviewDay] = useState<string>(client.customFields.reviewDay ?? "");
   const [notes, setNotes] = useState<string>(client.customFields.notes ?? "");
-  const [contractValue, setContractValue] = useState<string>((client as any).contractValue ? String((client as any).contractValue) : "");
+  const [photoPreview, setPhotoPreview] = useState<string | null>(client.photoUrl ?? null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setNiche(client.customFields.niche ?? "");
@@ -292,8 +295,34 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     setResponsible(client.customFields.fixedResponsibleId ?? "");
     setReviewDay(client.customFields.reviewDay ?? "");
     setNotes(client.customFields.notes ?? "");
-    setContractValue((client as any).contractValue ? String((client as any).contractValue) : "");
+    setPhotoPreview(client.photoUrl ?? null);
   }, [client.id]);
+
+  async function handlePhotoFile(file: File) {
+    if (file.size > 5 * 1024 * 1024) { toast.error("Imagem maior que 5MB."); return; }
+    const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+    const path = `clients/${client.id}/photo-${Date.now()}.${ext}`;
+    setPhotoUploading(true);
+    try {
+      const { error } = await supabase.storage.from("avatars").upload(path, file, {
+        upsert: true, contentType: file.type, cacheControl: "31536000",
+      });
+      if (error) throw error;
+      const preview = URL.createObjectURL(file);
+      setPhotoPreview(preview);
+      onSave({ photo_url: path });
+      toast.success("Foto atualizada");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao enviar foto");
+    }
+    setPhotoUploading(false);
+  }
+
+  async function removePhoto() {
+    setPhotoPreview(null);
+    onSave({ photo_url: null });
+    toast.success("Foto removida");
+  }
 
   function save() {
     onSave({
@@ -301,7 +330,6 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       reels_per_week: Number(reelsPerWeek) || 0,
       fixed_responsible_id: responsible || null,
       review_day: reviewDay, notes,
-      contract_value: contractValue ? Number(contractValue.replace(",", ".")) : null,
     });
     toast.success("Configuração salva");
   }
@@ -310,6 +338,54 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Photo upload */}
+      {canEdit && (
+        <div className="sm:col-span-2">
+          <ConfigField label="Foto do cliente (aparece no lugar da bolinha)">
+            <div className="flex items-center gap-4 mt-1">
+              <div className="relative shrink-0">
+                {photoPreview ? (
+                  <img src={photoPreview} alt="Foto" className="h-16 w-16 rounded-full object-cover" style={{ border: "2px solid rgba(200,212,78,0.4)" }} />
+                ) : (
+                  <div className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold"
+                    style={{ backgroundColor: client.color + "33", color: client.color }}>
+                    {client.icon ?? client.name[0]?.toUpperCase()}
+                  </div>
+                )}
+                {photoUploading && (
+                  <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
+                    <Loader2 size={18} className="animate-spin text-white" />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoFile(f); e.target.value = ""; }}
+                />
+                <button
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={photoUploading}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-white/10 text-white/70 hover:text-white hover:border-[#C8D44E] transition disabled:opacity-50"
+                >
+                  <Camera size={13} /> {photoPreview ? "Alterar foto" : "Adicionar foto"}
+                </button>
+                {photoPreview && (
+                  <button
+                    onClick={removePhoto}
+                    className="text-xs text-red-400 hover:text-red-300 transition text-left"
+                  >
+                    Remover foto
+                  </button>
+                )}
+              </div>
+            </div>
+          </ConfigField>
+        </div>
+      )}
       <ConfigField label="Nicho">
         <input value={niche} disabled={!canEdit} onChange={(e) => setNiche(e.target.value)} className={inp} />
       </ConfigField>
@@ -328,18 +404,6 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
           {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </ConfigField>
-      {isMaster && (
-        <ConfigField label="Valor do contrato (R$)">
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder="Ex: 1500,00"
-            value={contractValue}
-            onChange={(e) => setContractValue(e.target.value)}
-            className={inp}
-          />
-        </ConfigField>
-      )}
       <div className="sm:col-span-2">
         <ConfigField label="Observações">
           <textarea value={notes} disabled={!canEdit} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} />

@@ -9,6 +9,7 @@ import { FeedPreview } from "./FeedPreview";
 import { ClientFichaContent } from "./ClientFichaPanel";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { useMe } from "@/lib/luzeria/queries";
+import { MaisAtividadesTab } from "./MaisAtividadesTab";
 
 export function ClientView({ clientId }: { clientId: string }) {
   const { data: clients = [] } = useQuery(clientsQO());
@@ -17,7 +18,7 @@ export function ClientView({ clientId }: { clientId: string }) {
   const { selectedMonthKey, selectMonth } = useUI();
   const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
-  const [tab, setTab] = useState<"posts" | "reels" | "outros" | "gravacoes" | "roteiros" | "sistemas" | "feed" | "ficha">("posts");
+  const [tab, setTab] = useState<"posts" | "reels" | "mais" | "feed" | "ficha">("posts");
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { duplicateMonth, addContentItem, deleteItem } = useApi();
@@ -26,17 +27,13 @@ export function ClientView({ clientId }: { clientId: string }) {
   const isAvulso = client.category === "Avulsos";
 
   const TAB_CONFIG = {
-    posts:     { label: "Posts",     type: "post"      as const, items: month?.posts ?? [] },
-    reels:     { label: "Reels",     type: "reel"      as const, items: month?.reels ?? [] },
-    outros:    { label: "Outros",    type: "outros"    as const, items: month?.outros ?? [] },
-    gravacoes: { label: "Gravações", type: "gravacao"  as const, items: month?.gravacoes ?? [] },
-    roteiros:  { label: "Roteiros",  type: "roteiro"   as const, items: month?.roteiros ?? [] },
-    sistemas:  { label: "Sistemas",  type: "sistema"   as const, items: month?.sistemas ?? [] },
+    posts: { label: "Posts", type: "post" as const, items: month?.posts ?? [] },
+    reels: { label: "Reels", type: "reel" as const, items: month?.reels ?? [] },
   } as const;
 
   const tabs = isAvulso
-    ? (["posts", "reels", "outros", "gravacoes", "roteiros", "sistemas", "feed"] as const)
-    : (["posts", "reels", "gravacoes", "roteiros", "sistemas", "feed", "ficha"] as const);
+    ? (["posts", "reels", "mais", "feed"] as const)
+    : (["posts", "reels", "mais", "feed", "ficha"] as const);
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
   const idx = sortedKeys.indexOf(selectedMonthKey);
@@ -50,7 +47,7 @@ export function ClientView({ clientId }: { clientId: string }) {
     <div className="px-10 py-8 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-2">
-        <Avatar name={client.name} color={client.color} size={40} />
+        <Avatar name={client.name} color={client.color} size={40} avatarUrl={client.photoUrl} />
         <div className="flex items-center gap-2">
           <div>
           <h1 className="text-[24px] font-bold text-white leading-tight">{client.name}</h1>
@@ -96,10 +93,10 @@ export function ClientView({ clientId }: { clientId: string }) {
       {/* Tabs */}
       <div className="flex items-center gap-6 mt-8 border-b border-white/[0.06]">
         {tabs.map((t) => (
-          <button key={t} onClick={() => setTab(t)}
+          <button key={t} onClick={() => setTab(t as any)}
             className="relative py-3 text-sm font-semibold transition-colors"
             style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
-            {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
+            {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais atividades" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
             {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "#C8D44E" }} />}
           </button>
         ))}
@@ -138,6 +135,18 @@ export function ClientView({ clientId }: { clientId: string }) {
             </>
           );
         })()}
+        {tab === "mais" && month && (
+          <MaisAtividadesTab
+            clientId={clientId}
+            monthKey={selectedMonthKey}
+            gravacoes={month.gravacoes ?? []}
+            roteiros={month.roteiros ?? []}
+            sistemas={month.sistemas ?? []}
+            outros={month.outros ?? []}
+            profiles={profiles}
+            isAdmin={isAdmin}
+          />
+        )}
         {tab === "ficha" && (
           <div className="mt-2 -mx-10 md:mx-0 md:rounded-lg md:overflow-hidden md:border md:border-white/[0.06]">
             <ClientFichaContent clientId={client.id} />

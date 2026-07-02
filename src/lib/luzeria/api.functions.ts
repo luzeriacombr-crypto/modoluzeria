@@ -228,10 +228,12 @@ export const listClients = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.from("clients").select("*").order("name");
     if (error) throw new Error(error.message);
-    return (data ?? []).map<Client>((c) => ({
+    const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
+    const signedPhotos = await signAvatarPaths(context.supabase, photoPaths);
+    return (data ?? []).map<Client>((c: any) => ({
       id: c.id, name: c.name, color: c.color, icon: c.icon,
       favorite: c.favorite, archived: c.archived,
-      category: (c as any).category ?? "Social Media",
+      category: c.category ?? "Social Media",
       customFields: {
         niche: c.niche ?? "",
         postsPerWeek: c.posts_per_week ?? 0,
@@ -241,7 +243,9 @@ export const listClients = createServerFn({ method: "GET" })
         notes: c.notes ?? "",
       },
       createdAt: c.created_at,
-      description: (c as any).description ?? null,
+      description: c.description ?? null,
+      photoPath: c.photo_url ?? null,
+      photoUrl: c.photo_url ? (signedPhotos.get(c.photo_url) ?? null) : null,
     }));
   });
 
@@ -809,12 +813,15 @@ export const addAssignee = createServerFn({ method: "POST" })
 
 export const addContentItem = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string }) =>
+  .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string; dueDate?: string | null; notes?: string | null; location?: string | null }) =>
     z.object({
       clientId: z.string().uuid(),
       key: z.string(),
-      type: z.enum(["post", "reel", "outros"]),
+      type: z.enum(["post", "reel", "outros", "gravacao", "roteiro", "sistema"]),
       title: z.string().trim().max(200).optional(),
+      dueDate: z.string().nullable().optional(),
+      notes: z.string().trim().max(2000).nullable().optional(),
+      location: z.string().trim().max(500).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
@@ -831,12 +838,17 @@ export const addContentItem = createServerFn({ method: "POST" })
       .from("content_items").select("idx").eq("month_id", month.id).eq("type", data.type)
       .order("idx", { ascending: false }).limit(1).maybeSingle();
     const nextIdx = ((maxRow as any)?.idx ?? 0) + 1;
-    const fallback = data.type === "post" ? `Post ${nextIdx}` : data.type === "reel" ? `Reels ${nextIdx}` : `Item ${nextIdx}`;
+    const typeLabels: Record<string, string> = { post: "Post", reel: "Reel", outros: "Item", gravacao: "Gravação", roteiro: "Roteiro", sistema: "Sistema" };
+    const fallback = `${typeLabels[data.type] ?? "Item"} ${nextIdx}`;
+    const insertRow: Record<string, any> = {
+      month_id: month.id, type: data.type, idx: nextIdx,
+      title: (data.title?.trim() || fallback),
+    };
+    if (data.dueDate) insertRow.due_date = data.dueDate;
+    if (data.notes) insertRow.copy = data.notes;
+    if (data.location) insertRow.drive_link = data.location;
     const { data: inserted, error: iErr } = await context.supabase
-      .from("content_items").insert({
-        month_id: month.id, type: data.type, idx: nextIdx,
-        title: (data.title?.trim() || fallback),
-      }).select("id").single();
+      .from("content_items").insert(insertRow).select("id").single();
     if (iErr) throw new Error(iErr.message);
     return { id: inserted.id };
   });

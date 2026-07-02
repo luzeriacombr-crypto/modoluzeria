@@ -287,6 +287,31 @@ export const addPublicFeedback = createServerFn({ method: "POST" })
     };
   });
 
+/* ============ PUBLIC: approve single item ============ */
+
+export const approvePublicItem = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; itemId: string; authorName: string }) =>
+    z.object({
+      token: z.string().min(8).max(60),
+      itemId: z.string().uuid(),
+      authorName: z.string().trim().min(1).max(60),
+    }).parse(d))
+  .handler(async ({ data }) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+    );
+    const { error } = await supabase.rpc("add_public_feedback", {
+      _token: data.token,
+      _item_id: data.itemId,
+      _author_name: data.authorName,
+      _text: "✅ APROVADO",
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /* ============ PUBLIC: approve feed ============ */
 
 export const approvePublicFeed = createServerFn({ method: "POST" })
