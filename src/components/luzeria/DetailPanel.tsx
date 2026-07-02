@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, type Profile, type ContentItem, type ReelType, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, CONTENT_TYPE_LABEL, type Profile, type ContentItem, type ReelType, type Status } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS } from "./icons";
 import { MentionInput, renderMentions } from "./MentionInput";
@@ -208,7 +208,7 @@ export function DetailPanel() {
             <div className="min-w-0 flex-1">
               <div className="text-[11px] uppercase font-bold tracking-wider text-white/40">
                 <span className="text-[#C8D44E]">
-                  {item.type === "post" ? "Post" : item.type === "reel" ? "Reels" : "Item"} {String(item.idx).padStart(2, "0")}
+                  {CONTENT_TYPE_LABEL[item.type] ?? "Item"} {String(item.idx).padStart(2, "0")}
                 </span>
                 {client && <span className="ml-1.5">· {client.name}</span>}
                 {reworkCount > 0 && (

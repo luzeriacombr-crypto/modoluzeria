@@ -603,9 +603,28 @@ export const getDriveThumbnail = createServerFn({ method: "GET" })
   });
 
 /**
- * Returns a base64 data URL for the raw file bytes (used for client-side
- * video frame capture). Limited to ~40 MB to keep the response sane.
+ * Returns a short-lived Drive OAuth token so the browser can fetch the video
+ * directly from googleapis.com (supports CORS). No size limit — the video
+ * streams straight from Drive to the browser without buffering on the server.
  */
+export const getDriveVideoToken = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { fileId: string }) =>
+    z.object({ fileId: z.string().min(5).max(200) }).parse(d))
+  .handler(async ({ data }) => {
+    const token = await getAccessToken();
+    const meta: any = await driveFetch(
+      `/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=mimeType,name&supportsAllDrives=true`,
+    );
+    return {
+      token,
+      url: `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(data.fileId)}?alt=media&supportsAllDrives=true`,
+      mimeType: (meta?.mimeType as string) ?? "video/mp4",
+      name: (meta?.name as string) ?? "video",
+    };
+  });
+
+/** @deprecated Use getDriveVideoToken instead — no size limit. */
 export const getDriveFileBytes = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { fileId: string }) =>
@@ -614,10 +633,6 @@ export const getDriveFileBytes = createServerFn({ method: "GET" })
     const meta: any = await driveFetch(
       `/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=mimeType,size,name&supportsAllDrives=true`,
     );
-    const size = meta?.size ? Number(meta.size) : 0;
-    if (size && size > 40_000_000) {
-      throw new Error("Arquivo muito grande para captura de frame (limite 40 MB).");
-    }
     const res = await fetch(
       `${DRIVE_BASE}/files/${encodeURIComponent(data.fileId)}?alt=media&supportsAllDrives=true`,
       { headers: await driveHeaders() },

@@ -17,16 +17,26 @@ export function ClientView({ clientId }: { clientId: string }) {
   const { selectedMonthKey, selectMonth } = useUI();
   const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
-  const [tab, setTab] = useState<"posts" | "reels" | "outros" | "feed" | "ficha">("posts");
+  const [tab, setTab] = useState<"posts" | "reels" | "outros" | "gravacoes" | "roteiros" | "sistemas" | "feed" | "ficha">("posts");
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { duplicateMonth, addContentItem, deleteItem } = useApi();
 
   if (!client) return null;
   const isAvulso = client.category === "Avulsos";
+
+  const TAB_CONFIG = {
+    posts:     { label: "Posts",     type: "post"      as const, items: month?.posts ?? [] },
+    reels:     { label: "Reels",     type: "reel"      as const, items: month?.reels ?? [] },
+    outros:    { label: "Outros",    type: "outros"    as const, items: month?.outros ?? [] },
+    gravacoes: { label: "Gravações", type: "gravacao"  as const, items: month?.gravacoes ?? [] },
+    roteiros:  { label: "Roteiros",  type: "roteiro"   as const, items: month?.roteiros ?? [] },
+    sistemas:  { label: "Sistemas",  type: "sistema"   as const, items: month?.sistemas ?? [] },
+  } as const;
+
   const tabs = isAvulso
-    ? (["posts", "reels", "outros", "feed"] as const)
-    : (["posts", "reels", "feed", "ficha"] as const);
+    ? (["posts", "reels", "outros", "gravacoes", "roteiros", "sistemas", "feed"] as const)
+    : (["posts", "reels", "gravacoes", "roteiros", "sistemas", "feed", "ficha"] as const);
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
   const idx = sortedKeys.indexOf(selectedMonthKey);
@@ -89,17 +99,18 @@ export function ClientView({ clientId }: { clientId: string }) {
           <button key={t} onClick={() => setTab(t)}
             className="relative py-3 text-sm font-semibold transition-colors"
             style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
-            {t === "posts" ? "Posts" : t === "reels" ? "Reels" : t === "outros" ? "Outros" : t === "feed" ? "Preview de Feed" : "Ficha do Cliente"}
+            {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
             {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "#C8D44E" }} />}
           </button>
         ))}
       </div>
 
       <div className="mt-2">
-        {(tab === "posts" || tab === "reels" || tab === "outros") && (
-          <>
-            {(tab === "posts" ? (month?.posts ?? []) : tab === "reels" ? (month?.reels ?? []) : (month?.outros ?? []))
-              .map((item, i) => (
+        {(tab in TAB_CONFIG) && (() => {
+          const cfg = TAB_CONFIG[tab as keyof typeof TAB_CONFIG];
+          return (
+            <>
+              {cfg.items.map((item, i) => (
                 <div key={item.id} className="group/row relative pr-12">
                   <ContentRow item={item} profiles={profiles} idx={i + 1} />
                   {isAdmin && (
@@ -112,20 +123,21 @@ export function ClientView({ clientId }: { clientId: string }) {
                   )}
                 </div>
               ))}
-            {isAdmin && (
-              <button
-                onClick={() => addContentItem.mutate({
-                  data: { clientId, key: selectedMonthKey, type: tab === "posts" ? "post" : tab === "reels" ? "reel" : "outros" },
-                })}
-                className="mt-4 ml-4 inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold border border-dashed border-white/15 text-white/60 hover:text-[#C8D44E] hover:border-[#C8D44E] transition">
-                <Plus size={13} /> Adicionar {tab === "posts" ? "Post" : tab === "reels" ? "Reel" : "item"}
-              </button>
-            )}
-            {isAvulso && (tab === "posts" ? month?.posts : tab === "reels" ? month?.reels : month?.outros)?.length === 0 && !isAdmin && (
-              <div className="px-4 py-10 text-center text-sm text-white/40">Sem itens nesta aba.</div>
-            )}
-          </>
-        )}
+              {isAdmin && (
+                <button
+                  onClick={() => addContentItem.mutate({
+                    data: { clientId, key: selectedMonthKey, type: cfg.type },
+                  })}
+                  className="mt-4 ml-4 inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold border border-dashed border-white/15 text-white/60 hover:text-[#C8D44E] hover:border-[#C8D44E] transition">
+                  <Plus size={13} /> Adicionar {cfg.label}
+                </button>
+              )}
+              {cfg.items.length === 0 && !isAdmin && (
+                <div className="px-4 py-10 text-center text-sm text-white/40">Sem itens nesta aba.</div>
+              )}
+            </>
+          );
+        })()}
         {tab === "ficha" && (
           <div className="mt-2 -mx-10 md:mx-0 md:rounded-lg md:overflow-hidden md:border md:border-white/[0.06]">
             <ClientFichaContent clientId={client.id} />

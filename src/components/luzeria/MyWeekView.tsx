@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { myWeekQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { STATUS_META, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
 import { deadlineInfo } from "@/lib/luzeria/utils";
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -71,7 +71,7 @@ export function MyWeekView({ userId }: { userId?: string }) {
                       {STATUS_META[t.status as Status].label.slice(0, 4)}
                     </span>
                   </div>
-                  <div className="text-[11px] text-white leading-tight truncate">{t.title || `${t.type === "post" ? "Post" : t.type === "reel" ? "Reels" : "Item"} ${String(t.idx).padStart(2, "0")}`}</div>
+                  <div className="text-[11px] text-white leading-tight truncate">{t.title || `${CONTENT_TYPE_LABEL[t.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item"} ${String(t.idx).padStart(2, "0")}`}</div>
                 </button>
               ))}
             </div>

@@ -6,6 +6,7 @@ import {
   Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save,
 } from "lucide-react";
 import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO } from "@/lib/luzeria/queries";
+import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
 
@@ -315,10 +316,10 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       <ConfigField label="Dia de revisão">
         <input value={reviewDay} disabled={!canEdit} onChange={(e) => setReviewDay(e.target.value)} className={inp} />
       </ConfigField>
-      <ConfigField label="Posts / semana">
+      <ConfigField label="Posts / mês">
         <input type="number" value={postsPerWeek} disabled={!canEdit} onChange={(e) => setPostsPerWeek(e.target.value)} className={inp} />
       </ConfigField>
-      <ConfigField label="Reels / semana">
+      <ConfigField label="Reels / mês">
         <input type="number" value={reelsPerWeek} disabled={!canEdit} onChange={(e) => setReelsPerWeek(e.target.value)} className={inp} />
       </ConfigField>
       <ConfigField label="Responsável fixo">
@@ -693,7 +694,7 @@ function RecurringRow({ tpl, profiles, onUpdate, onDelete }: {
   const when = tpl.cadence === "weekly"
     ? `Toda ${DOW[tpl.dayOfWeek ?? 1]}`
     : `Dia ${tpl.dayOfMonth ?? 1} do mês`;
-  const typeLabel = tpl.type === "post" ? "Post" : tpl.type === "reel" ? "Reel" : "Outro";
+  const typeLabel = CONTENT_TYPE_LABEL[tpl.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item";
   return (
     <div className="bg-[#1C1C1C] border border-white/[0.06] rounded-md px-3 py-2.5">
       <div className="flex items-center gap-2">
@@ -748,6 +749,9 @@ function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
           <option value="post">Post</option>
           <option value="reel">Reel</option>
           <option value="outros">Outro</option>
+          <option value="gravacao">Gravação</option>
+          <option value="roteiro">Roteiro</option>
+          <option value="sistema">Sistema</option>
         </select>
         <select value={cadence} onChange={(e) => setCadence(e.target.value as any)}
           className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]">

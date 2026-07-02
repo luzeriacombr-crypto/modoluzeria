@@ -4,9 +4,10 @@ import {
   Users, Target, Package, Clock, AlertTriangle,
   ChevronLeft, ChevronRight, Trophy, Sparkles, Flame, Crown, Medal,
   X, CheckCircle2, Inbox,
-  Activity, AlertOctagon, RotateCcw,
+  Activity, AlertOctagon, RotateCcw, Zap,
 } from "lucide-react";
-import { adminDashboardQO, memberFinalizationsQO, topMembersQO, useMe, reportExtrasQO } from "@/lib/luzeria/queries";
+import { adminDashboardQO, memberFinalizationsQO, topMembersQO, useMe, reportExtrasQO, allMembersWorkloadQO } from "@/lib/luzeria/queries";
+import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { Avatar } from "./Avatar";
@@ -172,6 +173,9 @@ export function AdminDashboard() {
 
       {/* Saúde da Operação — admin master only */}
       {me?.role === "master" && <OperationHealth monthKey={selectedMonthKey} />}
+
+      {/* Carga de trabalho — visível para master */}
+      {me?.role === "master" && <WorkloadPanel />}
 
       {/* Top members */}
       <div className="rounded-xl bg-[#161616] border border-white/[0.07] p-5 mb-6 relative overflow-hidden">
@@ -356,7 +360,7 @@ function MemberDetailPanel({
     role === "setor" ? "Adm de Setor" : "Membro";
 
   const [period, setPeriod] = useState<Period>(initialPeriod);
-  const [filter, setFilter] = useState<"all" | "post" | "reel" | "outros">("all");
+  const [filter, setFilter] = useState<"all" | "post" | "reel" | "outros" | "gravacao" | "roteiro" | "sistema">("all");
 
   const q = useQuery(memberFinalizationsQO(member.id, period, monthKey));
   const list = q.data ?? [];
@@ -411,6 +415,9 @@ function MemberDetailPanel({
             { id: "post", label: "Posts" },
             { id: "reel", label: "Reels" },
             { id: "outros", label: "Outros" },
+            { id: "gravacao", label: "Gravações" },
+            { id: "roteiro", label: "Roteiros" },
+            { id: "sistema", label: "Sistemas" },
           ] as const).map((f) => (
             <button key={f.id} onClick={() => setFilter(f.id)}
               className="px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors"
@@ -435,7 +442,7 @@ function MemberDetailPanel({
           <ul className="space-y-1.5">
             {filtered.map((t) => {
               const isAvulso = t.clientCategory === "Avulsos";
-              const typeLabel = t.type === "post" ? "POST" : t.type === "reel" ? "REEL" : "OUTRO";
+              const typeLabel = (CONTENT_TYPE_LABEL[t.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item").toUpperCase();
               return (
                 <li key={t.itemId + t.finalizedAt}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
@@ -603,6 +610,76 @@ function HealthCard({ icon, tone, label, value, sub, valueColor }: {
         <div className="text-2xl font-bold tabular-nums mt-1.5" style={{ color: valueColor ?? "#FFFFFF" }}>{value}</div>
         <div className="text-[10px] text-white/40 mt-0.5">{sub}</div>
       </div>
+    </div>
+  );
+}
+/* ============== WORKLOAD PANEL (master only) ============== */
+
+function WorkloadPanel() {
+  const { data, isLoading } = useQuery(allMembersWorkloadQO());
+
+  return (
+    <div className="rounded-xl bg-[#161616] border border-white/[0.07] p-5 mb-6 relative overflow-hidden">
+      <div className="pointer-events-none absolute -top-12 -left-12 h-40 w-40 rounded-full opacity-10 blur-3xl" style={{ background: "#4A9EFF" }} />
+      <div className="flex items-center gap-2 mb-4">
+        <Zap size={16} className="text-[#4A9EFF]" />
+        <h2 className="text-white font-semibold">Carga de trabalho</h2>
+        <span className="text-[10px] text-white/30 ml-1">— itens abertos por membro</span>
+      </div>
+      {isLoading ? (
+        <div className="text-white/40 text-sm py-4">Carregando…</div>
+      ) : !data?.length ? (
+        <div className="text-white/30 text-sm py-4">Nenhum membro ativo.</div>
+      ) : (
+        <div className="space-y-3">
+          {data.map((row) => {
+            const max = data[0]?.openCount || 1;
+            const pct = Math.round((row.openCount / max) * 100);
+            const barColor = row.overdue > 0 ? "#FF4444" : row.dueSoon > 0 ? "#FF8C42" : "#4A9EFF";
+            return (
+              <div key={row.userId} className="flex items-center gap-3">
+                <div className="shrink-0">
+                  {row.avatarUrl ? (
+                    <img src={row.avatarUrl} alt={row.name} className="h-8 w-8 rounded-full object-cover" />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full grid place-items-center text-xs font-bold text-white"
+                      style={{ background: row.color }}>
+                      {row.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1 gap-2">
+                    <span className="text-white text-xs font-medium truncate">{row.name}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {row.overdue > 0 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(255,68,68,0.15)", color: "#FF4444" }}>
+                          {row.overdue} atrasado{row.overdue > 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {row.dueSoon > 0 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(255,140,66,0.15)", color: "#FF8C42" }}>
+                          {row.dueSoon} urgente{row.dueSoon > 1 ? "s" : ""}
+                        </span>
+                      )}
+                      <span className="text-white/60 text-xs tabular-nums">{row.openCount} itens</span>
+                    </div>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%`, background: barColor }} />
+                  </div>
+                  <div className="flex gap-3 mt-1 text-[10px] text-white/30">
+                    <span>{row.byType.post} post</span>
+                    <span>{row.byType.reel} reel</span>
+                    {row.byType.outros > 0 && <span>{row.byType.outros} outros</span>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

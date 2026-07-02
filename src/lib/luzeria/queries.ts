@@ -8,7 +8,7 @@ import {
   listStories, upsertStoryDay, setStoryDone, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   adminCreateUser, adminSendPasswordReset, getAdminDashboard, getTopMembers, getMemberFinalizations,
   updateMyAccount,
-  getReport, getMemberReportDetail,
+  getReport, getMemberReportDetail, getAllMembersWorkload, getMemberVelocity,
   updateFeedOrder,
   setItemCover,
   uploadItemCover,
@@ -191,6 +191,20 @@ export const memberStatusDurationQO = (userId: string) =>
     queryKey: ["member-status-duration", userId],
     queryFn: () => getMemberStatusDuration({ data: { userId } }),
     enabled: !!userId,
+  });
+
+export const allMembersWorkloadQO = () =>
+  queryOptions({
+    queryKey: ["all-members-workload"],
+    queryFn: () => getAllMembersWorkload(),
+    staleTime: 2 * 60 * 1000,
+  });
+
+export const memberVelocityQO = (from: string, to: string) =>
+  queryOptions({
+    queryKey: ["member-velocity", from, to],
+    queryFn: () => getMemberVelocity({ data: { from, to } }),
+    enabled: !!from && !!to,
   });
 
 export const appSettingsQO = () =>

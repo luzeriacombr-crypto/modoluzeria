@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { myTasksQO, myTodayQO, productivityQO, profilesQO, myMentionsQO, useMe, useApi } from "@/lib/luzeria/queries";
-import { STATUS_META, STATUS_ORDER, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
@@ -122,7 +122,7 @@ export function MyTasks() {
                   {m.clientName}
                 </span>
                 <span className="text-[11px] text-white/50 uppercase font-semibold shrink-0">
-                  {m.type === "post" ? "Post" : m.type === "reel" ? "Reels" : "Item"} {String(m.idx).padStart(2, "0")}
+                  {CONTENT_TYPE_LABEL[m.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item"} {String(m.idx).padStart(2, "0")}
                 </span>
                 <span className="text-sm text-white/90 truncate flex-1">
                   {m.authorName ? <span className="text-white/50">{m.authorName}: </span> : null}{m.snippet || m.title}

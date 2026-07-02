@@ -14,7 +14,7 @@ export type IGModalFile = {
 export type IGModalFeedback = { id: string; authorName: string; text: string; createdAt: string };
 export type IGModalItem = {
   id: string;
-  type: "post" | "reel" | "outros";
+  type: "post" | "reel" | "outros" | "gravacao" | "roteiro" | "sistema";
   title: string;
   caption: string;
   dueDate: string | null;

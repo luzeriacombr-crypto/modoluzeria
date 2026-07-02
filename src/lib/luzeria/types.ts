@@ -14,7 +14,27 @@ export type Status =
   | "EM_GRAVACAO"
   | "EM_EDICAO";
 
-export type ContentType = "post" | "reel" | "outros";
+export type ContentType = "post" | "reel" | "outros" | "gravacao" | "roteiro" | "sistema";
+
+/** Label de exibição para cada tipo de conteúdo. */
+export const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
+  post: "Post",
+  reel: "Reel",
+  outros: "Outro",
+  gravacao: "Gravação",
+  roteiro: "Roteiro",
+  sistema: "Sistema",
+};
+
+/** Emoji/ícone textual rápido por tipo. */
+export const CONTENT_TYPE_ICON: Record<ContentType, string> = {
+  post: "🖼️",
+  reel: "🎬",
+  outros: "📦",
+  gravacao: "🎥",
+  roteiro: "📝",
+  sistema: "🗂️",
+};
 
 /** Tipos de vídeo exclusivos de Reels. */
 export type ReelType = "lofi" | "facil" | "basico" | "avancado";
@@ -80,6 +100,9 @@ export interface MonthData {
   posts: ContentItem[];
   reels: ContentItem[];
   outros: ContentItem[];
+  gravacoes: ContentItem[];
+  roteiros: ContentItem[];
+  sistemas: ContentItem[];
 }
 
 export interface CustomFields {
@@ -182,6 +205,23 @@ export const STATUS_ORDER: Status[] = [
 ];
 
 export function statusOptionsFor(type: ContentType): Status[] {
+  const tail: Status[] = ["TRAVADO", "PRONTO_PARA_PUBLICAR"];
+
+  // Gravação: pipeline simples de produção audiovisual
+  if (type === "gravacao") {
+    return ["PLANEJAMENTO", "COPY", "EM_GRAVACAO", "REVISAO_INTERNA", ...tail];
+  }
+
+  // Roteiro: pipeline de texto/copy
+  if (type === "roteiro") {
+    return ["PLANEJAMENTO", "COPY", "REVISAO_INTERNA", "REVISAO_CLIENTE", ...tail];
+  }
+
+  // Sistema de Conteúdo: onboarding/estratégia de cliente
+  if (type === "sistema") {
+    return ["PLANEJAMENTO", "COPY", "REVISAO_INTERNA", "REVISAO_CLIENTE", "AGENDAMENTO", ...tail];
+  }
+
   const base: Status[] = [
     "PLANEJAMENTO",
     "COPY",
@@ -190,7 +230,6 @@ export function statusOptionsFor(type: ContentType): Status[] {
     "AGENDAMENTO",
     "REVISAO_AGENDAMENTO",
   ];
-  const tail: Status[] = ["TRAVADO", "PRONTO_PARA_PUBLICAR"];
   if (type === "post") {
     return [
       "PLANEJAMENTO",

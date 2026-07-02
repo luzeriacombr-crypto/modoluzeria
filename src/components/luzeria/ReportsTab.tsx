@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Download, Filter, ChevronDown, Clock, AlertOctagon, RotateCcw, Star,
-  BarChart3, Activity, Layers,
+  BarChart3, Activity, Layers, Zap,
 } from "lucide-react";
-import { profilesQO, clientsQO, reportQO, reportExtrasQO, type ReportFilters } from "@/lib/luzeria/queries";
+import { profilesQO, clientsQO, reportQO, reportExtrasQO, memberVelocityQO, type ReportFilters } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
 import { REEL_TYPE_LABEL, STATUS_META, type ReelType, type Status } from "@/lib/luzeria/types";
 import { exportReportXlsx } from "@/lib/luzeria/report-export";
@@ -62,10 +62,11 @@ export function ReportsTab() {
   const [page, setPage] = useState(0);
   const PER = 50;
 
-  type Tab = "produtividade" | "lead" | "status" | "retrabalho" | "qualidade" | "bloqueios";
+  type Tab = "produtividade" | "lead" | "status" | "retrabalho" | "qualidade" | "bloqueios" | "velocidade";
   const [tab, setTab] = useState<Tab>("produtividade");
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "produtividade", label: "Produtividade", icon: <BarChart3 size={13} /> },
+    { id: "velocidade", label: "Velocidade", icon: <Zap size={13} /> },
     { id: "lead", label: "Lead time", icon: <Clock size={13} /> },
     { id: "status", label: "Tempo por status", icon: <Activity size={13} /> },
     { id: "retrabalho", label: "Retrabalho", icon: <RotateCcw size={13} /> },
@@ -109,6 +110,9 @@ export function ReportsTab() {
               { value: "post", label: "Posts" },
               { value: "reel", label: "Reels" },
               { value: "outros", label: "Outros" },
+              { value: "gravacao", label: "Gravações" },
+              { value: "roteiro", label: "Roteiros" },
+              { value: "sistema", label: "Sistemas" },
               { value: "stories", label: "Stories" },
               { value: "cleaning", label: "Limpeza" },
             ]} />
@@ -308,6 +312,8 @@ export function ReportsTab() {
           </Section>
         </>
       )}
+
+      {tab === "velocidade" && <VelocityView from={filters.from} to={filters.to} />}
 
       {extras && tab === "lead" && <LeadTimeView data={extras.leadTime} />}
       {extras && tab === "status" && <StatusDurationView data={extras.statusDuration} />}
@@ -525,5 +531,71 @@ function FilterSelect({ label, value, onChange, options }: {
         <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
       </div>
     </label>
+  );
+}
+/* ===== VELOCITY VIEW ===== */
+
+function VelocityView({ from, to }: { from: string; to: string }) {
+  const { data, isLoading } = useQuery(memberVelocityQO(from, to));
+
+  if (isLoading) return <div className="text-white/40 text-sm py-6 px-2">Calculando velocidade…</div>;
+  if (!data?.length) return <div className="text-white/30 text-sm py-6 px-2">Nenhum item finalizado no período.</div>;
+
+  const maxAvg = Math.max(...data.map((r) => r.avgLeadTimeDays ?? 0), 1);
+
+  return (
+    <div className="space-y-3 py-2">
+      <div className="text-[11px] text-white/40 mb-3 px-1">
+        Lead time médio por membro — quanto tempo (em dias) um item fica em produção até ser finalizado. Menor = mais rápido.
+      </div>
+      {data.map((row) => {
+        const avg = row.avgLeadTimeDays;
+        const barPct = avg != null ? Math.round((avg / maxAvg) * 100) : 0;
+        const barColor = avg == null ? "#444" : avg <= 2 ? "#C8D44E" : avg <= 5 ? "#FF8C42" : "#FF4444";
+        return (
+          <div key={row.userId} className="rounded-xl bg-[#1C1C1C] border border-white/[0.06] p-4">
+            <div className="flex items-center gap-3 mb-3">
+              {row.avatarUrl ? (
+                <img src={row.avatarUrl} alt={row.name} className="h-8 w-8 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="h-8 w-8 rounded-full grid place-items-center text-xs font-bold text-white shrink-0"
+                  style={{ background: row.color }}>
+                  {row.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-white text-sm font-medium truncate">{row.name}</span>
+                  <span className="text-white font-bold tabular-nums text-sm shrink-0" style={{ color: barColor }}>
+                    {avg != null ? `${avg}d` : "—"}
+                  </span>
+                </div>
+                <div className="text-[10px] text-white/40">{row.totalFinished} entr. no período</div>
+              </div>
+            </div>
+            {/* Lead time bar */}
+            <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden mb-3">
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${barPct}%`, background: barColor }} />
+            </div>
+            {/* By type */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {[
+                { label: "Post", d: row.byType.post },
+                { label: "Reel", d: row.byType.reel },
+                { label: "Outros", d: row.byType.outros },
+              ].map(({ label, d }) => (
+                <div key={label} className="rounded bg-white/[0.04] py-1.5 px-1">
+                  <div className="text-[10px] text-white/40">{label}</div>
+                  <div className="text-xs text-white font-semibold tabular-nums">
+                    {d.count > 0 ? `${d.avgDays ?? "?"}d` : "—"}
+                  </div>
+                  <div className="text-[10px] text-white/30">{d.count} entr.</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }

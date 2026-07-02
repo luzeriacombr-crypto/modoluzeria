@@ -443,6 +443,9 @@ export const getMonth = createServerFn({ method: "GET" })
       posts: mapped.filter((i) => i.type === "post"),
       reels: mapped.filter((i) => i.type === "reel"),
       outros: mapped.filter((i) => i.type === "outros"),
+      gravacoes: mapped.filter((i) => i.type === "gravacao"),
+      roteiros: mapped.filter((i) => i.type === "roteiro"),
+      sistemas: mapped.filter((i) => i.type === "sistema"),
     };
   });
 
@@ -1703,4 +1706,145 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
       stories: stories.sort((a, b) => b.finalizedAt.localeCompare(a.finalizedAt)),
       cleaning: cleaning.sort((a, b) => b.finalizedAt.localeCompare(a.finalizedAt)),
     };
+  });
+
+/* ============================================================
+ * WORKLOAD — carga de todos os membros ativos
+ * ============================================================ */
+
+export type MemberWorkloadRow = {
+  userId: string;
+  name: string;
+  color: string;
+  icon: string | null;
+  avatarUrl: string | null;
+  openCount: number;
+  dueSoon: number;  // itens com prazo nos próximos 3 dias
+  overdue: number;  // itens com prazo já passado
+  byType: { post: number; reel: number; outros: number };
+};
+
+export const getAllMembersWorkload = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }): Promise<MemberWorkloadRow[]> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    // All active profiles
+    const { data: profiles } = await context.supabase
+      .from("profiles").select("id, name, color, icon, avatar_path").eq("active", true);
+
+    if (!profiles?.length) return [];
+
+    // All open items with assignees and due dates
+    const { data: openItems } = await context.supabase
+      .from("content_items")
+      .select("id, type, due_date, item_assignees(user_id)")
+      .neq("status", "PRONTO_PARA_PUBLICAR")
+      .neq("status", "TRAVADO");
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const in3days = new Date(today); in3days.setDate(in3days.getDate() + 3);
+
+    const avatarMap = await signAvatarPaths(context.supabase, (profiles ?? []).map((p: any) => p.avatar_path));
+
+    return (profiles ?? []).map((p: any) => {
+      const myItems = (openItems ?? []).filter((it: any) =>
+        (it.item_assignees ?? []).some((a: any) => a.user_id === p.id)
+      );
+      const byType = { post: 0, reel: 0, outros: 0 };
+      let dueSoon = 0; let overdue = 0;
+      myItems.forEach((it: any) => {
+        if (it.type === "post") byType.post++;
+        else if (it.type === "reel") byType.reel++;
+        else byType.outros++;
+        if (it.due_date) {
+          const due = new Date(it.due_date + "T23:59:59");
+          if (due < today) overdue++;
+          else if (due <= in3days) dueSoon++;
+        }
+      });
+      return {
+        userId: p.id, name: p.name, color: p.color, icon: p.icon,
+        avatarUrl: p.avatar_path ? (avatarMap.get(p.avatar_path) ?? null) : null,
+        openCount: myItems.length, dueSoon, overdue, byType,
+      };
+    }).sort((a, b) => b.openCount - a.openCount);
+  });
+
+/* ============================================================
+ * VELOCIDADE INDIVIDUAL — lead time por membro e tipo
+ * ============================================================ */
+
+export type MemberVelocityRow = {
+  userId: string;
+  name: string;
+  color: string;
+  icon: string | null;
+  avatarUrl: string | null;
+  totalFinished: number;
+  avgLeadTimeDays: number | null;
+  byType: {
+    post: { count: number; avgDays: number | null };
+    reel: { count: number; avgDays: number | null };
+    outros: { count: number; avgDays: number | null };
+  };
+};
+
+export const getMemberVelocity = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { from: string; to: string }) =>
+    z.object({ from: z.string(), to: z.string() }).parse(d))
+  .handler(async ({ data, context }): Promise<MemberVelocityRow[]> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { data: profiles } = await context.supabase
+      .from("profiles").select("id, name, color, icon, avatar_path").eq("active", true);
+
+    if (!profiles?.length) return [];
+
+    // Finished items in range with lead time data and assignees
+    const { data: items } = await context.supabase
+      .from("content_items")
+      .select("id, type, started_at, finished_at, item_assignees(user_id)")
+      .eq("status", "PRONTO_PARA_PUBLICAR")
+      .not("started_at", "is", null)
+      .not("finished_at", "is", null)
+      .gte("finished_at", data.from)
+      .lt("finished_at", data.to);
+
+    const avatarMap = await signAvatarPaths(context.supabase, (profiles ?? []).map((p: any) => p.avatar_path));
+
+    return (profiles ?? []).map((p: any) => {
+      const myItems = (items ?? []).filter((it: any) =>
+        (it.item_assignees ?? []).some((a: any) => a.user_id === p.id)
+      );
+
+      function calcAvg(subset: any[]) {
+        if (!subset.length) return null;
+        const daysArr = subset.map((it: any) => {
+          const ms = new Date(it.finished_at).getTime() - new Date(it.started_at).getTime();
+          return ms / 86_400_000;
+        });
+        return Math.round((daysArr.reduce((a, b) => a + b, 0) / daysArr.length) * 10) / 10;
+      }
+
+      const posts = myItems.filter((i: any) => i.type === "post");
+      const reels = myItems.filter((i: any) => i.type === "reel");
+      const outros = myItems.filter((i: any) => i.type === "outros");
+
+      return {
+        userId: p.id, name: p.name, color: p.color, icon: p.icon,
+        avatarUrl: p.avatar_path ? (avatarMap.get(p.avatar_path) ?? null) : null,
+        totalFinished: myItems.length,
+        avgLeadTimeDays: calcAvg(myItems),
+        byType: {
+          post: { count: posts.length, avgDays: calcAvg(posts) },
+          reel: { count: reels.length, avgDays: calcAvg(reels) },
+          outros: { count: outros.length, avgDays: calcAvg(outros) },
+        },
+      };
+    }).filter((r) => r.totalFinished > 0)
+      .sort((a, b) => (a.avgLeadTimeDays ?? 999) - (b.avgLeadTimeDays ?? 999));
   });

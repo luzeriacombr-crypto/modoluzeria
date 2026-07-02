@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { X, Film, Upload, Scissors, Loader2, Trash2, Check } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { itemFilesQO, useApi } from "@/lib/luzeria/queries";
-import { getDriveFileBytes } from "@/lib/luzeria/drive.functions";
+import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
 
 /**
  * Modal editor para escolher a capa de um Reel.
@@ -24,7 +24,7 @@ export function ReelCoverEditor({
   const { uploadItemCover, setItemCover } = useApi();
   const { data: files = [] } = useQuery(itemFilesQO(itemId));
   const videoFile = files.find((f) => (f.mimeType ?? "").startsWith("video/")) ?? files[0];
-  const fetchBytes = useServerFn(getDriveFileBytes);
+  const fetchVideoToken = useServerFn(getDriveVideoToken);
 
   const [mode, setMode] = useState<"frame" | "upload">("frame");
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
@@ -46,29 +46,41 @@ export function ReelCoverEditor({
     return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
   }, [onClose]);
 
-  // Load video bytes when frame mode is selected
+  // Load video directly from Drive in the browser — no size limit.
+  // Server returns a short-lived OAuth token; browser fetches the video itself.
   useEffect(() => {
     if (mode !== "frame" || videoSrc || !videoFile?.driveFileId) return;
     let revoke: string | null = null;
+    let cancelled = false;
     setVideoLoading(true); setVideoError(null);
-    fetchBytes({ data: { fileId: videoFile.driveFileId } })
-      .then((r: any) => {
-        if (!r?.dataUrl) throw new Error("Sem dados do vídeo.");
-        // Convert data URL -> blob URL (lower memory than reusing huge data URL in <video>)
-        const [meta, b64] = r.dataUrl.split(",");
-        const mime = /:(.*?);/.exec(meta)?.[1] ?? "video/mp4";
-        const bin = atob(b64);
-        const arr = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-        const blob = new Blob([arr], { type: mime });
-        const url = URL.createObjectURL(blob);
-        revoke = url;
-        setVideoSrc(url);
-      })
-      .catch((e) => setVideoError(e?.message ?? "Falha ao carregar vídeo."))
-      .finally(() => setVideoLoading(false));
-    return () => { if (revoke) URL.revokeObjectURL(revoke); };
-  }, [mode, videoFile?.driveFileId, fetchBytes, videoSrc]);
+
+    (async () => {
+      try {
+        const { token, url, mimeType } = await fetchVideoToken({ data: { fileId: videoFile.driveFileId } });
+
+        // Fetch video directly from googleapis.com — streams from Drive to browser
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`Drive retornou ${res.status}.`);
+
+        const blob = new Blob([await res.arrayBuffer()], { type: mimeType });
+        if (cancelled) return;
+        const blobUrl = URL.createObjectURL(blob);
+        revoke = blobUrl;
+        setVideoSrc(blobUrl);
+      } catch (e: any) {
+        if (!cancelled) setVideoError(e?.message ?? "Falha ao carregar vídeo.");
+      } finally {
+        if (!cancelled) setVideoLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
+  }, [mode, videoFile?.driveFileId, videoSrc, fetchVideoToken]);
 
   function captureFrame() {
     const v = videoRef.current;
@@ -192,7 +204,7 @@ export function ReelCoverEditor({
               {videoLoading && (
                 <div className="flex items-center gap-2 text-xs text-white/60">
                   <Loader2 size={14} className="animate-spin text-[#C8D44E]" />
-                  Carregando vídeo do Drive…
+                  Carregando vídeo do Drive… (pode demorar para vídeos grandes)
                 </div>
               )}
               {videoSrc && (
