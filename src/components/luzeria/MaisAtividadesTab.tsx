@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Plus, Trash2, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User } from "lucide-react";
 import { toast } from "sonner";
 import { useApi } from "@/lib/luzeria/queries";
+import { useUI } from "@/lib/luzeria/ui-store";
 import { ContentRow } from "./ContentRow";
 import type { ContentItem, Profile } from "@/lib/luzeria/types";
 
@@ -29,6 +30,7 @@ interface Props {
 
 export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sistemas, outros, profiles, isAdmin }: Props) {
   const { addContentItem, addAssignee, deleteItem } = useApi();
+  const { openItem } = useUI();
   const [openForm, setOpenForm] = useState<ActivityType | null>(null);
   const [collapsed, setCollapsed] = useState<Record<ActivityType, boolean>>({
     gravacao: false, roteiro: false, sistema: false, outros: false,
@@ -115,17 +117,26 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
             {!isCollapsed && items.length > 0 && (
               <div className="space-y-0.5">
                 {items.map((item, i) => (
-                  <div key={item.id} className="group/row relative pr-12">
+                  <div key={item.id} className="group/row relative pr-20">
                     <ContentRow item={item} profiles={profiles} idx={i + 1} />
-                    {isAdmin && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition">
                       <button
-                        onClick={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}
-                        title="Excluir"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition"
+                        onClick={() => openItem(item.id)}
+                        title="Editar"
+                        className="p-1.5 rounded text-white/40 hover:text-[#C8D44E] hover:bg-white/5 transition"
                       >
-                        <Trash2 size={13} />
+                        <Pencil size={13} />
                       </button>
-                    )}
+                      {isAdmin && (
+                        <button
+                          onClick={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}
+                          title="Excluir"
+                          className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
