@@ -446,10 +446,10 @@ export const getMonth = createServerFn({ method: "GET" })
       id: month.id, key: month.key,
       posts: mapped.filter((i) => i.type === "post"),
       reels: mapped.filter((i) => i.type === "reel"),
-      outros: mapped.filter((i) => i.type === "outros" && !["gravacao", "roteiro", "sistema"].includes((i as any).reelType ?? "")),
-      gravacoes: mapped.filter((i) => i.type === "outros" && (i as any).reelType === "gravacao"),
-      roteiros: mapped.filter((i) => i.type === "outros" && (i as any).reelType === "roteiro"),
-      sistemas: mapped.filter((i) => i.type === "outros" && (i as any).reelType === "sistema"),
+      outros: mapped.filter((i, idx) => i.type === "outros" && !(items?.[idx] as any)?.blocked_reason?.startsWith("_sub:")),
+      gravacoes: mapped.filter((i, idx) => i.type === "outros" && (items?.[idx] as any)?.blocked_reason === "_sub:gravacao"),
+      roteiros: mapped.filter((i, idx) => i.type === "outros" && (items?.[idx] as any)?.blocked_reason === "_sub:roteiro"),
+      sistemas: mapped.filter((i, idx) => i.type === "outros" && (items?.[idx] as any)?.blocked_reason === "_sub:sistema"),
     };
   });
 
@@ -834,7 +834,7 @@ export const addContentItem = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       month = m;
     }
-    // 'gravacao', 'roteiro', 'sistema' are not in the DB enum — store as 'outros' with reel_type as discriminator
+    // 'gravacao', 'roteiro', 'sistema' are not in the DB enum — store as 'outros' with blocked_reason as discriminator
     const SUBTYPE_MAP: Record<string, string> = { gravacao: "gravacao", roteiro: "roteiro", sistema: "sistema" };
     const dbType = SUBTYPE_MAP[data.type] ? "outros" : data.type;
     const subType = SUBTYPE_MAP[data.type] ?? null;
@@ -848,7 +848,7 @@ export const addContentItem = createServerFn({ method: "POST" })
       month_id: month.id, type: dbType, idx: nextIdx,
       title: (data.title?.trim() || fallback),
     };
-    if (subType) insertRow.reel_type = subType;
+    if (subType) insertRow.blocked_reason = `_sub:${subType}`;
     if (data.dueDate) insertRow.due_date = data.dueDate;
     if (data.notes) insertRow.copy = data.notes;
     if (data.location) insertRow.drive_link = data.location;
