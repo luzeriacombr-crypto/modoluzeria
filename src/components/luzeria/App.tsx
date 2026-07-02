@@ -76,6 +76,17 @@ export function App() {
           <Outlet />
         </main>
       </div>
+      {/* Always-visible floating toggle when sidebar is hidden — never gets stuck */}
+      {sidebarHidden && (
+        <button
+          onClick={toggleSidebar}
+          aria-label="Mostrar sidebar"
+          className="hidden md:flex fixed top-3 left-3 z-[9999] items-center gap-1.5 px-3 py-2 rounded-md text-white text-xs font-semibold transition-colors"
+          style={{ background: "#C8D44E", color: "#0D0D0D" }}
+        >
+          <PanelLeftOpen size={16} /> Menu
+        </button>
+      )}
       <DetailPanel />
       <ClientFichaPanel />
       <MobileNav />
