@@ -17,9 +17,17 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
 
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
+  const FEED_STATUSES = new Set([
+    "REVISAO_CLIENTE",
+    "AGENDAMENTO",
+    "REVISAO_AGENDAMENTO",
+    "TRAVADO",
+    "PRONTO_PARA_PUBLICAR",
+  ]);
+
   const ready = useMemo(() => {
     const all = [...month.posts, ...month.reels].filter(
-      (i) => i.status === "PRONTO_PARA_PUBLICAR",
+      (i) => FEED_STATUSES.has(i.status),
     );
     all.sort((a, b) => {
       const ao = a.feedOrder ?? Number.POSITIVE_INFINITY;
