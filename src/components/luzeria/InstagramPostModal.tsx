@@ -131,8 +131,8 @@ export function InstagramPostModal({
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft" && total > 1) setSlide((s) => Math.max(0, s - 1));
-      if (e.key === "ArrowRight" && total > 1) setSlide((s) => Math.min(total - 1, s + 1));
+      if (e.key === "ArrowLeft" && total > 1) { setSlide((s) => Math.max(0, s - 1)); setPlayingVideo(false); }
+      if (e.key === "ArrowRight" && total > 1) { setSlide((s) => Math.min(total - 1, s + 1)); setPlayingVideo(false); }
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -152,6 +152,11 @@ export function InstagramPostModal({
 
   const isReel = item.type === "reel";
   const reelVideoUrl = isReel ? current?.webViewUrl ?? null : null;
+  const [playingVideo, setPlayingVideo] = useState(false);
+  const currentIsVideo = current ? isVideo(current.mimeType) : false;
+  const driveEmbedUrl = currentIsVideo && current?.driveFileId
+    ? `https://drive.google.com/file/d/${current.driveFileId}/preview`
+    : null;
 
   const initial = client.name.trim().charAt(0).toUpperCase() || "L";
 
@@ -177,7 +182,15 @@ export function InstagramPostModal({
         {/* LEFT: media (4:5) */}
         <div className="relative bg-black md:flex-[0_0_460px] w-full md:w-[460px]">
           <div className="relative w-full" style={{ aspectRatio: "4 / 5" }}>
-            {current ? (
+            {/* Video iframe player */}
+            {playingVideo && driveEmbedUrl ? (
+              <iframe
+                src={driveEmbedUrl}
+                className="absolute inset-0 w-full h-full"
+                allow="autoplay"
+                allowFullScreen
+              />
+            ) : current ? (
               <FileThumb
                 file={current}
                 mode={mode}
@@ -189,17 +202,16 @@ export function InstagramPostModal({
               </div>
             )}
 
-            {/* Reel play overlay */}
-            {isReel && reelVideoUrl && (
-              <a
-                href={reelVideoUrl}
-                target="_blank" rel="noreferrer"
+            {/* Play overlay — click to embed video */}
+            {!playingVideo && driveEmbedUrl && (
+              <button
+                onClick={() => setPlayingVideo(true)}
                 className="absolute inset-0 grid place-items-center group"
               >
                 <div className="size-16 rounded-full bg-black/60 backdrop-blur grid place-items-center group-hover:scale-110 transition">
                   <Play size={28} className="text-white fill-white ml-1" />
                 </div>
-              </a>
+              </button>
             )}
 
             {/* Carousel arrows */}
@@ -207,14 +219,14 @@ export function InstagramPostModal({
               <>
                 {slide > 0 && (
                   <button
-                    onClick={() => setSlide((s) => s - 1)}
+                    onClick={() => { setSlide((s) => s - 1); setPlayingVideo(false); }}
                     className="absolute left-2 top-1/2 -translate-y-1/2 size-8 rounded-full bg-white/90 hover:bg-white grid place-items-center text-neutral-900 shadow"
                     aria-label="Anterior"
                   ><ChevronLeft size={18} /></button>
                 )}
                 {slide < total - 1 && (
                   <button
-                    onClick={() => setSlide((s) => s + 1)}
+                    onClick={() => { setSlide((s) => s + 1); setPlayingVideo(false); }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 size-8 rounded-full bg-white/90 hover:bg-white grid place-items-center text-neutral-900 shadow"
                     aria-label="Próximo"
                   ><ChevronRight size={18} /></button>
@@ -274,13 +286,13 @@ export function InstagramPostModal({
               <div className="text-[13px] text-neutral-400 italic">Sem legenda definida.</div>
             )}
 
-            {isReel && reelVideoUrl && (
-              <a
-                href={reelVideoUrl} target="_blank" rel="noreferrer"
+            {driveEmbedUrl && (
+              <button
+                onClick={() => setPlayingVideo(true)}
                 className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-neutral-700 hover:text-neutral-900"
               >
-                <ExternalLink size={13} /> Assistir vídeo no Drive
-              </a>
+                <Play size={13} /> Assistir vídeo
+              </button>
             )}
 
             {/* Feedback list */}
