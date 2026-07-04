@@ -67,28 +67,25 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
 }
 
 function VideoPlayer({ fileId }: { fileId: string }) {
-  // Try direct Drive public URL first (works if file is shared "anyone with link")
-  // Falls back to proxy, then to iframe
-  const [src, setSrc] = useState(`https://drive.google.com/uc?export=download&id=${fileId}`);
-  const [fallbackLevel, setFallbackLevel] = useState(0);
+  // &confirm=t bypasses Drive's large-file antivirus warning page
+  const [src, setSrc] = useState(
+    `https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`
+  );
+  const [failed, setFailed] = useState(false);
 
-  function handleError() {
-    if (fallbackLevel === 0) {
-      setSrc(`/api/video/${fileId}`);
-      setFallbackLevel(1);
-    } else {
-      setFallbackLevel(2);
-    }
-  }
-
-  if (fallbackLevel === 2) {
+  if (failed) {
     return (
-      <iframe
-        src={`https://drive.google.com/file/d/${fileId}/preview`}
-        allow="autoplay"
-        allowFullScreen
-        className="absolute inset-0 w-full h-full border-none"
-      />
+      <div className="absolute inset-0 bg-black grid place-items-center text-white/50 text-sm px-4 text-center">
+        Não foi possível carregar o vídeo.<br />
+        <a
+          href={`https://drive.google.com/file/d/${fileId}/view`}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 underline text-white/70"
+        >
+          Abrir no Drive
+        </a>
+      </div>
     );
   }
 
@@ -99,7 +96,14 @@ function VideoPlayer({ fileId }: { fileId: string }) {
       className="absolute inset-0 w-full h-full object-contain"
       controls
       playsInline
-      onError={handleError}
+      onError={() => {
+        if (src.includes("confirm=t")) {
+          // Try proxy as last resort
+          setSrc(`/api/video/${fileId}`);
+        } else {
+          setFailed(true);
+        }
+      }}
     />
   );
 }
