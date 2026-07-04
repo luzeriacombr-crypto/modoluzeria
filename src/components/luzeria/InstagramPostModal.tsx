@@ -67,24 +67,13 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
 }
 
 function VideoPlayer({ fileId }: { fileId: string }) {
-  // Embed Drive iframe but clip the bottom toolbar (~56px) with overflow hidden
-  const embedUrl = `https://drive.google.com/file/d/${fileId}/preview?rm=minimal`;
   return (
-    <div className="w-full h-full bg-black overflow-hidden" style={{ position: "relative" }}>
-      <iframe
-        src={embedUrl}
-        allow="autoplay"
-        allowFullScreen
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "calc(100% + 56px)", // extend past container to hide Drive bottom bar
-          border: "none",
-        }}
-      />
-    </div>
+    <iframe
+      src={`https://drive.google.com/file/d/${fileId}/preview`}
+      allow="autoplay"
+      allowFullScreen
+      className="absolute inset-0 w-full h-full border-none"
+    />
   );
 }
 
