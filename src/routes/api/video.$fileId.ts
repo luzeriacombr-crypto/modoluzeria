@@ -16,7 +16,7 @@ export const APIRoute = createAPIFileRoute("/api/video/$fileId")({
       if (range) upstream["Range"] = range;
 
       const res = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true&acknowledgeAbuse=true`,
         { headers: upstream },
       );
 
