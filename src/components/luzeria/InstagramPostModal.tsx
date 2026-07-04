@@ -66,8 +66,9 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
   );
 }
 
+const SCALE = 0.65; // controls appear at 65% size
+
 function VideoPlayer({ fileId }: { fileId: string }) {
-  // Iframe with Drive player — clip bottom bar (60px) using overflow:hidden
   return (
     <div className="absolute inset-0 bg-black" style={{ overflow: "hidden" }}>
       <iframe
@@ -78,8 +79,12 @@ function VideoPlayer({ fileId }: { fileId: string }) {
           position: "absolute",
           top: 0,
           left: 0,
-          width: "100%",
-          height: "calc(100% + 60px)",
+          // Make iframe larger to compensate for scale-down
+          width: `${100 / SCALE}%`,
+          height: `${100 / SCALE}%`,
+          // Scale down — video fills container but controls appear smaller
+          transform: `scale(${SCALE})`,
+          transformOrigin: "top left",
           border: "none",
         }}
       />
