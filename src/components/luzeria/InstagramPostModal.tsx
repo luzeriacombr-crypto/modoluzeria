@@ -67,9 +67,21 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
 }
 
 function VideoPlayer({ fileId }: { fileId: string }) {
-  const [error, setError] = useState(false);
+  // Try direct Drive public URL first (works if file is shared "anyone with link")
+  // Falls back to proxy, then to iframe
+  const [src, setSrc] = useState(`https://drive.google.com/uc?export=download&id=${fileId}`);
+  const [fallbackLevel, setFallbackLevel] = useState(0);
 
-  if (error) {
+  function handleError() {
+    if (fallbackLevel === 0) {
+      setSrc(`/api/video/${fileId}`);
+      setFallbackLevel(1);
+    } else {
+      setFallbackLevel(2);
+    }
+  }
+
+  if (fallbackLevel === 2) {
     return (
       <iframe
         src={`https://drive.google.com/file/d/${fileId}/preview`}
@@ -82,11 +94,12 @@ function VideoPlayer({ fileId }: { fileId: string }) {
 
   return (
     <video
-      src={`/api/video/${fileId}`}
+      key={src}
+      src={src}
       className="absolute inset-0 w-full h-full object-contain"
       controls
       playsInline
-      onError={() => setError(true)}
+      onError={handleError}
     />
   );
 }
