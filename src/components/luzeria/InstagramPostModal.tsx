@@ -67,20 +67,10 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
 }
 
 function VideoPlayer({ fileId }: { fileId: string }) {
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [loading, setLoading] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    setLoading(true);
-    fetch(`/api/video-url/${fileId}`)
-      .then((r) => r.json())
-      .then((d) => { setVideoUrl(d.url); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [fileId]);
 
   const toggle = useCallback(() => {
     const v = videoRef.current;
@@ -96,16 +86,14 @@ function VideoPlayer({ fileId }: { fileId: string }) {
     setProgress(Number(e.target.value));
   }, []);
 
-  if (loading) return <div className="w-full h-full bg-black grid place-items-center"><div className="size-10 rounded-full border-2 border-white/30 border-t-white animate-spin" /></div>;
-  if (!videoUrl) return <div className="w-full h-full bg-black grid place-items-center text-white/50 text-sm">Vídeo indisponível</div>;
-
   return (
     <div className="relative w-full h-full bg-black" onClick={toggle}>
       <video
         ref={videoRef}
-        src={videoUrl}
+        src={`/api/video/${fileId}`}
         className="w-full h-full object-contain"
         playsInline
+        autoPlay
         onTimeUpdate={() => setProgress(videoRef.current?.currentTime ?? 0)}
         onLoadedMetadata={() => setDuration(videoRef.current?.duration ?? 0)}
         onPlay={() => setPlaying(true)}
