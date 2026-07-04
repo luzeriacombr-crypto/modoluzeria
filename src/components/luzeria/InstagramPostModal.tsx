@@ -67,57 +67,23 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
 }
 
 function VideoPlayer({ fileId }: { fileId: string }) {
-  const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  const toggle = useCallback(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) { v.play(); setPlaying(true); }
-    else { v.pause(); setPlaying(false); }
-  }, []);
-
-  const seek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.currentTime = Number(e.target.value);
-    setProgress(Number(e.target.value));
-  }, []);
-
+  // Embed Drive iframe but clip the bottom toolbar (~56px) with overflow hidden
+  const embedUrl = `https://drive.google.com/file/d/${fileId}/preview?rm=minimal`;
   return (
-    <div className="relative w-full h-full bg-black" onClick={toggle}>
-      <video
-        ref={videoRef}
-        src={`/api/video/${fileId}`}
-        className="w-full h-full object-contain"
-        playsInline
-        autoPlay
-        onTimeUpdate={() => setProgress(videoRef.current?.currentTime ?? 0)}
-        onLoadedMetadata={() => setDuration(videoRef.current?.duration ?? 0)}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
+    <div className="w-full h-full bg-black overflow-hidden" style={{ position: "relative" }}>
+      <iframe
+        src={embedUrl}
+        allow="autoplay"
+        allowFullScreen
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "calc(100% + 56px)", // extend past container to hide Drive bottom bar
+          border: "none",
+        }}
       />
-      {/* Minimal controls — bottom bar */}
-      <div
-        className="absolute bottom-0 left-0 right-0 px-3 pb-2 pt-6 flex items-center gap-3"
-        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button onClick={toggle} className="text-white shrink-0">
-          {playing ? <Pause size={20} className="fill-white" /> : <Play size={20} className="fill-white ml-0.5" />}
-        </button>
-        <input
-          type="range"
-          min={0}
-          max={duration || 1}
-          step={0.1}
-          value={progress}
-          onChange={seek}
-          className="flex-1 h-1 accent-white cursor-pointer"
-        />
-      </div>
     </div>
   );
 }
