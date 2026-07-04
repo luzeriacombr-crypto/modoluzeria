@@ -67,26 +67,8 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
 }
 
 function VideoPlayer({ fileId }: { fileId: string }) {
-  const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [error, setError] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
-  const toggle = useCallback(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) { v.play().catch(() => {}); }
-    else { v.pause(); }
-  }, []);
-
-  const seek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.currentTime = Number(e.target.value);
-  }, []);
-
-  // Fallback to iframe if proxy fails
   if (error) {
     return (
       <iframe
@@ -99,35 +81,13 @@ function VideoPlayer({ fileId }: { fileId: string }) {
   }
 
   return (
-    <div className="absolute inset-0 bg-black" onClick={toggle}>
-      <video
-        ref={videoRef}
-        src={`/api/video/${fileId}`}
-        className="w-full h-full object-contain"
-        playsInline
-        muted={false}
-        onTimeUpdate={() => setProgress(videoRef.current?.currentTime ?? 0)}
-        onLoadedMetadata={() => { setDuration(videoRef.current?.duration ?? 0); videoRef.current?.play().catch(() => {}); }}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onError={() => setError(true)}
-      />
-      {/* Minimal controls */}
-      <div
-        className="absolute bottom-0 left-0 right-0 px-3 pb-2 pt-8 flex items-center gap-3"
-        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button onClick={toggle} className="text-white shrink-0">
-          {playing ? <Pause size={20} className="fill-white" /> : <Play size={20} className="fill-white ml-0.5" />}
-        </button>
-        <input
-          type="range" min={0} max={duration || 1} step={0.1} value={progress}
-          onChange={seek}
-          className="flex-1 h-1 accent-white cursor-pointer"
-        />
-      </div>
-    </div>
+    <video
+      src={`/api/video/${fileId}`}
+      className="absolute inset-0 w-full h-full object-contain"
+      controls
+      playsInline
+      onError={() => setError(true)}
+    />
   );
 }
 
