@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Heart, MessageCircle, Play, Send, Share2, X, Bookmark, ExternalLink, Calendar, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, MessageCircle, Pause, Play, Send, Share2, X, Bookmark, Calendar, Pencil } from "lucide-react";
 import { driveThumbnailQO, publicDriveThumbQO } from "@/lib/luzeria/queries";
 
 /* ------------ Shared types ------------ */
@@ -63,6 +63,74 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
     <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
   ) : (
     <div className="w-full h-full bg-neutral-100 animate-pulse" />
+  );
+}
+
+function VideoPlayer({ fileId }: { fileId: string }) {
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/video-url/${fileId}`)
+      .then((r) => r.json())
+      .then((d) => { setVideoUrl(d.url); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [fileId]);
+
+  const toggle = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) { v.play(); setPlaying(true); }
+    else { v.pause(); setPlaying(false); }
+  }, []);
+
+  const seek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = Number(e.target.value);
+    setProgress(Number(e.target.value));
+  }, []);
+
+  if (loading) return <div className="w-full h-full bg-black grid place-items-center"><div className="size-10 rounded-full border-2 border-white/30 border-t-white animate-spin" /></div>;
+  if (!videoUrl) return <div className="w-full h-full bg-black grid place-items-center text-white/50 text-sm">Vídeo indisponível</div>;
+
+  return (
+    <div className="relative w-full h-full bg-black" onClick={toggle}>
+      <video
+        ref={videoRef}
+        src={videoUrl}
+        className="w-full h-full object-contain"
+        playsInline
+        onTimeUpdate={() => setProgress(videoRef.current?.currentTime ?? 0)}
+        onLoadedMetadata={() => setDuration(videoRef.current?.duration ?? 0)}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+      />
+      {/* Minimal controls — bottom bar */}
+      <div
+        className="absolute bottom-0 left-0 right-0 px-3 pb-2 pt-6 flex items-center gap-3"
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button onClick={toggle} className="text-white shrink-0">
+          {playing ? <Pause size={20} className="fill-white" /> : <Play size={20} className="fill-white ml-0.5" />}
+        </button>
+        <input
+          type="range"
+          min={0}
+          max={duration || 1}
+          step={0.1}
+          value={progress}
+          onChange={seek}
+          className="flex-1 h-1 accent-white cursor-pointer"
+        />
+      </div>
+    </div>
   );
 }
 
@@ -182,14 +250,11 @@ export function InstagramPostModal({
         {/* LEFT: media (4:5) */}
         <div className="relative bg-black md:flex-[0_0_460px] w-full md:w-[460px]">
           <div className="relative w-full" style={{ aspectRatio: "4 / 5" }}>
-            {/* Video iframe player */}
-            {playingVideo && driveEmbedUrl ? (
-              <iframe
-                src={driveEmbedUrl}
-                className="absolute inset-0 w-full h-full"
-                allow="autoplay"
-                allowFullScreen
-              />
+            {/* Video player */}
+            {playingVideo && current?.driveFileId ? (
+              <div className="absolute inset-0">
+                <VideoPlayer fileId={current.driveFileId} />
+              </div>
             ) : current ? (
               <FileThumb
                 file={current}
