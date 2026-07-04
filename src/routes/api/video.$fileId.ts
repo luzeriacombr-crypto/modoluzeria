@@ -2,39 +2,38 @@ import { createAPIFileRoute } from "@tanstack/react-start/api";
 import { getAccessToken } from "@/lib/luzeria/drive.functions";
 
 export const APIRoute = createAPIFileRoute("/api/video/$fileId")({
-  GET: async ({ request, params }) => {
+  GET: async ({ params }) => {
     const { fileId } = params;
     if (!fileId) return new Response("missing fileId", { status: 400 });
 
     try {
       const token = await getAccessToken();
 
-      const upstream: Record<string, string> = {
-        Authorization: `Bearer ${token}`,
-      };
-      const range = request.headers.get("range");
-      if (range) upstream["Range"] = range;
-
+      // Follow redirects — Drive may redirect to a Google CDN URL
       const res = await fetch(
         `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true&acknowledgeAbuse=true`,
-        { headers: upstream },
+        { headers: { Authorization: `Bearer ${token}` }, redirect: "follow" },
       );
 
-      if (!res.ok && res.status !== 206) {
-        return new Response("video fetch failed", { status: res.status });
+      if (!res.ok) return new Response("fetch failed", { status: res.status });
+
+      // If Drive redirected to a CDN URL, redirect the browser there directly
+      // so the browser can make native range requests to Google's CDN
+      const finalUrl = res.url;
+      const originalUrl = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`;
+      if (!finalUrl.startsWith(originalUrl)) {
+        return Response.redirect(finalUrl, 302);
       }
 
-      const headers: Record<string, string> = {
-        "Content-Type": res.headers.get("content-type") ?? "video/mp4",
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "public, max-age=3600",
-      };
-      const cl = res.headers.get("content-length");
-      if (cl) headers["Content-Length"] = cl;
-      const cr = res.headers.get("content-range");
-      if (cr) headers["Content-Range"] = cr;
-
-      return new Response(res.body, { status: res.status, headers });
+      // No redirect — stream the response (works for small files)
+      return new Response(res.body, {
+        status: 200,
+        headers: {
+          "Content-Type": res.headers.get("content-type") ?? "video/mp4",
+          "Accept-Ranges": "bytes",
+          "Cache-Control": "public, max-age=3600",
+        },
+      });
     } catch {
       return new Response("error", { status: 500 });
     }
