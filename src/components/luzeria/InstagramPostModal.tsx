@@ -67,22 +67,31 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
 }
 
 function VideoPlayer({ fileId }: { fileId: string }) {
-  // &confirm=t bypasses Drive's large-file antivirus warning page
   const [src, setSrc] = useState(
     `https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`
   );
   const [failed, setFailed] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [showIcon, setShowIcon] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const iconTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function tap() {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) { v.play().catch(() => {}); }
+    else { v.pause(); }
+    // Flash icon briefly
+    setShowIcon(true);
+    if (iconTimer.current) clearTimeout(iconTimer.current);
+    iconTimer.current = setTimeout(() => setShowIcon(false), 800);
+  }
 
   if (failed) {
     return (
       <div className="absolute inset-0 bg-black grid place-items-center text-white/50 text-sm px-4 text-center">
-        Não foi possível carregar o vídeo.<br />
-        <a
-          href={`https://drive.google.com/file/d/${fileId}/view`}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-2 underline text-white/70"
-        >
+        Não foi possível carregar o vídeo.
+        <a href={`https://drive.google.com/file/d/${fileId}/view`} target="_blank" rel="noreferrer" className="mt-2 underline text-white/70 block">
           Abrir no Drive
         </a>
       </div>
@@ -90,21 +99,39 @@ function VideoPlayer({ fileId }: { fileId: string }) {
   }
 
   return (
-    <video
-      key={src}
-      src={src}
-      className="absolute inset-0 w-full h-full object-contain"
-      controls
-      playsInline
-      onError={() => {
-        if (src.includes("confirm=t")) {
-          // Try proxy as last resort
-          setSrc(`/api/video/${fileId}`);
-        } else {
-          setFailed(true);
-        }
-      }}
-    />
+    <div className="absolute inset-0 bg-black" onClick={tap}>
+      <video
+        ref={videoRef}
+        key={src}
+        src={src}
+        className="w-full h-full object-contain"
+        playsInline
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onError={() => {
+          if (src.includes("confirm=t")) { setSrc(`/api/video/${fileId}`); }
+          else { setFailed(true); }
+        }}
+      />
+      {/* Brief play/pause icon on tap */}
+      {showIcon && (
+        <div className="absolute inset-0 grid place-items-center pointer-events-none">
+          <div className="size-14 rounded-full bg-black/50 backdrop-blur grid place-items-center">
+            {playing
+              ? <Pause size={22} className="text-white fill-white" />
+              : <Play size={22} className="text-white fill-white ml-1" />}
+          </div>
+        </div>
+      )}
+      {/* Small play button when paused and no icon showing */}
+      {!playing && !showIcon && (
+        <div className="absolute inset-0 grid place-items-center pointer-events-none">
+          <div className="size-14 rounded-full bg-black/50 backdrop-blur grid place-items-center">
+            <Play size={22} className="text-white fill-white ml-1" />
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
