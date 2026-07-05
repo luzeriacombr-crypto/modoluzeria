@@ -58,7 +58,10 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
   const internalQ = useQuery({
     ...driveThumbnailQO(file.driveFileId, mode.kind === "internal" && enabled),
   });
-  const url = fallback ?? (mode.kind === "public" ? (file.thumbUrl ?? null) : null) ?? internalQ.data?.dataUrl ?? null;
+  let url: string | null = null;
+  if (fallback) url = fallback;
+  else if (mode.kind === "public" && file.thumbUrl) url = file.thumbUrl;
+  else if (internalQ.data?.dataUrl) url = internalQ.data.dataUrl;
   return url ? (
     <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
   ) : (
