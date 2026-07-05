@@ -15,16 +15,34 @@ import { MobileNav } from "./MobileNav";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ClientFichaPanel } from "./ClientFichaPanel";
 import { AppTour } from "./AppTour";
+import { LuzeriaLoader } from "./LuzeriaLoader";
 import luzeriaLogo from "@/assets/luzeria-sidebar.png";
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function App() {
   const me = useMe();
+  const qc = useQueryClient();
   const { sidebarHidden, toggleSidebar } = useUI();
   const [creating, setCreating] = useState<{ category?: string } | null>(null);
   const [customFor, setCustomFor] = useState<Client | null>(null);
 
+  // Supabase Realtime — invalidate month cache when team edits content items
+  useEffect(() => {
+    const channel = supabase
+      .channel("content-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "content_items" }, () => {
+        qc.invalidateQueries({ queryKey: ["month"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "content_comments" }, () => {
+        qc.invalidateQueries({ queryKey: ["month"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [qc]);
+
   if (me.isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] text-white/40 text-sm">Carregando…</div>;
+    return <LuzeriaLoader />;
   }
 
   if (me.data && !me.data.active) {

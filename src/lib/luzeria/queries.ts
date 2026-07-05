@@ -331,7 +331,34 @@ export function useApi() {
       },
     }),
     updateItem: useMutation({ mutationFn: useServerFn(updateItem), onSuccess: invalidateAll }),
-    setItemStatus: useMutation({ mutationFn: useServerFn(setItemStatus), onSuccess: invalidateAll }),
+    setItemStatus: useMutation({
+      mutationFn: useServerFn(setItemStatus),
+      onMutate: async (vars: any) => {
+        const { id, status } = vars?.data ?? vars ?? {};
+        if (!id || !status) return;
+        await qc.cancelQueries({ queryKey: ["month"] });
+        const snapshots: Array<{ key: unknown[]; data: unknown }> = [];
+        qc.getQueriesData<any>({ queryKey: ["month"] }).forEach(([key, data]) => {
+          if (!data) return;
+          snapshots.push({ key: key as unknown[], data });
+          const categories = ["posts", "reels", "outros", "gravacoes", "roteiros", "sistemas"];
+          const updated = { ...data };
+          categories.forEach((cat) => {
+            if (Array.isArray(data[cat])) {
+              updated[cat] = data[cat].map((item: any) =>
+                item.id === id ? { ...item, status } : item
+              );
+            }
+          });
+          qc.setQueryData(key as unknown[], updated);
+        });
+        return { snapshots };
+      },
+      onError: (_e: unknown, _v: unknown, ctx: any) => {
+        ctx?.snapshots?.forEach(({ key, data }: any) => qc.setQueryData(key, data));
+      },
+      onSuccess: invalidateAll,
+    }),
     addAssignee: useMutation({ mutationFn: useServerFn(addAssignee), onSuccess: invalidateAll }),
     removeAssignee: useMutation({ mutationFn: useServerFn(removeAssignee), onSuccess: invalidateAll }),
     addComment: useMutation({ mutationFn: useServerFn(addComment), onSuccess: invalidateAll }),
