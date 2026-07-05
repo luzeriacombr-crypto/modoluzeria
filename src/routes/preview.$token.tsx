@@ -9,7 +9,48 @@ import { InstagramPostModal, type IGModalItem } from "@/components/luzeria/Insta
 
 export const Route = createFileRoute("/preview/$token")({
   component: PublicPreviewPage,
-  ssr: false,
+  loader: async ({ params, context }) => {
+    try {
+      return await (context as any).queryClient.fetchQuery(publicFeedQO(params.token));
+    } catch {
+      return null;
+    }
+  },
+  head: ({ loaderData }) => {
+    const client = loaderData?.client;
+    const items = loaderData?.items ?? [];
+    const month = loaderData?.month;
+
+    const clientName = client?.name ?? "Preview";
+    const monthLabel = month?.key ? formatMonth(month.key) : "";
+    const title = monthLabel
+      ? `Preview — ${clientName} · ${monthLabel}`
+      : `Preview — ${clientName}`;
+    const description = `Confira e aprove as publicações de ${monthLabel || "este mês"}.`;
+
+    const ogImage =
+      items.find((i: any) => i.gridThumb)?.gridThumb ??
+      items.flatMap((i: any) => i.files).find((f: any) => f.thumbUrl)?.thumbUrl ??
+      null;
+
+    const meta: Record<string, string>[] = [
+      { title },
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: ogImage ? "summary_large_image" : "summary" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+    ];
+
+    if (ogImage) {
+      meta.push({ property: "og:image", content: ogImage });
+      meta.push({ name: "twitter:image", content: ogImage });
+    }
+
+    return { meta };
+  },
 });
 
 function PublicPreviewPage() {
