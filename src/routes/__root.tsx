@@ -12,7 +12,7 @@ import { setOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
+import { reportAppError } from "../lib/error-reporting";
 
 function NotFoundComponent() {
   return (
@@ -40,7 +40,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    reportAppError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
   return (
@@ -81,12 +81,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Luzeria Mode" },
       { name: "description", content: "Gestão de conteúdo, equipe e entregas, tudo no modo Luzeria." },
-      { name: "author", content: "Lovable" },
+      { name: "author", content: "Luzeria Estúdio" },
       { property: "og:title", content: "Luzeria Mode" },
       { property: "og:description", content: "Gestão de conteúdo, equipe e entregas, tudo no modo Luzeria." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Luzeria Mode" },
       { name: "twitter:description", content: "Gestão de conteúdo, equipe e entregas, tudo no modo Luzeria." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/e7QY06Epe0dgUbddzZcyI2ZSr3I2/social-images/social-1782677722941-Frame_1_(1).webp" },
