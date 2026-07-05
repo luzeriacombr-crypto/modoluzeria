@@ -69,9 +69,10 @@ SELECT jobname, schedule, active, command
 **Enums:** `app_role` (`master`, `setor`, `member`).
 
 **Secrets usados pela app:**
-- `GOOGLE_DRIVE_API_KEY`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN` (OAuth do Google Drive — não é uma API key única; ver `src/lib/luzeria/drive.functions.ts`)
 - `ONESIGNAL_REST_API_KEY`
-- `LOVABLE_API_KEY` (opcional — só se continuar usando o AI Gateway do Lovable)
+
+Nota: `LOVABLE_API_KEY` não é usada em nenhum lugar do código (confirmado por busca no repo) — não precisa migrar.
 
 ---
 
@@ -196,9 +197,8 @@ function usa (checar o `index.ts` dela).
 ### I. Configurar secrets no seu Supabase novo
 
 Project Settings → Edge Functions → Secrets:
-- `GOOGLE_DRIVE_API_KEY`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`
 - `ONESIGNAL_REST_API_KEY`
-- `LOVABLE_API_KEY` (opcional)
 
 ### J. Trocar env vars na Vercel
 
@@ -209,14 +209,16 @@ Substituir estas variáveis pelas do seu projeto novo:
 | `SUPABASE_URL` | Project URL |
 | `SUPABASE_PUBLISHABLE_KEY` | anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | service_role key |
-| `SUPABASE_ANON_KEY` | anon key (compat) |
 | `SUPABASE_PROJECT_ID` | Project Ref |
 | `VITE_SUPABASE_URL` | mesma da URL |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | mesma da anon |
 | `VITE_SUPABASE_PROJECT_ID` | mesmo do ref |
-| `GOOGLE_DRIVE_API_KEY` | copiar atual |
+| `GOOGLE_CLIENT_ID` | copiar atual (Google Cloud Console) |
+| `GOOGLE_CLIENT_SECRET` | copiar atual (Google Cloud Console) |
+| `GOOGLE_REFRESH_TOKEN` | copiar atual |
 | `ONESIGNAL_REST_API_KEY` | copiar atual (e rotacionar depois) |
-| `LOVABLE_API_KEY` | copiar atual (se manter AI Gateway) |
+
+Nota: `SUPABASE_ANON_KEY` e `LOVABLE_API_KEY` não são usadas no código — não precisam ser configuradas.
 
 Rebuild na Vercel. Fazer o cut-over primeiro em preview.
 
@@ -269,12 +271,16 @@ Rebuild na Vercel. Fazer o cut-over primeiro em preview.
 - **Formato de chaves Supabase (`sb_publishable_*` vs JWT antigo):** o código
   em `src/integrations/supabase/client.ts` (função `isNewSupabaseApiKey`) já
   lida com os dois formatos. Qualquer um funciona.
-- **Google Drive Picker / OAuth do Drive:** se o app usa Drive além da
-  `GOOGLE_DRIVE_API_KEY`, verificar se há Client ID separado configurado no
-  Google Console e se ele aceita o novo domínio.
-- **Realtime:** se você usa `supabase.channel(...)` em algum lugar, o novo
-  projeto já vem com Realtime ligado — só confirmar que as tabelas relevantes
-  estão nas publications (`supabase_realtime`).
+- **Google Drive:** a autenticação é 100% OAuth (`GOOGLE_CLIENT_ID` +
+  `GOOGLE_CLIENT_SECRET` + `GOOGLE_REFRESH_TOKEN`, ver `getAccessToken()` em
+  `src/lib/luzeria/drive.functions.ts`). Não há API key separada. O Client ID
+  precisa ter o domínio novo (Vercel) autorizado no Google Cloud Console se
+  o domínio mudar.
+- **Realtime:** o app usa `supabase.channel("content-realtime")` em
+  `src/components/luzeria/App.tsx` (escuta `content_items` e
+  `content_comments`). Confirmar que essas duas tabelas estão na publication
+  `supabase_realtime` do projeto novo — senão as atualizações ao vivo da
+  equipe param de funcionar silenciosamente.
 
 ---
 
