@@ -799,7 +799,7 @@ export const setItemStatus = createServerFn({ method: "POST" })
     }).then(() => {});
 
     // Push notification when item is approved — notify all assignees
-    if (data.status === "APROVADO" && assigneeIds.length > 0) {
+    if (data.status === "PRONTO_PARA_PUBLICAR" && assigneeIds.length > 0) {
       try {
         const { data: item } = await context.supabase
           .from("content_items").select("title").eq("id", data.id).maybeSingle();
@@ -900,7 +900,7 @@ export const addContentItem = createServerFn({ method: "POST" })
     const dbType = SUBTYPE_MAP[data.type] ? "outros" : data.type;
     const subType = SUBTYPE_MAP[data.type] ?? null;
     const { data: maxRow } = await context.supabase
-      .from("content_items").select("idx").eq("month_id", month.id).eq("type", dbType)
+      .from("content_items").select("idx").eq("month_id", month.id).eq("type", dbType as "outros" | "post" | "reel")
       .order("idx", { ascending: false }).limit(1).maybeSingle();
     const nextIdx = ((maxRow as any)?.idx ?? 0) + 1;
     const typeLabels: Record<string, string> = { post: "Post", reel: "Reel", outros: "Item", gravacao: "Gravação", roteiro: "Roteiro", sistema: "Sistema" };
