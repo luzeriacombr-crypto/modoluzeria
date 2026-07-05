@@ -8,7 +8,7 @@ import viteReact from "@vitejs/plugin-react";
 // Reproduces the production pipeline: Tailwind, tsconfig paths, TanStack
 // Start (SSR, server entry = src/server.ts), Nitro (Vercel preset) on build,
 // and React. Dev-only Lovable editor plugins were dropped — not needed to run.
-export default defineConfig(async ({ command }) => {
+export default defineConfig(async ({ command, mode }) => {
   const plugins = [
     tailwindcss(),
     tsConfigPaths({ projects: ["./tsconfig.json"] }),
@@ -24,8 +24,10 @@ export default defineConfig(async ({ command }) => {
     }),
   ];
 
-  // Nitro only runs on build; the Vercel preset produces the .vercel output.
-  if (command === "build") {
+  // Nitro/Vercel preset only for real production builds. Lovable's harness
+  // runs `vite build --mode development` and then checks for `dist/`, so we
+  // skip Nitro in that mode and let Vite emit the standard dist output.
+  if (command === "build" && mode !== "development") {
     const { nitro } = await import("nitro/vite");
     plugins.push(nitro({ preset: "vercel" }));
   }
