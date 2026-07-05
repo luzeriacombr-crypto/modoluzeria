@@ -28,10 +28,7 @@ export const Route = createFileRoute("/preview/$token")({
       : `Preview — ${clientName}`;
     const description = `Confira e aprove as publicações de ${monthLabel || "este mês"}.`;
 
-    const ogImage =
-      items.find((i: any) => i.gridThumb)?.gridThumb ??
-      items.flatMap((i: any) => i.files).find((f: any) => f.thumbUrl)?.thumbUrl ??
-      null;
+    const ogImage = "https://modo.luzeriaestudio.com.br/og-preview.jpg";
 
     const meta: Record<string, string>[] = [
       { title },
@@ -39,15 +36,12 @@ export const Route = createFileRoute("/preview/$token")({
       { property: "og:title", content: title },
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: ogImage ? "summary_large_image" : "summary" },
+      { property: "og:image", content: ogImage },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: title },
       { name: "twitter:description", content: description },
+      { name: "twitter:image", content: ogImage },
     ];
-
-    if (ogImage) {
-      meta.push({ property: "og:image", content: ogImage });
-      meta.push({ name: "twitter:image", content: ogImage });
-    }
 
     return { meta };
   },
