@@ -11,6 +11,7 @@ import { formatMonth, shortMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { CLEANING_TASKS } from "./CleaningView";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
+import { getDailyGreeting } from "@/lib/luzeria/daily-greeting";
 
 export function MyTasks() {
   const me = useMe().data;
@@ -59,18 +60,23 @@ export function MyTasks() {
 
   const targetProfile = profiles.find((p) => p.id === targetId);
   const [view, setView] = useState<"list" | "week">("list");
+  const dailyGreeting = getDailyGreeting();
 
   return (
     <div className="p-10 max-w-5xl mx-auto" data-tour="my-tasks">
       <div className="flex items-end justify-between mb-8">
         <div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2"
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[15px] font-bold uppercase tracking-wider mb-1"
             style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
             Olá, {(() => {
               const raw = (me?.name ?? "você").trim().split(" ")[0];
               return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
             })()}! 🤩
           </div>
+          <p className="italic text-white/50 text-xs mb-2">
+            Agora você sabe dizer "{dailyGreeting.word}" em{" "}
+            <span className="font-bold italic">{dailyGreeting.language} ({dailyGreeting.country})</span>.
+          </p>
           <h1 className="text-[24px] sm:text-[32px] font-bold text-white leading-none tracking-tight whitespace-nowrap">Coisas para fazer</h1>
           <p className="text-sm text-white/50 mt-2">
             {tasks.length} {tasks.length === 1 ? "tarefa atribuída" : "tarefas atribuídas"}
