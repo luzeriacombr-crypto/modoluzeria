@@ -126,13 +126,13 @@ Se o dump vier separando schema e dados, aplicar só a parte de `COPY`/`INSERT`
 depois que o passo C rodou (senão dá conflito de `CREATE TABLE`).
 
 Storage:
-1. Criar os buckets no dashboard → Storage: `avatars` e `reel-covers`,
-   **privados**.
-2. Upload:
-   ```bash
-   supabase storage cp --recursive ./storage-backup/avatars      ss:///avatars
-   supabase storage cp --recursive ./storage-backup/reel-covers  ss:///reel-covers
-   ```
+1. Buckets `avatars` e `reel-covers` já criados (privados) via SQL direto em
+   `storage.buckets`.
+2. **Decisão do time (2026-07-05): não migrar os arquivos antigos.** O
+   download pelo painel do Lovable Cloud estava com bug (pastas retornando
+   "0 files"). Como avatar é trivial de reenviar e as capas de reel podem ser
+   recriadas sob demanda, optou-se por deixar os buckets vazios e deixar a
+   equipe reenviar/recriar o que precisar depois do cut-over.
 
 ### E. Recriar o trigger em `auth.users`
 
