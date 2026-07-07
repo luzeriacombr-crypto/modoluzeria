@@ -86,13 +86,10 @@ function AuthPage() {
           {mode === "signin" ? "Não tem conta? Cadastrar" : "Já tem conta? Entrar"}
         </button>
       </div>
-      <div className="relative z-10 mt-8 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 max-w-sm text-center">
-        {["Somos criadores", "Simplifique ao máximo", "Sirva primeiro"].map((value, i, arr) => (
-          <span key={value} className="flex items-center gap-3">
-            <span className="text-[11px] font-medium uppercase tracking-[0.15em]" style={{ color: "rgba(200,212,78,0.75)" }}>
-              {value}
-            </span>
-            {i < arr.length - 1 && <span className="h-1 w-1 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.25)" }} />}
+      <div className="relative z-10 mt-8 flex flex-col items-center gap-1.5 text-center">
+        {["Somos criadores", "Simplifique ao máximo", "Sirva primeiro"].map((value) => (
+          <span key={value} className="text-[11px] font-medium uppercase tracking-[0.15em]" style={{ color: "rgba(200,212,78,0.75)" }}>
+            {value}
           </span>
         ))}
       </div>
