@@ -2,7 +2,7 @@ export type Greeting = { word: string; language: string; country: string };
 
 const GREETINGS: Greeting[] = [
   { word: "Olá", language: "português", country: "Brasil" },
-  { word: "Hello", language: "inglês", country: "Estados Unidos" },
+  { word: "Hi", language: "inglês", country: "Estados Unidos" },
   { word: "Hola", language: "espanhol", country: "Espanha" },
   { word: "Bonjour", language: "francês", country: "França" },
   { word: "Ciao", language: "italiano", country: "Itália" },

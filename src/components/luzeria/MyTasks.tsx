@@ -68,14 +68,14 @@ export function MyTasks() {
         <div>
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[15px] font-bold uppercase tracking-wider mb-1"
             style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
-            Olá, {(() => {
+            {dailyGreeting.word}, {(() => {
               const raw = (me?.name ?? "você").trim().split(" ")[0];
               return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
             })()}! 🤩
           </div>
           <p className="italic text-white/50 text-xs mb-2">
-            Agora você sabe dizer "{dailyGreeting.word}" em{" "}
-            <span className="font-bold italic">{dailyGreeting.language} ({dailyGreeting.country})</span>.
+            Agora você sabe falar "Olá" em{" "}
+            <span className="font-bold italic">{dailyGreeting.language}</span>!
           </p>
           <h1 className="text-[24px] sm:text-[32px] font-bold text-white leading-none tracking-tight whitespace-nowrap">Coisas para fazer</h1>
           <p className="text-sm text-white/50 mt-2">
