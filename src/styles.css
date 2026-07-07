@@ -462,7 +462,7 @@
   opacity: 0.55;
   top: -10%;
   left: -10%;
-  animation: lz-blob-lime 10s ease-in-out infinite alternate;
+  animation: lz-blob-lime 5s ease-in-out infinite alternate;
 }
 .lz-auth-bg__blob--green {
   width: 70vw;
@@ -473,7 +473,7 @@
   opacity: 0.45;
   bottom: -15%;
   right: -15%;
-  animation: lz-blob-green 12s ease-in-out infinite alternate;
+  animation: lz-blob-green 6s ease-in-out infinite alternate;
 }
 .lz-auth-bg__blob--dark {
   width: 80vw;
@@ -484,7 +484,7 @@
   opacity: 0.7;
   top: 35%;
   left: 25%;
-  animation: lz-blob-dark 8s ease-in-out infinite alternate;
+  animation: lz-blob-dark 4s ease-in-out infinite alternate;
 }
 @keyframes lz-blob-lime {
   0% { transform: translate(0, 0); }
