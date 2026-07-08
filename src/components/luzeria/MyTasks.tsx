@@ -75,7 +75,8 @@ export function MyTasks() {
           </div>
           <p className="italic text-white/50 text-xs mb-2">
             Agora você sabe falar "Olá" em{" "}
-            <span className="font-bold italic">{dailyGreeting.language}</span>!
+            <span className="font-bold italic">{dailyGreeting.language}</span>, língua natural{" "}
+            <span className="font-bold italic">{dailyGreeting.countryPhrase}</span> {dailyGreeting.flag}!
           </p>
           <h1 className="text-[24px] sm:text-[32px] font-bold text-white leading-none tracking-tight whitespace-nowrap">Coisas para fazer</h1>
           <p className="text-sm text-white/50 mt-2">
