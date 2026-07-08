@@ -587,19 +587,26 @@ export const getDriveThumbnail = createServerFn({ method: "GET" })
       size: z.number().int().min(64).max(1024).optional(),
     }).parse(d))
   .handler(async ({ data }) => {
-    const meta: any = await driveFetch(
-      `/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=thumbnailLink,mimeType&supportsAllDrives=true`,
-    );
-    const link: string | undefined = meta?.thumbnailLink;
-    if (!link) return { dataUrl: null as string | null };
-    const sz = data.size ?? 320;
-    const url = link.replace(/=s\d+(-[a-z]+)?$/i, `=s${sz}`);
-    const res = await fetch(url);
-    if (!res.ok) return { dataUrl: null as string | null };
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.byteLength > 2_500_000) return { dataUrl: null as string | null };
-    const ct = res.headers.get("content-type") ?? "image/jpeg";
-    return { dataUrl: `data:${ct};base64,${buf.toString("base64")}` };
+    try {
+      const meta: any = await driveFetch(
+        `/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=thumbnailLink,mimeType&supportsAllDrives=true`,
+      );
+      const link: string | undefined = meta?.thumbnailLink;
+      if (!link) return { dataUrl: null as string | null };
+      const sz = data.size ?? 320;
+      const url = link.replace(/=s\d+(-[a-z]+)?$/i, `=s${sz}`);
+      const res = await fetch(url);
+      if (!res.ok) return { dataUrl: null as string | null };
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (buf.byteLength > 2_500_000) return { dataUrl: null as string | null };
+      const ct = res.headers.get("content-type") ?? "image/jpeg";
+      return { dataUrl: `data:${ct};base64,${buf.toString("base64")}` };
+    } catch (e) {
+      // Drive API hiccups (rate limits, transient errors) shouldn't crash the
+      // request — fall back to no thumbnail so the client can retry.
+      console.error("[getDriveThumbnail] failed:", e);
+      return { dataUrl: null as string | null };
+    }
   });
 
 /**

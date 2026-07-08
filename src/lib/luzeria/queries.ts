@@ -253,7 +253,7 @@ export const driveThumbnailQO = (fileId: string | null | undefined, enabled = tr
     enabled: !!fileId && enabled,
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,
-    retry: false,
+    retry: 2,
   });
 
 export const clientDeliveriesFolderQO = (clientId: string | null) =>
