@@ -29,7 +29,7 @@ import {
 } from "./roadmap.functions";
 import {
   listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, detachItemFile,
-  getDriveThumbnail, getDriveFileBytes, reorderItemFiles,
+  getDriveThumbnail, getDriveFileBytes, reorderItemFiles, getGridThumbnails,
   getClientDeliveriesFolder, setClientDeliveriesFolder, clearClientDeliveriesFolder,
 } from "./drive.functions";
 import {
@@ -251,6 +251,18 @@ export const driveThumbnailQO = (fileId: string | null | undefined, enabled = tr
     queryKey: ["drive-thumb", fileId],
     queryFn: () => getDriveThumbnail({ data: { fileId: fileId! } }),
     enabled: !!fileId && enabled,
+    staleTime: 1000 * 60 * 30,
+    gcTime: 1000 * 60 * 60,
+    retry: 2,
+  });
+
+/** Batched thumbnail lookup for grids (e.g. feed preview) — one round trip
+ * for the whole grid instead of 2 round trips per cell. */
+export const gridThumbnailsQO = (itemIds: string[]) =>
+  queryOptions({
+    queryKey: ["grid-thumbs", [...itemIds].sort()],
+    queryFn: () => getGridThumbnails({ data: { itemIds } }),
+    enabled: itemIds.length > 0,
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,
     retry: 2,

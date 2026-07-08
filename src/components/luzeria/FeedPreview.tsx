@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy as CopyIcon, Film, Image as ImageIcon, Layers, RefreshCw, Share2 } from "lucide-react";
-import { itemFilesQO, driveThumbnailQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { itemFilesQO, gridThumbnailsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import type { Client, ContentItem, MonthData } from "@/lib/luzeria/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { InstagramPostModal, type IGModalItem } from "./InstagramPostModal";
@@ -59,6 +59,9 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
     return { items: orderedItems, placeholders: fill };
   }, [orderedItems]);
 
+  const itemIds = useMemo(() => cells.items.map((i) => i.id), [cells.items]);
+  const { data: gridThumbs } = useQuery(gridThumbnailsQO(itemIds));
+
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -98,6 +101,7 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
             <FeedCell
               key={item._key}
               item={item}
+              gridThumb={gridThumbs?.[item.id]}
               draggable={canDrag}
               isDragging={dragId === item.id}
               isOver={overId === item.id}
@@ -132,10 +136,11 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
 }
 
 function FeedCell({
-  item, draggable, isDragging, isOver,
+  item, gridThumb, draggable, isDragging, isOver,
   onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd, onOpen,
 }: {
   item: FeedItem;
+  gridThumb: { thumbUrl: string | null; fileCount: number } | undefined;
   draggable: boolean;
   isDragging: boolean;
   isOver: boolean;
@@ -147,12 +152,8 @@ function FeedCell({
   onOpen: () => void;
 }) {
   const cover = item.coverUrl ?? null;
-  const filesQ = useQuery({ ...itemFilesQO(item.id), enabled: !cover });
-  const first = filesQ.data?.[0];
-  const fileId = first?.driveFileId ?? null;
-  const thumbQ = useQuery(driveThumbnailQO(fileId, !!fileId && !cover));
-  const url = cover ?? thumbQ.data?.dataUrl ?? null;
-  const isCarousel = (filesQ.data?.length ?? 0) > 1;
+  const url = cover ?? gridThumb?.thumbUrl ?? null;
+  const isCarousel = (gridThumb?.fileCount ?? 0) > 1;
   const isReel = item.type === "reel";
 
   return (

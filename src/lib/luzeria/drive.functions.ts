@@ -353,6 +353,65 @@ export const listItemFiles = createServerFn({ method: "GET" })
     }));
   });
 
+/**
+ * Batched grid-thumbnail lookup for many items at once (e.g. the feed
+ * preview grid). Fetches item_files for all itemIds in one query, then
+ * resolves fresh Drive thumbnailLinks for every unique file in parallel —
+ * avoiding the N-items × 2-round-trips pattern that hits Drive's per-user
+ * rate limit when a grid has 15+ cells.
+ */
+export const getGridThumbnails = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemIds: string[] }) =>
+    z.object({ itemIds: z.array(z.string().uuid()).max(200) }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (data.itemIds.length === 0) return {};
+
+    const { data: rows, error } = await context.supabase
+      .from("item_files")
+      .select("item_id, drive_file_id")
+      .in("item_id", data.itemIds)
+      .order("sort_order")
+      .order("created_at");
+    if (error) throw new Error(error.message);
+
+    const filesByItem = new Map<string, string[]>();
+    const allDriveIds = new Set<string>();
+    for (const r of rows ?? []) {
+      const arr = filesByItem.get(r.item_id) ?? [];
+      arr.push(r.drive_file_id);
+      filesByItem.set(r.item_id, arr);
+      if (r.drive_file_id) allDriveIds.add(r.drive_file_id);
+    }
+
+    const thumbUrls = new Map<string, string>();
+    try {
+      const token = await getAccessToken();
+      await Promise.all(
+        [...allDriveIds].map(async (fileId) => {
+          try {
+            const res = await fetch(
+              `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=thumbnailLink&supportsAllDrives=true`,
+              { headers: { Authorization: `Bearer ${token}` } },
+            );
+            if (!res.ok) return;
+            const meta: any = await res.json();
+            const link: string | undefined = meta?.thumbnailLink;
+            if (link) thumbUrls.set(fileId, link.replace(/=s\d+(-[a-z]+)?$/i, "=s480"));
+          } catch { /* skip this file, others still resolve */ }
+        }),
+      );
+    } catch { /* skip all — Drive auth unavailable, cells fall back to placeholder */ }
+
+    const result: Record<string, { thumbUrl: string | null; fileCount: number }> = {};
+    for (const itemId of data.itemIds) {
+      const fileIds = filesByItem.get(itemId) ?? [];
+      const firstThumb = fileIds.length ? thumbUrls.get(fileIds[0]) ?? null : null;
+      result[itemId] = { thumbUrl: firstThumb, fileCount: fileIds.length };
+    }
+    return result;
+  });
+
 /* ============== SEARCH ============== */
 
 export const searchDriveFiles = createServerFn({ method: "GET" })
