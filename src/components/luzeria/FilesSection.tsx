@@ -71,6 +71,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
   const [linkValue, setLinkValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [missingClientId, setMissingClientId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Local optimistic order (array of file ids). Synced from server data.
@@ -127,27 +128,47 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     setError(null);
     setMissingClientId(null);
-    const file = e.target.files?.[0];
+    const selected = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!file) return;
-    if (file.size > MAX_UPLOAD_BYTES) {
-      setError(`Arquivo grande demais (máx. 25 MB). Faça upload direto no Drive e cole o link.`);
-      return;
+    if (selected.length === 0) return;
+
+    const tooBig = selected.filter((f) => f.size > MAX_UPLOAD_BYTES);
+    const toUpload = selected.filter((f) => f.size <= MAX_UPLOAD_BYTES);
+    if (tooBig.length > 0) {
+      setError(
+        tooBig.length === selected.length
+          ? `Arquivo${tooBig.length > 1 ? "s" : ""} grande${tooBig.length > 1 ? "s" : ""} demais (máx. 25 MB). Faça upload direto no Drive e cole o link.`
+          : `${tooBig.length} arquivo(s) ignorado(s) por serem grandes demais (máx. 25 MB): ${tooBig.map((f) => f.name).join(", ")}`,
+      );
     }
-    try {
-      const base64 = await fileToBase64(file);
-      await uploadDriveFile.mutateAsync({
-        data: {
-          itemId,
-          name: file.name,
-          mimeType: file.type || "application/octet-stream",
-          base64,
-        },
-      });
-    } catch (err: any) {
-      const p = parseDriveError(err?.message);
-      if (p.kind === "missing") setMissingClientId(p.clientId);
-      else setError(p.msg);
+    if (toUpload.length === 0) return;
+
+    setUploadProgress({ done: 0, total: toUpload.length });
+    const failed: string[] = [];
+    for (const file of toUpload) {
+      try {
+        const base64 = await fileToBase64(file);
+        await uploadDriveFile.mutateAsync({
+          data: {
+            itemId,
+            name: file.name,
+            mimeType: file.type || "application/octet-stream",
+            base64,
+          },
+        });
+        setUploadProgress((p) => (p ? { ...p, done: p.done + 1 } : p));
+      } catch (err: any) {
+        const p = parseDriveError(err?.message);
+        if (p.kind === "missing") {
+          setMissingClientId(p.clientId);
+          break;
+        }
+        failed.push(file.name);
+      }
+    }
+    setUploadProgress(null);
+    if (failed.length > 0) {
+      setError(`Falha ao enviar: ${failed.join(", ")}`);
     }
   }
 
@@ -167,7 +188,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
     }
   }
 
-  const busy = uploadDriveFile.isPending || attachDriveFile.isPending;
+  const busy = uploadProgress !== null || uploadDriveFile.isPending || attachDriveFile.isPending;
 
   return (
     <div>
@@ -276,12 +297,12 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
               onClick={() => fileRef.current?.click()}
               className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold bg-[#C8D44E] text-[#0D0D0D] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {uploadDriveFile.isPending ? (
+              {busy ? (
                 <Loader2 size={12} className="animate-spin" />
               ) : (
                 <Upload size={12} />
               )}
-              Enviar arquivo
+              {uploadProgress ? `Enviando ${uploadProgress.done}/${uploadProgress.total}...` : "Enviar arquivo"}
             </button>
             <button
               type="button"
@@ -294,6 +315,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
             <input
               ref={fileRef}
               type="file"
+              multiple
               hidden
               onChange={onUpload}
             />
@@ -349,8 +371,8 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
       )}
 
       <p className="text-[10px] text-white/40 mt-2 leading-relaxed">
-        Arquivos ficam armazenados no Google Drive da agência. Upload direto até 25 MB
-        — para arquivos maiores, faça upload no Drive e cole o link aqui.
+        Arquivos ficam armazenados no Google Drive da agência. Você pode selecionar vários de uma vez;
+        upload direto até 25 MB por arquivo — para arquivos maiores, faça upload no Drive e cole o link aqui.
       </p>
     </div>
   );
