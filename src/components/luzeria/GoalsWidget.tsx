@@ -51,14 +51,14 @@ export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: s
       <div className="flex items-center gap-1.5 mb-3 text-[10px] uppercase font-bold tracking-wider text-[#C8D44E]">
         <Target size={12} /> Meta do mês
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        {items.map((i) => <Ring key={i.label} {...i} />)}
+      <div className="space-y-3">
+        {items.map((i) => <Bar key={i.label} {...i} />)}
       </div>
     </div>
   );
 }
 
-function Ring({ label, done, goal }: { label: string; done: number; goal: number }) {
+function Bar({ label, done, goal }: { label: string; done: number; goal: number }) {
   const pct = Math.min(100, Math.round((done / goal) * 100));
   // alert: < 70% do esperado para o dia
   const dayOfMonth = new Date().getDate();
@@ -67,23 +67,17 @@ function Ring({ label, done, goal }: { label: string; done: number; goal: number
   const behind = done < expected * 0.7;
   const color = done >= goal ? "#C8D44E" : behind ? "#FF8C42" : "#7EB3FF";
 
-  const R = 24, C = 2 * Math.PI * R;
-  const offset = C - (Math.min(100, pct) / 100) * C;
   return (
-    <div className="flex flex-col items-center">
-      <div className="relative h-[70px] w-[70px]">
-        <svg viewBox="0 0 60 60" className="-rotate-90">
-          <circle cx="30" cy="30" r={R} stroke="rgba(255,255,255,0.07)" strokeWidth="6" fill="none" />
-          <circle cx="30" cy="30" r={R} stroke={color} strokeWidth="6" fill="none"
-            strokeDasharray={C} strokeDashoffset={offset} strokeLinecap="round"
-            style={{ transition: "stroke-dashoffset 600ms ease" }} />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-[14px] font-bold leading-none" style={{ color }}>{done}</div>
-          <div className="text-[9px] text-white/40 leading-none mt-0.5">/{goal}</div>
-        </div>
+    <div>
+      <div className="flex items-center justify-between mb-1.5 text-xs">
+        <span className="font-semibold text-white/70 uppercase tracking-wider text-[10px]">{label}</span>
+        <span className="tabular-nums font-bold" style={{ color }}>
+          {done}<span className="text-white/40 font-normal">/{goal}</span>
+        </span>
       </div>
-      <div className="text-[10px] uppercase font-bold tracking-wider text-white/60 mt-1.5">{label}</div>
+      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
+      </div>
     </div>
   );
 }
