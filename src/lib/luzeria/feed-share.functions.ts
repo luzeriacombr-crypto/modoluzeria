@@ -195,23 +195,41 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       }
     }
     const thumbUrls = new Map<string, string>();
-    try {
-      const token = await getAccessToken();
+    // A single transient failure here (token refresh hiccup, network blip)
+    // would otherwise leave every item without a thumbnail for this render
+    // with no way to recover — retry once before giving up entirely.
+    let token: string | null = null;
+    for (let attempt = 0; attempt < 2 && !token; attempt++) {
+      try {
+        token = await getAccessToken();
+      } catch {
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 400));
+      }
+    }
+    if (token) {
       await Promise.all(
         [...allDriveIds].map(async (fileId) => {
-          try {
-            const res = await fetch(
-              `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=thumbnailLink&supportsAllDrives=true`,
-              { headers: { Authorization: `Bearer ${token}` } },
-            );
-            if (!res.ok) return;
-            const meta = await res.json();
-            const link: string | undefined = meta?.thumbnailLink;
-            if (link) thumbUrls.set(fileId, link.replace(/=s\d+(-[a-z]+)?$/i, "=s720"));
-          } catch { /* skip */ }
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              const res = await fetch(
+                `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=thumbnailLink&supportsAllDrives=true`,
+                { headers: { Authorization: `Bearer ${token}` } },
+              );
+              if (!res.ok) {
+                if (attempt === 0) { await new Promise((r) => setTimeout(r, 300)); continue; }
+                return;
+              }
+              const meta = await res.json();
+              const link: string | undefined = meta?.thumbnailLink;
+              if (link) thumbUrls.set(fileId, link.replace(/=s\d+(-[a-z]+)?$/i, "=s720"));
+              return;
+            } catch {
+              if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
+            }
+          }
         }),
       );
-    } catch { /* skip if Drive auth unavailable */ }
+    }
 
     return {
       client: {
