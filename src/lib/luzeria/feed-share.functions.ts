@@ -133,8 +133,6 @@ export type PublicFeedPayload = {
   client: { name: string; color: string; description: string | null };
   month: { key: string };
   items: PublicFeedItem[];
-  /** TEMP DIAGNOSTIC — remove once thumbnail failure is root-caused. */
-  _debug?: { tokenError: string | null; fileErrors: string[] };
 };
 
 export const getPublicFeed = createServerFn({ method: "GET" })
@@ -197,10 +195,6 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       }
     }
     const thumbUrls = new Map<string, string>();
-    // TEMP DIAGNOSTIC — remove once the production thumbnail failure is
-    // root-caused. Surfaces the real error in the response payload since we
-    // don't have direct access to this deployment's runtime logs.
-    const _debug: { tokenError: string | null; fileErrors: string[] } = { tokenError: null, fileErrors: [] };
     // A single transient failure here (token refresh hiccup, network blip)
     // would otherwise leave every item without a thumbnail for this render
     // with no way to recover — retry once before giving up entirely.
@@ -216,7 +210,6 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     }
     if (!token) {
       console.error("[getPublicFeed] getAccessToken failed after retry:", tokenErr);
-      _debug.tokenError = tokenErr instanceof Error ? `${tokenErr.name}: ${tokenErr.message}` : String(tokenErr);
     }
     if (token) {
       await Promise.all(
@@ -230,25 +223,17 @@ export const getPublicFeed = createServerFn({ method: "GET" })
               if (!res.ok) {
                 if (attempt === 0) { await new Promise((r) => setTimeout(r, 300)); continue; }
                 const body = await res.text().catch(() => "");
-                const msg = `${fileId}: HTTP ${res.status} ${body.slice(0, 200)}`;
-                console.error(`[getPublicFeed] thumbnailLink fetch failed for ${msg}`);
-                _debug.fileErrors.push(msg);
+                console.error(`[getPublicFeed] thumbnailLink fetch failed for ${fileId}: ${res.status} ${body.slice(0, 200)}`);
                 return;
               }
               const meta = await res.json();
               const link: string | undefined = meta?.thumbnailLink;
-              if (!link) {
-                const msg = `${fileId}: no thumbnailLink — ${JSON.stringify(meta).slice(0, 200)}`;
-                console.error(`[getPublicFeed] ${msg}`);
-                _debug.fileErrors.push(msg);
-              }
+              if (!link) console.error(`[getPublicFeed] no thumbnailLink in response for ${fileId}:`, JSON.stringify(meta).slice(0, 200));
               if (link) thumbUrls.set(fileId, link.replace(/=s\d+(-[a-z]+)?$/i, "=s720"));
               return;
             } catch (e) {
               if (attempt === 0) { await new Promise((r) => setTimeout(r, 300)); continue; }
-              const msg = `${fileId}: threw — ${e instanceof Error ? e.message : String(e)}`;
-              console.error(`[getPublicFeed] thumbnailLink fetch ${msg}`);
-              _debug.fileErrors.push(msg);
+              console.error(`[getPublicFeed] thumbnailLink fetch threw for ${fileId}:`, e);
             }
           }
         }),
@@ -289,7 +274,6 @@ export const getPublicFeed = createServerFn({ method: "GET" })
           })),
         };
       }),
-      _debug,
     };
   });
 
