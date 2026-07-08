@@ -199,12 +199,17 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     // would otherwise leave every item without a thumbnail for this render
     // with no way to recover — retry once before giving up entirely.
     let token: string | null = null;
+    let tokenErr: unknown = null;
     for (let attempt = 0; attempt < 2 && !token; attempt++) {
       try {
         token = await getAccessToken();
-      } catch {
+      } catch (e) {
+        tokenErr = e;
         if (attempt === 0) await new Promise((r) => setTimeout(r, 400));
       }
+    }
+    if (!token) {
+      console.error("[getPublicFeed] getAccessToken failed after retry:", tokenErr);
     }
     if (token) {
       await Promise.all(
@@ -217,14 +222,18 @@ export const getPublicFeed = createServerFn({ method: "GET" })
               );
               if (!res.ok) {
                 if (attempt === 0) { await new Promise((r) => setTimeout(r, 300)); continue; }
+                const body = await res.text().catch(() => "");
+                console.error(`[getPublicFeed] thumbnailLink fetch failed for ${fileId}: ${res.status} ${body.slice(0, 200)}`);
                 return;
               }
               const meta = await res.json();
               const link: string | undefined = meta?.thumbnailLink;
+              if (!link) console.error(`[getPublicFeed] no thumbnailLink in response for ${fileId}:`, JSON.stringify(meta).slice(0, 200));
               if (link) thumbUrls.set(fileId, link.replace(/=s\d+(-[a-z]+)?$/i, "=s720"));
               return;
-            } catch {
-              if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
+            } catch (e) {
+              if (attempt === 0) { await new Promise((r) => setTimeout(r, 300)); continue; }
+              console.error(`[getPublicFeed] thumbnailLink fetch threw for ${fileId}:`, e);
             }
           }
         }),
