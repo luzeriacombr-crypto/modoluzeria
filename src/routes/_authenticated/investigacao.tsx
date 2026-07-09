@@ -35,6 +35,26 @@ function InvestigacaoPage() {
   };
   const anyError = Object.values(data.errors).some((v) => v);
 
+  // Classify each (client, month) group: is it EXACTLY the bug's fingerprint
+  // (Post 1..6 + Reels 1..6, plural "Reels", all created within seconds of
+  // each other) or does it need a human to look at it before touching anything.
+  const BUG_TITLES = new Set([1, 2, 3, 4, 5, 6].flatMap((i) => [`Post ${i}`, `Reels ${i}`]));
+  const byMonth = new Map<string, any[]>();
+  for (const i of data.directLookup) {
+    const arr = byMonth.get(i.month_id) ?? [];
+    arr.push(i);
+    byMonth.set(i.month_id, arr);
+  }
+  const groups = [...byMonth.entries()].map(([monthId, groupItems]) => {
+    const titles = groupItems.map((i: any) => i.title);
+    const allMatchBugPattern = titles.length > 0 && titles.every((t: string) => BUG_TITLES.has(t));
+    const isFullSet = new Set(titles).size === 12 && titles.length === 12;
+    const times = groupItems.map((i: any) => new Date(i.updated_at).getTime());
+    const spreadMs = Math.max(...times) - Math.min(...times);
+    const isBugJunk = allMatchBugPattern && isFullSet && spreadMs < 15_000;
+    return { monthId, clientName: survivingClientName(monthId), items: groupItems, isBugJunk, allMatchBugPattern, count: titles.length };
+  });
+
   return (
     <div className="p-10 text-white text-sm space-y-10 max-w-6xl">
       <h1 className="text-xl font-bold">Investigação temporária — itens sumidos</h1>
@@ -50,21 +70,37 @@ function InvestigacaoPage() {
 
       <section>
         <h2 className="text-base font-bold text-[#C8D44E] mb-2">
-          ✅ Sobreviveram (existem agora) — onde estão de verdade ({data.directLookup.length})
+          ✅ Sobreviveram (existem agora), agrupado por cliente/mês ({data.directLookup.length} itens em {groups.length} grupos)
         </h2>
-        <table className="w-full text-left border-collapse">
-          <thead><tr className="text-white/50"><th className="pr-4">Cliente/Mês real</th><th className="pr-4">Título</th><th className="pr-4">Status</th><th>Atualizado em</th></tr></thead>
-          <tbody>
-            {data.directLookup.map((i: any) => (
-              <tr key={i.id} className="border-t border-white/10">
-                <td className="pr-4 py-1">{survivingClientName(i.month_id)}</td>
-                <td className="pr-4 py-1">{i.title}</td>
-                <td className="pr-4 py-1">{i.status}</td>
-                <td className="py-1">{new Date(i.updated_at).toLocaleString("pt-BR")}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {groups.map((g) => (
+          <div key={g.monthId} className="mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-bold">{g.clientName}</span>
+              <span className="text-[11px]">({g.count} itens)</span>
+              {g.isBugJunk ? (
+                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-500/20 text-red-300">
+                  🗑️ lote fantasma do bug — confirmado
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-200">
+                  ⚠️ revisar manualmente antes de mexer
+                </span>
+              )}
+            </div>
+            <table className="w-full text-left border-collapse mb-2">
+              <thead><tr className="text-white/40 text-xs"><th className="pr-4">Título</th><th className="pr-4">Status</th><th>Atualizado em</th></tr></thead>
+              <tbody>
+                {g.items.map((i: any) => (
+                  <tr key={i.id} className="border-t border-white/10">
+                    <td className="pr-4 py-1">{i.title || <i className="text-white/30">(sem título)</i>}</td>
+                    <td className="pr-4 py-1">{i.status}</td>
+                    <td className="py-1">{new Date(i.updated_at).toLocaleString("pt-BR")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
       </section>
 
       <section>
