@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -566,8 +567,11 @@ export function DetailPanel() {
               onChange={(e) => setDueDate(e.target.value)}
               onBlur={() => {
                 const v = dueDate || null;
-                if (v !== (item.dueDate ?? null))
-                  updateItem.mutate({ data: { id: item.id, patch: { due_date: v } } });
+                const prev = item.dueDate ?? null;
+                if (v !== prev)
+                  updateItem.mutate({ data: { id: item.id, patch: { due_date: v } } }, {
+                    onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar prazo."); setDueDate(prev ?? ""); },
+                  });
               }}
               className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
             />
@@ -575,8 +579,11 @@ export function DetailPanel() {
               <button
                 type="button"
                 onClick={() => {
+                  const prev = item.dueDate ?? null;
                   setDueDate("");
-                  updateItem.mutate({ data: { id: item.id, patch: { due_date: null } } });
+                  updateItem.mutate({ data: { id: item.id, patch: { due_date: null } } }, {
+                    onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar prazo."); setDueDate(prev ?? ""); },
+                  });
                 }}
                 className="text-[11px] text-white/40 hover:text-white px-2 py-1 rounded hover:bg-white/5"
               >Limpar</button>
@@ -603,8 +610,11 @@ export function DetailPanel() {
               onChange={(e) => setScheduledAt(e.target.value)}
               onBlur={() => {
                 const v = scheduledAt ? new Date(scheduledAt).toISOString() : null;
+                const prev = toDatetimeLocalValue(item.scheduledAt);
                 if (v !== (item.scheduledAt ?? null))
-                  updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: v } } });
+                  updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: v } } }, {
+                    onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar data de publicação."); setScheduledAt(prev); },
+                  });
               }}
               className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
             />
@@ -612,8 +622,11 @@ export function DetailPanel() {
               <button
                 type="button"
                 onClick={() => {
+                  const prev = toDatetimeLocalValue(item.scheduledAt);
                   setScheduledAt("");
-                  updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: null } } });
+                  updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: null } } }, {
+                    onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar data de publicação."); setScheduledAt(prev); },
+                  });
                 }}
                 className="text-[11px] text-white/40 hover:text-white px-2 py-1 rounded hover:bg-white/5"
               >Limpar</button>
