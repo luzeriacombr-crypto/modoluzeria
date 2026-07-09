@@ -14,13 +14,13 @@ export const investigateItemLoss = createServerFn({ method: "GET" })
     const clientIds = (clients ?? []).map((c: any) => c.id);
 
     const { data: months, error: monthsErr } = await context.supabase
-      .from("months").select("id,key,client_id").in("client_id", clientIds.length ? clientIds : ["-"]);
+      .from("months").select("id,key,client_id").in("client_id", clientIds.length ? clientIds : ["00000000-0000-0000-0000-000000000000"]);
     const monthIds = (months ?? []).map((m: any) => m.id);
 
     const { data: items, error: itemsErr } = await context.supabase
       .from("content_items")
-      .select("id,title,type,status,month_id,created_at,updated_at")
-      .in("month_id", monthIds.length ? monthIds : ["-"]);
+      .select("id,title,type,status,month_id,updated_at")
+      .in("month_id", monthIds.length ? monthIds : ["00000000-0000-0000-0000-000000000000"]);
 
     // Sanity check: is content_items readable/non-empty at all for this session?
     const { count: totalItemsCount, error: countErr } = await context.supabase
@@ -40,16 +40,16 @@ export const investigateItemLoss = createServerFn({ method: "GET" })
     const createdIds = [...new Set((activity ?? []).filter((a: any) => a.action === "created").map((a: any) => a.entity_id))];
     const { data: directLookup, error: directErr } = await context.supabase
       .from("content_items")
-      .select("id,title,status,month_id,created_at,updated_at")
+      .select("id,title,status,month_id,updated_at")
       .in("id", createdIds.length ? createdIds : ["00000000-0000-0000-0000-000000000000"]);
 
     // For whichever of those DO still exist, resolve their real client/month via a direct join.
     const survivingMonthIds = [...new Set((directLookup ?? []).map((i: any) => i.month_id))];
     const { data: survivingMonths, error: survivingMonthsErr } = await context.supabase
-      .from("months").select("id,key,client_id").in("id", survivingMonthIds.length ? survivingMonthIds : ["-"]);
+      .from("months").select("id,key,client_id").in("id", survivingMonthIds.length ? survivingMonthIds : ["00000000-0000-0000-0000-000000000000"]);
     const survivingClientIds = [...new Set((survivingMonths ?? []).map((m: any) => m.client_id))];
     const { data: survivingClients, error: survivingClientsErr } = await context.supabase
-      .from("clients").select("id,name").in("id", survivingClientIds.length ? survivingClientIds : ["-"]);
+      .from("clients").select("id,name").in("id", survivingClientIds.length ? survivingClientIds : ["00000000-0000-0000-0000-000000000000"]);
 
     const { data: profiles } = await context.supabase.from("profiles").select("id,name");
 

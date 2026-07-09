@@ -108,14 +108,13 @@ function InvestigacaoPage() {
       <section>
         <h2 className="text-base font-bold text-[#C8D44E] mb-2">Itens atuais nesses 5 clientes ({data.items.length})</h2>
         <table className="w-full text-left border-collapse">
-          <thead><tr className="text-white/50"><th className="pr-4">Cliente/Mês</th><th className="pr-4">Título</th><th className="pr-4">Status</th><th className="pr-4">Criado em</th><th>Atualizado em</th></tr></thead>
+          <thead><tr className="text-white/50"><th className="pr-4">Cliente/Mês</th><th className="pr-4">Título</th><th className="pr-4">Status</th><th>Atualizado em</th></tr></thead>
           <tbody>
             {data.items.map((i: any) => (
               <tr key={i.id} className="border-t border-white/10">
                 <td className="pr-4 py-1">{clientName(i.month_id)}</td>
                 <td className="pr-4 py-1">{i.title}</td>
                 <td className="pr-4 py-1">{i.status}</td>
-                <td className="pr-4 py-1">{new Date(i.created_at).toLocaleString("pt-BR")}</td>
                 <td className="py-1">{new Date(i.updated_at).toLocaleString("pt-BR")}</td>
               </tr>
             ))}
