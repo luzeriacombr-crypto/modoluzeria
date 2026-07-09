@@ -499,6 +499,7 @@ export type Database = {
           quality_rating: number | null
           reel_type: string | null
           rework_count: number
+          scheduled_at: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["content_status"]
           title: string
@@ -525,6 +526,7 @@ export type Database = {
           quality_rating?: number | null
           reel_type?: string | null
           rework_count?: number
+          scheduled_at?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["content_status"]
           title?: string
@@ -551,6 +553,7 @@ export type Database = {
           quality_rating?: number | null
           reel_type?: string | null
           rework_count?: number
+          scheduled_at?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["content_status"]
           title?: string
@@ -1156,6 +1159,36 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_calendar_tokens: {
+        Row: {
+          access_token: string | null
+          access_token_expires_at: string | null
+          created_at: string
+          google_email: string
+          refresh_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          created_at?: string
+          google_email: string
+          refresh_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          created_at?: string
+          google_email?: string
+          refresh_token?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
