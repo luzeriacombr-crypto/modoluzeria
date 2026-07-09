@@ -26,14 +26,46 @@ function InvestigacaoPage() {
     return m ? `${data.clients.find((c: any) => c.id === m.client_id)?.name ?? "?"} (${m.key})` : "?";
   };
 
-  const currentIds = new Set(data.items.map((i: any) => i.id));
+  const directIds = new Set(data.directLookup.map((i: any) => i.id));
   const createdEvents = data.activity.filter((a: any) => a.action === "created");
-  const missing = createdEvents.filter((a: any) => !currentIds.has(a.entity_id));
-  const otherActions = data.activity.filter((a: any) => a.action !== "created");
+  const missing = createdEvents.filter((a: any) => !directIds.has(a.entity_id));
+  const survivingClientName = (monthId: string) => {
+    const m = data.survivingMonths.find((mm: any) => mm.id === monthId);
+    return m ? `${data.survivingClients.find((c: any) => c.id === m.client_id)?.name ?? "?"} (${m.key})` : "?";
+  };
+  const anyError = Object.values(data.errors).some((v) => v);
 
   return (
     <div className="p-10 text-white text-sm space-y-10 max-w-6xl">
       <h1 className="text-xl font-bold">Investigação temporária — itens sumidos</h1>
+
+      <section>
+        <h2 className="text-base font-bold text-[#C8D44E] mb-2">Checagem de sanidade</h2>
+        <p>Total de content_items no banco (todos os clientes): <b>{data.totalItemsCount}</b></p>
+        <p>Itens com ID direto confirmados existentes agora (dos {createdEvents.length} criados no período): <b>{data.directLookup.length}</b></p>
+        {anyError && (
+          <pre className="text-red-400 text-xs mt-2 whitespace-pre-wrap">{JSON.stringify(data.errors, null, 2)}</pre>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-base font-bold text-[#C8D44E] mb-2">
+          ✅ Sobreviveram (existem agora) — onde estão de verdade ({data.directLookup.length})
+        </h2>
+        <table className="w-full text-left border-collapse">
+          <thead><tr className="text-white/50"><th className="pr-4">Cliente/Mês real</th><th className="pr-4">Título</th><th className="pr-4">Status</th><th>Atualizado em</th></tr></thead>
+          <tbody>
+            {data.directLookup.map((i: any) => (
+              <tr key={i.id} className="border-t border-white/10">
+                <td className="pr-4 py-1">{survivingClientName(i.month_id)}</td>
+                <td className="pr-4 py-1">{i.title}</td>
+                <td className="pr-4 py-1">{i.status}</td>
+                <td className="py-1">{new Date(i.updated_at).toLocaleString("pt-BR")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
 
       <section>
         <h2 className="text-base font-bold text-[#C8D44E] mb-2">Clientes encontrados</h2>
