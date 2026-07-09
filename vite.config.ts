@@ -57,7 +57,7 @@ export default defineConfig(async ({ command, mode }) => {
       ],
       ignoreOutdatedRequests: true,
     },
-    server: { host: "::", port: 8080 },
+    server: { host: "::", port: process.env.PORT ? Number(process.env.PORT) : 8080 },
     plugins,
   };
 });

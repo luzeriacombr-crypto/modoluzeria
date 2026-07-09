@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
+import { refreshGoogleAccessToken } from "./google-oauth";
 import { z } from "zod";
 
 const UPLOAD_BASE = "https://www.googleapis.com/upload/drive/v3";
-const TOKEN_URL   = "https://oauth2.googleapis.com/token";
 const DRIVE_BASE  = "https://www.googleapis.com/drive/v3";
 
 const DRIVE_FIELDS =
@@ -22,22 +22,8 @@ export async function getAccessToken(): Promise<string> {
   if (!clientId || !clientSecret || !refreshToken) {
     throw new Error("Credenciais do Google Drive ausentes no servidor (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN).");
   }
-  const res = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type:    "refresh_token",
-      refresh_token: refreshToken,
-      client_id:     clientId,
-      client_secret: clientSecret,
-    }),
-  });
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`Erro ao obter token do Google (${res.status}): ${t.slice(0, 200)}`);
-  }
-  const json: any = await res.json();
-  _tokenCache = { token: json.access_token, expiresAt: Date.now() + json.expires_in * 1000 };
+  const { accessToken, expiresIn } = await refreshGoogleAccessToken({ clientId, clientSecret, refreshToken });
+  _tokenCache = { token: accessToken, expiresAt: Date.now() + expiresIn * 1000 };
   return _tokenCache.token;
 }
 

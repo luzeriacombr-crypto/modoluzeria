@@ -73,7 +73,7 @@ export function App() {
     <div className="flex min-h-screen bg-[#0D0D0D]" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       <Toaster theme="dark" position="bottom-right" />
       <div
-        className="hidden md:flex overflow-hidden"
+        className="hidden md:flex overflow-hidden self-start"
         style={{
           width: sidebarHidden ? 0 : 220,
           transition: "width 250ms ease",

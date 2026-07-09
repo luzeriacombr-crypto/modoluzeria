@@ -66,7 +66,7 @@ export function Sidebar({
   const isAdmin = me?.role === "master" || me?.role === "setor";
 
   return (
-    <aside data-tour="sidebar" className="sidebar-gradient w-[240px] flex flex-col h-screen text-white shrink-0">
+    <aside data-tour="sidebar" className="sidebar-gradient w-[240px] flex flex-col text-white shrink-0">
       {/* Logo */}
       <div className="px-5 pt-5 pb-4">
         <img src={luzeriaLogo} alt="Luzeria" className="h-7 w-auto object-contain" />
@@ -122,7 +122,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pt-2 pb-3 px-2">
+      <div className="pt-2 pb-3 px-2">
         {grouped.map(([cat, list]) => (
           <CategoryGroup
             key={cat}

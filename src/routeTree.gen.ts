@@ -13,10 +13,12 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
+import { Route as OauthGoogleCalendarCallbackRouteImport } from './routes/oauth.google-calendar-callback'
 import { Route as AuthenticatedStoriesRouteImport } from './routes/_authenticated/stories'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
 import { Route as AuthenticatedLimpezaRouteImport } from './routes/_authenticated/limpeza'
+import { Route as AuthenticatedInvestigacaoRouteImport } from './routes/_authenticated/investigacao'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedClienteClientIdRouteImport } from './routes/_authenticated/cliente.$clientId'
@@ -40,6 +42,12 @@ const PreviewTokenRoute = PreviewTokenRouteImport.update({
   path: '/preview/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OauthGoogleCalendarCallbackRoute =
+  OauthGoogleCalendarCallbackRouteImport.update({
+    id: '/oauth/google-calendar-callback',
+    path: '/oauth/google-calendar-callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedStoriesRoute = AuthenticatedStoriesRouteImport.update({
   id: '/stories',
   path: '/stories',
@@ -61,6 +69,12 @@ const AuthenticatedLimpezaRoute = AuthenticatedLimpezaRouteImport.update({
   path: '/limpeza',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedInvestigacaoRoute =
+  AuthenticatedInvestigacaoRouteImport.update({
+    id: '/investigacao',
+    path: '/investigacao',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedConfiguracoesRoute =
   AuthenticatedConfiguracoesRouteImport.update({
     id: '/configuracoes',
@@ -84,10 +98,12 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/limpeza': typeof AuthenticatedLimpezaRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/stories': typeof AuthenticatedStoriesRoute
+  '/oauth/google-calendar-callback': typeof OauthGoogleCalendarCallbackRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
 }
@@ -95,10 +111,12 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/limpeza': typeof AuthenticatedLimpezaRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/stories': typeof AuthenticatedStoriesRoute
+  '/oauth/google-calendar-callback': typeof OauthGoogleCalendarCallbackRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/': typeof AuthenticatedIndexRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
@@ -109,10 +127,12 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/_authenticated/limpeza': typeof AuthenticatedLimpezaRoute
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/stories': typeof AuthenticatedStoriesRoute
+  '/oauth/google-calendar-callback': typeof OauthGoogleCalendarCallbackRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
@@ -124,10 +144,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin'
     | '/configuracoes'
+    | '/investigacao'
     | '/limpeza'
     | '/minhas-tarefas'
     | '/perfil'
     | '/stories'
+    | '/oauth/google-calendar-callback'
     | '/preview/$token'
     | '/cliente/$clientId'
   fileRoutesByTo: FileRoutesByTo
@@ -135,10 +157,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin'
     | '/configuracoes'
+    | '/investigacao'
     | '/limpeza'
     | '/minhas-tarefas'
     | '/perfil'
     | '/stories'
+    | '/oauth/google-calendar-callback'
     | '/preview/$token'
     | '/'
     | '/cliente/$clientId'
@@ -148,10 +172,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/admin'
     | '/_authenticated/configuracoes'
+    | '/_authenticated/investigacao'
     | '/_authenticated/limpeza'
     | '/_authenticated/minhas-tarefas'
     | '/_authenticated/perfil'
     | '/_authenticated/stories'
+    | '/oauth/google-calendar-callback'
     | '/preview/$token'
     | '/_authenticated/'
     | '/_authenticated/cliente/$clientId'
@@ -160,6 +186,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  OauthGoogleCalendarCallbackRoute: typeof OauthGoogleCalendarCallbackRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
 }
 
@@ -193,6 +220,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PreviewTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oauth/google-calendar-callback': {
+      id: '/oauth/google-calendar-callback'
+      path: '/oauth/google-calendar-callback'
+      fullPath: '/oauth/google-calendar-callback'
+      preLoaderRoute: typeof OauthGoogleCalendarCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/stories': {
       id: '/_authenticated/stories'
       path: '/stories'
@@ -219,6 +253,13 @@ declare module '@tanstack/react-router' {
       path: '/limpeza'
       fullPath: '/limpeza'
       preLoaderRoute: typeof AuthenticatedLimpezaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/investigacao': {
+      id: '/_authenticated/investigacao'
+      path: '/investigacao'
+      fullPath: '/investigacao'
+      preLoaderRoute: typeof AuthenticatedInvestigacaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/configuracoes': {
@@ -248,6 +289,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedInvestigacaoRoute: typeof AuthenticatedInvestigacaoRoute
   AuthenticatedLimpezaRoute: typeof AuthenticatedLimpezaRoute
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
@@ -259,6 +301,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedInvestigacaoRoute: AuthenticatedInvestigacaoRoute,
   AuthenticatedLimpezaRoute: AuthenticatedLimpezaRoute,
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
@@ -273,6 +316,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  OauthGoogleCalendarCallbackRoute: OauthGoogleCalendarCallbackRoute,
   PreviewTokenRoute: PreviewTokenRoute,
 }
 export const routeTree = rootRouteImport

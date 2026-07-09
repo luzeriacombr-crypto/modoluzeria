@@ -1,17 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, profilesQO, myMentionsQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, profilesQO, myMentionsQO, todayCalendarEventsQO, myCalendarConnectionQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronDown, ChevronUp, Camera, Sparkles, List, CalendarDays, Clock, Check, X, AtSign } from "lucide-react";
+import { ChevronDown, ChevronUp, Camera, Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign } from "lucide-react";
 import { formatMonth, shortMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { CLEANING_TASKS } from "./CleaningView";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
+import { GoogleCalendarPromptModal } from "./GoogleCalendarPromptModal";
 import { getDailyGreeting } from "@/lib/luzeria/daily-greeting";
+
+const GCAL_PROMPT_DISMISSED_KEY = "lz_gcal_prompt_dismissed";
 
 export function MyTasks() {
   const me = useMe().data;
@@ -30,6 +33,18 @@ export function MyTasks() {
   const { data: mentions = [] } = useQuery({ ...myMentionsQO(), enabled: isMeView });
   const monthKey = useUI((s) => s.selectedMonthKey);
   const { data: prod } = useQuery(productivityQO(monthKey, targetId));
+
+  const { data: calendarConn } = useQuery({ ...myCalendarConnectionQO(), enabled: isMeView });
+  const [showCalendarPrompt, setShowCalendarPrompt] = useState(false);
+  useEffect(() => {
+    if (!isMeView || !calendarConn || calendarConn.connected) return;
+    if (localStorage.getItem(GCAL_PROMPT_DISMISSED_KEY)) return;
+    setShowCalendarPrompt(true);
+  }, [isMeView, calendarConn]);
+  function dismissCalendarPrompt() {
+    localStorage.setItem(GCAL_PROMPT_DISMISSED_KEY, "1");
+    setShowCalendarPrompt(false);
+  }
 
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -64,6 +79,7 @@ export function MyTasks() {
 
   return (
     <div className="p-10 max-w-5xl mx-auto" data-tour="my-tasks">
+      {showCalendarPrompt && <GoogleCalendarPromptModal onClose={dismissCalendarPrompt} />}
       <div className="mb-3">
         <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[15px] font-bold uppercase tracking-wider mb-1"
           style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
@@ -101,6 +117,8 @@ export function MyTasks() {
       </div>
 
       {targetId && <div data-tour="goals"><GoalsWidget monthKey={monthKey} userId={targetId} /></div>}
+
+      {isMeView && <TodayCalendarWidget />}
 
       {isMeView && mentions.length > 0 && (
         <div className="mb-6">
@@ -245,6 +263,31 @@ export function MyTasks() {
       )}
 
       {prod && <ProductivityBlock prod={prod} monthKey={monthKey} />}
+    </div>
+  );
+}
+
+function TodayCalendarWidget() {
+  const { data } = useQuery(todayCalendarEventsQO());
+  if (!data?.connected || !data.events?.length) return null;
+  return (
+    <div className="mb-6 bg-[#1C1C1C] rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+        <span className="rounded p-1" style={{ backgroundColor: "rgba(200,212,78,0.18)", color: "#C8D44E" }}>
+          <CalendarClock size={11} />
+        </span>
+        <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Hoje na agenda</h2>
+      </div>
+      <div className="divide-y divide-white/[0.05]">
+        {data.events.map((ev: any) => (
+          <div key={ev.id} className="flex items-center gap-3 px-4 py-2.5">
+            <span className="text-[11px] text-white/40 tabular-nums shrink-0">
+              {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+            <span className="text-sm text-white/90 truncate flex-1">{ev.title}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
