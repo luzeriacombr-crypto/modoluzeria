@@ -358,12 +358,9 @@ export const duplicateMonth = createServerFn({ method: "POST" })
           if (insErr) throw new Error(insErr.message);
         }
       }
-    } else {
-      const items: any[] = [];
-      for (let i = 1; i <= 6; i++) items.push({ month_id: newMonth.id, type: "post", idx: i, title: `Post ${i}` });
-      for (let i = 1; i <= 6; i++) items.push({ month_id: newMonth.id, type: "reel", idx: i, title: `Reels ${i}` });
-      await context.supabase.from("content_items").insert(items);
     }
+    // If there was nothing to duplicate from, leave the new month empty —
+    // fabricating placeholder content here was the source of a real bug.
     return { key: newKey };
   });
 
@@ -380,24 +377,12 @@ export const getMonth = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string; key: string }) => d)
   .handler(async ({ data, context }): Promise<MonthData | null> => {
-    let { data: month } = await context.supabase
+    // Reading a month must never have side effects — creating it (empty or
+    // seeded) is an explicit action (addContentItem, duplicateMonth), not
+    // something that should happen just because someone viewed the page.
+    const { data: month } = await context.supabase
       .from("months").select("id, key").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
-    const { data: clientRow } = await context.supabase
-      .from("clients").select("category").eq("id", data.clientId).maybeSingle();
-    const isAvulso = ((clientRow as any)?.category ?? "Social Media") === "Avulsos";
-    if (!month) {
-      const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-      if (!isAdmin) return null;
-      if (isAvulso) {
-        const { data: m, error } = await context.supabase
-          .from("months").insert({ client_id: data.clientId, key: data.key }).select().single();
-        if (error) throw new Error(error.message);
-        month = { id: m.id, key: m.key };
-      } else {
-        const seeded = await seedMonth(context.supabase, data.clientId, data.key);
-        month = { id: seeded.id, key: seeded.key };
-      }
-    }
+    if (!month) return null;
     const [{ data: items }, { data: assignees }, { data: comments }] = await Promise.all([
       context.supabase.from("content_items").select("*").eq("month_id", month.id).order("type").order("idx"),
       context.supabase.from("item_assignees").select("item_id, user_id").in("item_id",
