@@ -86,7 +86,7 @@ function PublicPreviewPage() {
     type: activeItem.type,
     title: activeItem.title,
     caption: activeItem.caption,
-    dueDate: activeItem.dueDate,
+    scheduledAt: activeItem.scheduledAt,
     coverUrl: activeItem.coverUrl,
     files: activeItem.files,
     feedback: activeItem.feedback,

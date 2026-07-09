@@ -292,7 +292,7 @@ function InternalPostModal({
       type: item.type,
       title: item.title,
       caption: item.caption ?? "",
-      dueDate: item.dueDate ?? null,
+      scheduledAt: item.scheduledAt ?? null,
       coverUrl: item.coverUrl ?? null,
       files,
       feedback: [], // populated below

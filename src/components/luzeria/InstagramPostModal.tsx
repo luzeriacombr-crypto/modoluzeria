@@ -18,7 +18,7 @@ export type IGModalItem = {
   type: "post" | "reel" | "outros" | "gravacao" | "roteiro" | "sistema";
   title: string;
   caption: string;
-  dueDate: string | null;
+  scheduledAt: string | null;
   coverUrl: string | null;
   files: IGModalFile[];
   feedback: IGModalFeedback[];
@@ -34,11 +34,11 @@ function isVideo(m: string | null | undefined) {
   return !!m && m.startsWith("video/");
 }
 
-function formatDateBR(iso: string | null) {
+function formatDateTimeBR(iso: string | null) {
   if (!iso) return null;
-  const [y, m, d] = iso.split("-").map(Number);
-  if (!y || !m || !d) return iso;
-  return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 function relativeTime(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -285,9 +285,9 @@ export function InstagramPostModal({
             >{initial}</div>
             <div className="flex-1 min-w-0">
               <div className="text-[13px] font-semibold text-neutral-900 truncate">{client.name}</div>
-              {item.dueDate && (
+              {item.scheduledAt && (
                 <div className="text-[11px] text-neutral-500 flex items-center gap-1 mt-0.5">
-                  <Calendar size={11} /> Publicação prevista · {formatDateBR(item.dueDate)}
+                  <Calendar size={11} /> Publicação prevista · {formatDateTimeBR(item.scheduledAt)}
                 </div>
               )}
             </div>
@@ -355,7 +355,7 @@ export function InstagramPostModal({
                 <Bookmark size={22} />
               </div>
               <div className="mt-2 text-[11px] text-neutral-500">
-                {item.dueDate ? `Prevista para ${formatDateBR(item.dueDate)}` : "Sem data definida"}
+                {item.scheduledAt ? `Prevista para ${formatDateTimeBR(item.scheduledAt)}` : "Sem data definida"}
               </div>
             </div>
           )}

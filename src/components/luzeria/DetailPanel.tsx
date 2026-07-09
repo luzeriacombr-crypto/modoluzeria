@@ -23,6 +23,15 @@ function findItem(month: any, id: string): ContentItem | undefined {
   );
 }
 
+/** ISO timestamp -> value for <input type="datetime-local">, in the browser's local time. */
+function toDatetimeLocalValue(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function normalizeExternalUrl(rawUrl: string) {
   const trimmed = rawUrl.trim();
   if (!trimmed) return null;
@@ -139,6 +148,7 @@ export function DetailPanel() {
   const [commentMentions, setCommentMentions] = useState<string[]>([]);
   const [qualityFor, setQualityFor] = useState<Status | null>(null);
   const [dueDate, setDueDate] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
   const [blockedReason, setBlockedReason] = useState("");
   const [assignOpen, setAssignOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -153,6 +163,7 @@ export function DetailPanel() {
       setTitle(item.title); setCopy(item.copy); setDrive(item.driveLink);
       setCaption(item.caption ?? "");
       setDueDate(item.dueDate ?? "");
+      setScheduledAt(toDatetimeLocalValue(item.scheduledAt));
       setBlockedReason(item.blockedReason ?? "");
     }
   }, [item?.id]); // eslint-disable-line
@@ -580,6 +591,35 @@ export function DetailPanel() {
               {item.finishedAt && ` · Publicado em ${new Date(item.finishedAt).toLocaleDateString("pt-BR")}`}
             </p>
           )}
+        </ModalSection>
+
+        {/* Data de publicação — aparece pro cliente no preview, diferente do Prazo (interno) */}
+        <ModalSection label="Data de publicação">
+          <div className="flex items-center gap-2">
+            <Calendar size={15} style={{ color: "#C8D44E" }} />
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              onBlur={() => {
+                const v = scheduledAt ? new Date(scheduledAt).toISOString() : null;
+                if (v !== (item.scheduledAt ?? null))
+                  updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: v } } });
+              }}
+              className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
+            />
+            {scheduledAt && (
+              <button
+                type="button"
+                onClick={() => {
+                  setScheduledAt("");
+                  updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: null } } });
+                }}
+                className="text-[11px] text-white/40 hover:text-white px-2 py-1 rounded hover:bg-white/5"
+              >Limpar</button>
+            )}
+          </div>
+          <p className="text-[10px] text-white/40 mt-1.5">Data e hora reais de publicação no Instagram. É isso que o cliente vê no preview — o Prazo acima é só interno.</p>
         </ModalSection>
 
         {item.status === "TRAVADO" && (

@@ -123,7 +123,7 @@ export type PublicFeedItem = {
   idx: number;
   title: string;
   caption: string;
-  dueDate: string | null;
+  scheduledAt: string | null;
   coverUrl: string | null;
   gridThumb: string | null;
   files: PublicFeedFile[];
@@ -262,7 +262,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
           idx: it.idx,
           title: it.title,
           caption: it.caption ?? "",
-          dueDate: it.due_date ?? null,
+          scheduledAt: it.scheduled_at ?? null,
           coverUrl: null,
           gridThumb,
           files,

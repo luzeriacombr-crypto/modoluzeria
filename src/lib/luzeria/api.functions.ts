@@ -411,6 +411,7 @@ export const getMonth = createServerFn({ method: "GET" })
       reelType: ((it as any).reel_type ?? null) as any,
       editorId: ((it as any).editor_id ?? null) as any,
       dueDate: ((it as any).due_date ?? null) as any,
+      scheduledAt: ((it as any).scheduled_at ?? null) as any,
       startedAt: ((it as any).started_at ?? null) as any,
       finishedAt: ((it as any).finished_at ?? null) as any,
       blockedReason: ((it as any).blocked_reason ?? null) as any,
@@ -447,7 +448,7 @@ export const updateItem = createServerFn({ method: "POST" })
     patch: {
       title?: string; copy?: string; caption?: string; drive_link?: string;
       reel_type?: string | null; editor_id?: string | null;
-      due_date?: string | null; blocked_reason?: string | null;
+      due_date?: string | null; scheduled_at?: string | null; blocked_reason?: string | null;
     };
   }) => d)
   .handler(async ({ data, context }) => {

@@ -69,8 +69,10 @@ export interface ContentItem {
   updatedAt: string;
   reelType?: ReelType | null;
   editorId?: string | null;
-  /** Optional internal deadline (YYYY-MM-DD). */
+  /** Optional internal deadline (YYYY-MM-DD). Never shown to clients. */
   dueDate?: string | null;
+  /** Real scheduled publish date+time (ISO timestamp). Shown to clients in the preview. */
+  scheduledAt?: string | null;
   /** Set automatically when item leaves PLANEJAMENTO for the first time. */
   startedAt?: string | null;
   /** Set automatically when item reaches PRONTO_PARA_PUBLICAR. */
