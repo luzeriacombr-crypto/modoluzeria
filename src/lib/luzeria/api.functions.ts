@@ -1054,9 +1054,14 @@ export const getProductivity = createServerFn({ method: "GET" })
     const [y, m] = data.monthKey.split("-").map(Number);
     const start = new Date(Date.UTC(y, m - 1, 1)).toISOString();
     const end = new Date(Date.UTC(y, m, 1)).toISOString();
-    const { data: assigns } = await context.supabase
-      .from("item_assignees").select("item_id").eq("user_id", targetUser);
-    const itemIds = (assigns ?? []).map((a) => a.item_id);
+    const [{ data: assigns }, { data: edited }] = await Promise.all([
+      context.supabase.from("item_assignees").select("item_id").eq("user_id", targetUser),
+      context.supabase.from("content_items").select("id").eq("editor_id", targetUser),
+    ]);
+    const itemIds = [...new Set([
+      ...(assigns ?? []).map((a) => a.item_id),
+      ...(edited ?? []).map((e) => e.id),
+    ])];
     if (itemIds.length === 0) {
       return { weeks: [0, 0, 0, 0], items: [[], [], [], []] as string[][], total: 0, history: [] };
     }

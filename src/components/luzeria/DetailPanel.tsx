@@ -448,8 +448,8 @@ export function DetailPanel() {
           </div>
         </ModalSection>
 
-        {/* Editor (Reels) */}
-        {item.type === "reel" && (
+        {/* Editor (Posts e Reels) */}
+        {(item.type === "post" || item.type === "reel") && (
           <ModalSection label="Editor">
             <div className="relative">
               <button
