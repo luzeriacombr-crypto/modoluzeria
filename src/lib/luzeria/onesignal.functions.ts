@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireActiveProfile } from "@/lib/luzeria/require-active";
 
 const ONESIGNAL_API = "https://onesignal.com/api/v1/notifications";
 
@@ -33,15 +34,24 @@ async function sendOneSignalNotification(payload: {
 }
 
 export const sendPushNotification = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
   .inputValidator((d: { userIds: string[]; title: string; body: string; url?: string }) =>
     z.object({
-      userIds: z.array(z.string()).min(1),
-      title: z.string(),
-      body: z.string(),
-      url: z.string().optional(),
+      userIds: z.array(z.string().uuid()).min(1).max(500),
+      title: z.string().min(1).max(120),
+      body: z.string().min(1).max(500),
+      url: z.string().url().max(2048).optional(),
     }).parse(d)
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    // Restrict push notifications to admin/master roles — sending arbitrary
+    // pushes to arbitrary users is an admin-level capability.
+    const { data: isAdmin, error: roleErr } = await context.supabase.rpc("is_admin", {
+      _user_id: context.userId,
+    });
+    if (roleErr) throw new Error("Unauthorized");
+    if (!isAdmin) throw new Error("Forbidden: admin role required");
+
     const appId = process.env.ONESIGNAL_APP_ID;
     const restApiKey = process.env.ONESIGNAL_REST_API_KEY;
     if (!appId || !restApiKey) {
