@@ -170,6 +170,12 @@ export function DetailPanel() {
   }, [item?.id]); // eslint-disable-line
 
   useEffect(() => {
+    if (!item) return;
+    setDueDate(item.dueDate ?? "");
+    setScheduledAt(toDatetimeLocalValue(item.scheduledAt));
+  }, [item?.id, item?.dueDate, item?.scheduledAt]);
+
+  useEffect(() => {
     if (!statusOpen) return;
     const h = (e: MouseEvent) => { if (!statusRef.current?.contains(e.target as Node)) setStatusOpen(false); };
     document.addEventListener("mousedown", h);
@@ -610,8 +616,9 @@ export function DetailPanel() {
               onChange={(e) => setScheduledAt(e.target.value)}
               onBlur={() => {
                 const v = scheduledAt ? new Date(scheduledAt).toISOString() : null;
+                const current = item.scheduledAt ? new Date(item.scheduledAt).toISOString() : null;
                 const prev = toDatetimeLocalValue(item.scheduledAt);
-                if (v !== (item.scheduledAt ?? null))
+                if (v !== current)
                   updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: v } } }, {
                     onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar data de publicação."); setScheduledAt(prev); },
                   });
