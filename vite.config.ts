@@ -50,7 +50,7 @@ export default defineConfig(async ({ command, mode }) => {
         const html = `<!doctype html><html><head><meta charset="utf-8"><title>App</title></head><body><div id="root"></div></body></html>`;
         writeFileSync(resolve(distDir, "index.html"), html);
       },
-    });
+    } as import("vite").Plugin);
   }
 
   return {
