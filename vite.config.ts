@@ -11,7 +11,7 @@ import { resolve } from "node:path";
 // Start (SSR, server entry = src/server.ts), Nitro (Vercel preset) on build,
 // and React. Dev-only Lovable editor plugins were dropped — not needed to run.
 export default defineConfig(async ({ command, mode }) => {
-  const plugins = [
+  const plugins: import("vite").PluginOption[] = [
     tailwindcss(),
     tsConfigPaths({ projects: ["./tsconfig.json"] }),
     tanstackStart({
