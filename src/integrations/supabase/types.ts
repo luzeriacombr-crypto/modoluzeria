@@ -1245,6 +1245,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_active_profile: { Args: { _user_id: string }; Returns: boolean }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_master: { Args: { _user_id: string }; Returns: boolean }
       luzeria_admin_list_cron_jobs: {
