@@ -33,6 +33,22 @@ function toDatetimeLocalValue(iso: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function toScheduledLocalParts(iso: string | null | undefined) {
+  const value = toDatetimeLocalValue(iso);
+  if (!value) return { date: "", time: "" };
+  const [date, time] = value.split("T");
+  return { date: date ?? "", time: time ?? "" };
+}
+
+function scheduledPartsToIso(date: string, time: string): string | null {
+  if (!date) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const safeTime = /^\d{2}:\d{2}$/.test(time) ? time : "09:00";
+  const d = new Date(`${date}T${safeTime}:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
 function normalizeExternalUrl(rawUrl: string) {
   const trimmed = rawUrl.trim();
   if (!trimmed) return null;
@@ -149,7 +165,8 @@ export function DetailPanel() {
   const [commentMentions, setCommentMentions] = useState<string[]>([]);
   const [qualityFor, setQualityFor] = useState<Status | null>(null);
   const [dueDate, setDueDate] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
   const [blockedReason, setBlockedReason] = useState("");
   const [assignOpen, setAssignOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -164,7 +181,9 @@ export function DetailPanel() {
       setTitle(item.title); setCopy(item.copy); setDrive(item.driveLink);
       setCaption(item.caption ?? "");
       setDueDate(item.dueDate ?? "");
-      setScheduledAt(toDatetimeLocalValue(item.scheduledAt));
+      const scheduled = toScheduledLocalParts(item.scheduledAt);
+      setScheduledDate(scheduled.date);
+      setScheduledTime(scheduled.time);
       setBlockedReason(item.blockedReason ?? "");
     }
   }, [item?.id]); // eslint-disable-line
@@ -172,7 +191,9 @@ export function DetailPanel() {
   useEffect(() => {
     if (!item) return;
     setDueDate(item.dueDate ?? "");
-    setScheduledAt(toDatetimeLocalValue(item.scheduledAt));
+    const scheduled = toScheduledLocalParts(item.scheduledAt);
+    setScheduledDate(scheduled.date);
+    setScheduledTime(scheduled.time);
   }, [item?.id, item?.dueDate, item?.scheduledAt]);
 
   useEffect(() => {
@@ -201,6 +222,23 @@ export function DetailPanel() {
   const itemId = item.id;
   function saveChecklist(next: typeof checklist) {
     updateChecklist.mutate({ data: { itemId, checklist: next } });
+  }
+
+  function saveScheduledAt(nextDate = scheduledDate, nextTime = scheduledTime) {
+    const current = toScheduledLocalParts(item.scheduledAt);
+    const normalizedTime = nextDate ? (nextTime || current.time || "09:00") : "";
+    if (nextDate && !nextTime) setScheduledTime(normalizedTime);
+
+    if (nextDate === current.date && normalizedTime === current.time) return;
+
+    const nextIso = scheduledPartsToIso(nextDate, normalizedTime);
+    updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: nextIso } } }, {
+      onError: (e: any) => {
+        toast.error(e?.message ?? "Erro ao salvar data de publicação.");
+        setScheduledDate(current.date);
+        setScheduledTime(current.time);
+      },
+    });
   }
 
   const showQuality = item.status === "PRONTO_PARA_PUBLICAR" || item.qualityRating != null;
@@ -611,28 +649,33 @@ export function DetailPanel() {
           <div className="flex items-center gap-2">
             <Calendar size={15} style={{ color: "#C8D44E" }} />
             <input
-              type="datetime-local"
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
-              onBlur={() => {
-                const v = scheduledAt ? new Date(scheduledAt).toISOString() : null;
-                const current = item.scheduledAt ? new Date(item.scheduledAt).toISOString() : null;
-                const prev = toDatetimeLocalValue(item.scheduledAt);
-                if (v !== current)
-                  updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: v } } }, {
-                    onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar data de publicação."); setScheduledAt(prev); },
-                  });
-              }}
+              type="date"
+              value={scheduledDate}
+              onChange={(e) => setScheduledDate(e.target.value)}
+              onBlur={(e) => saveScheduledAt(e.currentTarget.value, scheduledTime)}
+              className="min-w-0 flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
+            />
+            <input
+              type="time"
+              value={scheduledTime}
+              onChange={(e) => setScheduledTime(e.target.value)}
+              onBlur={(e) => saveScheduledAt(scheduledDate, e.currentTarget.value)}
+              disabled={!scheduledDate}
               className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
             />
-            {scheduledAt && (
+            {scheduledDate && (
               <button
                 type="button"
                 onClick={() => {
-                  const prev = toDatetimeLocalValue(item.scheduledAt);
-                  setScheduledAt("");
+                  const prev = toScheduledLocalParts(item.scheduledAt);
+                  setScheduledDate("");
+                  setScheduledTime("");
                   updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: null } } }, {
-                    onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar data de publicação."); setScheduledAt(prev); },
+                    onError: (e: any) => {
+                      toast.error(e?.message ?? "Erro ao salvar data de publicação.");
+                      setScheduledDate(prev.date);
+                      setScheduledTime(prev.time);
+                    },
                   });
                 }}
                 className="text-[11px] text-white/40 hover:text-white px-2 py-1 rounded hover:bg-white/5"
