@@ -36,11 +36,10 @@ export default defineConfig(async ({ command, mode }) => {
 
   plugins.push(viteReact());
 
-  // Lovable's dist-check runs after `vite build --mode development` and
-  // expects a `dist/index.html`. TanStack Start's SSR build only emits
-  // `dist/client/` and `dist/server/`, so synthesize a minimal placeholder
-  // pointing users at the SSR server. Runs only in dev-mode builds.
-  if (command === "build" && mode === "development") {
+  // Lovable's dist-check runs after Vite builds and expects a `dist/index.html`.
+  // TanStack Start's SSR build can emit only nested server/client outputs, so
+  // synthesize a minimal placeholder for both preview and production checks.
+  if (command === "build") {
     plugins.push({
       name: "lovable-dist-check-index-html",
       apply: "build",
