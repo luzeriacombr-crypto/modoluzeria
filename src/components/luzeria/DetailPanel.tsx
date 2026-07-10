@@ -220,19 +220,20 @@ export function DetailPanel() {
   const reworkCount = item.reworkCount ?? 0;
 
   const itemId = item.id;
+  const stableItem = item;
   function saveChecklist(next: typeof checklist) {
     updateChecklist.mutate({ data: { itemId, checklist: next } });
   }
 
   function saveScheduledAt(nextDate = scheduledDate, nextTime = scheduledTime) {
-    const current = toScheduledLocalParts(item.scheduledAt);
+    const current = toScheduledLocalParts(stableItem.scheduledAt);
     const normalizedTime = nextDate ? (nextTime || current.time || "09:00") : "";
     if (nextDate && !nextTime) setScheduledTime(normalizedTime);
 
     if (nextDate === current.date && normalizedTime === current.time) return;
 
     const nextIso = scheduledPartsToIso(nextDate, normalizedTime);
-    updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: nextIso } } }, {
+    updateItem.mutate({ data: { id: stableItem.id, patch: { scheduled_at: nextIso } } }, {
       onError: (e: any) => {
         toast.error(e?.message ?? "Erro ao salvar data de publicação.");
         setScheduledDate(current.date);
