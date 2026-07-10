@@ -3,6 +3,8 @@ import tailwindcss from "@tailwindcss/vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
+import { writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
 
 // Build config, previously provided by @lovable.dev/vite-tanstack-config.
 // Reproduces the production pipeline: Tailwind, tsconfig paths, TanStack
@@ -33,6 +35,23 @@ export default defineConfig(async ({ command, mode }) => {
   }
 
   plugins.push(viteReact());
+
+  // Lovable's dist-check runs after `vite build --mode development` and
+  // expects a `dist/index.html`. TanStack Start's SSR build only emits
+  // `dist/client/` and `dist/server/`, so synthesize a minimal placeholder
+  // pointing users at the SSR server. Runs only in dev-mode builds.
+  if (command === "build" && mode === "development") {
+    plugins.push({
+      name: "lovable-dist-check-index-html",
+      apply: "build",
+      closeBundle() {
+        const distDir = resolve(process.cwd(), "dist");
+        if (!existsSync(distDir)) mkdirSync(distDir, { recursive: true });
+        const html = `<!doctype html><html><head><meta charset="utf-8"><title>App</title></head><body><div id="root"></div></body></html>`;
+        writeFileSync(resolve(distDir, "index.html"), html);
+      },
+    });
+  }
 
   return {
     css: { transformer: "lightningcss" as const },
