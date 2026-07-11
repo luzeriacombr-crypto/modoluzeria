@@ -264,6 +264,46 @@ export function ReportsTab() {
             </div>
           </Section>
 
+          {/* Seção 3b - Atividades registradas (gravação/roteiro/sistema/outros) */}
+          <Section title="Atividades registradas">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3">
+              <MetricCard label="Gravações" value={report.activitySummary?.gravacao ?? 0} />
+              <MetricCard label="Roteiros" value={report.activitySummary?.roteiro ?? 0} />
+              <MetricCard label="Sistema" value={report.activitySummary?.sistema ?? 0} />
+              <MetricCard label="Outros" value={report.activitySummary?.outros ?? 0} />
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-wider text-white/50">
+                  <th className="text-left px-3 py-2">Membro</th>
+                  <th className="text-right px-2 py-2">Gravações</th>
+                  <th className="text-right px-2 py-2">Roteiros</th>
+                  <th className="text-right px-2 py-2">Sistema</th>
+                  <th className="text-right px-2 py-2">Outros</th>
+                  <th className="text-right px-3 py-2">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(!report.activityByMember || report.activityByMember.length === 0) && (
+                  <tr><td colSpan={6} className="px-3 py-4 text-white/40 text-center">Nenhuma atividade registrada no período.</td></tr>
+                )}
+                {report.activityByMember?.map((m: any) => (
+                  <tr key={m.userId} className="border-t border-white/[0.05]">
+                    <td className="px-3 py-2.5 flex items-center gap-2">
+                      <Avatar profile={{ id: m.userId, name: m.name, color: m.color, icon: m.icon } as any} size={26} />
+                      <span className="font-semibold text-white">{m.name}</span>
+                    </td>
+                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.gravacao}</td>
+                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.roteiro}</td>
+                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.sistema}</td>
+                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.outros}</td>
+                    <td className="text-right px-3 py-2.5 font-bold text-white tabular-nums">{m.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Section>
+
           {/* Seção 4 - Histórico */}
           <Section title={`Histórico (${histPage.total})`}>
             {histPage.rows.length === 0 ? (

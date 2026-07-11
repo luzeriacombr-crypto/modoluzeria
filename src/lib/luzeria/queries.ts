@@ -2,7 +2,7 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/r
 import { useServerFn } from "@tanstack/react-start";
 import {
   addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, duplicateMonth,
-  getMe, getMonth, getProductivity, listClients, listMonthKeys, listMyTasks, listNotifications,
+  getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile,
   listStories, upsertStoryDay, setStoryDone, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
@@ -67,6 +67,12 @@ export const productivityQO = (monthKey: string, userId?: string) =>
     queryFn: () => getProductivity({ data: { userId, monthKey } }),
     enabled: !!monthKey,
   });
+export const myActivityCountsQO = (monthKey: string, userId?: string) =>
+  queryOptions({
+    queryKey: ["my-activity-counts", userId ?? "self", monthKey],
+    queryFn: () => getMyActivityCounts({ data: { userId, monthKey } }),
+    enabled: !!monthKey,
+  });
 
 export const storiesQO = (monthKey: string) =>
   queryOptions({
@@ -111,7 +117,7 @@ export type ReportFilters = {
   userId?: string | null;
   from: string;
   to: string;
-  type?: "all" | "post" | "reel" | "outros" | "stories" | "cleaning";
+  type?: "all" | "post" | "reel" | "outros" | "gravacao" | "roteiro" | "sistema" | "stories" | "cleaning";
   clientId?: string | null;
 };
 

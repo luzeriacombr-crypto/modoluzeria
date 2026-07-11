@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, profilesQO, myMentionsQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, profilesQO, myMentionsQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -101,6 +101,8 @@ export function MyTasks() {
       </div>
 
       {targetId && <div data-tour="goals"><GoalsWidget monthKey={monthKey} userId={targetId} /></div>}
+
+      {targetId && <ActivityCountsWidget monthKey={monthKey} userId={targetId} />}
 
       {isMeView && mentions.length > 0 && (
         <div className="mb-6">
@@ -260,6 +262,36 @@ function DeadlinePill({ dueDate, status }: { dueDate?: string | null; status: st
     >
       <Clock size={10} /> {info.label}
     </span>
+  );
+}
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  gravacao: "gravações", roteiro: "roteiros", sistema: "sistemas", outros: "outras atividades",
+};
+
+function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: string }) {
+  const { data: counts } = useQuery(myActivityCountsQO(monthKey, userId));
+  const entries = counts
+    ? (Object.entries(counts) as [string, number][]).filter(([, n]) => n > 0)
+    : [];
+  if (entries.length === 0) return null;
+  return (
+    <div className="mb-6 bg-[#1C1C1C] rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+        <span className="rounded p-1" style={{ backgroundColor: "rgba(200,212,78,0.18)", color: "#C8D44E" }}>
+          <List size={11} />
+        </span>
+        <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Atividades registradas em {formatMonth(monthKey)}</h2>
+      </div>
+      <div className="flex flex-wrap gap-2 px-4 pb-3.5">
+        {entries.map(([type, n]) => (
+          <span key={type} className="text-xs font-semibold px-2.5 py-1 rounded-full"
+            style={{ backgroundColor: "rgba(200,212,78,0.12)", color: "#C8D44E" }}>
+            {n} {ACTIVITY_LABELS[type] ?? type}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 

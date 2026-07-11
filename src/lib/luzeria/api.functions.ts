@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status } from "./types";
+import { isActivityType } from "./types";
 
 /* ============== PROFILES & ROLES ============== */
 
@@ -349,8 +350,9 @@ export const duplicateMonth = createServerFn({ method: "POST" })
         const rows: any[] = [];
         (["post", "reel", "outros"] as const).forEach((t) => {
           const n = counts[t] ?? 0;
+          const status: Status = isActivityType(t) ? "PENDENTE" : "PLANEJAMENTO";
           for (let i = 1; i <= n; i++) {
-            rows.push({ month_id: newMonth.id, type: t, idx: i, title: "", status: "PLANEJAMENTO" as Status });
+            rows.push({ month_id: newMonth.id, type: t, idx: i, title: "", status });
           }
         });
         if (rows.length) {
@@ -432,10 +434,10 @@ export const getMonth = createServerFn({ method: "GET" })
       id: month.id, key: month.key,
       posts: mapped.filter((i) => i.type === "post"),
       reels: mapped.filter((i) => i.type === "reel"),
-      outros: mapped.filter((i, idx) => i.type === "outros" && !(items?.[idx] as any)?.blocked_reason?.startsWith("_sub:")),
-      gravacoes: mapped.filter((i, idx) => i.type === "outros" && (items?.[idx] as any)?.blocked_reason === "_sub:gravacao"),
-      roteiros: mapped.filter((i, idx) => i.type === "outros" && (items?.[idx] as any)?.blocked_reason === "_sub:roteiro"),
-      sistemas: mapped.filter((i, idx) => i.type === "outros" && (items?.[idx] as any)?.blocked_reason === "_sub:sistema"),
+      outros: mapped.filter((i) => i.type === "outros"),
+      gravacoes: mapped.filter((i) => i.type === "gravacao"),
+      roteiros: mapped.filter((i) => i.type === "roteiro"),
+      sistemas: mapped.filter((i) => i.type === "sistema"),
     };
   });
 
@@ -881,21 +883,17 @@ export const addContentItem = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       month = m;
     }
-    // 'gravacao', 'roteiro', 'sistema' are not in the DB enum — store as 'outros' with blocked_reason as discriminator
-    const SUBTYPE_MAP: Record<string, string> = { gravacao: "gravacao", roteiro: "roteiro", sistema: "sistema" };
-    const dbType = SUBTYPE_MAP[data.type] ? "outros" : data.type;
-    const subType = SUBTYPE_MAP[data.type] ?? null;
     const { data: maxRow } = await context.supabase
-      .from("content_items").select("idx").eq("month_id", month.id).eq("type", dbType as "outros" | "post" | "reel")
+      .from("content_items").select("idx").eq("month_id", month.id).eq("type", data.type)
       .order("idx", { ascending: false }).limit(1).maybeSingle();
     const nextIdx = ((maxRow as any)?.idx ?? 0) + 1;
     const typeLabels: Record<string, string> = { post: "Post", reel: "Reel", outros: "Item", gravacao: "Gravação", roteiro: "Roteiro", sistema: "Sistema" };
     const fallback = `${typeLabels[data.type] ?? "Item"} ${nextIdx}`;
     const insertRow: Record<string, any> = {
-      month_id: month.id, type: dbType, idx: nextIdx,
+      month_id: month.id, type: data.type, idx: nextIdx,
       title: (data.title?.trim() || fallback),
     };
-    if (subType) insertRow.blocked_reason = `_sub:${subType}`;
+    if (isActivityType(data.type)) insertRow.status = "PENDENTE";
     if (data.dueDate) insertRow.due_date = data.dueDate;
     if (data.notes) insertRow.copy = data.notes;
     if (data.location) insertRow.drive_link = data.location;
@@ -1096,6 +1094,35 @@ export const getProductivity = createServerFn({ method: "GET" })
       if (h) h.count++;
     });
     return { weeks, items, total: (done ?? []).length, history };
+  });
+
+/** Monthly count of registered activities (gravação/roteiro/sistema/outros) — separate
+ * from post/reel productivity, since these aren't "published" content. */
+export const getMyActivityCounts = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId?: string; monthKey: string }) => d)
+  .handler(async ({ data, context }) => {
+    let targetUser = context.userId;
+    if (data.userId && data.userId !== context.userId) {
+      const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+      if (!isAdmin) throw new Error("Forbidden");
+      targetUser = data.userId;
+    }
+    const [y, m] = data.monthKey.split("-").map(Number);
+    const start = new Date(Date.UTC(y, m - 1, 1)).toISOString();
+    const end = new Date(Date.UTC(y, m, 1)).toISOString();
+    const { data: rows, error } = await context.supabase
+      .from("finalizations")
+      .select("finalized_at, content_items!inner(type)")
+      .eq("user_id", targetUser)
+      .gte("finalized_at", start).lt("finalized_at", end);
+    if (error) throw new Error(error.message);
+    const counts = { gravacao: 0, roteiro: 0, sistema: 0, outros: 0 };
+    (rows ?? []).forEach((r: any) => {
+      const t = r.content_items?.type;
+      if (t && t in counts) (counts as any)[t]++;
+    });
+    return counts;
   });
 
 /* ============== STORIES SCHEDULE ============== */
@@ -1472,7 +1499,7 @@ const reportFiltersSchema = z.object({
   userId: z.string().uuid().optional().nullable(),
   from: z.string(),
   to: z.string(),
-  type: z.enum(["all", "post", "reel", "outros", "stories", "cleaning"]).optional(),
+  type: z.enum(["all", "post", "reel", "outros", "gravacao", "roteiro", "sistema", "stories", "cleaning"]).optional(),
   clientId: z.string().uuid().optional().nullable(),
 });
 
@@ -1514,7 +1541,7 @@ export const getReport = createServerFn({ method: "GET" })
       kind: "content" | "stories" | "cleaning";
       finalizedAt: string;
       userId: string;
-      type: "post" | "reel" | "outros" | "stories" | "cleaning";
+      type: "post" | "reel" | "outros" | "gravacao" | "roteiro" | "sistema" | "stories" | "cleaning";
       title: string;
       clientId: string | null;
       clientName: string | null;
@@ -1640,6 +1667,28 @@ export const getReport = createServerFn({ method: "GET" })
     const teamTotal = byMember.reduce((a, b) => a + b.total, 0);
     const byMemberWithPct = byMember.map((m) => ({ ...m, pct: teamTotal ? Math.round((m.total / teamTotal) * 100) : 0 }));
 
+    // ---- activities (gravação/roteiro/sistema/outros) — separate from post/reel productivity ----
+    const activityHist = contentHist.filter((h) => h.type !== "post" && h.type !== "reel");
+    const activitySummary = {
+      gravacao: activityHist.filter((h) => h.type === "gravacao").length,
+      roteiro: activityHist.filter((h) => h.type === "roteiro").length,
+      sistema: activityHist.filter((h) => h.type === "sistema").length,
+      outros: activityHist.filter((h) => h.type === "outros").length,
+    };
+    const activityAgg = new Map<string, { gravacao: number; roteiro: number; sistema: number; outros: number }>();
+    activityHist.forEach((h) => {
+      const row = activityAgg.get(h.userId) ?? { gravacao: 0, roteiro: 0, sistema: 0, outros: 0 };
+      (row as any)[h.type]++;
+      activityAgg.set(h.userId, row);
+    });
+    const activityByMember = [...activityAgg.entries()].map(([userId, v]) => {
+      const p = profileById.get(userId);
+      return {
+        userId, name: p?.name ?? "—", color: p?.color ?? "#888", icon: p?.icon ?? null,
+        ...v, total: v.gravacao + v.roteiro + v.sistema + v.outros,
+      };
+    }).sort((a, b) => b.total - a.total);
+
     // ---- by editor / format ----
     const fmtAgg = new Map<string, { lofi: number; facil: number; basico: number; avancado: number }>();
     contentHist.forEach((h) => {
@@ -1675,7 +1724,7 @@ export const getReport = createServerFn({ method: "GET" })
       editorName: h.editorId ? (profileById.get(h.editorId)?.name ?? null) : null,
     }));
 
-    return { summary, byMember: byMemberWithPct, byEditorFormat, formatTotals, history: enriched };
+    return { summary, byMember: byMemberWithPct, byEditorFormat, formatTotals, history: enriched, activitySummary, activityByMember };
   });
 
 export const getMemberReportDetail = createServerFn({ method: "GET" })

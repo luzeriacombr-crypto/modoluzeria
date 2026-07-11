@@ -12,7 +12,26 @@ export type Status =
   | "REVISAO_ARTE"
   // Reel-only
   | "EM_GRAVACAO"
-  | "EM_EDICAO";
+  | "EM_EDICAO"
+  // Activity-only (gravacao/roteiro/sistema/outros) — simple two-state pipeline,
+  // these aren't "published" so the post/reel funnel doesn't apply.
+  | "PENDENTE"
+  | "CONCLUIDO";
+
+/** Content types that are activity logs, not publishable content. */
+export const ACTIVITY_TYPES: ContentType[] = ["gravacao", "roteiro", "sistema", "outros"];
+export function isActivityType(type: ContentType): boolean {
+  return ACTIVITY_TYPES.includes(type);
+}
+
+/** Date field label per activity type — what the date on the item actually means.
+ * Mirrors ACTIVITY_CONFIG in MaisAtividadesTab.tsx, kept in sync manually. */
+export const ACTIVITY_DATE_LABEL: Record<string, string> = {
+  gravacao: "Data para gravação",
+  roteiro: "Data de entrega",
+  sistema: "Data de entrega",
+  outros: "Data de entrega",
+};
 
 export type ContentType = "post" | "reel" | "outros" | "gravacao" | "roteiro" | "sistema";
 
@@ -177,6 +196,8 @@ export const STATUS_META: Record<
   REVISAO_ARTE:        { label: "Revisão de arte",     bg: "#4A2800", color: "#FF8C42", icon: "Eye" },
   EM_GRAVACAO:         { label: "Em gravação",         bg: "#1A1A3A", color: "#7E9EFF", icon: "Video" },
   EM_EDICAO:           { label: "Em edição",         bg: "#2A1A2A", color: "#FF7EE8", icon: "Scissors" },
+  PENDENTE:            { label: "Pendente",             bg: "#2A2A1E", color: "#FFD97E", icon: "Clock" },
+  CONCLUIDO:           { label: "Concluído",            bg: "#1A3A1A", color: "#C8D44E", icon: "CheckCircle" },
 };
 
 /** Status comuns a Posts, Reels e Outros, na ordem do pipeline. */
@@ -211,22 +232,13 @@ export const STATUS_ORDER: Status[] = [
 ];
 
 export function statusOptionsFor(type: ContentType): Status[] {
+  // Atividades (gravação/roteiro/sistema/outros) não são publicadas — não fazem
+  // sentido no funil de post/reel. Só registram se aconteceu ou não.
+  if (isActivityType(type)) {
+    return ["PENDENTE", "CONCLUIDO"];
+  }
+
   const tail: Status[] = ["TRAVADO", "PRONTO_PARA_PUBLICAR"];
-
-  // Gravação: pipeline simples de produção audiovisual
-  if (type === "gravacao") {
-    return ["PLANEJAMENTO", "COPY", "EM_GRAVACAO", "REVISAO_INTERNA", ...tail];
-  }
-
-  // Roteiro: pipeline de texto/copy
-  if (type === "roteiro") {
-    return ["PLANEJAMENTO", "COPY", "REVISAO_INTERNA", "REVISAO_CLIENTE", ...tail];
-  }
-
-  // Sistema de Conteúdo: onboarding/estratégia de cliente
-  if (type === "sistema") {
-    return ["PLANEJAMENTO", "COPY", "REVISAO_INTERNA", "REVISAO_CLIENTE", "AGENDAMENTO", ...tail];
-  }
 
   const base: Status[] = [
     "PLANEJAMENTO",
@@ -245,19 +257,9 @@ export function statusOptionsFor(type: ContentType): Status[] {
       ...tail,
     ];
   }
-  if (type === "reel") {
-    return [
-      "PLANEJAMENTO",
-      "COPY",
-      ...REEL_EXTRA_STATUS,
-      ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
-      ...tail,
-    ];
-  }
   return [
     "PLANEJAMENTO",
     "COPY",
-    ...POST_EXTRA_STATUS,
     ...REEL_EXTRA_STATUS,
     ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
     ...tail,

@@ -1250,7 +1250,9 @@ export type Database = {
         | "REVISAO_AGENDAMENTO"
         | "TRAVADO"
         | "PRONTO_PARA_PUBLICAR"
-      content_type: "post" | "reel" | "outros"
+        | "PENDENTE"
+        | "CONCLUIDO"
+      content_type: "post" | "reel" | "outros" | "gravacao" | "roteiro" | "sistema"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1392,8 +1394,10 @@ export const Constants = {
         "REVISAO_AGENDAMENTO",
         "TRAVADO",
         "PRONTO_PARA_PUBLICAR",
+        "PENDENTE",
+        "CONCLUIDO",
       ],
-      content_type: ["post", "reel", "outros"],
+      content_type: ["post", "reel", "outros", "gravacao", "roteiro", "sistema"],
     },
   },
 } as const

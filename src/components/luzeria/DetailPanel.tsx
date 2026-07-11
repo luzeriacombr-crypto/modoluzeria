@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, CONTENT_TYPE_LABEL, type Profile, type ContentItem, type ReelType, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, type Profile, type ContentItem, type ReelType, type Status } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS } from "./icons";
 import { MentionInput, renderMentions } from "./MentionInput";
@@ -211,8 +211,9 @@ export function DetailPanel() {
   const canSetEditor = isAdmin || (me ? item.assigneeIds.includes(me.id) : false);
   const canEditFiles = isAdmin || (me ? item.assigneeIds.includes(me.id) : false);
   const activeProfiles = profiles.filter((p) => p.active);
+  const isActivity = isActivityType(item.type);
   const isOverdue =
-    !!item.dueDate && item.status !== "PRONTO_PARA_PUBLICAR" &&
+    !isActivity && !!item.dueDate && item.status !== "PRONTO_PARA_PUBLICAR" &&
     new Date(item.dueDate + "T23:59:59").getTime() < Date.now();
 
   const checklist = item.checklist ?? [];
@@ -323,34 +324,36 @@ export function DetailPanel() {
               )}
             </ModalSection>
 
-            {/* Briefing (era Copy) */}
-            <ModalSection label="Briefing">
+            {/* Briefing (era Copy) — vira "Observações" pra atividades, que não têm briefing de conteúdo */}
+            <ModalSection label={isActivity ? "Observações" : "Briefing"}>
               <textarea
                 value={copy}
                 onChange={(e) => setCopy(e.target.value)}
                 rows={5}
                 onBlur={() => { if (copy !== item.copy) updateItem.mutate({ data: { id: item.id, patch: { copy } } }); }}
-                placeholder="Descreva o briefing do conteúdo..."
+                placeholder={isActivity ? "Observações sobre essa atividade..." : "Descreva o briefing do conteúdo..."}
                 className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none transition-colors"
               />
             </ModalSection>
 
-            {/* Legenda */}
-            <ModalSection label="Legenda">
-              <div className="relative">
-                <textarea
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  rows={5}
-                  onBlur={() => { if (caption !== (item.caption ?? "")) updateItem.mutate({ data: { id: item.id, patch: { caption } } }); }}
-                  placeholder="Digite a legenda que será publicada..."
-                  className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 pb-6 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none transition-colors"
-                />
-                <div className="absolute bottom-2 right-3 text-[10px] text-white/40 pointer-events-none">
-                  {caption.length} caracteres
+            {/* Legenda — só faz sentido pra post/reel, que são publicados no Instagram */}
+            {!isActivity && (
+              <ModalSection label="Legenda">
+                <div className="relative">
+                  <textarea
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value)}
+                    rows={5}
+                    onBlur={() => { if (caption !== (item.caption ?? "")) updateItem.mutate({ data: { id: item.id, patch: { caption } } }); }}
+                    placeholder="Digite a legenda que será publicada..."
+                    className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 pb-6 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none transition-colors"
+                  />
+                  <div className="absolute bottom-2 right-3 text-[10px] text-white/40 pointer-events-none">
+                    {caption.length} caracteres
+                  </div>
                 </div>
-              </div>
-            </ModalSection>
+              </ModalSection>
+            )}
 
             {/* Comentários + Timeline */}
             <ModalSection label="Comentários" last>
@@ -602,8 +605,8 @@ export function DetailPanel() {
           </ModalSection>
         )}
 
-        {/* Prazo */}
-        <ModalSection label="Prazo">
+        {/* Prazo — pra atividades vira a data em que a atividade aconteceu/acontece, não um deadline */}
+        <ModalSection label={isActivity ? (ACTIVITY_DATE_LABEL[item.type] ?? "Data") : "Prazo"}>
           <div className="flex items-center gap-2">
             <Calendar size={15} style={{ color: isOverdue ? "#FF6B6B" : "#C8D44E" }} />
             <input
@@ -615,7 +618,7 @@ export function DetailPanel() {
                 const prev = item.dueDate ?? null;
                 if (v !== prev)
                   updateItem.mutate({ data: { id: item.id, patch: { due_date: v } } }, {
-                    onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar prazo."); setDueDate(prev ?? ""); },
+                    onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar data."); setDueDate(prev ?? ""); },
                   });
               }}
               className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
@@ -627,7 +630,7 @@ export function DetailPanel() {
                   const prev = item.dueDate ?? null;
                   setDueDate("");
                   updateItem.mutate({ data: { id: item.id, patch: { due_date: null } } }, {
-                    onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar prazo."); setDueDate(prev ?? ""); },
+                    onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar data."); setDueDate(prev ?? ""); },
                   });
                 }}
                 className="text-[11px] text-white/40 hover:text-white px-2 py-1 rounded hover:bg-white/5"
@@ -645,46 +648,61 @@ export function DetailPanel() {
           )}
         </ModalSection>
 
-        {/* Data de publicação — aparece pro cliente no preview, diferente do Prazo (interno) */}
-        <ModalSection label="Data de publicação">
-          <div className="flex items-center gap-2">
-            <Calendar size={15} style={{ color: "#C8D44E" }} />
+        {/* Data de publicação — só existe pra post/reel, que de fato são publicados */}
+        {!isActivity && (
+          <ModalSection label="Data de publicação">
+            <div className="flex items-center gap-2">
+              <Calendar size={15} style={{ color: "#C8D44E" }} />
+              <input
+                type="date"
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                onBlur={(e) => saveScheduledAt(e.currentTarget.value, scheduledTime)}
+                className="min-w-0 flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
+              />
+              <input
+                type="time"
+                value={scheduledTime}
+                onChange={(e) => setScheduledTime(e.target.value)}
+                onBlur={(e) => saveScheduledAt(scheduledDate, e.currentTarget.value)}
+                disabled={!scheduledDate}
+                className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
+              />
+              {scheduledDate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const prev = toScheduledLocalParts(item.scheduledAt);
+                    setScheduledDate("");
+                    setScheduledTime("");
+                    updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: null } } }, {
+                      onError: (e: any) => {
+                        toast.error(e?.message ?? "Erro ao salvar data de publicação.");
+                        setScheduledDate(prev.date);
+                        setScheduledTime(prev.time);
+                      },
+                    });
+                  }}
+                  className="text-[11px] text-white/40 hover:text-white px-2 py-1 rounded hover:bg-white/5"
+                >Limpar</button>
+              )}
+            </div>
+            <p className="text-[10px] text-white/40 mt-1.5">Data e hora reais de publicação no Instagram. É isso que o cliente vê no preview — o Prazo acima é só interno.</p>
+          </ModalSection>
+        )}
+
+        {/* Local — só faz sentido pra gravação (externa, estúdio, etc.) */}
+        {item.type === "gravacao" && (
+          <ModalSection label="Local">
             <input
-              type="date"
-              value={scheduledDate}
-              onChange={(e) => setScheduledDate(e.target.value)}
-              onBlur={(e) => saveScheduledAt(e.currentTarget.value, scheduledTime)}
-              className="min-w-0 flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
+              value={drive}
+              onChange={(e) => setDrive(e.target.value)}
+              onBlur={() => { if (drive !== item.driveLink) updateItem.mutate({ data: { id: item.id, patch: { drive_link: drive } } }); }}
+              placeholder="Ex: Clínica, estúdio, externo…"
+              className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30"
             />
-            <input
-              type="time"
-              value={scheduledTime}
-              onChange={(e) => setScheduledTime(e.target.value)}
-              onBlur={(e) => saveScheduledAt(scheduledDate, e.currentTarget.value)}
-              disabled={!scheduledDate}
-              className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
-            />
-            {scheduledDate && (
-              <button
-                type="button"
-                onClick={() => {
-                  const prev = toScheduledLocalParts(item.scheduledAt);
-                  setScheduledDate("");
-                  setScheduledTime("");
-                  updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: null } } }, {
-                    onError: (e: any) => {
-                      toast.error(e?.message ?? "Erro ao salvar data de publicação.");
-                      setScheduledDate(prev.date);
-                      setScheduledTime(prev.time);
-                    },
-                  });
-                }}
-                className="text-[11px] text-white/40 hover:text-white px-2 py-1 rounded hover:bg-white/5"
-              >Limpar</button>
-            )}
-          </div>
-          <p className="text-[10px] text-white/40 mt-1.5">Data e hora reais de publicação no Instagram. É isso que o cliente vê no preview — o Prazo acima é só interno.</p>
-        </ModalSection>
+          </ModalSection>
+        )}
 
         {item.status === "TRAVADO" && (
           <ModalSection label="Motivo do travamento">
