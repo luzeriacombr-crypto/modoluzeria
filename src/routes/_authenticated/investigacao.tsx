@@ -2,7 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { investigateItemLoss, getGoogleClientIdDebug } from "@/lib/luzeria/debug-investigation.functions";
+import { investigateItemLoss } from "@/lib/luzeria/debug-investigation.functions";
 
 export const Route = createFileRoute("/_authenticated/investigacao")({
   component: InvestigacaoPage,
@@ -11,14 +11,9 @@ export const Route = createFileRoute("/_authenticated/investigacao")({
 
 function InvestigacaoPage() {
   const fn = useServerFn(investigateItemLoss);
-  const clientIdFn = useServerFn(getGoogleClientIdDebug);
   const { data, isLoading, error } = useQuery({
     queryKey: ["debug-investigacao"],
     queryFn: () => fn(),
-  });
-  const { data: clientIdData } = useQuery({
-    queryKey: ["debug-google-client-id"],
-    queryFn: () => clientIdFn(),
   });
 
   if (isLoading) return <div className="p-10 text-white">Carregando…</div>;
@@ -63,11 +58,6 @@ function InvestigacaoPage() {
   return (
     <div className="p-10 text-white text-sm space-y-10 max-w-6xl">
       <h1 className="text-xl font-bold">Investigação temporária — itens sumidos</h1>
-
-      <section>
-        <h2 className="text-base font-bold text-[#C8D44E] mb-2">Google Client ID (não é secreto)</h2>
-        <p className="font-mono break-all">{clientIdData?.clientId ?? "carregando…"}</p>
-      </section>
 
       <section>
         <h2 className="text-base font-bold text-[#C8D44E] mb-2">Checagem de sanidade</h2>

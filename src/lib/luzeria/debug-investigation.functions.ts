@@ -2,17 +2,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 
-// TEMPORARY — client_id is not secret (it's sent to the browser in every OAuth
-// redirect), only exposing it here to identify which Google Cloud project owns
-// it without needing DevTools. Delete after the Calendar OAuth setup is done.
-export const getGoogleClientIdDebug = createServerFn({ method: "GET" })
-  .middleware([requireActiveProfile])
-  .handler(async ({ context }) => {
-    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
-    if (!isMaster) throw new Error("Forbidden");
-    return { clientId: process.env.GOOGLE_CLIENT_ID ?? null };
-  });
-
 export const investigateItemLoss = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {

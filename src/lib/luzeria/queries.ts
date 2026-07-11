@@ -40,11 +40,6 @@ import {
   getOrCreateShareToken, rotateShareToken, listClientFeedback,
   getPublicFeed, getPublicDriveThumbnail, addPublicFeedback,
 } from "./feed-share.functions";
-import {
-  getGoogleCalendarAuthUrl, disconnectGoogleCalendar,
-  getMyCalendarConnection, getTodayCalendarEvents,
-} from "./calendar.functions";
-
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
 export const clientsQO = () => queryOptions({ queryKey: ["clients"], queryFn: () => listClients() });
@@ -284,20 +279,6 @@ export const notificationPrefsQO = () =>
   queryOptions({
     queryKey: ["notification-prefs"],
     queryFn: () => getMyNotificationPreferences(),
-    staleTime: 60_000,
-  });
-
-export const myCalendarConnectionQO = () =>
-  queryOptions({
-    queryKey: ["my-calendar-connection"],
-    queryFn: () => getMyCalendarConnection(),
-    staleTime: 60_000,
-  });
-
-export const todayCalendarEventsQO = (userId?: string) =>
-  queryOptions({
-    queryKey: ["today-calendar-events", userId ?? "self"],
-    queryFn: () => getTodayCalendarEvents({ data: { userId } }),
     staleTime: 60_000,
   });
 
@@ -568,14 +549,6 @@ export function useApi() {
       },
     }),
     /* ===== GOOGLE AGENDA ===== */
-    getGoogleCalendarAuthUrl: useMutation({ mutationFn: useServerFn(getGoogleCalendarAuthUrl) }),
-    disconnectGoogleCalendar: useMutation({
-      mutationFn: useServerFn(disconnectGoogleCalendar),
-      onSuccess: () => {
-        qc.invalidateQueries({ queryKey: ["my-calendar-connection"] });
-        qc.invalidateQueries({ queryKey: ["today-calendar-events"] });
-      },
-    }),
     /* ===== FEED SHARE ===== */
     getOrCreateShareToken: useMutation({ mutationFn: useServerFn(getOrCreateShareToken) }),
     rotateShareToken: useMutation({ mutationFn: useServerFn(rotateShareToken) }),
