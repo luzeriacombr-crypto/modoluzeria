@@ -15,7 +15,7 @@ export function ClientView({ clientId }: { clientId: string }) {
   const { data: clients = [] } = useQuery(clientsQO());
   const client = clients.find((c) => c.id === clientId);
   const { data: profiles = [] } = useQuery(profilesQO());
-  const { selectedMonthKey, selectMonth } = useUI();
+  const { selectedMonthKey, selectMonth, openFicha } = useUI();
   const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
   const [tab, setTab] = useState<"posts" | "reels" | "mais" | "feed" | "ficha">("posts");
@@ -56,7 +56,7 @@ export function ClientView({ clientId }: { clientId: string }) {
           )}
           </div>
           <button
-            onClick={() => setTab(isAvulso ? "feed" : "ficha")}
+            onClick={() => (isAvulso ? openFicha(client.id) : setTab("ficha"))}
             title="Ficha do cliente"
             className="ml-1 p-1.5 rounded-md text-white/50 hover:text-[#C8D44E] hover:bg-white/5 transition"
           >
