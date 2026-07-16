@@ -15,7 +15,7 @@ export function ClientView({ clientId }: { clientId: string }) {
   const { data: clients = [] } = useQuery(clientsQO());
   const client = clients.find((c) => c.id === clientId);
   const { data: profiles = [] } = useQuery(profilesQO());
-  const { selectedMonthKey, selectMonth, openFicha } = useUI();
+  const { selectedMonthKey, selectMonth } = useUI();
   const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
   const [tab, setTab] = useState<"posts" | "reels" | "mais" | "feed" | "ficha">("posts");
@@ -31,9 +31,7 @@ export function ClientView({ clientId }: { clientId: string }) {
     reels: { label: "Reels", type: "reel" as const, items: month?.reels ?? [] },
   } as const;
 
-  const tabs = isAvulso
-    ? (["posts", "reels", "mais", "feed"] as const)
-    : (["posts", "reels", "mais", "feed", "ficha"] as const);
+  const tabs = ["posts", "reels", "mais", "feed", "ficha"] as const;
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
   const idx = sortedKeys.indexOf(selectedMonthKey);
@@ -56,7 +54,7 @@ export function ClientView({ clientId }: { clientId: string }) {
           )}
           </div>
           <button
-            onClick={() => (isAvulso ? openFicha(client.id) : setTab("ficha"))}
+            onClick={() => setTab("ficha")}
             title="Ficha do cliente"
             className="ml-1 p-1.5 rounded-md text-white/50 hover:text-[#C8D44E] hover:bg-white/5 transition"
           >
