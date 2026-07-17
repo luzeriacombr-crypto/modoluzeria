@@ -88,6 +88,10 @@
 
 :root {
   --radius: 0.5rem;
+  /* Shared "premium" easing for hover/press micro-interactions — smooth
+   * deceleration instead of linear-ish `ease`. Already used by the slide-in
+   * panels/modals; applied here to buttons, rows and cards too. */
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
   /* Luzeria palette */
   --background: #0D0D0D;
   --foreground: #FFFFFF;
@@ -174,8 +178,10 @@
 
   /* Default tactile feedback for any clickable element that doesn't override it */
   button, [role="button"], a, summary, label[for], select, [data-clickable] {
-    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease,
-                box-shadow 180ms ease, transform 160ms ease, opacity 150ms ease, filter 160ms ease;
+    transition: background-color 160ms var(--ease-premium), color 160ms var(--ease-premium),
+                border-color 160ms var(--ease-premium), box-shadow 180ms var(--ease-premium),
+                transform 160ms var(--ease-premium), opacity 150ms var(--ease-premium),
+                filter 160ms var(--ease-premium);
   }
   button:not(:disabled), [role="button"]:not([aria-disabled="true"]), a[href], summary,
   label[for], select:not(:disabled), [data-clickable] {
@@ -260,7 +266,7 @@
   color: #0D0D0D;
   font-weight: 700;
   box-shadow: 0 4px 16px rgba(200, 212, 78, 0.3);
-  transition: box-shadow 200ms ease, transform 200ms ease, opacity 150ms ease;
+  transition: box-shadow 200ms var(--ease-premium), transform 200ms var(--ease-premium), opacity 150ms var(--ease-premium);
   &:hover {
     box-shadow: 0 6px 24px rgba(200, 212, 78, 0.45);
   }
@@ -296,7 +302,7 @@
   font-size: 0.875rem;
   color: #ffffff;
   outline: none;
-  transition: border-color 150ms ease;
+  transition: border-color 150ms var(--ease-premium);
   &:focus {
     border-color: #C8D44E;
     box-shadow: 0 0 0 1px #C8D44E;
@@ -312,7 +318,7 @@
   color: #0D0D0D;
   font-weight: 700;
   box-shadow: 0 4px 16px rgba(200, 212, 78, 0.25);
-  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease, opacity 150ms ease;
+  transition: transform 180ms var(--ease-premium), box-shadow 180ms var(--ease-premium), filter 180ms var(--ease-premium), opacity 150ms var(--ease-premium);
   &:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 8px 24px rgba(200, 212, 78, 0.5);
@@ -331,7 +337,7 @@
   background-color: transparent;
   color: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease;
+  transition: background-color 180ms var(--ease-premium), color 180ms var(--ease-premium), border-color 180ms var(--ease-premium), transform 180ms var(--ease-premium);
   &:hover:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.07);
     color: #ffffff;
@@ -346,7 +352,7 @@
   background-color: transparent;
   color: #E5484D;
   border: 1px solid rgba(229, 72, 77, 0.3);
-  transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  transition: background-color 180ms var(--ease-premium), color 180ms var(--ease-premium), box-shadow 180ms var(--ease-premium), border-color 180ms var(--ease-premium);
   &:hover:not(:disabled) {
     background-color: rgba(229, 72, 77, 0.12);
     border-color: rgba(229, 72, 77, 0.55);
@@ -359,7 +365,7 @@
   justify-content: center;
   color: rgba(255, 255, 255, 0.55);
   border-radius: 9999px;
-  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+  transition: background-color 160ms var(--ease-premium), color 160ms var(--ease-premium), transform 160ms var(--ease-premium);
   cursor: pointer;
   &:hover:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.08);
@@ -369,13 +375,13 @@
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 @utility lz-row-hover {
-  transition: background-color 160ms ease, transform 160ms ease, border-color 160ms ease;
+  transition: background-color 160ms var(--ease-premium), transform 160ms var(--ease-premium), border-color 160ms var(--ease-premium);
   &:hover {
     background-color: rgba(255, 255, 255, 0.035);
   }
 }
 @utility lz-card-hover {
-  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+  transition: transform 200ms var(--ease-premium), border-color 200ms var(--ease-premium), box-shadow 200ms var(--ease-premium), background-color 200ms var(--ease-premium);
   &:hover {
     transform: translateY(-2px);
     border-color: rgba(200, 212, 78, 0.35);
@@ -383,7 +389,7 @@
   }
 }
 @utility lz-sidebar-item {
-  transition: background-color 160ms ease, color 160ms ease, padding 160ms ease;
+  transition: background-color 160ms var(--ease-premium), color 160ms var(--ease-premium), padding 160ms var(--ease-premium);
   cursor: pointer;
   &:hover:not(.is-active) {
     background-color: rgba(255, 255, 255, 0.06);
@@ -392,7 +398,7 @@
 }
 @utility lz-tab {
   position: relative;
-  transition: color 160ms ease;
+  transition: color 160ms var(--ease-premium);
   cursor: pointer;
   &::after {
     content: "";
@@ -402,7 +408,7 @@
     background: #C8D44E;
     transform: scaleX(0);
     transform-origin: center;
-    transition: transform 200ms ease;
+    transition: transform 200ms var(--ease-premium);
   }
   &:hover:not(.is-active) {
     color: #ffffff;
@@ -414,7 +420,7 @@
 @utility lz-link {
   position: relative;
   display: inline-block;
-  transition: color 160ms ease;
+  transition: color 160ms var(--ease-premium);
   &::after {
     content: "";
     position: absolute;
@@ -424,7 +430,7 @@
     background: currentColor;
     transform: scaleX(0);
     transform-origin: right;
-    transition: transform 240ms ease;
+    transition: transform 240ms var(--ease-premium);
   }
   &:hover::after {
     transform: scaleX(1);
