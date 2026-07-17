@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { STATUS_META, STATUS_ORDER, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, STATUS_ORDER, statusLabel, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 
 export function StatusBadge({
-  status, onChange, size = "sm", options,
-}: { status: Status; onChange?: (s: Status) => void; size?: "sm" | "md"; options?: Status[] }) {
+  status, onChange, size = "sm", options, isAvulso = false,
+}: { status: Status; onChange?: (s: Status) => void; size?: "sm" | "md"; options?: Status[]; isAvulso?: boolean }) {
   const list = options ?? STATUS_ORDER;
   const meta = STATUS_META[status];
   const Icon = STATUS_ICONS[status];
@@ -50,7 +50,7 @@ export function StatusBadge({
         }}
       >
         <Icon size={12} />
-        <span>{meta.label}</span>
+        <span>{statusLabel(status, isAvulso)}</span>
         {onChange && (
           <ChevronDown
             size={11}
@@ -73,7 +73,7 @@ export function StatusBadge({
                 <span className="rounded p-1" style={{ backgroundColor: m.bg, color: m.color }}>
                   <I size={11} />
                 </span>
-                <span className="text-white/80">{m.label}</span>
+                <span className="text-white/80">{statusLabel(s, isAvulso)}</span>
               </button>
             );
           })}

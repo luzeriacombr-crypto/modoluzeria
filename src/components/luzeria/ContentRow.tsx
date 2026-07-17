@@ -8,10 +8,11 @@ import { StatusBadge } from "./StatusBadge";
 import { Avatar, AvatarStack } from "./Avatar";
 import { useUI } from "@/lib/luzeria/ui-store";
 
-export function ContentRow({ item, profiles, idx }: {
+export function ContentRow({ item, profiles, idx, isAvulso }: {
   item: ContentItem;
   profiles: Profile[];
   idx: number;
+  isAvulso?: boolean;
 }) {
   const { setItemStatus, updateItem, addAssignee } = useApi();
   const me = useMe().data;
@@ -84,7 +85,7 @@ export function ContentRow({ item, profiles, idx }: {
       )}
 
       <div onClick={(e) => e.stopPropagation()}>
-        <StatusBadge status={item.status} options={statusOptionsFor(item.type)}
+        <StatusBadge status={item.status} options={statusOptionsFor(item.type)} isAvulso={isAvulso}
           onChange={(s) => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }} />
       </div>
 

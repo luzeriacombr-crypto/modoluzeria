@@ -107,7 +107,7 @@ export function ClientView({ clientId }: { clientId: string }) {
             <>
               {cfg.items.map((item, i) => (
                 <div key={item.id} className="group/row relative pr-12">
-                  <ContentRow item={item} profiles={profiles} idx={i + 1} />
+                  <ContentRow item={item} profiles={profiles} idx={i + 1} isAvulso={isAvulso} />
                   {isAdmin && (
                     <button
                       onClick={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { STATUS_META, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, type Profile, type ContentItem, type ReelType, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, type Profile, type ContentItem, type ReelType, type Status } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS } from "./icons";
 import { MentionInput, renderMentions } from "./MentionInput";
@@ -144,6 +144,7 @@ export function DetailPanel() {
   const item = useMemo(() => (selectedItemId && month ? findItem(month, selectedItemId) : undefined), [month, selectedItemId]);
   const client = clients.find((c) => c.id === selectedClientId);
   const isAdmin = me?.role === "master" || me?.role === "setor";
+  const isAvulso = client?.category === "Avulsos";
 
   useEffect(() => {
     if (!selectedItemId) return;
@@ -429,7 +430,7 @@ export function DetailPanel() {
                       const I = STATUS_ICONS[item.status];
                       return <I size={16} />;
                     })()}
-                    {STATUS_META[item.status].label}
+                    {statusLabel(item.status, isAvulso)}
                   </span>
                   <ChevronDown size={16} className={`transition-transform ${statusOpen ? "rotate-180" : ""}`} />
                 </button>
@@ -456,7 +457,7 @@ export function DetailPanel() {
                             backgroundColor: active ? m.bg : "transparent",
                             color: active ? m.color : "rgba(255,255,255,0.6)",
                           }}>
-                          <I size={16} /> {m.label}
+                          <I size={16} /> {statusLabel(s, isAvulso)}
                         </button>
                       );
                     })}
@@ -606,7 +607,7 @@ export function DetailPanel() {
         )}
 
         {/* Prazo — pra atividades vira a data em que a atividade aconteceu/acontece, não um deadline */}
-        <ModalSection label={isActivity ? (ACTIVITY_DATE_LABEL[item.type] ?? "Data") : "Prazo"}>
+        <ModalSection label={isActivity ? (ACTIVITY_DATE_LABEL[item.type] ?? "Data") : (isAvulso ? "Prazo de entrega" : "Prazo")}>
           <div className="flex items-center gap-2">
             <Calendar size={15} style={{ color: isOverdue ? "#FF6B6B" : "#C8D44E" }} />
             <input
@@ -643,13 +644,13 @@ export function DetailPanel() {
           {item.startedAt && (
             <p className="text-[10px] text-white/40 mt-1.5">
               Iniciado em {new Date(item.startedAt).toLocaleDateString("pt-BR")}
-              {item.finishedAt && ` · Publicado em ${new Date(item.finishedAt).toLocaleDateString("pt-BR")}`}
+              {item.finishedAt && ` · ${isAvulso ? "Entregue" : "Publicado"} em ${new Date(item.finishedAt).toLocaleDateString("pt-BR")}`}
             </p>
           )}
         </ModalSection>
 
-        {/* Data de publicação — só existe pra post/reel, que de fato são publicados */}
-        {!isActivity && (
+        {/* Data de publicação — só existe pra post/reel de clientes não-avulsos, que de fato são publicados */}
+        {!isActivity && !isAvulso && (
           <ModalSection label="Data de publicação">
             <div className="flex items-center gap-2">
               <Calendar size={15} style={{ color: "#C8D44E" }} />

@@ -200,6 +200,13 @@ export const STATUS_META: Record<
   CONCLUIDO:           { label: "Concluído",            bg: "#1A3A1A", color: "#C8D44E", icon: "CheckCircle" },
 };
 
+/** Rótulo exibido para um status — clientes Avulsos veem "Entregue" no lugar
+ * de "Pronto para publicar" (o valor no banco continua PRONTO_PARA_PUBLICAR). */
+export function statusLabel(status: Status, isAvulso?: boolean): string {
+  if (isAvulso && status === "PRONTO_PARA_PUBLICAR") return "Entregue";
+  return STATUS_META[status].label;
+}
+
 /** Status comuns a Posts, Reels e Outros, na ordem do pipeline. */
 export const GLOBAL_STATUS_ORDER: Status[] = [
   "PLANEJAMENTO",
