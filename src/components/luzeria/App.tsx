@@ -34,7 +34,7 @@ export function App() {
       .on("postgres_changes", { event: "*", schema: "public", table: "content_items" }, () => {
         qc.invalidateQueries({ queryKey: ["month"] });
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "content_comments" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "comments" }, () => {
         qc.invalidateQueries({ queryKey: ["month"] });
       })
       .subscribe();

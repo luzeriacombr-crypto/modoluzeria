@@ -227,7 +227,9 @@ export const updateMyAccount = createServerFn({ method: "POST" })
 export const listClients = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase.from("clients").select("*").order("name");
+    const { data, error } = await context.supabase.from("clients")
+      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url")
+      .order("name");
     if (error) throw new Error(error.message);
     const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
     const signedPhotos = await signAvatarPaths(context.supabase, photoPaths);
@@ -385,12 +387,14 @@ export const getMonth = createServerFn({ method: "GET" })
     const { data: month } = await context.supabase
       .from("months").select("id, key").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
     if (!month) return null;
-    const [{ data: items }, { data: assignees }, { data: comments }] = await Promise.all([
-      context.supabase.from("content_items").select("*").eq("month_id", month.id).order("type").order("idx"),
-      context.supabase.from("item_assignees").select("item_id, user_id").in("item_id",
-        (await context.supabase.from("content_items").select("id").eq("month_id", month.id)).data?.map((x) => x.id) ?? []),
-      context.supabase.from("comments").select("id, item_id, author_id, text, is_system, created_at").in("item_id",
-        (await context.supabase.from("content_items").select("id").eq("month_id", month.id)).data?.map((x) => x.id) ?? []).order("created_at"),
+    const { data: items } = await context.supabase
+      .from("content_items")
+      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source")
+      .eq("month_id", month.id).order("type").order("idx");
+    const itemIds = (items ?? []).map((it: any) => it.id);
+    const [{ data: assignees }, { data: comments }] = await Promise.all([
+      context.supabase.from("item_assignees").select("item_id, user_id").in("item_id", itemIds),
+      context.supabase.from("comments").select("id, item_id, author_id, text, is_system, created_at").in("item_id", itemIds).order("created_at"),
     ]);
     const itemAssignees = new Map<string, string[]>();
     (assignees ?? []).forEach((a) => {
@@ -475,18 +479,14 @@ export const updateFeedOrder = createServerFn({ method: "POST" })
       .from("content_items").select("id").eq("month_id", data.monthId);
     const allIds = (existing ?? []).map((x: any) => x.id);
     const ordered = data.orderedItemIds.filter((id) => allIds.includes(id));
-    const updates = ordered.map((id, pos) =>
-      context.supabase.from("content_items").update({ feed_order: pos }).eq("id", id),
-    );
     const missing = allIds.filter((id) => !ordered.includes(id));
-    if (missing.length) {
-      updates.push(
-        context.supabase.from("content_items").update({ feed_order: null }).in("id", missing) as any,
-      );
-    }
-    const results = await Promise.all(updates);
-    for (const r of results) {
-      if ((r as any)?.error) throw new Error((r as any).error.message);
+    const rows = [
+      ...ordered.map((id, pos) => ({ id, feed_order: pos })),
+      ...missing.map((id) => ({ id, feed_order: null })),
+    ];
+    if (rows.length) {
+      const { error } = await context.supabase.rpc("update_feed_order", { p_updates: rows });
+      if (error) throw new Error(error.message);
     }
     return { ok: true };
   });

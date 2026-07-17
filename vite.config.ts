@@ -31,7 +31,9 @@ export default defineConfig(async ({ command, mode }) => {
   // skip Nitro in that mode and let Vite emit the standard dist output.
   if (command === "build" && mode !== "development") {
     const { nitro } = await import("nitro/vite");
-    plugins.push(nitro({ preset: "vercel" }));
+    // Pin functions to São Paulo — the Supabase project lives in sa-east-1,
+    // so matching the region avoids a cross-continent round trip per request.
+    plugins.push(nitro({ preset: "vercel", vercel: { functions: { regions: ["gru1"] } } }));
   }
 
   plugins.push(viteReact());

@@ -1,5 +1,3 @@
-import * as XLSX from "xlsx";
-
 const MONTHS_PT = [
   "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
@@ -17,10 +15,11 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("pt-BR");
 }
 
-export function exportReportXlsx(
+export async function exportReportXlsx(
   report: any,
   range: { from: string; to: string; label: string },
 ) {
+  const XLSX = await import("xlsx");
   const wb = XLSX.utils.book_new();
 
   // Aba 1 — Resumo
