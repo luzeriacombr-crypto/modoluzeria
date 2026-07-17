@@ -10,6 +10,7 @@ import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, 
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
+import { ImageCropModal } from "./ImageCropModal";
 
 function formatHours(h: number | null) {
   if (h == null) return "—";
@@ -286,6 +287,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
   const [notes, setNotes] = useState<string>(client.customFields.notes ?? "");
   const [photoPreview, setPhotoPreview] = useState<string | null>(client.photoUrl ?? null);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -298,17 +300,21 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     setPhotoPreview(client.photoUrl ?? null);
   }, [client.id]);
 
-  async function handlePhotoFile(file: File) {
-    if (file.size > 5 * 1024 * 1024) { toast.error("Imagem maior que 5MB."); return; }
-    const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-    const path = `clients/${client.id}/photo-${Date.now()}.${ext}`;
+  function pickPhotoFile(file: File) {
+    if (file.size > 20 * 1024 * 1024) { toast.error("Imagem maior que 20MB."); return; }
+    setCropFile(file);
+  }
+
+  async function handleCroppedPhoto(result: { blob: Blob; contentType: string; ext: string }) {
+    setCropFile(null);
+    const path = `clients/${client.id}/photo-${Date.now()}.${result.ext}`;
     setPhotoUploading(true);
     try {
-      const { error } = await supabase.storage.from("avatars").upload(path, file, {
-        upsert: true, contentType: file.type, cacheControl: "31536000",
+      const { error } = await supabase.storage.from("avatars").upload(path, result.blob, {
+        upsert: true, contentType: result.contentType, cacheControl: "31536000",
       });
       if (error) throw error;
-      const preview = URL.createObjectURL(file);
+      const preview = URL.createObjectURL(result.blob);
       setPhotoPreview(preview);
       onSave({ photo_url: path });
       toast.success("Foto atualizada");
@@ -364,7 +370,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoFile(f); e.target.value = ""; }}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) pickPhotoFile(f); e.target.value = ""; }}
                 />
                 <button
                   onClick={() => photoInputRef.current?.click()}
@@ -414,6 +420,9 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
           <button onClick={save} className="rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90"
             style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>Salvar configuração</button>
         </div>
+      )}
+      {cropFile && (
+        <ImageCropModal file={cropFile} onCancel={() => setCropFile(null)} onConfirm={handleCroppedPhoto} />
       )}
     </div>
   );
