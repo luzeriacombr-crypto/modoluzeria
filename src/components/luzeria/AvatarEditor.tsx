@@ -3,6 +3,7 @@ import { Camera, Loader2, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
+import { ImageCropModal } from "./ImageCropModal";
 import type { Profile } from "@/lib/luzeria/types";
 
 export const AVATAR_PALETTE = [
@@ -49,8 +50,19 @@ export function AvatarEditor({
   const inputRef = useRef<HTMLInputElement>(null);
   const [hovering, setHovering] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   const previewProfile = { ...me, color: draftColor, avatarUrl: draftAvatarUrl };
+
+  function pickFile(file: File) {
+    if (file.size > 20 * 1024 * 1024) { toast.error("Imagem maior que 20MB."); return; }
+    setCropFile(file);
+  }
+
+  function handleCropConfirm(result: { blob: Blob; contentType: string; ext: string }) {
+    setCropFile(null);
+    onPickFile(new File([result.blob], `avatar.${result.ext}`, { type: result.contentType }));
+  }
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -64,7 +76,7 @@ export function AvatarEditor({
           e.preventDefault();
           setDragging(false);
           const f = e.dataTransfer.files?.[0];
-          if (f) onPickFile(f);
+          if (f) pickFile(f);
         }}
         style={{
           width: size, height: size,
@@ -94,7 +106,7 @@ export function AvatarEditor({
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) onPickFile(f);
+            if (f) pickFile(f);
             e.target.value = "";
           }}
         />
@@ -121,6 +133,9 @@ export function AvatarEditor({
         )}
       </div>
       <p className="text-[10px] text-white/30">JPG, PNG ou WEBP, até 5MB.</p>
+      {cropFile && (
+        <ImageCropModal file={cropFile} onCancel={() => setCropFile(null)} onConfirm={handleCropConfirm} />
+      )}
     </div>
   );
 }
