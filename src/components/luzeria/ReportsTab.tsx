@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { profilesQO, clientsQO, reportQO, reportExtrasQO, memberVelocityQO, type ReportFilters } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
-import { REEL_TYPE_LABEL, STATUS_META, type ReelType, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, type Status } from "@/lib/luzeria/types";
 import { exportReportXlsx } from "@/lib/luzeria/report-export";
 import { MemberReportPanel } from "./MemberReportPanel";
 
@@ -19,6 +19,16 @@ const PRESET_LABEL: Record<Preset, string> = {
   "6m": "Últimos 6 meses",
   year: "Este ano",
   custom: "Personalizado",
+};
+
+const ACTIVITY_KIND_META: Record<string, { label: string; bg: string; color: string }> = {
+  finalized: { label: "FINALIZOU", bg: "rgba(200,212,78,0.15)", color: "#C8D44E" },
+  status: { label: "STATUS", bg: "rgba(74,158,255,0.15)", color: "#4A9EFF" },
+  comment: { label: "COMENTÁRIO", bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" },
+  file: { label: "ARQUIVO", bg: "rgba(255,140,66,0.15)", color: "#FF8C42" },
+  created: { label: "CRIADO", bg: "rgba(184,132,252,0.15)", color: "#B884FC" },
+  due_date: { label: "PRAZO", bg: "rgba(255,217,126,0.15)", color: "#FFD97E" },
+  rated: { label: "AVALIAÇÃO", bg: "rgba(255,126,232,0.15)", color: "#FF7EE8" },
 };
 
 function rangeFor(preset: Preset, customFrom?: string, customTo?: string) {
@@ -87,7 +97,7 @@ export function ReportsTab() {
 
   const presetLabel = PRESET_LABEL[pPreset];
   const histPage = useMemo(() => {
-    const all = report?.history ?? [];
+    const all = (report as any)?.activityFeed ?? [];
     return { rows: all.slice(page * PER, (page + 1) * PER), total: all.length };
   }, [report, page]);
 
@@ -308,34 +318,28 @@ export function ReportsTab() {
           <Section title={`Histórico (${histPage.total})`}>
             {histPage.rows.length === 0 ? (
               <p className="text-white/40 text-sm px-3 py-4 text-center">Sem registros no período.</p>
-            ) : histPage.rows.map((h: any, i: number) => (
-              <div key={i} className="flex items-center gap-3 px-3 py-2.5 border-t border-white/[0.05] text-xs">
-                <span className="text-white/40 tabular-nums w-32 shrink-0">{new Date(h.finalizedAt).toLocaleString("pt-BR")}</span>
-                <Avatar profile={{ id: h.userId, name: h.userName, color: h.userColor } as any} size={22} />
-                <span className="text-white/80 w-28 truncate">{h.userName}</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold shrink-0"
-                  style={{ backgroundColor: (h.clientColor ?? "#444") + "33", color: h.clientColor ?? "#FFF" }}>
-                  {h.clientName ?? "—"}
-                </span>
-                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
-                  style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
-                  {h.type === "post" ? "POST" : h.type === "reel" ? "REEL" : h.type === "outros" ? "OUTRO" : h.type === "stories" ? "STORIES" : "LIMPEZA"}
-                </span>
-                <span className="text-white flex-1 truncate">{h.title}</span>
-                {h.type === "reel" && h.reelType && (
-                  <span className="text-[10px] text-white/50 shrink-0">{REEL_TYPE_LABEL[h.reelType as ReelType]}</span>
-                )}
-                {h.type === "reel" && h.editorName && (
-                  <span className="text-[10px] text-white/50 shrink-0">✂ {h.editorName}</span>
-                )}
-                {h.lateDays > 0 && (
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0"
-                    style={{ backgroundColor: "rgba(255,107,107,0.18)", color: "#FF6B6B" }}>
-                    Atraso {h.lateDays}d
+            ) : histPage.rows.map((h: any, i: number) => {
+              const km = ACTIVITY_KIND_META[h.kind] ?? { label: h.kind?.toUpperCase() ?? "?", bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" };
+              return (
+                <div key={i} className="flex items-center gap-3 px-3 py-2.5 border-t border-white/[0.05] text-xs">
+                  <span className="text-white/40 tabular-nums w-32 shrink-0">{new Date(h.at).toLocaleString("pt-BR")}</span>
+                  <Avatar profile={{ id: h.userId, name: h.userName, color: h.userColor } as any} size={22} />
+                  <span className="text-white/80 w-28 truncate">{h.userName}</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold shrink-0"
+                    style={{ backgroundColor: (h.clientColor ?? "#444") + "33", color: h.clientColor ?? "#FFF" }}>
+                    {h.clientName ?? "—"}
                   </span>
-                )}
-              </div>
-            ))}
+                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
+                    style={{ backgroundColor: km.bg, color: km.color }}>
+                    {km.label}
+                  </span>
+                  <span className="text-white flex-1 truncate">
+                    <span className="font-semibold">{h.itemTitle ?? "—"}</span>
+                    <span className="text-white/50"> · {h.description}</span>
+                  </span>
+                </div>
+              );
+            })}
             {histPage.total > PER && (
               <div className="flex items-center justify-between mt-3 px-3 text-xs text-white/60">
                 <button disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}

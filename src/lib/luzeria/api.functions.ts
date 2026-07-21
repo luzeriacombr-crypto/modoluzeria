@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status } from "./types";
-import { isActivityType } from "./types";
+import { isActivityType, STATUS_META } from "./types";
 
 /* ============== PROFILES & ROLES ============== */
 
@@ -1637,6 +1637,121 @@ export const getReport = createServerFn({ method: "GET" })
 
     history.sort((a, b) => b.finalizedAt.localeCompare(a.finalizedAt));
 
+    // ---- broad activity feed (comments, files, status moves, item events) ----
+    // Kept separate from `history` above: that array drives goal/finalization
+    // stats (summary/byMember/etc.) and must stay finalization-only. This one
+    // is the raw "everything that happened" feed for the Histórico display.
+    type ActivityEntry = {
+      kind: "finalized" | "status" | "comment" | "file" | "created" | "due_date" | "rated";
+      at: string;
+      userId: string;
+      clientId: string | null;
+      clientName: string | null;
+      clientColor: string | null;
+      itemId: string | null;
+      itemTitle: string | null;
+      itemType: string | null;
+      description: string;
+    };
+    const activityFeed: ActivityEntry[] = [];
+
+    let stq = context.supabase
+      .from("status_transitions")
+      .select("item_id, from_status, to_status, actor_id, at")
+      .gte("at", fromISO).lt("at", toISO);
+    if (filterUser) stq = stq.eq("actor_id", filterUser);
+    const { data: statusRows } = await stq;
+
+    let cmq = context.supabase
+      .from("comments")
+      .select("item_id, author_id, text, created_at")
+      .eq("is_system", false)
+      .gte("created_at", fromISO).lt("created_at", toISO);
+    if (filterUser) cmq = cmq.eq("author_id", filterUser);
+    const { data: commentRows } = await cmq;
+
+    let ifq = context.supabase
+      .from("item_files")
+      .select("item_id, name, mime_type, added_by, created_at")
+      .gte("created_at", fromISO).lt("created_at", toISO);
+    if (filterUser) ifq = ifq.eq("added_by", filterUser);
+    const { data: fileRows } = await ifq;
+
+    let alq = context.supabase
+      .from("activity_log")
+      .select("entity_id, actor_id, action, meta, at")
+      .eq("entity_type", "content_item")
+      .in("action", ["created", "due_date_changed", "rated"])
+      .gte("at", fromISO).lt("at", toISO);
+    if (filterUser) alq = alq.eq("actor_id", filterUser);
+    const { data: logRows } = await alq;
+
+    const touchedItemIds = new Set<string>();
+    (statusRows ?? []).forEach((r: any) => touchedItemIds.add(r.item_id));
+    (commentRows ?? []).forEach((r: any) => touchedItemIds.add(r.item_id));
+    (fileRows ?? []).forEach((r: any) => touchedItemIds.add(r.item_id));
+    (logRows ?? []).forEach((r: any) => touchedItemIds.add(r.entity_id));
+
+    const itemInfoById = new Map<string, any>();
+    if (touchedItemIds.size > 0) {
+      const { data: itemsInfo } = await context.supabase
+        .from("content_items")
+        .select("id, type, title, months!inner(client_id, key, clients!inner(id, name, color, category))")
+        .in("id", [...touchedItemIds]);
+      (itemsInfo ?? []).forEach((it: any) => itemInfoById.set(it.id, it));
+    }
+
+    function pushActivity(kind: ActivityEntry["kind"], itemId: string | null, userId: string | null, at: string, description: string) {
+      if (!userId) return;
+      if (filterType === "stories" || filterType === "cleaning") return;
+      const it = itemId ? itemInfoById.get(itemId) : null;
+      const c = it?.months?.clients;
+      if (filterClient && c?.id !== filterClient) return;
+      if (filterType !== "all" && it && it.type !== filterType) return;
+      activityFeed.push({
+        kind, at, userId,
+        clientId: c?.id ?? null, clientName: c?.name ?? null, clientColor: c?.color ?? null,
+        itemId, itemTitle: it?.title ?? null, itemType: it?.type ?? null,
+        description,
+      });
+    }
+
+    (statusRows ?? []).forEach((r: any) => {
+      const fromLabel = r.from_status ? (STATUS_META[r.from_status as Status]?.label ?? r.from_status) : null;
+      const toLabel = STATUS_META[r.to_status as Status]?.label ?? r.to_status;
+      const isFinal = r.to_status === "PRONTO_PARA_PUBLICAR" || r.to_status === "CONCLUIDO";
+      const desc = fromLabel ? `Mudou o status de "${fromLabel}" para "${toLabel}"` : `Definiu o status como "${toLabel}"`;
+      pushActivity(isFinal ? "finalized" : "status", r.item_id, r.actor_id, r.at, desc);
+    });
+    (commentRows ?? []).forEach((r: any) => {
+      const text = (r.text ?? "").length > 100 ? r.text.slice(0, 100) + "…" : (r.text ?? "");
+      pushActivity("comment", r.item_id, r.author_id, r.created_at, `Comentou: "${text}"`);
+    });
+    (fileRows ?? []).forEach((r: any) => {
+      const mime = r.mime_type ?? "";
+      const verb = mime.startsWith("image/") ? "Adicionou a foto" : mime.startsWith("video/") ? "Adicionou o vídeo" : "Anexou o arquivo";
+      pushActivity("file", r.item_id, r.added_by, r.created_at, `${verb} "${r.name}"`);
+    });
+    (logRows ?? []).forEach((r: any) => {
+      if (r.action === "created") {
+        pushActivity("created", r.entity_id, r.actor_id, r.at, `Criou "${r.meta?.title ?? ""}"`);
+      } else if (r.action === "due_date_changed") {
+        const to = r.meta?.to ? new Date(r.meta.to + "T12:00:00").toLocaleDateString("pt-BR") : "sem prazo";
+        pushActivity("due_date", r.entity_id, r.actor_id, r.at, `Alterou o prazo para ${to}`);
+      } else if (r.action === "rated") {
+        const rating = r.meta?.rating ?? "?";
+        pushActivity("rated", r.entity_id, r.actor_id, r.at, `Avaliou com ${rating} estrela${rating === 1 ? "" : "s"}`);
+      }
+    });
+
+    const enrichedActivity = activityFeed
+      .map((a) => ({
+        ...a,
+        userName: profileById.get(a.userId)?.name ?? "—",
+        userColor: profileById.get(a.userId)?.color ?? "#888",
+      }))
+      .sort((a, b) => b.at.localeCompare(a.at));
+
     // ---- summary ----
     const contentHist = history.filter((h) => h.kind === "content");
     const summary = {
@@ -1736,7 +1851,7 @@ export const getReport = createServerFn({ method: "GET" })
       editorName: h.editorId ? (profileById.get(h.editorId)?.name ?? null) : null,
     }));
 
-    return { summary, byMember: byMemberWithPct, byEditorFormat, formatTotals, history: enriched, activitySummary, activityByMember };
+    return { summary, byMember: byMemberWithPct, byEditorFormat, formatTotals, history: enriched, activitySummary, activityByMember, activityFeed: enrichedActivity };
   });
 
 export const getMemberReportDetail = createServerFn({ method: "GET" })

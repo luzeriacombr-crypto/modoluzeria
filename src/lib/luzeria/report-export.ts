@@ -3,12 +3,9 @@ const MONTHS_PT = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
-const TYPE_LABEL: Record<string, string> = {
-  post: "POST", reel: "REEL", outros: "OUTRO", stories: "STORIES", cleaning: "LIMPEZA",
-};
-
-const REEL_LABEL: Record<string, string> = {
-  lofi: "Lo-fi", facil: "Fácil", basico: "Básico", avancado: "Avançado",
+const ACTIVITY_KIND_LABEL: Record<string, string> = {
+  finalized: "Finalizou", status: "Mudança de status", comment: "Comentário",
+  file: "Arquivo", created: "Criação", due_date: "Prazo alterado", rated: "Avaliação",
 };
 
 function fmtDate(iso: string) {
@@ -58,16 +55,16 @@ export async function exportReportXlsx(
   ]);
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([fmtHead, ...fmtRows]), "Reels por Formato");
 
-  // Aba 4 — Histórico
-  const histHead = ["Data", "Membro", "Cliente", "Tipo", "Título", "Formato", "Editor"];
-  const histRows = report.history.map((h: any) => [
-    fmtDate(h.finalizedAt),
+  // Aba 4 — Histórico (feed de atividade: comentários, uploads, mudanças de
+  // status, criação de itens, etc. — não só finalizações)
+  const histHead = ["Data", "Membro", "Cliente", "Ação", "Item", "Descrição"];
+  const histRows = (report.activityFeed ?? []).map((h: any) => [
+    fmtDate(h.at),
     h.userName,
     h.clientName ?? "—",
-    TYPE_LABEL[h.type] ?? h.type,
-    h.title,
-    h.reelType ? REEL_LABEL[h.reelType] : "",
-    h.editorName ?? "",
+    ACTIVITY_KIND_LABEL[h.kind] ?? h.kind,
+    h.itemTitle ?? "",
+    h.description ?? "",
   ]);
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([histHead, ...histRows]), "Histórico");
 
