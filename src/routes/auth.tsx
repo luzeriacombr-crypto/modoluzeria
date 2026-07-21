@@ -52,8 +52,7 @@ function AuthPage() {
           <img src={luzeriaLogo} alt="Luzeria" className="h-10 w-auto object-contain" />
           <p className="text-white/90 text-xs font-light italic tracking-wide mt-2">Você foi chamado para criar</p>
         </div>
-        <h1 className="text-white text-xl font-semibold text-center">Acesse sua conta</h1>
-        <p className="text-white/50 text-sm text-center mt-2 mb-7">Gestão de produção de conteúdo</p>
+        <h1 className="text-white text-xl font-semibold text-center mb-7">Acesse sua conta</h1>
         <form onSubmit={submit} className="space-y-3">
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Email"
             className="w-full bg-white/[0.05] border border-white/10 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/40 transition-colors" />
