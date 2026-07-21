@@ -80,6 +80,21 @@ export function AdminDashboard() {
 
   const maxCount = top.data?.ranking[0]?.count ?? 0;
 
+  // Ordena por status de meta: superada > batida > em dia > abaixo > sem itens;
+  // dentro do mesmo status, quem tem % maior aparece primeiro.
+  const sortedClients = useMemo(() => {
+    const statusRank = (c: { total: number; percent: number }) => {
+      if (c.total === 0) return 4;
+      if (c.percent > 100) return 0;
+      if (c.percent >= 100) return 1;
+      if (c.percent >= 80) return 2;
+      return 3;
+    };
+    return [...(data?.clients ?? [])].sort((a, b) =>
+      statusRank(a) - statusRank(b) || b.percent - a.percent
+    );
+  }, [data?.clients]);
+
   // Distribuição por categoria (visível só de clientes não-arquivados retornados pelo backend).
   const byCategory = useMemo(() => {
     const map = new Map<string, { total: number; done: number }>();
@@ -272,7 +287,7 @@ export function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {(data?.clients ?? []).map((c) => {
+              {sortedClients.map((c) => {
                 const inactive = c.archived;
                 const statusLabel =
                   c.total === 0 ? "Sem itens" :
@@ -310,7 +325,7 @@ export function AdminDashboard() {
                   </tr>
                 );
               })}
-              {(data?.clients ?? []).length === 0 && (
+              {sortedClients.length === 0 && (
                 <tr><td colSpan={6} className="px-5 py-8 text-center text-white/40 text-sm">Nenhum cliente.</td></tr>
               )}
             </tbody>
