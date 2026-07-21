@@ -4,14 +4,18 @@ import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, type Status } from "@/li
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronDown, ChevronUp, Camera, Sparkles, List, CalendarDays, Clock, Check, X, AtSign } from "lucide-react";
-import { formatMonth, shortMonth, deadlineInfo } from "@/lib/luzeria/utils";
+import { Camera, Sparkles, List, CalendarDays, Clock, Check, X, AtSign } from "lucide-react";
+import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { CLEANING_TASKS } from "./CleaningView";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
 import { getDailyGreeting } from "@/lib/luzeria/daily-greeting";
+
+const ProductivityBlock = lazy(() =>
+  import("./ProductivityChart").then((m) => ({ default: m.ProductivityBlock })),
+);
 
 export function MyTasks() {
   const me = useMe().data;
@@ -246,7 +250,11 @@ export function MyTasks() {
         </div>
       )}
 
-      {prod && <ProductivityBlock prod={prod} monthKey={monthKey} />}
+      {prod && (
+        <Suspense fallback={<div className="mt-10 h-[290px] rounded-lg" style={{ background: "#1C1C1C", border: "1px solid rgba(200,212,78,0.15)" }} />}>
+          <ProductivityBlock prod={prod} monthKey={monthKey} />
+        </Suspense>
+      )}
     </div>
   );
 }
@@ -291,84 +299,6 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
           </span>
         ))}
       </div>
-    </div>
-  );
-}
-
-function ProductivityBlock({ prod, monthKey }: { prod: { weeks: number[]; items: string[][]; total: number; history: { key: string; count: number }[] }; monthKey: string }) {
-  const [showHist, setShowHist] = useState(false);
-  const max = Math.max(...prod.weeks, 1);
-  const avg = (prod.weeks.reduce((a, b) => a + b, 0) / 4).toFixed(1);
-  const bestIdx = prod.weeks.indexOf(Math.max(...prod.weeks));
-  const histMax = Math.max(...prod.history.map((h) => h.count), 1);
-  const histBest = prod.history.reduce((a, b) => (b.count > a.count ? b : a), prod.history[0] ?? { key: "", count: 0 });
-
-  return (
-    <div className="mt-10 rounded-lg p-6" style={{ background: "#1C1C1C", border: "1px solid rgba(200,212,78,0.15)" }}>
-      <div className="flex items-end justify-between mb-1">
-        <h3 className="text-lg font-bold text-white">Como estou indo?</h3>
-        <span className="text-xs text-white/40">{formatMonth(monthKey)}</span>
-      </div>
-      <p className="text-xs text-white/50 mb-6">
-        <span className="text-[#C8D44E] font-bold">{prod.total}</span> tarefa{prod.total === 1 ? "" : "s"} finalizada{prod.total === 1 ? "" : "s"} em {formatMonth(monthKey)}
-      </p>
-
-      <div className="flex items-end gap-4 h-44 px-2">
-        {prod.weeks.map((v, i) => {
-          const h = (v / max) * 100;
-          const isBest = i === bestIdx && v > 0;
-          return (
-            <div key={i} className="flex-1 flex flex-col items-center gap-2 group relative">
-              <div className="text-[11px] font-bold text-white">{v}</div>
-              <div className="w-full rounded-t-md lz-grow-bar relative"
-                style={{
-                  height: `${Math.max(h, 4)}%`,
-                  background: isBest
-                    ? "linear-gradient(180deg, #C8D44E 0%, #8FA832 100%)"
-                    : "rgba(200,212,78,0.25)",
-                }}>
-                {prod.items[i].length > 0 && (
-                  <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 z-10 bg-[#0D0D0D] border border-white/10 rounded-md p-2 text-[10px] text-white/80">
-                    <div className="font-semibold text-[#C8D44E] mb-1">Semana {i + 1}</div>
-                    {prod.items[i].slice(0, 5).map((t, j) => <div key={j} className="truncate">• {t}</div>)}
-                    {prod.items[i].length > 5 && <div className="text-white/40">+{prod.items[i].length - 5}</div>}
-                  </div>
-                )}
-              </div>
-              <div className="text-[10px] text-white/40 uppercase font-semibold">S{i + 1}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="flex items-center justify-between mt-5 text-xs">
-        <span className="text-[#C8D44E] font-semibold">
-          {prod.weeks[bestIdx] > 0 ? `Melhor: Semana ${bestIdx + 1} com ${prod.weeks[bestIdx]} tarefa${prod.weeks[bestIdx] === 1 ? "" : "s"}` : "Sem tarefas finalizadas ainda"}
-        </span>
-        <span className="text-white/50">Média: {avg}/semana</span>
-      </div>
-
-      <button onClick={() => setShowHist((x) => !x)}
-        className="mt-5 inline-flex items-center gap-1 text-[11px] text-white/50 hover:text-white">
-        {showHist ? <ChevronUp size={12} /> : <ChevronDown size={12} />} Histórico 6 meses
-      </button>
-      {showHist && (
-        <div className="mt-3 flex items-end gap-2 h-20">
-          {prod.history.map((h) => {
-            const isBest = h.key === histBest.key && h.count > 0;
-            return (
-              <div key={h.key} className="flex-1 flex flex-col items-center gap-1">
-                <div className="text-[10px] font-bold" style={{ color: isBest ? "#C8D44E" : "rgba(255,255,255,0.5)" }}>{h.count}</div>
-                <div className="w-full rounded-t" style={{
-                  height: `${(h.count / histMax) * 60 + 4}px`,
-                  background: isBest ? "#C8D44E" : "rgba(200,212,78,0.25)",
-                }} />
-                <div className="text-[9px] text-white/40">{shortMonth(h.key)}</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
