@@ -55,7 +55,7 @@ export function AdminDashboard() {
 
   const dashboard = useQuery(adminDashboardQO(selectedMonthKey));
   const top = useQuery(topMembersQO(period, selectedMonthKey));
-  const [openMember, setOpenMember] = useState<null | { id: string; name: string; color: string }>(null);
+  const [openMember, setOpenMember] = useState<null | { id: string; name: string; color: string; avatarUrl: string | null }>(null);
 
   // Modo TV: quando a sidebar está oculta, reflag o dashboard a cada 5 minutos.
   const sidebarHidden = useUI((s) => s.sidebarHidden);
@@ -212,14 +212,14 @@ export function AdminDashboard() {
               <button
                 key={r.id}
                 disabled={!canOpen}
-                onClick={() => canOpen && setOpenMember({ id: r.id, name: r.name, color: r.color })}
+                onClick={() => canOpen && setOpenMember({ id: r.id, name: r.name, color: r.color, avatarUrl: r.avatarUrl })}
                 className={`w-full flex flex-row items-start gap-3 px-2 py-2 rounded-lg transition-colors text-left ${canOpen ? "hover:bg-white/[0.05] cursor-pointer" : "cursor-default"}`}
               >
                 <div className="w-8 inline-flex items-center justify-center gap-1 text-[11px] font-bold tabular-nums"
                   style={{ color: rankColor }}>
                   {rankIcon ?? String(i + 1).padStart(2, "0")}
                 </div>
-                <Avatar name={r.name} color={r.color} size={30} />
+                <Avatar name={r.name} color={r.color} avatarUrl={r.avatarUrl} size={30} />
                 <div className="flex-1 min-w-0">
                   <div className="text-white text-sm font-medium truncate mb-1 flex flex-row items-center gap-2">
                     {r.name}
@@ -287,7 +287,7 @@ export function AdminDashboard() {
                   <tr key={c.id} className={`border-t border-white/[0.04] ${inactive ? "opacity-40" : ""}`}>
                     <td className="px-5 py-3 text-left">
                       <div className="flex items-center justify-start gap-3">
-                        <Avatar name={c.name} color={c.color} size={26} />
+                        <Avatar name={c.name} color={c.color} avatarUrl={c.photoUrl} size={26} />
                         <span className="text-white font-medium">{c.name}</span>
                       </div>
                     </td>
@@ -348,7 +348,7 @@ export function AdminDashboard() {
 function MemberDetailPanel({
   member, monthKey, initialPeriod, onClose,
 }: {
-  member: { id: string; name: string; color: string };
+  member: { id: string; name: string; color: string; avatarUrl: string | null };
   monthKey: string;
   initialPeriod: Period;
   onClose: () => void;
@@ -390,7 +390,7 @@ function MemberDetailPanel({
         <div className="px-6 pt-5 pb-4 border-b border-white/[0.08]">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <Avatar name={member.name} color={member.color} size={48} />
+              <Avatar name={member.name} color={member.color} avatarUrl={member.avatarUrl} size={48} />
               <div className="min-w-0">
                 <div className="text-white font-bold text-[17px] truncate">{member.name}</div>
                 <div className="mt-1 inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded"

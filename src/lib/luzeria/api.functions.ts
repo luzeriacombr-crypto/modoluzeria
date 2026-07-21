@@ -1356,11 +1356,12 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     z.object({ monthKey: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: clientsAll } = await context.supabase
-      .from("clients").select("id, name, color, archived, category").order("name");
+      .from("clients").select("id, name, color, archived, category, photo_url").order("name");
     // "Ex-clientes" não entram nas métricas nem na listagem do dashboard.
     const clients = (clientsAll ?? []).filter(
       (c: any) => (c.category ?? "Social Media") !== "Ex-clientes"
     );
+    const photoMap = await signAvatarPaths(context.supabase, clients.map((c: any) => c.photo_url));
     const { data: months } = await context.supabase
       .from("months").select("id, client_id").eq("key", data.monthKey);
     const monthIds = (months ?? []).map((m) => m.id);
@@ -1373,6 +1374,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
 
     type Row = {
       id: string; name: string; color: string; archived: boolean; category: string;
+      photoUrl: string | null;
       posts: number; reels: number; total: number; done: number; percent: number;
     };
     const rows: Row[] = (clients ?? []).map((c: any) => {
@@ -1386,6 +1388,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       return {
         id: c.id, name: c.name, color: c.color, archived: !!c.archived,
         category: c.category ?? "Social Media",
+        photoUrl: c.photo_url ? (photoMap.get(c.photo_url) ?? null) : null,
         posts, reels, total, done, percent,
       };
     });
@@ -1435,10 +1438,12 @@ export const getTopMembers = createServerFn({ method: "GET" })
     (finals ?? []).forEach((f: any) => counts.set(f.user_id, (counts.get(f.user_id) ?? 0) + 1));
 
     const { data: profiles } = await context.supabase
-      .from("profiles").select("id, name, color, icon");
+      .from("profiles").select("id, name, color, icon, avatar_url");
+    const avatarMap = await signAvatarPaths(context.supabase, (profiles ?? []).map((p: any) => p.avatar_url));
     const ranking = (profiles ?? [])
       .map((p: any) => ({
         id: p.id, name: p.name, color: p.color, icon: p.icon,
+        avatarUrl: p.avatar_url ? (avatarMap.get(p.avatar_url) ?? null) : null,
         count: counts.get(p.id) ?? 0,
       }))
       .filter((r) => r.count > 0)
@@ -1850,7 +1855,7 @@ export const getAllMembersWorkload = createServerFn({ method: "GET" })
 
     // All active profiles
     const { data: profiles } = await context.supabase
-      .from("profiles").select("id, name, color, icon, avatar_path").eq("active", true);
+      .from("profiles").select("id, name, color, icon, avatar_url").eq("active", true);
 
     if (!profiles?.length) return [];
 
@@ -1864,7 +1869,7 @@ export const getAllMembersWorkload = createServerFn({ method: "GET" })
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const in3days = new Date(today); in3days.setDate(in3days.getDate() + 3);
 
-    const avatarMap = await signAvatarPaths(context.supabase, (profiles ?? []).map((p: any) => p.avatar_path));
+    const avatarMap = await signAvatarPaths(context.supabase, (profiles ?? []).map((p: any) => p.avatar_url));
 
     return (profiles ?? []).map((p: any) => {
       const myItems = (openItems ?? []).filter((it: any) =>
@@ -1884,7 +1889,7 @@ export const getAllMembersWorkload = createServerFn({ method: "GET" })
       });
       return {
         userId: p.id, name: p.name, color: p.color, icon: p.icon,
-        avatarUrl: p.avatar_path ? (avatarMap.get(p.avatar_path) ?? null) : null,
+        avatarUrl: p.avatar_url ? (avatarMap.get(p.avatar_url) ?? null) : null,
         openCount: myItems.length, dueSoon, overdue, byType,
       };
     }).sort((a, b) => b.openCount - a.openCount);
@@ -1918,7 +1923,7 @@ export const getMemberVelocity = createServerFn({ method: "GET" })
     if (!isAdmin) throw new Error("Forbidden");
 
     const { data: profiles } = await context.supabase
-      .from("profiles").select("id, name, color, icon, avatar_path").eq("active", true);
+      .from("profiles").select("id, name, color, icon, avatar_url").eq("active", true);
 
     if (!profiles?.length) return [];
 
@@ -1932,7 +1937,7 @@ export const getMemberVelocity = createServerFn({ method: "GET" })
       .gte("finished_at", data.from)
       .lt("finished_at", data.to);
 
-    const avatarMap = await signAvatarPaths(context.supabase, (profiles ?? []).map((p: any) => p.avatar_path));
+    const avatarMap = await signAvatarPaths(context.supabase, (profiles ?? []).map((p: any) => p.avatar_url));
 
     return (profiles ?? []).map((p: any) => {
       const myItems = (items ?? []).filter((it: any) =>
@@ -1954,7 +1959,7 @@ export const getMemberVelocity = createServerFn({ method: "GET" })
 
       return {
         userId: p.id, name: p.name, color: p.color, icon: p.icon,
-        avatarUrl: p.avatar_path ? (avatarMap.get(p.avatar_path) ?? null) : null,
+        avatarUrl: p.avatar_url ? (avatarMap.get(p.avatar_url) ?? null) : null,
         totalFinished: myItems.length,
         avgLeadTimeDays: calcAvg(myItems),
         byType: {
