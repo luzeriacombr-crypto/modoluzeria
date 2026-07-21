@@ -1356,7 +1356,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     z.object({ monthKey: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: clientsAll } = await context.supabase
-      .from("clients").select("id, name, color, archived, category, photo_url").order("name");
+      .from("clients").select("id, name, color, archived, category, photo_url, posts_per_week, reels_per_week").order("name");
     // "Ex-clientes" não entram nas métricas nem na listagem do dashboard.
     const clients = (clientsAll ?? []).filter(
       (c: any) => (c.category ?? "Social Media") !== "Ex-clientes"
@@ -1376,6 +1376,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       id: string; name: string; color: string; archived: boolean; category: string;
       photoUrl: string | null;
       posts: number; reels: number; total: number; done: number; percent: number;
+      contracted: number;
     };
     const rows: Row[] = (clients ?? []).map((c: any) => {
       const mid = monthByClient.get(c.id);
@@ -1384,12 +1385,18 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       const reels = its.filter((i) => i.type === "reel").length;
       const total = its.length;
       const done = its.filter((i) => i.status === "PRONTO_PARA_PUBLICAR").length;
-      const percent = total ? Math.round((done / total) * 100) : 0;
+      // % contra o combinado no contrato (posts/reels por mês), não contra o
+      // que foi criado no sistema — assim dá pra ultrapassar 100% quando a
+      // equipe entrega mais do que o combinado.
+      const contracted = (c.posts_per_week ?? 0) + (c.reels_per_week ?? 0);
+      const percent = contracted > 0
+        ? Math.round((done / contracted) * 100)
+        : (total ? Math.round((done / total) * 100) : 0);
       return {
         id: c.id, name: c.name, color: c.color, archived: !!c.archived,
         category: c.category ?? "Social Media",
         photoUrl: c.photo_url ? (photoMap.get(c.photo_url) ?? null) : null,
-        posts, reels, total, done, percent,
+        posts, reels, total, done, percent, contracted,
       };
     });
 

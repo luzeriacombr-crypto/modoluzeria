@@ -276,10 +276,12 @@ export function AdminDashboard() {
                 const inactive = c.archived;
                 const statusLabel =
                   c.total === 0 ? "Sem itens" :
+                  c.percent > 100 ? "Meta superada" :
                   c.percent >= 100 ? "Meta batida" :
                   c.percent >= 80 ? "Em dia" : "Abaixo";
                 const statusColor =
                   c.total === 0 ? { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" } :
+                  c.percent > 100 ? { bg: "rgba(200,212,78,0.3)", color: "#C8D44E" } :
                   c.percent >= 100 ? { bg: "rgba(200,212,78,0.15)", color: "#C8D44E" } :
                   c.percent >= 80 ? { bg: "rgba(74,158,255,0.15)", color: "#4A9EFF" } :
                                     { bg: "rgba(255,68,68,0.15)", color: "#FF4444" };
@@ -301,6 +303,7 @@ export function AdminDashboard() {
                       <span className="inline-flex items-center justify-center gap-1.5 rounded px-2 py-1 text-[11px] font-semibold"
                         style={{ backgroundColor: statusColor.bg, color: statusColor.color }}>
                         {statusLabel === "Abaixo" && <AlertTriangle size={11} />}
+                        {statusLabel === "Meta superada" && <Trophy size={11} />}
                         {statusLabel}
                       </span>
                     </td>
