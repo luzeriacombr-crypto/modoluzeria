@@ -433,26 +433,32 @@ export function useApi() {
     upsertClientLink: useMutation({
       mutationFn: useServerFn(upsertClientLink),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar link."),
     }),
     deleteClientLink: useMutation({
       mutationFn: useServerFn(deleteClientLink),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover link."),
     }),
     upsertClientContact: useMutation({
       mutationFn: useServerFn(upsertClientContact),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar contato."),
     }),
     deleteClientContact: useMutation({
       mutationFn: useServerFn(deleteClientContact),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover contato."),
     }),
     upsertClientSecret: useMutation({
       mutationFn: useServerFn(upsertClientSecret),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar."),
     }),
     deleteClientSecret: useMutation({
       mutationFn: useServerFn(deleteClientSecret),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover."),
     }),
     /* ===== ROADMAP MUTATIONS ===== */
     updateChecklist: useMutation({

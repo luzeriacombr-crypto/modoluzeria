@@ -581,11 +581,11 @@ export const getClientFicha = createServerFn({ method: "GET" })
 
     const [linksRes, contactsRes, secretsRes] = await Promise.all([
       context.supabase.from("client_links")
-        .select("id, client_id, label, url, sort_order")
-        .eq("client_id", data.clientId).order("sort_order"),
+        .select("id, client_id, label, url, position")
+        .eq("client_id", data.clientId).order("position"),
       context.supabase.from("client_contacts")
-        .select("id, client_id, name, role, email, phone, notes, sort_order")
-        .eq("client_id", data.clientId).order("sort_order"),
+        .select("id, client_id, name, role, email, phone, notes, position")
+        .eq("client_id", data.clientId).order("position"),
       isAdmin
         ? context.supabase.from("client_secrets")
             .select("id, client_id, label, value, notes")
@@ -626,11 +626,11 @@ export const getClientFicha = createServerFn({ method: "GET" })
     return {
       description: (client as any)?.description ?? "",
       links: (linksRes.data ?? []).map((l: any) => ({
-        id: l.id, clientId: l.client_id, label: l.label, url: l.url, sortOrder: l.sort_order,
+        id: l.id, clientId: l.client_id, label: l.label, url: l.url, sortOrder: l.position,
       })),
       contacts: (contactsRes.data ?? []).map((c: any) => ({
         id: c.id, clientId: c.client_id, name: c.name, role: c.role,
-        email: c.email, phone: c.phone, notes: c.notes, sortOrder: c.sort_order,
+        email: c.email, phone: c.phone, notes: c.notes, sortOrder: c.position,
       })),
       secrets: (secretsRes.data ?? []).map((s: any) => ({
         id: s.id, clientId: s.client_id, label: s.label, value: s.value, notes: s.notes,
@@ -655,12 +655,12 @@ export const upsertClientLink = createServerFn({ method: "POST" })
     const db: any = context.supabase;
     if (data.id) {
       const { error } = await db.from("client_links")
-        .update({ label: data.label, url: data.url, sort_order: data.sortOrder ?? 0 })
+        .update({ label: data.label, url: data.url, position: data.sortOrder ?? 0 })
         .eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
       const { error } = await db.from("client_links")
-        .insert({ client_id: data.clientId, label: data.label, url: data.url, sort_order: data.sortOrder ?? 0 });
+        .insert({ client_id: data.clientId, label: data.label, url: data.url, position: data.sortOrder ?? 0 });
       if (error) throw new Error(error.message);
     }
     return { ok: true };
@@ -699,7 +699,7 @@ export const upsertClientContact = createServerFn({ method: "POST" })
     const db: any = context.supabase;
     const payload: any = {
       name: data.name, role: data.role ?? null, email: data.email ?? null,
-      phone: data.phone ?? null, notes: data.notes ?? null, sort_order: data.sortOrder ?? 0,
+      phone: data.phone ?? null, notes: data.notes ?? null, position: data.sortOrder ?? 0,
     };
     if (data.id) {
       const { error } = await db.from("client_contacts").update(payload).eq("id", data.id);
