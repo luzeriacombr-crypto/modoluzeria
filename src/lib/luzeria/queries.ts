@@ -1,5 +1,6 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import {
   addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, duplicateMonth,
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
@@ -371,8 +372,9 @@ export function useApi() {
         });
         return { snapshots };
       },
-      onError: (_e: unknown, _v: unknown, ctx: any) => {
+      onError: (e: any, _v: unknown, ctx: any) => {
         ctx?.snapshots?.forEach(({ key, data }: any) => qc.setQueryData(key, data));
+        toast.error(e?.message ?? "Erro ao mudar status.");
       },
       onSuccess: invalidateAll,
     }),
