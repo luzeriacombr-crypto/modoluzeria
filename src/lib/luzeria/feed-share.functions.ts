@@ -240,11 +240,6 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       );
     }
 
-    // This re-fetches Drive thumbnails on every hit; a short shared cache
-    // takes the repeat-visit load off both this function and the Drive API.
-    const { setResponseHeader } = await import("@tanstack/react-start/server");
-    setResponseHeader("Cache-Control", "public, max-age=20, stale-while-revalidate=120");
-
     return {
       client: {
         name: client.name as string,
