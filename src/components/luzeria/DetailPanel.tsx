@@ -24,6 +24,26 @@ function findItem(month: any, id: string): ContentItem | undefined {
   );
 }
 
+/** Splits text on URLs (http(s):// or www.) and renders the matches as clickable links.
+ * Textareas can't have inline clickable links while editable, so this only runs in
+ * the read-only (not-currently-editing) view of a field. */
+const URL_RE = /((?:https?:\/\/|www\.)[^\s<]+)/gi;
+function renderLinkedText(text: string): React.ReactNode {
+  const parts = text.split(URL_RE);
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <a key={i} href={part.startsWith("http") ? part : `https://${part}`}
+        target="_blank" rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="text-[#C8D44E] underline underline-offset-2 hover:brightness-110">
+        {part}
+      </a>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  );
+}
+
 /** ISO timestamp -> value for <input type="datetime-local">, in the browser's local time. */
 function toDatetimeLocalValue(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -161,6 +181,8 @@ export function DetailPanel() {
   const [title, setTitle] = useState("");
   const [copy, setCopy] = useState("");
   const [caption, setCaption] = useState("");
+  const [editingCopy, setEditingCopy] = useState(false);
+  const [editingCaption, setEditingCaption] = useState(false);
   const [drive, setDrive] = useState("");
   const [comment, setComment] = useState("");
   const [commentMentions, setCommentMentions] = useState<string[]>([]);
@@ -327,32 +349,62 @@ export function DetailPanel() {
 
             {/* Briefing (era Copy) — vira "Observações" pra atividades, que não têm briefing de conteúdo */}
             <ModalSection label={isActivity ? "Observações" : "Briefing"}>
-              <textarea
-                value={copy}
-                onChange={(e) => setCopy(e.target.value)}
-                rows={5}
-                onBlur={() => { if (copy !== item.copy) updateItem.mutate({ data: { id: item.id, patch: { copy } } }); }}
-                placeholder={isActivity ? "Observações sobre essa atividade..." : "Descreva o briefing do conteúdo..."}
-                className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none transition-colors"
-              />
+              {editingCopy ? (
+                <textarea
+                  autoFocus
+                  value={copy}
+                  onChange={(e) => setCopy(e.target.value)}
+                  rows={5}
+                  onBlur={() => {
+                    setEditingCopy(false);
+                    if (copy !== item.copy) updateItem.mutate({ data: { id: item.id, patch: { copy } } });
+                  }}
+                  placeholder={isActivity ? "Observações sobre essa atividade..." : "Descreva o briefing do conteúdo..."}
+                  className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none transition-colors"
+                />
+              ) : (
+                <div
+                  onClick={() => setEditingCopy(true)}
+                  className="w-full min-h-[110px] bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 text-sm text-white whitespace-pre-wrap break-words cursor-text hover:border-white/10 transition-colors"
+                >
+                  {copy ? renderLinkedText(copy) : (
+                    <span className="text-white/30">{isActivity ? "Observações sobre essa atividade..." : "Descreva o briefing do conteúdo..."}</span>
+                  )}
+                </div>
+              )}
             </ModalSection>
 
             {/* Legenda — só faz sentido pra post/reel, que são publicados no Instagram */}
             {!isActivity && (
               <ModalSection label="Legenda">
-                <div className="relative">
-                  <textarea
-                    value={caption}
-                    onChange={(e) => setCaption(e.target.value)}
-                    rows={5}
-                    onBlur={() => { if (caption !== (item.caption ?? "")) updateItem.mutate({ data: { id: item.id, patch: { caption } } }); }}
-                    placeholder="Digite a legenda que será publicada..."
-                    className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 pb-6 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none transition-colors"
-                  />
-                  <div className="absolute bottom-2 right-3 text-[10px] text-white/40 pointer-events-none">
-                    {caption.length} caracteres
+                {editingCaption ? (
+                  <div className="relative">
+                    <textarea
+                      autoFocus
+                      value={caption}
+                      onChange={(e) => setCaption(e.target.value)}
+                      rows={5}
+                      onBlur={() => {
+                        setEditingCaption(false);
+                        if (caption !== (item.caption ?? "")) updateItem.mutate({ data: { id: item.id, patch: { caption } } });
+                      }}
+                      placeholder="Digite a legenda que será publicada..."
+                      className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 pb-6 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none transition-colors"
+                    />
+                    <div className="absolute bottom-2 right-3 text-[10px] text-white/40 pointer-events-none">
+                      {caption.length} caracteres
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div
+                    onClick={() => setEditingCaption(true)}
+                    className="w-full min-h-[110px] bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 text-sm text-white whitespace-pre-wrap break-words cursor-text hover:border-white/10 transition-colors"
+                  >
+                    {caption ? renderLinkedText(caption) : (
+                      <span className="text-white/30">Digite a legenda que será publicada...</span>
+                    )}
+                  </div>
+                )}
               </ModalSection>
             )}
 
