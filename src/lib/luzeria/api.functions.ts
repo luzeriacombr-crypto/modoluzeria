@@ -773,7 +773,7 @@ export const setItemStatus = createServerFn({ method: "POST" })
       .maybeSingle();
 
     const { error } = await context.supabase
-      .from("content_items").update({ status: data.status }).eq("id", data.id);
+      .rpc("set_item_status", { p_item_id: data.id, p_status: data.status });
     if (error) throw new Error(error.message);
 
     // Log transition (fire-and-forget, don't block on error)

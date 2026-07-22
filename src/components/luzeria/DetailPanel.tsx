@@ -436,7 +436,9 @@ export function DetailPanel() {
                 </button>
                 {statusOpen && (
                   <div className="absolute z-50 left-0 right-0 mt-1 rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto">
-                    {statusOptionsFor(item.type).map((s) => {
+                    {statusOptionsFor(item.type)
+                      .filter((s) => isAdmin || s !== "PRONTO_PARA_PUBLICAR")
+                      .map((s) => {
                       const m = STATUS_META[s]; const I = STATUS_ICONS[s];
                       const active = item.status === s;
                       return (

@@ -85,7 +85,9 @@ export function ContentRow({ item, profiles, idx, isAvulso }: {
       )}
 
       <div onClick={(e) => e.stopPropagation()}>
-        <StatusBadge status={item.status} options={statusOptionsFor(item.type)} isAvulso={isAvulso}
+        <StatusBadge status={item.status}
+          options={statusOptionsFor(item.type).filter((s) => isAdmin || s !== "PRONTO_PARA_PUBLICAR")}
+          isAvulso={isAvulso}
           onChange={(s) => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }} />
       </div>
 
