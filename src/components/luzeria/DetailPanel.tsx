@@ -527,10 +527,8 @@ export function DetailPanel() {
               <div key={p.id} className="flex items-center gap-1.5 bg-white/5 rounded-full pl-1 pr-2 py-1">
                 <Avatar profile={p} size={22} />
                 <span className="text-xs text-white/80">{p.name}</span>
-                {(isAdmin || p.id === me?.id) && (
-                  <button onClick={() => removeAssignee.mutate({ data: { itemId: item.id, userId: p.id } })}
-                    className="text-white/40 hover:text-red-400 ml-0.5"><X size={12} /></button>
-                )}
+                <button onClick={() => removeAssignee.mutate({ data: { itemId: item.id, userId: p.id } })}
+                  className="text-white/40 hover:text-red-400 ml-0.5"><X size={12} /></button>
               </div>
             ))}
             <div className="relative">
@@ -542,9 +540,8 @@ export function DetailPanel() {
                 <div className="absolute z-[60] mt-1 left-0 min-w-[200px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-72 overflow-y-auto">
                   {profiles.map((p) => {
                     const has = item.assigneeIds.includes(p.id);
-                    const allowed = isAdmin || p.id === me?.id;
                     return (
-                      <button key={p.id} disabled={!allowed}
+                      <button key={p.id}
                         onClick={() => {
                           if (has) removeAssignee.mutate({ data: { itemId: item.id, userId: p.id } });
                           else addAssignee.mutate({ data: { itemId: item.id, userId: p.id } });

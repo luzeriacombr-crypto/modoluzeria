@@ -101,7 +101,7 @@ export function ContentRow({ item, profiles, idx, isAvulso }: {
             className="h-7 w-7 rounded-full border border-dashed border-white/20 text-white/40 hover:text-[#C8D44E] hover:border-[#C8D44E] flex items-center justify-center transition-colors"
           ><Plus size={14} /></button>
         ) : null}
-        {isAdmin && assignees.length > 0 && (
+        {assignees.length > 0 && (
           <button onClick={() => openItem(item.id)} title="Gerenciar responsáveis"
             className="ml-1 h-7 w-7 rounded-full border border-dashed border-white/15 text-white/30 hover:text-white/70 hover:border-white/30 flex items-center justify-center transition-colors">
             <Plus size={12} />
