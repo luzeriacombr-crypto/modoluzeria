@@ -80,7 +80,12 @@ export function ReelCoverEditor({
       cancelled = true;
       if (revoke) URL.revokeObjectURL(revoke);
     };
-  }, [mode, videoFile?.driveFileId, videoSrc, fetchVideoToken]);
+    // videoSrc is intentionally NOT a dependency: it's set *by* this effect, and
+    // including it here made the effect's own cleanup revoke the blob URL the
+    // instant it was created (state update -> re-run -> cleanup runs first),
+    // leaving <video> pointed at an already-revoked blob forever.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, videoFile?.driveFileId, fetchVideoToken]);
 
   function captureFrame() {
     const v = videoRef.current;
