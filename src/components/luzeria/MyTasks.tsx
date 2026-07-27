@@ -11,7 +11,7 @@ import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { CLEANING_TASKS } from "./CleaningView";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
-import { getDailyGreeting } from "@/lib/luzeria/daily-greeting";
+import { getDailyVerse } from "@/lib/luzeria/daily-verse";
 
 const ProductivityBlock = lazy(() =>
   import("./ProductivityChart").then((m) => ({ default: m.ProductivityBlock })),
@@ -64,22 +64,20 @@ export function MyTasks() {
 
   const targetProfile = profiles.find((p) => p.id === targetId);
   const [view, setView] = useState<"list" | "week">("list");
-  const dailyGreeting = getDailyGreeting();
+  const dailyVerse = getDailyVerse();
 
   return (
     <div className="p-10 max-w-5xl mx-auto" data-tour="my-tasks">
       <div className="mb-3">
         <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[15px] font-bold uppercase tracking-wider mb-1"
           style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
-          {dailyGreeting.word}, {(() => {
+          Olá, {(() => {
             const raw = (me?.name ?? "você").trim().split(" ")[0];
             return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
           })()}! 🤩
         </div>
         <p className="italic text-white/50 text-xs text-balance">
-          Agora você sabe falar "Olá" em{" "}
-          <span className="font-bold italic">{dailyGreeting.language}</span>, língua natural{" "}
-          <span className="font-bold italic">{dailyGreeting.countryPhrase}</span> {dailyGreeting.flag}!
+          "{dailyVerse.text}" <span className="font-bold italic">({dailyVerse.reference})</span>
         </p>
       </div>
       <div className="flex items-end justify-between mb-8">
