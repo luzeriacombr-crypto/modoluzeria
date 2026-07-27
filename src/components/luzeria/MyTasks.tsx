@@ -76,9 +76,14 @@ export function MyTasks() {
             return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
           })()}! 🤩
         </div>
-        <p className="italic text-white/50 text-xs text-balance">
-          "{dailyVerse.text}" <span className="font-bold italic">({dailyVerse.reference})</span>
-        </p>
+        <div className="max-w-sm">
+          <p className="italic text-white/60 text-[13px] leading-relaxed text-balance">
+            "{dailyVerse.text}"
+          </p>
+          <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-[#C8D44E]/70">
+            {dailyVerse.reference}
+          </p>
+        </div>
       </div>
       <div className="flex items-end justify-between mb-8">
         <div>
