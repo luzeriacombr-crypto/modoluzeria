@@ -5,6 +5,10 @@ import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status } from "./types";
 import { isActivityType, STATUS_META } from "./types";
 
+/** Fixed id of the original Luzeria Estúdio org — also hardcoded in migrations
+ * and in the admin-auth-operations edge function (they can't share a TS import). */
+export const LUZERIA_ORG_ID = "00000000-0000-0000-0000-000000000001";
+
 /* ============== PROFILES & ROLES ============== */
 
 /** Generate signed read URLs for avatar storage paths (1 year). */
@@ -67,21 +71,23 @@ export const getMe = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: profile } = await context.supabase
       .from("profiles")
-      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, org_id")
       .eq("id", context.userId).maybeSingle();
     const { data: roleRow } = await context.supabase
       .from("user_roles").select("role").eq("user_id", context.userId).maybeSingle();
     if (!profile) return null;
     const { data: myEmail } = await context.supabase.rpc("get_my_email");
     const signed = await signAvatarPaths(context.supabase, [profile.avatar_url]);
+    const role = (roleRow?.role ?? "member") as Role;
     return {
       id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
-      role: (roleRow?.role ?? "member") as Role,
+      role,
       avatarPath: profile.avatar_url ?? null,
       avatarUrl: profile.avatar_url ? signed.get(profile.avatar_url) ?? null : null,
       onboardedAt: profile.onboarded_at ?? null,
       tourCompletedAt: (profile as any).tour_completed_at ?? null,
+      isPlatformAdmin: role === "master" && (profile as any).org_id === LUZERIA_ORG_ID,
     } satisfies Profile;
   });
 
@@ -188,8 +194,44 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       password: data.password,
       name: data.name,
       role: data.role,
+      orgId: context.orgId,
     });
     return { ok: true, id: result?.id };
+  });
+
+/** Luzeria-only: provisions a brand new agency (org) plus its first master
+ * user, in one step. Used to onboard a new paying agency onto the platform. */
+export const createAgency = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { orgName: string; name: string; email: string; password: string }) =>
+    z.object({
+      orgName: z.string().trim().min(1).max(80),
+      name: z.string().trim().min(1).max(80),
+      email: z.string().email(),
+      password: z.string().min(6),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+
+    const slug = data.orgName.trim().toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+      || "agencia";
+    const { data: org, error: orgErr } = await context.supabase
+      .from("orgs").insert({ name: data.orgName.trim(), slug: `${slug}-${Date.now().toString(36)}` })
+      .select().single();
+    if (orgErr) throw new Error(orgErr.message);
+
+    await callAdminEdgeFn("createUser", {
+      email: data.email,
+      password: data.password,
+      name: data.name,
+      role: "master",
+      orgId: org.id,
+    });
+    return { ok: true, orgId: org.id as string };
   });
 
 export const adminSendPasswordReset = createServerFn({ method: "POST" })

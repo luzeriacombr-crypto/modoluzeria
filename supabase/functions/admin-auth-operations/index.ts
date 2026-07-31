@@ -22,6 +22,15 @@ function fail(error: string, status = 400) {
   return json({ success: false, error }, status);
 }
 
+// Same fixed id as in the app (src/lib/luzeria/api.functions.ts) and in the
+// SQL migrations — can't share a real import across the Deno/Vercel boundary.
+const LUZERIA_ORG_ID = "00000000-0000-0000-0000-000000000001";
+
+async function getProfileOrgId(supabaseAdmin: any, userId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin.from("profiles").select("org_id").eq("id", userId).maybeSingle();
+  return (data?.org_id as string | null) ?? null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return fail("Method not allowed", 405);
@@ -55,6 +64,9 @@ Deno.serve(async (req) => {
   if (masterErr) return fail(masterErr.message, 500);
   if (!isMaster) return fail("Forbidden: master role required", 403);
 
+  const callerOrgId = await getProfileOrgId(supabaseAdmin, callerId);
+  const callerIsPlatformAdmin = callerOrgId === LUZERIA_ORG_ID;
+
   let body: any;
   try {
     body = await req.json();
@@ -67,8 +79,23 @@ Deno.serve(async (req) => {
   try {
     switch (operation) {
       case "createUser": {
-        const { email, password, name, role } = params;
+        const { email, password, name, role, orgId } = params;
         if (!email || !password) return fail("email and password required");
+        if (!orgId) return fail("orgId required");
+        if (orgId !== callerOrgId && !callerIsPlatformAdmin) {
+          return fail("Forbidden: cannot create users for another organization", 403);
+        }
+        // Pre-register the org (and role/name) for this email so the
+        // handle_new_user() DB trigger stamps the right org_id on the new
+        // profile — it looks this table up by email on every signup.
+        const { error: assignErr } = await supabaseAdmin
+          .from("email_role_assignments")
+          .upsert(
+            { email, name: name || email.split("@")[0], role: role || "member", org_id: orgId },
+            { onConflict: "email" },
+          );
+        if (assignErr) return fail(`Failed to assign organization: ${assignErr.message}`, 500);
+
         const { data, error } = await supabaseAdmin.auth.admin.createUser({
           email,
           password,
@@ -76,21 +103,16 @@ Deno.serve(async (req) => {
           user_metadata: name ? { name } : undefined,
         });
         if (error) return fail(error.message, 400);
-        if (role && data.user) {
-          const { error: roleErr } = await supabaseAdmin
-            .from("user_roles")
-            .upsert(
-              { user_id: data.user.id, role },
-              { onConflict: "user_id,role" },
-            );
-          if (roleErr) return fail(`User created but role failed: ${roleErr.message}`, 500);
-        }
         return ok({ user: data.user });
       }
 
       case "deleteUser": {
         const { targetUserId } = params;
         if (!targetUserId) return fail("targetUserId required");
+        const targetOrgId = await getProfileOrgId(supabaseAdmin, targetUserId);
+        if (targetOrgId !== callerOrgId && !callerIsPlatformAdmin) {
+          return fail("Forbidden: cannot manage users from another organization", 403);
+        }
         const { data, error } = await supabaseAdmin.auth.admin.deleteUser(targetUserId);
         if (error) return fail(error.message, 400);
         return ok(data);
@@ -99,6 +121,11 @@ Deno.serve(async (req) => {
       case "sendPasswordReset": {
         const { email } = params;
         if (!email) return fail("email required");
+        const { data: targetProfile } = await supabaseAdmin
+          .from("profiles").select("org_id").eq("email", email).maybeSingle();
+        if ((targetProfile?.org_id ?? null) !== callerOrgId && !callerIsPlatformAdmin) {
+          return fail("Forbidden: cannot manage users from another organization", 403);
+        }
         const { data, error } = await supabaseAdmin.auth.admin.generateLink({
           type: "recovery",
           email,
@@ -110,6 +137,10 @@ Deno.serve(async (req) => {
       case "updateUser": {
         const { targetUserId, email, password, name } = params;
         if (!targetUserId) return fail("targetUserId required");
+        const targetOrgId = await getProfileOrgId(supabaseAdmin, targetUserId);
+        if (targetOrgId !== callerOrgId && !callerIsPlatformAdmin) {
+          return fail("Forbidden: cannot manage users from another organization", 403);
+        }
         const attrs: Record<string, unknown> = {};
         if (email) attrs.email = email;
         if (password) attrs.password = password;

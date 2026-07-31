@@ -7,7 +7,7 @@ import type { Role } from "@/lib/luzeria/types";
 import { roleLabel } from "./Sidebar";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
-import { UserPlus, X, Settings as SettingsIcon, Star, KeyRound } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, KeyRound, Building2 } from "lucide-react";
 import { ReportsTab } from "./ReportsTab";
 import { DriveSettingsTab } from "./DriveSettingsTab";
 import { MemberGoalsTab } from "./MemberGoalsTab";
@@ -16,10 +16,11 @@ import { AutomationsTab } from "./AutomationsTab";
 export function SettingsPage() {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
-  const { setUserRole, setUserActive, deleteUser, adminCreateUser, adminSendPasswordReset } = useApi();
+  const { setUserRole, setUserActive, deleteUser, adminCreateUser, adminSendPasswordReset, createAgency } = useApi();
   const { setViewAs } = useUI();
   const navigate = useNavigate();
   const [adding, setAdding] = useState(false);
+  const [creatingAgency, setCreatingAgency] = useState(false);
   const [tab, setTab] = useState<"team" | "report" | "goals" | "drive" | "automations" | "general">("team");
 
   if (me?.role !== "master") {
@@ -60,10 +61,18 @@ export function SettingsPage() {
           </p>
         </div>
         {tab === "team" && (
-          <button onClick={() => setAdding(true)}
-            className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
-            <UserPlus size={14} /> Adicionar membro
-          </button>
+          <div className="flex items-center gap-2">
+            {me.isPlatformAdmin && (
+              <button onClick={() => setCreatingAgency(true)}
+                className="lz-btn-ghost text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
+                <Building2 size={14} /> Criar nova agência
+              </button>
+            )}
+            <button onClick={() => setAdding(true)}
+              className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
+              <UserPlus size={14} /> Adicionar membro
+            </button>
+          </div>
         )}
       </div>
 
@@ -217,6 +226,19 @@ export function SettingsPage() {
           }}
         />
       )}
+
+      {creatingAgency && (
+        <CreateAgencyModal
+          loading={createAgency.isPending}
+          onClose={() => setCreatingAgency(false)}
+          onSubmit={(payload) => {
+            createAgency.mutate({ data: payload }, {
+              onSuccess: () => { toast.success(`Agência "${payload.orgName}" criada.`); setCreatingAgency(false); },
+              onError: (e: any) => toast.error(e?.message ?? "Erro ao criar agência"),
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -266,6 +288,55 @@ function AddMemberModal({ onClose, onSubmit, loading }: {
           </button>
           <p className="text-[10px] text-white/40 text-center mt-2">
             O membro já entra ativo. Compartilhe email e senha para o primeiro acesso.
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function CreateAgencyModal({ onClose, onSubmit, loading }: {
+  onClose: () => void;
+  loading: boolean;
+  onSubmit: (d: { orgName: string; name: string; email: string; password: string }) => void;
+}) {
+  const [orgName, setOrgName] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-7"
+        style={{ border: "1px solid rgba(200,212,78,0.2)" }}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-white font-semibold">Criar nova agência</h2>
+          <button onClick={onClose} className="text-white/40 hover:text-white transition"><X size={18} /></button>
+        </div>
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit({ orgName, name, email, password }); }} className="space-y-3">
+          <Field label="Nome da agência">
+            <input value={orgName} onChange={(e) => setOrgName(e.target.value)} required maxLength={80}
+              className="lz-input" placeholder="Ex: Agência Teste" />
+          </Field>
+          <Field label="Nome do responsável">
+            <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={80}
+              className="lz-input" placeholder="Nome de quem vai administrar" />
+          </Field>
+          <Field label="Email (login)">
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+              className="lz-input" placeholder="email@agencia.com.br" />
+          </Field>
+          <Field label="Senha provisória">
+            <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
+              className="lz-input" placeholder="Mínimo 6 caracteres" />
+          </Field>
+          <button type="submit" disabled={loading}
+            className="lz-btn-primary w-full rounded-md py-2.5 mt-2 text-sm disabled:opacity-50">
+            {loading ? "Criando…" : "Criar agência"}
+          </button>
+          <p className="text-[10px] text-white/40 text-center mt-2">
+            Cria uma organização isolada com esse email como Adm Master dela — sem acesso aos dados da Luzeria.
           </p>
         </form>
       </div>

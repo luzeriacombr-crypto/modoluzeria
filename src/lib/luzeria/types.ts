@@ -169,6 +169,8 @@ export interface Profile {
   avatarPath?: string | null;
   onboardedAt?: string | null;
   tourCompletedAt?: string | null;
+  /** True only for masters of the Luzeria org itself (the platform owner). */
+  isPlatformAdmin?: boolean;
 }
 
 export interface NotificationItem {
