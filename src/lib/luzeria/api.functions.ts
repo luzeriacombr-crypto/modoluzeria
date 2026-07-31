@@ -284,7 +284,7 @@ export const createClient = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
-    const insert: any = { name: data.name };
+    const insert: any = { name: data.name, org_id: context.orgId };
     if (data.category) insert.category = data.category;
     if (data.color) insert.color = data.color;
     if (data.icon !== undefined) insert.icon = data.icon;

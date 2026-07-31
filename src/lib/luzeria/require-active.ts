@@ -11,12 +11,12 @@ export const requireActiveProfile = createMiddleware({ type: "function" })
   .server(async ({ next, context }) => {
     const { data, error } = await context.supabase
       .from("profiles")
-      .select("active")
+      .select("active, org_id")
       .eq("id", context.userId)
       .maybeSingle();
     if (error) throw new Error("Unauthorized");
     if (!data || data.active !== true) {
       throw new Error("Unauthorized: account pending approval or deactivated");
     }
-    return next();
+    return next({ context: { orgId: data.org_id as string } });
   });

@@ -386,6 +386,7 @@ export type Database = {
           name: string
           niche: string | null
           notes: string | null
+          org_id: string | null
           posts_per_week: number | null
           reels_per_week: number | null
           review_day: string | null
@@ -404,6 +405,7 @@ export type Database = {
           name: string
           niche?: string | null
           notes?: string | null
+          org_id?: string | null
           posts_per_week?: number | null
           reels_per_week?: number | null
           review_day?: string | null
@@ -422,6 +424,7 @@ export type Database = {
           name?: string
           niche?: string | null
           notes?: string | null
+          org_id?: string | null
           posts_per_week?: number | null
           reels_per_week?: number | null
           review_day?: string | null
@@ -432,6 +435,13 @@ export type Database = {
             columns: ["fixed_responsible_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
             referencedColumns: ["id"]
           },
         ]
@@ -496,6 +506,7 @@ export type Database = {
           last_status_change_at: string | null
           legacy_assignee: string | null
           month_id: string
+          org_id: string
           quality_rating: number | null
           reel_type: string | null
           rework_count: number
@@ -523,6 +534,7 @@ export type Database = {
           last_status_change_at?: string | null
           legacy_assignee?: string | null
           month_id: string
+          org_id?: string
           quality_rating?: number | null
           reel_type?: string | null
           rework_count?: number
@@ -550,6 +562,7 @@ export type Database = {
           last_status_change_at?: string | null
           legacy_assignee?: string | null
           month_id?: string
+          org_id?: string
           quality_rating?: number | null
           reel_type?: string | null
           rework_count?: number
@@ -573,6 +586,13 @@ export type Database = {
             columns: ["month_id"]
             isOneToOne: false
             referencedRelation: "months"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
             referencedColumns: ["id"]
           },
         ]
@@ -613,19 +633,30 @@ export type Database = {
         Row: {
           email: string
           name: string
+          org_id: string | null
           role: Database["public"]["Enums"]["app_role"]
         }
         Insert: {
           email: string
           name: string
+          org_id?: string | null
           role: Database["public"]["Enums"]["app_role"]
         }
         Update: {
           email?: string
           name?: string
+          org_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_role_assignments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feed_share_tokens: {
         Row: {
@@ -888,18 +919,21 @@ export type Database = {
           created_at: string
           id: string
           key: string
+          org_id: string
         }
         Insert: {
           client_id: string
           created_at?: string
           id?: string
           key: string
+          org_id?: string
         }
         Update: {
           client_id?: string
           created_at?: string
           id?: string
           key?: string
+          org_id?: string
         }
         Relationships: [
           {
@@ -907,6 +941,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "months_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
             referencedColumns: ["id"]
           },
         ]
@@ -983,6 +1024,27 @@ export type Database = {
           },
         ]
       }
+      orgs: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active: boolean
@@ -994,6 +1056,7 @@ export type Database = {
           id: string
           name: string
           onboarded_at: string | null
+          org_id: string | null
           tour_completed_at: string | null
         }
         Insert: {
@@ -1006,6 +1069,7 @@ export type Database = {
           id: string
           name: string
           onboarded_at?: string | null
+          org_id?: string | null
           tour_completed_at?: string | null
         }
         Update: {
@@ -1018,9 +1082,18 @@ export type Database = {
           id?: string
           name?: string
           onboarded_at?: string | null
+          org_id?: string | null
           tour_completed_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recurring_templates: {
         Row: {
@@ -1202,6 +1275,7 @@ export type Database = {
         }[]
       }
       auto_mark_missed: { Args: never; Returns: number }
+      current_org_id: { Args: never; Returns: string }
       generate_recurring_for_month: {
         Args: { _month_key?: string }
         Returns: number
