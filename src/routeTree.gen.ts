@@ -20,6 +20,7 @@ import { Route as AuthenticatedLimpezaRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedInvestigacaoRouteImport } from './routes/_authenticated/investigacao'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedOauthDriveCallbackRouteImport } from './routes/_authenticated/oauth.drive-callback'
 import { Route as AuthenticatedClienteClientIdRouteImport } from './routes/_authenticated/cliente.$clientId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -79,6 +80,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedOauthDriveCallbackRoute =
+  AuthenticatedOauthDriveCallbackRouteImport.update({
+    id: '/oauth/drive-callback',
+    path: '/oauth/drive-callback',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedClienteClientIdRoute =
   AuthenticatedClienteClientIdRouteImport.update({
     id: '/cliente/$clientId',
@@ -98,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/stories': typeof AuthenticatedStoriesRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
+  '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -111,6 +119,7 @@ export interface FileRoutesByTo {
   '/preview/$token': typeof PreviewTokenRoute
   '/': typeof AuthenticatedIndexRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
+  '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -126,6 +135,7 @@ export interface FileRoutesById {
   '/preview/$token': typeof PreviewTokenRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
+  '/_authenticated/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/stories'
     | '/preview/$token'
     | '/cliente/$clientId'
+    | '/oauth/drive-callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/preview/$token'
     | '/'
     | '/cliente/$clientId'
+    | '/oauth/drive-callback'
   id:
     | '__root__'
     | '/_authenticated'
@@ -168,6 +180,7 @@ export interface FileRouteTypes {
     | '/preview/$token'
     | '/_authenticated/'
     | '/_authenticated/cliente/$clientId'
+    | '/_authenticated/oauth/drive-callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -255,6 +268,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/oauth/drive-callback': {
+      id: '/_authenticated/oauth/drive-callback'
+      path: '/oauth/drive-callback'
+      fullPath: '/oauth/drive-callback'
+      preLoaderRoute: typeof AuthenticatedOauthDriveCallbackRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/cliente/$clientId': {
       id: '/_authenticated/cliente/$clientId'
       path: '/cliente/$clientId'
@@ -275,6 +295,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStoriesRoute: typeof AuthenticatedStoriesRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedClienteClientIdRoute: typeof AuthenticatedClienteClientIdRoute
+  AuthenticatedOauthDriveCallbackRoute: typeof AuthenticatedOauthDriveCallbackRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -287,6 +308,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStoriesRoute: AuthenticatedStoriesRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedClienteClientIdRoute: AuthenticatedClienteClientIdRoute,
+  AuthenticatedOauthDriveCallbackRoute: AuthenticatedOauthDriveCallbackRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

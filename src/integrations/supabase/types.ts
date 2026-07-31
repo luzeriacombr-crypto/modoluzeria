@@ -1024,6 +1024,45 @@ export type Database = {
           },
         ]
       }
+      org_google_credentials: {
+        Row: {
+          connected_at: string
+          connected_by: string | null
+          drive_email: string | null
+          org_id: string
+          refresh_token: string
+        }
+        Insert: {
+          connected_at?: string
+          connected_by?: string | null
+          drive_email?: string | null
+          org_id: string
+          refresh_token: string
+        }
+        Update: {
+          connected_at?: string
+          connected_by?: string | null
+          drive_email?: string | null
+          org_id?: string
+          refresh_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_google_credentials_connected_by_fkey"
+            columns: ["connected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_google_credentials_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orgs: {
         Row: {
           created_at: string

@@ -2,17 +2,38 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { FolderTree, Loader2, RefreshCw, Save } from "lucide-react";
+import { FolderTree, Loader2, RefreshCw, Save, HardDrive, ExternalLink } from "lucide-react";
 import {
   getDriveConfig,
   setDriveRootFolder,
   reorganizeAllDriveFiles,
+  getDriveConnectionStatus,
+  getDriveConnectUrl,
 } from "@/lib/luzeria/drive.functions";
 
 export function DriveSettingsTab() {
   const getCfg = useServerFn(getDriveConfig);
   const setRoot = useServerFn(setDriveRootFolder);
   const reorganize = useServerFn(reorganizeAllDriveFiles);
+  const getConnStatus = useServerFn(getDriveConnectionStatus);
+  const getConnectUrl = useServerFn(getDriveConnectUrl);
+
+  const connStatus = useQuery({
+    queryKey: ["drive-connection-status"],
+    queryFn: () => getConnStatus(),
+  });
+  const [connecting, setConnecting] = useState(false);
+
+  async function connectDrive() {
+    setConnecting(true);
+    try {
+      const r: any = await getConnectUrl({ data: { redirectOrigin: window.location.origin } });
+      window.location.href = r.url;
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao iniciar conexão com o Drive");
+      setConnecting(false);
+    }
+  }
 
   const cfg = useQuery({
     queryKey: ["drive-config"],
@@ -58,8 +79,39 @@ export function DriveSettingsTab() {
     }
   }
 
+  const status = connStatus.data;
+
   return (
     <div className="space-y-6">
+      <section className="bg-[#1C1C1C] rounded-lg p-6 border border-white/[0.06]">
+        <div className="flex items-center gap-2 text-white/60 text-[11px] uppercase tracking-wider font-bold mb-3">
+          <HardDrive size={12} /> Conta do Google Drive
+        </div>
+        <p className="text-xs text-white/50 mb-4 leading-relaxed">
+          Cada agência conecta a própria conta do Google Drive. Os arquivos dessa agência
+          ficam só nessa conta — a Luzeria não tem acesso a ela.
+        </p>
+        {connStatus.isLoading ? (
+          <div className="text-white/40 text-sm">Verificando…</div>
+        ) : status?.connected ? (
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-[#C8D44E] font-medium">
+              ✓ Conectado{status.driveEmail ? ` — ${status.driveEmail}` : ""}
+            </div>
+            <button onClick={connectDrive} disabled={connecting}
+              className="text-[11px] text-white/50 hover:text-white transition disabled:opacity-50">
+              Trocar de conta
+            </button>
+          </div>
+        ) : (
+          <button onClick={connectDrive} disabled={connecting}
+            className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 disabled:opacity-50">
+            {connecting ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+            Conectar Google Drive
+          </button>
+        )}
+      </section>
+
       <section className="bg-[#1C1C1C] rounded-lg p-6 border border-white/[0.06]">
         <div className="flex items-center gap-2 text-white/60 text-[11px] uppercase tracking-wider font-bold mb-3">
           <FolderTree size={12} /> Pasta raiz dos clientes

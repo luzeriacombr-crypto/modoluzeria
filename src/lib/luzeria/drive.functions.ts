@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { requireActiveProfile } from "./require-active";
 import { refreshGoogleAccessToken } from "./google-oauth";
+import { LUZERIA_ORG_ID } from "./api.functions";
 import { z } from "zod";
 
 const UPLOAD_BASE = "https://www.googleapis.com/upload/drive/v3";
@@ -9,22 +11,44 @@ const DRIVE_BASE  = "https://www.googleapis.com/drive/v3";
 const DRIVE_FIELDS =
   "id,name,mimeType,iconLink,thumbnailLink,webViewLink,size,modifiedTime";
 
-// In-memory token cache — reused until 5 min before expiry.
-let _tokenCache: { token: string; expiresAt: number } | null = null;
+/** Carries the calling org's id through every Drive helper call for the
+ * duration of one request, without threading it through every function
+ * signature — every exported handler below wraps its body in withDriveOrg(). */
+const driveOrgAls = new AsyncLocalStorage<string>();
+function withDriveOrg<T>(orgId: string, fn: () => Promise<T>): Promise<T> {
+  return driveOrgAls.run(orgId, fn);
+}
+
+// In-memory token cache, keyed by org — reused until 5 min before expiry.
+const _tokenCacheByOrg = new Map<string, { token: string; expiresAt: number }>();
 
 export async function getAccessToken(): Promise<string> {
-  if (_tokenCache && _tokenCache.expiresAt > Date.now() + 300_000) {
-    return _tokenCache.token;
-  }
-  const clientId     = process.env.GOOGLE_CLIENT_ID;
+  const orgId = driveOrgAls.getStore();
+  if (!orgId) throw new Error("Drive: organização não identificada nesta requisição.");
+
+  const cached = _tokenCacheByOrg.get(orgId);
+  if (cached && cached.expiresAt > Date.now() + 300_000) return cached.token;
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
-  if (!clientId || !clientSecret || !refreshToken) {
-    throw new Error("Credenciais do Google Drive ausentes no servidor (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN).");
+  if (!clientId || !clientSecret) {
+    throw new Error("Credenciais do Google Drive ausentes no servidor (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET).");
   }
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("org_google_credentials").select("refresh_token").eq("org_id", orgId).maybeSingle();
+  let refreshToken = (data as any)?.refresh_token as string | undefined;
+  if (!refreshToken && orgId === LUZERIA_ORG_ID) {
+    refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+  }
+  if (!refreshToken) {
+    throw new Error("Esta agência ainda não conectou o Google Drive. Vá em Configurações → Drive e conecte sua conta.");
+  }
+
   const { accessToken, expiresIn } = await refreshGoogleAccessToken({ clientId, clientSecret, refreshToken });
-  _tokenCache = { token: accessToken, expiresAt: Date.now() + expiresIn * 1000 };
-  return _tokenCache.token;
+  _tokenCacheByOrg.set(orgId, { token: accessToken, expiresAt: Date.now() + expiresIn * 1000 });
+  return accessToken;
 }
 
 async function driveHeaders(extra: Record<string, string> = {}): Promise<Record<string, string>> {
@@ -162,14 +186,28 @@ async function driveMoveTo(fileId: string, targetParentId: string) {
 
 /* ============== ROOT FOLDER (app settings) ============== */
 
+function rootFolderSettingKey(orgId: string): string {
+  return `drive_root_folder_id:${orgId}`;
+}
+
 async function readRootFolderId(supabase: any): Promise<string> {
+  const orgId = driveOrgAls.getStore()!;
   const { data } = await supabase
     .from("app_settings")
     .select("value")
-    .eq("key", "drive_root_folder_id")
+    .eq("key", rootFolderSettingKey(orgId))
     .maybeSingle();
-  const stored = (data?.value as any)?.id;
-  return (typeof stored === "string" && stored) ? stored : DEFAULT_ROOT_FOLDER_ID;
+  let stored = (data?.value as any)?.id;
+  // Legacy fallback: Luzeria's root folder was originally stored under the
+  // bare key (pre-multi-tenant). Only relevant until it's re-saved once.
+  if (!stored && orgId === LUZERIA_ORG_ID) {
+    const legacy = await supabase
+      .from("app_settings").select("value").eq("key", "drive_root_folder_id").maybeSingle();
+    stored = (legacy.data?.value as any)?.id;
+  }
+  if (typeof stored === "string" && stored) return stored;
+  // New orgs with no configured root: use their own Drive's top level.
+  return orgId === LUZERIA_ORG_ID ? DEFAULT_ROOT_FOLDER_ID : "root";
 }
 
 /* ============== CLIENT / MONTH FOLDER RESOLUTION ============== */
@@ -350,7 +388,7 @@ export const getGridThumbnails = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { itemIds: string[] }) =>
     z.object({ itemIds: z.array(z.string().uuid()).max(200) }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     if (data.itemIds.length === 0) return {};
 
     const { data: rows, error } = await context.supabase
@@ -396,7 +434,7 @@ export const getGridThumbnails = createServerFn({ method: "GET" })
       result[itemId] = { thumbUrl: firstThumb, fileCount: fileIds.length };
     }
     return result;
-  });
+  }));
 
 /* ============== SEARCH ============== */
 
@@ -404,7 +442,7 @@ export const searchDriveFiles = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { query?: string }) =>
     z.object({ query: z.string().max(120).optional() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     const q = (data.query ?? "").trim();
     const qParam = q
       ? `name contains '${q.replace(/'/g, "\\'")}' and trashed = false`
@@ -426,7 +464,7 @@ export const searchDriveFiles = createServerFn({ method: "GET" })
       sizeBytes: f.size ? Number(f.size) : null,
       modifiedTime: f.modifiedTime ?? null,
     }));
-  });
+  }));
 
 /* ============== ATTACH BY ID/URL ============== */
 
@@ -437,7 +475,7 @@ export const attachDriveFile = createServerFn({ method: "POST" })
       itemId: z.string().uuid(),
       fileIdOrUrl: z.string().min(3).max(1024),
     }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     await assertCanWrite(context.supabase, context.userId, data.itemId);
     const fileId = parseDriveId(data.fileIdOrUrl);
     if (!fileId) throw new Error("Link/ID do Drive inválido.");
@@ -481,7 +519,7 @@ export const attachDriveFile = createServerFn({ method: "POST" })
 
     await syncLegacyDriveLink(context.supabase, data.itemId);
     return { ok: true };
-  });
+  }));
 
 /* ============== UPLOAD ============== */
 
@@ -500,7 +538,7 @@ export const uploadDriveFile = createServerFn({ method: "POST" })
       // ~25 MB ceiling for inline base64 uploads.
       base64: z.string().min(1).max(35_000_000),
     }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     await assertCanWrite(context.supabase, context.userId, data.itemId);
 
     // Uploads require the client's deliveries folder to be configured;
@@ -564,7 +602,7 @@ export const uploadDriveFile = createServerFn({ method: "POST" })
 
     await syncLegacyDriveLink(context.supabase, data.itemId);
     return { ok: true, file: { id: meta.id, name: row.name } };
-  });
+  }));
 
 /* ============== DETACH ============== */
 
@@ -631,7 +669,7 @@ export const getDriveThumbnail = createServerFn({ method: "GET" })
       fileId: z.string().min(5).max(200),
       size: z.number().int().min(64).max(1024).optional(),
     }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     try {
       const meta: any = await driveFetch(
         `/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=thumbnailLink,mimeType&supportsAllDrives=true`,
@@ -652,7 +690,7 @@ export const getDriveThumbnail = createServerFn({ method: "GET" })
       console.error("[getDriveThumbnail] failed:", e);
       return { dataUrl: null as string | null };
     }
-  });
+  }));
 
 /**
  * Returns a short-lived Drive OAuth token so the browser can fetch the video
@@ -663,7 +701,7 @@ export const getDriveVideoToken = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { fileId: string }) =>
     z.object({ fileId: z.string().min(5).max(200) }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     const token = await getAccessToken();
     const meta: any = await driveFetch(
       `/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=mimeType,name&supportsAllDrives=true`,
@@ -674,14 +712,14 @@ export const getDriveVideoToken = createServerFn({ method: "GET" })
       mimeType: (meta?.mimeType as string) ?? "video/mp4",
       name: (meta?.name as string) ?? "video",
     };
-  });
+  }));
 
 /** @deprecated Use getDriveVideoToken instead — no size limit. */
 export const getDriveFileBytes = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { fileId: string }) =>
     z.object({ fileId: z.string().min(5).max(200) }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     const meta: any = await driveFetch(
       `/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=mimeType,size,name&supportsAllDrives=true`,
     );
@@ -696,7 +734,7 @@ export const getDriveFileBytes = createServerFn({ method: "GET" })
     const buf = Buffer.from(await res.arrayBuffer());
     const ct = meta?.mimeType ?? res.headers.get("content-type") ?? "application/octet-stream";
     return { dataUrl: `data:${ct};base64,${buf.toString("base64")}`, mimeType: ct, name: meta?.name ?? "video" };
-  });
+  }));
 
 /* ============== DRIVE CONFIG + ORGANIZE ============== */
 
@@ -710,16 +748,16 @@ async function assertMaster(supabase: any, userId: string) {
 
 export const getDriveConfig = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }) => withDriveOrg(context.orgId, async () => {
     const rootFolderId = await readRootFolderId(context.supabase);
     return { rootFolderId, default: DEFAULT_ROOT_FOLDER_ID };
-  });
+  }));
 
 export const setDriveRootFolder = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { folderIdOrUrl: string }) =>
     z.object({ folderIdOrUrl: z.string().min(5).max(500) }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     await assertMaster(context.supabase, context.userId);
     const id = parseDriveId(data.folderIdOrUrl) ?? data.folderIdOrUrl.trim();
     // Validate it exists and is a folder.
@@ -731,9 +769,105 @@ export const setDriveRootFolder = createServerFn({ method: "POST" })
     }
     const { error } = await context.supabase
       .from("app_settings")
-      .upsert({ key: "drive_root_folder_id", value: { id, name: meta.name } });
+      .upsert({ key: rootFolderSettingKey(context.orgId), value: { id, name: meta.name } });
     if (error) throw new Error(error.message);
     return { ok: true, id, name: meta.name };
+  }));
+
+/* ============== PER-ORG DRIVE CONNECTION (OAuth) ============== */
+
+export const getDriveConnectionStatus = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data } = await context.supabase
+      .from("org_google_credentials")
+      .select("drive_email, connected_at")
+      .eq("org_id", context.orgId)
+      .maybeSingle();
+    if (data) return { connected: true, driveEmail: data.drive_email, connectedAt: data.connected_at };
+    if (context.orgId === LUZERIA_ORG_ID && process.env.GOOGLE_REFRESH_TOKEN) {
+      return { connected: true, driveEmail: null, connectedAt: null };
+    }
+    return { connected: false, driveEmail: null, connectedAt: null };
+  });
+
+/** Builds the Google consent URL for this org's master to connect their own Drive. */
+export const getDriveConnectUrl = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { redirectOrigin: string }) =>
+    z.object({ redirectOrigin: z.string().url() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertMaster(context.supabase, context.userId);
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) throw new Error("GOOGLE_CLIENT_ID ausente no servidor.");
+    const redirectUri = `${data.redirectOrigin}/oauth/drive-callback`;
+    const scope = [
+      "https://www.googleapis.com/auth/drive",
+      "https://www.googleapis.com/auth/userinfo.email",
+    ].join(" ");
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope,
+      access_type: "offline",
+      prompt: "consent",
+    });
+    return { url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` };
+  });
+
+/** Exchanges the OAuth code from /oauth/drive-callback for a refresh token
+ * tied to this org — never touches another org's credentials. */
+export const completeDriveConnect = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { code: string; redirectOrigin: string }) =>
+    z.object({ code: z.string().min(1), redirectOrigin: z.string().url() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertMaster(context.supabase, context.userId);
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    if (!clientId || !clientSecret) throw new Error("Credenciais do Google ausentes no servidor.");
+    const redirectUri = `${data.redirectOrigin}/oauth/drive-callback`;
+
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code: data.code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code",
+      }),
+    });
+    const tokens: any = await tokenRes.json();
+    if (!tokenRes.ok || !tokens.refresh_token) {
+      throw new Error(
+        tokens?.error_description || tokens?.error ||
+        "Não foi possível conectar ao Google Drive. Tente novamente.",
+      );
+    }
+
+    let driveEmail: string | null = null;
+    try {
+      const uiRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+      if (uiRes.ok) driveEmail = (await uiRes.json())?.email ?? null;
+    } catch { /* cosmetic only, connection still succeeds without it */ }
+
+    const { error } = await context.supabase
+      .from("org_google_credentials")
+      .upsert({
+        org_id: context.orgId,
+        refresh_token: tokens.refresh_token,
+        drive_email: driveEmail,
+        connected_by: context.userId,
+        connected_at: new Date().toISOString(),
+      }, { onConflict: "org_id" });
+    if (error) throw new Error(error.message);
+
+    return { ok: true, driveEmail };
   });
 
 /** List candidate client folders inside the root (for fuzzy review). */
@@ -741,7 +875,7 @@ export const findClientFolderCandidates = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string }) =>
     z.object({ clientId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     const { data: client } = await context.supabase
       .from("clients").select("id, name").eq("id", data.clientId).maybeSingle();
     if (!client) throw new Error("Cliente não encontrado.");
@@ -766,7 +900,7 @@ export const findClientFolderCandidates = createServerFn({ method: "GET" })
 
     const exact = scored.find((s) => s.score === 100) ?? null;
     return { clientName: client.name, exact, candidates: scored };
-  });
+  }));
 
 /** Idempotently ensure the Entregas folder exists for a client. */
 export const ensureClientDeliveriesFolder = createServerFn({ method: "POST" })
@@ -776,7 +910,7 @@ export const ensureClientDeliveriesFolder = createServerFn({ method: "POST" })
       clientId: z.string().uuid(),
       clientFolderId: z.string().min(5).max(200).optional(),
     }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     const { data: client } = await context.supabase
       .from("clients").select("id, name").eq("id", data.clientId).maybeSingle();
     if (!client) throw new Error("Cliente não encontrado.");
@@ -786,12 +920,12 @@ export const ensureClientDeliveriesFolder = createServerFn({ method: "POST" })
       { autoCreate: true, forceClientFolderId: data.clientFolderId },
     );
     return { ok: true, ...tree };
-  });
+  }));
 
 /** Re-organize every existing attached file into the correct client/month folder. */
 export const reorganizeAllDriveFiles = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }) => withDriveOrg(context.orgId, async () => {
     await assertMaster(context.supabase, context.userId);
     const { data: files } = await context.supabase
       .from("item_files")
@@ -827,7 +961,7 @@ export const reorganizeAllDriveFiles = createServerFn({ method: "POST" })
       }
     }
     return { ok: true, moved, skipped, errors: errors.slice(0, 20) };
-  });
+  }));
 
 /* ============== PER-CLIENT DELIVERIES FOLDER (Perfil do Cliente) ============== */
 
@@ -858,7 +992,7 @@ export const setClientDeliveriesFolder = createServerFn({ method: "POST" })
       clientId: z.string().uuid(),
       folderIdOrUrl: z.string().trim().min(5).max(500),
     }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     await assertAdmin(context.supabase, context.userId);
     const id = parseDriveId(data.folderIdOrUrl);
     if (!id) throw new Error("Link/ID do Drive inválido.");
@@ -893,7 +1027,7 @@ export const setClientDeliveriesFolder = createServerFn({ method: "POST" })
       name: meta?.name ?? null,
       webViewUrl: `https://drive.google.com/drive/folders/${id}`,
     };
-  });
+  }));
 
 export const clearClientDeliveriesFolder = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
