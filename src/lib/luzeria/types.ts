@@ -174,6 +174,7 @@ export interface Profile {
   orgId?: string | null;
   orgName?: string | null;
   orgTagline?: string | null;
+  orgLogoUrl?: string | null;
 }
 
 export interface NotificationItem {

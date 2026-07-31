@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { profilesQO, useApi, useMe, appSettingsQO } from "@/lib/luzeria/queries";
+import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
 import { roleLabel } from "./Sidebar";
@@ -367,7 +368,14 @@ function GeneralSettings() {
 
   return (
     <div className="max-w-2xl">
-      {!me?.isPlatformAdmin && <OrgBrandingSection orgName={me?.orgName ?? ""} orgTagline={me?.orgTagline ?? ""} />}
+      {!me?.isPlatformAdmin && me?.orgId && (
+        <OrgBrandingSection
+          orgId={me.orgId}
+          orgName={me.orgName ?? ""}
+          orgTagline={me.orgTagline ?? ""}
+          orgLogoUrl={me.orgLogoUrl ?? null}
+        />
+      )}
 
       <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
         <SettingsIcon size={12} /> Operação
@@ -414,10 +422,15 @@ function GeneralSettings() {
   );
 }
 
-function OrgBrandingSection({ orgName, orgTagline }: { orgName: string; orgTagline: string }) {
+const MAX_LOGO_BYTES = 3 * 1024 * 1024;
+
+function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl }: {
+  orgId: string; orgName: string; orgTagline: string; orgLogoUrl: string | null;
+}) {
   const { updateMyOrg } = useApi();
   const [name, setName] = useState(orgName);
   const [tagline, setTagline] = useState(orgTagline);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => { setName(orgName); }, [orgName]);
   useEffect(() => { setTagline(orgTagline); }, [orgTagline]);
@@ -429,16 +442,69 @@ function OrgBrandingSection({ orgName, orgTagline }: { orgName: string; orgTagli
     });
   }
 
+  async function pickLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Escolha um arquivo de imagem."); return; }
+    if (file.size > MAX_LOGO_BYTES) { toast.error("Imagem muito grande (máximo 3 MB)."); return; }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `org-logos/${orgId}/logo-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        contentType: file.type, upsert: true,
+      });
+      if (upErr) throw upErr;
+      await updateMyOrg.mutateAsync({ data: { logoPath: path } });
+      toast.success("Logo atualizada.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao enviar a logo.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function removeLogo() {
+    updateMyOrg.mutate({ data: { logoPath: null } }, {
+      onSuccess: () => toast.success("Logo removida."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
+    });
+  }
+
   return (
     <>
       <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
         <Star size={12} /> Marca da agência
       </h2>
-      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-3">
+      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-4">
         <p className="text-[11px] text-white/50 leading-relaxed">
           Aparece no lugar de "Luzeria" na barra lateral e no título da aba, depois que sua equipe faz login.
           A tela de login em si continua igual pra todas as agências.
         </p>
+
+        <div className="flex items-center gap-4">
+          <div className="h-14 w-14 rounded-md bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+            {orgLogoUrl ? (
+              <img src={orgLogoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
+            ) : (
+              <span className="text-[10px] text-white/30 text-center px-1">Sem logo</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <label className="lz-btn-ghost text-xs px-4 py-2 rounded-md cursor-pointer disabled:opacity-50">
+              {uploading ? "Enviando…" : "Enviar logo"}
+              <input type="file" accept="image/*" className="hidden" onChange={pickLogo} disabled={uploading} />
+            </label>
+            {orgLogoUrl && (
+              <button onClick={removeLogo} disabled={updateMyOrg.isPending}
+                className="text-[11px] text-white/50 hover:text-red-400 transition disabled:opacity-50">
+                Remover
+              </button>
+            )}
+          </div>
+        </div>
+
         <Field label="Nome da agência">
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} className="lz-input" />
         </Field>

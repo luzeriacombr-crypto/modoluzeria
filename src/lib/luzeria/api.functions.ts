@@ -81,8 +81,12 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path").eq("id", orgId).maybeSingle()
       : { data: null };
+    const logoPath = (org as any)?.logo_path as string | null | undefined;
+    const orgLogoUrl = logoPath
+      ? context.supabase.storage.from("avatars").getPublicUrl(logoPath).data.publicUrl
+      : null;
     return {
       id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
@@ -95,16 +99,18 @@ export const getMe = createServerFn({ method: "GET" })
       orgId,
       orgName: (org as any)?.name ?? null,
       orgTagline: (org as any)?.tagline ?? null,
+      orgLogoUrl,
     } satisfies Profile;
   });
 
 /** Master-only: rename their own agency and/or set its in-app tagline. */
 export const updateMyOrg = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { name?: string; tagline?: string | null }) =>
+  .inputValidator((d: { name?: string; tagline?: string | null; logoPath?: string | null }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
       tagline: z.string().trim().max(120).nullable().optional(),
+      logoPath: z.string().max(300).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -112,6 +118,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     const patch: any = {};
     if (data.name !== undefined) patch.name = data.name;
     if (data.tagline !== undefined) patch.tagline = data.tagline;
+    if (data.logoPath !== undefined) patch.logo_path = data.logoPath;
     if (Object.keys(patch).length === 0) return { ok: true };
     const { error } = await context.supabase.from("orgs").update(patch).eq("id", context.orgId);
     if (error) throw new Error(error.message);

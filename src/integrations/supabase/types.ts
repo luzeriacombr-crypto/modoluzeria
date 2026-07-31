@@ -1067,6 +1067,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          logo_path: string | null
           name: string
           slug: string
           tagline: string | null
@@ -1074,6 +1075,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          logo_path?: string | null
           name: string
           slug: string
           tagline?: string | null
@@ -1081,6 +1083,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          logo_path?: string | null
           name?: string
           slug?: string
           tagline?: string | null

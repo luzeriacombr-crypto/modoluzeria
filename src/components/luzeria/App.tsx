@@ -138,9 +138,13 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
         {sidebarHidden ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
       </button>
       {me?.orgId && me.orgId !== LUZERIA_ORG_ID ? (
-        <span className="md:hidden text-white font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px]">
-          {me.orgName ?? "Modo Luzeria"}
-        </span>
+        me.orgLogoUrl ? (
+          <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="md:hidden h-7 w-auto max-w-[140px] object-contain" />
+        ) : (
+          <span className="md:hidden text-white font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px]">
+            {me.orgName ?? "Modo Luzeria"}
+          </span>
+        )
       ) : (
         <img src={luzeriaLogo} alt="Luzeria" className="md:hidden h-6 w-auto object-contain" />
       )}

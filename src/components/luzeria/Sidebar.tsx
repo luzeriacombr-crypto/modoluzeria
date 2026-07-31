@@ -73,6 +73,8 @@ export function Sidebar({
       <div className="px-5 pt-5 pb-4">
         {isLuzeria ? (
           <img src={luzeriaLogo} alt="Luzeria" className="h-7 w-auto object-contain" />
+        ) : me?.orgLogoUrl ? (
+          <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="h-9 w-auto max-w-full object-contain" />
         ) : (
           <div className="text-white font-extrabold text-lg uppercase tracking-wide truncate" title={me?.orgName ?? ""}>
             {me?.orgName ?? "Modo Luzeria"}
