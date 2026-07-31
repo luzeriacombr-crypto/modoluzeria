@@ -120,8 +120,12 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.tagline !== undefined) patch.tagline = data.tagline;
     if (data.logoPath !== undefined) patch.logo_path = data.logoPath;
     if (Object.keys(patch).length === 0) return { ok: true };
-    const { error } = await context.supabase.from("orgs").update(patch).eq("id", context.orgId);
+    const { data: updated, error } = await context.supabase
+      .from("orgs").update(patch).eq("id", context.orgId).select("id").maybeSingle();
     if (error) throw new Error(error.message);
+    // A blocked-by-RLS update returns no error and zero rows — surface that
+    // as a real failure instead of a false "saved" toast.
+    if (!updated) throw new Error("Não foi possível salvar (permissão negada).");
     return { ok: true };
   });
 
