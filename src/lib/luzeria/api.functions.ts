@@ -77,16 +77,14 @@ export const getMe = createServerFn({ method: "GET" })
       .from("user_roles").select("role").eq("user_id", context.userId).maybeSingle();
     if (!profile) return null;
     const { data: myEmail } = await context.supabase.rpc("get_my_email");
-    const signed = await signAvatarPaths(context.supabase, [profile.avatar_url]);
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org } = orgId
       ? await context.supabase.from("orgs").select("name, tagline, logo_path").eq("id", orgId).maybeSingle()
       : { data: null };
     const logoPath = (org as any)?.logo_path as string | null | undefined;
-    const orgLogoUrl = logoPath
-      ? context.supabase.storage.from("avatars").getPublicUrl(logoPath).data.publicUrl
-      : null;
+    const signed = await signAvatarPaths(context.supabase, [profile.avatar_url, logoPath]);
+    const orgLogoUrl = logoPath ? signed.get(logoPath) ?? null : null;
     return {
       id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
