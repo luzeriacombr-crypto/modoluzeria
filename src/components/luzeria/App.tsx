@@ -19,6 +19,7 @@ import { LuzeriaLoader } from "./LuzeriaLoader";
 import luzeriaLogo from "@/assets/luzeria-sidebar.png";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 
 export function App() {
   const me = useMe();
@@ -40,6 +41,15 @@ export function App() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [qc]);
+
+  // Personalize the browser tab title once we know which org is logged in
+  // (the pre-login splash/login screen stays generic — org is unknown then).
+  // Luzeria keeps the default "Modo Luzeria" set in __root.tsx.
+  useEffect(() => {
+    if (me.data?.orgName && me.data.orgId !== LUZERIA_ORG_ID) {
+      document.title = `Modo ${me.data.orgName}`;
+    }
+  }, [me.data?.orgName, me.data?.orgId]);
 
   if (me.isLoading) {
     return <LuzeriaLoader />;
@@ -127,7 +137,13 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
       >
         {sidebarHidden ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
       </button>
-      <img src={luzeriaLogo} alt="Luzeria" className="md:hidden h-6 w-auto object-contain" />
+      {me?.orgId && me.orgId !== LUZERIA_ORG_ID ? (
+        <span className="md:hidden text-white font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px]">
+          {me.orgName ?? "Modo Luzeria"}
+        </span>
+      ) : (
+        <img src={luzeriaLogo} alt="Luzeria" className="md:hidden h-6 w-auto object-contain" />
+      )}
       <div className="flex-1" />
       <NotificationsBell />
       {me && (

@@ -171,6 +171,9 @@ export interface Profile {
   tourCompletedAt?: string | null;
   /** True only for masters of the Luzeria org itself (the platform owner). */
   isPlatformAdmin?: boolean;
+  orgId?: string | null;
+  orgName?: string | null;
+  orgTagline?: string | null;
 }
 
 export interface NotificationItem {

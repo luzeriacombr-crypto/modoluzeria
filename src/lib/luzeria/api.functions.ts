@@ -79,6 +79,10 @@ export const getMe = createServerFn({ method: "GET" })
     const { data: myEmail } = await context.supabase.rpc("get_my_email");
     const signed = await signAvatarPaths(context.supabase, [profile.avatar_url]);
     const role = (roleRow?.role ?? "member") as Role;
+    const orgId = (profile as any).org_id as string | null;
+    const { data: org } = orgId
+      ? await context.supabase.from("orgs").select("name, tagline").eq("id", orgId).maybeSingle()
+      : { data: null };
     return {
       id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
@@ -87,8 +91,31 @@ export const getMe = createServerFn({ method: "GET" })
       avatarUrl: profile.avatar_url ? signed.get(profile.avatar_url) ?? null : null,
       onboardedAt: profile.onboarded_at ?? null,
       tourCompletedAt: (profile as any).tour_completed_at ?? null,
-      isPlatformAdmin: role === "master" && (profile as any).org_id === LUZERIA_ORG_ID,
+      isPlatformAdmin: role === "master" && orgId === LUZERIA_ORG_ID,
+      orgId,
+      orgName: (org as any)?.name ?? null,
+      orgTagline: (org as any)?.tagline ?? null,
     } satisfies Profile;
+  });
+
+/** Master-only: rename their own agency and/or set its in-app tagline. */
+export const updateMyOrg = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { name?: string; tagline?: string | null }) =>
+    z.object({
+      name: z.string().trim().min(1).max(80).optional(),
+      tagline: z.string().trim().max(120).nullable().optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const patch: any = {};
+    if (data.name !== undefined) patch.name = data.name;
+    if (data.tagline !== undefined) patch.tagline = data.tagline;
+    if (Object.keys(patch).length === 0) return { ok: true };
+    const { error } = await context.supabase.from("orgs").update(patch).eq("id", context.orgId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const updateMyProfile = createServerFn({ method: "POST" })

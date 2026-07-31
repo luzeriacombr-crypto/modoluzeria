@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Client } from "@/lib/luzeria/types";
 import luzeriaLogo from "@/assets/luzeria-sidebar.png";
+import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
@@ -64,13 +65,22 @@ export function Sidebar({
   }, [clients]);
 
   const isAdmin = me?.role === "master" || me?.role === "setor";
+  const isLuzeria = !me?.orgId || me.orgId === LUZERIA_ORG_ID;
 
   return (
     <aside data-tour="sidebar" className="sidebar-gradient w-[240px] flex flex-col text-white shrink-0">
       {/* Logo */}
       <div className="px-5 pt-5 pb-4">
-        <img src={luzeriaLogo} alt="Luzeria" className="h-7 w-auto object-contain" />
-        <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-2">Você foi chamado para criar</p>
+        {isLuzeria ? (
+          <img src={luzeriaLogo} alt="Luzeria" className="h-7 w-auto object-contain" />
+        ) : (
+          <div className="text-white font-extrabold text-lg uppercase tracking-wide truncate" title={me?.orgName ?? ""}>
+            {me?.orgName ?? "Modo Luzeria"}
+          </div>
+        )}
+        <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-2">
+          {isLuzeria ? "Você foi chamado para criar" : (me?.orgTagline || "Gestão de conteúdo e criação")}
+        </p>
       </div>
       <div className="mx-5 h-px" style={{ backgroundColor: "rgba(200,212,78,0.2)" }} />
 

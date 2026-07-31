@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { profilesQO, useApi, useMe, appSettingsQO } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
@@ -356,6 +356,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function GeneralSettings() {
   const { data: settings } = useQuery(appSettingsQO());
   const { updateAppSettings } = useApi();
+  const me = useMe().data;
   if (!settings) return <div className="text-white/40 text-sm">Carregando…</div>;
 
   const toggle = (next: boolean) =>
@@ -366,6 +367,8 @@ function GeneralSettings() {
 
   return (
     <div className="max-w-2xl">
+      {!me?.isPlatformAdmin && <OrgBrandingSection orgName={me?.orgName ?? ""} orgTagline={me?.orgTagline ?? ""} />}
+
       <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
         <SettingsIcon size={12} /> Operação
       </h2>
@@ -408,5 +411,46 @@ function GeneralSettings() {
         </button>
       </div>
     </div>
+  );
+}
+
+function OrgBrandingSection({ orgName, orgTagline }: { orgName: string; orgTagline: string }) {
+  const { updateMyOrg } = useApi();
+  const [name, setName] = useState(orgName);
+  const [tagline, setTagline] = useState(orgTagline);
+
+  useEffect(() => { setName(orgName); }, [orgName]);
+  useEffect(() => { setTagline(orgTagline); }, [orgTagline]);
+
+  function save() {
+    updateMyOrg.mutate({ data: { name: name.trim(), tagline: tagline.trim() || null } }, {
+      onSuccess: () => toast.success("Marca da agência atualizada."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+    });
+  }
+
+  return (
+    <>
+      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+        <Star size={12} /> Marca da agência
+      </h2>
+      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-3">
+        <p className="text-[11px] text-white/50 leading-relaxed">
+          Aparece no lugar de "Luzeria" na barra lateral e no título da aba, depois que sua equipe faz login.
+          A tela de login em si continua igual pra todas as agências.
+        </p>
+        <Field label="Nome da agência">
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} className="lz-input" />
+        </Field>
+        <Field label="Slogan (opcional)">
+          <input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={120} className="lz-input"
+            placeholder="Ex: Conteúdo que conecta" />
+        </Field>
+        <button onClick={save} disabled={updateMyOrg.isPending || !name.trim()}
+          className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50">
+          {updateMyOrg.isPending ? "Salvando…" : "Salvar"}
+        </button>
+      </div>
+    </>
   );
 }
