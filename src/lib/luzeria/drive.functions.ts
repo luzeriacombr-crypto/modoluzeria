@@ -743,9 +743,8 @@ export const getDriveFileBytes = createServerFn({ method: "GET" })
 /* ============== DRIVE CONFIG + ORGANIZE ============== */
 
 async function assertMaster(supabase: any, userId: string) {
-  const { data } = await supabase
-    .from("profiles").select("role").eq("id", userId).maybeSingle();
-  if (data?.role !== "master") {
+  const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
+  if (!isMaster) {
     throw new Error("Apenas o Adm Master pode executar esta ação.");
   }
 }
