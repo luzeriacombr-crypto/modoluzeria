@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { AsyncLocalStorage } from "node:async_hooks";
 import { requireActiveProfile } from "./require-active";
 import { refreshGoogleAccessToken } from "./google-oauth";
 import { LUZERIA_ORG_ID } from "./api.functions";
@@ -13,17 +12,21 @@ const DRIVE_FIELDS =
 
 /** Carries the calling org's id through every Drive helper call for the
  * duration of one request, without threading it through every function
- * signature — every exported handler below wraps its body in withDriveOrg(). */
-const driveOrgAls = new AsyncLocalStorage<string>();
-function withDriveOrg<T>(orgId: string, fn: () => Promise<T>): Promise<T> {
-  return driveOrgAls.run(orgId, fn);
+ * signature — every exported handler below wraps its body in withDriveOrg().
+ * The AsyncLocalStorage itself lives in a .server.ts module and is always
+ * dynamically imported — top-level `node:async_hooks` would otherwise leak
+ * into the client bundle (this file ships partially to the browser). */
+async function withDriveOrg<T>(orgId: string, fn: () => Promise<T>): Promise<T> {
+  const { withDriveOrg: run } = await import("./drive-org-context.server");
+  return run(orgId, fn);
 }
 
 // In-memory token cache, keyed by org — reused until 5 min before expiry.
 const _tokenCacheByOrg = new Map<string, { token: string; expiresAt: number }>();
 
 export async function getAccessToken(): Promise<string> {
-  const orgId = driveOrgAls.getStore();
+  const { currentDriveOrgId } = await import("./drive-org-context.server");
+  const orgId = currentDriveOrgId();
   if (!orgId) throw new Error("Drive: organização não identificada nesta requisição.");
 
   const cached = _tokenCacheByOrg.get(orgId);
@@ -191,7 +194,8 @@ function rootFolderSettingKey(orgId: string): string {
 }
 
 async function readRootFolderId(supabase: any): Promise<string> {
-  const orgId = driveOrgAls.getStore()!;
+  const { currentDriveOrgId } = await import("./drive-org-context.server");
+  const orgId = currentDriveOrgId()!;
   const { data } = await supabase
     .from("app_settings")
     .select("value")
