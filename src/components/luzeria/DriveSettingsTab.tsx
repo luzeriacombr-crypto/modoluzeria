@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { FolderTree, Loader2, RefreshCw, Save, HardDrive, ExternalLink } from "lucide-react";
+import { FolderTree, Loader2, RefreshCw, Save, HardDrive, ExternalLink, CircleHelp } from "lucide-react";
 import {
   getDriveConfig,
   setDriveRootFolder,
@@ -87,10 +87,18 @@ export function DriveSettingsTab() {
         <div className="flex items-center gap-2 text-white/60 text-[11px] uppercase tracking-wider font-bold mb-3">
           <HardDrive size={12} /> Conta do Google Drive
         </div>
-        <p className="text-xs text-white/50 mb-4 leading-relaxed">
+        <p className="text-xs text-white/50 mb-2 leading-relaxed">
           Cada agência conecta a própria conta do Google Drive. Os arquivos dessa agência
           ficam só nessa conta — nenhuma outra agência tem acesso a ela.
         </p>
+        <a
+          href="https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs font-medium mb-4 text-[rgb(var(--lz-brand-rgb))] hover:opacity-80 transition-opacity"
+        >
+          <CircleHelp size={13} /> Precisa de ajuda? Assista o tutorial!
+        </a>
         {connStatus.isLoading ? (
           <div className="text-white/40 text-sm">Verificando…</div>
         ) : status?.connected ? (

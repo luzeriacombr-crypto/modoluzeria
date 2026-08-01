@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { CircleHelp } from "lucide-react";
 import { useApi } from "@/lib/luzeria/queries";
 import type { Profile } from "@/lib/luzeria/types";
 import { AvatarEditor, ColorPicker, showAvatarError, uploadAvatar } from "./AvatarEditor";
@@ -45,7 +46,7 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
   const firstName = me.name.split(" ")[0] || me.name;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10"
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10"
       style={{ background: "radial-gradient(circle at top, rgba(var(--lz-brand-light-rgb),0.07), transparent 60%), #0D0D0D" }}>
       <div className="w-full max-w-md bg-[#1A1A1A] rounded-2xl p-7 md:p-9"
         style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.18)" }}>
@@ -105,6 +106,14 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
           </>
         )}
       </div>
+      <a
+        href="https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-4 flex items-center gap-1.5 text-xs font-medium text-white/50 hover:text-white transition-colors"
+      >
+        <CircleHelp size={13} /> Precisa de ajuda? Assista o tutorial!
+      </a>
     </div>
   );
 }
