@@ -10,6 +10,7 @@ const LIME = "#D7FF3F";
 const LIME_ON_LIGHT = "#5B7A00"; // readable lime-family accent for white sections
 const BG_BLUE = "#0A0E23";
 const BG_BLUE_2 = "#111F5C";
+const BG_BLUE_LIGHT = "#E1E8FB";
 const BG_GREEN = "#0B2A1C";
 const BG_WHITE = "#F5F5F0";
 const BG_GRAY = "#18181B";
@@ -103,7 +104,7 @@ export function SalesPage() {
       </section>
 
       {/* Dores */}
-      <section style={{ background: BG_GREEN }} className="border-t border-white/10">
+      <section style={{ background: BG_BLUE_LIGHT, color: "#0A0E23" }} className="border-t border-black/10">
         <div className="px-5 sm:px-10 max-w-[820px] mx-auto py-14">
           <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">O Modo Criador é para...</h2>
           <ul className="space-y-4">
@@ -115,12 +116,12 @@ export function SalesPage() {
               "Você que já perdeu prazo porque ninguém viu que faltava aprovar algo",
               "Você que tem vergonha de mostrar sua \"organização interna\" pra um cliente novo",
             ].map((t) => (
-              <li key={t} className="flex gap-3 text-white/75 text-base sm:text-lg">
-                <span className="text-red-400 font-bold shrink-0">✗</span>{t}
+              <li key={t} className="flex gap-3 text-[#0A0E23]/75 text-base sm:text-lg">
+                <span className="text-red-500 font-bold shrink-0">✗</span>{t}
               </li>
             ))}
           </ul>
-          <p className="mt-8 font-bold" style={{ color: LIME }}>
+          <p className="mt-8 font-bold" style={{ color: LIME_ON_LIGHT }}>
             Se você marcou pelo menos um, o Modo Criador foi feito pra você.
           </p>
         </div>
@@ -206,18 +207,18 @@ export function SalesPage() {
       </section>
 
       {/* Formulário */}
-      <section id="assinar-form" style={{ background: BG_GREEN }} className="border-t border-white/10">
+      <section id="assinar-form" style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10">
         <div className="px-5 sm:px-10 max-w-[560px] mx-auto py-14">
         <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-2 text-center">Comece seu teste de 7 dias</h2>
-        <p className="text-white/50 text-sm text-center mb-8">Sem compromisso. Cancele quando quiser antes da cobrança.</p>
+        <p className="text-[#0A0E23]/60 text-sm text-center mb-8">Sem compromisso. Cancele quando quiser antes da cobrança.</p>
 
         {invoiceUrl !== undefined ? (
-          <div className="bg-white/5 rounded-xl p-6 border border-white/10 text-center">
+          <div className="bg-black/[0.03] rounded-xl p-6 border border-black/10 text-center">
             <div className="text-2xl mb-3">✅</div>
             <div className="font-bold text-lg mb-2">Cadastro criado!</div>
             {invoiceUrl ? (
               <>
-                <p className="text-white/60 text-sm mb-4">
+                <p className="text-[#0A0E23]/70 text-sm mb-4">
                   Abrimos numa nova aba o link seguro pra você cadastrar o cartão (sem cobrança agora — só depois dos 7 dias de teste).
                 </p>
                 <a href={invoiceUrl} target="_blank" rel="noreferrer" className="font-bold uppercase text-sm px-5 py-3 rounded-full inline-block" style={{ background: LIME, color: "#0A0E23" }}>
@@ -225,28 +226,28 @@ export function SalesPage() {
                 </a>
               </>
             ) : (
-              <p className="text-white/60 text-sm">Enviamos um e-mail de confirmação — clique no link pra ativar sua conta.</p>
+              <p className="text-[#0A0E23]/70 text-sm">Enviamos um e-mail de confirmação — clique no link pra ativar sua conta.</p>
             )}
-            <p className="text-white/40 text-xs mt-6">
+            <p className="text-[#0A0E23]/50 text-xs mt-6">
               Também mandamos um e-mail de confirmação — confirme antes de tentar entrar em <Link to="/auth" className="underline">/auth</Link>.
             </p>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
             <Field label="Nome da agência">
-              <input required value={agencyName} onChange={(e) => setAgencyName(e.target.value)} className="lz-input" maxLength={80} />
+              <input required value={agencyName} onChange={(e) => setAgencyName(e.target.value)} className="lz-input-onlight" maxLength={80} />
             </Field>
             <Field label="Seu nome">
-              <input required value={name} onChange={(e) => setName(e.target.value)} className="lz-input" maxLength={80} />
+              <input required value={name} onChange={(e) => setName(e.target.value)} className="lz-input-onlight" maxLength={80} />
             </Field>
             <Field label="Seu e-mail">
-              <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="lz-input" />
+              <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="lz-input-onlight" />
             </Field>
             <Field label="Crie uma senha">
-              <input required type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="lz-input" />
+              <input required type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="lz-input-onlight" />
             </Field>
             <Field label="CNPJ ou CPF da agência">
-              <input required value={taxId} onChange={(e) => setTaxId(e.target.value)} className="lz-input" placeholder="Somente números" maxLength={18} />
+              <input required value={taxId} onChange={(e) => setTaxId(e.target.value)} className="lz-input-onlight" placeholder="Somente números" maxLength={18} />
             </Field>
             {/* Honeypot — invisible to real users, bots tend to fill every field */}
             <input
@@ -254,7 +255,7 @@ export function SalesPage() {
               autoComplete="off" tabIndex={-1} aria-hidden="true"
               style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
             />
-            {error && <p className="text-red-400 text-sm">{error}</p>}
+            {error && <p className="text-red-500 text-sm">{error}</p>}
             <button
               type="submit" disabled={loading}
               className="w-full font-black uppercase text-sm px-5 py-4 rounded-full transition disabled:opacity-50"
@@ -310,7 +311,7 @@ export function SalesPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-xs uppercase tracking-wide text-white/50 mb-1.5">{label}</span>
+      <span className="block text-xs uppercase tracking-wide text-[#0A0E23]/60 mb-1.5">{label}</span>
       {children}
     </label>
   );
