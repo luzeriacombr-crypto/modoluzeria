@@ -139,6 +139,74 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/* ============== PLANS ============== */
+
+export const getPlans = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase.from("plans").select("*").order("sort_order");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((p: any) => ({
+      id: p.id as string,
+      name: p.name as string,
+      priceCents: p.price_cents as number | null,
+      maxClients: p.max_clients as number | null,
+      maxCollaborators: p.max_collaborators as number | null,
+      features: (p.features ?? {}) as Record<string, boolean | string | number | null>,
+      sortOrder: p.sort_order as number,
+    }));
+  });
+
+export const getOrgPlanStatus = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: org } = await context.supabase
+      .from("orgs").select("plan_id, subscription_status, trial_ends_at").eq("id", context.orgId).maybeSingle();
+    const planId = (org as any)?.plan_id ?? "solo";
+    const { data: plan } = await context.supabase.from("plans").select("*").eq("id", planId).maybeSingle();
+    const { count: clientsUsed } = await context.supabase
+      .from("clients").select("id", { count: "exact", head: true }).eq("archived", false).neq("category", "Ex-clientes");
+    const { count: collaboratorsUsed } = await context.supabase
+      .from("profiles").select("id", { count: "exact", head: true }).eq("active", true);
+    return {
+      planId,
+      planName: (plan as any)?.name ?? "Solo",
+      priceCents: (plan as any)?.price_cents ?? null,
+      maxClients: (plan as any)?.max_clients ?? null,
+      maxCollaborators: (plan as any)?.max_collaborators ?? null,
+      features: ((plan as any)?.features ?? {}) as Record<string, boolean | string | number | null>,
+      subscriptionStatus: (org as any)?.subscription_status ?? "trialing",
+      trialEndsAt: (org as any)?.trial_ends_at ?? null,
+      clientsUsed: clientsUsed ?? 0,
+      collaboratorsUsed: collaboratorsUsed ?? 0,
+    };
+  });
+
+/** Throws a friendly error if the org is at/over its plan's client cap.
+ * Luzeria itself is exempt (not a customer of its own platform). */
+async function assertClientLimit(supabase: any, orgId: string) {
+  if (orgId === LUZERIA_ORG_ID) return;
+  const { data: org } = await supabase.from("orgs").select("plan_id").eq("id", orgId).maybeSingle();
+  const { data: plan } = await supabase.from("plans").select("max_clients, name").eq("id", org?.plan_id ?? "solo").maybeSingle();
+  if (plan?.max_clients == null) return;
+  const { count } = await supabase.from("clients").select("id", { count: "exact", head: true }).eq("archived", false).neq("category", "Ex-clientes");
+  if ((count ?? 0) >= plan.max_clients) {
+    throw new Error(`Limite de ${plan.max_clients} clientes do plano ${plan.name} atingido. Faça upgrade para adicionar mais.`);
+  }
+}
+
+/** Same idea for collaborators — used before creating a new team member. */
+async function assertCollaboratorLimit(supabase: any, orgId: string) {
+  if (orgId === LUZERIA_ORG_ID) return;
+  const { data: org } = await supabase.from("orgs").select("plan_id").eq("id", orgId).maybeSingle();
+  const { data: plan } = await supabase.from("plans").select("max_collaborators, name").eq("id", org?.plan_id ?? "solo").maybeSingle();
+  if (plan?.max_collaborators == null) return;
+  const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("active", true);
+  if ((count ?? 0) >= plan.max_collaborators) {
+    throw new Error(`Limite de ${plan.max_collaborators} colaboradores do plano ${plan.name} atingido. Faça upgrade para adicionar mais.`);
+  }
+}
+
 export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { name?: string; color?: string; icon?: string | null; avatarPath?: string | null; onboarded?: boolean; tourCompleted?: boolean }) =>
@@ -237,6 +305,7 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       role: z.enum(["master","setor","member"]),
     }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertCollaboratorLimit(context.supabase, context.orgId);
     const result = await callAdminEdgeFn("createUser", {
       email: data.email,
       password: data.password,
@@ -374,6 +443,7 @@ export const createClient = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
+    await assertClientLimit(context.supabase, context.orgId);
     const insert: any = { name: data.name, org_id: context.orgId };
     if (data.category) insert.category = data.category;
     if (data.color) insert.color = data.color;

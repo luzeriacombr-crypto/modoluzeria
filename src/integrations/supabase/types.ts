@@ -1072,8 +1072,11 @@ export type Database = {
           id: string
           logo_path: string | null
           name: string
+          plan_id: string
           slug: string
+          subscription_status: string
           tagline: string | null
+          trial_ends_at: string | null
         }
         Insert: {
           color_primary?: string | null
@@ -1083,8 +1086,11 @@ export type Database = {
           id?: string
           logo_path?: string | null
           name: string
+          plan_id?: string
           slug: string
+          subscription_status?: string
           tagline?: string | null
+          trial_ends_at?: string | null
         }
         Update: {
           color_primary?: string | null
@@ -1094,8 +1100,52 @@ export type Database = {
           id?: string
           logo_path?: string | null
           name?: string
+          plan_id?: string
           slug?: string
+          subscription_status?: string
           tagline?: string | null
+          trial_ends_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orgs_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          created_at: string
+          features: Json
+          id: string
+          max_clients: number | null
+          max_collaborators: number | null
+          name: string
+          price_cents: number | null
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          features?: Json
+          id: string
+          max_clients?: number | null
+          max_collaborators?: number | null
+          name: string
+          price_cents?: number | null
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          features?: Json
+          id?: string
+          max_clients?: number | null
+          max_collaborators?: number | null
+          name?: string
+          price_cents?: number | null
+          sort_order?: number
         }
         Relationships: []
       }

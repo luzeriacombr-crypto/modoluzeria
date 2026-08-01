@@ -7,7 +7,7 @@ import {
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile,
   listStories, upsertStoryDay, setStoryDone, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
-  adminCreateUser, createAgency, updateMyOrg, adminSendPasswordReset, getAdminDashboard, getTopMembers, getMemberFinalizations,
+  adminCreateUser, createAgency, updateMyOrg, getOrgPlanStatus, adminSendPasswordReset, getAdminDashboard, getTopMembers, getMemberFinalizations,
   updateMyAccount,
   getReport, getMemberReportDetail, getMemberVelocity,
   updateFeedOrder,
@@ -208,6 +208,9 @@ export const memberVelocityQO = (from: string, to: string) =>
 
 export const appSettingsQO = () =>
   queryOptions({ queryKey: ["app-settings"], queryFn: () => getAppSettings() });
+
+export const orgPlanStatusQO = () =>
+  queryOptions({ queryKey: ["org-plan-status"], queryFn: () => getOrgPlanStatus() });
 
 export const myWeekQO = (from: string, to: string, userId?: string) =>
   queryOptions({

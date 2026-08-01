@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { profilesQO, useApi, useMe, appSettingsQO } from "@/lib/luzeria/queries";
+import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO } from "@/lib/luzeria/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
@@ -368,6 +368,8 @@ function GeneralSettings() {
 
   return (
     <div className="max-w-2xl">
+      {!me?.isPlatformAdmin && me?.orgId && <PlanUsageSection />}
+
       {!me?.isPlatformAdmin && me?.orgId && (
         <OrgBrandingSection
           orgId={me.orgId}
@@ -464,6 +466,61 @@ function ColorPickerField({ label, value, onChange, presets }: {
           maxLength={7} className="lz-input font-mono" placeholder="#C8D44E" />
       </div>
     </Field>
+  );
+}
+
+function UsageBar({ label, used, max, pct }: { label: string; used: number; max: number | null; pct: number }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between text-[11px] text-white/60 mb-1">
+        <span>{label}</span>
+        <span>{used}{max != null ? ` / ${max}` : " (ilimitado)"}</span>
+      </div>
+      {max != null && (
+        <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${pct}%`, background: pct >= 100 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))" }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlanUsageSection() {
+  const { data: status, isLoading } = useQuery(orgPlanStatusQO());
+  if (isLoading || !status) return null;
+
+  const clientsPct = status.maxClients ? Math.min(100, Math.round((status.clientsUsed / status.maxClients) * 100)) : 0;
+  const collabPct = status.maxCollaborators ? Math.min(100, Math.round((status.collaboratorsUsed / status.maxCollaborators) * 100)) : 0;
+  const priceLabel = status.priceCents != null
+    ? `R$ ${(status.priceCents / 100).toFixed(2).replace(".", ",")}/mês`
+    : "Sob consulta";
+  const trialDaysLeft = status.trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(status.trialEndsAt).getTime() - Date.now()) / 86_400_000))
+    : null;
+
+  return (
+    <>
+      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+        <Star size={12} /> Seu plano
+      </h2>
+      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-lg font-bold text-white">{status.planName}</div>
+            <div className="text-[11px] text-white/50">{priceLabel}</div>
+          </div>
+          {status.subscriptionStatus === "trialing" && trialDaysLeft !== null && (
+            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded"
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+              {trialDaysLeft > 0 ? `${trialDaysLeft} dias de teste` : "Teste expirado"}
+            </span>
+          )}
+        </div>
+        <UsageBar label="Clientes ativos" used={status.clientsUsed} max={status.maxClients} pct={clientsPct} />
+        <UsageBar label="Colaboradores" used={status.collaboratorsUsed} max={status.maxCollaborators} pct={collabPct} />
+      </div>
+    </>
   );
 }
 
