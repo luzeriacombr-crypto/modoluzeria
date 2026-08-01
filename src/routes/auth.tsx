@@ -1,8 +1,9 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { ArrowLeft } from "lucide-react";
 import luzeriaLogo from "@/assets/luzeria-logo-login.png";
 
 export const Route = createFileRoute("/auth")({
@@ -10,7 +11,7 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   beforeLoad: async () => {
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/" });
+    if (data.session) throw redirect({ to: "/minhas-tarefas" });
   },
 });
 
@@ -31,7 +32,7 @@ function AuthPage() {
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      if (s) nav({ to: "/" });
+      if (s) nav({ to: "/minhas-tarefas" });
     });
     return () => sub.subscription.unsubscribe();
   }, [nav]);
@@ -48,9 +49,12 @@ function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4"
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 relative"
       style={{ background: "linear-gradient(to bottom left, #090E24, #111F5C)" }}>
       <Toaster theme="dark" position="bottom-right" />
+      <Link to="/" className="absolute top-5 left-5 flex items-center gap-1.5 text-white/60 hover:text-white text-xs font-semibold transition-colors">
+        <ArrowLeft size={14} /> Home
+      </Link>
       <div className="w-full max-w-sm rounded-2xl p-8 shadow-2xl" style={{ background: "#16215C" }}>
         <div className="flex flex-col items-center mb-7">
           <div className="flex items-center gap-1.5">
