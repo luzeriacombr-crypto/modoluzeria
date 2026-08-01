@@ -1363,7 +1363,7 @@ export const listStories = createServerFn({ method: "GET" })
     const end = `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, "0")}-01`;
     const { data: rows, error } = await context.supabase
       .from("stories_schedule")
-      .select("id, day, user_id, label, status, done_at, done_by")
+      .select("id, day, user_id, label, status, done_at, done_by, client_id, clients(name, color)")
       .gte("day", start).lt("day", end);
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
@@ -1373,23 +1373,26 @@ export const listStories = createServerFn({ method: "GET" })
       status: (r.status ?? "pending") as "pending" | "done" | "missed",
       doneAt: (r.done_at ?? null) as string | null,
       doneBy: (r.done_by ?? null) as string | null,
+      clientId: (r.client_id ?? null) as string | null,
+      clientName: (r.clients?.name ?? null) as string | null,
+      clientColor: (r.clients?.color ?? null) as string | null,
     }));
   });
 
 export const upsertStoryDay = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { day: string; userId?: string | null; label?: string | null }) => d)
+  .inputValidator((d: { day: string; userId?: string | null; label?: string | null; clientId?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
-    if (!data.userId && !data.label) {
+    if (!data.userId && !data.label && !data.clientId) {
       const { error } = await context.supabase.from("stories_schedule").delete().eq("day", data.day);
       if (error) throw new Error(error.message);
       return { ok: true };
     }
     const { error } = await context.supabase
       .from("stories_schedule")
-      .upsert({ org_id: context.orgId, day: data.day, user_id: data.userId ?? null, label: data.label ?? null, updated_at: new Date().toISOString() }, { onConflict: "org_id,day" });
+      .upsert({ org_id: context.orgId, day: data.day, user_id: data.userId ?? null, label: data.label ?? null, client_id: data.clientId ?? null, updated_at: new Date().toISOString() }, { onConflict: "org_id,day" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1431,7 +1434,7 @@ export const getMyToday = createServerFn({ method: "GET" })
       targetUser = data.userId;
     }
     const { data: story } = await context.supabase
-      .from("stories_schedule").select("day, status").eq("day", data.today).eq("user_id", targetUser).maybeSingle();
+      .from("stories_schedule").select("day, status, client_id, clients(name)").eq("day", data.today).eq("user_id", targetUser).maybeSingle();
     let cleaningTasks: { taskId: string; taskName: string }[] = [];
     let cleaningStatuses: { taskId: string; status: "done" | "missed" }[] = [];
     if (data.weekday >= 0 && data.weekday <= 5) {
@@ -1453,6 +1456,7 @@ export const getMyToday = createServerFn({ method: "GET" })
     return {
       stories: !!story,
       storyStatus: (story?.status ?? null) as "pending" | "done" | "missed" | null,
+      storyClientName: ((story as any)?.clients?.name ?? null) as string | null,
       cleaningTasks,
       cleaningStatuses,
     };
@@ -1869,15 +1873,16 @@ export const getReport = createServerFn({ method: "GET" })
     });
 
     // ---- stories ----
-    if (!filterClient && (filterType === "all" || filterType === "stories")) {
+    if (filterType === "all" || filterType === "stories") {
       const fromDay = data.from.slice(0, 10);
       const toDay = data.to.slice(0, 10);
       let sq = context.supabase
         .from("stories_schedule")
-        .select("day, user_id, updated_at")
+        .select("day, user_id, updated_at, client_id, clients(name, color)")
         .gte("day", fromDay).lt("day", toDay)
         .not("user_id", "is", null);
       if (filterUser) sq = sq.eq("user_id", filterUser);
+      if (filterClient) sq = sq.eq("client_id", filterClient);
       const { data: storyRows } = await sq;
       (storyRows ?? []).forEach((s: any) => {
         history.push({
@@ -1886,7 +1891,7 @@ export const getReport = createServerFn({ method: "GET" })
           userId: s.user_id,
           type: "stories",
           title: `Stories ${new Date(s.day + "T12:00:00Z").toLocaleDateString("pt-BR")}`,
-          clientId: null, clientName: "STORIES", clientColor: "#7EFFD9", clientCategory: "Stories",
+          clientId: s.client_id ?? null, clientName: s.clients?.name ?? "STORIES", clientColor: s.clients?.color ?? "#7EFFD9", clientCategory: "Stories",
           reelType: null, editorId: null, lateDays: 0,
         });
       });

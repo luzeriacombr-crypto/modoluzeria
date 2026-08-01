@@ -177,7 +177,7 @@ export function MyTasks() {
                 {today?.stories && (
                   <DailyTaskCard
                     icon={<Camera size={18} />}
-                    title="É seu dia nos Stories"
+                    title={today?.storyClientName ? `É seu dia nos Stories — ${today.storyClientName}` : "É seu dia nos Stories"}
                     subtitle="Publique pelo menos uma sequência com 5."
                     status={today?.storyStatus ?? "pending"}
                     canAct={isMe}
