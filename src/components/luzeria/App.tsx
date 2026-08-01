@@ -16,10 +16,8 @@ import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ClientFichaPanel } from "./ClientFichaPanel";
 import { AppTour } from "./AppTour";
 import { LuzeriaLoader } from "./LuzeriaLoader";
-import luzeriaLogo from "@/assets/luzeria-sidebar.png";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { hexToRgbChannels } from "@/lib/luzeria/utils";
 
 export function App() {
@@ -45,18 +43,18 @@ export function App() {
 
   // Personalize the browser tab title once we know which org is logged in
   // (the pre-login splash/login screen stays generic — org is unknown then).
-  // Luzeria keeps the default "Modo Luzeria" set in __root.tsx.
+  // Luzeria is treated like any other org here on purpose — its own org row
+  // carries the "Luzeria" name/tagline as data, not as a code special-case.
   useEffect(() => {
-    if (me.data?.orgName && me.data.orgId !== LUZERIA_ORG_ID) {
+    if (me.data?.orgName) {
       document.title = `Modo ${me.data.orgName}`;
     }
-  }, [me.data?.orgName, me.data?.orgId]);
+  }, [me.data?.orgName]);
 
-  // Same idea for the brand colors: only override the CSS variables (which
-  // default to Luzeria's green in styles.css) once we know it's a
-  // non-Luzeria org with custom colors saved.
+  // Same idea for the brand colors: override the CSS variables (which
+  // default to Luzeria's green in styles.css) whenever the org has custom
+  // colors saved — including Luzeria's own org, once it sets any.
   useEffect(() => {
-    if (me.data?.orgId === LUZERIA_ORG_ID) return;
     const root = document.documentElement.style;
     const primary = me.data?.orgColorPrimary ? hexToRgbChannels(me.data.orgColorPrimary) : null;
     const light = me.data?.orgColorPrimaryLight ? hexToRgbChannels(me.data.orgColorPrimaryLight) : null;
@@ -157,16 +155,12 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
       >
         {sidebarHidden ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
       </button>
-      {me?.orgId && me.orgId !== LUZERIA_ORG_ID ? (
-        me.orgLogoUrl ? (
-          <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="md:hidden h-7 w-auto max-w-[140px] object-contain" />
-        ) : (
-          <span className="md:hidden text-white font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px]">
-            {me.orgName ?? "Modo Luzeria"}
-          </span>
-        )
+      {me?.orgLogoUrl ? (
+        <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="md:hidden h-7 w-auto max-w-[140px] object-contain" />
       ) : (
-        <img src={luzeriaLogo} alt="Luzeria" className="md:hidden h-6 w-auto object-contain" />
+        <span className="md:hidden text-white font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px]">
+          {me?.orgName ?? "Modo Criador"}
+        </span>
       )}
       <div className="flex-1" />
       <NotificationsBell />

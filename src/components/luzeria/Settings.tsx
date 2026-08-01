@@ -368,9 +368,9 @@ function GeneralSettings() {
 
   return (
     <div className="max-w-2xl">
-      {!me?.isPlatformAdmin && me?.orgId && <PlanUsageSection />}
+      {me?.orgId && <PlanUsageSection />}
 
-      {!me?.isPlatformAdmin && me?.orgId && (
+      {me?.orgId && (
         <OrgBrandingSection
           orgId={me.orgId}
           orgName={me.orgName ?? ""}
