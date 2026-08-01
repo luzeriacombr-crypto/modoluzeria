@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import luzeriaLogo from "@/assets/luzeria-logo-login.png";
+import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -49,8 +49,10 @@ function AuthPage() {
       <div className="relative z-10 w-full max-w-sm bg-[#1A1A1A] rounded-xl p-8 shadow-2xl"
         style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.2)" }}>
         <div className="flex flex-col items-center justify-center mb-10">
-          <img src={luzeriaLogo} alt="Luzeria" className="h-10 w-auto object-contain" />
-          <p className="text-white/90 text-xs font-light italic tracking-wide mt-2">Você foi chamado para criar</p>
+          <ModoCriadorLogo variant="white" className="h-8 w-auto" />
+          <p className="text-white/90 text-xs font-light tracking-wide mt-2">
+            Você foi chamado para <span className="font-criador-serif">criar</span>
+          </p>
         </div>
         <h1 className="text-white text-xl font-semibold text-center mb-7">Acesse sua conta</h1>
         <form onSubmit={submit} className="space-y-3">

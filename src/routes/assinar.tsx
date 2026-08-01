@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getPublicPlans, publicSignup } from "@/lib/luzeria/signup.functions";
+import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 
 export const Route = createFileRoute("/assinar")({
   component: AssinarPage,
@@ -59,9 +60,7 @@ function AssinarPage() {
     <div className="min-h-screen text-white" style={{ background: "#0A0E23", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       {/* Header */}
       <header className="flex items-center justify-between px-5 sm:px-10 py-5 max-w-[1100px] mx-auto">
-        <div className="font-black uppercase tracking-tight text-lg">
-          MODO <span style={{ color: LIME }}>CRIADOR</span>
-        </div>
+        <ModoCriadorLogo variant="brand" className="h-6 w-auto" />
         <Link to="/auth" className="text-sm text-white/70 hover:text-white transition">
           Já tem conta? Entrar →
         </Link>
@@ -77,7 +76,10 @@ function AssinarPage() {
           <br />
           por falta de organização.
           <br />
-          <span style={{ color: LIME }}>Ganhe tempo com o Modo Criador.</span>
+          <span style={{ color: LIME }}>
+            Ganhe tempo com o Modo{" "}
+            <span className="font-criador-serif normal-case">Criador</span>.
+          </span>
         </h1>
         <p className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">
           A plataforma que centraliza calendário, aprovação de cliente, equipe e arquivos da sua agência de social media — num só lugar, sem planilha, sem WhatsApp perdido.
@@ -279,7 +281,7 @@ function AssinarPage() {
       </section>
 
       <footer className="px-5 sm:px-10 py-10 text-center text-white/30 text-xs">
-        Modo Criador — desenvolvido pela Luzeria Estúdio.
+        Modo <span className="font-criador-serif">Criador</span> — desenvolvido pela Luzeria Estúdio.
       </footer>
     </div>
   );

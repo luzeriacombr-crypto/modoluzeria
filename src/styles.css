@@ -2,6 +2,13 @@
 @source "../src";
 @import "tw-animate-css";
 
+/* A touch of serif for the Modo Criador brand voice — used sparingly on
+ * marketing headlines, not for body copy or UI chrome. */
+@utility font-criador-serif {
+  font-family: "Instrument Serif", serif;
+  font-style: italic;
+}
+
 /* Themed scrollbars */
 * {
   scrollbar-color: #2D4A3E transparent;
