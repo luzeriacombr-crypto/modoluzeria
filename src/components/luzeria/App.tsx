@@ -60,13 +60,16 @@ export function App() {
     const root = document.documentElement.style;
     const primary = me.data?.orgColorPrimary ? hexToRgbChannels(me.data.orgColorPrimary) : null;
     const light = me.data?.orgColorPrimaryLight ? hexToRgbChannels(me.data.orgColorPrimaryLight) : null;
+    const sidebar = me.data?.orgColorSidebar ? hexToRgbChannels(me.data.orgColorSidebar) : null;
     if (primary) root.setProperty("--lz-brand-rgb", primary);
     if (light) root.setProperty("--lz-brand-light-rgb", light);
+    if (sidebar) root.setProperty("--lz-sidebar-rgb", sidebar);
     return () => {
       root.removeProperty("--lz-brand-rgb");
       root.removeProperty("--lz-brand-light-rgb");
+      root.removeProperty("--lz-sidebar-rgb");
     };
-  }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight]);
+  }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight, me.data?.orgColorSidebar]);
 
   if (me.isLoading) {
     return <LuzeriaLoader />;

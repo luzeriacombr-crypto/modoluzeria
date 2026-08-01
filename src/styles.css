@@ -100,6 +100,7 @@
    * there — so it always renders with the default Luzeria green. */
   --lz-brand-rgb: 200, 212, 78;
   --lz-brand-light-rgb: 200, 212, 78;
+  --lz-sidebar-rgb: 26, 58, 46;
   /* Luzeria palette */
   --background: #0D0D0D;
   --foreground: #FFFFFF;
@@ -125,9 +126,9 @@
   --chart-3: #FF8C42;
   --chart-4: #B794F4;
   --chart-5: #FFFFFF;
-  --sidebar-from: #1A3A2E;
-  --sidebar-to: #1A3A2E;
-  --sidebar: #1A3A2E;
+  --sidebar-from: rgb(var(--lz-sidebar-rgb));
+  --sidebar-to: rgb(var(--lz-sidebar-rgb));
+  --sidebar: rgb(var(--lz-sidebar-rgb));
   --sidebar-foreground: #FFFFFF;
   --sidebar-primary: rgb(var(--lz-brand-rgb));
   --sidebar-primary-foreground: #0D0D0D;

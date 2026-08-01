@@ -376,6 +376,7 @@ function GeneralSettings() {
           orgLogoUrl={me.orgLogoUrl ?? null}
           orgColorPrimary={me.orgColorPrimary ?? "#C8D44E"}
           orgColorPrimaryLight={me.orgColorPrimaryLight ?? "#C8D44E"}
+          orgColorSidebar={me.orgColorSidebar ?? "#1A3A2E"}
         />
       )}
 
@@ -432,6 +433,9 @@ const BRAND_PRESETS = [
 const BRAND_LIGHT_PRESETS = [
   "#C8D44E", "#8FD1FF", "#FFC08A", "#FFAFAF", "#D4AFFF", "#7EEAC4", "#FFAFDA", "#FFD98A",
 ];
+const SIDEBAR_PRESETS = [
+  "#1A3A2E", "#1A2E3A", "#2E1A3A", "#3A2E1A", "#1A1A1A", "#3A1A1A", "#0D2B4A", "#2A1E1E",
+];
 
 function isValidHex(v: string): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(v.trim());
@@ -463,21 +467,23 @@ function ColorPickerField({ label, value, onChange, presets }: {
   );
 }
 
-function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl, orgColorPrimary, orgColorPrimaryLight }: {
+function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar }: {
   orgId: string; orgName: string; orgTagline: string; orgLogoUrl: string | null;
-  orgColorPrimary: string; orgColorPrimaryLight: string;
+  orgColorPrimary: string; orgColorPrimaryLight: string; orgColorSidebar: string;
 }) {
   const { updateMyOrg } = useApi();
   const [name, setName] = useState(orgName);
   const [tagline, setTagline] = useState(orgTagline);
   const [colorPrimary, setColorPrimary] = useState(orgColorPrimary);
   const [colorPrimaryLight, setColorPrimaryLight] = useState(orgColorPrimaryLight);
+  const [colorSidebar, setColorSidebar] = useState(orgColorSidebar);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => { setName(orgName); }, [orgName]);
   useEffect(() => { setTagline(orgTagline); }, [orgTagline]);
   useEffect(() => { setColorPrimary(orgColorPrimary); }, [orgColorPrimary]);
   useEffect(() => { setColorPrimaryLight(orgColorPrimaryLight); }, [orgColorPrimaryLight]);
+  useEffect(() => { setColorSidebar(orgColorSidebar); }, [orgColorSidebar]);
 
   function save() {
     updateMyOrg.mutate({
@@ -486,6 +492,7 @@ function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl, orgColorPr
         tagline: tagline.trim() || null,
         colorPrimary: colorPrimary || null,
         colorPrimaryLight: colorPrimaryLight || null,
+        colorSidebar: colorSidebar || null,
       },
     }, {
       onSuccess: () => toast.success("Marca da agência atualizada."),
@@ -567,6 +574,7 @@ function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl, orgColorPr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/[0.06]">
           <ColorPickerField label="Cor principal" value={colorPrimary} onChange={setColorPrimary} presets={BRAND_PRESETS} />
           <ColorPickerField label="Cor clara (fundos suaves)" value={colorPrimaryLight} onChange={setColorPrimaryLight} presets={BRAND_LIGHT_PRESETS} />
+          <ColorPickerField label="Cor da barra lateral" value={colorSidebar} onChange={setColorSidebar} presets={SIDEBAR_PRESETS} />
         </div>
 
         <button onClick={save} disabled={updateMyOrg.isPending || !name.trim()}

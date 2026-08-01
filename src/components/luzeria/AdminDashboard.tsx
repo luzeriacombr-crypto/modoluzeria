@@ -133,7 +133,7 @@ export function AdminDashboard() {
         <div className="pointer-events-none absolute -top-20 -left-20 h-64 w-64 rounded-full opacity-30 blur-3xl"
           style={{ background: PALETTE.lime }} />
         <div className="pointer-events-none absolute -bottom-24 right-10 h-72 w-72 rounded-full opacity-25 blur-3xl"
-          style={{ background: "#1A3A2E" }} />
+          style={{ background: "rgb(var(--lz-sidebar-rgb))" }} />
 
 
         <div className="relative grid md:grid-cols-[1fr_auto] gap-8 p-6 md:p-8 items-center">
@@ -176,7 +176,7 @@ export function AdminDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <MetricCard tone={PALETTE.lime}      icon={<Users size={16} />}          label="Clientes ativos" value={t?.clients ?? 0} />
         <MetricCard tone={PALETTE.blue}      icon={<Target size={16} />}         label="Meta do mês"     value={t?.planned ?? 0} />
-        <MetricCard tone={"#1A3A2E"}          icon={<Package size={16} />}        label="Entregues"       value={t?.done ?? 0} />
+        <MetricCard tone={"rgb(var(--lz-sidebar-rgb))"}          icon={<Package size={16} />}        label="Entregues"       value={t?.done ?? 0} />
         <MetricCard
           tone={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
           icon={<Clock size={16} />}

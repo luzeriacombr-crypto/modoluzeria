@@ -177,6 +177,7 @@ export interface Profile {
   orgLogoUrl?: string | null;
   orgColorPrimary?: string | null;
   orgColorPrimaryLight?: string | null;
+  orgColorSidebar?: string | null;
 }
 
 export interface NotificationItem {

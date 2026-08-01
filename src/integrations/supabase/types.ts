@@ -1067,6 +1067,7 @@ export type Database = {
         Row: {
           color_primary: string | null
           color_primary_light: string | null
+          color_sidebar: string | null
           created_at: string
           id: string
           logo_path: string | null
@@ -1077,6 +1078,7 @@ export type Database = {
         Insert: {
           color_primary?: string | null
           color_primary_light?: string | null
+          color_sidebar?: string | null
           created_at?: string
           id?: string
           logo_path?: string | null
@@ -1087,6 +1089,7 @@ export type Database = {
         Update: {
           color_primary?: string | null
           color_primary_light?: string | null
+          color_sidebar?: string | null
           created_at?: string
           id?: string
           logo_path?: string | null
