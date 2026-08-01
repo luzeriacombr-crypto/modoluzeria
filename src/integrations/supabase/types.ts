@@ -93,6 +93,7 @@ export type Database = {
           done_by: string | null
           id: string
           occurrence_date: string
+          org_id: string
           status: string
           task_idx: number
           updated_at: string
@@ -105,6 +106,7 @@ export type Database = {
           done_by?: string | null
           id?: string
           occurrence_date: string
+          org_id: string
           status: string
           task_idx: number
           updated_at?: string
@@ -117,6 +119,7 @@ export type Database = {
           done_by?: string | null
           id?: string
           occurrence_date?: string
+          org_id?: string
           status?: string
           task_idx?: number
           updated_at?: string
@@ -130,6 +133,7 @@ export type Database = {
           created_at: string
           id: string
           label: string | null
+          org_id: string
           task_idx: number
           updated_at: string
           user_id: string | null
@@ -139,6 +143,7 @@ export type Database = {
           created_at?: string
           id?: string
           label?: string | null
+          org_id: string
           task_idx: number
           updated_at?: string
           user_id?: string | null
@@ -148,6 +153,7 @@ export type Database = {
           created_at?: string
           id?: string
           label?: string | null
+          org_id?: string
           task_idx?: number
           updated_at?: string
           user_id?: string | null
@@ -157,18 +163,18 @@ export type Database = {
       }
       cleaning_settings: {
         Row: {
-          id: number
           note: string
+          org_id: string
           updated_at: string
         }
         Insert: {
-          id?: number
           note?: string
+          org_id: string
           updated_at?: string
         }
         Update: {
-          id?: number
           note?: string
+          org_id?: string
           updated_at?: string
         }
         Relationships: []
@@ -1335,34 +1341,40 @@ export type Database = {
       }
       stories_schedule: {
         Row: {
+          client_id: string | null
           created_at: string
           day: string
           done_at: string | null
           done_by: string | null
           id: string
           label: string | null
+          org_id: string
           status: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
           day: string
           done_at?: string | null
           done_by?: string | null
           id?: string
           label?: string | null
+          org_id: string
           status?: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           day?: string
           done_at?: string | null
           done_by?: string | null
           id?: string
           label?: string | null
+          org_id?: string
           status?: string
           updated_at?: string
           user_id?: string | null

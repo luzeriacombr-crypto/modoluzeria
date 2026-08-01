@@ -1389,7 +1389,7 @@ export const upsertStoryDay = createServerFn({ method: "POST" })
     }
     const { error } = await context.supabase
       .from("stories_schedule")
-      .upsert({ day: data.day, user_id: data.userId ?? null, label: data.label ?? null, updated_at: new Date().toISOString() }, { onConflict: "day" });
+      .upsert({ org_id: context.orgId, day: data.day, user_id: data.userId ?? null, label: data.label ?? null, updated_at: new Date().toISOString() }, { onConflict: "org_id,day" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1472,7 +1472,7 @@ export const getCleaning = createServerFn({ method: "GET" })
 
     const [{ data: rows }, { data: settings }, { data: logs }] = await Promise.all([
       context.supabase.from("cleaning_schedule").select("id, task_idx, weekday, user_id, label"),
-      context.supabase.from("cleaning_settings").select("note").eq("id", 1).maybeSingle(),
+      context.supabase.from("cleaning_settings").select("note").eq("org_id", context.orgId).maybeSingle(),
       context.supabase.from("cleaning_log")
         .select("task_idx, weekday, occurrence_date, status, done_at, done_by")
         .gte("occurrence_date", weekStart).lte("occurrence_date", weekEnd),
@@ -1512,7 +1512,7 @@ export const upsertCleaningCell = createServerFn({ method: "POST" })
     }
     const { error } = await context.supabase
       .from("cleaning_schedule")
-      .upsert({ task_idx: data.taskIdx, weekday: data.weekday, user_id: data.userId ?? null, label: data.label ?? null, updated_at: new Date().toISOString() }, { onConflict: "task_idx,weekday" });
+      .upsert({ org_id: context.orgId, task_idx: data.taskIdx, weekday: data.weekday, user_id: data.userId ?? null, label: data.label ?? null, updated_at: new Date().toISOString() }, { onConflict: "org_id,task_idx,weekday" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1550,6 +1550,7 @@ export const setCleaningDone = createServerFn({ method: "POST" })
     const { error } = await context.supabase
       .from("cleaning_log")
       .upsert({
+        org_id: context.orgId,
         task_idx: data.taskIdx,
         weekday: data.weekday,
         occurrence_date: data.occurrenceDate,
@@ -1557,7 +1558,7 @@ export const setCleaningDone = createServerFn({ method: "POST" })
         status: "done",
         done_at: new Date().toISOString(),
         done_by: context.userId,
-      }, { onConflict: "task_idx,weekday,occurrence_date" });
+      }, { onConflict: "org_id,task_idx,weekday,occurrence_date" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1569,7 +1570,7 @@ export const updateCleaningNote = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
     const { error } = await context.supabase
-      .from("cleaning_settings").upsert({ id: 1, note: data.note, updated_at: new Date().toISOString() });
+      .from("cleaning_settings").upsert({ org_id: context.orgId, note: data.note, updated_at: new Date().toISOString() }, { onConflict: "org_id" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
