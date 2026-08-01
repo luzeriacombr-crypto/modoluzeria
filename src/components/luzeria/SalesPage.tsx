@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { getPublicPlans, publicSignup } from "@/lib/luzeria/signup.functions";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
+import heroMockup from "@/assets/hero-mockup.png";
 
 const LIME = "#D7FF3F";
 
@@ -58,34 +59,41 @@ export function SalesPage() {
       </header>
 
       {/* Hero */}
-      <section className="px-5 sm:px-10 max-w-[1100px] mx-auto pt-8 pb-16">
-        <div className="inline-flex items-center gap-2 border border-white/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide mb-6">
-          🚀 Gestão de conteúdo pra agência
+      <section className="px-5 sm:px-10 max-w-[1200px] mx-auto pt-8 pb-16">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-8 items-center">
+          <div className="order-2 lg:order-1">
+            <div className="inline-flex items-center gap-2 border border-white/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide mb-6">
+              🚀 Gestão de conteúdo pra agência
+            </div>
+            <h1 className="font-black uppercase leading-[0.95] text-[clamp(2rem,5.5vw,3.75rem)]">
+              Pare de perder cliente
+              <br />
+              por falta de organização.
+              <br />
+              <span className="font-criador-serif normal-case block" style={{ color: LIME }}>
+                Ganhe tempo com o Modo Criador.
+              </span>
+            </h1>
+            <p className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">
+              A plataforma que centraliza tudo que um Social Media precisa: produtividade da equipe, calendário de postagens, link aprovação de cliente, organização de arquivos… tudo num só lugar, sem planilha chata ou arquivos perdidos no WhatsApp.
+            </p>
+            <div className="mt-8">
+              <div className="text-white/50 text-sm">A partir de</div>
+              <div className="text-4xl font-black">R$ 49,90<span className="text-lg font-normal text-white/50">/mês</span></div>
+              <div className="text-white/40 text-xs mt-1">7 dias grátis · Cancele quando quiser</div>
+            </div>
+            <button
+              onClick={() => scrollToForm()}
+              className="mt-6 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full transition hover:opacity-90"
+              style={{ background: LIME, color: "#0A0E23" }}
+            >
+              Quero começar agora →
+            </button>
+          </div>
+          <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
+            <img src={heroMockup} alt="Painel do Modo Criador no computador e no celular" className="w-full max-w-[460px] lg:max-w-none h-auto" />
+          </div>
         </div>
-        <h1 className="font-black uppercase leading-[0.95] text-[clamp(2rem,7vw,3.75rem)] max-w-[820px]">
-          Pare de perder cliente
-          <br />
-          por falta de organização.
-          <br />
-          <span className="font-criador-serif normal-case block" style={{ color: LIME }}>
-            Ganhe tempo com o Modo Criador.
-          </span>
-        </h1>
-        <p className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">
-          A plataforma que centraliza tudo que um Social Media precisa: produtividade da equipe, calendário de postagens, link aprovação de cliente, organização de arquivos… tudo num só lugar, sem planilha chata ou arquivos perdidos no WhatsApp.
-        </p>
-        <div className="mt-8">
-          <div className="text-white/50 text-sm">A partir de</div>
-          <div className="text-4xl font-black">R$ 49,90<span className="text-lg font-normal text-white/50">/mês</span></div>
-          <div className="text-white/40 text-xs mt-1">7 dias grátis · Cancele quando quiser</div>
-        </div>
-        <button
-          onClick={() => scrollToForm()}
-          className="mt-6 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full transition hover:opacity-90"
-          style={{ background: LIME, color: "#0A0E23" }}
-        >
-          Quero começar agora →
-        </button>
       </section>
 
       {/* Dores */}
