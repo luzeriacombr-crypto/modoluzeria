@@ -103,7 +103,7 @@ export function Sidebar({
         />
         <NavButton
           icon={<Sparkles size={15} />}
-          label="Limpeza"
+          label="Rotina"
           active={pathname === "/limpeza"}
           onClick={() => navigate({ to: "/limpeza" })}
         />

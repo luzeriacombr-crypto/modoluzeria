@@ -90,12 +90,12 @@ export function MemberReportPanel({
         </div>
 
         <div className="px-6 py-5">
-          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[rgb(var(--lz-brand-rgb))]">Limpeza</div>
+          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[rgb(var(--lz-brand-rgb))]">Rotina</div>
           {(data?.cleaning ?? []).length === 0 ? (
             <p className="text-xs text-white/40">Nenhuma.</p>
           ) : (data?.cleaning ?? []).map((c, i) => (
             <div key={i} className="flex items-center justify-between py-1.5 text-xs">
-              <span className="text-white/80">{WEEKDAY[c.weekday] ?? "—"} · tarefa {c.taskIdx + 1}</span>
+              <span className="text-white/80">{WEEKDAY[c.weekday] ?? "—"} · {c.taskName || "tarefa"}</span>
               <span className="text-white/40 text-[10px]">{new Date(c.finalizedAt).toLocaleDateString("pt-BR")}</span>
             </div>
           ))}

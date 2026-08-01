@@ -95,7 +95,7 @@ export type Database = {
           occurrence_date: string
           org_id: string
           status: string
-          task_idx: number
+          task_id: string
           updated_at: string
           user_id: string | null
           weekday: number
@@ -108,7 +108,7 @@ export type Database = {
           occurrence_date: string
           org_id: string
           status: string
-          task_idx: number
+          task_id: string
           updated_at?: string
           user_id?: string | null
           weekday: number
@@ -121,12 +121,20 @@ export type Database = {
           occurrence_date?: string
           org_id?: string
           status?: string
-          task_idx?: number
+          task_id?: string
           updated_at?: string
           user_id?: string | null
           weekday?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cleaning_log_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "cleaning_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cleaning_schedule: {
         Row: {
@@ -134,7 +142,7 @@ export type Database = {
           id: string
           label: string | null
           org_id: string
-          task_idx: number
+          task_id: string
           updated_at: string
           user_id: string | null
           weekday: number
@@ -144,7 +152,7 @@ export type Database = {
           id?: string
           label?: string | null
           org_id: string
-          task_idx: number
+          task_id: string
           updated_at?: string
           user_id?: string | null
           weekday: number
@@ -154,10 +162,42 @@ export type Database = {
           id?: string
           label?: string | null
           org_id?: string
-          task_idx?: number
+          task_id?: string
           updated_at?: string
           user_id?: string | null
           weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cleaning_schedule_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "cleaning_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cleaning_tasks: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          org_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          org_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string
+          sort_order?: number
         }
         Relationships: []
       }

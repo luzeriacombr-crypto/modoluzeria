@@ -1432,26 +1432,28 @@ export const getMyToday = createServerFn({ method: "GET" })
     }
     const { data: story } = await context.supabase
       .from("stories_schedule").select("day, status").eq("day", data.today).eq("user_id", targetUser).maybeSingle();
-    let cleaning: number[] = [];
-    let cleaningStatuses: { taskIdx: number; status: "done" | "missed" }[] = [];
+    let cleaningTasks: { taskId: string; taskName: string }[] = [];
+    let cleaningStatuses: { taskId: string; status: "done" | "missed" }[] = [];
     if (data.weekday >= 0 && data.weekday <= 5) {
       const { data: rows } = await context.supabase
-        .from("cleaning_schedule").select("task_idx").eq("weekday", data.weekday).eq("user_id", targetUser);
-      cleaning = (rows ?? []).map((r: any) => r.task_idx as number);
-      if (cleaning.length > 0) {
+        .from("cleaning_schedule")
+        .select("task_id, cleaning_tasks(name)")
+        .eq("weekday", data.weekday).eq("user_id", targetUser);
+      cleaningTasks = (rows ?? []).map((r: any) => ({ taskId: r.task_id as string, taskName: (r.cleaning_tasks?.name ?? "") as string }));
+      if (cleaningTasks.length > 0) {
         const { data: logs } = await context.supabase
           .from("cleaning_log")
-          .select("task_idx, status")
+          .select("task_id, status")
           .eq("occurrence_date", data.today)
           .eq("weekday", data.weekday)
-          .in("task_idx", cleaning);
-        cleaningStatuses = (logs ?? []).map((r: any) => ({ taskIdx: r.task_idx, status: r.status }));
+          .in("task_id", cleaningTasks.map((t) => t.taskId));
+        cleaningStatuses = (logs ?? []).map((r: any) => ({ taskId: r.task_id, status: r.status }));
       }
     }
     return {
       stories: !!story,
       storyStatus: (story?.status ?? null) as "pending" | "done" | "missed" | null,
-      cleaningTaskIdx: cleaning,
+      cleaningTasks,
       cleaningStatuses,
     };
   });
@@ -1470,17 +1472,21 @@ export const getCleaning = createServerFn({ method: "GET" })
     const weekStart = monday.toISOString().slice(0, 10);
     const weekEnd = sunday.toISOString().slice(0, 10);
 
-    const [{ data: rows }, { data: settings }, { data: logs }] = await Promise.all([
-      context.supabase.from("cleaning_schedule").select("id, task_idx, weekday, user_id, label"),
+    const [{ data: taskRows }, { data: rows }, { data: settings }, { data: logs }] = await Promise.all([
+      context.supabase.from("cleaning_tasks").select("id, name, sort_order").order("sort_order"),
+      context.supabase.from("cleaning_schedule").select("id, task_id, weekday, user_id, label"),
       context.supabase.from("cleaning_settings").select("note").eq("org_id", context.orgId).maybeSingle(),
       context.supabase.from("cleaning_log")
-        .select("task_idx, weekday, occurrence_date, status, done_at, done_by")
+        .select("task_id, weekday, occurrence_date, status, done_at, done_by")
         .gte("occurrence_date", weekStart).lte("occurrence_date", weekEnd),
     ]);
     return {
+      tasks: (taskRows ?? []).map((t: any) => ({
+        id: t.id as string, name: t.name as string, sortOrder: t.sort_order as number,
+      })),
       cells: (rows ?? []).map((r: any) => ({
         id: r.id as string,
-        taskIdx: r.task_idx as number,
+        taskId: r.task_id as string,
         weekday: r.weekday as number,
         userId: (r.user_id ?? null) as string | null,
         label: (r.label ?? null) as string | null,
@@ -1488,7 +1494,7 @@ export const getCleaning = createServerFn({ method: "GET" })
       note: (settings?.note ?? "") as string,
       weekStart,
       weekLog: (logs ?? []).map((r: any) => ({
-        taskIdx: r.task_idx as number,
+        taskId: r.task_id as string,
         weekday: r.weekday as number,
         occurrenceDate: r.occurrence_date as string,
         status: r.status as "done" | "missed",
@@ -1498,30 +1504,65 @@ export const getCleaning = createServerFn({ method: "GET" })
     };
   });
 
+export const listCleaningTasks = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("cleaning_tasks").select("id, name, sort_order").order("sort_order");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((t: any) => ({ id: t.id as string, name: t.name as string, sortOrder: t.sort_order as number }));
+  });
+
+export const addCleaningTask = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { name: string }) => z.object({ name: z.string().trim().min(1).max(200) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { data: maxRow } = await context.supabase
+      .from("cleaning_tasks").select("sort_order").order("sort_order", { ascending: false }).limit(1).maybeSingle();
+    const nextOrder = (maxRow?.sort_order ?? -1) + 1;
+    const { error } = await context.supabase
+      .from("cleaning_tasks").insert({ org_id: context.orgId, name: data.name, sort_order: nextOrder });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteCleaningTask = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("cleaning_tasks").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const upsertCleaningCell = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { taskIdx: number; weekday: number; userId?: string | null; label?: string | null }) => d)
+  .inputValidator((d: { taskId: string; weekday: number; userId?: string | null; label?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
     if (!data.userId && !data.label) {
       const { error } = await context.supabase
-        .from("cleaning_schedule").delete().eq("task_idx", data.taskIdx).eq("weekday", data.weekday);
+        .from("cleaning_schedule").delete().eq("task_id", data.taskId).eq("weekday", data.weekday);
       if (error) throw new Error(error.message);
       return { ok: true };
     }
     const { error } = await context.supabase
       .from("cleaning_schedule")
-      .upsert({ org_id: context.orgId, task_idx: data.taskIdx, weekday: data.weekday, user_id: data.userId ?? null, label: data.label ?? null, updated_at: new Date().toISOString() }, { onConflict: "org_id,task_idx,weekday" });
+      .upsert({ org_id: context.orgId, task_id: data.taskId, weekday: data.weekday, user_id: data.userId ?? null, label: data.label ?? null, updated_at: new Date().toISOString() }, { onConflict: "org_id,task_id,weekday" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 export const setCleaningDone = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { taskIdx: number; weekday: number; occurrenceDate: string; done: boolean }) =>
+  .inputValidator((d: { taskId: string; weekday: number; occurrenceDate: string; done: boolean }) =>
     z.object({
-      taskIdx: z.number().int().min(0),
+      taskId: z.string().uuid(),
       weekday: z.number().int().min(0).max(6),
       occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       done: z.boolean(),
@@ -1531,7 +1572,7 @@ export const setCleaningDone = createServerFn({ method: "POST" })
     const [{ data: isAdmin }, { data: cell }] = await Promise.all([
       context.supabase.rpc("is_admin", { _user_id: context.userId }),
       context.supabase.from("cleaning_schedule")
-        .select("user_id").eq("task_idx", data.taskIdx).eq("weekday", data.weekday).maybeSingle(),
+        .select("user_id").eq("task_id", data.taskId).eq("weekday", data.weekday).maybeSingle(),
     ]);
     if (!isAdmin && cell?.user_id !== context.userId) throw new Error("Forbidden");
 
@@ -1540,7 +1581,7 @@ export const setCleaningDone = createServerFn({ method: "POST" })
       const { error } = await context.supabase
         .from("cleaning_log")
         .delete()
-        .eq("task_idx", data.taskIdx)
+        .eq("task_id", data.taskId)
         .eq("weekday", data.weekday)
         .eq("occurrence_date", data.occurrenceDate);
       if (error) throw new Error(error.message);
@@ -1551,14 +1592,14 @@ export const setCleaningDone = createServerFn({ method: "POST" })
       .from("cleaning_log")
       .upsert({
         org_id: context.orgId,
-        task_idx: data.taskIdx,
+        task_id: data.taskId,
         weekday: data.weekday,
         occurrence_date: data.occurrenceDate,
         user_id: cell?.user_id ?? null,
         status: "done",
         done_at: new Date().toISOString(),
         done_by: context.userId,
-      }, { onConflict: "org_id,task_idx,weekday,occurrence_date" });
+      }, { onConflict: "org_id,task_id,weekday,occurrence_date" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1844,7 +1885,7 @@ export const getReport = createServerFn({ method: "GET" })
     if (!filterClient && (filterType === "all" || filterType === "cleaning")) {
       let cq = context.supabase
         .from("cleaning_schedule")
-        .select("task_idx, weekday, user_id, updated_at")
+        .select("task_id, weekday, user_id, updated_at, cleaning_tasks(name)")
         .not("user_id", "is", null)
         .gte("updated_at", fromISO).lt("updated_at", toISO);
       if (filterUser) cq = cq.eq("user_id", filterUser);
@@ -1855,7 +1896,7 @@ export const getReport = createServerFn({ method: "GET" })
           finalizedAt: c.updated_at ?? new Date().toISOString(),
           userId: c.user_id,
           type: "cleaning",
-          title: `Limpeza · tarefa ${c.task_idx + 1} (dia ${c.weekday})`,
+          title: `Limpeza · ${c.cleaning_tasks?.name ?? "tarefa"} (dia ${c.weekday})`,
           clientId: null, clientName: "LIMPEZA", clientColor: "#4A9EFF", clientCategory: "Limpeza",
           reelType: null, editorId: null, lateDays: 0,
         });
@@ -2162,11 +2203,11 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
     }));
 
     const { data: cleanRows } = await context.supabase
-      .from("cleaning_schedule").select("task_idx, weekday, updated_at")
+      .from("cleaning_schedule").select("weekday, updated_at, cleaning_tasks(name)")
       .eq("user_id", data.userId)
       .gte("updated_at", fromISO).lt("updated_at", toISO);
     const cleaning = (cleanRows ?? []).map((c: any) => ({
-      taskIdx: c.task_idx, weekday: c.weekday, finalizedAt: c.updated_at,
+      taskName: (c.cleaning_tasks?.name ?? "") as string, weekday: c.weekday, finalizedAt: c.updated_at,
     }));
 
     return {

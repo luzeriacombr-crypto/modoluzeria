@@ -13,9 +13,10 @@ import { ReportsTab } from "./ReportsTab";
 import { DriveSettingsTab } from "./DriveSettingsTab";
 import { MemberGoalsTab } from "./MemberGoalsTab";
 import { AutomationsTab } from "./AutomationsTab";
+import { CleaningTasksTab } from "./CleaningTasksTab";
 
-type SettingsTab = "team" | "report" | "goals" | "drive" | "automations" | "general" | "subscription";
-const VALID_TABS: SettingsTab[] = ["team", "report", "goals", "drive", "automations", "general", "subscription"];
+type SettingsTab = "team" | "report" | "goals" | "drive" | "cleaning" | "automations" | "general" | "subscription";
+const VALID_TABS: SettingsTab[] = ["team", "report", "goals", "drive", "cleaning", "automations", "general", "subscription"];
 
 export function SettingsPage({ initialTab }: { initialTab?: string }) {
   const me = useMe().data;
@@ -62,6 +63,7 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
              tab === "goals"  ? "Defina a meta mensal de cada colaborador." :
              tab === "report" ? "Relatório consolidado de entregas." :
              tab === "drive"  ? "Integração com Google Drive." :
+             tab === "cleaning" ? "Tarefas recorrentes da tela Rotina." :
              tab === "automations" ? "Lembretes automáticos e jobs do sistema." :
              tab === "subscription" ? "Seu plano, uso e cobrança." :
              "Ajustes gerais da operação."}
@@ -89,6 +91,7 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
           { id: "goals", label: "Metas" },
           { id: "report", label: "Relatório" },
           { id: "drive", label: "Drive" },
+          { id: "cleaning", label: "Rotina" },
           { id: "automations", label: "Automações" },
           { id: "subscription", label: "Assinatura" },
           { id: "general", label: "Geral" },
@@ -111,6 +114,7 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
        tab === "subscription" ? <SubscriptionSettings /> :
        tab === "goals" ? <MemberGoalsTab /> :
        tab === "drive" ? <DriveSettingsTab /> :
+       tab === "cleaning" ? <CleaningTasksTab /> :
        tab === "automations" ? <AutomationsTab /> :
        tab === "report" ? <ReportsTab /> : (
         <>

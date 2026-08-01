@@ -7,6 +7,7 @@ import {
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile,
   listStories, upsertStoryDay, setStoryDone, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
+  listCleaningTasks, addCleaningTask, deleteCleaningTask,
   adminCreateUser, createAgency, updateMyOrg, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, getAdminDashboard, getTopMembers, getMemberFinalizations,
   updateMyAccount,
   getReport, getMemberReportDetail, getMemberVelocity,
@@ -83,6 +84,8 @@ export const storiesQO = (monthKey: string) =>
   });
 export const cleaningQO = () =>
   queryOptions({ queryKey: ["cleaning"], queryFn: () => getCleaning() });
+export const cleaningTasksQO = () =>
+  queryOptions({ queryKey: ["cleaning-tasks"], queryFn: () => listCleaningTasks() });
 export const myTodayQO = (today: string, weekday: number, userId?: string) =>
   queryOptions({
     queryKey: ["my-today", userId ?? "self", today],
@@ -433,6 +436,14 @@ export function useApi() {
     setCleaningDone: useMutation({
       mutationFn: useServerFn(setCleaningDone),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
+    }),
+    addCleaningTask: useMutation({
+      mutationFn: useServerFn(addCleaningTask),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning-tasks"] }); qc.invalidateQueries({ queryKey: ["cleaning"] }); },
+    }),
+    deleteCleaningTask: useMutation({
+      mutationFn: useServerFn(deleteCleaningTask),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning-tasks"] }); qc.invalidateQueries({ queryKey: ["cleaning"] }); },
     }),
     updateCleaningNote: useMutation({
       mutationFn: useServerFn(updateCleaningNote),

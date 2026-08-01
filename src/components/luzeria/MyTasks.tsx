@@ -8,7 +8,6 @@ import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Camera, Sparkles, List, CalendarDays, Clock, Check, X, AtSign } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
-import { CLEANING_TASKS } from "./CleaningView";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
 import { getDailyVerse } from "@/lib/luzeria/daily-verse";
@@ -169,7 +168,7 @@ export function MyTasks() {
         ))}
       </div>
 
-      {(today?.stories || (today?.cleaningTaskIdx?.length ?? 0) > 0) && (
+      {(today?.stories || (today?.cleaningTasks?.length ?? 0) > 0) && (
         <div className="space-y-3 mb-8">
           {(() => {
             const isMe = !isAdmin || !viewAs || viewAs === me?.id;
@@ -185,18 +184,18 @@ export function MyTasks() {
                     onDone={() => setStoryDone.mutate({ data: { day: todayStr, done: true } })}
                   />
                 )}
-                {today?.cleaningTaskIdx?.map((ti) => {
-                  const st = (today?.cleaningStatuses ?? []).find((s) => s.taskIdx === ti)?.status ?? "pending";
-                  const raw = CLEANING_TASKS[ti] ?? "limpeza";
+                {today?.cleaningTasks?.map(({ taskId, taskName: rawName }) => {
+                  const st = (today?.cleaningStatuses ?? []).find((s) => s.taskId === taskId)?.status ?? "pending";
+                  const raw = rawName || "rotina";
                   const taskName = raw.charAt(0).toLowerCase() + raw.slice(1);
                   return (
                     <DailyTaskCard
-                      key={ti}
+                      key={taskId}
                       icon={<Sparkles size={18} />}
                       title={`É seu dia de ${taskName}`}
                       status={st}
                       canAct={isMe}
-                      onDone={() => setCleaningDone.mutate({ data: { taskIdx: ti, weekday: weekdayIdx, occurrenceDate: todayStr, done: true } })}
+                      onDone={() => setCleaningDone.mutate({ data: { taskId, weekday: weekdayIdx, occurrenceDate: todayStr, done: true } })}
                     />
                   );
                 })}

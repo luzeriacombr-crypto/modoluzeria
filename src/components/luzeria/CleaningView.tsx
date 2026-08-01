@@ -7,18 +7,6 @@ import { AssigneePicker, colorForLabel } from "./AssigneePicker";
 import { Avatar } from "./Avatar";
 import { toast } from "sonner";
 
-export const CLEANING_TASKS = [
-  "Varrer e passar pano no chão (tudo)",
-  "Varrer calçada",
-  "Limpar espelhos",
-  "Limpar teto e paredes",
-  "Limpar/organizar cozinha",
-  "Lavar banheiro",
-  "Recolher lixo",
-  "Limpar os móveis (Hall, administrativo, escritório e sala de produção)",
-  "Limpar estúdio e organizar equipamentos",
-  "Lavar e trocar panos/toalhas/tapetes",
-];
 export const CLEANING_DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 export function CleaningView() {
@@ -27,21 +15,23 @@ export function CleaningView() {
   const { data } = useQuery(cleaningQO());
   const { data: profiles = [] } = useQuery(profilesQO());
   const { upsertCleaningCell, updateCleaningNote, setCleaningDone } = useApi();
-  const [picker, setPicker] = useState<{ rect: DOMRect; taskIdx: number; weekday: number } | null>(null);
+  const [picker, setPicker] = useState<{ rect: DOMRect; taskId: string; weekday: number } | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [noteDirty, setNoteDirty] = useState(false);
 
   useEffect(() => { if (data && !noteDirty) setNoteDraft(data.note); }, [data, noteDirty]);
 
+  const tasks = data?.tasks ?? [];
+
   const cellMap = useMemo(() => {
     const m = new Map<string, { userId: string | null; label: string | null }>();
-    (data?.cells ?? []).forEach((c) => m.set(`${c.taskIdx}-${c.weekday}`, { userId: c.userId, label: c.label }));
+    (data?.cells ?? []).forEach((c) => m.set(`${c.taskId}-${c.weekday}`, { userId: c.userId, label: c.label }));
     return m;
   }, [data]);
 
   const logMap = useMemo(() => {
     const m = new Map<string, { status: "done" | "missed"; occurrenceDate: string }>();
-    (data?.weekLog ?? []).forEach((l) => m.set(`${l.taskIdx}-${l.weekday}`, { status: l.status, occurrenceDate: l.occurrenceDate }));
+    (data?.weekLog ?? []).forEach((l) => m.set(`${l.taskId}-${l.weekday}`, { status: l.status, occurrenceDate: l.occurrenceDate }));
     return m;
   }, [data]);
 
@@ -82,8 +72,8 @@ export function CleaningView() {
           <div className="flex items-center gap-2 text-white/40 text-xs uppercase tracking-wider mb-2">
             <Sparkles size={13} /> <span>Escala</span>
           </div>
-          <h1 className="text-[32px] font-bold text-white leading-none tracking-tight">Limpeza</h1>
-          <p className="text-sm text-white/50 mt-2">Tabela semanal fixa de tarefas do estúdio.</p>
+          <h1 className="text-[32px] font-bold text-white leading-none tracking-tight">Rotina</h1>
+          <p className="text-sm text-white/50 mt-2">Tabela semanal de tarefas recorrentes da equipe.</p>
         </div>
       </div>
 
@@ -99,18 +89,25 @@ export function CleaningView() {
               </tr>
             </thead>
             <tbody>
-              {CLEANING_TASKS.map((task, ti) => (
-                <tr key={ti} className="border-b border-white/[0.04] last:border-b-0">
+              {tasks.length === 0 && (
+                <tr>
+                  <td colSpan={CLEANING_DAYS.length + 1} className="px-4 py-8 text-center text-white/40 text-xs">
+                    Nenhuma tarefa cadastrada. Cadastre em Configurações → Rotina.
+                  </td>
+                </tr>
+              )}
+              {tasks.map((task, ti) => (
+                <tr key={task.id} className="border-b border-white/[0.04] last:border-b-0">
                   <td className="px-4 py-3 text-white/90 align-top">
                     <span className="text-white/40 text-[11px] mr-2">{String(ti + 1).padStart(2, "0")}</span>
-                    {task}
+                    {task.name}
                   </td>
                   {CLEANING_DAYS.map((_, wi) => {
-                    const entry = cellMap.get(`${ti}-${wi}`);
+                    const entry = cellMap.get(`${task.id}-${wi}`);
                     const i = info(entry);
                     const isMine = !!entry?.userId && entry.userId === me?.id;
                     const occ = weekDates[wi];
-                    const log = logMap.get(`${ti}-${wi}`);
+                    const log = logMap.get(`${task.id}-${wi}`);
                     const status: "pending" | "done" | "missed" = log?.status ?? "pending";
                     const canToggle = !!entry?.userId && (isMine || isAdmin);
                     return (
@@ -118,7 +115,7 @@ export function CleaningView() {
                         <div className="relative">
                         <button
                           disabled={!isAdmin}
-                          onClick={(e) => isAdmin && setPicker({ rect: (e.currentTarget as HTMLElement).getBoundingClientRect(), taskIdx: ti, weekday: wi })}
+                          onClick={(e) => isAdmin && setPicker({ rect: (e.currentTarget as HTMLElement).getBoundingClientRect(), taskId: task.id, weekday: wi })}
                           className="w-full min-h-[42px] rounded-md px-2 py-1.5 flex items-center gap-1.5 transition-colors text-left"
                           style={{
                             backgroundColor: isMine ? "rgba(var(--lz-brand-light-rgb),0.1)" : i ? "rgba(255,255,255,0.03)" : "transparent",
@@ -145,7 +142,7 @@ export function CleaningView() {
                               e.stopPropagation();
                               if (!canToggle) return;
                               if (status === "missed" && !isAdmin) return;
-                              setCleaningDone.mutate({ data: { taskIdx: ti, weekday: wi, occurrenceDate: occ, done: status !== "done" } });
+                              setCleaningDone.mutate({ data: { taskId: task.id, weekday: wi, occurrenceDate: occ, done: status !== "done" } });
                             }}
                             title={
                               status === "done" ? `Feito (${occ === todayStr ? "hoje" : occ}) — clique para desfazer`
@@ -212,7 +209,7 @@ export function CleaningView() {
         <AssigneePicker
           anchorRect={picker.rect}
           onClose={() => setPicker(null)}
-          onPick={(p) => upsertCleaningCell.mutate({ data: { taskIdx: picker.taskIdx, weekday: picker.weekday, userId: p.userId, label: p.label } })}
+          onPick={(p) => upsertCleaningCell.mutate({ data: { taskId: picker.taskId, weekday: picker.weekday, userId: p.userId, label: p.label } })}
         />,
         document.body,
       )}
