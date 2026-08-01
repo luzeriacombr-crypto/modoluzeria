@@ -3,9 +3,11 @@ import { toast } from "sonner";
 import { useApi } from "@/lib/luzeria/queries";
 import type { Profile } from "@/lib/luzeria/types";
 import { AvatarEditor, ColorPicker, showAvatarError, uploadAvatar } from "./AvatarEditor";
+import { ImportClientsStep } from "./ImportClientsStep";
 
 export function WelcomeOnboarding({ me }: { me: Profile }) {
   const { updateMyProfile } = useApi();
+  const [step, setStep] = useState<"profile" | "import">("profile");
   const [color, setColor] = useState<string>(me.color);
   const [avatarPath, setAvatarPath] = useState<string | null>(me.avatarPath ?? null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(me.avatarUrl ?? null);
@@ -26,15 +28,17 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
     setAvatarPreview(null);
   }
 
-  function finish(saveCustomization: boolean) {
-    const payload: { color?: string; avatarPath?: string | null; onboarded: boolean } = { onboarded: true };
-    if (saveCustomization) {
-      payload.color = color;
-      payload.avatarPath = avatarPath;
-    }
-    updateMyProfile.mutate({ data: payload }, {
-      onSuccess: () => { if (saveCustomization) toast.success("Perfil personalizado."); },
+  function goToImportStep(saveCustomization: boolean) {
+    if (!saveCustomization) { setStep("import"); return; }
+    updateMyProfile.mutate({ data: { color, avatarPath } }, {
+      onSuccess: () => { toast.success("Perfil personalizado."); setStep("import"); },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar perfil"),
+    });
+  }
+
+  function completeOnboarding() {
+    updateMyProfile.mutate({ data: { onboarded: true } }, {
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao concluir"),
     });
   }
 
@@ -45,47 +49,61 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
       style={{ background: "radial-gradient(circle at top, rgba(var(--lz-brand-light-rgb),0.07), transparent 60%), #0D0D0D" }}>
       <div className="w-full max-w-md bg-[#1A1A1A] rounded-2xl p-7 md:p-9"
         style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.18)" }}>
-        <div className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
-          Bem-vinda(o) à Luzeria
-        </div>
-        <h1 className="text-white text-[24px] font-bold leading-tight">
-          Olá, {firstName}!
-        </h1>
-        <p className="text-white/60 text-sm mt-1.5 mb-6">
-          Personalize seu perfil antes de começar.
-        </p>
+        {step === "profile" ? (
+          <>
+            <div className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
+              Bem-vinda(o)
+            </div>
+            <h1 className="text-white text-[24px] font-bold leading-tight">
+              Olá, {firstName}!
+            </h1>
+            <p className="text-white/60 text-sm mt-1.5 mb-6">
+              Personalize seu perfil antes de começar.
+            </p>
 
-        <AvatarEditor
-          me={me}
-          draftColor={color}
-          draftAvatarUrl={avatarPreview}
-          uploading={uploading}
-          onPickFile={onPickFile}
-          onRemovePhoto={onRemovePhoto}
-        />
+            <AvatarEditor
+              me={me}
+              draftColor={color}
+              draftAvatarUrl={avatarPreview}
+              uploading={uploading}
+              onPickFile={onPickFile}
+              onRemovePhoto={onRemovePhoto}
+            />
 
-        <div className="mt-7">
-          <div className="text-[10px] uppercase font-bold tracking-wider text-white/50 mb-3 text-center">
-            {avatarPreview ? "Cor de fallback (sem foto)" : "Escolha a cor do seu avatar"}
-          </div>
-          <ColorPicker value={color} onChange={setColor} />
-        </div>
+            <div className="mt-7">
+              <div className="text-[10px] uppercase font-bold tracking-wider text-white/50 mb-3 text-center">
+                {avatarPreview ? "Cor de fallback (sem foto)" : "Escolha a cor do seu avatar"}
+              </div>
+              <ColorPicker value={color} onChange={setColor} />
+            </div>
 
-        <button
-          onClick={() => finish(true)}
-          disabled={updateMyProfile.isPending || uploading}
-          className="mt-8 w-full rounded-md py-3 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-        >
-          {updateMyProfile.isPending ? "Salvando…" : "Salvar e entrar"}
-        </button>
-        <button
-          onClick={() => finish(false)}
-          disabled={updateMyProfile.isPending}
-          className="mt-3 w-full text-xs text-white/50 hover:text-white transition disabled:opacity-40"
-        >
-          Pular por agora
-        </button>
+            <button
+              onClick={() => goToImportStep(true)}
+              disabled={updateMyProfile.isPending || uploading}
+              className="mt-8 w-full rounded-md py-3 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+            >
+              {updateMyProfile.isPending ? "Salvando…" : "Salvar e continuar"}
+            </button>
+            <button
+              onClick={() => goToImportStep(false)}
+              disabled={updateMyProfile.isPending}
+              className="mt-3 w-full text-xs text-white/50 hover:text-white transition disabled:opacity-40"
+            >
+              Pular por agora
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
+              Importar clientes
+            </div>
+            <h1 className="text-white text-[24px] font-bold leading-tight mb-6">
+              Traga seus clientes
+            </h1>
+            <ImportClientsStep onDone={completeOnboarding} onSkip={completeOnboarding} />
+          </>
+        )}
       </div>
     </div>
   );
