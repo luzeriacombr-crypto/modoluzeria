@@ -76,9 +76,8 @@ function AssinarPage() {
           <br />
           por falta de organização.
           <br />
-          <span style={{ color: LIME }}>
-            Ganhe tempo com o Modo{" "}
-            <span className="font-criador-serif normal-case">Criador</span>.
+          <span className="font-criador-serif normal-case block" style={{ color: LIME }}>
+            Ganhe tempo com o Modo Criador.
           </span>
         </h1>
         <p className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">
@@ -100,7 +99,7 @@ function AssinarPage() {
 
       {/* Dores */}
       <section className="px-5 sm:px-10 max-w-[820px] mx-auto py-14 border-t border-white/10">
-        <h2 className="font-black uppercase text-2xl sm:text-3xl mb-8">Isso é pra você se...</h2>
+        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">Isso é pra você se...</h2>
         <ul className="space-y-4">
           {[
             "Você gerencia vários clientes e cada um vive numa planilha ou pasta diferente",
@@ -121,7 +120,7 @@ function AssinarPage() {
 
       {/* Simples assim */}
       <section className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14 border-t border-white/10">
-        <h2 className="font-black uppercase text-2xl sm:text-3xl mb-10 text-center">Simples assim</h2>
+        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">Simples assim</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { n: "01", i: "📅", t: "Monte o calendário", d: "Organize posts e reels de cada cliente num board visual, por mês." },
@@ -141,7 +140,7 @@ function AssinarPage() {
 
       {/* Benefícios */}
       <section className="px-5 sm:px-10 max-w-[820px] mx-auto py-14 border-t border-white/10">
-        <h2 className="font-black uppercase text-2xl sm:text-3xl mb-8">Você vai ter...</h2>
+        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">Você vai ter...</h2>
         <ul className="space-y-4">
           {[
             "Calendário de conteúdo ilimitado, por cliente e por mês",
@@ -194,7 +193,7 @@ function AssinarPage() {
 
       {/* Formulário */}
       <section id="assinar-form" className="px-5 sm:px-10 max-w-[560px] mx-auto py-14 border-t border-white/10">
-        <h2 className="font-black uppercase text-2xl sm:text-3xl mb-2 text-center">Comece seu teste de 7 dias</h2>
+        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-2 text-center">Comece seu teste de 7 dias</h2>
         <p className="text-white/50 text-sm text-center mb-8">Sem compromisso. Cancele quando quiser antes da cobrança.</p>
 
         {invoiceUrl !== undefined ? (
@@ -262,7 +261,7 @@ function AssinarPage() {
 
       {/* FAQ */}
       <section className="px-5 sm:px-10 max-w-[720px] mx-auto py-14 border-t border-white/10">
-        <h2 className="font-black uppercase text-2xl sm:text-3xl mb-8">Dúvidas frequentes</h2>
+        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">Dúvidas frequentes</h2>
         <div className="space-y-3">
           {[
             ["Preciso saber mexer em tecnologia?", "Não. Se você sabe usar WhatsApp e planilha, já sabe usar o Modo Criador."],
