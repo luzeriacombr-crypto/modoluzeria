@@ -14,8 +14,8 @@ import { DriveSettingsTab } from "./DriveSettingsTab";
 import { MemberGoalsTab } from "./MemberGoalsTab";
 import { AutomationsTab } from "./AutomationsTab";
 
-type SettingsTab = "team" | "report" | "goals" | "drive" | "automations" | "general";
-const VALID_TABS: SettingsTab[] = ["team", "report", "goals", "drive", "automations", "general"];
+type SettingsTab = "team" | "report" | "goals" | "drive" | "automations" | "general" | "subscription";
+const VALID_TABS: SettingsTab[] = ["team", "report", "goals", "drive", "automations", "general", "subscription"];
 
 export function SettingsPage({ initialTab }: { initialTab?: string }) {
   const me = useMe().data;
@@ -63,6 +63,7 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
              tab === "report" ? "Relatório consolidado de entregas." :
              tab === "drive"  ? "Integração com Google Drive." :
              tab === "automations" ? "Lembretes automáticos e jobs do sistema." :
+             tab === "subscription" ? "Seu plano, uso e cobrança." :
              "Ajustes gerais da operação."}
           </p>
         </div>
@@ -89,6 +90,7 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
           { id: "report", label: "Relatório" },
           { id: "drive", label: "Drive" },
           { id: "automations", label: "Automações" },
+          { id: "subscription", label: "Assinatura" },
           { id: "general", label: "Geral" },
         ].map((t) => {
           const active = tab === (t.id as any);
@@ -106,6 +108,7 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
       </div>
 
       {tab === "general" ? <GeneralSettings /> :
+       tab === "subscription" ? <SubscriptionSettings /> :
        tab === "goals" ? <MemberGoalsTab /> :
        tab === "drive" ? <DriveSettingsTab /> :
        tab === "automations" ? <AutomationsTab /> :
@@ -373,8 +376,6 @@ function GeneralSettings() {
 
   return (
     <div className="max-w-2xl">
-      {me?.orgId && <PlanUsageSection />}
-
       {me?.orgId && (
         <OrgBrandingSection
           orgId={me.orgId}
@@ -487,6 +488,16 @@ function UsageBar({ label, used, max, pct }: { label: string; used: number; max:
             style={{ width: `${pct}%`, background: pct >= 100 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))" }} />
         </div>
       )}
+    </div>
+  );
+}
+
+function SubscriptionSettings() {
+  const me = useMe().data;
+  if (!me?.orgId) return <div className="text-white/40 text-sm">Carregando…</div>;
+  return (
+    <div className="max-w-2xl">
+      <PlanUsageSection />
     </div>
   );
 }
