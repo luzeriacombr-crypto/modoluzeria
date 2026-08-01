@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { CircleHelp } from "lucide-react";
+import { Video } from "lucide-react";
 import { useApi } from "@/lib/luzeria/queries";
 import type { Profile } from "@/lib/luzeria/types";
 import { AvatarEditor, ColorPicker, showAvatarError, uploadAvatar } from "./AvatarEditor";
@@ -110,9 +110,9 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
         href="https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw"
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 flex items-center gap-1.5 text-xs font-medium text-white/50 hover:text-white transition-colors"
+        className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-full bg-white/[0.06] hover:bg-white/10 text-white/70 hover:text-white transition-colors"
       >
-        <CircleHelp size={13} /> Precisa de ajuda? Assista o tutorial!
+        <Video size={13} /> Precisa de ajuda? Assista o tutorial!
       </a>
     </div>
   );

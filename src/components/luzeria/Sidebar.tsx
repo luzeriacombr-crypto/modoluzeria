@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Settings, LogOut, Plus, Camera, Sparkles, Info, CircleHelp,
+  Settings, LogOut, Plus, Camera, Sparkles, Info, Video,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -168,9 +168,9 @@ export function Sidebar({
         href="https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw"
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-1.5 px-3 py-2 mx-2 mb-1 text-[11px] font-medium rounded-md text-white/50 hover:text-white hover:bg-white/[0.04] transition-colors"
+        className="inline-flex items-center gap-1.5 mx-2 mb-2 px-3 py-1.5 text-[11px] font-semibold rounded-full bg-white/[0.06] hover:bg-white/10 text-white/70 hover:text-white transition-colors"
       >
-        <CircleHelp size={13} /> Precisa de ajuda? Assista o tutorial!
+        <Video size={13} /> Precisa de ajuda? Assista o tutorial!
       </a>
 
       {/* Footer user */}

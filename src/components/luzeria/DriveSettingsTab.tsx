@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { FolderTree, Loader2, RefreshCw, Save, HardDrive, ExternalLink, CircleHelp } from "lucide-react";
+import { FolderTree, Loader2, RefreshCw, Save, HardDrive, ExternalLink, Video } from "lucide-react";
 import {
   getDriveConfig,
   setDriveRootFolder,
@@ -95,9 +95,10 @@ export function DriveSettingsTab() {
           href="https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs font-medium mb-4 text-[rgb(var(--lz-brand-rgb))] hover:opacity-80 transition-opacity"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mb-4 text-xs font-semibold rounded-full transition-opacity hover:opacity-80"
+          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
         >
-          <CircleHelp size={13} /> Precisa de ajuda? Assista o tutorial!
+          <Video size={13} /> Precisa de ajuda? Assista o tutorial!
         </a>
         {connStatus.isLoading ? (
           <div className="text-white/40 text-sm">Verificando…</div>
