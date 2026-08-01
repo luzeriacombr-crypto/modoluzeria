@@ -47,7 +47,7 @@ export function App() {
   // carries the "Luzeria" name/tagline as data, not as a code special-case.
   useEffect(() => {
     if (me.data?.orgName) {
-      document.title = `Modo ${me.data.orgName}`;
+      document.title = `Modo Criador - ${me.data.orgName}`;
     }
   }, [me.data?.orgName]);
 
