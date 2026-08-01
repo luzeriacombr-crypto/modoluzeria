@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, Save, Check, X } from "lucide-react";
+import { Sparkles, Save, Check, X, Pencil, Trash2, Plus } from "lucide-react";
 import { cleaningQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { AssigneePicker, colorForLabel } from "./AssigneePicker";
 import { Avatar } from "./Avatar";
@@ -12,12 +12,16 @@ export const CLEANING_DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", 
 export function CleaningView() {
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
+  const isMaster = me?.role === "master";
   const { data } = useQuery(cleaningQO());
   const { data: profiles = [] } = useQuery(profilesQO());
-  const { upsertCleaningCell, updateCleaningNote, setCleaningDone } = useApi();
+  const { upsertCleaningCell, updateCleaningNote, setCleaningDone, addCleaningTask, renameCleaningTask, deleteCleaningTask } = useApi();
   const [picker, setPicker] = useState<{ rect: DOMRect; taskId: string; weekday: number } | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [noteDirty, setNoteDirty] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [newTaskName, setNewTaskName] = useState("");
 
   useEffect(() => { if (data && !noteDirty) setNoteDraft(data.note); }, [data, noteDirty]);
 
@@ -65,6 +69,25 @@ export function CleaningView() {
     return null;
   }
 
+  function startEdit(id: string, name: string) {
+    setEditingTaskId(id);
+    setEditName(name);
+  }
+
+  function saveEdit() {
+    if (!editingTaskId) return;
+    const value = editName.trim();
+    if (value) renameCleaningTask.mutate({ data: { id: editingTaskId, name: value } });
+    setEditingTaskId(null);
+  }
+
+  function submitNewTask() {
+    const value = newTaskName.trim();
+    if (!value) return;
+    addCleaningTask.mutate({ data: { name: value } });
+    setNewTaskName("");
+  }
+
   return (
     <div className="p-6 md:p-10 max-w-6xl mx-auto">
       <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
@@ -92,15 +115,41 @@ export function CleaningView() {
               {tasks.length === 0 && (
                 <tr>
                   <td colSpan={CLEANING_DAYS.length + 1} className="px-4 py-8 text-center text-white/40 text-xs">
-                    Nenhuma tarefa cadastrada. Cadastre em Configurações → Rotina.
+                    Nenhuma tarefa cadastrada{isMaster ? " — adicione uma abaixo." : "."}
                   </td>
                 </tr>
               )}
               {tasks.map((task, ti) => (
-                <tr key={task.id} className="border-b border-white/[0.04] last:border-b-0">
+                <tr key={task.id} className="border-b border-white/[0.04] last:border-b-0 group">
                   <td className="px-4 py-3 text-white/90 align-top">
-                    <span className="text-white/40 text-[11px] mr-2">{String(ti + 1).padStart(2, "0")}</span>
-                    {task.name}
+                    {editingTaskId === task.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          autoFocus
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEditingTaskId(null); }}
+                          className="flex-1 min-w-0 bg-[#0D0D0D] border border-white/10 rounded px-2 py-1 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                        />
+                        <button onClick={saveEdit} className="p-1 rounded text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5 shrink-0"><Save size={13} /></button>
+                        <button onClick={() => setEditingTaskId(null)} className="p-1 rounded text-white/40 hover:bg-white/5 shrink-0"><X size={13} /></button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-white/40 text-[11px] mr-1 shrink-0">{String(ti + 1).padStart(2, "0")}</span>
+                        <span className="flex-1 min-w-0">{task.name}</span>
+                        {isMaster && (
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            <button onClick={() => startEdit(task.id, task.name)} title="Editar tarefa"
+                              className="p-1 rounded text-white/40 hover:text-white hover:bg-white/5"><Pencil size={12} /></button>
+                            <button
+                              onClick={() => { if (confirm(`Excluir a tarefa "${task.name}"? Isso também remove as atribuições e o histórico dela.`)) deleteCleaningTask.mutate({ data: { id: task.id } }); }}
+                              title="Excluir tarefa"
+                              className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5"><Trash2 size={12} /></button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </td>
                   {CLEANING_DAYS.map((_, wi) => {
                     const entry = cellMap.get(`${task.id}-${wi}`);
@@ -172,6 +221,27 @@ export function CleaningView() {
                   })}
                 </tr>
               ))}
+              {isMaster && (
+                <tr>
+                  <td colSpan={CLEANING_DAYS.length + 1} className="px-4 py-3">
+                    <div className="flex items-center gap-2 max-w-sm">
+                      <input
+                        value={newTaskName}
+                        onChange={(e) => setNewTaskName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") submitNewTask(); }}
+                        placeholder="Nova tarefa…"
+                        className="flex-1 bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
+                      />
+                      <button
+                        disabled={!newTaskName.trim()}
+                        onClick={submitNewTask}
+                        className="px-2.5 py-1.5 rounded-md text-xs font-bold disabled:opacity-30 transition-opacity inline-flex items-center gap-1"
+                        style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+                      ><Plus size={13} /> Adicionar</button>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

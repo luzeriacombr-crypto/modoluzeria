@@ -7,7 +7,7 @@ import {
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile,
   listStories, upsertStoryDay, setStoryDone, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
-  listCleaningTasks, addCleaningTask, deleteCleaningTask,
+  listCleaningTasks, addCleaningTask, renameCleaningTask, deleteCleaningTask,
   adminCreateUser, createAgency, updateMyOrg, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, getAdminDashboard, getTopMembers, getMemberFinalizations,
   updateMyAccount,
   getReport, getMemberReportDetail, getMemberVelocity,
@@ -439,6 +439,10 @@ export function useApi() {
     }),
     addCleaningTask: useMutation({
       mutationFn: useServerFn(addCleaningTask),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning-tasks"] }); qc.invalidateQueries({ queryKey: ["cleaning"] }); },
+    }),
+    renameCleaningTask: useMutation({
+      mutationFn: useServerFn(renameCleaningTask),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning-tasks"] }); qc.invalidateQueries({ queryKey: ["cleaning"] }); },
     }),
     deleteCleaningTask: useMutation({

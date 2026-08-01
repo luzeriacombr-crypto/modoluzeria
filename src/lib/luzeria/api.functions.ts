@@ -1517,8 +1517,8 @@ export const addCleaningTask = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { name: string }) => z.object({ name: z.string().trim().min(1).max(200) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
     const { data: maxRow } = await context.supabase
       .from("cleaning_tasks").select("sort_order").order("sort_order", { ascending: false }).limit(1).maybeSingle();
     const nextOrder = (maxRow?.sort_order ?? -1) + 1;
@@ -1528,12 +1528,23 @@ export const addCleaningTask = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const renameCleaningTask = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string; name: string }) => z.object({ id: z.string().uuid(), name: z.string().trim().min(1).max(200) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("cleaning_tasks").update({ name: data.name }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const deleteCleaningTask = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
     const { error } = await context.supabase.from("cleaning_tasks").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };

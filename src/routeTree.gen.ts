@@ -15,9 +15,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
 import { Route as AuthenticatedStoriesRouteImport } from './routes/_authenticated/stories'
+import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated/rotina'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
-import { Route as AuthenticatedLimpezaRouteImport } from './routes/_authenticated/limpeza'
 import { Route as AuthenticatedInvestigacaoRouteImport } from './routes/_authenticated/investigacao'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -53,6 +53,11 @@ const AuthenticatedStoriesRoute = AuthenticatedStoriesRouteImport.update({
   path: '/stories',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRotinaRoute = AuthenticatedRotinaRouteImport.update({
+  id: '/rotina',
+  path: '/rotina',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
   id: '/perfil',
   path: '/perfil',
@@ -64,11 +69,6 @@ const AuthenticatedMinhasTarefasRoute =
     path: '/minhas-tarefas',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedLimpezaRoute = AuthenticatedLimpezaRouteImport.update({
-  id: '/limpeza',
-  path: '/limpeza',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedInvestigacaoRoute =
   AuthenticatedInvestigacaoRouteImport.update({
     id: '/investigacao',
@@ -106,9 +106,9 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/investigacao': typeof AuthenticatedInvestigacaoRoute
-  '/limpeza': typeof AuthenticatedLimpezaRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
+  '/rotina': typeof AuthenticatedRotinaRoute
   '/stories': typeof AuthenticatedStoriesRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
@@ -121,9 +121,9 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/investigacao': typeof AuthenticatedInvestigacaoRoute
-  '/limpeza': typeof AuthenticatedLimpezaRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
+  '/rotina': typeof AuthenticatedRotinaRoute
   '/stories': typeof AuthenticatedStoriesRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
@@ -138,9 +138,9 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/investigacao': typeof AuthenticatedInvestigacaoRoute
-  '/_authenticated/limpeza': typeof AuthenticatedLimpezaRoute
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
+  '/_authenticated/rotina': typeof AuthenticatedRotinaRoute
   '/_authenticated/stories': typeof AuthenticatedStoriesRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/_authenticated/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
@@ -155,9 +155,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/configuracoes'
     | '/investigacao'
-    | '/limpeza'
     | '/minhas-tarefas'
     | '/perfil'
+    | '/rotina'
     | '/stories'
     | '/preview/$token'
     | '/cliente/$clientId'
@@ -170,9 +170,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/configuracoes'
     | '/investigacao'
-    | '/limpeza'
     | '/minhas-tarefas'
     | '/perfil'
+    | '/rotina'
     | '/stories'
     | '/preview/$token'
     | '/cliente/$clientId'
@@ -186,9 +186,9 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/configuracoes'
     | '/_authenticated/investigacao'
-    | '/_authenticated/limpeza'
     | '/_authenticated/minhas-tarefas'
     | '/_authenticated/perfil'
+    | '/_authenticated/rotina'
     | '/_authenticated/stories'
     | '/preview/$token'
     | '/_authenticated/cliente/$clientId'
@@ -247,6 +247,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoriesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/rotina': {
+      id: '/_authenticated/rotina'
+      path: '/rotina'
+      fullPath: '/rotina'
+      preLoaderRoute: typeof AuthenticatedRotinaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/perfil': {
       id: '/_authenticated/perfil'
       path: '/perfil'
@@ -259,13 +266,6 @@ declare module '@tanstack/react-router' {
       path: '/minhas-tarefas'
       fullPath: '/minhas-tarefas'
       preLoaderRoute: typeof AuthenticatedMinhasTarefasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/limpeza': {
-      id: '/_authenticated/limpeza'
-      path: '/limpeza'
-      fullPath: '/limpeza'
-      preLoaderRoute: typeof AuthenticatedLimpezaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/investigacao': {
@@ -310,9 +310,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedInvestigacaoRoute: typeof AuthenticatedInvestigacaoRoute
-  AuthenticatedLimpezaRoute: typeof AuthenticatedLimpezaRoute
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
+  AuthenticatedRotinaRoute: typeof AuthenticatedRotinaRoute
   AuthenticatedStoriesRoute: typeof AuthenticatedStoriesRoute
   AuthenticatedClienteClientIdRoute: typeof AuthenticatedClienteClientIdRoute
   AuthenticatedOauthDriveCallbackRoute: typeof AuthenticatedOauthDriveCallbackRoute
@@ -322,9 +322,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedInvestigacaoRoute: AuthenticatedInvestigacaoRoute,
-  AuthenticatedLimpezaRoute: AuthenticatedLimpezaRoute,
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
+  AuthenticatedRotinaRoute: AuthenticatedRotinaRoute,
   AuthenticatedStoriesRoute: AuthenticatedStoriesRoute,
   AuthenticatedClienteClientIdRoute: AuthenticatedClienteClientIdRoute,
   AuthenticatedOauthDriveCallbackRoute: AuthenticatedOauthDriveCallbackRoute,
