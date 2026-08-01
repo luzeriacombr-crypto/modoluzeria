@@ -88,6 +88,10 @@ export const publicSignup = createServerFn({ method: "POST" })
       });
       if (userErr || !created?.user) throw new Error(userErr?.message ?? "Não foi possível criar sua conta.");
 
+      // admin.createUser() never sends the confirmation email itself — trigger it explicitly.
+      const { error: resendErr } = await supabaseAdmin.auth.resend({ type: "signup", email: data.email });
+      if (resendErr) console.error("Falha ao enviar e-mail de confirmação:", resendErr.message);
+
       const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
       const customer = await createAsaasCustomer({ name: data.agencyName.trim(), cpfCnpj: data.taxId, email: data.email });
       const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
