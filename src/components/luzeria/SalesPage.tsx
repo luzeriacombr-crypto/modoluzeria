@@ -72,7 +72,7 @@ export function SalesPage() {
           </span>
         </h1>
         <p className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">
-          A plataforma que centraliza calendário, aprovação de cliente, equipe e arquivos da sua agência de social media — num só lugar, sem planilha, sem WhatsApp perdido.
+          A plataforma que centraliza tudo que um Social Media precisa: produtividade da equipe, calendário de postagens, link aprovação de cliente, organização de arquivos… tudo num só lugar, sem planilha chata ou arquivos perdidos no WhatsApp.
         </p>
         <div className="mt-8">
           <div className="text-white/50 text-sm">A partir de</div>
@@ -90,14 +90,15 @@ export function SalesPage() {
 
       {/* Dores */}
       <section className="px-5 sm:px-10 max-w-[820px] mx-auto py-14 border-t border-white/10">
-        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">Isso é pra você se...</h2>
+        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">O Modo Criador é para...</h2>
         <ul className="space-y-4">
           {[
-            "Você gerencia vários clientes e cada um vive numa planilha ou pasta diferente",
-            "Cliente demora dias pra aprovar um post porque o link se perdeu no WhatsApp",
-            "Sua equipe não sabe quem é responsável por qual entrega",
-            "Você já perdeu prazo porque ninguém viu que faltava aprovar algo",
-            "Você tem vergonha de mostrar sua \"organização interna\" pra um cliente novo",
+            "Você que gerencia vários clientes e cada um vive numa planilha ou pasta diferente",
+            "Cliente que demora dias pra aprovar um post porque os arquivos se perdem no WhatsApp",
+            "Sua equipe que não sabe quem é responsável por qual entrega e qual o prazo",
+            "Você que quer mensurar a produtividade do time",
+            "Você que já perdeu prazo porque ninguém viu que faltava aprovar algo",
+            "Você que tem vergonha de mostrar sua \"organização interna\" pra um cliente novo",
           ].map((t) => (
             <li key={t} className="flex gap-3 text-white/75 text-base sm:text-lg">
               <span className="text-red-400 font-bold shrink-0">✗</span>{t}
@@ -105,7 +106,7 @@ export function SalesPage() {
           ))}
         </ul>
         <p className="mt-8 font-bold" style={{ color: LIME }}>
-          🎯 Se você marcou pelo menos um, o Modo Criador foi feito pra você.
+          Se você marcou pelo menos um, o Modo Criador foi feito pra você.
         </p>
       </section>
 
@@ -114,10 +115,10 @@ export function SalesPage() {
         <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">Simples assim</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { n: "01", i: "📅", t: "Monte o calendário", d: "Organize posts e reels de cada cliente num board visual, por mês." },
-            { n: "02", i: "👥", t: "Atribua e acompanhe", d: "Sua equipe sabe exatamente quem faz o quê, com comentários e prazos." },
-            { n: "03", i: "🔗", t: "Cliente aprova pelo link", d: "Manda um link público bonito, o cliente aprova ou comenta, sem login." },
-            { n: "04", i: "📁", t: "Arquivos no Drive", d: "Cada agência com sua própria pasta do Google Drive conectada." },
+            { n: "01", i: "📅", t: "Monte o calendário", d: "Organize Posts e Reels de cada cliente num board visual, por mês." },
+            { n: "02", i: "👥", t: "Atribua e acompanhe", d: "Sua equipe sabe exatamente quem faz o quê, qual o prazo e você pode fazer comentários." },
+            { n: "03", i: "🔗", t: "Cliente aprova pelo link", d: "Manda um link público bonito, o cliente aprova ou comenta alterações, sem login." },
+            { n: "04", i: "📁", t: "Arquivos no Drive", d: "Conecte sua própria conta do Google Drive e faça o Backup dos arquivos automaticamente." },
           ].map((s) => (
             <div key={s.n} className="bg-white/5 rounded-xl p-5 border border-white/10">
               <div className="text-white/30 font-black text-sm mb-2">{s.n}</div>
@@ -135,7 +136,7 @@ export function SalesPage() {
         <ul className="space-y-4">
           {[
             "Calendário de conteúdo ilimitado, por cliente e por mês",
-            "Link de aprovação pro cliente, com a sua marca (logo e cores da sua agência)",
+            "Link de aprovação pro cliente",
             "Equipe com papéis e responsáveis por tarefa",
             "Google Drive conectado, arquivos organizados automaticamente",
             "Relatórios de produtividade da equipe",
@@ -244,9 +245,9 @@ export function SalesPage() {
 
       {/* Fundador */}
       <section className="px-5 sm:px-10 max-w-[720px] mx-auto py-14 border-t border-white/10 text-center">
-        <div className="text-xs uppercase tracking-wide font-bold mb-3" style={{ color: LIME }}>⚡ Junior Reis</div>
+        <div className="text-xs uppercase tracking-wide font-bold mb-3" style={{ color: LIME }}>⚡ Somos a Luzeria Estúdio!</div>
         <p className="text-white/60 text-sm leading-relaxed">
-          Fundador da Luzeria Estúdio. Com mais de uma década em comunicação e criação de conteúdo, Junior viveu na pele a dor de gerenciar vários clientes ao mesmo tempo — foi aí que nasceu o Modo Criador: a ferramenta que a própria agência usa todos os dias.
+          Com mais de uma década em comunicação e criação de conteúdo, vivemos na pele a dor de gerenciar vários clientes ao mesmo tempo e foi aí que nasceu o Modo Criador: a ferramenta que a nossa própria agência usa todos os dias e agora queremos compartilhar também com a sua.
         </p>
       </section>
 
@@ -255,8 +256,9 @@ export function SalesPage() {
         <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">Dúvidas frequentes</h2>
         <div className="space-y-3">
           {[
-            ["Preciso saber mexer em tecnologia?", "Não. Se você sabe usar WhatsApp e planilha, já sabe usar o Modo Criador."],
-            ["Meu cliente precisa criar conta pra aprovar o conteúdo?", "Não. Ele recebe um link público, com a sua marca, e aprova direto — sem cadastro."],
+            ["Preciso saber mexer em tecnologia?", "Não. É muito intuitivo usar o Modo Criador. (Bem mais fácil que o ClickUp e Trello.)"],
+            ["Estou vindo de outra plataforma, consigo migrar meus clientes?", "Sim, criamos um sistema que você consegue colocar toda a sua operação dentro do Modo Criador com rapidez."],
+            ["Meu cliente precisa criar conta pra aprovar o conteúdo?", "Não. Ele recebe um link público, com a sua marca, e aprova direto, sem cadastro."],
             ["Funciona pra qualquer tipo de agência?", "Sim, foi feito pra qualquer agência ou social media que gerencia múltiplos clientes."],
             ["Posso trocar de plano depois?", "Sim, a qualquer momento nas configurações da sua conta."],
             ["O que acontece se eu não cancelar antes do teste acabar?", "A cobrança do plano escolhido começa automaticamente no cartão cadastrado, depois dos 7 dias."],
