@@ -154,7 +154,7 @@ function PublicPreviewPage() {
                   }}
                   disabled={approving}
                   className="px-6 py-2.5 rounded-full text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
-                  style={{ background: "#C8D44E", color: "#0D0D0D" }}
+                  style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
                 >
                   {approving ? "Registrando…" : "✓ Aprovar feed de " + formattedMonth}
                 </button>
@@ -164,7 +164,7 @@ function PublicPreviewPage() {
         )}
 
         <div className="mt-6 text-center text-white/30 text-[11px]">
-          Apresentado por <span className="font-semibold" style={{ color: "#C8D44E" }}>Luzeria Estúdio</span>
+          Apresentado por <span className="font-semibold" style={{ color: "rgb(var(--lz-brand-rgb))" }}>Luzeria Estúdio</span>
         </div>
       </div>
 

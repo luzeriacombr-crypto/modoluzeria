@@ -1065,6 +1065,8 @@ export type Database = {
       }
       orgs: {
         Row: {
+          color_primary: string | null
+          color_primary_light: string | null
           created_at: string
           id: string
           logo_path: string | null
@@ -1073,6 +1075,8 @@ export type Database = {
           tagline: string | null
         }
         Insert: {
+          color_primary?: string | null
+          color_primary_light?: string | null
           created_at?: string
           id?: string
           logo_path?: string | null
@@ -1081,6 +1085,8 @@ export type Database = {
           tagline?: string | null
         }
         Update: {
+          color_primary?: string | null
+          color_primary_light?: string | null
           created_at?: string
           id?: string
           logo_path?: string | null

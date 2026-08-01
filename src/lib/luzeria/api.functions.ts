@@ -80,7 +80,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light").eq("id", orgId).maybeSingle()
       : { data: null };
     const logoPath = (org as any)?.logo_path as string | null | undefined;
     const signed = await signAvatarPaths(context.supabase, [profile.avatar_url, logoPath]);
@@ -97,6 +97,8 @@ export const getMe = createServerFn({ method: "GET" })
       orgId,
       orgName: (org as any)?.name ?? null,
       orgTagline: (org as any)?.tagline ?? null,
+      orgColorPrimary: (org as any)?.color_primary ?? null,
+      orgColorPrimaryLight: (org as any)?.color_primary_light ?? null,
       orgLogoUrl,
     } satisfies Profile;
   });
@@ -104,11 +106,16 @@ export const getMe = createServerFn({ method: "GET" })
 /** Master-only: rename their own agency and/or set its in-app tagline. */
 export const updateMyOrg = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { name?: string; tagline?: string | null; logoPath?: string | null }) =>
+  .inputValidator((d: {
+    name?: string; tagline?: string | null; logoPath?: string | null;
+    colorPrimary?: string | null; colorPrimaryLight?: string | null;
+  }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
       tagline: z.string().trim().max(120).nullable().optional(),
       logoPath: z.string().max(300).nullable().optional(),
+      colorPrimary: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+      colorPrimaryLight: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -117,6 +124,8 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.name !== undefined) patch.name = data.name;
     if (data.tagline !== undefined) patch.tagline = data.tagline;
     if (data.logoPath !== undefined) patch.logo_path = data.logoPath;
+    if (data.colorPrimary !== undefined) patch.color_primary = data.colorPrimary;
+    if (data.colorPrimaryLight !== undefined) patch.color_primary_light = data.colorPrimaryLight;
     if (Object.keys(patch).length === 0) return { ok: true };
     const { data: updated, error } = await context.supabase
       .from("orgs").update(patch).eq("id", context.orgId).select("id").maybeSingle();

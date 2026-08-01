@@ -16,7 +16,7 @@ export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: s
     return (
       <div className="rounded-xl bg-[#1C1C1C] border border-white/[0.06] p-4 mb-6 flex items-center gap-3">
         <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
-          style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
           <Target size={16} />
         </div>
         <div className="flex-1 min-w-0">
@@ -31,7 +31,7 @@ export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: s
           <button
             onClick={() => navigate({ to: "/configuracoes" })}
             className="text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-black"
-            style={{ backgroundColor: "#C8D44E" }}
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
           >
             Definir metas
           </button>
@@ -48,7 +48,7 @@ export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: s
 
   return (
     <div className="rounded-xl bg-[#1C1C1C] border border-white/[0.06] p-4 mb-6">
-      <div className="flex items-center gap-1.5 mb-3 text-[10px] uppercase font-bold tracking-wider text-[#C8D44E]">
+      <div className="flex items-center gap-1.5 mb-3 text-[10px] uppercase font-bold tracking-wider text-[rgb(var(--lz-brand-rgb))]">
         <Target size={12} /> Meta do mês
       </div>
       <div className="space-y-3">
@@ -65,7 +65,7 @@ function Bar({ label, done, goal }: { label: string; done: number; goal: number 
   const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
   const expected = Math.round((dayOfMonth / daysInMonth) * goal);
   const behind = done < expected * 0.7;
-  const color = done >= goal ? "#C8D44E" : behind ? "#FF8C42" : "#7EB3FF";
+  const color = done >= goal ? "rgb(var(--lz-brand-rgb))" : behind ? "#FF8C42" : "#7EB3FF";
 
   return (
     <div>

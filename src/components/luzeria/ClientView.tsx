@@ -50,13 +50,13 @@ export function ClientView({ clientId }: { clientId: string }) {
           <div>
           <h1 className="text-[24px] font-bold text-white leading-tight">{client.name}</h1>
           {client.customFields.niche && (
-            <div className="text-[13px] font-semibold mt-0.5" style={{ color: "#C8D44E" }}>{client.customFields.niche}</div>
+            <div className="text-[13px] font-semibold mt-0.5" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{client.customFields.niche}</div>
           )}
           </div>
           <button
             onClick={() => setTab("ficha")}
             title="Ficha do cliente"
-            className="ml-1 p-1.5 rounded-md text-white/50 hover:text-[#C8D44E] hover:bg-white/5 transition"
+            className="ml-1 p-1.5 rounded-md text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5 transition"
           >
             <Info size={15} />
           </button>
@@ -67,11 +67,11 @@ export function ClientView({ clientId }: { clientId: string }) {
             <ChevronLeft size={16} />
           </button>}
           {isAvulso ? (
-            <span className="rounded-md px-3 py-1 text-[10px] font-bold uppercase tracking-wider" style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E", border: "1px solid rgba(200,212,78,0.3)" }}>
+            <span className="rounded-md px-3 py-1 text-[10px] font-bold uppercase tracking-wider" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))", border: "1px solid rgba(var(--lz-brand-light-rgb),0.3)" }}>
               Avulso
             </span>
           ) : (
-            <span className="rounded-md px-3 py-1 text-xs font-bold uppercase" style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
+            <span className="rounded-md px-3 py-1 text-xs font-bold uppercase" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
               {formatMonth(selectedMonthKey)}
             </span>
           )}
@@ -81,7 +81,7 @@ export function ClientView({ clientId }: { clientId: string }) {
           </button>}
           {isAdmin && !isAvulso && (
             <button onClick={() => duplicateMonth.mutate({ data: { clientId, fromKey: selectedMonthKey } })}
-              className="inline-flex items-center gap-1.5 ml-2 rounded-md px-3 py-1.5 text-xs font-semibold text-white/80 border border-white/10 hover:border-[#C8D44E] hover:text-[#C8D44E] transition">
+              className="inline-flex items-center gap-1.5 ml-2 rounded-md px-3 py-1.5 text-xs font-semibold text-white/80 border border-white/10 hover:border-[rgb(var(--lz-brand-rgb))] hover:text-[rgb(var(--lz-brand-rgb))] transition">
               <Copy size={13} /> Duplicar mês
             </button>
           )}
@@ -95,7 +95,7 @@ export function ClientView({ clientId }: { clientId: string }) {
             className="relative py-3 text-sm font-semibold transition-colors"
             style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
             {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais atividades" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
-            {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "#C8D44E" }} />}
+            {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
           </button>
         ))}
       </div>
@@ -123,7 +123,7 @@ export function ClientView({ clientId }: { clientId: string }) {
                   onClick={() => addContentItem.mutate({
                     data: { clientId, key: selectedMonthKey, type: cfg.type },
                   })}
-                  className="mt-4 ml-4 inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold border border-dashed border-white/15 text-white/60 hover:text-[#C8D44E] hover:border-[#C8D44E] transition">
+                  className="mt-4 ml-4 inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold border border-dashed border-white/15 text-white/60 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] transition">
                   <Plus size={13} /> Adicionar {cfg.label}
                 </button>
               )}

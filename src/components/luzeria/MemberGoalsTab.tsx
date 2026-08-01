@@ -121,7 +121,7 @@ export function MemberGoalsTab() {
             ←
           </button>
           <div className="flex items-center gap-2 text-white">
-            <Target size={14} className="text-[#C8D44E]" />
+            <Target size={14} className="text-[rgb(var(--lz-brand-rgb))]" />
             <span className="text-sm font-bold">{labelFor(monthKey)}</span>
           </div>
           <button
@@ -133,7 +133,7 @@ export function MemberGoalsTab() {
           {monthKey !== currentMonthKey() && (
             <button
               onClick={() => setMonthKey(currentMonthKey())}
-              className="text-[11px] text-white/40 hover:text-[#C8D44E] transition ml-1"
+              className="text-[11px] text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] transition ml-1"
             >
               Hoje
             </button>
@@ -196,7 +196,7 @@ export function MemberGoalsTab() {
                 onClick={() => save(p.id)}
                 disabled={!dirty}
                 className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md text-black transition disabled:opacity-30 disabled:cursor-not-allowed"
-                style={{ backgroundColor: "#C8D44E" }}
+                style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
               >
                 Salvar
               </button>
@@ -216,7 +216,7 @@ function GoalInput({ value, onChange }: { value: number; onChange: (v: number) =
       max={9999}
       value={value}
       onChange={(e) => onChange(parseInt(e.target.value, 10) || 0)}
-      className="w-full bg-[#0D0D0D] border border-white/10 text-sm text-white rounded-md px-2 py-1.5 text-center outline-none focus:border-[#C8D44E]"
+      className="w-full bg-[#0D0D0D] border border-white/10 text-sm text-white rounded-md px-2 py-1.5 text-center outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
     />
   );
 }

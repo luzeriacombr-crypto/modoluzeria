@@ -412,7 +412,7 @@ export function InstagramPostModal({
                     }}
                     disabled={itemApproving || !onApproveItem}
                     className="flex-1 inline-flex items-center justify-center gap-2 text-[14px] font-semibold py-3.5 rounded-md transition active:scale-[0.98] disabled:opacity-50"
-                    style={{ background: "#C8D44E", color: "#0D0D0D" }}
+                    style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
                   >
                     {itemApproving ? "Aprovando…" : "✓ Aprovar post"}
                   </button>
@@ -420,7 +420,7 @@ export function InstagramPostModal({
                     <button
                       onClick={() => setComposerOpen(true)}
                       className="flex-1 inline-flex items-center justify-center gap-2 text-[14px] font-semibold py-3.5 rounded-md border-2 transition active:scale-[0.98]"
-                      style={{ borderColor: "#C8D44E", color: "#0D0D0D" }}
+                      style={{ borderColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
                     >
                       <Pencil size={16} /> Sugerir alteração
                     </button>
@@ -455,7 +455,7 @@ export function InstagramPostModal({
                       onClick={submit}
                       disabled={submitting || !author.trim() || !text.trim()}
                       className="text-[14px] font-semibold px-5 py-3 rounded-md transition disabled:opacity-50"
-                      style={{ background: "#C8D44E", color: "#0D0D0D" }}
+                      style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
                     >{submitting ? "Enviando…" : "Enviar sugestão"}</button>
                   </div>
                 </div>

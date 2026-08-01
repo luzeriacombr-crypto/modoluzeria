@@ -60,7 +60,7 @@ function InvestigacaoPage() {
       <h1 className="text-xl font-bold">Investigação temporária — itens sumidos</h1>
 
       <section>
-        <h2 className="text-base font-bold text-[#C8D44E] mb-2">Checagem de sanidade</h2>
+        <h2 className="text-base font-bold text-[rgb(var(--lz-brand-rgb))] mb-2">Checagem de sanidade</h2>
         <p>Total de content_items no banco (todos os clientes): <b>{data.totalItemsCount}</b></p>
         <p>Itens com ID direto confirmados existentes agora (dos {createdEvents.length} criados no período): <b>{data.directLookup.length}</b></p>
         {anyError && (
@@ -69,7 +69,7 @@ function InvestigacaoPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[#C8D44E] mb-2">
+        <h2 className="text-base font-bold text-[rgb(var(--lz-brand-rgb))] mb-2">
           ✅ Sobreviveram (existem agora), agrupado por cliente/mês ({data.directLookup.length} itens em {groups.length} grupos)
         </h2>
         {groups.map((g) => (
@@ -104,7 +104,7 @@ function InvestigacaoPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[#C8D44E] mb-2">Clientes encontrados</h2>
+        <h2 className="text-base font-bold text-[rgb(var(--lz-brand-rgb))] mb-2">Clientes encontrados</h2>
         <table className="w-full text-left border-collapse">
           <thead><tr className="text-white/50"><th className="pr-4">Nome</th><th className="pr-4">Categoria</th><th className="pr-4">Arquivado</th><th>ID</th></tr></thead>
           <tbody>
@@ -121,7 +121,7 @@ function InvestigacaoPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[#C8D44E] mb-2">
+        <h2 className="text-base font-bold text-[rgb(var(--lz-brand-rgb))] mb-2">
           🚨 Criados mas NÃO existem mais agora ({missing.length})
         </h2>
         {missing.length === 0 && <p className="text-white/50">Nenhum — todos os itens criados nos últimos 4 dias ainda existem.</p>}
@@ -142,7 +142,7 @@ function InvestigacaoPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[#C8D44E] mb-2">Itens atuais nesses 5 clientes ({data.items.length})</h2>
+        <h2 className="text-base font-bold text-[rgb(var(--lz-brand-rgb))] mb-2">Itens atuais nesses 5 clientes ({data.items.length})</h2>
         <table className="w-full text-left border-collapse">
           <thead><tr className="text-white/50"><th className="pr-4">Cliente/Mês</th><th className="pr-4">Título</th><th className="pr-4">Status</th><th>Atualizado em</th></tr></thead>
           <tbody>
@@ -159,7 +159,7 @@ function InvestigacaoPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[#C8D44E] mb-2">Todas as ações registradas (últimos 4 dias, todos os clientes, {data.activity.length})</h2>
+        <h2 className="text-base font-bold text-[rgb(var(--lz-brand-rgb))] mb-2">Todas as ações registradas (últimos 4 dias, todos os clientes, {data.activity.length})</h2>
         <table className="w-full text-left border-collapse">
           <thead><tr className="text-white/50"><th className="pr-4">Quando</th><th className="pr-4">Quem</th><th className="pr-4">Ação</th><th className="pr-4">Meta</th><th>Item ID</th></tr></thead>
           <tbody>

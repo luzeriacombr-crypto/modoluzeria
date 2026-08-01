@@ -6,7 +6,7 @@ export function WorkloadBadge({ userId, compact }: { userId: string; compact?: b
   const { data } = useQuery(workloadQO(userId));
   if (!data) return null;
   const heavy = data.openCount > 8;
-  const color = heavy ? "#FF8C42" : data.openCount === 0 ? "rgba(255,255,255,0.4)" : "#C8D44E";
+  const color = heavy ? "#FF8C42" : data.openCount === 0 ? "rgba(255,255,255,0.4)" : "rgb(var(--lz-brand-rgb))";
   return (
     <div className="relative group inline-flex items-center gap-1 text-[10px] font-semibold tabular-nums"
       style={{ color }}>

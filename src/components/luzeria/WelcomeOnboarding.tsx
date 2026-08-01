@@ -42,10 +42,10 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10"
-      style={{ background: "radial-gradient(circle at top, rgba(200,212,78,0.07), transparent 60%), #0D0D0D" }}>
+      style={{ background: "radial-gradient(circle at top, rgba(var(--lz-brand-light-rgb),0.07), transparent 60%), #0D0D0D" }}>
       <div className="w-full max-w-md bg-[#1A1A1A] rounded-2xl p-7 md:p-9"
-        style={{ border: "1px solid rgba(200,212,78,0.18)" }}>
-        <div className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: "#C8D44E" }}>
+        style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.18)" }}>
+        <div className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
           Bem-vinda(o) à Luzeria
         </div>
         <h1 className="text-white text-[24px] font-bold leading-tight">
@@ -75,7 +75,7 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
           onClick={() => finish(true)}
           disabled={updateMyProfile.isPending || uploading}
           className="mt-8 w-full rounded-md py-3 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
         >
           {updateMyProfile.isPending ? "Salvando…" : "Salvar e entrar"}
         </button>

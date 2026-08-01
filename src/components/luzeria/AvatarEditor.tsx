@@ -7,7 +7,7 @@ import { ImageCropModal } from "./ImageCropModal";
 import type { Profile } from "@/lib/luzeria/types";
 
 export const AVATAR_PALETTE = [
-  "#C8D44E", "#FF6B6B", "#4A9EFF", "#FF8C42",
+  "rgb(var(--lz-brand-rgb))", "#FF6B6B", "#4A9EFF", "#FF8C42",
   "#A855F7", "#10B981", "#F59E0B", "#EC4899",
   "#FFFFFF", "#FF4444", "#00BCD4", "#E91E63",
 ];
@@ -81,7 +81,7 @@ export function AvatarEditor({
         style={{
           width: size, height: size,
           borderRadius: "50%",
-          border: dragging ? "2px dashed #C8D44E" : "2px solid transparent",
+          border: dragging ? "2px dashed rgb(var(--lz-brand-rgb))" : "2px solid transparent",
           transition: "border-color 200ms ease",
         }}
       >
@@ -118,7 +118,7 @@ export function AvatarEditor({
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
           className="text-xs font-semibold px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 transition-colors border"
-          style={{ borderColor: "rgba(200,212,78,0.4)", color: "#C8D44E", backgroundColor: "transparent" }}
+          style={{ borderColor: "rgba(var(--lz-brand-light-rgb),0.4)", color: "rgb(var(--lz-brand-rgb))", backgroundColor: "transparent" }}
         >
           <Upload size={12} /> {draftAvatarUrl ? "Trocar foto" : "Enviar foto"}
         </button>
@@ -157,7 +157,7 @@ export function ColorPicker({
             style={{
               backgroundColor: c,
               boxShadow: selected
-                ? "0 0 0 2px #0D0D0D, 0 0 0 4px #C8D44E"
+                ? "0 0 0 2px #0D0D0D, 0 0 0 4px rgb(var(--lz-brand-rgb))"
                 : "0 0 0 1px rgba(255,255,255,0.1)",
             }}
           />

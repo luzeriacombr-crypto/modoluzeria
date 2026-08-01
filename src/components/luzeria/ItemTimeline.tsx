@@ -6,7 +6,7 @@ import { ChevronDown, ChevronRight, History } from "lucide-react";
 
 const KIND_DOT: Record<string, string> = {
   created: "#7EB3FF",
-  status: "#C8D44E",
+  status: "rgb(var(--lz-brand-rgb))",
   due: "#FF8C42",
   rated: "#FFD66E",
   rework: "#FF4444",

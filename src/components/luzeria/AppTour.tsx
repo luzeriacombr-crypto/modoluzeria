@@ -174,6 +174,7 @@ export function AppTour() {
     position: "fixed",
     width: Math.min(CARD_W, vw - 24),
     zIndex: 1000,
+    borderColor: "rgba(var(--lz-brand-rgb), 0.4)",
   };
   if (rect) {
     const cardW = Math.min(CARD_W, vw - 24);
@@ -198,8 +199,8 @@ export function AppTour() {
         width: rect.width + 12,
         height: rect.height + 12,
         borderRadius: 12,
-        boxShadow: "0 0 0 4px rgba(200,212,78,0.45), 0 0 0 9999px rgba(0,0,0,0.65)",
-        border: "2px solid #C8D44E",
+        boxShadow: "0 0 0 4px rgba(var(--lz-brand-light-rgb),0.45), 0 0 0 9999px rgba(0,0,0,0.65)",
+        border: "2px solid rgb(var(--lz-brand-rgb))",
         pointerEvents: "none",
         zIndex: 999,
         transition: "top 200ms ease, left 200ms ease, width 200ms ease, height 200ms ease",
@@ -220,15 +221,15 @@ export function AppTour() {
       {highlight}
       <div
         style={cardStyle}
-        className="rounded-xl bg-[#1C1C1C] border border-[#C8D44E]/40 p-4 shadow-2xl text-white"
+        className="rounded-xl bg-[#1C1C1C] border p-4 shadow-2xl text-white"
       >
         <div className="flex items-start gap-2 mb-2">
           <div className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
-            style={{ backgroundColor: "rgba(200,212,78,0.18)", color: "#C8D44E" }}>
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
             <Sparkles size={14} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] uppercase tracking-wider font-bold text-[#C8D44E]">
+            <div className="text-[10px] uppercase tracking-wider font-bold text-[rgb(var(--lz-brand-rgb))]">
               Tour · {stepIdx + 1} de {visibleSteps.length}
             </div>
             <h3 className="text-white font-bold text-sm mt-0.5 leading-tight">{step.title}</h3>
@@ -243,7 +244,7 @@ export function AppTour() {
         <div className="h-1 w-full rounded-full bg-white/5 mb-3 overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
-            style={{ width: `${((stepIdx + 1) / visibleSteps.length) * 100}%`, backgroundColor: "#C8D44E" }}
+            style={{ width: `${((stepIdx + 1) / visibleSteps.length) * 100}%`, backgroundColor: "rgb(var(--lz-brand-rgb))" }}
           />
         </div>
 
@@ -265,7 +266,7 @@ export function AppTour() {
             <button
               onClick={next}
               className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md text-black"
-              style={{ backgroundColor: "#C8D44E" }}
+              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
             >
               {stepIdx >= visibleSteps.length - 1 ? (
                 <>Finalizar <Check size={12} /></>

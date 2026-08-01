@@ -95,7 +95,7 @@ export function DriveSettingsTab() {
           <div className="text-white/40 text-sm">Verificando…</div>
         ) : status?.connected ? (
           <div className="flex items-center justify-between">
-            <div className="text-sm text-[#C8D44E] font-medium">
+            <div className="text-sm text-[rgb(var(--lz-brand-rgb))] font-medium">
               ✓ Conectado{status.driveEmail ? ` — ${status.driveEmail}` : ""}
             </div>
             <button onClick={connectDrive} disabled={connecting}
@@ -128,7 +128,7 @@ export function DriveSettingsTab() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="ID ou link da pasta no Drive"
-            className="flex-1 bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#C8D44E]/60"
+            className="lz-input-dark flex-1 bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder:text-white/30"
           />
           <button
             onClick={save}
@@ -160,7 +160,7 @@ export function DriveSettingsTab() {
 
         {report && (
           <div className="mt-5 text-xs text-white/70 space-y-1">
-            <div>Movidos: <span className="text-[#C8D44E] font-semibold">{report.moved}</span></div>
+            <div>Movidos: <span className="text-[rgb(var(--lz-brand-rgb))] font-semibold">{report.moved}</span></div>
             <div>Ignorados: <span className="text-white/50">{report.skipped}</span></div>
             {report.errors.length > 0 && (
               <details className="mt-2">

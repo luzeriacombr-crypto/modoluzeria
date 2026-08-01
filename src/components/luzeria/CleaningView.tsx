@@ -121,8 +121,8 @@ export function CleaningView() {
                           onClick={(e) => isAdmin && setPicker({ rect: (e.currentTarget as HTMLElement).getBoundingClientRect(), taskIdx: ti, weekday: wi })}
                           className="w-full min-h-[42px] rounded-md px-2 py-1.5 flex items-center gap-1.5 transition-colors text-left"
                           style={{
-                            backgroundColor: isMine ? "rgba(200,212,78,0.1)" : i ? "rgba(255,255,255,0.03)" : "transparent",
-                            border: isMine ? "1px solid #C8D44E" : "1px solid rgba(255,255,255,0.05)",
+                            backgroundColor: isMine ? "rgba(var(--lz-brand-light-rgb),0.1)" : i ? "rgba(255,255,255,0.03)" : "transparent",
+                            border: isMine ? "1px solid rgb(var(--lz-brand-rgb))" : "1px solid rgba(255,255,255,0.05)",
                             cursor: isAdmin ? "pointer" : "default",
                           }}
                         >
@@ -156,7 +156,7 @@ export function CleaningView() {
                             className="absolute top-1 right-1 h-4 w-4 rounded-full flex items-center justify-center"
                             style={{
                               backgroundColor:
-                                status === "done" ? "#C8D44E"
+                                status === "done" ? "rgb(var(--lz-brand-rgb))"
                                 : status === "missed" ? "#FF4444"
                                 : "rgba(255,255,255,0.15)",
                               color: status === "missed" ? "#FFFFFF" : "#0D0D0D",
@@ -187,7 +187,7 @@ export function CleaningView() {
                 value={noteDraft}
                 onChange={(e) => { setNoteDraft(e.target.value); setNoteDirty(true); }}
                 rows={3}
-                className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-xs text-white/90 outline-none focus:border-[#C8D44E] resize-none"
+                className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-xs text-white/90 outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
               />
               {noteDirty && (
                 <button
@@ -196,7 +196,7 @@ export function CleaningView() {
                     { onSuccess: () => { setNoteDirty(false); toast.success("Nota salva"); } },
                   )}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md"
-                  style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+                  style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
                 >
                   <Save size={12} /> Salvar nota
                 </button>

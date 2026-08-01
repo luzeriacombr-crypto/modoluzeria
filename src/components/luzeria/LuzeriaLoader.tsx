@@ -21,8 +21,8 @@ export function LuzeriaLoader({ fullScreen = true }: { fullScreen?: boolean }) {
 
       <img src={luzeriaLogo} alt="Luzeria" className="lz-logo" style={{ height: 32, width: "auto", objectFit: "contain" }} />
 
-      <div style={{ width: 128, height: 2, borderRadius: 9999, overflow: "hidden", background: "rgba(200,212,78,0.15)" }}>
-        <div className="lz-bar" style={{ height: "100%", borderRadius: 9999, background: "#C8D44E" }} />
+      <div style={{ width: 128, height: 2, borderRadius: 9999, overflow: "hidden", background: "rgba(var(--lz-brand-light-rgb),0.15)" }}>
+        <div className="lz-bar" style={{ height: "100%", borderRadius: 9999, background: "rgb(var(--lz-brand-rgb))" }} />
       </div>
     </div>
   );

@@ -65,7 +65,7 @@ export function ClientFichaPanel() {
                 {client.icon ?? client.name[0]?.toUpperCase()}
               </div>
               <div className="min-w-0">
-                <div className="text-[10px] uppercase font-bold tracking-wider" style={{ color: "#C8D44E" }}>
+                <div className="text-[10px] uppercase font-bold tracking-wider" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
                   Ficha do cliente
                 </div>
                 <h2 className="text-[20px] font-bold text-white truncate">{client.name}</h2>
@@ -107,7 +107,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         <Section label="Métricas">
           <div className="grid grid-cols-2 gap-2">
             <MetricMini icon={<FileText size={13} />} label="Itens totais" value={metrics?.totalItems ?? 0} />
-            <MetricMini icon={<CheckCircle2 size={13} />} label="Prontos" value={metrics?.finalized ?? 0} color="#C8D44E" />
+            <MetricMini icon={<CheckCircle2 size={13} />} label="Prontos" value={metrics?.finalized ?? 0} color="rgb(var(--lz-brand-rgb))" />
             <MetricMini
               icon={<AlertOctagon size={13} />}
               label="Travados"
@@ -145,7 +145,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             disabled={!isAdmin}
             rows={4}
             placeholder={isAdmin ? "Tom de voz, nicho, observações, instruções do cliente…" : "Sem descrição."}
-            className="w-full bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none disabled:opacity-70"
+            className="w-full bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 resize-none disabled:opacity-70"
           />
         </Section>
 
@@ -169,12 +169,12 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
               const href = normUrl(l.url);
               return (
                 <div key={l.id} className="flex items-center gap-2 bg-[#1C1C1C] border border-white/[0.06] rounded-md px-3 py-2">
-                  <LinkIcon size={14} style={{ color: "#C8D44E" }} className="shrink-0" />
+                  <LinkIcon size={14} style={{ color: "rgb(var(--lz-brand-rgb))" }} className="shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-semibold text-white truncate">{l.label}</div>
                     {href ? (
                       <a href={href} target="_blank" rel="noopener noreferrer"
-                        className="text-[11px] text-white/50 hover:text-[#C8D44E] truncate inline-flex items-center gap-1">
+                        className="text-[11px] text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] truncate inline-flex items-center gap-1">
                         {l.url} <ExternalLink size={10} />
                       </a>
                     ) : (
@@ -206,7 +206,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             {(ficha?.contacts ?? []).map((c) => (
               <div key={c.id} className="bg-[#1C1C1C] border border-white/[0.06] rounded-md px-3 py-2.5">
                 <div className="flex items-center gap-2">
-                  <User size={14} style={{ color: "#C8D44E" }} />
+                  <User size={14} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-white truncate">{c.name}</div>
                     {c.role && <div className="text-[11px] text-white/50">{c.role}</div>}
@@ -224,12 +224,12 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
                 {(c.email || c.phone) && (
                   <div className="mt-1.5 flex flex-wrap gap-3 text-[11px] text-white/70">
                     {c.email && (
-                      <a href={`mailto:${c.email}`} className="inline-flex items-center gap-1 hover:text-[#C8D44E]">
+                      <a href={`mailto:${c.email}`} className="inline-flex items-center gap-1 hover:text-[rgb(var(--lz-brand-rgb))]">
                         <Mail size={11} /> {c.email}
                       </a>
                     )}
                     {c.phone && (
-                      <a href={`tel:${c.phone.replace(/\D/g, "")}`} className="inline-flex items-center gap-1 hover:text-[#C8D44E]">
+                      <a href={`tel:${c.phone.replace(/\D/g, "")}`} className="inline-flex items-center gap-1 hover:text-[rgb(var(--lz-brand-rgb))]">
                         <Phone size={11} /> {c.phone}
                       </a>
                     )}
@@ -340,7 +340,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     toast.success("Configuração salva");
   }
 
-  const inp = "w-full bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] transition-colors disabled:opacity-60";
+  const inp = "w-full bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] transition-colors disabled:opacity-60";
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -351,7 +351,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
             <div className="flex items-center gap-4 mt-1">
               <div className="relative shrink-0">
                 {photoPreview ? (
-                  <img src={photoPreview} alt="Foto" className="h-16 w-16 rounded-full object-cover" style={{ border: "2px solid rgba(200,212,78,0.4)" }} />
+                  <img src={photoPreview} alt="Foto" className="h-16 w-16 rounded-full object-cover" style={{ border: "2px solid rgba(var(--lz-brand-light-rgb),0.4)" }} />
                 ) : (
                   <div className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold"
                     style={{ backgroundColor: client.color + "33", color: client.color }}>
@@ -375,7 +375,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
                 <button
                   onClick={() => photoInputRef.current?.click()}
                   disabled={photoUploading}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-white/10 text-white/70 hover:text-white hover:border-[#C8D44E] transition disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-white/10 text-white/70 hover:text-white hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
                 >
                   <Camera size={13} /> {photoPreview ? "Alterar foto" : "Adicionar foto"}
                 </button>
@@ -418,7 +418,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       {canEdit && (
         <div className="sm:col-span-2">
           <button onClick={save} className="rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>Salvar configuração</button>
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>Salvar configuração</button>
         </div>
       )}
       {cropFile && (
@@ -440,7 +440,7 @@ function ConfigField({ label, children }: { label: string; children: React.React
 function Section({ label, children, last }: { label: string; children: React.ReactNode; last?: boolean }) {
   return (
     <div className={`px-6 py-5 ${last ? "" : "border-b border-white/[0.08]"}`}>
-      <div className="text-[10px] uppercase font-bold tracking-wider mb-3" style={{ color: "#C8D44E" }}>{label}</div>
+      <div className="text-[10px] uppercase font-bold tracking-wider mb-3" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{label}</div>
       {children}
     </div>
   );
@@ -499,7 +499,7 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
             disabled={!isAdmin || isLoading || busy}
             onChange={(e) => { setValue(e.target.value); setDirty(true); }}
             placeholder="https://drive.google.com/drive/folders/…"
-            className="w-full pl-8 pr-3 py-2 bg-[#1C1C1C] border border-white/[0.08] rounded-md text-xs text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 disabled:opacity-60"
+            className="w-full pl-8 pr-3 py-2 bg-[#1C1C1C] border border-white/[0.08] rounded-md text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 disabled:opacity-60"
           />
         </div>
         <div className="flex gap-2">
@@ -518,7 +518,7 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
               disabled={!dirty || !value.trim() || busy}
               onClick={save}
               className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-[11px] font-bold disabled:opacity-30 transition"
-              style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
             >
               {setClientDeliveriesFolder.isPending ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Salvar
             </button>
@@ -561,12 +561,12 @@ function AddLinkRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d: an
       <input
         value={label} onChange={(e) => setLabel(e.target.value)}
         placeholder="Rótulo (ex.: Drive principal)"
-        className="sm:w-40 bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-xs text-white outline-none focus:border-[#C8D44E] placeholder:text-white/30"
+        className="sm:w-40 bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
       />
       <input
         value={url} onChange={(e) => setUrl(e.target.value)}
         placeholder="https://…"
-        className="flex-1 bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-xs text-white outline-none focus:border-[#C8D44E] placeholder:text-white/30"
+        className="flex-1 bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
       />
       <button
         disabled={!label.trim() || !url.trim()}
@@ -575,7 +575,7 @@ function AddLinkRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d: an
           setLabel(""); setUrl("");
         }}
         className="px-3 rounded-md text-xs font-bold disabled:opacity-30 transition-opacity"
-        style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+        style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
       ><Plus size={13} /></button>
     </div>
   );
@@ -591,7 +591,7 @@ function AddContactRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d:
   if (!open) {
     return (
       <button onClick={() => setOpen(true)}
-        className="w-full mt-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 py-2 text-[11px] text-white/50 hover:text-[#C8D44E] hover:border-[#C8D44E]">
+        className="w-full mt-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 py-2 text-[11px] text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))]">
         <Plus size={12} /> Novo contato
       </button>
     );
@@ -599,13 +599,13 @@ function AddContactRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d:
   return (
     <div className="bg-[#1C1C1C] border border-white/[0.08] rounded-md p-3 space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]" />
-        <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Cargo" className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]" />
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]" />
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Telefone" className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+        <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Cargo" className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Telefone" className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
       </div>
       <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observações" rows={2}
-        className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E] resize-none" />
+        className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none" />
       <div className="flex items-center justify-end gap-2">
         <button onClick={() => setOpen(false)} className="text-[11px] text-white/50 hover:text-white px-2 py-1">Cancelar</button>
         <button
@@ -620,7 +620,7 @@ function AddContactRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d:
             setOpen(false);
           }}
           className="px-3 py-1.5 rounded-md text-[11px] font-bold disabled:opacity-30"
-          style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
         >Salvar</button>
       </div>
     </div>
@@ -649,7 +649,7 @@ function OnboardingBlock({ clientId }: { clientId: string }) {
         </span>
         {allDone && (
           <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1"
-            style={{ backgroundColor: "rgba(200,212,78,0.18)", color: "#C8D44E" }}>
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
             <CheckCircle2 size={11} /> Onboarding completo
           </span>
         )}
@@ -661,8 +661,8 @@ function OnboardingBlock({ clientId }: { clientId: string }) {
               onClick={() => save(list.map((x) => x.id === c.id ? { ...x, done: !x.done } : x))}
               className="h-4 w-4 rounded border flex items-center justify-center shrink-0"
               style={{
-                borderColor: c.done ? "#C8D44E" : "rgba(255,255,255,0.25)",
-                backgroundColor: c.done ? "#C8D44E" : "transparent",
+                borderColor: c.done ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.25)",
+                backgroundColor: c.done ? "rgb(var(--lz-brand-rgb))" : "transparent",
               }}
             >{c.done && <Check size={10} color="#0D0D0D" strokeWidth={3} />}</button>
             <input
@@ -690,7 +690,7 @@ function OnboardingBlock({ clientId }: { clientId: string }) {
               }
             }}
             placeholder="Ex.: Acesso ao Drive, briefing assinado, identidade visual…"
-            className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/30 border-b border-white/[0.06] focus:border-[#C8D44E] py-1"
+            className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/30 border-b border-white/[0.06] focus:border-[rgb(var(--lz-brand-rgb))] py-1"
           />
         </div>
       </div>
@@ -741,7 +741,7 @@ function RecurringBlock({ clientId }: { clientId: string }) {
       <div className="flex items-center gap-2 mt-3">
         {!adding && (
           <button onClick={() => setAdding(true)}
-            className="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 py-2 text-[11px] text-white/50 hover:text-[#C8D44E] hover:border-[#C8D44E]">
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 py-2 text-[11px] text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))]">
             <Plus size={12} /> Nova recorrência
           </button>
         )}
@@ -752,7 +752,7 @@ function RecurringBlock({ clientId }: { clientId: string }) {
             })}
             disabled={api.generateRecurring.isPending}
             className="px-3 py-2 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 disabled:opacity-40"
-            style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
           ><Zap size={12} /> {api.generateRecurring.isPending ? "Gerando…" : "Gerar agora"}</button>
         )}
       </div>
@@ -771,14 +771,14 @@ function RecurringRow({ tpl, profiles, onUpdate, onDelete }: {
   return (
     <div className="bg-[#1C1C1C] border border-white/[0.06] rounded-md px-3 py-2.5">
       <div className="flex items-center gap-2">
-        <Repeat size={13} style={{ color: tpl.active ? "#C8D44E" : "rgba(255,255,255,0.3)" }} />
+        <Repeat size={13} style={{ color: tpl.active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.3)" }} />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-white truncate">{tpl.title}</div>
           <div className="text-[10px] text-white/40">{typeLabel} · {when}</div>
         </div>
         <button
           onClick={() => onUpdate({ active: !tpl.active })}
-          className="p-1 rounded text-white/40 hover:text-[#C8D44E] hover:bg-white/5"
+          className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5"
           title={tpl.active ? "Desativar" : "Ativar"}
         ><Power size={12} /></button>
         <button onClick={onDelete} className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5">
@@ -815,10 +815,10 @@ function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
   return (
     <div className="bg-[#1C1C1C] border border-white/[0.08] rounded-md p-3 space-y-2">
       <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título da tarefa recorrente"
-        className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]" />
+        className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
       <div className="grid grid-cols-3 gap-2">
         <select value={type} onChange={(e) => setType(e.target.value as any)}
-          className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]">
+          className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
           <option value="post">Post</option>
           <option value="reel">Reel</option>
           <option value="outros">Outro</option>
@@ -827,20 +827,20 @@ function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
           <option value="sistema">Sistema</option>
         </select>
         <select value={cadence} onChange={(e) => setCadence(e.target.value as any)}
-          className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]">
+          className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
           <option value="weekly">Semanal</option>
           <option value="monthly">Mensal</option>
         </select>
         {cadence === "weekly" ? (
           <select value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))}
-            className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]">
+            className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
             {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d, i) => (
               <option key={i} value={i}>{d}</option>
             ))}
           </select>
         ) : (
           <input type="number" min={1} max={31} value={dayOfMonth} onChange={(e) => setDayOfMonth(Number(e.target.value))}
-            className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]" />
+            className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
         )}
       </div>
       <div>
@@ -852,7 +852,7 @@ function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
               <button key={p.id}
                 onClick={() => setAssignees((a) => sel ? a.filter((x) => x !== p.id) : [...a, p.id])}
                 className="px-2 py-1 rounded text-[10px] font-semibold transition-colors"
-                style={{ backgroundColor: sel ? "#C8D44E" : "rgba(255,255,255,0.06)", color: sel ? "#0D0D0D" : "#FFFFFF" }}
+                style={{ backgroundColor: sel ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)", color: sel ? "#0D0D0D" : "#FFFFFF" }}
               >{p.name}</button>
             );
           })}
@@ -868,7 +868,7 @@ function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
             defaultAssignees: assignees, active: true,
           })}
           className="px-3 py-1.5 rounded-md text-[11px] font-bold disabled:opacity-30"
-          style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>Salvar</button>
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>Salvar</button>
       </div>
     </div>
   );
@@ -880,7 +880,7 @@ function SecretRow({ secret, onDelete }: { secret: any; onDelete: () => void }) 
   return (
     <div className="bg-[#1C1C1C] border border-white/[0.06] rounded-md px-3 py-2.5">
       <div className="flex items-center gap-2">
-        <KeyRound size={14} style={{ color: "#C8D44E" }} />
+        <KeyRound size={14} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
         <div className="text-sm font-semibold text-white flex-1 truncate">{secret.label}</div>
         <button onClick={() => setShow((s) => !s)} className="p-1 rounded text-white/40 hover:text-white hover:bg-white/5" title={show ? "Ocultar" : "Revelar"}>
           {show ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -894,7 +894,7 @@ function SecretRow({ secret, onDelete }: { secret: any; onDelete: () => void }) 
               window.setTimeout(() => setCopied(false), 1500);
             } catch { toast.error("Não foi possível copiar"); }
           }}
-          className="p-1 rounded text-white/40 hover:text-[#C8D44E] hover:bg-white/5"
+          className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5"
           title="Copiar valor"
         >{copied ? <Check size={13} /> : <Copy size={13} />}</button>
         <button onClick={() => { if (confirm(`Excluir "${secret.label}"?`)) onDelete(); }} className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5">
@@ -917,16 +917,16 @@ function AddSecretRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d: 
   if (!open) {
     return (
       <button onClick={() => setOpen(true)}
-        className="w-full mt-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 py-2 text-[11px] text-white/50 hover:text-[#C8D44E] hover:border-[#C8D44E]">
+        className="w-full mt-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 py-2 text-[11px] text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))]">
         <Plus size={12} /> Novo acesso
       </button>
     );
   }
   return (
     <div className="bg-[#1C1C1C] border border-white/[0.08] rounded-md p-3 space-y-2">
-      <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Rótulo (ex.: Instagram)" className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]" />
-      <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Senha / token / login" className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white font-mono outline-none focus:border-[#C8D44E]" />
-      <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observações (opcional)" className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]" />
+      <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Rótulo (ex.: Instagram)" className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+      <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Senha / token / login" className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white font-mono outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+      <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observações (opcional)" className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
       <div className="flex items-center justify-end gap-2">
         <button onClick={() => setOpen(false)} className="text-[11px] text-white/50 hover:text-white px-2 py-1">Cancelar</button>
         <button
@@ -936,7 +936,7 @@ function AddSecretRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d: 
             setLabel(""); setValue(""); setNotes(""); setOpen(false);
           }}
           className="px-3 py-1.5 rounded-md text-[11px] font-bold disabled:opacity-30"
-          style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
         >Salvar</button>
       </div>
     </div>

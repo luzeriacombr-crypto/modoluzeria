@@ -32,7 +32,7 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
       <label className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">Nome</label>
       <input value={name} onChange={(e) => setName(e.target.value)} autoFocus
         placeholder={isAvulso ? "Ex: João Silva, Empresa XYZ" : ""}
-        className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]" />
+        className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]" />
 
       <div className="mt-4">
         <div className="text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">Cor</div>
@@ -40,7 +40,7 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
           {PRESET_COLORS.map((c) => (
             <button key={c} type="button" onClick={() => setColor(c)}
               className="h-6 w-6 rounded-full border-2 transition-transform hover:scale-110"
-              style={{ backgroundColor: c, borderColor: color === c ? "#C8D44E" : "transparent" }} />
+              style={{ backgroundColor: c, borderColor: color === c ? "rgb(var(--lz-brand-rgb))" : "transparent" }} />
           ))}
         </div>
       </div>
@@ -49,7 +49,7 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
         <div className="text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">Inicial / Emoji (opcional)</div>
         <input value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={2}
           placeholder="(automático)"
-          className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E]" />
+          className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
       </div>
 
       <div className="flex items-center justify-end gap-2 mt-5">
@@ -59,7 +59,7 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
             data: { name: name.trim(), category, color, icon: icon.trim() || null },
           }).then(onClose)}
           className="px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50 transition-opacity hover:opacity-90"
-          style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
           Criar
         </button>
       </div>
@@ -124,13 +124,13 @@ export function CustomFieldsModal({ client, onClose }: { client: Client | null; 
       <div className="flex items-center justify-end gap-2 mt-5">
         <button onClick={onClose} className="px-3 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
         <button onClick={save} className="px-4 py-2 rounded-md text-sm font-bold transition-opacity hover:opacity-90"
-          style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>Salvar</button>
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>Salvar</button>
       </div>
     </Modal>
   );
 }
 
-const inp = "w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]";
+const inp = "w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]";
 function F({ label, children }: { label: string; children: React.ReactNode }) {
   return (<label className="block"><span className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">{label}</span>{children}</label>);
 }

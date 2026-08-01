@@ -91,8 +91,8 @@ export function SettingsPage() {
             <button key={t.id} onClick={() => setTab(t.id as any)}
               className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
               style={{
-                color: active ? "#C8D44E" : "rgba(255,255,255,0.5)",
-                borderColor: active ? "#C8D44E" : "transparent",
+                color: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.5)",
+                borderColor: active ? "rgb(var(--lz-brand-rgb))" : "transparent",
               }}>
               {t.label}
             </button>
@@ -109,7 +109,7 @@ export function SettingsPage() {
       {pending.length > 0 && (
         <>
           <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3">
-            Aguardando aprovação <span className="text-[#C8D44E]">({pending.length})</span>
+            Aguardando aprovação <span className="text-[rgb(var(--lz-brand-rgb))]">({pending.length})</span>
           </h2>
           <div className="bg-[#1C1C1C] rounded-lg overflow-hidden mb-8">
             {pending.map((p) => (
@@ -149,12 +149,12 @@ export function SettingsPage() {
               <div className="text-[11px] text-white/40 truncate">{p.email}</div>
             </div>
             <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded"
-              style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
               {roleLabel(p.role)}
             </span>
             <select value={p.role} disabled={p.id === me.id}
               onChange={(e) => setUserRole.mutate({ data: { userId: p.id, role: e.target.value as Role } })}
-              className="bg-[#0D0D0D] border border-white/10 text-xs text-white rounded-md px-2 py-1 outline-none focus:border-[#C8D44E] disabled:opacity-40">
+              className="bg-[#0D0D0D] border border-white/10 text-xs text-white rounded-md px-2 py-1 outline-none focus:border-[rgb(var(--lz-brand-rgb))] disabled:opacity-40">
               <option value="member">Membro</option>
               <option value="setor">Adm Setor</option>
               <option value="master">Adm Master</option>
@@ -165,11 +165,11 @@ export function SettingsPage() {
               Ativo
             </label>
             <button onClick={() => { setViewAs(p.id); navigate({ to: "/minhas-tarefas" }); }}
-              className="text-[11px] text-white/60 hover:text-[#C8D44E] transition">Ver demandas</button>
+              className="text-[11px] text-white/60 hover:text-[rgb(var(--lz-brand-rgb))] transition">Ver demandas</button>
             <button onClick={() => handleResetPassword(p.id, p.name, p.email)}
               disabled={adminSendPasswordReset.isPending}
               title="Enviar link de redefinição de senha por email"
-              className="text-[11px] text-white/60 hover:text-[#C8D44E] transition inline-flex items-center gap-1 disabled:opacity-40">
+              className="text-[11px] text-white/60 hover:text-[rgb(var(--lz-brand-rgb))] transition inline-flex items-center gap-1 disabled:opacity-40">
               <KeyRound size={12} /> Resetar senha
             </button>
             <button onClick={() => handleRemove(p.id, p.name)} disabled={p.id === me.id}
@@ -185,7 +185,7 @@ export function SettingsPage() {
       </p>
 
       <div className="mt-8 pt-6 border-t border-white/[0.06]">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-[#C8D44E] mb-4">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--lz-brand-rgb))] mb-4">
           Diferença entre funções
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -258,7 +258,7 @@ function AddMemberModal({ onClose, onSubmit, loading }: {
       onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()}
         className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-7"
-        style={{ border: "1px solid rgba(200,212,78,0.2)" }}>
+        style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.2)" }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-white font-semibold">Adicionar membro</h2>
           <button onClick={onClose} className="text-white/40 hover:text-white transition"><X size={18} /></button>
@@ -310,7 +310,7 @@ function CreateAgencyModal({ onClose, onSubmit, loading }: {
       onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()}
         className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-7"
-        style={{ border: "1px solid rgba(200,212,78,0.2)" }}>
+        style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.2)" }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-white font-semibold">Criar nova agência</h2>
           <button onClick={onClose} className="text-white/40 hover:text-white transition"><X size={18} /></button>
@@ -374,6 +374,8 @@ function GeneralSettings() {
           orgName={me.orgName ?? ""}
           orgTagline={me.orgTagline ?? ""}
           orgLogoUrl={me.orgLogoUrl ?? null}
+          orgColorPrimary={me.orgColorPrimary ?? "#C8D44E"}
+          orgColorPrimaryLight={me.orgColorPrimaryLight ?? "#C8D44E"}
         />
       )}
 
@@ -382,19 +384,19 @@ function GeneralSettings() {
       </h2>
       <div className="bg-[#1C1C1C] rounded-lg p-5 flex items-start gap-4">
         <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
-          style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
           <Star size={16} />
         </div>
         <div className="flex-1">
           <div className="text-sm font-semibold text-white">Exigir avaliação ao finalizar</div>
           <div className="text-[11px] text-white/50 mt-1">
-            Ao mudar status de uma tarefa para <span className="text-[#C8D44E] font-semibold">Pronto para publicar</span>,
+            Ao mudar status de uma tarefa para <span className="text-[rgb(var(--lz-brand-rgb))] font-semibold">Pronto para publicar</span>,
             o responsável é obrigado a dar uma nota de qualidade (1–5 estrelas).
           </div>
         </div>
         <button onClick={() => toggle(!settings.requireRatingOnFinalize)}
           className={`relative h-6 w-11 rounded-full transition-colors ${
-            settings.requireRatingOnFinalize ? "bg-[#C8D44E]" : "bg-white/15"}`}>
+            settings.requireRatingOnFinalize ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`}>
           <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
             settings.requireRatingOnFinalize ? "translate-x-[22px]" : "translate-x-0.5"}`} />
         </button>
@@ -413,7 +415,7 @@ function GeneralSettings() {
         <button
           onClick={() => window.dispatchEvent(new Event("lz:start-tour"))}
           className="text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-black"
-          style={{ backgroundColor: "#C8D44E" }}
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
         >
           Refazer tour
         </button>
@@ -424,19 +426,68 @@ function GeneralSettings() {
 
 const MAX_LOGO_BYTES = 3 * 1024 * 1024;
 
-function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl }: {
+const BRAND_PRESETS = [
+  "#C8D44E", "#4A9EFF", "#FF8C42", "#FF6B6B", "#A855F7", "#10B981", "#EC4899", "#F5A623",
+];
+const BRAND_LIGHT_PRESETS = [
+  "#C8D44E", "#8FD1FF", "#FFC08A", "#FFAFAF", "#D4AFFF", "#7EEAC4", "#FFAFDA", "#FFD98A",
+];
+
+function isValidHex(v: string): boolean {
+  return /^#[0-9A-Fa-f]{6}$/.test(v.trim());
+}
+
+function ColorPickerField({ label, value, onChange, presets }: {
+  label: string; value: string; onChange: (hex: string) => void; presets: string[];
+}) {
+  const [hexInput, setHexInput] = useState(value);
+  useEffect(() => { setHexInput(value); }, [value]);
+
+  return (
+    <Field label={label}>
+      <div className="flex items-center gap-2 mb-2">
+        {presets.map((p) => (
+          <button key={p} type="button" onClick={() => onChange(p)}
+            className="h-6 w-6 rounded-full border-2 transition-transform hover:scale-110"
+            style={{ backgroundColor: p, borderColor: value.toLowerCase() === p.toLowerCase() ? "#ffffff" : "transparent" }}
+            title={p} />
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="h-8 w-8 rounded-md border border-white/10 shrink-0" style={{ backgroundColor: isValidHex(hexInput) ? hexInput : "transparent" }} />
+        <input value={hexInput} onChange={(e) => setHexInput(e.target.value)}
+          onBlur={() => { if (isValidHex(hexInput)) onChange(hexInput.trim()); else setHexInput(value); }}
+          maxLength={7} className="lz-input font-mono" placeholder="#C8D44E" />
+      </div>
+    </Field>
+  );
+}
+
+function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl, orgColorPrimary, orgColorPrimaryLight }: {
   orgId: string; orgName: string; orgTagline: string; orgLogoUrl: string | null;
+  orgColorPrimary: string; orgColorPrimaryLight: string;
 }) {
   const { updateMyOrg } = useApi();
   const [name, setName] = useState(orgName);
   const [tagline, setTagline] = useState(orgTagline);
+  const [colorPrimary, setColorPrimary] = useState(orgColorPrimary);
+  const [colorPrimaryLight, setColorPrimaryLight] = useState(orgColorPrimaryLight);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => { setName(orgName); }, [orgName]);
   useEffect(() => { setTagline(orgTagline); }, [orgTagline]);
+  useEffect(() => { setColorPrimary(orgColorPrimary); }, [orgColorPrimary]);
+  useEffect(() => { setColorPrimaryLight(orgColorPrimaryLight); }, [orgColorPrimaryLight]);
 
   function save() {
-    updateMyOrg.mutate({ data: { name: name.trim(), tagline: tagline.trim() || null } }, {
+    updateMyOrg.mutate({
+      data: {
+        name: name.trim(),
+        tagline: tagline.trim() || null,
+        colorPrimary: colorPrimary || null,
+        colorPrimaryLight: colorPrimaryLight || null,
+      },
+    }, {
       onSuccess: () => toast.success("Marca da agência atualizada."),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
     });
@@ -512,6 +563,12 @@ function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl }: {
           <input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={120} className="lz-input"
             placeholder="Ex: Conteúdo que conecta" />
         </Field>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/[0.06]">
+          <ColorPickerField label="Cor principal" value={colorPrimary} onChange={setColorPrimary} presets={BRAND_PRESETS} />
+          <ColorPickerField label="Cor clara (fundos suaves)" value={colorPrimaryLight} onChange={setColorPrimaryLight} presets={BRAND_LIGHT_PRESETS} />
+        </div>
+
         <button onClick={save} disabled={updateMyOrg.isPending || !name.trim()}
           className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50">
           {updateMyOrg.isPending ? "Salvando…" : "Salvar"}

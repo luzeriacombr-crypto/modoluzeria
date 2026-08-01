@@ -40,7 +40,7 @@ export function MemberReportPanel({
           <div className="flex-1 min-w-0">
             <div className="text-[18px] font-bold text-white truncate">{member.name}</div>
             <div className="text-[11px] uppercase font-bold tracking-wider text-white/50">
-              {roleLabel(member.role as any)} · <span className="text-[#C8D44E]">{member.total} entregas</span>
+              {roleLabel(member.role as any)} · <span className="text-[rgb(var(--lz-brand-rgb))]">{member.total} entregas</span>
             </div>
           </div>
           <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5"><X size={16} /></button>
@@ -48,7 +48,7 @@ export function MemberReportPanel({
 
         {/* Bar chart */}
         <div className="px-6 py-5 border-b border-white/[0.08]">
-          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[#C8D44E]">Últimos 6 meses</div>
+          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[rgb(var(--lz-brand-rgb))]">Últimos 6 meses</div>
           <div className="flex items-end gap-2 h-32">
             {(data?.monthly ?? []).map((m) => {
               const top = Math.max(...(data?.monthly ?? []).map((x) => x.count));
@@ -58,7 +58,7 @@ export function MemberReportPanel({
                 <div key={m.key} className="flex-1 flex flex-col items-center gap-1">
                   <div className="flex-1 w-full flex items-end">
                     <div className="w-full rounded-t-sm transition-all"
-                      style={{ height: `${h}%`, backgroundColor: isMax ? "#C8D44E" : "rgba(200,212,78,0.25)" }} />
+                      style={{ height: `${h}%`, backgroundColor: isMax ? "rgb(var(--lz-brand-rgb))" : "rgba(var(--lz-brand-light-rgb),0.25)" }} />
                   </div>
                   <div className="text-[9px] text-white/50">{m.key.slice(5)}/{m.key.slice(2, 4)}</div>
                   <div className="text-[10px] font-bold text-white">{m.count}</div>
@@ -78,7 +78,7 @@ export function MemberReportPanel({
         <ListBlock title="Outros" items={data?.outros ?? []} renderRight={() => null} />
 
         <div className="px-6 py-5 border-b border-white/[0.08]">
-          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[#C8D44E]">Stories</div>
+          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[rgb(var(--lz-brand-rgb))]">Stories</div>
           {(data?.stories ?? []).length === 0 ? (
             <p className="text-xs text-white/40">Nenhum.</p>
           ) : (data?.stories ?? []).map((s) => (
@@ -90,7 +90,7 @@ export function MemberReportPanel({
         </div>
 
         <div className="px-6 py-5">
-          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[#C8D44E]">Limpeza</div>
+          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[rgb(var(--lz-brand-rgb))]">Limpeza</div>
           {(data?.cleaning ?? []).length === 0 ? (
             <p className="text-xs text-white/40">Nenhuma.</p>
           ) : (data?.cleaning ?? []).map((c, i) => (
@@ -113,7 +113,7 @@ function ListBlock({ title, items, renderRight }: {
   return (
     <div className="px-6 py-5 border-b border-white/[0.08]">
       <div className="text-[10px] uppercase font-bold tracking-wider mb-3 flex items-center justify-between">
-        <span className="text-[#C8D44E]">{title}</span>
+        <span className="text-[rgb(var(--lz-brand-rgb))]">{title}</span>
         <span className="text-white/40">{items.length}</span>
       </div>
       {items.length === 0 ? (

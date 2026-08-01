@@ -106,7 +106,7 @@ export function ImageCropModal({
           <input
             type="range" min={1} max={3} step={0.01} value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
-            className="flex-1 accent-[#C8D44E]"
+            className="flex-1 accent-[rgb(var(--lz-brand-rgb))]"
           />
         </div>
         <p className="text-[10px] text-white/40 mt-2">
@@ -124,7 +124,7 @@ export function ImageCropModal({
           <button
             onClick={handleConfirm}
             disabled={processing || !area}
-            className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold bg-[#C8D44E] text-black disabled:opacity-40 inline-flex items-center justify-center gap-1.5"
+            className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold bg-[rgb(var(--lz-brand-rgb))] text-black disabled:opacity-40 inline-flex items-center justify-center gap-1.5"
           >
             {processing ? <Loader2 size={14} className="animate-spin" /> : null}
             Confirmar

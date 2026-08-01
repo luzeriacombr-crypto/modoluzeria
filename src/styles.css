@@ -21,7 +21,7 @@
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background-color: #C8D44E;
+  background-color: rgb(var(--lz-brand-rgb));
 }
 *::-webkit-scrollbar-corner {
   background: transparent;
@@ -92,6 +92,14 @@
    * deceleration instead of linear-ish `ease`. Already used by the slide-in
    * panels/modals; applied here to buttons, rows and cards too. */
   --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Per-org brand color (RGB channels, no "rgb()" wrapper, so both
+   * rgb(var(--lz-brand-rgb)) and rgba(var(--lz-brand-rgb), alpha) work).
+   * Defaults to Luzeria's lime green; App.tsx overrides these on
+   * document.documentElement for orgs that picked their own colors. The
+   * pre-login screen (auth.tsx) never overrides these — org is unknown
+   * there — so it always renders with the default Luzeria green. */
+  --lz-brand-rgb: 200, 212, 78;
+  --lz-brand-light-rgb: 200, 212, 78;
   /* Luzeria palette */
   --background: #0D0D0D;
   --foreground: #FFFFFF;
@@ -99,20 +107,20 @@
   --card-foreground: #FFFFFF;
   --popover: #1C1C1C;
   --popover-foreground: #FFFFFF;
-  --primary: #C8D44E;
+  --primary: rgb(var(--lz-brand-rgb));
   --primary-foreground: #0D0D0D;
   --secondary: #1C1C1C;
   --secondary-foreground: #FFFFFF;
   --muted: #1C1C1C;
   --muted-foreground: rgba(255, 255, 255, 0.5);
-  --accent: #C8D44E;
+  --accent: rgb(var(--lz-brand-rgb));
   --accent-foreground: #0D0D0D;
   --destructive: #E5484D;
   --destructive-foreground: #FFFFFF;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.1);
-  --ring: #C8D44E;
-  --chart-1: #C8D44E;
+  --ring: rgb(var(--lz-brand-rgb));
+  --chart-1: rgb(var(--lz-brand-rgb));
   --chart-2: #4A9EFF;
   --chart-3: #FF8C42;
   --chart-4: #B794F4;
@@ -121,12 +129,12 @@
   --sidebar-to: #1A3A2E;
   --sidebar: #1A3A2E;
   --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #C8D44E;
+  --sidebar-primary: rgb(var(--lz-brand-rgb));
   --sidebar-primary-foreground: #0D0D0D;
   --sidebar-accent: rgba(255, 255, 255, 0.08);
   --sidebar-accent-foreground: #FFFFFF;
   --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-ring: #C8D44E;
+  --sidebar-ring: rgb(var(--lz-brand-rgb));
 }
 
 .dark {
@@ -196,7 +204,7 @@
   /* Focus ring for keyboard navigation */
   button:focus-visible, [role="button"]:focus-visible, a:focus-visible,
   input:focus-visible, textarea:focus-visible, select:focus-visible {
-    outline: 2px solid #C8D44E;
+    outline: 2px solid rgb(var(--lz-brand-rgb));
     outline-offset: 2px;
   }
 }
@@ -207,11 +215,11 @@
   100% { transform: scale(1); }
 }
 @keyframes lz-highlight {
-  0% { background-color: rgba(200, 212, 78, 0.15); }
+  0% { background-color: rgba(var(--lz-brand-light-rgb), 0.15); }
   100% { background-color: transparent; }
 }
 @keyframes lz-flash {
-  0%, 30% { background-color: rgba(200, 212, 78, 0.15); }
+  0%, 30% { background-color: rgba(var(--lz-brand-light-rgb), 0.15); }
   100% { background-color: transparent; }
 }
 @keyframes lz-slide-in {
@@ -262,13 +270,13 @@
   background-image: linear-gradient(180deg, var(--sidebar-from), var(--sidebar-to));
 }
 @utility lz-btn-primary {
-  background-image: linear-gradient(135deg, #C8D44E, #A8B83E);
+  background-image: linear-gradient(135deg, rgb(var(--lz-brand-rgb)), color-mix(in srgb, rgb(var(--lz-brand-rgb)) 78%, black));
   color: #0D0D0D;
   font-weight: 700;
-  box-shadow: 0 4px 16px rgba(200, 212, 78, 0.3);
+  box-shadow: 0 4px 16px rgba(var(--lz-brand-rgb), 0.3);
   transition: box-shadow 200ms var(--ease-premium), transform 200ms var(--ease-premium), opacity 150ms var(--ease-premium);
   &:hover {
-    box-shadow: 0 6px 24px rgba(200, 212, 78, 0.45);
+    box-shadow: 0 6px 24px rgba(var(--lz-brand-rgb), 0.45);
   }
   &:disabled {
     opacity: 0.5;
@@ -304,24 +312,32 @@
   outline: none;
   transition: border-color 150ms var(--ease-premium);
   &:focus {
-    border-color: #C8D44E;
-    box-shadow: 0 0 0 1px #C8D44E;
+    border-color: rgb(var(--lz-brand-rgb));
+    box-shadow: 0 0 0 1px rgb(var(--lz-brand-rgb));
   }
   &::placeholder {
     color: rgba(255, 255, 255, 0.4);
   }
 }
+/* Same idea as lz-input but for the darker (#0D0D0D) inputs used in a few
+ * panels — kept separate since the base background differs. */
+@utility lz-input-dark {
+  &:focus {
+    outline: none;
+    border-color: rgba(var(--lz-brand-rgb), 0.6);
+  }
+}
 
 /* ====== Hover utilities (global feedback layer) ====== */
 @utility lz-btn-accent {
-  background-image: linear-gradient(135deg, #C8D44E, #A8B83E);
+  background-image: linear-gradient(135deg, rgb(var(--lz-brand-rgb)), color-mix(in srgb, rgb(var(--lz-brand-rgb)) 78%, black));
   color: #0D0D0D;
   font-weight: 700;
-  box-shadow: 0 4px 16px rgba(200, 212, 78, 0.25);
+  box-shadow: 0 4px 16px rgba(var(--lz-brand-rgb), 0.25);
   transition: transform 180ms var(--ease-premium), box-shadow 180ms var(--ease-premium), filter 180ms var(--ease-premium), opacity 150ms var(--ease-premium);
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 8px 24px rgba(200, 212, 78, 0.5);
+    box-shadow: 0 8px 24px rgba(var(--lz-brand-rgb), 0.5);
     filter: brightness(1.06);
   }
   &:active:not(:disabled) {
@@ -384,8 +400,8 @@
   transition: transform 200ms var(--ease-premium), border-color 200ms var(--ease-premium), box-shadow 200ms var(--ease-premium), background-color 200ms var(--ease-premium);
   &:hover {
     transform: translateY(-2px);
-    border-color: rgba(200, 212, 78, 0.35);
-    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(200, 212, 78, 0.12);
+    border-color: rgba(var(--lz-brand-light-rgb), 0.35);
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(var(--lz-brand-light-rgb), 0.12);
   }
 }
 @utility lz-sidebar-item {
@@ -405,7 +421,7 @@
     position: absolute;
     left: 0; right: 0; bottom: -2px;
     height: 2px;
-    background: #C8D44E;
+    background: rgb(var(--lz-brand-rgb));
     transform: scaleX(0);
     transform-origin: center;
     transition: transform 200ms var(--ease-premium);

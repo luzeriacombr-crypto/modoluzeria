@@ -108,13 +108,13 @@ export function StoriesView() {
               className="aspect-square rounded-md p-2 flex flex-col justify-between text-left transition-all relative"
               style={{
                 backgroundColor: info ? bg : "rgba(28,28,28,0.6)",
-                border: isMine ? "2px solid #C8D44E" : isToday ? "1px solid rgba(200,212,78,0.4)" : "1px solid transparent",
+                border: isMine ? "2px solid rgb(var(--lz-brand-rgb))" : isToday ? "1px solid rgba(var(--lz-brand-light-rgb),0.4)" : "1px solid transparent",
                 cursor: isAdmin ? "pointer" : "default",
                 opacity: isAdmin ? 1 : 0.95,
               }}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold" style={{ color: isToday ? "#C8D44E" : "rgba(255,255,255,0.6)" }}>
+                <span className="text-xs font-bold" style={{ color: isToday ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.6)" }}>
                   {String(c.day).padStart(2, "0")}
                 </span>
                 {info?.profile && <Avatar profile={info.profile} size={18} />}
@@ -137,7 +137,7 @@ export function StoriesView() {
                       className="h-4 w-4 rounded-full flex items-center justify-center shrink-0"
                       style={{
                         backgroundColor:
-                          status === "done" ? "#C8D44E"
+                          status === "done" ? "rgb(var(--lz-brand-rgb))"
                           : status === "missed" ? "#FF4444"
                           : "rgba(255,255,255,0.15)",
                         color: status === "missed" ? "#FFFFFF" : "#0D0D0D",

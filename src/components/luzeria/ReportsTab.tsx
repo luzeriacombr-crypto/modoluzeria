@@ -22,7 +22,7 @@ const PRESET_LABEL: Record<Preset, string> = {
 };
 
 const ACTIVITY_KIND_META: Record<string, { label: string; bg: string; color: string }> = {
-  finalized: { label: "FINALIZOU", bg: "rgba(200,212,78,0.15)", color: "#C8D44E" },
+  finalized: { label: "FINALIZOU", bg: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" },
   status: { label: "STATUS", bg: "rgba(74,158,255,0.15)", color: "#4A9EFF" },
   comment: { label: "COMENTÁRIO", bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" },
   file: { label: "ARQUIVO", bg: "rgba(255,140,66,0.15)", color: "#FF8C42" },
@@ -106,7 +106,7 @@ export function ReportsTab() {
       {/* Filtros */}
       <div className="bg-[#1C1C1C] rounded-lg p-5 mb-6">
         <div className="flex items-center gap-2 mb-4">
-          <Filter size={14} className="text-[#C8D44E]" />
+          <Filter size={14} className="text-[rgb(var(--lz-brand-rgb))]" />
           <span className="text-xs uppercase font-bold tracking-wider text-white/70">Filtros</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -134,27 +134,27 @@ export function ReportsTab() {
             <label className="text-[10px] uppercase font-bold tracking-wider text-white/50">
               De
               <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
-                className="mt-1 w-full bg-[#0D0D0D] border border-white/10 rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]" />
+                className="mt-1 w-full bg-[#0D0D0D] border border-white/10 rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
             </label>
             <label className="text-[10px] uppercase font-bold tracking-wider text-white/50">
               Até
               <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
-                className="mt-1 w-full bg-[#0D0D0D] border border-white/10 rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[#C8D44E]" />
+                className="mt-1 w-full bg-[#0D0D0D] border border-white/10 rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
             </label>
           </div>
         )}
         <div className="flex items-center justify-between mt-4">
           <button onClick={apply}
             className="text-xs font-bold px-4 py-2 rounded-md transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
             Aplicar filtros
           </button>
           <button
             disabled={!report}
             onClick={() => report && exportReportXlsx(report, { from: filters.from, to: filters.to, label: presetLabel })}
             className="text-xs font-semibold px-4 py-2 rounded-md border inline-flex items-center gap-2 transition-colors disabled:opacity-30"
-            style={{ borderColor: "#C8D44E", color: "#C8D44E", backgroundColor: "transparent" }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200,212,78,0.1)")}
+            style={{ borderColor: "rgb(var(--lz-brand-rgb))", color: "rgb(var(--lz-brand-rgb))", backgroundColor: "transparent" }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(var(--lz-brand-light-rgb),0.1)")}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}>
             <Download size={13} /> Exportar .xlsx
           </button>
@@ -169,7 +169,7 @@ export function ReportsTab() {
           <button key={t.id} onClick={() => setTab(t.id)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-colors"
             style={{
-              backgroundColor: tab === t.id ? "#C8D44E" : "rgba(255,255,255,0.04)",
+              backgroundColor: tab === t.id ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.04)",
               color: tab === t.id ? "#0D0D0D" : "rgba(255,255,255,0.7)",
             }}>
             {t.icon} {t.label}
@@ -213,14 +213,14 @@ export function ReportsTab() {
                     className="border-t border-white/[0.05] hover:bg-white/[0.03] cursor-pointer transition-colors">
                     <td className="px-3 py-2.5 flex items-center gap-2">
                       <Avatar profile={{ id: m.userId, name: m.name, color: m.color, icon: m.icon } as any} size={26} />
-                      <span className="font-semibold" style={{ color: i === 0 ? "#C8D44E" : "#FFF" }}>{m.name}</span>
+                      <span className="font-semibold" style={{ color: i === 0 ? "rgb(var(--lz-brand-rgb))" : "#FFF" }}>{m.name}</span>
                     </td>
                     <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.posts}</td>
                     <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.reels}</td>
                     <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.outros}</td>
                     <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.stories}</td>
                     <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.cleaning}</td>
-                    <td className="text-right px-2 py-2.5 font-bold tabular-nums" style={{ color: i === 0 ? "#C8D44E" : "#FFF" }}>{m.total}</td>
+                    <td className="text-right px-2 py-2.5 font-bold tabular-nums" style={{ color: i === 0 ? "rgb(var(--lz-brand-rgb))" : "#FFF" }}>{m.total}</td>
                     <td className="text-right px-2 py-2.5 tabular-nums">
                       {m.lateCount > 0 ? (
                         <span title={`Média de atraso: ${m.avgLateDays} dia(s)`} className="font-bold" style={{ color: "#FF6B6B" }}>
@@ -418,7 +418,7 @@ function LeadTable({ rows, accent }: { rows: any[]; accent?: boolean }) {
             <td className="px-3 py-2.5 text-white/80 truncate max-w-[300px]">{r.title}</td>
             <td className="px-3 py-2.5 text-white/60">{r.clientName}</td>
             <td className="px-3 py-2.5 text-right tabular-nums font-bold"
-              style={{ color: accent ? "#C8D44E" : "#FFFFFF" }}>{formatHours(r.hours)}</td>
+              style={{ color: accent ? "rgb(var(--lz-brand-rgb))" : "#FFFFFF" }}>{formatHours(r.hours)}</td>
           </tr>
         ))}
       </tbody>
@@ -442,7 +442,7 @@ function StatusDurationView({ data }: { data: any[] }) {
                 <span className="text-white/60 tabular-nums">{formatHours(d.avgHours)} <span className="text-white/30">· {d.count} transições</span></span>
               </div>
               <div className="h-2 rounded-full bg-white/[0.05] overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: meta?.color ?? "#C8D44E" }} />
+                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: meta?.color ?? "rgb(var(--lz-brand-rgb))" }} />
               </div>
             </div>
           );
@@ -507,11 +507,11 @@ function QualityView({ data }: { data: any }) {
               <div key={n} className="flex items-center gap-3">
                 <div className="inline-flex items-center gap-0.5 w-20">
                   {Array.from({ length: n }).map((_, i) => (
-                    <Star key={i} size={11} fill="#C8D44E" color="#C8D44E" />
+                    <Star key={i} size={11} fill="rgb(var(--lz-brand-rgb))" color="rgb(var(--lz-brand-rgb))" />
                   ))}
                 </div>
                 <div className="flex-1 h-2 rounded-full bg-white/[0.05] overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#C8D44E" }} />
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "rgb(var(--lz-brand-rgb))" }} />
                 </div>
                 <span className="text-xs text-white/60 tabular-nums w-12 text-right">{c}</span>
               </div>
@@ -546,7 +546,7 @@ function MetricCard({ label, value, accent }: { label: string; value: number; ac
   return (
     <div className="bg-[#1C1C1C] rounded-lg p-4">
       <div className="text-[10px] uppercase font-bold tracking-wider text-white/50">{label}</div>
-      <div className="text-[28px] font-bold tabular-nums mt-1" style={{ color: accent ? "#C8D44E" : "#FFFFFF" }}>{value}</div>
+      <div className="text-[28px] font-bold tabular-nums mt-1" style={{ color: accent ? "rgb(var(--lz-brand-rgb))" : "#FFFFFF" }}>{value}</div>
     </div>
   );
 }
@@ -569,7 +569,7 @@ function FilterSelect({ label, value, onChange, options }: {
       <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">{label}</span>
       <div className="relative mt-1">
         <select value={value} onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none bg-[#0D0D0D] border border-white/10 rounded-md px-2 py-1.5 pr-7 text-xs text-white outline-none focus:border-[#C8D44E]">
+          className="w-full appearance-none bg-[#0D0D0D] border border-white/10 rounded-md px-2 py-1.5 pr-7 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
           {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
@@ -595,7 +595,7 @@ function VelocityView({ from, to }: { from: string; to: string }) {
       {data.map((row) => {
         const avg = row.avgLeadTimeDays;
         const barPct = avg != null ? Math.round((avg / maxAvg) * 100) : 0;
-        const barColor = avg == null ? "#444" : avg <= 2 ? "#C8D44E" : avg <= 5 ? "#FF8C42" : "#FF4444";
+        const barColor = avg == null ? "#444" : avg <= 2 ? "rgb(var(--lz-brand-rgb))" : avg <= 5 ? "#FF8C42" : "#FF4444";
         return (
           <div key={row.userId} className="rounded-xl bg-[#1C1C1C] border border-white/[0.06] p-4">
             <div className="flex items-center gap-3 mb-3">

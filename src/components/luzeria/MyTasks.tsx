@@ -70,7 +70,7 @@ export function MyTasks() {
     <div className="p-10 max-w-5xl mx-auto" data-tour="my-tasks">
       <div className="mb-3">
         <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[15px] font-bold uppercase tracking-wider mb-1"
-          style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
           Olá, {(() => {
             const raw = (me?.name ?? "você").trim().split(" ")[0];
             return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
@@ -80,7 +80,7 @@ export function MyTasks() {
           <p className="italic text-white/60 text-[13px] leading-relaxed text-balance">
             "{dailyVerse.text}"
           </p>
-          <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-[#C8D44E]/70">
+          <p className="mt-1 text-[11px] font-bold uppercase tracking-wider" style={{ color: "rgba(var(--lz-brand-rgb), 0.7)" }}>
             {dailyVerse.reference}
           </p>
         </div>
@@ -96,7 +96,7 @@ export function MyTasks() {
           <div className="flex items-center gap-2">
             <span className="text-xs text-white/40">Ver como:</span>
             <select value={viewAs} onChange={(e) => setViewAs(e.target.value)}
-              className="bg-[#1C1C1C] border border-white/10 text-sm text-white rounded-md px-3 py-1.5 outline-none focus:border-[#C8D44E]">
+              className="bg-[#1C1C1C] border border-white/10 text-sm text-white rounded-md px-3 py-1.5 outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
               <option value="">{me?.name} (eu)</option>
               {profiles.filter((p) => p.id !== me?.id).map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
@@ -114,7 +114,7 @@ export function MyTasks() {
       {isMeView && mentions.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
-            <span className="rounded p-1" style={{ backgroundColor: "rgba(200,212,78,0.18)", color: "#C8D44E" }}>
+            <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
               <AtSign size={11} />
             </span>
             <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Mencionado em</h2>
@@ -134,7 +134,7 @@ export function MyTasks() {
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left border-b border-white/[0.05] last:border-b-0"
               >
                 <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider shrink-0"
-                  style={{ backgroundColor: "rgba(200,212,78,0.18)", color: "#C8D44E" }}>
+                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
                   @MENÇÃO
                 </span>
                 <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
@@ -163,7 +163,7 @@ export function MyTasks() {
         ].map((v) => (
           <button key={v.id} onClick={() => setView(v.id)}
             className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md transition-colors ${
-              view === v.id ? "bg-[#C8D44E] text-black" : "text-white/60 hover:text-white"}`}>
+              view === v.id ? "bg-[rgb(var(--lz-brand-rgb))] text-black" : "text-white/60 hover:text-white"}`}>
             <v.Icon size={12} /> {v.label}
           </button>
         ))}
@@ -235,7 +235,7 @@ export function MyTasks() {
                       </span>
                       {t.clientCategory === "Avulsos" && (
                         <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
-                          style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+                          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
                           Avulso
                         </span>
                       )}
@@ -254,7 +254,7 @@ export function MyTasks() {
       )}
 
       {prod && (
-        <Suspense fallback={<div className="mt-10 h-[290px] rounded-lg" style={{ background: "#1C1C1C", border: "1px solid rgba(200,212,78,0.15)" }} />}>
+        <Suspense fallback={<div className="mt-10 h-[290px] rounded-lg" style={{ background: "#1C1C1C", border: "1px solid rgba(var(--lz-brand-light-rgb),0.15)" }} />}>
           <ProductivityBlock prod={prod} monthKey={monthKey} />
         </Suspense>
       )}
@@ -289,7 +289,7 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
   return (
     <div className="mb-6 bg-[#1C1C1C] rounded-lg overflow-hidden">
       <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-        <span className="rounded p-1" style={{ backgroundColor: "rgba(200,212,78,0.18)", color: "#C8D44E" }}>
+        <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
           <List size={11} />
         </span>
         <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Atividades registradas em {formatMonth(monthKey)}</h2>
@@ -297,7 +297,7 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
       <div className="flex flex-wrap gap-2 px-4 pb-3.5">
         {entries.map(([type, n]) => (
           <span key={type} className="text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={{ backgroundColor: "rgba(200,212,78,0.12)", color: "#C8D44E" }}>
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.12)", color: "rgb(var(--lz-brand-rgb))" }}>
             {n} {ACTIVITY_LABELS[type] ?? type}
           </span>
         ))}
@@ -327,16 +327,16 @@ function DailyTaskCard({
     <div
       className="rounded-lg p-4 flex items-center gap-3 transition-opacity"
       style={{
-        backgroundColor: missed ? "rgba(255,68,68,0.08)" : "rgba(200,212,78,0.1)",
-        borderLeft: `3px solid ${missed ? "#FF4444" : "#C8D44E"}`,
+        backgroundColor: missed ? "rgba(255,68,68,0.08)" : "rgba(var(--lz-brand-light-rgb),0.1)",
+        borderLeft: `3px solid ${missed ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}`,
         opacity: done ? 0.5 : 1,
       }}
     >
       <div
         className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
         style={{
-          backgroundColor: missed ? "rgba(255,68,68,0.2)" : "rgba(200,212,78,0.2)",
-          color: missed ? "#FF4444" : "#C8D44E",
+          backgroundColor: missed ? "rgba(255,68,68,0.2)" : "rgba(var(--lz-brand-light-rgb),0.2)",
+          color: missed ? "#FF4444" : "rgb(var(--lz-brand-rgb))",
         }}
       >
         {icon}
@@ -351,7 +351,7 @@ function DailyTaskCard({
           disabled={!canAct || done}
           className="text-[11px] font-semibold px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 shrink-0"
           style={{
-            backgroundColor: "#C8D44E",
+            backgroundColor: "rgb(var(--lz-brand-rgb))",
             color: "#0D0D0D",
             cursor: done ? "default" : canAct ? "pointer" : "not-allowed",
           }}

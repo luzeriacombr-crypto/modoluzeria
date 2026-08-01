@@ -10,7 +10,7 @@ export function Avatar({
   ring?: boolean;
   avatarUrl?: string | null;
 }) {
-  const c = profile?.color ?? color ?? "#C8D44E";
+  const c = profile?.color ?? color ?? "rgb(var(--lz-brand-rgb))";
   const n = profile?.name ?? name ?? "?";
   const initial = profile?.icon || n.trim().charAt(0).toUpperCase() || "?";
   const photo = avatarUrl ?? profile?.avatarUrl ?? null;

@@ -47,7 +47,7 @@ function DriveCallbackPage() {
         )}
         {status === "success" && (
           <>
-            <p className="text-[#C8D44E] font-semibold mb-2">Drive conectado!</p>
+            <p className="text-[rgb(var(--lz-brand-rgb))] font-semibold mb-2">Drive conectado!</p>
             <p className="text-white/60 text-sm">{message}</p>
           </>
         )}

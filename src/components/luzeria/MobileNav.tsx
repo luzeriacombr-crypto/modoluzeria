@@ -12,7 +12,7 @@ const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"
 const CATEGORY_COLOR: Record<string, string> = {
   "Social Media": "#5BA88A",
   "Pack Digital": "#5BA88A",
-  "Avulsos": "#C8D44E",
+  "Avulsos": "rgb(var(--lz-brand-rgb))",
   "Ex-clientes": "#E76F51",
 };
 
@@ -91,7 +91,7 @@ export function MobileNav() {
                         >
                           <Avatar name={c.name} color={cc} size={32} />
                           <span className="text-xs font-semibold text-white truncate flex-1 min-w-0">{c.name}</span>
-                          {c.favorite && <Star size={11} className="text-[#C8D44E] fill-[#C8D44E] shrink-0 absolute top-1.5 right-1.5" />}
+                          {c.favorite && <Star size={11} className="text-[rgb(var(--lz-brand-rgb))] fill-[rgb(var(--lz-brand-rgb))] shrink-0 absolute top-1.5 right-1.5" />}
                         </button>
                       );
                     })}
@@ -112,7 +112,7 @@ export function MobileNav() {
             <button
               onClick={() => { navigate({ to: "/perfil" }); setShowMe(false); }}
               className="mt-6 px-5 py-2 rounded-md text-xs font-bold"
-              style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
             >Editar perfil</button>
             <button onClick={() => supabase.auth.signOut().then(() => (location.href = "/auth"))}
               className="mt-3 text-xs text-red-400 hover:underline">Sair</button>
@@ -139,7 +139,7 @@ function NavBtn({ icon, active, onClick, badge }: { icon: React.ReactNode; activ
   return (
     <button onClick={onClick}
       className="relative flex items-center justify-center h-12 w-16 transition-colors"
-      style={{ color: active ? "#C8D44E" : "rgba(255,255,255,0.4)" }}>
+      style={{ color: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.4)" }}>
       {icon}
       {badge !== undefined && badge > 0 && (
         <span className="absolute top-1 right-3 min-w-[14px] h-[14px] rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center px-1">

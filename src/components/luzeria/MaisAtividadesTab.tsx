@@ -67,7 +67,7 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                 {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
                 {cfg.label}
                 {items.length > 0 && (
-                  <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+                  <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
                     {items.length}
                   </span>
                 )}
@@ -76,7 +76,7 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
               {isAdmin && !formOpen && (
                 <button
                   onClick={() => setOpenForm(type)}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/50 hover:text-[#C8D44E] transition"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] transition"
                 >
                   <Plus size={13} /> Registrar
                 </button>
@@ -125,7 +125,7 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                       </span>
                     )}
                     <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => openItem(item.id)} title="Editar" className="p-1.5 rounded text-white/40 hover:text-[#C8D44E] hover:bg-white/5 transition">
+                      <button onClick={() => openItem(item.id)} title="Editar" className="p-1.5 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5 transition">
                         <Pencil size={13} />
                       </button>
                       {isAdmin && (
@@ -167,7 +167,7 @@ function ActivityForm({
   const [notes, setNotes] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
 
-  const inp = "w-full bg-[#1A1A1A] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] transition-colors placeholder:text-white/30";
+  const inp = "w-full bg-[#1A1A1A] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition-colors placeholder:text-white/30";
 
   async function submit() {
     if (!title.trim()) return;
@@ -246,7 +246,7 @@ function ActivityForm({
           onClick={submit}
           disabled={!title.trim() || loading}
           className="text-xs font-bold px-4 py-2 rounded-md transition disabled:opacity-40"
-          style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
         >
           {loading ? "Registrando…" : `Registrar ${cfg.label}`}
         </button>

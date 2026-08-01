@@ -112,5 +112,15 @@ export function deadlineInfo(dueDate?: string | null, status?: string): Deadline
   if (days === 0) return { level: "urgent", label: "Vence hoje", color: "#FF4444", bg: "rgba(255,68,68,0.12)", days };
   if (days === 1) return { level: "urgent", label: "Vence amanhã", color: "#FF4444", bg: "rgba(255,68,68,0.12)", days };
   if (days <= 3) return { level: "soon", label: `Em ${days} dias`, color: "#F5A623", bg: "rgba(245,166,35,0.12)", days };
-  return { level: "ok", label: `Em ${days} dias`, color: "#C8D44E", bg: "rgba(200,212,78,0.12)", days };
+  return { level: "ok", label: `Em ${days} dias`, color: "rgb(var(--lz-brand-rgb))", bg: "rgba(var(--lz-brand-light-rgb),0.12)", days };
+}
+
+/** "#RRGGBB" -> "R, G, B" for use inside a CSS custom property that's later
+ * referenced as rgb(var(--x)) / rgba(var(--x), alpha). Returns null for an
+ * invalid hex so callers can safely skip overriding the CSS variable. */
+export function hexToRgbChannels(hex: string): string | null {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
 }

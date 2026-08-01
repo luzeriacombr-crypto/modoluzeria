@@ -164,7 +164,7 @@ export function ReelCoverEditor({
         {/* Header */}
         <div className="px-5 md:px-6 pt-4 md:pt-5 pb-3 border-b border-white/[0.08] flex items-center justify-between shrink-0">
           <div className="min-w-0">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-[#C8D44E]">Reel</div>
+            <div className="text-[10px] uppercase font-bold tracking-wider text-[rgb(var(--lz-brand-rgb))]">Reel</div>
             <div className="text-base md:text-lg font-bold text-white">Capa do Reel</div>
           </div>
           <button onClick={onClose} className="text-white/50 hover:text-white p-1.5 rounded-md hover:bg-white/5">
@@ -181,7 +181,7 @@ export function ReelCoverEditor({
                 onClick={() => { setMode(m); setPreviewDataUrl(null); setVideoError(null); }}
                 className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded transition-colors"
                 style={{
-                  backgroundColor: mode === m ? "#C8D44E" : "transparent",
+                  backgroundColor: mode === m ? "rgb(var(--lz-brand-rgb))" : "transparent",
                   color: mode === m ? "#0D0D0D" : "rgba(255,255,255,0.6)",
                 }}
               >
@@ -208,7 +208,7 @@ export function ReelCoverEditor({
               )}
               {videoLoading && (
                 <div className="flex items-center gap-2 text-xs text-white/60">
-                  <Loader2 size={14} className="animate-spin text-[#C8D44E]" />
+                  <Loader2 size={14} className="animate-spin text-[rgb(var(--lz-brand-rgb))]" />
                   Carregando vídeo do Drive… (pode demorar para vídeos grandes)
                 </div>
               )}
@@ -239,7 +239,7 @@ export function ReelCoverEditor({
 
           {mode === "upload" && (
             <label className="block w-full cursor-pointer">
-              <div className="w-full aspect-[4/5] max-h-[55vh] rounded-lg border border-dashed border-white/15 bg-[#141414] hover:border-[#C8D44E] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-2">
+              <div className="w-full aspect-[4/5] max-h-[55vh] rounded-lg border border-dashed border-white/15 bg-[#141414] hover:border-[rgb(var(--lz-brand-rgb))] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-2">
                 <Upload size={22} className="text-white/40" />
                 <span className="text-xs text-white/60">
                   {uploadFile ? uploadFile.name : "Clique para enviar uma imagem (JPG, PNG, WEBP)"}
@@ -302,7 +302,7 @@ export function ReelCoverEditor({
               onClick={saveCover}
               disabled={!previewDataUrl || busy !== null}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
             >
               {busy === "save" ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
               Salvar capa

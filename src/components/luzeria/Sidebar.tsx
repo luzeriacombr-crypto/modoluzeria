@@ -20,7 +20,7 @@ const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"
 const CATEGORY_COLOR: Record<string, string> = {
   "Social Media": "#5BA88A",
   "Pack Digital": "#5BA88A",
-  "Avulsos": "#C8D44E",
+  "Avulsos": "rgb(var(--lz-brand-rgb))",
   "Ex-clientes": "#E76F51",
 };
 
@@ -84,7 +84,7 @@ export function Sidebar({
           {isLuzeria ? "Você foi chamado para criar" : (me?.orgTagline || "Gestão de conteúdo e criação")}
         </p>
       </div>
-      <div className="mx-5 h-px" style={{ backgroundColor: "rgba(200,212,78,0.2)" }} />
+      <div className="mx-5 h-px" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)" }} />
 
       {/* My tasks + dashboard nav */}
       <div className="px-3 pt-4 pb-2 space-y-0.5">
@@ -180,16 +180,16 @@ function NavButton({ icon, label, active, onClick, badge }: { icon: React.ReactN
     <button onClick={onClick}
       className="w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative"
       style={{
-        backgroundColor: active ? "rgba(200,212,78,0.12)" : "transparent",
+        backgroundColor: active ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent",
         color: active ? "#FFFFFF" : "rgba(255,255,255,0.7)",
       }}>
-      {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "#C8D44E" }} />}
+      {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
       <span className="flex items-center gap-2.5">
-        <span className={active ? "text-[#C8D44E]" : "text-white/60"}>{icon}</span>
+        <span className={active ? "text-[rgb(var(--lz-brand-rgb))]" : "text-white/60"}>{icon}</span>
         {label}
       </span>
       {badge !== undefined && badge > 0 && (
-        <span className="text-[10px] font-bold px-1.5 rounded" style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>{badge}</span>
+        <span className="text-[10px] font-bold px-1.5 rounded" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>{badge}</span>
       )}
     </button>
   );
@@ -218,7 +218,7 @@ function CategoryGroup({
         {onAdd && (
           <button onClick={(e) => { e.stopPropagation(); onAdd(); }}
             title="Nova demanda avulsa"
-            className="p-1 rounded text-white/40 hover:text-[#C8D44E] hover:bg-white/5">
+            className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5">
             <Plus size={13} />
           </button>
         )}
@@ -279,9 +279,9 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
   return (
     <div ref={ref}
       className="group relative rounded-md transition-colors mx-1"
-      style={{ backgroundColor: active ? "rgba(200,212,78,0.12)" : "transparent" }}
+      style={{ backgroundColor: active ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent" }}
     >
-      {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r" style={{ backgroundColor: "#C8D44E" }} />}
+      {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
       <Link
         to="/cliente/$clientId"
         params={{ clientId: client.id }}
@@ -292,20 +292,20 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
       >
         <Avatar name={client.name} color={client.color} size={26} avatarUrl={client.photoUrl} />
         <span className="text-sm truncate text-white/90 flex-1">{client.name}</span>
-        {client.favorite && <Star size={12} className="text-[#C8D44E] fill-[#C8D44E]" />}
+        {client.favorite && <Star size={12} className="text-[rgb(var(--lz-brand-rgb))] fill-[rgb(var(--lz-brand-rgb))]" />}
       </Link>
 
       <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={(e) => { e.stopPropagation(); openFicha(client.id); }}
           title="Ficha do cliente"
-          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-[#C8D44E]"
+          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-[rgb(var(--lz-brand-rgb))]"
         >
           <Info size={13} />
         </button>
         <button onClick={(e) => { e.stopPropagation(); updateClient.mutate({ data: { id: client.id, patch: { favorite: !client.favorite } } }); }}
           className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white">
-          <Star size={13} className={client.favorite ? "fill-[#C8D44E] text-[#C8D44E]" : ""} />
+          <Star size={13} className={client.favorite ? "fill-[rgb(var(--lz-brand-rgb))] text-[rgb(var(--lz-brand-rgb))]" : ""} />
         </button>
         {canManage && (
           <button ref={btnRef} onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
@@ -344,7 +344,7 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
                     className="w-full text-left px-3 py-1.5 text-xs text-white/80 hover:bg-white/5 transition-colors flex items-center justify-between"
                   >
                     <span>{cat}</span>
-                    {client.category === cat && <span className="text-[#C8D44E]">●</span>}
+                    {client.category === cat && <span className="text-[rgb(var(--lz-brand-rgb))]">●</span>}
                   </button>
                 ))}
               </div>
@@ -356,7 +356,7 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
               {PRESET_COLORS.map((c) => (
                 <button key={c} onClick={() => updateClient.mutate({ data: { id: client.id, patch: { color: c } } })}
                   className="h-5 w-5 rounded-full border-2 transition-transform hover:scale-110"
-                  style={{ backgroundColor: c, borderColor: client.color === c ? "#C8D44E" : "transparent" }} />
+                  style={{ backgroundColor: c, borderColor: client.color === c ? "rgb(var(--lz-brand-rgb))" : "transparent" }} />
               ))}
             </div>
             <div className="text-[10px] uppercase text-white/40 mt-3 mb-1">Inicial / Emoji</div>
@@ -368,7 +368,7 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
                 if (v !== (client.icon ?? null))
                   updateClient.mutate({ data: { id: client.id, patch: { icon: v } } });
               }}
-              className="w-full text-xs bg-[#0D0D0D] border border-white/10 rounded px-2 py-1 text-white outline-none focus:border-[#C8D44E]"
+              className="w-full text-xs bg-[#0D0D0D] border border-white/10 rounded px-2 py-1 text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
               maxLength={2}
             />
           </div>
@@ -425,7 +425,7 @@ function UserFooter({ onSettings, onProfile }: { onSettings: () => void; onProfi
           <div className="min-w-0 flex-1">
             <div className="text-xs font-semibold truncate text-white">{me.name}</div>
             <span className="inline-block text-[9px] uppercase font-bold mt-0.5 px-1.5 py-0.5 rounded"
-              style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
               {roleLabel(me.role)}
             </span>
           </div>

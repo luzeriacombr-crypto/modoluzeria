@@ -47,7 +47,7 @@ function AuthPage() {
       </div>
       <Toaster theme="dark" position="bottom-right" />
       <div className="relative z-10 w-full max-w-sm bg-[#1A1A1A] rounded-xl p-8 shadow-2xl"
-        style={{ border: "1px solid rgba(200,212,78,0.2)" }}>
+        style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.2)" }}>
         <div className="flex flex-col items-center justify-center mb-10">
           <img src={luzeriaLogo} alt="Luzeria" className="h-10 w-auto object-contain" />
           <p className="text-white/90 text-xs font-light italic tracking-wide mt-2">Você foi chamado para criar</p>
@@ -55,9 +55,9 @@ function AuthPage() {
         <h1 className="text-white text-xl font-semibold text-center mb-7">Acesse sua conta</h1>
         <form onSubmit={submit} className="space-y-3">
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Email"
-            className="w-full bg-white/[0.05] border border-white/10 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/40 transition-colors" />
+            className="w-full bg-white/[0.05] border border-white/10 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/40 transition-colors" />
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="Senha"
-            className="w-full bg-white/[0.05] border border-white/10 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/40 transition-colors" />
+            className="w-full bg-white/[0.05] border border-white/10 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/40 transition-colors" />
           <button type="submit" disabled={loading}
             className="lz-btn-primary w-full rounded-md py-2.5 mt-2 text-sm">
             {loading ? "..." : "Entrar"}
@@ -66,7 +66,7 @@ function AuthPage() {
       </div>
       <div className="relative z-10 mt-8 flex flex-col items-center gap-1.5 text-center">
         {["Somos criadores", "Simplifique ao máximo", "Sirva primeiro"].map((value) => (
-          <span key={value} className="text-[11px] font-medium uppercase tracking-[0.15em]" style={{ color: "rgba(200,212,78,0.75)" }}>
+          <span key={value} className="text-[11px] font-medium uppercase tracking-[0.15em]" style={{ color: "rgba(var(--lz-brand-light-rgb),0.75)" }}>
             {value}
           </span>
         ))}

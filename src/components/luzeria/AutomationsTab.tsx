@@ -75,7 +75,7 @@ export function AutomationsTab() {
               <div key={j.jobname}
                 className="flex items-start gap-4 px-5 py-4 border-b border-white/[0.05] last:border-b-0">
                 <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0 mt-0.5"
-                  style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
                   <Icon size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -83,7 +83,7 @@ export function AutomationsTab() {
                     <div className="text-sm font-semibold text-white truncate">{meta.label}</div>
                     {j.active ? (
                       <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded"
-                        style={{ backgroundColor: "rgba(200,212,78,0.18)", color: "#C8D44E" }}>Ativa</span>
+                        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>Ativa</span>
                     ) : (
                       <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-white/10 text-white/50">Pausada</span>
                     )}

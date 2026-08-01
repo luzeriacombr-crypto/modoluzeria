@@ -175,6 +175,8 @@ export interface Profile {
   orgName?: string | null;
   orgTagline?: string | null;
   orgLogoUrl?: string | null;
+  orgColorPrimary?: string | null;
+  orgColorPrimaryLight?: string | null;
 }
 
 export interface NotificationItem {
@@ -196,14 +198,14 @@ export const STATUS_META: Record<
   REVISAO_CLIENTE:     { label: "Revisão cliente",     bg: "#0D2B4A", color: "#4A9EFF", icon: "MessageSquare" },
   AGENDAMENTO:         { label: "Agendamento",         bg: "#1A2E2A", color: "#7EFFD9", icon: "CalendarCheck" },
   REVISAO_AGENDAMENTO: { label: "Revisão agendamento", bg: "#2A1E1E", color: "#FF9E7E", icon: "CalendarClock" },
-  PRONTO_PARA_PUBLICAR: { label: "Pronto para publicar", bg: "#1A3A1A", color: "#C8D44E", icon: "CheckCircle" },
+  PRONTO_PARA_PUBLICAR: { label: "Pronto para publicar", bg: "#1A3A1A", color: "rgb(var(--lz-brand-rgb))", icon: "CheckCircle" },
   TRAVADO:             { label: "Travado",             bg: "#3A1A1A", color: "#FF6B6B", icon: "Ban" },
   CRIACAO:             { label: "Criação de arte",     bg: "#3D2B5E", color: "#C084FC", icon: "Paintbrush" },
   REVISAO_ARTE:        { label: "Revisão de arte",     bg: "#4A2800", color: "#FF8C42", icon: "Eye" },
   EM_GRAVACAO:         { label: "Em gravação",         bg: "#1A1A3A", color: "#7E9EFF", icon: "Video" },
   EM_EDICAO:           { label: "Em edição",         bg: "#2A1A2A", color: "#FF7EE8", icon: "Scissors" },
   PENDENTE:            { label: "Pendente",             bg: "#2A2A1E", color: "#FFD97E", icon: "Clock" },
-  CONCLUIDO:           { label: "Concluído",            bg: "#1A3A1A", color: "#C8D44E", icon: "CheckCircle" },
+  CONCLUIDO:           { label: "Concluído",            bg: "#1A3A1A", color: "rgb(var(--lz-brand-rgb))", icon: "CheckCircle" },
 };
 
 /** Rótulo exibido para um status — clientes Avulsos veem "Entregue" no lugar

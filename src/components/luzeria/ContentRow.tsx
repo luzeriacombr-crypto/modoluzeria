@@ -55,7 +55,7 @@ export function ContentRow({ item, profiles, idx, isAvulso }: {
       className={`group flex items-center gap-4 px-4 h-[140px] border-b border-white/[0.06] hover:bg-white/[0.02] transition-colors cursor-pointer ${flashed ? "lz-flash" : ""}`}
       onClick={() => openItem(item.id)}
     >
-      <span className="text-[14px] font-bold w-7 shrink-0" style={{ color: "#C8D44E" }}>
+      <span className="text-[14px] font-bold w-7 shrink-0" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
         {String(idx).padStart(2, "0")}
       </span>
 
@@ -67,12 +67,12 @@ export function ContentRow({ item, profiles, idx, isAvulso }: {
           onBlur={commit}
           onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setTitle(item.title); setEditing(false); } }}
           onClick={(e) => e.stopPropagation()}
-          className="flex-1 bg-transparent text-[15px] font-medium text-white outline-none border-b border-[#C8D44E] py-0.5"
+          className="flex-1 bg-transparent text-[15px] font-medium text-white outline-none border-b border-[rgb(var(--lz-brand-rgb))] py-0.5"
         />
       ) : (
         <button
           onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-          className="flex-1 text-left text-[15px] font-medium text-white truncate hover:text-[#C8D44E] transition-colors min-w-0"
+          className="flex-1 text-left text-[15px] font-medium text-white truncate hover:text-[rgb(var(--lz-brand-rgb))] transition-colors min-w-0"
           title={item.title}
         >
           <span className="truncate">{item.title}</span>
@@ -98,7 +98,7 @@ export function ContentRow({ item, profiles, idx, isAvulso }: {
           <button
             onClick={() => addAssignee.mutate({ data: { itemId: item.id, userId: me.id } })}
             title="Atribuir-me"
-            className="h-7 w-7 rounded-full border border-dashed border-white/20 text-white/40 hover:text-[#C8D44E] hover:border-[#C8D44E] flex items-center justify-center transition-colors"
+            className="h-7 w-7 rounded-full border border-dashed border-white/20 text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors"
           ><Plus size={14} /></button>
         ) : null}
         {assignees.length > 0 && (
@@ -110,7 +110,7 @@ export function ContentRow({ item, profiles, idx, isAvulso }: {
       </div>
 
       <LinkIcon size={15}
-        style={{ color: item.driveLink ? "#C8D44E" : "rgba(255,255,255,0.25)", opacity: item.driveLink ? 1 : 0.4 }} />
+        style={{ color: item.driveLink ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.25)", opacity: item.driveLink ? 1 : 0.4 }} />
       {dueLabel && (
         <div
           className="hidden sm:flex items-center gap-1 text-[11px] font-semibold tabular-nums"
@@ -134,7 +134,7 @@ export function ContentRow({ item, profiles, idx, isAvulso }: {
         </div>
       )}
       <div className="flex items-center gap-1 text-[11px] tabular-nums"
-        style={{ color: item.comments.length ? "#C8D44E" : "rgba(255,255,255,0.25)", opacity: item.comments.length ? 1 : 0.4 }}>
+        style={{ color: item.comments.length ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.25)", opacity: item.comments.length ? 1 : 0.4 }}>
         <MessageCircle size={14} />
         <span>{item.comments.length}</span>
       </div>

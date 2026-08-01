@@ -171,7 +171,7 @@ function FeedCell({
         background: "#1C1C1C",
         cursor: draggable ? "grab" : "pointer",
         opacity: isDragging ? 0.4 : 1,
-        outline: isOver ? "2px solid #C8D44E" : "none",
+        outline: isOver ? "2px solid rgb(var(--lz-brand-rgb))" : "none",
         outlineOffset: isOver ? "-2px" : 0,
       }}
       title={item.title}
@@ -229,7 +229,7 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
         onClick={generate}
         disabled={getOrCreateShareToken.isPending}
         className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full transition"
-        style={{ background: "#C8D44E", color: "#0D0D0D" }}
+        style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
       >
         <Share2 size={13} />
         Compartilhar preview
@@ -253,7 +253,7 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
             <button
               onClick={copyLink}
               className="px-2.5 rounded-md text-[12px] font-semibold inline-flex items-center gap-1"
-              style={{ background: "#C8D44E", color: "#0D0D0D" }}
+              style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
             >
               {copied ? <Check size={14} /> : <CopyIcon size={14} />}
               {copied ? "Copiado" : "Copiar"}

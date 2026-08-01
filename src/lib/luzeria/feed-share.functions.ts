@@ -243,7 +243,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     return {
       client: {
         name: client.name as string,
-        color: (client.color as string) ?? "#C8D44E",
+        color: (client.color as string) ?? "rgb(var(--lz-brand-rgb))",
         description: client.description ?? null,
       },
       month: { key: month.key as string },

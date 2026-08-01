@@ -46,11 +46,13 @@ export function MyWeekView({ userId }: { userId?: string }) {
           const list = byDay[key];
           return (
             <div key={key} className={`rounded-xl border p-3 min-h-[120px] ${
-              isToday ? "border-[#C8D44E]/50 bg-[#C8D44E]/[0.04]" : "border-white/[0.06] bg-[#1C1C1C]"
-            }`}>
+              isToday ? "" : "border-white/[0.06] bg-[#1C1C1C]"
+            }`}
+              style={isToday ? { borderColor: "rgba(var(--lz-brand-rgb), 0.5)", backgroundColor: "rgba(var(--lz-brand-light-rgb), 0.04)" } : undefined}
+            >
               <div className="flex items-baseline justify-between mb-2">
                 <div className={`text-[10px] uppercase font-bold tracking-wider ${
-                  isToday ? "text-[#C8D44E]" : isPast ? "text-white/30" : "text-white/50"
+                  isToday ? "text-[rgb(var(--lz-brand-rgb))]" : isPast ? "text-white/30" : "text-white/50"
                 }`}>{WEEKDAYS[d.getDay()]}</div>
                 <div className={`text-base font-bold tabular-nums ${
                   isToday ? "text-white" : isPast ? "text-white/30" : "text-white/70"

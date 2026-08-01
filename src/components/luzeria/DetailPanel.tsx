@@ -35,7 +35,7 @@ function renderLinkedText(text: string): React.ReactNode {
       <a key={i} href={part.startsWith("http") ? part : `https://${part}`}
         target="_blank" rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
-        className="text-[#C8D44E] underline underline-offset-2 hover:brightness-110">
+        className="text-[rgb(var(--lz-brand-rgb))] underline underline-offset-2 hover:brightness-110">
         {part}
       </a>
     ) : (
@@ -111,9 +111,9 @@ function MediaPreview({ itemId, onEmpty, coverUrl }: { itemId: string; onEmpty: 
       <button
         type="button"
         onClick={onEmpty}
-        className="group w-full aspect-[4/5] rounded-[10px] border border-dashed border-white/15 bg-[#141414] hover:border-[#C8D44E] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-2"
+        className="group w-full aspect-[4/5] rounded-[10px] border border-dashed border-white/15 bg-[#141414] hover:border-[rgb(var(--lz-brand-rgb))] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-2"
       >
-        <Upload size={22} className="text-white/30 group-hover:text-[#C8D44E] transition-colors" />
+        <Upload size={22} className="text-white/30 group-hover:text-[rgb(var(--lz-brand-rgb))] transition-colors" />
         <span className="text-xs text-white/40 group-hover:text-white/70 transition-colors">
           Envie um arquivo ou cole o link do Drive
         </span>
@@ -291,7 +291,7 @@ export function DetailPanel() {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="text-[11px] uppercase font-bold tracking-wider text-white/40">
-                <span className="text-[#C8D44E]">
+                <span className="text-[rgb(var(--lz-brand-rgb))]">
                   {CONTENT_TYPE_LABEL[item.type] ?? "Item"} {String(item.idx).padStart(2, "0")}
                 </span>
                 {client && <span className="ml-1.5">· {client.name}</span>}
@@ -308,7 +308,7 @@ export function DetailPanel() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={() => { if (title.trim() && title !== item.title) updateItem.mutate({ data: { id: item.id, patch: { title: title.trim() } } }); }}
-                className="mt-1.5 w-full bg-transparent text-[22px] font-bold text-white outline-none placeholder:text-white/30 border-b border-transparent focus:border-[#C8D44E] transition-colors pb-0.5"
+                className="mt-1.5 w-full bg-transparent text-[22px] font-bold text-white outline-none placeholder:text-white/30 border-b border-transparent focus:border-[rgb(var(--lz-brand-rgb))] transition-colors pb-0.5"
               />
             </div>
             <button
@@ -339,7 +339,7 @@ export function DetailPanel() {
                 <button
                   type="button"
                   onClick={() => setCoverOpen(true)}
-                  className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider text-white/80 hover:text-[#0D0D0D] bg-white/[0.04] hover:bg-[#C8D44E] border border-white/10 hover:border-[#C8D44E] transition-colors"
+                  className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider text-white/80 hover:text-[#0D0D0D] bg-white/[0.04] hover:bg-[rgb(var(--lz-brand-rgb))] border border-white/10 hover:border-[rgb(var(--lz-brand-rgb))] transition-colors"
                 >
                   <ImagePlus size={14} />
                   {item.coverPath ? "Trocar capa do Reel" : "Definir capa do Reel"}
@@ -360,7 +360,7 @@ export function DetailPanel() {
                     if (copy !== item.copy) updateItem.mutate({ data: { id: item.id, patch: { copy } } });
                   }}
                   placeholder={isActivity ? "Observações sobre essa atividade..." : "Descreva o briefing do conteúdo..."}
-                  className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none transition-colors"
+                  className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 resize-none transition-colors"
                 />
               ) : (
                 <div
@@ -389,7 +389,7 @@ export function DetailPanel() {
                         if (caption !== (item.caption ?? "")) updateItem.mutate({ data: { id: item.id, patch: { caption } } });
                       }}
                       placeholder="Digite a legenda que será publicada..."
-                      className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 pb-6 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 resize-none transition-colors"
+                      className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 pb-6 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 resize-none transition-colors"
                     />
                     <div className="absolute bottom-2 right-3 text-[10px] text-white/40 pointer-events-none">
                       {caption.length} caracteres
@@ -416,7 +416,7 @@ export function DetailPanel() {
                   const author = profiles.find((p) => p.id === c.authorId);
                   if (c.system) return (
                     <div key={c.id} className="rounded-md px-3 py-2 text-[11px] italic"
-                      style={{ backgroundColor: "rgba(200,212,78,0.06)", borderLeft: "2px solid #C8D44E", color: "rgba(255,255,255,0.7)" }}>
+                      style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.06)", borderLeft: "2px solid rgb(var(--lz-brand-rgb))", color: "rgba(255,255,255,0.7)" }}>
                       <span>{c.text}</span>
                       <span className="text-white/40 ml-2 not-italic">{relTime(c.createdAt)}</span>
                     </div>
@@ -454,7 +454,7 @@ export function DetailPanel() {
                     setComment(""); setCommentMentions([]);
                   }}
                   className="px-3 py-2 rounded-md text-sm font-bold disabled:opacity-30 transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
+                  style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
                   <Send size={14} />
                 </button>
               </div>
@@ -533,7 +533,7 @@ export function DetailPanel() {
             ))}
             <div className="relative">
               <button onClick={() => setAssignOpen((o) => !o)}
-                className="h-8 w-8 rounded-full border border-dashed border-white/20 text-white/40 hover:text-[#C8D44E] hover:border-[#C8D44E] flex items-center justify-center transition-colors">
+                className="h-8 w-8 rounded-full border border-dashed border-white/20 text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors">
                 <Plus size={14} />
               </button>
               {assignOpen && (
@@ -550,7 +550,7 @@ export function DetailPanel() {
                         className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-left">
                         <Avatar profile={p} size={22} />
                         <span className="text-white/80 flex-1">{p.name}</span>
-                        {has && <Check size={13} className="text-[#C8D44E]" />}
+                        {has && <Check size={13} className="text-[rgb(var(--lz-brand-rgb))]" />}
                       </button>
                     );
                   })}
@@ -567,7 +567,7 @@ export function DetailPanel() {
               <button
                 disabled={!canSetEditor}
                 onClick={() => setEditorOpen((o) => !o)}
-                className="w-full flex items-center justify-between gap-2 rounded-md bg-[#252525] border border-white/[0.08] px-3 py-2.5 text-sm text-white hover:border-[#C8D44E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-between gap-2 rounded-md bg-[#252525] border border-white/[0.08] px-3 py-2.5 text-sm text-white hover:border-[rgb(var(--lz-brand-rgb))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="flex items-center gap-2 min-w-0">
                   {editor ? (
@@ -606,7 +606,7 @@ export function DetailPanel() {
                       >
                         <Avatar profile={p} size={22} />
                         <span className="text-white/80 flex-1">{p.name}</span>
-                        {sel && <Check size={13} className="text-[#C8D44E]" />}
+                        {sel && <Check size={13} className="text-[rgb(var(--lz-brand-rgb))]" />}
                       </button>
                     );
                   })}
@@ -632,15 +632,15 @@ export function DetailPanel() {
                     })}
                     className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-[1.05] hover:brightness-110"
                     style={{
-                      backgroundColor: active ? "#C8D44E" : "rgba(255,255,255,0.08)",
+                      backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.08)",
                       color: active ? "#0D0D0D" : "#FFFFFF",
                       fontWeight: active ? 700 : 500,
-                      border: active ? "1px solid #C8D44E" : "1px solid rgba(255,255,255,0.08)",
+                      border: active ? "1px solid rgb(var(--lz-brand-rgb))" : "1px solid rgba(255,255,255,0.08)",
                     }}
                     onMouseEnter={(e) => {
                       if (!active) {
-                        e.currentTarget.style.backgroundColor = "rgba(200,212,78,0.15)";
-                        e.currentTarget.style.borderColor = "rgba(200,212,78,0.4)";
+                        e.currentTarget.style.backgroundColor = "rgba(var(--lz-brand-light-rgb),0.15)";
+                        e.currentTarget.style.borderColor = "rgba(var(--lz-brand-light-rgb),0.4)";
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -660,7 +660,7 @@ export function DetailPanel() {
         {/* Prazo — pra atividades vira a data em que a atividade aconteceu/acontece, não um deadline */}
         <ModalSection label={isActivity ? (ACTIVITY_DATE_LABEL[item.type] ?? "Data") : (isAvulso ? "Prazo de entrega" : "Prazo")}>
           <div className="flex items-center gap-2">
-            <Calendar size={15} style={{ color: isOverdue ? "#FF6B6B" : "#C8D44E" }} />
+            <Calendar size={15} style={{ color: isOverdue ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))" }} />
             <input
               type="date"
               value={dueDate}
@@ -673,7 +673,7 @@ export function DetailPanel() {
                     onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar data."); setDueDate(prev ?? ""); },
                   });
               }}
-              className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
+              className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]"
             />
             {dueDate && (
               <button
@@ -704,13 +704,13 @@ export function DetailPanel() {
         {!isActivity && !isAvulso && (
           <ModalSection label="Data de publicação">
             <div className="flex items-center gap-2">
-              <Calendar size={15} style={{ color: "#C8D44E" }} />
+              <Calendar size={15} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
               <input
                 type="date"
                 value={scheduledDate}
                 onChange={(e) => setScheduledDate(e.target.value)}
                 onBlur={(e) => saveScheduledAt(e.currentTarget.value, scheduledTime)}
-                className="min-w-0 flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
+                className="min-w-0 flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]"
               />
               <input
                 type="time"
@@ -718,7 +718,7 @@ export function DetailPanel() {
                 onChange={(e) => setScheduledTime(e.target.value)}
                 onBlur={(e) => saveScheduledAt(scheduledDate, e.currentTarget.value)}
                 disabled={!scheduledDate}
-                className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E]"
+                className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]"
               />
               {scheduledDate && (
                 <button
@@ -751,7 +751,7 @@ export function DetailPanel() {
               onChange={(e) => setDrive(e.target.value)}
               onBlur={() => { if (drive !== item.driveLink) updateItem.mutate({ data: { id: item.id, patch: { drive_link: drive } } }); }}
               placeholder="Ex: Clínica, estúdio, externo…"
-              className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30"
+              className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
             />
           </ModalSection>
         )}
@@ -788,8 +788,8 @@ export function DetailPanel() {
                   }}
                   className="h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-colors"
                   style={{
-                    borderColor: c.done ? "#C8D44E" : "rgba(255,255,255,0.25)",
-                    backgroundColor: c.done ? "#C8D44E" : "transparent",
+                    borderColor: c.done ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.25)",
+                    backgroundColor: c.done ? "rgb(var(--lz-brand-rgb))" : "transparent",
                   }}
                 >
                   {c.done && <Check size={10} color="#0D0D0D" strokeWidth={3} />}
@@ -825,7 +825,7 @@ export function DetailPanel() {
                   }
                 }}
                 placeholder="Adicionar subtarefa e dar Enter…"
-                className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/30 border-b border-white/[0.06] focus:border-[#C8D44E] py-1"
+                className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/30 border-b border-white/[0.06] focus:border-[rgb(var(--lz-brand-rgb))] py-1"
               />
             </div>
           </div>
@@ -844,12 +844,12 @@ export function DetailPanel() {
                     onClick={() => rateItem.mutate({ data: { itemId: item.id, rating: item.qualityRating === n ? null : n } })}
                     className="p-0.5 disabled:cursor-not-allowed transition-transform hover:scale-110 disabled:hover:scale-100"
                   >
-                    <Star size={20} fill={filled ? "#C8D44E" : "transparent"} color={filled ? "#C8D44E" : "rgba(255,255,255,0.3)"} />
+                    <Star size={20} fill={filled ? "rgb(var(--lz-brand-rgb))" : "transparent"} color={filled ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.3)"} />
                   </button>
                 );
               })}
               {item.qualityRating != null && (
-                <span className="ml-2 text-xs font-bold text-[#C8D44E]">{item.qualityRating}/5</span>
+                <span className="ml-2 text-xs font-bold text-[rgb(var(--lz-brand-rgb))]">{item.qualityRating}/5</span>
               )}
             </div>
             {!isAdmin && (
@@ -897,7 +897,7 @@ export function DetailPanel() {
 function ModalSection({ label, children, last }: { label: string; children: React.ReactNode; last?: boolean }) {
   return (
     <div className={`px-5 md:px-6 py-4 ${last ? "" : "border-b border-white/[0.06]"}`}>
-      <div className="text-[10px] uppercase font-bold tracking-wider mb-2.5" style={{ color: "#C8D44E" }}>{label}</div>
+      <div className="text-[10px] uppercase font-bold tracking-wider mb-2.5" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{label}</div>
       {children}
     </div>
   );

@@ -20,6 +20,7 @@ import luzeriaLogo from "@/assets/luzeria-sidebar.png";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
+import { hexToRgbChannels } from "@/lib/luzeria/utils";
 
 export function App() {
   const me = useMe();
@@ -51,6 +52,22 @@ export function App() {
     }
   }, [me.data?.orgName, me.data?.orgId]);
 
+  // Same idea for the brand colors: only override the CSS variables (which
+  // default to Luzeria's green in styles.css) once we know it's a
+  // non-Luzeria org with custom colors saved.
+  useEffect(() => {
+    if (me.data?.orgId === LUZERIA_ORG_ID) return;
+    const root = document.documentElement.style;
+    const primary = me.data?.orgColorPrimary ? hexToRgbChannels(me.data.orgColorPrimary) : null;
+    const light = me.data?.orgColorPrimaryLight ? hexToRgbChannels(me.data.orgColorPrimaryLight) : null;
+    if (primary) root.setProperty("--lz-brand-rgb", primary);
+    if (light) root.setProperty("--lz-brand-light-rgb", light);
+    return () => {
+      root.removeProperty("--lz-brand-rgb");
+      root.removeProperty("--lz-brand-light-rgb");
+    };
+  }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight]);
+
   if (me.isLoading) {
     return <LuzeriaLoader />;
   }
@@ -59,8 +76,8 @@ export function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] px-4">
         <div className="max-w-sm w-full bg-[#1A1A1A] rounded-xl p-8 text-center"
-          style={{ border: "1px solid rgba(200,212,78,0.2)" }}>
-          <div className="text-[#C8D44E] text-xs uppercase tracking-wider font-bold mb-3">Aguardando aprovação</div>
+          style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.2)" }}>
+          <div className="text-[rgb(var(--lz-brand-rgb))] text-xs uppercase tracking-wider font-bold mb-3">Aguardando aprovação</div>
           <h1 className="text-white text-lg font-semibold mb-2">Sua conta está em análise</h1>
           <p className="text-white/50 text-sm leading-relaxed mb-6">
             Um Administrador precisa autorizar seu acesso antes que você possa usar o sistema. Você receberá acesso assim que for aprovado.
@@ -110,7 +127,7 @@ export function App() {
           onClick={toggleSidebar}
           aria-label="Mostrar sidebar"
           className="hidden md:flex fixed top-3 left-3 z-[9999] items-center gap-1.5 px-3 py-2 rounded-md text-white text-xs font-semibold transition-colors"
-          style={{ background: "#C8D44E", color: "#0D0D0D" }}
+          style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
         >
           <PanelLeftOpen size={16} /> Menu
         </button>
@@ -157,7 +174,7 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
           title="Meu perfil"
           data-tour="profile-btn"
         >
-          <div className="rounded-full p-[2px]" style={{ border: "2px solid #C8D44E" }}>
+          <div className="rounded-full p-[2px]" style={{ border: "2px solid rgb(var(--lz-brand-rgb))" }}>
             <Avatar profile={me} size={26} />
           </div>
           <span className="hidden md:inline text-xs text-white/70">{me.name}</span>

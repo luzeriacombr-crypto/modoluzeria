@@ -10,7 +10,7 @@ export function ProfilePage() {
   const me = useMe().data;
   const { updateMyProfile, setMyNotificationPreferences, updateMyAccount } = useApi();
   const { data: prefs } = useQuery(notificationPrefsQO());
-  const [color, setColor] = useState<string>(me?.color ?? "#C8D44E");
+  const [color, setColor] = useState<string>(me?.color ?? "rgb(var(--lz-brand-rgb))");
   const [avatarPath, setAvatarPath] = useState<string | null>(me?.avatarPath ?? null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(me?.avatarUrl ?? null);
   const [uploading, setUploading] = useState(false);
@@ -56,7 +56,7 @@ export function ProfilePage() {
 
   return (
     <div className="px-5 md:px-10 py-8 md:py-12 max-w-2xl mx-auto">
-      <div className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: "#C8D44E" }}>
+      <div className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
         Meu perfil
       </div>
       <h1 className="text-white text-[28px] md:text-[32px] font-bold tracking-tight">{me.name}</h1>
@@ -64,7 +64,7 @@ export function ProfilePage() {
         <Mail size={13} /> {me.email}
       </p>
       <span className="inline-block text-[10px] uppercase font-bold mt-3 px-2 py-0.5 rounded"
-        style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
         {roleLabel(me.role)}
       </span>
 
@@ -97,7 +97,7 @@ export function ProfilePage() {
           onClick={save}
           disabled={!dirty || updateMyProfile.isPending || uploading}
           className="text-sm font-bold px-6 py-2.5 rounded-md transition-opacity hover:opacity-90 disabled:opacity-40"
-          style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
         >
           {updateMyProfile.isPending ? "Salvando…" : "Salvar alterações"}
         </button>
@@ -159,7 +159,7 @@ export function ProfilePage() {
         <button
           onClick={() => window.dispatchEvent(new Event("lz:start-tour"))}
           className="text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-black shrink-0"
-          style={{ backgroundColor: "#C8D44E" }}
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
         >
           Refazer tour
         </button>
@@ -179,7 +179,7 @@ function PrefRow({ icon, title, description, value, disabled, onChange }: {
   return (
     <div className="flex items-start gap-4">
       <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
-        style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
         {icon}
       </div>
       <div className="flex-1 min-w-0">
@@ -191,7 +191,7 @@ function PrefRow({ icon, title, description, value, disabled, onChange }: {
         disabled={disabled}
         onClick={() => onChange(!value)}
         className={`relative h-6 w-11 rounded-full transition-colors shrink-0 disabled:opacity-50 ${
-          value ? "bg-[#C8D44E]" : "bg-white/15"
+          value ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"
         }`}>
         <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
           value ? "translate-x-[22px]" : "translate-x-0.5"
@@ -261,7 +261,7 @@ function AccountSection({ initialName, initialEmail, loading, onSave }: {
       <div className="flex justify-end">
         <button type="submit" disabled={!dirty || loading}
           className="text-sm font-bold px-6 py-2.5 rounded-md transition-opacity hover:opacity-90 disabled:opacity-40"
-          style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}>
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
           {loading ? "Salvando…" : "Salvar conta"}
         </button>
       </div>
@@ -276,7 +276,7 @@ function AccountField({ icon, label, children }: { icon: React.ReactNode; label:
   return (
     <label className="block">
       <span className="text-[10px] uppercase font-bold tracking-wider text-white/50 inline-flex items-center gap-1.5">
-        <span style={{ color: "#C8D44E" }}>{icon}</span> {label}
+        <span style={{ color: "rgb(var(--lz-brand-rgb))" }}>{icon}</span> {label}
       </span>
       <div className="mt-1.5">{children}</div>
     </label>

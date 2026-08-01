@@ -50,7 +50,7 @@ export function AssigneePicker({
           }
         }}
         placeholder="Buscar ou digitar nome…"
-        className="w-full text-xs bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-white outline-none focus:border-[#C8D44E]"
+        className="w-full text-xs bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
       />
       <div className="max-h-60 overflow-y-auto mt-1">
         {filtered.map((p) => (
@@ -64,7 +64,7 @@ export function AssigneePicker({
         {q.trim() && !filtered.some((p) => p.name.toLowerCase() === term) && (
           <button
             onClick={() => { onPick({ userId: null, label: q.trim() }); onClose(); }}
-            className="w-full text-left px-2 py-1.5 rounded hover:bg-white/5 text-xs text-[#C8D44E]">
+            className="w-full text-left px-2 py-1.5 rounded hover:bg-white/5 text-xs text-[rgb(var(--lz-brand-rgb))]">
             + Usar “{q.trim()}”
           </button>
         )}
@@ -80,7 +80,7 @@ export function AssigneePicker({
 
 /** Pick a stable color from a free-text label so cells are visually distinct. */
 const LABEL_PALETTE = [
-  "#C8D44E", "#FF6B6B", "#4A9EFF", "#FF8C42", "#A855F7",
+  "rgb(var(--lz-brand-rgb))", "#FF6B6B", "#4A9EFF", "#FF8C42", "#A855F7",
   "#10B981", "#F59E0B", "#EC4899", "#22D3EE", "#F472B6", "#84CC16",
 ];
 export function colorForLabel(label: string): string {

@@ -17,10 +17,10 @@ function formatSize(n: number | null | undefined) {
 
 function MimeIcon({ mime }: { mime?: string | null }) {
   const m = mime ?? "";
-  if (m.startsWith("image/")) return <ImageIcon size={16} style={{ color: "#C8D44E" }} />;
-  if (m.startsWith("video/")) return <Film size={16} style={{ color: "#C8D44E" }} />;
-  if (m.includes("folder")) return <FolderOpen size={16} style={{ color: "#C8D44E" }} />;
-  return <FileText size={16} style={{ color: "#C8D44E" }} />;
+  if (m.startsWith("image/")) return <ImageIcon size={16} style={{ color: "rgb(var(--lz-brand-rgb))" }} />;
+  if (m.startsWith("video/")) return <Film size={16} style={{ color: "rgb(var(--lz-brand-rgb))" }} />;
+  if (m.includes("folder")) return <FolderOpen size={16} style={{ color: "rgb(var(--lz-brand-rgb))" }} />;
+  return <FileText size={16} style={{ color: "rgb(var(--lz-brand-rgb))" }} />;
 }
 
 function isThumbnailable(mime?: string | null) {
@@ -221,7 +221,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
                   type="button"
                   onClick={(e) => { e.stopPropagation(); moveBy(f.id, -1); }}
                   disabled={i === 0 || reorderItemFiles.isPending}
-                  className="text-white/30 hover:text-[#C8D44E] disabled:opacity-20 disabled:cursor-not-allowed leading-none"
+                  className="text-white/30 hover:text-[rgb(var(--lz-brand-rgb))] disabled:opacity-20 disabled:cursor-not-allowed leading-none"
                   title="Mover para cima"
                 >
                   <ChevronUp size={12} />
@@ -236,7 +236,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
                   type="button"
                   onClick={(e) => { e.stopPropagation(); moveBy(f.id, 1); }}
                   disabled={i === orderedFiles.length - 1 || reorderItemFiles.isPending}
-                  className="text-white/30 hover:text-[#C8D44E] disabled:opacity-20 disabled:cursor-not-allowed leading-none"
+                  className="text-white/30 hover:text-[rgb(var(--lz-brand-rgb))] disabled:opacity-20 disabled:cursor-not-allowed leading-none"
                   title="Mover para baixo"
                 >
                   <ChevronDown size={12} />
@@ -250,13 +250,13 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
               rel="noopener noreferrer"
               referrerPolicy="no-referrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-[13px] font-medium text-white hover:text-[#C8D44E] truncate"
+              className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-[13px] font-medium text-white hover:text-[rgb(var(--lz-brand-rgb))] truncate"
               title={f.name}
             >
               {i === 0 && (
                 <span
                   className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-                  style={{ background: "rgba(200,212,78,0.15)", color: "#C8D44E" }}
+                  style={{ background: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
                   title="Aparece na prévia de Mídia"
                 >
                   Capa
@@ -295,7 +295,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
               type="button"
               disabled={busy}
               onClick={() => fileRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold bg-[#C8D44E] text-[#0D0D0D] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               {busy ? (
                 <Loader2 size={12} className="animate-spin" />
@@ -332,13 +332,13 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
                 }}
                 autoFocus
                 placeholder="Cole o link ou ID do arquivo/pasta..."
-                className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#C8D44E] focus:ring-1 focus:ring-[#C8D44E] placeholder:text-white/30 transition-colors"
+                className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 transition-colors"
               />
               <button
                 type="button"
                 disabled={!linkValue.trim() || attachDriveFile.isPending}
                 onClick={onAttachLink}
-                className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[11px] font-semibold bg-[#C8D44E] text-[#0D0D0D] hover:brightness-110 disabled:opacity-50 transition"
+                className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[11px] font-semibold bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] hover:brightness-110 disabled:opacity-50 transition"
               >
                 {attachDriveFile.isPending ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
                 Vincular
@@ -361,7 +361,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
                 type="button"
                 onClick={() => openFicha(clientId ?? missingClientId)}
                 className="shrink-0 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider"
-                style={{ backgroundColor: "#C8D44E", color: "#0D0D0D" }}
+                style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
               >
                 Abrir perfil
               </button>

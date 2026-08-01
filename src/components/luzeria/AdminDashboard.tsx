@@ -27,14 +27,14 @@ function shiftMonth(key: string, delta: number) {
 }
 
 function pctColor(p: number) {
-  if (p >= 80) return "#C8D44E";
+  if (p >= 80) return "rgb(var(--lz-brand-rgb))";
   if (p >= 50) return "#FF8C42";
   return "#FF4444";
 }
 
 // Paleta criativa derivada das cores já presentes no app.
 const PALETTE = {
-  lime: "#C8D44E",
+  lime: "rgb(var(--lz-brand-rgb))",
   limeDeep: "#8FA832",
   green: "#5BA88A",
   greenDeep: "#2D4A3E",
@@ -124,10 +124,10 @@ export function AdminDashboard() {
       <div data-tour="dashboard-hero" className="relative overflow-hidden rounded-2xl mb-6"
         style={{
           background:
-            "radial-gradient(120% 140% at 0% 0%, rgba(200,212,78,0.18) 0%, rgba(91,168,138,0.10) 35%, rgba(28,28,28,0) 70%), " +
+            "radial-gradient(120% 140% at 0% 0%, rgba(var(--lz-brand-light-rgb),0.18) 0%, rgba(91,168,138,0.10) 35%, rgba(28,28,28,0) 70%), " +
             "radial-gradient(80% 120% at 100% 100%, rgba(26,58,46,0.55) 0%, rgba(28,28,28,0) 65%), " +
             "linear-gradient(180deg, #161616 0%, #111111 100%)",
-          border: "1px solid rgba(200,212,78,0.18)",
+          border: "1px solid rgba(var(--lz-brand-light-rgb),0.18)",
         }}>
         {/* Glow blobs */}
         <div className="pointer-events-none absolute -top-20 -left-20 h-64 w-64 rounded-full opacity-30 blur-3xl"
@@ -139,7 +139,7 @@ export function AdminDashboard() {
         <div className="relative grid md:grid-cols-[1fr_auto] gap-8 p-6 md:p-8 items-center">
           <div className="text-center md:text-left flex flex-col items-center md:items-start">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-              style={{ backgroundColor: "rgba(200,212,78,0.15)", color: PALETTE.lime }}>
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: PALETTE.lime }}>
               <Sparkles size={11} /> Dashboard
             </div>
             <h1
@@ -178,11 +178,11 @@ export function AdminDashboard() {
         <MetricCard tone={PALETTE.blue}      icon={<Target size={16} />}         label="Meta do mês"     value={t?.planned ?? 0} />
         <MetricCard tone={"#1A3A2E"}          icon={<Package size={16} />}        label="Entregues"       value={t?.done ?? 0} />
         <MetricCard
-          tone={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "#C8D44E"}
+          tone={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
           icon={<Clock size={16} />}
           label="Falta"
           value={((t?.planned ?? 0) - (t?.done ?? 0))}
-          valueColor={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "#C8D44E"}
+          valueColor={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
         />
       </div>
 
@@ -194,13 +194,13 @@ export function AdminDashboard() {
         <div className="pointer-events-none absolute -top-16 -right-10 h-48 w-48 rounded-full opacity-15 blur-3xl" style={{ background: PALETTE.lime }} />
         <div className="flex items-center justify-start md:justify-between flex-wrap gap-3 mb-5 relative">
           <h2 className="text-white font-semibold inline-flex items-center gap-2">
-            <Trophy size={16} className="text-[#C8D44E]" />
+            <Trophy size={16} className="text-[rgb(var(--lz-brand-rgb))]" />
             Top Membros <span className="text-white/40 font-normal">— {PERIOD_LABEL[period]}</span>
           </h2>
           <div className="flex items-center gap-1 bg-[#0D0D0D] rounded-md p-1 text-xs">
             {(Object.keys(PERIOD_LABEL) as Period[]).map((p) => (
               <button key={p} onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 rounded transition ${period === p ? "bg-[#C8D44E] text-[#0D0D0D] font-semibold" : "text-white/60 hover:text-white"}`}>
+                className={`px-3 py-1.5 rounded transition ${period === p ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] font-semibold" : "text-white/60 hover:text-white"}`}>
                 {PERIOD_LABEL[p]}
               </button>
             ))}
@@ -237,7 +237,7 @@ export function AdminDashboard() {
                     {r.name}
                     {r.id === me?.id && (
                       <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded"
-                        style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>Você</span>
+                        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>Você</span>
                     )}
                   </div>
                   <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px]">
@@ -293,8 +293,8 @@ export function AdminDashboard() {
                   c.percent >= 80 ? "Em dia" : "Abaixo";
                 const statusColor =
                   c.total === 0 ? { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" } :
-                  c.percent > 100 ? { bg: "rgba(200,212,78,0.3)", color: "#C8D44E" } :
-                  c.percent >= 100 ? { bg: "rgba(200,212,78,0.15)", color: "#C8D44E" } :
+                  c.percent > 100 ? { bg: "rgba(var(--lz-brand-light-rgb),0.3)", color: "rgb(var(--lz-brand-rgb))" } :
+                  c.percent >= 100 ? { bg: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" } :
                   c.percent >= 80 ? { bg: "rgba(74,158,255,0.15)", color: "#4A9EFF" } :
                                     { bg: "rgba(255,68,68,0.15)", color: "#FF4444" };
                 return (
@@ -409,7 +409,7 @@ function MemberDetailPanel({
               <div className="min-w-0">
                 <div className="text-white font-bold text-[17px] truncate">{member.name}</div>
                 <div className="mt-1 inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded"
-                  style={{ backgroundColor: "rgba(200,212,78,0.15)", color: "#C8D44E" }}>
+                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
                   {roleLabel}
                 </div>
               </div>
@@ -437,7 +437,7 @@ function MemberDetailPanel({
             <button key={f.id} onClick={() => setFilter(f.id)}
               className="px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors"
               style={{
-                backgroundColor: filter === f.id ? "#C8D44E" : "rgba(255,255,255,0.06)",
+                backgroundColor: filter === f.id ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
                 color: filter === f.id ? "#0D0D0D" : "rgba(255,255,255,0.7)",
               }}>
               {f.label}
@@ -465,8 +465,8 @@ function MemberDetailPanel({
                     <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                       <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
                         style={{
-                          backgroundColor: isAvulso ? "rgba(200,212,78,0.15)" : `${t.clientColor}22`,
-                          color: isAvulso ? "#C8D44E" : t.clientColor,
+                          backgroundColor: isAvulso ? "rgba(var(--lz-brand-light-rgb),0.15)" : `${t.clientColor}22`,
+                          color: isAvulso ? "rgb(var(--lz-brand-rgb))" : t.clientColor,
                         }}>
                         {isAvulso ? "AVULSO" : t.clientName}
                       </span>
@@ -478,7 +478,7 @@ function MemberDetailPanel({
                     <div className="text-white text-sm truncate">{t.title}</div>
                     <div className="text-[10px] text-white/40 mt-0.5">{formatFinalized(t.finalizedAt)}</div>
                   </div>
-                  <CheckCircle2 size={18} style={{ color: "#C8D44E" }} className="shrink-0" />
+                  <CheckCircle2 size={18} style={{ color: "rgb(var(--lz-brand-rgb))" }} className="shrink-0" />
                 </li>
               );
             })}
@@ -497,7 +497,7 @@ function MemberDetailPanel({
               <button key={p} onClick={() => setPeriod(p)}
                 className="px-2.5 py-1.5 rounded transition flex-1"
                 style={{
-                  backgroundColor: period === p ? "#C8D44E" : "transparent",
+                  backgroundColor: period === p ? "rgb(var(--lz-brand-rgb))" : "transparent",
                   color: period === p ? "#0D0D0D" : "rgba(255,255,255,0.6)",
                   fontWeight: period === p ? 700 : 500,
                 }}>
@@ -550,7 +550,7 @@ function BigDonut({ percent, done, total }: { percent: number; done: number; tot
       <svg width={size} height={size} className="-rotate-90">
         <defs>
           <linearGradient id="bigdonut" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#C8D44E" />
+            <stop offset="0%" stopColor="rgb(var(--lz-brand-rgb))" />
             <stop offset="55%" stopColor="#8FA832" />
             <stop offset="100%" stopColor="#5BA88A" />
           </linearGradient>
@@ -562,7 +562,7 @@ function BigDonut({ percent, done, total }: { percent: number; done: number; tot
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="text-[44px] font-extrabold tabular-nums leading-none text-white">{percent}%</div>
         <div className="text-[10px] uppercase tracking-wider text-white/50 font-bold mt-1">Entregue</div>
-        <div className="text-[11px] text-white/70 mt-0.5"><span className="font-bold text-[#C8D44E]">{done}</span> / {total}</div>
+        <div className="text-[11px] text-white/70 mt-0.5"><span className="font-bold text-[rgb(var(--lz-brand-rgb))]">{done}</span> / {total}</div>
       </div>
     </div>
   );
@@ -598,15 +598,15 @@ function OperationHealth({ monthKey }: { monthKey: string }) {
   return (
     <div className="rounded-xl bg-[#161616] border border-white/[0.07] p-5 mb-6 relative overflow-hidden">
       <div className="flex items-center gap-2 mb-4">
-        <Activity size={16} className="text-[#C8D44E]" />
+        <Activity size={16} className="text-[rgb(var(--lz-brand-rgb))]" />
         <h2 className="text-white font-semibold">Saúde da operação</h2>
         <span className="text-[10px] text-white/30 ml-1">— mês atual</span>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <HealthCard icon={<Clock size={14} />} tone="#4A9EFF" label="Lead time médio" value={formatHours(leadAvg)} sub={`${data?.leadTime.count ?? 0} entregas`} />
-        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "#C8D44E"} label="Travados" value={blocked} sub={blocked > 0 ? "precisam de ação" : "tudo fluindo"} valueColor={blocked > 0 ? "#FF6B6B" : "#C8D44E"} />
-        <HealthCard icon={<RotateCcw size={14} />} tone={reworkRate > 15 ? "#FF8C42" : "#C8D44E"} label="Taxa de retrabalho" value={`${reworkRate}%`} sub={`${data?.rework.total ?? 0} itens`} />
-        <HealthCard icon={<Trophy size={14} />} tone="#C8D44E" label="Qualidade média" value={quality > 0 ? `${quality}/5` : "—"} sub={`${data?.quality.count ?? 0} avaliados`} />
+        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} label="Travados" value={blocked} sub={blocked > 0 ? "precisam de ação" : "tudo fluindo"} valueColor={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} />
+        <HealthCard icon={<RotateCcw size={14} />} tone={reworkRate > 15 ? "#FF8C42" : "rgb(var(--lz-brand-rgb))"} label="Taxa de retrabalho" value={`${reworkRate}%`} sub={`${data?.rework.total ?? 0} itens`} />
+        <HealthCard icon={<Trophy size={14} />} tone="rgb(var(--lz-brand-rgb))" label="Qualidade média" value={quality > 0 ? `${quality}/5` : "—"} sub={`${data?.quality.count ?? 0} avaliados`} />
       </div>
     </div>
   );

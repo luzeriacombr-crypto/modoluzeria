@@ -79,7 +79,7 @@ export function NotificationsBell() {
             </div>
             {unread > 0 && (
               <button onClick={() => markNotificationRead.mutate({ data: { all: true } })}
-                className="text-[11px] text-[#C8D44E] hover:underline">Marcar todas como lidas</button>
+                className="text-[11px] text-[rgb(var(--lz-brand-rgb))] hover:underline">Marcar todas como lidas</button>
             )}
           </div>
           <div className={isMobile ? "flex-1 overflow-y-auto" : "max-h-[480px] overflow-y-auto"}>
@@ -99,12 +99,12 @@ export function NotificationsBell() {
                 }}
                 className="w-full text-left px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors block"
                 style={{
-                  backgroundColor: !n.read ? "rgba(200,212,78,0.06)" : "transparent",
+                  backgroundColor: !n.read ? "rgba(var(--lz-brand-light-rgb),0.06)" : "transparent",
                   opacity: n.read ? 0.6 : 1,
                 }}
               >
                 <div className="flex items-start gap-2">
-                  {!n.read && <span className="h-1.5 w-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: "#C8D44E" }} />}
+                  {!n.read && <span className="h-1.5 w-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
                   <div className="flex-1">
                     <p className="text-xs text-white/90">{n.message}</p>
                     <p className="text-[10px] text-white/40 mt-0.5">{relTime(n.createdAt)}</p>
