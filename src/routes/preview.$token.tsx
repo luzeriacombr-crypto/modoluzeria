@@ -71,13 +71,13 @@ function PublicPreviewPage() {
       <Shell>
         <div className="text-center">
           <div className="text-white text-2xl font-bold mb-2">Link inválido</div>
-          <div className="text-white/50 text-sm">Este link foi revogado ou nunca existiu. Solicite um novo à equipe Luzeria.</div>
+          <div className="text-white/50 text-sm">Este link foi revogado ou nunca existiu. Solicite um novo à sua agência.</div>
         </div>
       </Shell>
     );
   }
 
-  const { client, items } = q.data;
+  const { client, items, orgName } = q.data;
   const initial = client.name.charAt(0).toUpperCase();
   const activeItem = items.find((i) => i.id === activeId) ?? null;
 
@@ -142,7 +142,7 @@ function PublicPreviewPage() {
             ) : (
               <div>
                 <div className="text-white font-semibold text-sm mb-1">Tudo certo com o conteúdo?</div>
-                <div className="text-white/50 text-xs mb-4">Ao aprovar, a Luzeria Estúdio recebe uma confirmação formal.</div>
+                <div className="text-white/50 text-xs mb-4">Ao aprovar, {orgName ?? "a agência"} recebe uma confirmação formal.</div>
                 <button
                   onClick={async () => {
                     setApproving(true);
@@ -164,7 +164,7 @@ function PublicPreviewPage() {
         )}
 
         <div className="mt-6 text-center text-white/30 text-[11px]">
-          Apresentado por <span className="font-semibold" style={{ color: "rgb(var(--lz-brand-rgb))" }}>Luzeria Estúdio</span>
+          Apresentado por <span className="font-semibold" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{orgName ?? "sua agência"}</span>
         </div>
       </div>
 

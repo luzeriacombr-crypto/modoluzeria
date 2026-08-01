@@ -21,7 +21,7 @@ export async function exportReportXlsx(
 
   // Aba 1 — Resumo
   const resumo = [
-    ["Relatório Luzeria"],
+    ["Relatório"],
     ["Período", range.label],
     ["De", new Date(range.from).toLocaleDateString("pt-BR")],
     ["Até", new Date(range.to).toLocaleDateString("pt-BR")],
@@ -69,6 +69,6 @@ export async function exportReportXlsx(
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([histHead, ...histRows]), "Histórico");
 
   const refDate = new Date(range.to);
-  const fname = `Relatorio_Luzeria_${MONTHS_PT[refDate.getMonth()]}_${refDate.getFullYear()}.xlsx`;
+  const fname = `Relatorio_${MONTHS_PT[refDate.getMonth()]}_${refDate.getFullYear()}.xlsx`;
   XLSX.writeFile(wb, fname);
 }

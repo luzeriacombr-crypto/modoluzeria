@@ -19,7 +19,7 @@ type Step = {
 const STEPS: Step[] = [
   {
     id: "intro",
-    title: "Bem-vindo à Luzeria 💚",
+    title: "Bem-vindo ao Modo Criador 💚",
     desc: "Em poucos passos eu te mostro o app. Você pode avançar, voltar ou pular a qualquer momento.",
   },
   {

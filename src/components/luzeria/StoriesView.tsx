@@ -69,7 +69,7 @@ export function StoriesView() {
             <Camera size={13} /> <span>Escala</span>
           </div>
           <h1 className="text-[32px] font-bold text-white leading-none tracking-tight">Stories</h1>
-          <p className="text-sm text-white/50 mt-2">Responsáveis pelos stories da Luzeria.</p>
+          <p className="text-sm text-white/50 mt-2">Responsáveis pelos stories da equipe.</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => shift(-1)} className="p-2 rounded-md bg-[#1C1C1C] hover:bg-white/5 text-white/70">

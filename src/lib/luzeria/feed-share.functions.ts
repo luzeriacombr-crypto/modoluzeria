@@ -133,6 +133,7 @@ export type PublicFeedPayload = {
   client: { name: string; color: string; description: string | null };
   month: { key: string };
   items: PublicFeedItem[];
+  orgName: string | null;
 };
 
 export const getPublicFeed = createServerFn({ method: "GET" })
@@ -149,6 +150,11 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     if (error || !result) return null;
 
     const { data: orgId } = await supabase.rpc("get_org_id_for_token", { _token: data.token });
+    let orgName: string | null = null;
+    if (orgId) {
+      const { data: org } = await supabase.from("orgs").select("name").eq("id", orgId as string).maybeSingle();
+      orgName = org?.name ?? null;
+    }
 
     const r = result as any;
     const { client, month, items: rawItems, files: rawFiles, feedback: rawFeedback } = r;
@@ -282,6 +288,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
           })),
         };
       }),
+      orgName,
     };
   });
 

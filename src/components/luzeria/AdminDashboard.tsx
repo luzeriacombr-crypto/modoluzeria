@@ -11,6 +11,7 @@ import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { Avatar } from "./Avatar";
+import { SetupChecklist } from "./SetupChecklist";
 
 type Period = "month" | "3m" | "6m" | "year";
 const PERIOD_LABEL: Record<Period, string> = {
@@ -120,6 +121,7 @@ export function AdminDashboard() {
 
   return (
     <div className="px-5 md:px-10 py-8 max-w-[1320px] mx-auto">
+      <SetupChecklist />
       {/* HERO */}
       <div data-tour="dashboard-hero" className="relative overflow-hidden rounded-2xl mb-6"
         style={{

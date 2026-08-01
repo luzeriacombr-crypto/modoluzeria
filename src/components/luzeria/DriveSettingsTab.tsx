@@ -89,7 +89,7 @@ export function DriveSettingsTab() {
         </div>
         <p className="text-xs text-white/50 mb-4 leading-relaxed">
           Cada agência conecta a própria conta do Google Drive. Os arquivos dessa agência
-          ficam só nessa conta — a Luzeria não tem acesso a ela.
+          ficam só nessa conta — nenhuma outra agência tem acesso a ela.
         </p>
         {connStatus.isLoading ? (
           <div className="text-white/40 text-sm">Verificando…</div>

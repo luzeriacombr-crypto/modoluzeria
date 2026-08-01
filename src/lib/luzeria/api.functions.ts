@@ -160,6 +160,26 @@ export const getPlans = createServerFn({ method: "GET" })
     }));
   });
 
+/** Drives the "Primeiros passos" checklist shown to masters until they've
+ * customized the brand, connected Drive, and added at least one client. */
+export const getSetupChecklist = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: org } = await context.supabase
+      .from("orgs").select("logo_path, color_primary").eq("id", context.orgId).maybeSingle();
+    const brandingDone = !!(org?.logo_path || org?.color_primary);
+
+    const { data: drive } = await context.supabase
+      .from("org_google_credentials").select("org_id").eq("org_id", context.orgId).maybeSingle();
+    const driveConnected = !!drive || (context.orgId === LUZERIA_ORG_ID && !!process.env.GOOGLE_REFRESH_TOKEN);
+
+    const { count } = await context.supabase
+      .from("clients").select("id", { count: "exact", head: true }).eq("archived", false).neq("category", "Ex-clientes");
+    const hasClients = (count ?? 0) > 0;
+
+    return { brandingDone, driveConnected, hasClients };
+  });
+
 export const getOrgPlanStatus = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {

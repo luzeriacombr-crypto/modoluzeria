@@ -7,7 +7,7 @@ import {
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile,
   listStories, upsertStoryDay, setStoryDone, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
-  adminCreateUser, createAgency, updateMyOrg, getOrgPlanStatus, getPlans, subscribeToPlan, adminSendPasswordReset, getAdminDashboard, getTopMembers, getMemberFinalizations,
+  adminCreateUser, createAgency, updateMyOrg, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, getAdminDashboard, getTopMembers, getMemberFinalizations,
   updateMyAccount,
   getReport, getMemberReportDetail, getMemberVelocity,
   updateFeedOrder,
@@ -211,6 +211,9 @@ export const appSettingsQO = () =>
 
 export const orgPlanStatusQO = () =>
   queryOptions({ queryKey: ["org-plan-status"], queryFn: () => getOrgPlanStatus() });
+
+export const setupChecklistQO = () =>
+  queryOptions({ queryKey: ["setup-checklist"], queryFn: () => getSetupChecklist() });
 
 export const plansQO = () =>
   queryOptions({ queryKey: ["plans"], queryFn: () => getPlans() });

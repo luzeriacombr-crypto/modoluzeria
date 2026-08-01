@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 // The Modo Criador wordmark. Two path groups: the small top line and the
 // larger bottom line — in the original artwork they're white + lime, but
 // most surfaces need a single solid color (e.g. white on dark, black on
@@ -32,13 +34,15 @@ const BOTTOM_PATHS = [
 export function ModoCriadorLogo({
   variant = "brand",
   className,
+  style,
 }: {
   variant?: Variant;
   className?: string;
+  style?: CSSProperties;
 }) {
   const { top, bottom } = VARIANT_COLORS[variant];
   return (
-    <svg viewBox="0 0 544 191" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} role="img" aria-label="Modo Criador">
+    <svg viewBox="0 0 544 191" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} style={style} role="img" aria-label="Modo Criador">
       {TOP_PATHS.map((d, i) => <path key={`t${i}`} d={d} fill={top} />)}
       {BOTTOM_PATHS.map((d, i) => <path key={`b${i}`} d={d} fill={bottom} />)}
     </svg>

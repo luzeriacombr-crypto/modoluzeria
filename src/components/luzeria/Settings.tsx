@@ -14,7 +14,10 @@ import { DriveSettingsTab } from "./DriveSettingsTab";
 import { MemberGoalsTab } from "./MemberGoalsTab";
 import { AutomationsTab } from "./AutomationsTab";
 
-export function SettingsPage() {
+type SettingsTab = "team" | "report" | "goals" | "drive" | "automations" | "general";
+const VALID_TABS: SettingsTab[] = ["team", "report", "goals", "drive", "automations", "general"];
+
+export function SettingsPage({ initialTab }: { initialTab?: string }) {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
   const { setUserRole, setUserActive, deleteUser, adminCreateUser, adminSendPasswordReset, createAgency } = useApi();
@@ -22,7 +25,9 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const [adding, setAdding] = useState(false);
   const [creatingAgency, setCreatingAgency] = useState(false);
-  const [tab, setTab] = useState<"team" | "report" | "goals" | "drive" | "automations" | "general">("team");
+  const [tab, setTab] = useState<SettingsTab>(
+    (VALID_TABS as string[]).includes(initialTab ?? "") ? (initialTab as SettingsTab) : "team",
+  );
 
   if (me?.role !== "master") {
     return <div className="p-10 text-white/60 text-sm">Acesso restrito ao Administrador Master.</div>;
@@ -671,7 +676,7 @@ function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl, orgColorPr
       </h2>
       <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-4">
         <p className="text-[11px] text-white/50 leading-relaxed">
-          Aparece no lugar de "Luzeria" na barra lateral e no título da aba, depois que sua equipe faz login.
+          Aparece na barra lateral e no título da aba, depois que sua equipe faz login.
           A tela de login em si continua igual pra todas as agências.
         </p>
 

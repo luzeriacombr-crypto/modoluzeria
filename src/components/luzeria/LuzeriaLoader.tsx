@@ -1,4 +1,4 @@
-import luzeriaLogo from "@/assets/luzeria-logo-login.png";
+import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 
 export function LuzeriaLoader({ fullScreen = true }: { fullScreen?: boolean }) {
   return (
@@ -19,7 +19,7 @@ export function LuzeriaLoader({ fullScreen = true }: { fullScreen?: boolean }) {
         .lz-logo { animation: lz-fade 0.4s ease-out both; }
       `}</style>
 
-      <img src={luzeriaLogo} alt="Luzeria" className="lz-logo" style={{ height: 32, width: "auto", objectFit: "contain" }} />
+      <ModoCriadorLogo variant="white" className="lz-logo" style={{ height: 32, width: "auto" }} />
 
       <div style={{ width: 128, height: 2, borderRadius: 9999, overflow: "hidden", background: "rgba(var(--lz-brand-light-rgb),0.15)" }}>
         <div className="lz-bar" style={{ height: "100%", borderRadius: 9999, background: "rgb(var(--lz-brand-rgb))" }} />
