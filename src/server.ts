@@ -40,6 +40,10 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      if (new URL(request.url).pathname === "/api/webhooks/asaas" && request.method === "POST") {
+        const { handleAsaasWebhook } = await import("./lib/luzeria/asaas-webhook.server");
+        return await handleAsaasWebhook(request);
+      }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

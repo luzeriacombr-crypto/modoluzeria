@@ -110,6 +110,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
   .inputValidator((d: {
     name?: string; tagline?: string | null; logoPath?: string | null;
     colorPrimary?: string | null; colorPrimaryLight?: string | null; colorSidebar?: string | null;
+    taxId?: string | null;
   }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
@@ -118,6 +119,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       colorPrimary: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       colorPrimaryLight: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       colorSidebar: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+      taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -129,6 +131,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.colorPrimary !== undefined) patch.color_primary = data.colorPrimary;
     if (data.colorPrimaryLight !== undefined) patch.color_primary_light = data.colorPrimaryLight;
     if (data.colorSidebar !== undefined) patch.color_sidebar = data.colorSidebar;
+    if (data.taxId !== undefined) patch.tax_id = data.taxId;
     if (Object.keys(patch).length === 0) return { ok: true };
     const { data: updated, error } = await context.supabase
       .from("orgs").update(patch).eq("id", context.orgId).select("id").maybeSingle();
@@ -161,7 +164,7 @@ export const getOrgPlanStatus = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const { data: org } = await context.supabase
-      .from("orgs").select("plan_id, subscription_status, trial_ends_at").eq("id", context.orgId).maybeSingle();
+      .from("orgs").select("plan_id, subscription_status, trial_ends_at, tax_id, asaas_subscription_id").eq("id", context.orgId).maybeSingle();
     const planId = (org as any)?.plan_id ?? "solo";
     const { data: plan } = await context.supabase.from("plans").select("*").eq("id", planId).maybeSingle();
     const { count: clientsUsed } = await context.supabase
@@ -179,7 +182,50 @@ export const getOrgPlanStatus = createServerFn({ method: "GET" })
       trialEndsAt: (org as any)?.trial_ends_at ?? null,
       clientsUsed: clientsUsed ?? 0,
       collaboratorsUsed: collaboratorsUsed ?? 0,
+      taxId: (org as any)?.tax_id ?? null,
+      hasAsaasSubscription: !!(org as any)?.asaas_subscription_id,
     };
+  });
+
+/** Master clicks "Assinar" for a plan: creates (or reuses) the org's Asaas
+ * customer + a monthly subscription for that plan's price, returns the
+ * invoice URL so the org can complete the first payment (boleto/PIX/cartão). */
+export const subscribeToPlan = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { planId: string }) => z.object({ planId: z.string().min(1) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+
+    const { data: org } = await context.supabase
+      .from("orgs").select("name, tax_id, asaas_customer_id").eq("id", context.orgId).maybeSingle();
+    if (!org?.tax_id) throw new Error("Preencha o CNPJ/CPF da agência antes de assinar um plano.");
+
+    const { data: plan } = await context.supabase.from("plans").select("id, name, price_cents").eq("id", data.planId).maybeSingle();
+    if (!plan) throw new Error("Plano não encontrado.");
+    if (plan.price_cents == null) throw new Error("Este plano é sob consulta — fale com a gente para contratar.");
+
+    const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
+
+    let customerId = org.asaas_customer_id;
+    if (!customerId) {
+      const customer = await createAsaasCustomer({ name: org.name, cpfCnpj: org.tax_id });
+      customerId = customer.id;
+    }
+
+    const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
+      customerId,
+      valueCents: plan.price_cents,
+      description: `Modo Criador — Plano ${plan.name}`,
+    });
+
+    const { error } = await context.supabase
+      .from("orgs")
+      .update({ plan_id: plan.id, asaas_customer_id: customerId, asaas_subscription_id: subscriptionId })
+      .eq("id", context.orgId);
+    if (error) throw new Error(error.message);
+
+    return { invoiceUrl };
   });
 
 /** Throws a friendly error if the org is at/over its plan's client cap.

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO } from "@/lib/luzeria/queries";
+import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO } from "@/lib/luzeria/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
@@ -486,8 +486,20 @@ function UsageBar({ label, used, max, pct }: { label: string; used: number; max:
   );
 }
 
+const SUBSCRIPTION_STATUS_LABEL: Record<string, { label: string; color: string }> = {
+  active: { label: "Assinatura ativa", color: "#4ADE80" },
+  past_due: { label: "Pagamento atrasado", color: "#FF6B6B" },
+  canceled: { label: "Cancelada", color: "#FF6B6B" },
+};
+
 function PlanUsageSection() {
   const { data: status, isLoading } = useQuery(orgPlanStatusQO());
+  const { data: plans } = useQuery(plansQO());
+  const { updateMyOrg, subscribeToPlan } = useApi();
+  const [taxId, setTaxId] = useState("");
+
+  useEffect(() => { if (status?.taxId) setTaxId(status.taxId); }, [status?.taxId]);
+
   if (isLoading || !status) return null;
 
   const clientsPct = status.maxClients ? Math.min(100, Math.round((status.clientsUsed / status.maxClients) * 100)) : 0;
@@ -498,6 +510,25 @@ function PlanUsageSection() {
   const trialDaysLeft = status.trialEndsAt
     ? Math.max(0, Math.ceil((new Date(status.trialEndsAt).getTime() - Date.now()) / 86_400_000))
     : null;
+  const statusInfo = SUBSCRIPTION_STATUS_LABEL[status.subscriptionStatus];
+
+  function saveTaxId() {
+    const digits = taxId.replace(/\D/g, "");
+    updateMyOrg.mutate({ data: { taxId: digits || null } }, {
+      onSuccess: () => toast.success("CNPJ/CPF salvo."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+    });
+  }
+
+  function subscribe(planId: string) {
+    subscribeToPlan.mutate({ data: { planId } }, {
+      onSuccess: (r: any) => {
+        toast.success("Assinatura criada! Abrindo a fatura para pagamento…");
+        if (r?.invoiceUrl) window.open(r.invoiceUrl, "_blank");
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao assinar o plano."),
+    });
+  }
 
   return (
     <>
@@ -510,15 +541,61 @@ function PlanUsageSection() {
             <div className="text-lg font-bold text-white">{status.planName}</div>
             <div className="text-[11px] text-white/50">{priceLabel}</div>
           </div>
-          {status.subscriptionStatus === "trialing" && trialDaysLeft !== null && (
+          {status.subscriptionStatus === "trialing" && trialDaysLeft !== null ? (
             <span className="text-[10px] font-bold uppercase px-2 py-1 rounded"
               style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
               {trialDaysLeft > 0 ? `${trialDaysLeft} dias de teste` : "Teste expirado"}
             </span>
-          )}
+          ) : statusInfo ? (
+            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded"
+              style={{ backgroundColor: `${statusInfo.color}26`, color: statusInfo.color }}>
+              {statusInfo.label}
+            </span>
+          ) : null}
         </div>
         <UsageBar label="Clientes ativos" used={status.clientsUsed} max={status.maxClients} pct={clientsPct} />
         <UsageBar label="Colaboradores" used={status.collaboratorsUsed} max={status.maxCollaborators} pct={collabPct} />
+      </div>
+
+      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+        <Star size={12} /> Assinatura e cobrança
+      </h2>
+      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-4">
+        <Field label="CNPJ ou CPF da agência (necessário para assinar um plano)">
+          <div className="flex gap-2">
+            <input value={taxId} onChange={(e) => setTaxId(e.target.value)} maxLength={18} className="lz-input"
+              placeholder="Somente números" />
+            <button onClick={saveTaxId} disabled={updateMyOrg.isPending}
+              className="lz-btn-ghost text-xs px-4 py-2 rounded-md whitespace-nowrap disabled:opacity-50">
+              {updateMyOrg.isPending ? "Salvando…" : "Salvar"}
+            </button>
+          </div>
+        </Field>
+
+        <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+          {(plans ?? []).map((plan) => (
+            <div key={plan.id} className="flex items-center justify-between bg-black/20 rounded-md px-3 py-2.5">
+              <div>
+                <div className="text-sm text-white font-semibold">{plan.name}</div>
+                <div className="text-[11px] text-white/50">
+                  {plan.priceCents != null ? `R$ ${(plan.priceCents / 100).toFixed(2).replace(".", ",")}/mês` : "Sob consulta"}
+                  {" · "}até {plan.maxClients} clientes · até {plan.maxCollaborators} colaboradores
+                </div>
+              </div>
+              {plan.id === status.planId && status.hasAsaasSubscription ? (
+                <span className="text-[10px] uppercase font-bold text-white/40 px-2">Plano atual</span>
+              ) : plan.priceCents == null ? (
+                <a href="https://wa.me/" target="_blank" rel="noreferrer"
+                  className="lz-btn-ghost text-xs px-3 py-1.5 rounded-md whitespace-nowrap">Fale conosco</a>
+              ) : (
+                <button onClick={() => subscribe(plan.id)} disabled={subscribeToPlan.isPending}
+                  className="lz-btn-primary text-xs px-3 py-1.5 rounded-md whitespace-nowrap disabled:opacity-50">
+                  {subscribeToPlan.isPending ? "Aguarde…" : "Assinar"}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </>
   );

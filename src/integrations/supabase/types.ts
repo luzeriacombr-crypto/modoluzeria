@@ -44,6 +44,27 @@ export type Database = {
         }
         Relationships: []
       }
+      asaas_webhook_events: {
+        Row: {
+          event: string
+          id: string
+          payload: Json
+          processed_at: string
+        }
+        Insert: {
+          event: string
+          id: string
+          payload: Json
+          processed_at?: string
+        }
+        Update: {
+          event?: string
+          id?: string
+          payload?: Json
+          processed_at?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           key: string
@@ -1065,6 +1086,8 @@ export type Database = {
       }
       orgs: {
         Row: {
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
           color_primary: string | null
           color_primary_light: string | null
           color_sidebar: string | null
@@ -1076,9 +1099,12 @@ export type Database = {
           slug: string
           subscription_status: string
           tagline: string | null
+          tax_id: string | null
           trial_ends_at: string | null
         }
         Insert: {
+          asaas_customer_id?: string | null
+          asaas_subscription_id?: string | null
           color_primary?: string | null
           color_primary_light?: string | null
           color_sidebar?: string | null
@@ -1090,9 +1116,12 @@ export type Database = {
           slug: string
           subscription_status?: string
           tagline?: string | null
+          tax_id?: string | null
           trial_ends_at?: string | null
         }
         Update: {
+          asaas_customer_id?: string | null
+          asaas_subscription_id?: string | null
           color_primary?: string | null
           color_primary_light?: string | null
           color_sidebar?: string | null
@@ -1104,6 +1133,7 @@ export type Database = {
           slug?: string
           subscription_status?: string
           tagline?: string | null
+          tax_id?: string | null
           trial_ends_at?: string | null
         }
         Relationships: [
