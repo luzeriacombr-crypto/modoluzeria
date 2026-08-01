@@ -141,6 +141,16 @@ Deno.serve(async (req) => {
         if (targetOrgId !== callerOrgId && !callerIsPlatformAdmin) {
           return fail("Forbidden: cannot manage users from another organization", 403);
         }
+        // `name` is stored in public.profiles.name, not auth.users — that's
+        // what getMe()/the rest of the app actually reads for display. The
+        // user_metadata copy is just kept in sync for handle_new_user()'s
+        // fallback on future signups; it was previously the ONLY place this
+        // wrote to, so renaming an existing account silently did nothing.
+        if (name) {
+          const { error: profileErr } = await supabaseAdmin
+            .from("profiles").update({ name }).eq("id", targetUserId);
+          if (profileErr) return fail(`Falha ao atualizar nome: ${profileErr.message}`, 500);
+        }
         const attrs: Record<string, unknown> = {};
         if (email) attrs.email = email;
         if (password) attrs.password = password;
