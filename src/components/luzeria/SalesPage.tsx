@@ -10,8 +10,6 @@ const LIME = "#D7FF3F";
 const LIME_ON_LIGHT = "#5B7A00"; // readable lime-family accent for white sections
 const BG_BLUE = "#0A0E23";
 const BG_BLUE_2 = "#111F5C";
-const BG_BLUE_LIGHT = "#E1E8FB";
-const BG_GREEN = "#0B2A1C";
 const BG_WHITE = "#F5F5F0";
 const BG_GRAY = "#18181B";
 
@@ -104,7 +102,7 @@ export function SalesPage() {
       </section>
 
       {/* Dores */}
-      <section style={{ background: BG_BLUE_LIGHT, color: "#0A0E23" }} className="border-t border-black/10">
+      <section style={{ background: "#0C1F61" }} className="border-t border-white/10">
         <div className="px-5 sm:px-10 max-w-[820px] mx-auto py-14">
           <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">O Modo Criador é para...</h2>
           <ul className="space-y-4">
@@ -116,13 +114,16 @@ export function SalesPage() {
               "Você que já perdeu prazo porque ninguém viu que faltava aprovar algo",
               "Você que tem vergonha de mostrar sua \"organização interna\" pra um cliente novo",
             ].map((t) => (
-              <li key={t} className="flex gap-3 text-[#0A0E23]/75 text-base sm:text-lg">
-                <span className="text-red-500 font-bold shrink-0">✗</span>{t}
+              <li key={t} className="flex gap-3 text-white/75 text-base sm:text-lg">
+                <span className="text-red-400 font-bold shrink-0">✗</span>{t}
               </li>
             ))}
           </ul>
-          <p className="mt-8 font-bold" style={{ color: LIME_ON_LIGHT }}>
-            Se você marcou pelo menos um, o Modo Criador foi feito pra você.
+          <p className="mt-8 text-white">
+            Se você marcou pelo menos um,{" "}
+            <span className="font-bold" style={{ color: LIME }}>
+              o Modo Criador foi feito pra você.
+            </span>
           </p>
         </div>
       </section>
