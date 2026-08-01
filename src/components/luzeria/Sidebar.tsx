@@ -69,7 +69,7 @@ export function Sidebar({
       {/* Logo */}
       <div className="px-5 pt-5 pb-4">
         {me?.orgLogoUrl ? (
-          <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="h-9 w-auto max-w-full object-contain" />
+          <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="max-h-7 max-w-[170px]" />
         ) : (
           <div className="text-white font-extrabold text-lg uppercase tracking-wide truncate" title={me?.orgName ?? ""}>
             {me?.orgName ?? "Modo Criador"}
