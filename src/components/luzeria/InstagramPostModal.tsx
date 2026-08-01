@@ -23,7 +23,7 @@ export type IGModalItem = {
   files: IGModalFile[];
   feedback: IGModalFeedback[];
 };
-export type IGModalClient = { name: string; color: string };
+export type IGModalClient = { name: string; color: string; photoUrl?: string | null };
 
 /** Either internal (auth thumbnail) or public (token-signed thumbnail). */
 type ThumbMode =
@@ -279,10 +279,18 @@ export function InstagramPostModal({
         <div ref={detailsRef} className="flex-1 flex flex-col min-h-0 max-h-full md:max-h-[92vh] bg-white overflow-y-auto md:overflow-hidden">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-200">
-            <div
-              className="size-9 rounded-full grid place-items-center font-semibold text-white text-sm shrink-0"
-              style={{ background: client.color }}
-            >{initial}</div>
+            {client.photoUrl ? (
+              <img
+                src={client.photoUrl}
+                alt={client.name}
+                className="size-9 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div
+                className="size-9 rounded-full grid place-items-center font-semibold text-white text-sm shrink-0"
+                style={{ background: client.color }}
+              >{initial}</div>
+            )}
             <div className="flex-1 min-w-0">
               <div className="text-[13px] font-semibold text-neutral-900 truncate">{client.name}</div>
               {item.scheduledAt && (

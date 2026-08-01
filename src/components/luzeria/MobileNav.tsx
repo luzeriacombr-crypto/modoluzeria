@@ -89,7 +89,7 @@ export function MobileNav() {
                             border: `1px solid color-mix(in oklab, ${cc} 35%, transparent)`,
                           }}
                         >
-                          <Avatar name={c.name} color={cc} size={32} />
+                          <Avatar name={c.name} color={cc} avatarUrl={c.photoUrl} size={32} />
                           <span className="text-xs font-semibold text-white truncate flex-1 min-w-0">{c.name}</span>
                           {c.favorite && <Star size={11} className="text-[rgb(var(--lz-brand-rgb))] fill-[rgb(var(--lz-brand-rgb))] shrink-0 absolute top-1.5 right-1.5" />}
                         </button>

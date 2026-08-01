@@ -7,6 +7,12 @@ import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import heroMockup from "@/assets/hero-mockup.png";
 
 const LIME = "#D7FF3F";
+const LIME_ON_LIGHT = "#5B7A00"; // readable lime-family accent for white sections
+const BG_BLUE = "#0A0E23";
+const BG_BLUE_2 = "#111F5C";
+const BG_GREEN = "#0B2A1C";
+const BG_WHITE = "#F5F5F0";
+const BG_GRAY = "#18181B";
 
 export function SalesPage() {
   const plans = useQuery({ queryKey: ["public-plans"], queryFn: () => getPublicPlans() });
@@ -97,102 +103,111 @@ export function SalesPage() {
       </section>
 
       {/* Dores */}
-      <section className="px-5 sm:px-10 max-w-[820px] mx-auto py-14 border-t border-white/10">
-        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">O Modo Criador é para...</h2>
-        <ul className="space-y-4">
-          {[
-            "Você que gerencia vários clientes e cada um vive numa planilha ou pasta diferente",
-            "Cliente que demora dias pra aprovar um post porque os arquivos se perdem no WhatsApp",
-            "Sua equipe que não sabe quem é responsável por qual entrega e qual o prazo",
-            "Você que quer mensurar a produtividade do time",
-            "Você que já perdeu prazo porque ninguém viu que faltava aprovar algo",
-            "Você que tem vergonha de mostrar sua \"organização interna\" pra um cliente novo",
-          ].map((t) => (
-            <li key={t} className="flex gap-3 text-white/75 text-base sm:text-lg">
-              <span className="text-red-400 font-bold shrink-0">✗</span>{t}
-            </li>
-          ))}
-        </ul>
-        <p className="mt-8 font-bold" style={{ color: LIME }}>
-          Se você marcou pelo menos um, o Modo Criador foi feito pra você.
-        </p>
+      <section style={{ background: BG_GREEN }} className="border-t border-white/10">
+        <div className="px-5 sm:px-10 max-w-[820px] mx-auto py-14">
+          <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">O Modo Criador é para...</h2>
+          <ul className="space-y-4">
+            {[
+              "Você que gerencia vários clientes e cada um vive numa planilha ou pasta diferente",
+              "Cliente que demora dias pra aprovar um post porque os arquivos se perdem no WhatsApp",
+              "Sua equipe que não sabe quem é responsável por qual entrega e qual o prazo",
+              "Você que quer mensurar a produtividade do time",
+              "Você que já perdeu prazo porque ninguém viu que faltava aprovar algo",
+              "Você que tem vergonha de mostrar sua \"organização interna\" pra um cliente novo",
+            ].map((t) => (
+              <li key={t} className="flex gap-3 text-white/75 text-base sm:text-lg">
+                <span className="text-red-400 font-bold shrink-0">✗</span>{t}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-8 font-bold" style={{ color: LIME }}>
+            Se você marcou pelo menos um, o Modo Criador foi feito pra você.
+          </p>
+        </div>
       </section>
 
       {/* Simples assim */}
-      <section className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14 border-t border-white/10">
-        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">Simples assim</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { n: "01", i: "📅", t: "Monte o calendário", d: "Organize Posts e Reels de cada cliente num board visual, por mês." },
-            { n: "02", i: "👥", t: "Atribua e acompanhe", d: "Sua equipe sabe exatamente quem faz o quê, qual o prazo e você pode fazer comentários." },
-            { n: "03", i: "🔗", t: "Cliente aprova pelo link", d: "Manda um link público bonito, o cliente aprova ou comenta alterações, sem login." },
-            { n: "04", i: "📁", t: "Arquivos no Drive", d: "Conecte sua própria conta do Google Drive e faça o Backup dos arquivos automaticamente." },
-          ].map((s) => (
-            <div key={s.n} className="bg-white/5 rounded-xl p-5 border border-white/10">
-              <div className="text-white/30 font-black text-sm mb-2">{s.n}</div>
-              <div className="text-2xl mb-2">{s.i}</div>
-              <div className="font-bold mb-1">{s.t}</div>
-              <div className="text-white/50 text-sm leading-relaxed">{s.d}</div>
-            </div>
-          ))}
+      <section style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10">
+        <div className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14">
+          <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">Simples assim</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { n: "01", i: "📅", t: "Monte o calendário", d: "Organize Posts e Reels de cada cliente num board visual, por mês." },
+              { n: "02", i: "👥", t: "Atribua e acompanhe", d: "Sua equipe sabe exatamente quem faz o quê, qual o prazo e você pode fazer comentários." },
+              { n: "03", i: "🔗", t: "Cliente aprova pelo link", d: "Manda um link público bonito, o cliente aprova ou comenta alterações, sem login." },
+              { n: "04", i: "📁", t: "Arquivos no Drive", d: "Conecte sua própria conta do Google Drive e faça o Backup dos arquivos automaticamente." },
+            ].map((s) => (
+              <div key={s.n} className="bg-black/[0.04] rounded-xl p-5 border border-black/10">
+                <div className="text-black/30 font-black text-sm mb-2">{s.n}</div>
+                <div className="text-2xl mb-2">{s.i}</div>
+                <div className="font-bold mb-1">{s.t}</div>
+                <div className="text-[#0A0E23]/60 text-sm leading-relaxed">{s.d}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Benefícios */}
-      <section className="px-5 sm:px-10 max-w-[820px] mx-auto py-14 border-t border-white/10">
-        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">Você vai ter...</h2>
-        <ul className="space-y-4">
-          {[
-            "Calendário de conteúdo ilimitado, por cliente e por mês",
-            "Link de aprovação pro cliente",
-            "Equipe com papéis e responsáveis por tarefa",
-            "Google Drive conectado, arquivos organizados automaticamente",
-            "Relatórios de produtividade da equipe",
-            "Suporte em português, feito pra agência brasileira",
-          ].map((t) => (
-            <li key={t} className="flex gap-3 text-white/85 text-base sm:text-lg">
-              <span className="shrink-0" style={{ color: LIME }}>✅</span>{t}
-            </li>
-          ))}
-        </ul>
+      <section style={{ background: BG_GRAY }} className="border-t border-white/10">
+        <div className="px-5 sm:px-10 max-w-[820px] mx-auto py-14">
+          <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">Você vai ter...</h2>
+          <ul className="space-y-4">
+            {[
+              "Calendário de conteúdo ilimitado, por cliente e por mês",
+              "Link de aprovação pro cliente",
+              "Equipe com papéis e responsáveis por tarefa",
+              "Google Drive conectado, arquivos organizados automaticamente",
+              "Relatórios de produtividade da equipe",
+              "Suporte em português, feito pra agência brasileira",
+            ].map((t) => (
+              <li key={t} className="flex gap-3 text-white/85 text-base sm:text-lg">
+                <span className="shrink-0" style={{ color: LIME }}>✅</span>{t}
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       {/* Planos */}
-      <section className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14 border-t border-white/10">
-        <h2 className="font-black uppercase text-2xl sm:text-3xl mb-10 text-center">Escolha seu plano</h2>
-        {plans.isLoading ? (
-          <p className="text-center text-white/40">Carregando planos…</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {selectablePlans.map((p) => (
-              <div key={p.id} className="bg-white/5 rounded-xl p-6 border border-white/10 flex flex-col">
-                <div className="font-black text-xl mb-1">{p.name}</div>
-                <div className="text-3xl font-black mb-1">
-                  R$ {(p.priceCents! / 100).toFixed(2).replace(".", ",")}
-                  <span className="text-sm font-normal text-white/50">/mês</span>
+      <section style={{ background: BG_BLUE_2 }} className="border-t border-white/10">
+        <div className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14">
+          <h2 className="font-black uppercase text-2xl sm:text-3xl mb-10 text-center">Escolha seu plano</h2>
+          {plans.isLoading ? (
+            <p className="text-center text-white/40">Carregando planos…</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {selectablePlans.map((p) => (
+                <div key={p.id} className="bg-white/5 rounded-xl p-6 border border-white/10 flex flex-col">
+                  <div className="font-black text-xl mb-1">{p.name}</div>
+                  <div className="text-3xl font-black mb-1">
+                    R$ {(p.priceCents! / 100).toFixed(2).replace(".", ",")}
+                    <span className="text-sm font-normal text-white/50">/mês</span>
+                  </div>
+                  <div className="text-white/50 text-sm mb-6">
+                    até {p.maxClients} clientes · até {p.maxCollaborators} colaboradores
+                  </div>
+                  <button
+                    onClick={() => scrollToForm(p.id)}
+                    className="mt-auto font-bold uppercase text-sm px-5 py-3 rounded-full transition"
+                    style={
+                      planId === p.id
+                        ? { background: LIME, color: "#0A0E23" }
+                        : { background: "rgba(255,255,255,0.08)", color: "#fff" }
+                    }
+                  >
+                    {planId === p.id ? "Selecionado ✓" : "Escolher plano"}
+                  </button>
                 </div>
-                <div className="text-white/50 text-sm mb-6">
-                  até {p.maxClients} clientes · até {p.maxCollaborators} colaboradores
-                </div>
-                <button
-                  onClick={() => scrollToForm(p.id)}
-                  className="mt-auto font-bold uppercase text-sm px-5 py-3 rounded-full transition"
-                  style={
-                    planId === p.id
-                      ? { background: LIME, color: "#0A0E23" }
-                      : { background: "rgba(255,255,255,0.08)", color: "#fff" }
-                  }
-                >
-                  {planId === p.id ? "Selecionado ✓" : "Escolher plano"}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Formulário */}
-      <section id="assinar-form" className="px-5 sm:px-10 max-w-[560px] mx-auto py-14 border-t border-white/10">
+      <section id="assinar-form" style={{ background: BG_GREEN }} className="border-t border-white/10">
+        <div className="px-5 sm:px-10 max-w-[560px] mx-auto py-14">
         <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-2 text-center">Comece seu teste de 7 dias</h2>
         <p className="text-white/50 text-sm text-center mb-8">Sem compromisso. Cancele quando quiser antes da cobrança.</p>
 
@@ -249,18 +264,22 @@ export function SalesPage() {
             </button>
           </form>
         )}
+        </div>
       </section>
 
       {/* Fundador */}
-      <section className="px-5 sm:px-10 max-w-[720px] mx-auto py-14 border-t border-white/10 text-center">
-        <div className="text-xs uppercase tracking-wide font-bold mb-3" style={{ color: LIME }}>⚡ Somos a Luzeria Estúdio!</div>
-        <p className="text-white/60 text-sm leading-relaxed">
+      <section style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10 text-center">
+        <div className="px-5 sm:px-10 max-w-[720px] mx-auto py-14">
+        <div className="text-xs uppercase tracking-wide font-bold mb-3" style={{ color: LIME_ON_LIGHT }}>⚡ Somos a Luzeria Estúdio!</div>
+        <p className="text-[#0A0E23]/70 text-sm leading-relaxed">
           Com mais de uma década em comunicação e criação de conteúdo, vivemos na pele a dor de gerenciar vários clientes ao mesmo tempo e foi aí que nasceu o Modo Criador: a ferramenta que a nossa própria agência usa todos os dias e agora queremos compartilhar também com a sua.
         </p>
+        </div>
       </section>
 
       {/* FAQ */}
-      <section className="px-5 sm:px-10 max-w-[720px] mx-auto py-14 border-t border-white/10">
+      <section style={{ background: BG_GRAY }} className="border-t border-white/10">
+        <div className="px-5 sm:px-10 max-w-[720px] mx-auto py-14">
         <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">Dúvidas frequentes</h2>
         <div className="space-y-3">
           {[
@@ -278,9 +297,10 @@ export function SalesPage() {
             </details>
           ))}
         </div>
+        </div>
       </section>
 
-      <footer className="px-5 sm:px-10 py-10 text-center text-white/30 text-xs">
+      <footer style={{ background: BG_BLUE }} className="px-5 sm:px-10 py-10 text-center text-white/30 text-xs">
         Modo <span className="font-criador-serif">Criador</span> — desenvolvido pela Luzeria Estúdio.
       </footer>
     </div>

@@ -306,7 +306,7 @@ function InternalPostModal({
   return (
     <InstagramPostModal
       item={enriched}
-      client={{ name: client.name, color: client.color }}
+      client={{ name: client.name, color: client.color, photoUrl: client.photoUrl }}
       mode={{ kind: "internal" }}
       canComment={false}
       onClose={onClose}
