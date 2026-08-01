@@ -16,7 +16,7 @@ const DRIVE_FIELDS =
  * The AsyncLocalStorage itself lives in a .server.ts module and is always
  * dynamically imported — top-level `node:async_hooks` would otherwise leak
  * into the client bundle (this file ships partially to the browser). */
-async function withDriveOrg<T>(orgId: string, fn: () => Promise<T>): Promise<T> {
+export async function withDriveOrg<T>(orgId: string, fn: () => Promise<T>): Promise<T> {
   const { withDriveOrg: run } = await import("./drive-org-context.server");
   return run(orgId, fn);
 }

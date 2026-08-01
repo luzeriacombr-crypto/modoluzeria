@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
-import { getAccessToken } from "./drive.functions";
+import { getAccessToken, withDriveOrg } from "./drive.functions";
 
 const DRIVE_BASE = "https://www.googleapis.com/drive/v3";
 
@@ -148,6 +148,8 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     const { data: result, error } = await supabase.rpc("get_public_feed", { _token: data.token });
     if (error || !result) return null;
 
+    const { data: orgId } = await supabase.rpc("get_org_id_for_token", { _token: data.token });
+
     const r = result as any;
     const { client, month, items: rawItems, files: rawFiles, feedback: rawFeedback } = r;
     if (!client || !month) return null;
@@ -200,13 +202,19 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     // with no way to recover — retry once before giving up entirely.
     let token: string | null = null;
     let tokenErr: unknown = null;
-    for (let attempt = 0; attempt < 2 && !token; attempt++) {
-      try {
-        token = await getAccessToken();
-      } catch (e) {
-        tokenErr = e;
-        if (attempt === 0) await new Promise((r) => setTimeout(r, 400));
-      }
+    if (orgId) {
+      await withDriveOrg(orgId as string, async () => {
+        for (let attempt = 0; attempt < 2 && !token; attempt++) {
+          try {
+            token = await getAccessToken();
+          } catch (e) {
+            tokenErr = e;
+            if (attempt === 0) await new Promise((r) => setTimeout(r, 400));
+          }
+        }
+      });
+    } else {
+      tokenErr = new Error("Could not resolve org for this share token");
     }
     if (!token) {
       console.error("[getPublicFeed] getAccessToken failed after retry:", tokenErr);
@@ -299,7 +307,9 @@ export const getPublicDriveThumbnail = createServerFn({ method: "GET" })
       _file_id: data.fileId,
     });
     if (!ok) return { dataUrl: null as string | null };
-    const dataUrl = await fetchThumbDataUrl(data.fileId, data.size ?? 720);
+    const { data: orgId } = await supabase.rpc("get_org_id_for_token", { _token: data.token });
+    if (!orgId) return { dataUrl: null as string | null };
+    const dataUrl = await withDriveOrg(orgId as string, () => fetchThumbDataUrl(data.fileId, data.size ?? 720));
     return { dataUrl };
   });
 
