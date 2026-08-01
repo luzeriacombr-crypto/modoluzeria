@@ -42,13 +42,17 @@ export async function createAsaasSubscription(params: {
   customerId: string;
   valueCents: number;
   description: string;
+  billingType?: "UNDEFINED" | "CREDIT_CARD";
+  trialDays?: number;
 }) {
-  const nextDueDate = new Date().toISOString().slice(0, 10);
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + (params.trialDays ?? 0));
+  const nextDueDate = dueDate.toISOString().slice(0, 10);
   const subscription = (await asaasFetch("/subscriptions", {
     method: "POST",
     body: JSON.stringify({
       customer: params.customerId,
-      billingType: "UNDEFINED",
+      billingType: params.billingType ?? "UNDEFINED",
       value: params.valueCents / 100,
       nextDueDate,
       cycle: "MONTHLY",
