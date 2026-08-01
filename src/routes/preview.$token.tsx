@@ -28,7 +28,7 @@ export const Route = createFileRoute("/preview/$token")({
       : `Preview — ${clientName}`;
     const description = `Confira e aprove as publicações de ${monthLabel || "este mês"}.`;
 
-    const ogImage = `${import.meta.env.VITE_APP_URL ?? "https://modocriador.com.br"}/og-preview.jpg`;
+    const ogImage = `${import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com.br"}/og-preview.jpg`;
 
     const meta: Record<string, string>[] = [
       { title },

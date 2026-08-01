@@ -1012,7 +1012,7 @@ export const setItemStatus = createServerFn({ method: "POST" })
                 en: `"${item?.title ?? "Item"}" foi aprovado`,
                 pt: `"${item?.title ?? "Item"}" foi aprovado`,
               },
-              url: process.env.VITE_APP_URL ?? "https://modocriador.com.br",
+              url: process.env.VITE_APP_URL ?? "https://www.modocriador.com.br",
             }),
           });
         }
@@ -1054,7 +1054,7 @@ export const addAssignee = createServerFn({ method: "POST" })
                 en: `${assigner?.name ?? "Alguém"} te atribuiu: ${item?.title ?? "uma tarefa"}`,
                 pt: `${assigner?.name ?? "Alguém"} te atribuiu: ${item?.title ?? "uma tarefa"}`,
               },
-              url: process.env.VITE_APP_URL ?? "https://modocriador.com.br",
+              url: process.env.VITE_APP_URL ?? "https://www.modocriador.com.br",
             }),
           });
         }
