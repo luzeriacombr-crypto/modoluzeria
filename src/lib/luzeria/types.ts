@@ -65,6 +65,14 @@ export const REEL_TYPE_LABEL: Record<ReelType, string> = {
   avancado: "Avançado",
 };
 
+/** Formato exclusivo de Posts. */
+export type PostFormat = "estatico" | "carrossel";
+export const POST_FORMATS: PostFormat[] = ["estatico", "carrossel"];
+export const POST_FORMAT_LABEL: Record<PostFormat, string> = {
+  estatico: "Estático",
+  carrossel: "Carrossel",
+};
+
 export interface Comment {
   id: string;
   text: string;
@@ -87,6 +95,7 @@ export interface ContentItem {
   comments: Comment[];
   updatedAt: string;
   reelType?: ReelType | null;
+  postFormat?: PostFormat | null;
   editorId?: string | null;
   /** Optional internal deadline (YYYY-MM-DD). Never shown to clients. */
   dueDate?: string | null;

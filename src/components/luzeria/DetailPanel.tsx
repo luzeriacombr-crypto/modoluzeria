@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, type Profile, type ContentItem, type ReelType, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS } from "./icons";
 import { MentionInput, renderMentions } from "./MentionInput";
@@ -650,6 +650,44 @@ export function DetailPanel() {
                       }
                     }}>
                     {REEL_TYPE_LABEL[rt as ReelType]}
+                  </button>
+                );
+              })}
+            </div>
+          </ModalSection>
+        )}
+
+        {/* Formato do post (Posts) */}
+        {item.type === "post" && (
+          <ModalSection label="Formato">
+            <div className="flex items-center gap-2 flex-wrap">
+              {POST_FORMATS.map((pf) => {
+                const active = item.postFormat === pf;
+                return (
+                  <button key={pf}
+                    onClick={() => updateItem.mutate({
+                      data: { id: item.id, patch: { post_format: active ? null : pf } },
+                    })}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-[1.05] hover:brightness-110"
+                    style={{
+                      backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.08)",
+                      color: active ? "#0D0D0D" : "#FFFFFF",
+                      fontWeight: active ? 700 : 500,
+                      border: active ? "1px solid rgb(var(--lz-brand-rgb))" : "1px solid rgba(255,255,255,0.08)",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.backgroundColor = "rgba(var(--lz-brand-light-rgb),0.15)";
+                        e.currentTarget.style.borderColor = "rgba(var(--lz-brand-light-rgb),0.4)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
+                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                      }
+                    }}>
+                    {POST_FORMAT_LABEL[pf as PostFormat]}
                   </button>
                 );
               })}

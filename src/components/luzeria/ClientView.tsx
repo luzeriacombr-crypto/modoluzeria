@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Copy, Info, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Info, Plus } from "lucide-react";
 import { useState } from "react";
 import { clientsQO, monthKeysQO, monthQO, profilesQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { ContentRow } from "./ContentRow";
+import { ContentCard } from "./ContentCard";
 import { FeedPreview } from "./FeedPreview";
 import { ClientFichaContent } from "./ClientFichaPanel";
 import { formatMonth } from "@/lib/luzeria/utils";
@@ -42,7 +42,7 @@ export function ClientView({ clientId }: { clientId: string }) {
   }
 
   return (
-    <div className="px-10 py-8 max-w-5xl mx-auto">
+    <div className="px-4 sm:px-6 md:px-10 py-6 md:py-8 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-2">
         <Avatar name={client.name} color={client.color} size={40} avatarUrl={client.photoUrl} />
@@ -105,28 +105,30 @@ export function ClientView({ clientId }: { clientId: string }) {
           const cfg = TAB_CONFIG[tab as keyof typeof TAB_CONFIG];
           return (
             <>
-              {cfg.items.map((item, i) => (
-                <div key={item.id} className="group/row relative pr-12">
-                  <ContentRow item={item} profiles={profiles} idx={i + 1} isAvulso={isAvulso} />
-                  {isAdmin && (
-                    <button
-                      onClick={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}
-                      title="Excluir item"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition">
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                </div>
-              ))}
-              {isAdmin && (
-                <button
-                  onClick={() => addContentItem.mutate({
-                    data: { clientId, key: selectedMonthKey, type: cfg.type },
-                  })}
-                  className="mt-4 ml-4 inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold border border-dashed border-white/15 text-white/60 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] transition">
-                  <Plus size={13} /> Adicionar {cfg.label}
-                </button>
-              )}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {cfg.items.map((item, i) => (
+                  <ContentCard
+                    key={item.id}
+                    item={item}
+                    profiles={profiles}
+                    idx={i + 1}
+                    isAvulso={isAvulso}
+                    isAdmin={isAdmin}
+                    onDelete={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}
+                  />
+                ))}
+                {isAdmin && (
+                  <button
+                    onClick={() => addContentItem.mutate({
+                      data: { clientId, key: selectedMonthKey, type: cfg.type },
+                    })}
+                    className="flex flex-col items-center justify-center gap-2 min-h-[200px] rounded-xl border border-dashed border-white/15 text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
+                    style={{ transitionTimingFunction: "var(--ease-premium)" }}>
+                    <Plus size={20} />
+                    <span className="text-xs font-semibold">Adicionar {cfg.label}</span>
+                  </button>
+                )}
+              </div>
               {cfg.items.length === 0 && !isAdmin && (
                 <div className="px-4 py-10 text-center text-sm text-white/40">Sem itens nesta aba.</div>
               )}
@@ -146,7 +148,7 @@ export function ClientView({ clientId }: { clientId: string }) {
           />
         )}
         {tab === "ficha" && (
-          <div className="mt-2 -mx-10 md:mx-0 md:rounded-lg md:overflow-hidden md:border md:border-white/[0.06]">
+          <div className="mt-2 -mx-4 sm:-mx-6 md:mx-0 md:rounded-lg md:overflow-hidden md:border md:border-white/[0.06]">
             <ClientFichaContent clientId={client.id} />
           </div>
         )}

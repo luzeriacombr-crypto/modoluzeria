@@ -640,6 +640,7 @@ export type Database = {
           legacy_assignee: string | null
           month_id: string
           org_id: string
+          post_format: string | null
           quality_rating: number | null
           reel_type: string | null
           rework_count: number
@@ -668,6 +669,7 @@ export type Database = {
           legacy_assignee?: string | null
           month_id: string
           org_id?: string
+          post_format?: string | null
           quality_rating?: number | null
           reel_type?: string | null
           rework_count?: number
@@ -696,6 +698,7 @@ export type Database = {
           legacy_assignee?: string | null
           month_id?: string
           org_id?: string
+          post_format?: string | null
           quality_rating?: number | null
           reel_type?: string | null
           rework_count?: number

@@ -615,7 +615,7 @@ export const getMonth = createServerFn({ method: "GET" })
     if (!month) return null;
     const { data: items } = await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source")
+      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source")
       .eq("month_id", month.id).order("type").order("idx");
     const itemIds = (items ?? []).map((it: any) => it.id);
     const [{ data: assignees }, { data: comments }] = await Promise.all([
@@ -641,6 +641,7 @@ export const getMonth = createServerFn({ method: "GET" })
       comments: itemComments.get(it.id) ?? [],
       updatedAt: it.updated_at,
       reelType: ((it as any).reel_type ?? null) as any,
+      postFormat: ((it as any).post_format ?? null) as any,
       editorId: ((it as any).editor_id ?? null) as any,
       dueDate: ((it as any).due_date ?? null) as any,
       scheduledAt: ((it as any).scheduled_at ?? null) as any,
@@ -679,7 +680,7 @@ export const updateItem = createServerFn({ method: "POST" })
     id: string;
     patch: {
       title?: string; copy?: string; caption?: string; drive_link?: string;
-      reel_type?: string | null; editor_id?: string | null;
+      reel_type?: string | null; post_format?: string | null; editor_id?: string | null;
       due_date?: string | null; scheduled_at?: string | null; blocked_reason?: string | null;
     };
   }) => d)
