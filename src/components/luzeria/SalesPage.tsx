@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
+import {
+  Rocket, CalendarDays, Users, Link2, FolderOpen, Check, X, ChevronDown, Zap, Lock,
+} from "lucide-react";
 import { getPublicPlans, publicSignup } from "@/lib/luzeria/signup.functions";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import heroMockup from "@/assets/hero-mockup.png";
@@ -12,6 +15,18 @@ const BG_BLUE = "#0A0E23";
 const BG_BLUE_2 = "#111F5C";
 const BG_WHITE = "#F5F5F0";
 const BG_GRAY = "#18181B";
+
+// Populate once real screenshots come in — the section below renders
+// nothing until there's at least one entry, so it's safe to ship empty.
+type Testimonial = { image: string; alt: string };
+const TESTIMONIALS: Testimonial[] = [];
+
+const STEPS = [
+  { n: "01", Icon: CalendarDays, t: "Monte o calendário", d: "Organize Posts e Reels de cada cliente num board visual, por mês." },
+  { n: "02", Icon: Users, t: "Atribua e acompanhe", d: "Sua equipe sabe exatamente quem faz o quê, qual o prazo e você pode fazer comentários." },
+  { n: "03", Icon: Link2, t: "Cliente aprova pelo link", d: "Manda um link público bonito, o cliente aprova ou comenta alterações, sem login." },
+  { n: "04", Icon: FolderOpen, t: "Arquivos no Drive", d: "Conecte sua própria conta do Google Drive e faça o Backup dos arquivos automaticamente." },
+];
 
 export function SalesPage() {
   const plans = useQuery({ queryKey: ["public-plans"], queryFn: () => getPublicPlans() });
@@ -68,7 +83,7 @@ export function SalesPage() {
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-8 items-center">
           <div className="order-2 lg:order-1">
             <div className="inline-flex items-center gap-2 border border-white/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide mb-6">
-              🚀 Gestão de conteúdo pra agência
+              <Rocket size={13} style={{ color: LIME }} /> Gestão de conteúdo pra agência
             </div>
             <h1 className="font-black uppercase leading-[0.95] text-[clamp(2rem,5.5vw,3.75rem)]">
               Pare de perder cliente
@@ -115,7 +130,7 @@ export function SalesPage() {
               "Você que tem vergonha de mostrar sua \"organização interna\" pra um cliente novo",
             ].map((t) => (
               <li key={t} className="flex gap-3 text-white/75 text-base sm:text-lg">
-                <span className="text-red-400 font-bold shrink-0">✗</span>{t}
+                <X size={20} className="text-red-400 shrink-0 mt-0.5" strokeWidth={2.5} />{t}
               </li>
             ))}
           </ul>
@@ -133,15 +148,15 @@ export function SalesPage() {
         <div className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14">
           <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">Simples assim</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { n: "01", i: "📅", t: "Monte o calendário", d: "Organize Posts e Reels de cada cliente num board visual, por mês." },
-              { n: "02", i: "👥", t: "Atribua e acompanhe", d: "Sua equipe sabe exatamente quem faz o quê, qual o prazo e você pode fazer comentários." },
-              { n: "03", i: "🔗", t: "Cliente aprova pelo link", d: "Manda um link público bonito, o cliente aprova ou comenta alterações, sem login." },
-              { n: "04", i: "📁", t: "Arquivos no Drive", d: "Conecte sua própria conta do Google Drive e faça o Backup dos arquivos automaticamente." },
-            ].map((s) => (
+            {STEPS.map((s) => (
               <div key={s.n} className="bg-black/[0.04] rounded-xl p-5 border border-black/10">
-                <div className="text-black/30 font-black text-sm mb-2">{s.n}</div>
-                <div className="text-2xl mb-2">{s.i}</div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-black shrink-0"
+                    style={{ background: LIME, color: "#0A0E23" }}>
+                    {s.n}
+                  </span>
+                  <s.Icon size={20} style={{ color: LIME_ON_LIGHT }} />
+                </div>
                 <div className="font-bold mb-1">{s.t}</div>
                 <div className="text-[#0A0E23]/60 text-sm leading-relaxed">{s.d}</div>
               </div>
@@ -164,44 +179,77 @@ export function SalesPage() {
               "Suporte em português, feito pra agência brasileira",
             ].map((t) => (
               <li key={t} className="flex gap-3 text-white/85 text-base sm:text-lg">
-                <span className="shrink-0" style={{ color: LIME }}>✅</span>{t}
+                <Check size={20} className="shrink-0 mt-0.5" style={{ color: LIME }} strokeWidth={2.5} />{t}
               </li>
             ))}
           </ul>
         </div>
       </section>
 
+      {/* Depoimentos — renders nothing until TESTIMONIALS has entries */}
+      {TESTIMONIALS.length > 0 && (
+        <section style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10">
+          <div className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14">
+            <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">Quem usa, recomenda</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {TESTIMONIALS.map((t) => (
+                <img key={t.image} src={t.image} alt={t.alt} className="w-full h-auto rounded-xl border border-black/10 shadow-sm" />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Planos */}
       <section style={{ background: BG_BLUE_2 }} className="border-t border-white/10">
         <div className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14">
           <h2 className="font-black uppercase text-2xl sm:text-3xl mb-10 text-center">Escolha seu plano</h2>
           {plans.isLoading ? (
-            <p className="text-center text-white/40">Carregando planos…</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="rounded-xl p-6 border border-white/10 bg-white/5 animate-pulse h-[180px]" />
+              ))}
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {selectablePlans.map((p) => (
-                <div key={p.id} className="bg-white/5 rounded-xl p-6 border border-white/10 flex flex-col">
-                  <div className="font-black text-xl mb-1">{p.name}</div>
-                  <div className="text-3xl font-black mb-1">
-                    R$ {(p.priceCents! / 100).toFixed(2).replace(".", ",")}
-                    <span className="text-sm font-normal text-white/50">/mês</span>
+              {selectablePlans.map((p) => {
+                const recommended = p.name.trim().toLowerCase() === "pro";
+                return (
+                  <div key={p.id} className="relative rounded-xl p-6 flex flex-col"
+                    style={{
+                      background: recommended ? "rgba(215,255,63,0.06)" : "rgba(255,255,255,0.05)",
+                      border: recommended ? `2px solid ${LIME}` : "1px solid rgba(255,255,255,0.1)",
+                    }}>
+                    {recommended && (
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-wide px-3 py-1 rounded-full"
+                        style={{ background: LIME, color: "#0A0E23" }}>
+                        Mais popular
+                      </span>
+                    )}
+                    <div className="font-black text-xl mb-1">{p.name}</div>
+                    <div className="text-3xl font-black mb-1">
+                      R$ {(p.priceCents! / 100).toFixed(2).replace(".", ",")}
+                      <span className="text-sm font-normal text-white/50">/mês</span>
+                    </div>
+                    <div className="text-white/50 text-sm mb-6">
+                      até {p.maxClients} clientes · até {p.maxCollaborators} colaboradores
+                    </div>
+                    <button
+                      onClick={() => scrollToForm(p.id)}
+                      className="mt-auto font-bold uppercase text-sm px-5 py-3 rounded-full transition"
+                      style={
+                        planId === p.id
+                          ? { background: LIME, color: "#0A0E23" }
+                          : recommended
+                          ? { background: LIME, color: "#0A0E23" }
+                          : { background: "rgba(255,255,255,0.08)", color: "#fff" }
+                      }
+                    >
+                      {planId === p.id ? "Selecionado ✓" : "Escolher plano"}
+                    </button>
                   </div>
-                  <div className="text-white/50 text-sm mb-6">
-                    até {p.maxClients} clientes · até {p.maxCollaborators} colaboradores
-                  </div>
-                  <button
-                    onClick={() => scrollToForm(p.id)}
-                    className="mt-auto font-bold uppercase text-sm px-5 py-3 rounded-full transition"
-                    style={
-                      planId === p.id
-                        ? { background: LIME, color: "#0A0E23" }
-                        : { background: "rgba(255,255,255,0.08)", color: "#fff" }
-                    }
-                  >
-                    {planId === p.id ? "Selecionado ✓" : "Escolher plano"}
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -215,7 +263,11 @@ export function SalesPage() {
 
         {invoiceUrl !== undefined ? (
           <div className="bg-black/[0.03] rounded-xl p-6 border border-black/10 text-center">
-            <div className="text-2xl mb-3">✅</div>
+            <div className="mb-3 flex justify-center">
+              <span className="h-10 w-10 rounded-full flex items-center justify-center" style={{ background: LIME }}>
+                <Check size={20} color="#0A0E23" strokeWidth={3} />
+              </span>
+            </div>
             <div className="font-bold text-lg mb-2">Cadastro criado!</div>
             {invoiceUrl ? (
               <>
@@ -264,6 +316,9 @@ export function SalesPage() {
             >
               {loading ? "Criando conta…" : "Começar meu teste grátis →"}
             </button>
+            <p className="flex items-center justify-center gap-1.5 text-[11px] text-[#0A0E23]/45 pt-1">
+              <Lock size={11} /> Ambiente seguro · Seus dados ficam protegidos
+            </p>
           </form>
         )}
         </div>
@@ -272,7 +327,9 @@ export function SalesPage() {
       {/* Fundador */}
       <section style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10 text-center">
         <div className="px-5 sm:px-10 max-w-[720px] mx-auto py-14">
-        <div className="text-xs uppercase tracking-wide font-bold mb-3" style={{ color: LIME_ON_LIGHT }}>⚡ Somos a Luzeria Estúdio!</div>
+        <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: LIME_ON_LIGHT }}>
+          <Zap size={13} /> Somos a Luzeria Estúdio!
+        </div>
         <p className="text-[#0A0E23]/70 text-sm leading-relaxed">
           Com mais de uma década em comunicação e criação de conteúdo, vivemos na pele a dor de gerenciar vários clientes ao mesmo tempo e foi aí que nasceu o Modo Criador: a ferramenta que a nossa própria agência usa todos os dias e agora queremos compartilhar também com a sua.
         </p>
@@ -293,10 +350,7 @@ export function SalesPage() {
             ["O que acontece se eu não cancelar antes do teste acabar?", "A cobrança do plano escolhido começa automaticamente no cartão cadastrado, depois dos 7 dias."],
             ["Meus dados ficam seguros?", "Sim. Seus dados e os dos seus clientes ficam isolados dos de outras agências, com infraestrutura segura."],
           ].map(([q, a]) => (
-            <details key={q} className="bg-white/5 rounded-lg p-4 border border-white/10">
-              <summary className="cursor-pointer font-semibold text-sm">❓ {q}</summary>
-              <p className="text-white/50 text-sm mt-3 leading-relaxed">{a}</p>
-            </details>
+            <FaqItem key={q} question={q} answer={a} />
           ))}
         </div>
         </div>
@@ -318,6 +372,24 @@ export function SalesPage() {
         </svg>
         <span className="text-sm font-bold">Falar no WhatsApp</span>
       </a>
+    </div>
+  );
+}
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 text-left px-4 py-4"
+      >
+        <span className="font-semibold text-sm">{question}</span>
+        <ChevronDown size={16} className="shrink-0 text-white/50 transition-transform" style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
+      </button>
+      {open && (
+        <p className="text-white/50 text-sm leading-relaxed px-4 pb-4">{answer}</p>
+      )}
     </div>
   );
 }
