@@ -43,7 +43,7 @@ const FAQ: { category: string; items: { q: string; a: string }[] }[] = [
   },
 ];
 
-const TUTORIALS: { title: string; steps: string[]; images?: { src: string; alt: string }[] }[] = [
+const TUTORIALS: { title: string; steps: string[]; images?: { src: string; alt: string }[]; videoUrl?: string }[] = [
   {
     title: "Criar um novo post ou reel",
     steps: [
@@ -70,6 +70,7 @@ const TUTORIALS: { title: string; steps: string[]; images?: { src: string; alt: 
       "Clique em conectar e faça login com a conta Google da agência.",
       "Pronto — os arquivos enviados nos posts passam a ser organizados lá automaticamente.",
     ],
+    videoUrl: "https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw",
   },
   {
     title: "Criar uma automação",
@@ -142,14 +143,6 @@ export function AjudaPage() {
 
       {tab === "tutoriais" && (
         <div className="space-y-4">
-          <a
-            href="https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw"
-            target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mb-2 text-xs font-semibold rounded-full transition-opacity hover:opacity-80"
-            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
-          >
-            <Video size={13} /> Vídeo: como conectar o Google Drive
-          </a>
           {TUTORIALS.map((t) => (
             <div key={t.title} className="bg-[#1C1C1C] rounded-lg p-5">
               <div className="font-bold text-white mb-3">{t.title}</div>
@@ -158,6 +151,16 @@ export function AjudaPage() {
                   <li key={i} className="text-sm text-white/60 leading-relaxed">{s}</li>
                 ))}
               </ol>
+              {t.videoUrl && (
+                <a
+                  href={t.videoUrl}
+                  target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mt-4 text-xs font-semibold rounded-full transition-opacity hover:opacity-80"
+                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+                >
+                  <Video size={13} /> Vídeo: como conectar o Google Drive
+                </a>
+              )}
               {t.images && t.images.length > 0 && (
                 <div className={`mt-4 grid gap-3 ${t.images.length > 1 ? "sm:grid-cols-2" : ""}`}>
                   {t.images.map((img) => (
