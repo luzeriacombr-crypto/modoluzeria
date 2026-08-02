@@ -3,6 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ExternalLink, Image as ImageIcon, Video } from "lucide-react";
 import { useMe, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/queries";
 import type { MyBugReport, AllBugReport } from "@/lib/luzeria/bug-reports.functions";
+import tutorialAddPost from "@/assets/tutorials/tutorial-add-post.png";
+import tutorialFormato from "@/assets/tutorials/tutorial-formato.png";
+import tutorialNovaAutomacao from "@/assets/tutorials/tutorial-nova-automacao.png";
+import tutorialEquipeCard from "@/assets/tutorials/tutorial-equipe-card.png";
+import tutorialEnviarFoto from "@/assets/tutorials/tutorial-enviar-foto.png";
 
 type Tab = "faq" | "tutoriais" | "minhas" | "todas";
 
@@ -38,7 +43,7 @@ const FAQ: { category: string; items: { q: string; a: string }[] }[] = [
   },
 ];
 
-const TUTORIALS: { title: string; steps: string[] }[] = [
+const TUTORIALS: { title: string; steps: string[]; images?: { src: string; alt: string }[] }[] = [
   {
     title: "Criar um novo post ou reel",
     steps: [
@@ -47,6 +52,7 @@ const TUTORIALS: { title: string; steps: string[] }[] = [
       "Clique no título do card pra dar um nome a ele.",
       "Defina status, responsável e prazo direto pelo card.",
     ],
+    images: [{ src: tutorialAddPost, alt: "Card tracejado \"Adicionar Posts\" no fim do grid" }],
   },
   {
     title: "Marcar um post como Estático ou Carrossel",
@@ -55,6 +61,7 @@ const TUTORIALS: { title: string; steps: string[] }[] = [
       "Na seção \"Formato\", escolha Estático ou Carrossel.",
       "Isso só pode ser mudado dentro do post — no resumo em cards ele só aparece pra leitura.",
     ],
+    images: [{ src: tutorialFormato, alt: "Seção Formato dentro do post, com as opções Estático e Carrossel" }],
   },
   {
     title: "Conectar o Google Drive",
@@ -72,6 +79,7 @@ const TUTORIALS: { title: string; steps: string[] }[] = [
       "Escolha o status de gatilho e a ação (alterar status ou atribuir membro).",
       "Salve — a regra passa a rodar sozinha a partir daí.",
     ],
+    images: [{ src: tutorialNovaAutomacao, alt: "Botão \"Nova automação\" na aba Automações" }],
   },
   {
     title: "Adicionar foto de um colaborador",
@@ -79,6 +87,10 @@ const TUTORIALS: { title: string; steps: string[] }[] = [
       "Vá em Configurações → Equipe (só Admin Master).",
       "Clique no card da pessoa.",
       "Clique em \"Enviar foto\" e escolha a imagem.",
+    ],
+    images: [
+      { src: tutorialEquipeCard, alt: "Grid de cards da equipe — clique no card de um colaborador" },
+      { src: tutorialEnviarFoto, alt: "Botão \"Enviar foto\" dentro do modal do colaborador" },
     ],
   },
 ];
@@ -146,6 +158,13 @@ export function AjudaPage() {
                   <li key={i} className="text-sm text-white/60 leading-relaxed">{s}</li>
                 ))}
               </ol>
+              {t.images && t.images.length > 0 && (
+                <div className={`mt-4 grid gap-3 ${t.images.length > 1 ? "sm:grid-cols-2" : ""}`}>
+                  {t.images.map((img) => (
+                    <img key={img.src} src={img.src} alt={img.alt} className="w-full h-auto rounded-md border border-white/10" />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
