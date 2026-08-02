@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { Client } from "@/lib/luzeria/types";
 import { useQuery } from "@tanstack/react-query";
@@ -7,7 +8,10 @@ import { PRESET_COLORS } from "@/lib/luzeria/utils";
 
 export function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
   if (!open) return null;
-  return (
+  // Portal to <body> — some callers (e.g. the header) render this inside an
+  // ancestor with backdrop-filter, which creates a new containing block for
+  // `fixed` descendants and traps the overlay inside that ancestor's box.
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-[#1C1C1C] rounded-lg w-full max-w-md border border-white/10 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
@@ -16,7 +20,8 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
         </div>
         <div className="p-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
