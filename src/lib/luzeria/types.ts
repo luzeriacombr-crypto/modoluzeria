@@ -129,6 +129,8 @@ export interface MonthData {
   key: string;
   /** How "Preview de Feed" (and the public client link) orders items. */
   feedOrderMode: "personalizada" | "cronologica";
+  /** Only meaningful when feedOrderMode is "cronologica". */
+  feedOrderDirection: "asc" | "desc";
   posts: ContentItem[];
   reels: ContentItem[];
   outros: ContentItem[];

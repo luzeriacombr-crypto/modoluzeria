@@ -623,7 +623,7 @@ export const getMonth = createServerFn({ method: "GET" })
     // seeded) is an explicit action (addContentItem, duplicateMonth), not
     // something that should happen just because someone viewed the page.
     const { data: month } = await context.supabase
-      .from("months").select("id, key, feed_order_mode").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
+      .from("months").select("id, key, feed_order_mode, feed_order_direction").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
     if (!month) return null;
     const { data: items } = await context.supabase
       .from("content_items")
@@ -676,6 +676,7 @@ export const getMonth = createServerFn({ method: "GET" })
     return {
       id: month.id, key: month.key,
       feedOrderMode: ((month as any).feed_order_mode ?? "personalizada") as any,
+      feedOrderDirection: ((month as any).feed_order_direction ?? "asc") as any,
       posts: mapped.filter((i) => i.type === "post"),
       reels: mapped.filter((i) => i.type === "reel"),
       outros: mapped.filter((i) => i.type === "outros"),
@@ -742,6 +743,21 @@ export const setFeedOrderMode = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Apenas admins podem mudar a ordem do feed.");
     const { error } = await context.supabase.from("months").update({ feed_order_mode: data.mode }).eq("id", data.monthId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setFeedOrderDirection = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { monthId: string; direction: "asc" | "desc" }) =>
+    z.object({
+      monthId: z.string().uuid(),
+      direction: z.enum(["asc", "desc"]),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Apenas admins podem mudar a ordem do feed.");
+    const { error } = await context.supabase.from("months").update({ feed_order_direction: data.direction }).eq("id", data.monthId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

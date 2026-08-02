@@ -13,13 +13,19 @@ import { useMe } from "@/lib/luzeria/queries";
 import { MaisAtividadesTab } from "./MaisAtividadesTab";
 
 type OrderMode = "personalizada" | "cronologica";
+type OrderDirection = "asc" | "desc";
 const ORDER_MODE_KEY = "lz-content-order-mode";
+const ORDER_DIRECTION_KEY = "lz-content-order-direction";
 
-function byScheduledAt(a: ContentItem, b: ContentItem) {
-  const at = a.scheduledAt ? new Date(a.scheduledAt).getTime() : Number.POSITIVE_INFINITY;
-  const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : Number.POSITIVE_INFINITY;
-  if (at !== bt) return at - bt;
-  return a.idx - b.idx;
+function byScheduledAt(direction: OrderDirection) {
+  return (a: ContentItem, b: ContentItem) => {
+    const at = a.scheduledAt ? new Date(a.scheduledAt).getTime() : null;
+    const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : null;
+    if (at === null && bt === null) return a.idx - b.idx;
+    if (at === null) return 1;
+    if (bt === null) return -1;
+    return direction === "asc" ? at - bt : bt - at;
+  };
 }
 
 export function ClientView({ clientId }: { clientId: string }) {
@@ -36,6 +42,13 @@ export function ClientView({ clientId }: { clientId: string }) {
   function changeOrderMode(mode: OrderMode) {
     setOrderMode(mode);
     localStorage.setItem(ORDER_MODE_KEY, mode);
+  }
+  const [orderDirection, setOrderDirection] = useState<OrderDirection>(
+    () => (typeof window !== "undefined" && (localStorage.getItem(ORDER_DIRECTION_KEY) as OrderDirection)) || "asc",
+  );
+  function changeOrderDirection(direction: OrderDirection) {
+    setOrderDirection(direction);
+    localStorage.setItem(ORDER_DIRECTION_KEY, direction);
   }
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
@@ -121,7 +134,7 @@ export function ClientView({ clientId }: { clientId: string }) {
       <div className="mt-2">
         {(tab in TAB_CONFIG) && (() => {
           const cfg = TAB_CONFIG[tab as keyof typeof TAB_CONFIG];
-          const items = orderMode === "cronologica" ? [...cfg.items].sort(byScheduledAt) : cfg.items;
+          const items = orderMode === "cronologica" ? [...cfg.items].sort(byScheduledAt(orderDirection)) : cfg.items;
           return (
             <>
               <div className="flex items-center justify-end gap-1.5 mb-3">
@@ -142,6 +155,16 @@ export function ClientView({ clientId }: { clientId: string }) {
                     </button>
                   );
                 })}
+                {orderMode === "cronologica" && (
+                  <select
+                    value={orderDirection}
+                    onChange={(e) => changeOrderDirection(e.target.value as OrderDirection)}
+                    className="ml-1 bg-transparent border border-white/10 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white/50 outline-none cursor-pointer hover:text-white/70 hover:border-white/20 transition-colors"
+                  >
+                    <option value="desc" className="bg-[#1C1C1C] text-white">Recentes primeiro</option>
+                    <option value="asc" className="bg-[#1C1C1C] text-white">Antigas primeiro</option>
+                  </select>
+                )}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {items.map((item, i) => (

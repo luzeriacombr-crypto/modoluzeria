@@ -1060,6 +1060,7 @@ export type Database = {
           client_id: string
           created_at: string
           feed_order_mode: string
+          feed_order_direction: string
           id: string
           key: string
           org_id: string
@@ -1068,6 +1069,7 @@ export type Database = {
           client_id: string
           created_at?: string
           feed_order_mode?: string
+          feed_order_direction?: string
           id?: string
           key: string
           org_id?: string
@@ -1076,6 +1078,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           feed_order_mode?: string
+          feed_order_direction?: string
           id?: string
           key?: string
           org_id?: string

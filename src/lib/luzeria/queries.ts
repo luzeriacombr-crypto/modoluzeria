@@ -13,6 +13,7 @@ import {
   getReport, getMemberReportDetail, getMemberVelocity,
   updateFeedOrder,
   setFeedOrderMode,
+  setFeedOrderDirection,
   setItemCover,
   uploadItemCover,
   getClientFicha,
@@ -406,6 +407,10 @@ export function useApi() {
     }),
     setFeedOrderMode: useMutation({
       mutationFn: useServerFn(setFeedOrderMode),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
+    }),
+    setFeedOrderDirection: useMutation({
+      mutationFn: useServerFn(setFeedOrderDirection),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
     }),
     setItemCover: useMutation({

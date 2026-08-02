@@ -14,7 +14,7 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
   const isMobile = useIsMobile();
   const isChronological = month.feedOrderMode === "cronologica";
   const canDrag = isAdmin && !isMobile && !isChronological;
-  const { updateFeedOrder, setFeedOrderMode } = useApi();
+  const { updateFeedOrder, setFeedOrderMode, setFeedOrderDirection } = useApi();
 
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
@@ -30,12 +30,17 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
       (i) => FEED_STATUSES.has(i.status),
     );
     if (isChronological) {
+      const dir = month.feedOrderDirection === "desc" ? -1 : 1;
       all.sort((a, b) => {
-        const at = a.scheduledAt ? new Date(a.scheduledAt).getTime() : Number.POSITIVE_INFINITY;
-        const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : Number.POSITIVE_INFINITY;
-        if (at !== bt) return at - bt;
-        if (a.type !== b.type) return a.type === "reel" ? 1 : -1;
-        return a.idx - b.idx;
+        const at = a.scheduledAt ? new Date(a.scheduledAt).getTime() : null;
+        const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : null;
+        if (at === null && bt === null) {
+          if (a.type !== b.type) return a.type === "reel" ? 1 : -1;
+          return a.idx - b.idx;
+        }
+        if (at === null) return 1;
+        if (bt === null) return -1;
+        return (at - bt) * dir;
       });
     } else {
       all.sort((a, b) => {
@@ -47,7 +52,7 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
       });
     }
     return all.map<FeedItem>((i) => ({ ...i, _key: i.id }));
-  }, [month.posts, month.reels, isChronological]);
+  }, [month.posts, month.reels, isChronological, month.feedOrderDirection]);
 
   // Local order for optimistic drag-and-drop
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
@@ -129,6 +134,17 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
               </button>
             );
           })}
+          {isChronological && (
+            <select
+              value={month.feedOrderDirection}
+              disabled={!isAdmin}
+              onChange={(e) => setFeedOrderDirection.mutate({ data: { monthId: month.id, direction: e.target.value as "asc" | "desc" } })}
+              className="ml-1 bg-transparent border border-white/10 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white/50 outline-none cursor-pointer hover:text-white/70 hover:border-white/20 transition-colors disabled:cursor-default"
+            >
+              <option value="desc" className="bg-[#1C1C1C] text-white">Recentes primeiro</option>
+              <option value="asc" className="bg-[#1C1C1C] text-white">Antigas primeiro</option>
+            </select>
+          )}
         </div>
         <div className="grid grid-cols-3 gap-[3px] bg-black/30 p-[3px] rounded-md">
           {cells.items.map((item) => (
