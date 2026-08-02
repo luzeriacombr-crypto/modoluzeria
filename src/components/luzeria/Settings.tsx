@@ -5,7 +5,6 @@ import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO } fr
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
-import { roleLabel } from "./Sidebar";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
 import { UserPlus, X, Settings as SettingsIcon, Star, KeyRound, Building2 } from "lucide-react";
@@ -14,8 +13,8 @@ import { DriveSettingsTab } from "./DriveSettingsTab";
 import { MemberGoalsTab } from "./MemberGoalsTab";
 import { AutomationsTab } from "./AutomationsTab";
 
-type SettingsTab = "team" | "report" | "goals" | "drive" | "automations" | "general" | "subscription";
-const VALID_TABS: SettingsTab[] = ["team", "report", "goals", "drive", "automations", "general", "subscription"];
+type SettingsTab = "team" | "report" | "drive" | "automations" | "general" | "subscription";
+const VALID_TABS: SettingsTab[] = ["team", "report", "drive", "automations", "general", "subscription"];
 
 export function SettingsPage({ initialTab }: { initialTab?: string }) {
   const me = useMe().data;
@@ -58,8 +57,7 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
         <div>
           <h1 className="text-[32px] font-bold text-white tracking-tight">Configurações</h1>
           <p className="text-sm text-white/50 mt-2">
-            {tab === "team"   ? "Gerencie acessos e funções da equipe." :
-             tab === "goals"  ? "Defina a meta mensal de cada colaborador." :
+            {tab === "team"   ? "Gerencie acessos, funções e metas da equipe." :
              tab === "report" ? "Relatório consolidado de entregas." :
              tab === "drive"  ? "Integração com Google Drive." :
              tab === "automations" ? "Lembretes automáticos e jobs do sistema." :
@@ -67,26 +65,11 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
              "Ajustes gerais da operação."}
           </p>
         </div>
-        {tab === "team" && (
-          <div className="flex items-center gap-2">
-            {me.isPlatformAdmin && (
-              <button onClick={() => setCreatingAgency(true)}
-                className="lz-btn-ghost text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
-                <Building2 size={14} /> Criar nova agência
-              </button>
-            )}
-            <button onClick={() => setAdding(true)}
-              className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
-              <UserPlus size={14} /> Adicionar membro
-            </button>
-          </div>
-        )}
       </div>
 
-      <div className="flex items-center gap-1 border-b border-white/10 mb-8">
+      <div className="flex items-center gap-1 border-b border-white/10 mb-6">
         {[
           { id: "team", label: "Equipe" },
-          { id: "goals", label: "Metas" },
           { id: "report", label: "Relatório" },
           { id: "drive", label: "Drive" },
           { id: "automations", label: "Automações" },
@@ -107,9 +90,23 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
         })}
       </div>
 
+      {tab === "team" && (
+        <div className="flex items-center justify-end gap-2 mb-6">
+          {me.isPlatformAdmin && (
+            <button onClick={() => setCreatingAgency(true)}
+              className="lz-btn-ghost text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
+              <Building2 size={14} /> Criar nova agência
+            </button>
+          )}
+          <button onClick={() => setAdding(true)}
+            className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
+            <UserPlus size={14} /> Adicionar membro
+          </button>
+        </div>
+      )}
+
       {tab === "general" ? <GeneralSettings /> :
        tab === "subscription" ? <SubscriptionSettings /> :
-       tab === "goals" ? <MemberGoalsTab /> :
        tab === "drive" ? <DriveSettingsTab /> :
        tab === "automations" ? <AutomationsTab /> :
        tab === "report" ? <ReportsTab /> : (
@@ -156,13 +153,16 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
               <div className="text-sm font-semibold text-white truncate">{p.name}</div>
               <div className="text-[11px] text-white/40 truncate">{p.email}</div>
             </div>
-            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded"
-              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
-              {roleLabel(p.role)}
-            </span>
             <select value={p.role} disabled={p.id === me.id}
               onChange={(e) => setUserRole.mutate({ data: { userId: p.id, role: e.target.value as Role } })}
-              className="bg-[#0D0D0D] border border-white/10 text-xs text-white rounded-md px-2 py-1 outline-none focus:border-[rgb(var(--lz-brand-rgb))] disabled:opacity-40">
+              className="text-[10px] uppercase font-bold rounded-full pl-3 pr-6 py-1.5 outline-none appearance-none cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)",
+                color: "rgb(var(--lz-brand-rgb))",
+                backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 10px center",
+              }}>
               <option value="member">Membro</option>
               <option value="setor">Adm Setor</option>
               <option value="master">Adm Master</option>
@@ -191,6 +191,13 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
       <p className="text-[11px] text-white/30 mt-4">
         Novos cadastros ficam pendentes até a aprovação de um Administrador Master. E-mails pré-cadastrados na equipe inicial entram já aprovados com a função correta.
       </p>
+
+      <div className="mt-10 pt-6 border-t border-white/[0.06]">
+        <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-4">
+          Metas da equipe
+        </h2>
+        <MemberGoalsTab />
+      </div>
 
       <div className="mt-8 pt-6 border-t border-white/[0.06]">
         <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--lz-brand-rgb))] mb-4">
