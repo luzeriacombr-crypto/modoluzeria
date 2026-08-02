@@ -623,7 +623,7 @@ export const getMonth = createServerFn({ method: "GET" })
     // seeded) is an explicit action (addContentItem, duplicateMonth), not
     // something that should happen just because someone viewed the page.
     const { data: month } = await context.supabase
-      .from("months").select("id, key").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
+      .from("months").select("id, key, feed_order_mode").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
     if (!month) return null;
     const { data: items } = await context.supabase
       .from("content_items")
@@ -675,6 +675,7 @@ export const getMonth = createServerFn({ method: "GET" })
     });
     return {
       id: month.id, key: month.key,
+      feedOrderMode: ((month as any).feed_order_mode ?? "personalizada") as any,
       posts: mapped.filter((i) => i.type === "post"),
       reels: mapped.filter((i) => i.type === "reel"),
       outros: mapped.filter((i) => i.type === "outros"),
@@ -727,6 +728,21 @@ export const updateFeedOrder = createServerFn({ method: "POST" })
       const { error } = await context.supabase.rpc("update_feed_order", { p_updates: rows });
       if (error) throw new Error(error.message);
     }
+    return { ok: true };
+  });
+
+export const setFeedOrderMode = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { monthId: string; mode: "personalizada" | "cronologica" }) =>
+    z.object({
+      monthId: z.string().uuid(),
+      mode: z.enum(["personalizada", "cronologica"]),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Apenas admins podem mudar a ordem do feed.");
+    const { error } = await context.supabase.from("months").update({ feed_order_mode: data.mode }).eq("id", data.monthId);
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
 

@@ -12,6 +12,7 @@ import {
   updateMyAccount,
   getReport, getMemberReportDetail, getMemberVelocity,
   updateFeedOrder,
+  setFeedOrderMode,
   setItemCover,
   uploadItemCover,
   getClientFicha,
@@ -401,6 +402,10 @@ export function useApi() {
     deleteItem: useMutation({ mutationFn: useServerFn(deleteItem), onSuccess: invalidateAll }),
     updateFeedOrder: useMutation({
       mutationFn: useServerFn(updateFeedOrder),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
+    }),
+    setFeedOrderMode: useMutation({
+      mutationFn: useServerFn(setFeedOrderMode),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
     }),
     setItemCover: useMutation({

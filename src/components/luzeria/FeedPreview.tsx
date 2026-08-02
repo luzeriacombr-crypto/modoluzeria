@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy as CopyIcon, Film, Image as ImageIcon, Layers, RefreshCw, Share2 } from "lucide-react";
 import { itemFilesQO, gridThumbnailsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -12,8 +12,9 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const isMobile = useIsMobile();
-  const canDrag = isAdmin && !isMobile;
-  const { updateFeedOrder } = useApi();
+  const isChronological = month.feedOrderMode === "cronologica";
+  const canDrag = isAdmin && !isMobile && !isChronological;
+  const { updateFeedOrder, setFeedOrderMode } = useApi();
 
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
@@ -28,18 +29,29 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
     const all = [...month.posts, ...month.reels].filter(
       (i) => FEED_STATUSES.has(i.status),
     );
-    all.sort((a, b) => {
-      const ao = a.feedOrder ?? Number.POSITIVE_INFINITY;
-      const bo = b.feedOrder ?? Number.POSITIVE_INFINITY;
-      if (ao !== bo) return ao - bo;
-      if (a.type !== b.type) return a.type === "reel" ? 1 : -1;
-      return a.idx - b.idx;
-    });
+    if (isChronological) {
+      all.sort((a, b) => {
+        const at = a.scheduledAt ? new Date(a.scheduledAt).getTime() : Number.POSITIVE_INFINITY;
+        const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : Number.POSITIVE_INFINITY;
+        if (at !== bt) return at - bt;
+        if (a.type !== b.type) return a.type === "reel" ? 1 : -1;
+        return a.idx - b.idx;
+      });
+    } else {
+      all.sort((a, b) => {
+        const ao = a.feedOrder ?? Number.POSITIVE_INFINITY;
+        const bo = b.feedOrder ?? Number.POSITIVE_INFINITY;
+        if (ao !== bo) return ao - bo;
+        if (a.type !== b.type) return a.type === "reel" ? 1 : -1;
+        return a.idx - b.idx;
+      });
+    }
     return all.map<FeedItem>((i) => ({ ...i, _key: i.id }));
-  }, [month.posts, month.reels]);
+  }, [month.posts, month.reels, isChronological]);
 
   // Local order for optimistic drag-and-drop
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
+  useEffect(() => { setLocalOrder(null); }, [isChronological]);
   const orderedItems: FeedItem[] = useMemo(() => {
     if (!localOrder) return ready;
     const byId = new Map(ready.map((i) => [i.id, i]));
@@ -93,8 +105,30 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
             {canDrag && <span className="ml-2 text-white/30 normal-case tracking-normal">— arraste para reordenar</span>}
           </div>
           {isAdmin && (
-            <ShareButton clientId={client.id} monthId={month.id} />
+            <div className="flex items-center gap-2">
+              <ShareButton clientId={client.id} monthId={month.id} />
+            </div>
           )}
+        </div>
+        <div className="flex items-center justify-end gap-1.5 mb-3">
+          <span className="text-[10px] uppercase font-semibold text-white/30 tracking-wider mr-1">Ordem</span>
+          {(["personalizada", "cronologica"] as const).map((m) => {
+            const active = month.feedOrderMode === m;
+            return (
+              <button
+                key={m}
+                disabled={!isAdmin}
+                onClick={() => setFeedOrderMode.mutate({ data: { monthId: month.id, mode: m } })}
+                className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors disabled:cursor-default"
+                style={{
+                  backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
+                  color: active ? "#0D0D0D" : "rgba(255,255,255,0.5)",
+                }}
+              >
+                {m === "personalizada" ? "Personalizada" : "Cronológica"}
+              </button>
+            );
+          })}
         </div>
         <div className="grid grid-cols-3 gap-[3px] bg-black/30 p-[3px] rounded-md">
           {cells.items.map((item) => (

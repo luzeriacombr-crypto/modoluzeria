@@ -1059,6 +1059,7 @@ export type Database = {
         Row: {
           client_id: string
           created_at: string
+          feed_order_mode: string
           id: string
           key: string
           org_id: string
@@ -1066,6 +1067,7 @@ export type Database = {
         Insert: {
           client_id: string
           created_at?: string
+          feed_order_mode?: string
           id?: string
           key: string
           org_id?: string
@@ -1073,6 +1075,7 @@ export type Database = {
         Update: {
           client_id?: string
           created_at?: string
+          feed_order_mode?: string
           id?: string
           key?: string
           org_id?: string

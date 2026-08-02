@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Copy, Info, Plus } from "lucide-react";
 import { useState } from "react";
 import { clientsQO, monthKeysQO, monthQO, profilesQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
+import type { ContentItem } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { ContentCard } from "./ContentCard";
 import { FeedPreview } from "./FeedPreview";
@@ -10,6 +11,16 @@ import { ClientFichaContent } from "./ClientFichaPanel";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { useMe } from "@/lib/luzeria/queries";
 import { MaisAtividadesTab } from "./MaisAtividadesTab";
+
+type OrderMode = "personalizada" | "cronologica";
+const ORDER_MODE_KEY = "lz-content-order-mode";
+
+function byScheduledAt(a: ContentItem, b: ContentItem) {
+  const at = a.scheduledAt ? new Date(a.scheduledAt).getTime() : Number.POSITIVE_INFINITY;
+  const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : Number.POSITIVE_INFINITY;
+  if (at !== bt) return at - bt;
+  return a.idx - b.idx;
+}
 
 export function ClientView({ clientId }: { clientId: string }) {
   const { data: clients = [] } = useQuery(clientsQO());
@@ -19,6 +30,13 @@ export function ClientView({ clientId }: { clientId: string }) {
   const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
   const [tab, setTab] = useState<"posts" | "reels" | "mais" | "feed" | "ficha">("posts");
+  const [orderMode, setOrderMode] = useState<OrderMode>(
+    () => (typeof window !== "undefined" && (localStorage.getItem(ORDER_MODE_KEY) as OrderMode)) || "personalizada",
+  );
+  function changeOrderMode(mode: OrderMode) {
+    setOrderMode(mode);
+    localStorage.setItem(ORDER_MODE_KEY, mode);
+  }
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { duplicateMonth, addContentItem, deleteItem } = useApi();
@@ -103,10 +121,30 @@ export function ClientView({ clientId }: { clientId: string }) {
       <div className="mt-2">
         {(tab in TAB_CONFIG) && (() => {
           const cfg = TAB_CONFIG[tab as keyof typeof TAB_CONFIG];
+          const items = orderMode === "cronologica" ? [...cfg.items].sort(byScheduledAt) : cfg.items;
           return (
             <>
+              <div className="flex items-center justify-end gap-1.5 mb-3">
+                <span className="text-[10px] uppercase font-semibold text-white/30 tracking-wider mr-1">Ordem</span>
+                {(["personalizada", "cronologica"] as const).map((m) => {
+                  const active = orderMode === m;
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => changeOrderMode(m)}
+                      className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors"
+                      style={{
+                        backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
+                        color: active ? "#0D0D0D" : "rgba(255,255,255,0.5)",
+                      }}
+                    >
+                      {m === "personalizada" ? "Personalizada" : "Cronológica"}
+                    </button>
+                  );
+                })}
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {cfg.items.map((item, i) => (
+                {items.map((item, i) => (
                   <ContentCard
                     key={item.id}
                     item={item}
