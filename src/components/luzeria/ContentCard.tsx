@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar, Image as ImageIcon, Trash2 } from "lucide-react";
 import type { ContentItem, Profile } from "@/lib/luzeria/types";
 import {
-  statusOptionsFor, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL,
+  statusOptionsFor, REEL_TYPE_LABEL, POST_FORMAT_LABEL,
   type ReelType, type PostFormat,
 } from "@/lib/luzeria/types";
 import { useApi, useMe, itemFilesQO, driveThumbnailQO } from "@/lib/luzeria/queries";
@@ -114,28 +114,13 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete }
           </button>
         )}
 
-        {item.type === "post" && (
-          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-            {POST_FORMATS.map((f) => {
-              const active = item.postFormat === f;
-              return (
-                <button
-                  key={f}
-                  onClick={() => updateItem.mutate({
-                    data: { id: item.id, patch: { post_format: active ? null : f as PostFormat } },
-                  })}
-                  className="flex-1 rounded-md py-1 text-[10px] font-bold uppercase tracking-wide transition-all duration-200 hover:brightness-110"
-                  style={{
-                    backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
-                    color: active ? "#0D0D0D" : "rgba(255,255,255,0.5)",
-                    ...EASE,
-                  }}
-                >
-                  {POST_FORMAT_LABEL[f]}
-                </button>
-              );
-            })}
-          </div>
+        {item.type === "post" && item.postFormat && (
+          <span
+            className="self-start rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+            style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}
+          >
+            {POST_FORMAT_LABEL[item.postFormat as PostFormat]}
+          </span>
         )}
         {item.type === "reel" && item.reelType && (
           <span
