@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Settings, LogOut, Plus, Camera, Sparkles, Info,
+  Settings, LogOut, Plus, Camera, Sparkles, Info, CircleHelp,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -106,6 +106,12 @@ export function Sidebar({
           label="Rotina"
           active={pathname === "/rotina"}
           onClick={() => navigate({ to: "/rotina" })}
+        />
+        <NavButton
+          icon={<CircleHelp size={15} />}
+          label="Ajuda"
+          active={pathname === "/ajuda"}
+          onClick={() => navigate({ to: "/ajuda" })}
         />
       </div>
 

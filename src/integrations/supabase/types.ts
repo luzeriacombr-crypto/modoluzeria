@@ -1557,6 +1557,18 @@ export type Database = {
           schedule: string
         }[]
       }
+      platform_list_bug_reports: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          message: string
+          org_name: string
+          page_url: string
+          reporter_name: string
+          screenshot_path: string
+        }[]
+      }
       send_daily_digest: { Args: never; Returns: number }
       send_deadline_reminders: { Args: never; Returns: number }
       verify_public_token_file: {

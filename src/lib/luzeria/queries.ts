@@ -39,6 +39,7 @@ import {
   runDailyDigestNow, runDeadlineRemindersNow, listCronJobs,
 } from "./automations.functions";
 import { listAutomationRules, createAutomationRule, deleteAutomationRule } from "./automation-rules.functions";
+import { listMyBugReports, listAllBugReports } from "./bug-reports.functions";
 import {
   getOrCreateShareToken, rotateShareToken, listClientFeedback,
   getPublicFeed, getPublicDriveThumbnail, addPublicFeedback,
@@ -304,6 +305,12 @@ export const cronJobsQO = () =>
 
 export const automationRulesQO = () =>
   queryOptions({ queryKey: ["automation-rules"], queryFn: () => listAutomationRules() });
+
+export const myBugReportsQO = () =>
+  queryOptions({ queryKey: ["bug-reports", "mine"], queryFn: () => listMyBugReports() });
+
+export const allBugReportsQO = () =>
+  queryOptions({ queryKey: ["bug-reports", "all"], queryFn: () => listAllBugReports() });
 
 export const clientFeedbackQO = (itemId: string | null) =>
   queryOptions({

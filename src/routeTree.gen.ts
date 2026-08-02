@@ -20,6 +20,7 @@ import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
 import { Route as AuthenticatedInvestigacaoRouteImport } from './routes/_authenticated/investigacao'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/ajuda'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedOauthDriveCallbackRouteImport } from './routes/_authenticated/oauth.drive-callback'
 import { Route as AuthenticatedClienteClientIdRouteImport } from './routes/_authenticated/cliente.$clientId'
@@ -81,6 +82,11 @@ const AuthenticatedConfiguracoesRoute =
     path: '/configuracoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAjudaRoute = AuthenticatedAjudaRouteImport.update({
+  id: '/ajuda',
+  path: '/ajuda',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -104,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/assinar': typeof AssinarRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/ajuda': typeof AuthenticatedAjudaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/assinar': typeof AssinarRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/ajuda': typeof AuthenticatedAjudaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
@@ -136,6 +144,7 @@ export interface FileRoutesById {
   '/assinar': typeof AssinarRoute
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/ajuda': typeof AuthenticatedAjudaRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/assinar'
     | '/auth'
     | '/admin'
+    | '/ajuda'
     | '/configuracoes'
     | '/investigacao'
     | '/minhas-tarefas'
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/assinar'
     | '/auth'
     | '/admin'
+    | '/ajuda'
     | '/configuracoes'
     | '/investigacao'
     | '/minhas-tarefas'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/assinar'
     | '/auth'
     | '/_authenticated/admin'
+    | '/_authenticated/ajuda'
     | '/_authenticated/configuracoes'
     | '/_authenticated/investigacao'
     | '/_authenticated/minhas-tarefas'
@@ -282,6 +294,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ajuda': {
+      id: '/_authenticated/ajuda'
+      path: '/ajuda'
+      fullPath: '/ajuda'
+      preLoaderRoute: typeof AuthenticatedAjudaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -308,6 +327,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAjudaRoute: typeof AuthenticatedAjudaRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedInvestigacaoRoute: typeof AuthenticatedInvestigacaoRoute
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
@@ -320,6 +340,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAjudaRoute: AuthenticatedAjudaRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedInvestigacaoRoute: AuthenticatedInvestigacaoRoute,
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,

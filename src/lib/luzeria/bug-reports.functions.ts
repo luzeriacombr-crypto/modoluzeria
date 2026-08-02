@@ -1,8 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
+import { LUZERIA_ORG_ID } from "./api.functions";
 
 const PLATFORM_SUPPORT_EMAIL = "junioreisfoto2@gmail.com";
+
+async function signBugReportPaths(supabase: any, paths: (string | null | undefined)[]): Promise<Map<string, string>> {
+  const unique = Array.from(new Set(paths.filter((p): p is string => !!p)));
+  const result = new Map<string, string>();
+  if (unique.length === 0) return result;
+  const { data } = await supabase.storage.from("bug-reports").createSignedUrls(unique, 60 * 60 * 24 * 30);
+  (data ?? []).forEach((r: any) => {
+    if (r?.path && r?.signedUrl) result.set(r.path, r.signedUrl);
+  });
+  return result;
+}
 
 export const reportBug = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
@@ -63,4 +75,52 @@ export const reportBug = createServerFn({ method: "POST" })
     }
 
     return { ok: true };
+  });
+
+export type MyBugReport = {
+  id: string;
+  message: string;
+  pageUrl: string | null;
+  screenshotUrl: string | null;
+  createdAt: string;
+};
+
+export const listMyBugReports = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }): Promise<MyBugReport[]> => {
+    const { data, error } = await context.supabase
+      .from("bug_reports")
+      .select("id, message, page_url, screenshot_path, created_at")
+      .eq("reported_by", context.userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    const signed = await signBugReportPaths(context.supabase, (data ?? []).map((r: any) => r.screenshot_path));
+    return (data ?? []).map((r: any) => ({
+      id: r.id,
+      message: r.message,
+      pageUrl: r.page_url,
+      screenshotUrl: r.screenshot_path ? signed.get(r.screenshot_path) ?? null : null,
+      createdAt: r.created_at,
+    }));
+  });
+
+export type AllBugReport = MyBugReport & { orgName: string; reporterName: string };
+
+export const listAllBugReports = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }): Promise<AllBugReport[]> => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { data, error } = await context.supabase.rpc("platform_list_bug_reports");
+    if (error) throw new Error(error.message);
+    const rows = data ?? [];
+    const signed = await signBugReportPaths(context.supabase, rows.map((r: any) => r.screenshot_path));
+    return rows.map((r: any) => ({
+      id: r.id,
+      message: r.message,
+      pageUrl: r.page_url,
+      screenshotUrl: r.screenshot_path ? signed.get(r.screenshot_path) ?? null : null,
+      createdAt: r.created_at,
+      orgName: r.org_name ?? "—",
+      reporterName: r.reporter_name ?? "—",
+    }));
   });
