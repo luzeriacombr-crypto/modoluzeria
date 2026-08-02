@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { getPublicPlans, publicSignup } from "@/lib/luzeria/signup.functions";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
+import clickupTrelloLogos from "@/assets/clickup-trello-logos.png";
 import heroDesktopMockup from "@/assets/hero-desktop-mockup.png";
 import heroPhoneMockup from "@/assets/hero-phone-mockup.png";
 import driveCardMockup from "@/assets/drive-card-mockup.png";
@@ -130,6 +131,7 @@ export function SalesPage() {
             <p className="text-white/40 text-xs mt-3 max-w-[420px]">
               Usava o ClickUp ou Trello? Sem problemas, você pode migrar todo o seu fluxo com facilidade.
             </p>
+            <img src={clickupTrelloLogos} alt="Logos do ClickUp e do Trello" className="h-6 w-auto mt-2 opacity-70" />
           </div>
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
             <div className="relative w-full max-w-[460px] lg:max-w-none aspect-[1182/854]">
