@@ -6,16 +6,36 @@ import type { MyBugReport, AllBugReport } from "@/lib/luzeria/bug-reports.functi
 
 type Tab = "faq" | "tutoriais" | "minhas" | "todas";
 
-const FAQ: { q: string; a: string }[] = [
-  { q: "Como funcionam os cards de Posts e Reels?", a: "Cada post ou reel aparece como um card com capa, status, responsável e prazo. Clique no card pra abrir os detalhes completos (copy, checklist, comentários, arquivos)." },
-  { q: "O que é o campo Estático/Carrossel?", a: "É o formato do post. No resumo em cards só aparece o formato já escolhido — pra mudar, abra o post clicando nele e use a seção \"Formato\"." },
-  { q: "Como funciona a Rotina?", a: "É a lista de tarefas de organização/limpeza da agência, com um calendário por dia. O Admin Master pode editar a lista de tarefas direto na tela." },
-  { q: "Como funcionam as Automações?", a: "Em Configurações → Automações, o Admin Master pode criar regras do tipo \"quando o status virar X, então alterar status para Y (ou atribuir para alguém)\". Elas rodam sozinhas, mesmo sem ninguém com a tela aberta." },
-  { q: "Como envio uma foto de perfil pra um colega que ainda não tem?", a: "Em Configurações → Equipe, clique no card do colaborador — abre um modal onde o Admin Master pode enviar ou trocar a foto dele." },
-  { q: "Como funciona o backup no Google Drive?", a: "Conecte sua conta do Drive em Configurações → Drive. Os arquivos enviados nos posts/reels são organizados automaticamente lá, por cliente e mês." },
-  { q: "Como meu cliente aprova um post sem ter conta?", a: "Cada cliente tem um link público (aba \"Preview de Feed\" dentro do cliente). Manda esse link — o cliente aprova ou comenta direto, sem login." },
-  { q: "Esqueci minha senha, e agora?", a: "Peça pro Admin Master da sua agência: Configurações → Equipe → clique no seu card → \"Resetar senha\". Você recebe um link por e-mail." },
-  { q: "Como reporto um problema ou peço uma sugestão?", a: "Use o ícone de interrogação (?) ao lado do sino de notificações, em qualquer tela. Você também pode acompanhar o que já reportou na aba \"Minhas solicitações\" aqui em cima." },
+const FAQ: { category: string; items: { q: string; a: string }[] }[] = [
+  {
+    category: "Conteúdo (Posts, Reels e Rotina)",
+    items: [
+      { q: "Como funcionam os cards de Posts e Reels?", a: "Cada post ou reel aparece como um card com capa, status, responsável e prazo. Clique no card pra abrir os detalhes completos (copy, checklist, comentários, arquivos)." },
+      { q: "O que é o campo Estático/Carrossel?", a: "É o formato do post. No resumo em cards só aparece o formato já escolhido — pra mudar, abra o post clicando nele e use a seção \"Formato\"." },
+      { q: "Como funciona a Rotina?", a: "É a lista de tarefas de organização/limpeza da agência, com um calendário por dia. O Admin Master pode editar a lista de tarefas direto na tela." },
+    ],
+  },
+  {
+    category: "Equipe e automações",
+    items: [
+      { q: "Como envio uma foto de perfil pra um colega que ainda não tem?", a: "Em Configurações → Equipe, clique no card do colaborador — abre um modal onde o Admin Master pode enviar ou trocar a foto dele." },
+      { q: "Esqueci minha senha, e agora?", a: "Peça pro Admin Master da sua agência: Configurações → Equipe → clique no seu card → \"Resetar senha\". Você recebe um link por e-mail." },
+      { q: "Como funcionam as Automações?", a: "Em Configurações → Automações, o Admin Master pode criar regras do tipo \"quando o status virar X, então alterar status para Y (ou atribuir para alguém)\". Elas rodam sozinhas, mesmo sem ninguém com a tela aberta." },
+    ],
+  },
+  {
+    category: "Clientes e arquivos",
+    items: [
+      { q: "Como meu cliente aprova um post sem ter conta?", a: "Cada cliente tem um link público (aba \"Preview de Feed\" dentro do cliente). Manda esse link — o cliente aprova ou comenta direto, sem login." },
+      { q: "Como funciona o backup no Google Drive?", a: "Conecte sua conta do Drive em Configurações → Drive. Os arquivos enviados nos posts/reels são organizados automaticamente lá, por cliente e mês." },
+    ],
+  },
+  {
+    category: "Suporte",
+    items: [
+      { q: "Como reporto um problema ou peço uma sugestão?", a: "Use o ícone de interrogação (?) ao lado do sino de notificações, em qualquer tela. Você também pode acompanhar o que já reportou na aba \"Minhas solicitações\" aqui em cima." },
+    ],
+  },
 ];
 
 const TUTORIALS: { title: string; steps: string[] }[] = [
@@ -96,8 +116,15 @@ export function AjudaPage() {
       </div>
 
       {tab === "faq" && (
-        <div className="space-y-3">
-          {FAQ.map((item) => <FaqItem key={item.q} question={item.q} answer={item.a} />)}
+        <div className="space-y-8">
+          {FAQ.map((group) => (
+            <div key={group.category}>
+              <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3">{group.category}</h2>
+              <div className="space-y-3">
+                {group.items.map((item) => <FaqItem key={item.q} question={item.q} answer={item.a} />)}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
