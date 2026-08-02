@@ -128,10 +128,12 @@ export function SalesPage() {
             >
               Quero testar por 7 dias! →
             </button>
-            <p className="text-white/40 text-xs mt-3 max-w-[420px]">
-              Usava o ClickUp ou Trello? Sem problemas, você pode migrar todo o seu fluxo com facilidade.
-            </p>
-            <img src={clickupTrelloLogos} alt="Logos do ClickUp e do Trello" className="h-6 w-auto mt-2 opacity-70" />
+            <div className="flex items-center gap-3 mt-3 max-w-[480px]">
+              <img src={clickupTrelloLogos} alt="Logos do ClickUp e do Trello" className="h-9 w-auto shrink-0 opacity-80" />
+              <p className="text-white/40 text-xs">
+                Usava o ClickUp ou Trello? Sem problemas, você pode migrar todo o seu fluxo com facilidade.
+              </p>
+            </div>
           </div>
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
             <div className="relative w-full max-w-[460px] lg:max-w-none aspect-[1182/854]">
