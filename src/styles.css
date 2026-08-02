@@ -301,6 +301,21 @@
   backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
+@keyframes lz-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+@utility lz-float-a {
+  animation: lz-float 5s ease-in-out infinite;
+}
+@utility lz-float-b {
+  animation: lz-float 6s ease-in-out infinite;
+  animation-delay: -2s;
+}
+@utility lz-float-c {
+  animation: lz-float 5.5s ease-in-out infinite;
+  animation-delay: -4s;
+}
 @keyframes lz-grow-bar {
   from { transform: scaleY(0); }
   to { transform: scaleY(1); }
@@ -484,6 +499,9 @@
   .lz-btn-accent, .lz-btn-ghost, .lz-card-hover, .lz-row-hover, .lz-icon-btn {
     transition: none !important;
     transform: none !important;
+  }
+  .lz-float-a, .lz-float-b, .lz-float-c {
+    animation: none !important;
   }
 }
 

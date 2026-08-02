@@ -8,7 +8,9 @@ import {
 import { getPublicPlans, publicSignup } from "@/lib/luzeria/signup.functions";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import heroMockup from "@/assets/hero-mockup.png";
-import driveBackupMockup from "@/assets/drive-backup-mockup.png";
+import driveCardMockup from "@/assets/drive-card-mockup.png";
+import postCreativeMockup from "@/assets/post-creative-mockup.png";
+import appScreenshotMockup from "@/assets/app-screenshot-mockup.png";
 
 const LIME = "#D7FF3F";
 const LIME_ON_LIGHT = "#5B7A00"; // readable lime-family accent for white sections
@@ -184,25 +186,34 @@ export function SalesPage() {
       </section>
 
       {/* Backup automático */}
-      <section style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10">
+      <section style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10 overflow-hidden">
         <Reveal className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
-            <div>
-              <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: LIME_ON_LIGHT }}>
-                <FolderOpen size={13} /> Backup automático
-              </div>
-              <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-4">
-                Todo post vai direto pro seu Google Drive.
-              </h2>
-              <p className="text-[#0A0E23]/60 text-base leading-relaxed">
-                Conecte sua própria conta do Google Drive e cada arquivo que sua equipe sobe no Modo Criador é organizado e salvo automaticamente. Sem pasta perdida, sem procurar arquivo em conversa do WhatsApp.
-              </p>
+          <div className="max-w-[640px] mx-auto text-center mb-12">
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: LIME_ON_LIGHT }}>
+              <FolderOpen size={13} /> Backup automático
             </div>
+            <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-4">
+              Todo post vai direto pro seu Google Drive.
+            </h2>
+            <p className="text-[#0A0E23]/60 text-base leading-relaxed">
+              Conecte sua própria conta do Google Drive e cada arquivo que sua equipe sobe no Modo Criador é organizado e salvo automaticamente. Sem pasta perdida, sem procurar arquivo em conversa do WhatsApp.
+            </p>
+          </div>
+          <div className="relative max-w-[820px] mx-auto aspect-[3/2] sm:aspect-[16/9]">
             <img
-              src={driveBackupMockup}
-              alt="Post enviado no Modo Criador salvo automaticamente no Google Drive"
-              className={`w-full h-auto rounded-xl ${LIFT}`}
-              style={EASE}
+              src={appScreenshotMockup}
+              alt="Tela do Modo Criador com os posts do cliente"
+              className="lz-float-c absolute right-0 top-[14%] w-[62%] sm:w-[58%] h-auto drop-shadow-xl"
+            />
+            <img
+              src={driveCardMockup}
+              alt="Post organizado automaticamente numa pasta do Google Drive"
+              className="lz-float-a absolute left-0 top-[6%] w-[34%] sm:w-[30%] h-auto drop-shadow-xl"
+            />
+            <img
+              src={postCreativeMockup}
+              alt="Arte de post criada no Modo Criador"
+              className="lz-float-b absolute left-[27%] sm:left-[29%] top-0 w-[38%] sm:w-[34%] h-auto rounded-xl drop-shadow-2xl"
             />
           </div>
         </Reveal>
