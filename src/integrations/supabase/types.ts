@@ -86,6 +86,36 @@ export type Database = {
         }
         Relationships: []
       }
+      bug_reports: {
+        Row: {
+          id: string
+          org_id: string
+          reported_by: string
+          message: string
+          screenshot_path: string | null
+          page_url: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          reported_by: string
+          message: string
+          screenshot_path?: string | null
+          page_url?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          reported_by?: string
+          message?: string
+          screenshot_path?: string | null
+          page_url?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       cleaning_log: {
         Row: {
           created_at: string

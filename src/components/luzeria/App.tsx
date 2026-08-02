@@ -8,6 +8,7 @@ import type { Client } from "@/lib/luzeria/types";
 import { Sidebar } from "./Sidebar";
 import { DetailPanel } from "./DetailPanel";
 import { NotificationsBell } from "./Notifications";
+import { HelpButton } from "./HelpButton";
 import { NewClientModal, CustomFieldsModal } from "./Modals";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
@@ -163,6 +164,7 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
         </span>
       )}
       <div className="flex-1" />
+      <HelpButton />
       <NotificationsBell />
       {me && (
         <button
