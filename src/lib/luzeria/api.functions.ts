@@ -328,6 +328,18 @@ export const setUserActive = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminUpdateMemberAvatar = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId: string; avatarPath: string | null }) =>
+    z.object({ userId: z.string().uuid(), avatarPath: z.string().trim().max(400).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("profiles").update({ avatar_url: data.avatarPath }).eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 async function callAdminEdgeFn(
   operation: string,
   params: Record<string, unknown>,

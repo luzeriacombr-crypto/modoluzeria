@@ -1,17 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO } from "@/lib/luzeria/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
-import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
-import { UserPlus, X, Settings as SettingsIcon, Star, KeyRound, Building2 } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, Building2 } from "lucide-react";
 import { ReportsTab } from "./ReportsTab";
 import { DriveSettingsTab } from "./DriveSettingsTab";
 import { MemberGoalsTab } from "./MemberGoalsTab";
 import { AutomationsTab } from "./AutomationsTab";
+import { TeamMemberCard } from "./TeamMemberCard";
 
 type SettingsTab = "team" | "report" | "drive" | "automations" | "general" | "subscription";
 const VALID_TABS: SettingsTab[] = ["team", "report", "drive", "automations", "general", "subscription"];
@@ -19,9 +18,7 @@ const VALID_TABS: SettingsTab[] = ["team", "report", "drive", "automations", "ge
 export function SettingsPage({ initialTab }: { initialTab?: string }) {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
-  const { setUserRole, setUserActive, deleteUser, adminCreateUser, adminSendPasswordReset, createAgency } = useApi();
-  const { setViewAs } = useUI();
-  const navigate = useNavigate();
+  const { setUserActive, deleteUser, adminCreateUser, createAgency } = useApi();
   const [adding, setAdding] = useState(false);
   const [creatingAgency, setCreatingAgency] = useState(false);
   const [tab, setTab] = useState<SettingsTab>(
@@ -40,14 +37,6 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
     deleteUser.mutate({ data: { userId: id } }, {
       onSuccess: () => toast.success("Colaborador removido."),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
-    });
-  };
-
-  const handleResetPassword = (id: string, name: string, email: string) => {
-    if (!confirm(`Enviar link de redefinição de senha para ${name} (${email})?`)) return;
-    adminSendPasswordReset.mutate({ data: { userId: id } }, {
-      onSuccess: (res: any) => toast.success(`Email enviado para ${res?.email ?? email}.`),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao enviar email"),
     });
   };
 
@@ -145,51 +134,12 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
       <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3">
         Equipe ativa <span className="text-white/30">({active.length})</span>
       </h2>
-      <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
-        {active.map((p) => (
-          <div key={p.id} className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.05] last:border-b-0">
-            <Avatar profile={p} size={36} />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-white truncate">{p.name}</div>
-              <div className="text-[11px] text-white/40 truncate">{p.email}</div>
-            </div>
-            <select value={p.role} disabled={p.id === me.id}
-              onChange={(e) => setUserRole.mutate({ data: { userId: p.id, role: e.target.value as Role } })}
-              className="text-[10px] uppercase font-bold rounded-full pl-3 pr-6 py-1.5 outline-none appearance-none cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)",
-                color: "rgb(var(--lz-brand-rgb))",
-                backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "right 10px center",
-              }}>
-              <option value="member">Membro</option>
-              <option value="setor">Adm Setor</option>
-              <option value="master">Adm Master</option>
-            </select>
-            <label className="flex items-center gap-1.5 text-[11px] text-white/60">
-              <input type="checkbox" checked={p.active} disabled={p.id === me.id}
-                onChange={(e) => setUserActive.mutate({ data: { userId: p.id, active: e.target.checked } })} />
-              Ativo
-            </label>
-            <button onClick={() => { setViewAs(p.id); navigate({ to: "/minhas-tarefas" }); }}
-              className="text-[11px] text-white/60 hover:text-[rgb(var(--lz-brand-rgb))] transition">Ver demandas</button>
-            <button onClick={() => handleResetPassword(p.id, p.name, p.email)}
-              disabled={adminSendPasswordReset.isPending}
-              title="Enviar link de redefinição de senha por email"
-              className="text-[11px] text-white/60 hover:text-[rgb(var(--lz-brand-rgb))] transition inline-flex items-center gap-1 disabled:opacity-40">
-              <KeyRound size={12} /> Resetar senha
-            </button>
-            <button onClick={() => handleRemove(p.id, p.name)} disabled={p.id === me.id}
-              className="text-[11px] text-white/40 hover:text-red-400 transition disabled:opacity-30 disabled:cursor-not-allowed">
-              Remover
-            </button>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        {active.map((p) => <TeamMemberCard key={p.id} profile={p} />)}
       </div>
 
       <p className="text-[11px] text-white/30 mt-4">
-        Novos cadastros ficam pendentes até a aprovação de um Administrador Master. E-mails pré-cadastrados na equipe inicial entram já aprovados com a função correta.
+        Clique num membro pra ver mais opções (resetar senha, ver demandas, ativo/inativo, remover). Novos cadastros ficam pendentes até a aprovação de um Administrador Master. E-mails pré-cadastrados na equipe inicial entram já aprovados com a função correta.
       </p>
 
       <div className="mt-10 pt-6 border-t border-white/[0.06]">
