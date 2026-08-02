@@ -128,7 +128,7 @@ export function SalesPage() {
               Quero testar por 7 dias! →
             </button>
             <p className="text-white/40 text-xs mt-3 max-w-[420px]">
-              (e mais: traga automaticamente seus dados e clientes do Trello ou ClickUp em poucos cliques)
+              Usava o ClickUp ou Trello? Sem problemas, você pode migrar todo o seu fluxo com facilidade.
             </p>
           </div>
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
