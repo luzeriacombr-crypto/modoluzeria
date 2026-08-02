@@ -269,10 +269,10 @@ function AddMemberModal({ onClose, onSubmit, loading }: {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>("member");
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 lz-overlay-in"
       onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-7"
+        className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-7 lz-modal-in"
         style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.2)" }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-white font-semibold">Adicionar membro</h2>
@@ -321,10 +321,10 @@ function CreateAgencyModal({ onClose, onSubmit, loading }: {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 lz-overlay-in"
       onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-7"
+        className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-7 lz-modal-in"
         style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.2)" }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-white font-semibold">Criar nova agência</h2>

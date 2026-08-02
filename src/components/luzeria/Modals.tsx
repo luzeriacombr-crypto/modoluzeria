@@ -12,8 +12,8 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
   // ancestor with backdrop-filter, which creates a new containing block for
   // `fixed` descendants and traps the overlay inside that ancestor's box.
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[#1C1C1C] rounded-lg w-full max-w-md border border-white/10 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm lz-overlay-in" onClick={onClose}>
+      <div className="bg-[#1C1C1C] rounded-lg w-full max-w-md border border-white/10 shadow-2xl lz-modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
           <h2 className="text-base font-bold text-white">{title}</h2>
           <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5"><X size={16} /></button>

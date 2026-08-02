@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
@@ -20,6 +20,11 @@ const BG_GRAY = "#18181B";
 // nothing until there's at least one entry, so it's safe to ship empty.
 type Testimonial = { image: string; alt: string };
 const TESTIMONIALS: Testimonial[] = [];
+
+const EASE = { transitionTimingFunction: "var(--ease-premium)" as const };
+// Same curve premium buttons/cards use elsewhere in the app.
+const POP = "transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97]";
+const LIFT = "transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-2xl";
 
 const STEPS = [
   { n: "01", Icon: CalendarDays, t: "Monte o calendário", d: "Organize Posts e Reels de cada cliente num board visual, por mês." },
@@ -68,14 +73,26 @@ export function SalesPage() {
     }
   }
 
+  const scrolled = useScrolled();
+
   return (
     <div className="min-h-screen text-white" style={{ background: "#0A0E23", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       {/* Header */}
-      <header className="flex items-center justify-between px-5 sm:px-10 py-5 max-w-[1100px] mx-auto">
-        <ModoCriadorLogo variant="brand" className="h-6 w-auto" />
-        <Link to="/auth" className="text-sm text-white/70 hover:text-white transition">
-          Já tem conta? Entrar →
-        </Link>
+      <header
+        className="sticky top-0 z-40 flex items-center justify-between px-5 sm:px-10 py-5"
+        style={{
+          transition: "background-color 300ms var(--ease-premium), backdrop-filter 300ms var(--ease-premium), border-color 300ms var(--ease-premium)",
+          backgroundColor: scrolled ? "rgba(10,14,35,0.8)" : "transparent",
+          backdropFilter: scrolled ? "blur(12px)" : "none",
+          borderBottom: scrolled ? "1px solid rgba(255,255,255,0.08)" : "1px solid transparent",
+        }}
+      >
+        <div className="flex items-center justify-between max-w-[1100px] mx-auto w-full">
+          <ModoCriadorLogo variant="brand" className="h-6 w-auto" />
+          <Link to="/auth" className="text-sm text-white/70 hover:text-white transition">
+            Já tem conta? Entrar →
+          </Link>
+        </div>
       </header>
 
       {/* Hero */}
@@ -104,8 +121,8 @@ export function SalesPage() {
             </div>
             <button
               onClick={() => scrollToForm()}
-              className="mt-6 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full transition hover:opacity-90"
-              style={{ background: LIME, color: "#0A0E23" }}
+              className={`mt-6 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full ${POP}`}
+              style={{ background: LIME, color: "#0A0E23", ...EASE }}
             >
               Quero começar agora →
             </button>
@@ -118,7 +135,7 @@ export function SalesPage() {
 
       {/* Dores */}
       <section style={{ background: "#0C1F61" }} className="border-t border-white/10">
-        <div className="px-5 sm:px-10 max-w-[820px] mx-auto py-14">
+        <Reveal className="px-5 sm:px-10 max-w-[820px] mx-auto py-14">
           <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">O Modo Criador é para...</h2>
           <ul className="space-y-4">
             {[
@@ -140,16 +157,16 @@ export function SalesPage() {
               o Modo Criador foi feito pra você.
             </span>
           </p>
-        </div>
+        </Reveal>
       </section>
 
       {/* Simples assim */}
       <section style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10">
-        <div className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14">
+        <Reveal className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14">
           <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">Simples assim</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {STEPS.map((s) => (
-              <div key={s.n} className="bg-black/[0.04] rounded-xl p-5 border border-black/10">
+              <div key={s.n} className={`bg-black/[0.04] rounded-xl p-5 border border-black/10 ${LIFT}`} style={EASE}>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-black shrink-0"
                     style={{ background: LIME, color: "#0A0E23" }}>
@@ -162,12 +179,12 @@ export function SalesPage() {
               </div>
             ))}
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* Benefícios */}
       <section style={{ background: BG_GRAY }} className="border-t border-white/10">
-        <div className="px-5 sm:px-10 max-w-[820px] mx-auto py-14">
+        <Reveal className="px-5 sm:px-10 max-w-[820px] mx-auto py-14">
           <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">Você vai ter...</h2>
           <ul className="space-y-4">
             {[
@@ -183,26 +200,26 @@ export function SalesPage() {
               </li>
             ))}
           </ul>
-        </div>
+        </Reveal>
       </section>
 
       {/* Depoimentos — renders nothing until TESTIMONIALS has entries */}
       {TESTIMONIALS.length > 0 && (
         <section style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10">
-          <div className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14">
+          <Reveal className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14">
             <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">Quem usa, recomenda</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {TESTIMONIALS.map((t) => (
-                <img key={t.image} src={t.image} alt={t.alt} className="w-full h-auto rounded-xl border border-black/10 shadow-sm" />
+                <img key={t.image} src={t.image} alt={t.alt} className={`w-full h-auto rounded-xl border border-black/10 shadow-sm ${LIFT}`} style={EASE} />
               ))}
             </div>
-          </div>
+          </Reveal>
         </section>
       )}
 
       {/* Planos */}
       <section style={{ background: BG_BLUE_2 }} className="border-t border-white/10">
-        <div className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14">
+        <Reveal className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14">
           <h2 className="font-black uppercase text-2xl sm:text-3xl mb-10 text-center">Escolha seu plano</h2>
           {plans.isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -215,10 +232,11 @@ export function SalesPage() {
               {selectablePlans.map((p) => {
                 const recommended = p.name.trim().toLowerCase() === "pro";
                 return (
-                  <div key={p.id} className="relative rounded-xl p-6 flex flex-col"
+                  <div key={p.id} className={`relative rounded-xl p-6 flex flex-col ${LIFT}`}
                     style={{
                       background: recommended ? "rgba(215,255,63,0.06)" : "rgba(255,255,255,0.05)",
                       border: recommended ? `2px solid ${LIME}` : "1px solid rgba(255,255,255,0.1)",
+                      ...EASE,
                     }}>
                     {recommended && (
                       <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-wide px-3 py-1 rounded-full"
@@ -236,14 +254,13 @@ export function SalesPage() {
                     </div>
                     <button
                       onClick={() => scrollToForm(p.id)}
-                      className="mt-auto font-bold uppercase text-sm px-5 py-3 rounded-full transition"
-                      style={
-                        planId === p.id
+                      className={`mt-auto font-bold uppercase text-sm px-5 py-3 rounded-full ${POP}`}
+                      style={{
+                        ...(planId === p.id || recommended
                           ? { background: LIME, color: "#0A0E23" }
-                          : recommended
-                          ? { background: LIME, color: "#0A0E23" }
-                          : { background: "rgba(255,255,255,0.08)", color: "#fff" }
-                      }
+                          : { background: "rgba(255,255,255,0.08)", color: "#fff" }),
+                        ...EASE,
+                      }}
                     >
                       {planId === p.id ? "Selecionado ✓" : "Escolher plano"}
                     </button>
@@ -252,7 +269,7 @@ export function SalesPage() {
               })}
             </div>
           )}
-        </div>
+        </Reveal>
       </section>
 
       {/* Formulário */}
@@ -390,6 +407,49 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
       {open && (
         <p className="text-white/50 text-sm leading-relaxed px-4 pb-4">{answer}</p>
       )}
+    </div>
+  );
+}
+
+function useScrolled(threshold = 30) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > threshold);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [threshold]);
+  return scrolled;
+}
+
+/** Fades + slides a section's content in once it enters the viewport.
+ * Skips the animation entirely for prefers-reduced-motion. */
+function Reveal({ children, className }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setVisible(true); return; }
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setVisible(true); obs.disconnect(); }
+    }, { threshold: 0.15 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(28px)",
+        transition: "opacity 700ms var(--ease-premium), transform 700ms var(--ease-premium)",
+      }}
+    >
+      {children}
     </div>
   );
 }
