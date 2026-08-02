@@ -7,13 +7,14 @@ import {
 } from "lucide-react";
 import { getPublicPlans, publicSignup } from "@/lib/luzeria/signup.functions";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
-import heroMockup from "@/assets/hero-mockup.png";
+import heroDesktopMockup from "@/assets/hero-desktop-mockup.png";
+import heroPhoneMockup from "@/assets/hero-phone-mockup.png";
 import driveCardMockup from "@/assets/drive-card-mockup.png";
 import postCreativeMockup from "@/assets/post-creative-mockup.png";
 import appScreenshotMockup from "@/assets/app-screenshot-mockup.png";
 
 const LIME = "#D7FF3F";
-const LIME_ON_LIGHT = "#5B7A00"; // readable lime-family accent for white sections
+const ACCENT_ON_LIGHT = "#111F5C"; // accent color for text on white sections
 const BG_BLUE = "#0A0E23";
 const BG_BLUE_2 = "#111F5C";
 const BG_WHITE = "#F5F5F0";
@@ -111,7 +112,9 @@ export function SalesPage() {
               por falta de organização.
               <br />
               <span className="font-criador-serif normal-case block" style={{ color: LIME }}>
-                Ganhe tempo com o Modo Criador.
+                Ganhe tempo com
+                <br />
+                o Modo Criador.
               </span>
             </h1>
             <p className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">
@@ -131,7 +134,18 @@ export function SalesPage() {
             </button>
           </div>
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
-            <img src={heroMockup} alt="Painel do Modo Criador no computador e no celular" className="w-full max-w-[460px] lg:max-w-none h-auto" />
+            <div className="relative w-full max-w-[460px] lg:max-w-none aspect-[1182/854]">
+              <img
+                src={heroDesktopMockup}
+                alt="Painel do Modo Criador no computador"
+                className="lz-float-c absolute right-0 top-0 w-[82%] h-auto drop-shadow-2xl"
+              />
+              <img
+                src={heroPhoneMockup}
+                alt="Painel do Modo Criador no celular"
+                className="lz-float-a absolute left-0 bottom-0 w-[50%] h-auto drop-shadow-2xl"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -150,11 +164,11 @@ export function SalesPage() {
               "Você que tem vergonha de mostrar sua \"organização interna\" pra um cliente novo",
             ].map((t) => (
               <li key={t} className="flex gap-3 text-white/75 text-base sm:text-lg">
-                <X size={20} className="text-red-400 shrink-0 mt-0.5" strokeWidth={2.5} />{t}
+                <X size={20} className="text-red-400 shrink-0 mt-0.5" strokeWidth={2.5} /><span className="text-balance">{t}</span>
               </li>
             ))}
           </ul>
-          <p className="mt-8 text-white">
+          <p className="mt-8 text-white text-balance">
             Se você marcou pelo menos um,{" "}
             <span className="font-bold" style={{ color: LIME }}>
               o Modo Criador foi feito pra você.
@@ -175,7 +189,7 @@ export function SalesPage() {
                     style={{ background: LIME, color: "#0A0E23" }}>
                     {s.n}
                   </span>
-                  <s.Icon size={20} style={{ color: LIME_ON_LIGHT }} />
+                  <s.Icon size={20} style={{ color: ACCENT_ON_LIGHT }} />
                 </div>
                 <div className="font-bold mb-1">{s.t}</div>
                 <div className="text-[#0A0E23]/60 text-sm leading-relaxed">{s.d}</div>
@@ -189,7 +203,7 @@ export function SalesPage() {
       <section style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10 overflow-hidden">
         <Reveal className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14">
           <div className="max-w-[640px] mx-auto text-center mb-12">
-            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: LIME_ON_LIGHT }}>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: ACCENT_ON_LIGHT }}>
               <FolderOpen size={13} /> Backup automático
             </div>
             <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-4">
@@ -233,7 +247,7 @@ export function SalesPage() {
               "Suporte em português, feito pra agência brasileira",
             ].map((t) => (
               <li key={t} className="flex gap-3 text-white/85 text-base sm:text-lg">
-                <Check size={20} className="shrink-0 mt-0.5" style={{ color: LIME }} strokeWidth={2.5} />{t}
+                <Check size={20} className="shrink-0 mt-0.5" style={{ color: LIME }} strokeWidth={2.5} /><span className="text-balance">{t}</span>
               </li>
             ))}
           </ul>
@@ -381,7 +395,7 @@ export function SalesPage() {
       {/* Fundador */}
       <section style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10 text-center">
         <div className="px-5 sm:px-10 max-w-[720px] mx-auto py-14">
-        <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: LIME_ON_LIGHT }}>
+        <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: ACCENT_ON_LIGHT }}>
           <Zap size={13} /> Somos a Luzeria Estúdio!
         </div>
         <p className="text-[#0A0E23]/70 text-sm leading-relaxed">
