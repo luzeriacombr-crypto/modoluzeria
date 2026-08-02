@@ -101,7 +101,7 @@ export function SalesPage() {
 
       {/* Hero */}
       <section className="px-5 sm:px-10 max-w-[1200px] mx-auto pt-8 pb-16">
-        <div className="grid lg:grid-cols-2 gap-10 lg:gap-8 items-center">
+        <div className="grid lg:grid-cols-2 gap-2 lg:gap-8 items-center">
           <div className="order-2 lg:order-1">
             <div className="inline-flex items-center gap-2 border border-white/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide mb-6">
               <Rocket size={13} style={{ color: LIME }} /> Gestão de conteúdo pra agência
