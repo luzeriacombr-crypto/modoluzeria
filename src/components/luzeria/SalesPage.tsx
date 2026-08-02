@@ -120,18 +120,16 @@ export function SalesPage() {
             <p className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">
               A plataforma que centraliza tudo que um Social Media precisa: produtividade da equipe, calendário de postagens, link aprovação de cliente, organização de arquivos… tudo num só lugar, sem planilha chata ou arquivos perdidos no WhatsApp.
             </p>
-            <div className="mt-8">
-              <div className="text-white/50 text-sm">A partir de</div>
-              <div className="text-4xl font-black">R$ 49,90<span className="text-lg font-normal text-white/50">/mês</span></div>
-              <div className="text-white/40 text-xs mt-1">7 dias grátis · Cancele quando quiser</div>
-            </div>
             <button
               onClick={() => scrollToForm()}
-              className={`mt-6 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full ${POP}`}
+              className={`mt-8 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full ${POP}`}
               style={{ background: LIME, color: "#0A0E23", ...EASE }}
             >
-              Quero começar agora →
+              Quero testar por 7 dias! →
             </button>
+            <p className="text-white/40 text-xs mt-3 max-w-[420px]">
+              (e mais: traga automaticamente seus dados e clientes do Trello ou ClickUp em poucos cliques)
+            </p>
           </div>
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
             <div className="relative w-full max-w-[460px] lg:max-w-none aspect-[1182/854]">
