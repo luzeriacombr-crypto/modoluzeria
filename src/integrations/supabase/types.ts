@@ -44,6 +44,42 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_rules: {
+        Row: {
+          id: string
+          org_id: string
+          active: boolean
+          trigger_status: string
+          action_type: string
+          action_status: string | null
+          action_user_id: string | null
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          active?: boolean
+          trigger_status: string
+          action_type: string
+          action_status?: string | null
+          action_user_id?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          active?: boolean
+          trigger_status?: string
+          action_type?: string
+          action_status?: string | null
+          action_user_id?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Relationships: []
+      }
       asaas_webhook_events: {
         Row: {
           event: string

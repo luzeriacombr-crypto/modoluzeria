@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Bell, Calendar, PlayCircle, Repeat, Sparkles, Timer } from "lucide-react";
-import { cronJobsQO, useApi } from "@/lib/luzeria/queries";
+import { Bell, Calendar, Plus, PlayCircle, Repeat, Sparkles, Timer, Trash2, Zap } from "lucide-react";
+import { cronJobsQO, automationRulesQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { STATUS_META, type Status } from "@/lib/luzeria/types";
+
+const STATUS_OPTIONS = Object.keys(STATUS_META) as Status[];
 
 const JOB_META: Record<string, { label: string; description: string; icon: React.ComponentType<any> }> = {
   luzeria_deadline_reminders: {
@@ -102,6 +106,8 @@ export function AutomationsTab() {
         </div>
       </div>
 
+      <AutomationRulesSection />
+
       <div>
         <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
           <PlayCircle size={12} /> Disparar agora
@@ -129,6 +135,122 @@ export function AutomationsTab() {
         <p className="text-[11px] text-white/30 mt-3">
           Útil para testar. As notificações respeitam as preferências de cada colaborador (configuráveis no perfil).
         </p>
+      </div>
+    </div>
+  );
+}
+
+function AutomationRulesSection() {
+  const me = useMe().data;
+  const isMaster = me?.role === "master";
+  const { data: rules = [] } = useQuery(automationRulesQO());
+  const { data: profiles = [] } = useQuery(profilesQO());
+  const { createAutomationRule, deleteAutomationRule } = useApi();
+  const [adding, setAdding] = useState(false);
+
+  function memberName(userId: string | null) {
+    return profiles.find((p) => p.id === userId)?.name ?? "—";
+  }
+
+  return (
+    <div>
+      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+        <Zap size={12} /> Minhas automações
+      </h2>
+      <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
+        {rules.length === 0 && !adding && (
+          <div className="px-5 py-6 text-sm text-white/40">Nenhuma automação criada ainda.</div>
+        )}
+        {rules.map((r) => (
+          <div key={r.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.05] last:border-b-0">
+            <span className="text-sm text-white/85 flex-1 min-w-0">
+              Quando o status virar <strong style={{ color: STATUS_META[r.triggerStatus as Status]?.color }}>{STATUS_META[r.triggerStatus as Status]?.label ?? r.triggerStatus}</strong>
+              {" → "}
+              {r.actionType === "set_status" ? (
+                <>alterar status para <strong style={{ color: STATUS_META[r.actionStatus as Status]?.color }}>{STATUS_META[r.actionStatus as Status]?.label ?? r.actionStatus}</strong></>
+              ) : (
+                <>atribuir para <strong>{memberName(r.actionUserId)}</strong></>
+              )}
+            </span>
+            {isMaster && (
+              <button
+                onClick={() => { if (confirm("Excluir essa automação?")) deleteAutomationRule.mutate({ data: { id: r.id } }); }}
+                className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-white/5 shrink-0"
+              ><Trash2 size={13} /></button>
+            )}
+          </div>
+        ))}
+        {isMaster && (
+          adding ? (
+            <NewRuleForm
+              profiles={profiles}
+              onCancel={() => setAdding(false)}
+              onSubmit={(payload) => createAutomationRule.mutate({ data: payload }, { onSuccess: () => setAdding(false) })}
+            />
+          ) : (
+            <button
+              onClick={() => setAdding(true)}
+              className="w-full flex items-center justify-center gap-1.5 px-5 py-3.5 text-xs font-semibold text-white/60 hover:text-white hover:bg-white/[0.03] transition-colors"
+            ><Plus size={13} /> Nova automação</button>
+          )
+        )}
+      </div>
+      <p className="text-[11px] text-white/30 mt-3">
+        As automações rodam direto no sistema, mesmo que ninguém esteja com a tela aberta.
+      </p>
+    </div>
+  );
+}
+
+function NewRuleForm({
+  profiles, onCancel, onSubmit,
+}: {
+  profiles: { id: string; name: string }[];
+  onCancel: () => void;
+  onSubmit: (payload: { triggerStatus: string; actionType: "set_status" | "assign_member"; actionStatus?: string; actionUserId?: string }) => void;
+}) {
+  const [triggerStatus, setTriggerStatus] = useState<Status>(STATUS_OPTIONS[0]);
+  const [actionType, setActionType] = useState<"set_status" | "assign_member">("set_status");
+  const [actionStatus, setActionStatus] = useState<Status>(STATUS_OPTIONS[0]);
+  const [actionUserId, setActionUserId] = useState(profiles[0]?.id ?? "");
+
+  const selectClass = "bg-[#0D0D0D] border border-white/10 rounded-md px-2.5 py-2 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
+
+  return (
+    <div className="px-5 py-4 border-t border-white/[0.06] space-y-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-white/70">
+        <span>Quando o status virar</span>
+        <select value={triggerStatus} onChange={(e) => setTriggerStatus(e.target.value as Status)} className={selectClass}>
+          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+        </select>
+        <span>então</span>
+        <select value={actionType} onChange={(e) => setActionType(e.target.value as any)} className={selectClass}>
+          <option value="set_status">Alterar status para</option>
+          <option value="assign_member">Atribuir para</option>
+        </select>
+        {actionType === "set_status" ? (
+          <select value={actionStatus} onChange={(e) => setActionStatus(e.target.value as Status)} className={selectClass}>
+            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+          </select>
+        ) : (
+          <select value={actionUserId} onChange={(e) => setActionUserId(e.target.value)} className={selectClass}>
+            {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        )}
+      </div>
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={onCancel} className="px-3 py-1.5 text-xs text-white/60 hover:text-white">Cancelar</button>
+        <button
+          disabled={actionType === "assign_member" && !actionUserId}
+          onClick={() => onSubmit({
+            triggerStatus,
+            actionType,
+            actionStatus: actionType === "set_status" ? actionStatus : undefined,
+            actionUserId: actionType === "assign_member" ? actionUserId : undefined,
+          })}
+          className="px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-40"
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >Salvar</button>
       </div>
     </div>
   );

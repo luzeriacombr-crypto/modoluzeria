@@ -38,6 +38,7 @@ import {
   getMyNotificationPreferences, setMyNotificationPreferences,
   runDailyDigestNow, runDeadlineRemindersNow, listCronJobs,
 } from "./automations.functions";
+import { listAutomationRules, createAutomationRule, deleteAutomationRule } from "./automation-rules.functions";
 import {
   getOrCreateShareToken, rotateShareToken, listClientFeedback,
   getPublicFeed, getPublicDriveThumbnail, addPublicFeedback,
@@ -300,6 +301,9 @@ export const cronJobsQO = () =>
     queryFn: () => listCronJobs(),
     staleTime: 30_000,
   });
+
+export const automationRulesQO = () =>
+  queryOptions({ queryKey: ["automation-rules"], queryFn: () => listAutomationRules() });
 
 export const clientFeedbackQO = (itemId: string | null) =>
   queryOptions({
@@ -570,6 +574,14 @@ export function useApi() {
     setMyNotificationPreferences: useMutation({
       mutationFn: useServerFn(setMyNotificationPreferences),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["notification-prefs"] }),
+    }),
+    createAutomationRule: useMutation({
+      mutationFn: useServerFn(createAutomationRule),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["automation-rules"] }),
+    }),
+    deleteAutomationRule: useMutation({
+      mutationFn: useServerFn(deleteAutomationRule),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["automation-rules"] }),
     }),
     runDailyDigestNow: useMutation({
       mutationFn: useServerFn(runDailyDigestNow),
