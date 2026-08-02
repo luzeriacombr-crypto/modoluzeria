@@ -11,6 +11,7 @@ const ACCEPT = ["image/png", "image/jpeg", "image/webp"];
 export function HelpButton() {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -27,6 +28,7 @@ export function HelpButton() {
   function close() {
     setOpen(false);
     setMessage("");
+    setWhatsapp("");
     setFile(null);
     setPreview(null);
   }
@@ -48,6 +50,7 @@ export function HelpButton() {
         data: {
           message: message.trim(),
           pageUrl: window.location.href,
+          whatsapp: whatsapp.trim() || undefined,
           screenshotBase64,
           screenshotContentType: file?.type,
         },
@@ -83,6 +86,18 @@ export function HelpButton() {
           placeholder="Descreva o que você esperava e o que aconteceu…"
           className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
         />
+
+        <div className="mt-4">
+          <label className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">
+            Seu WhatsApp (opcional)
+          </label>
+          <input
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            placeholder="Pra gente te chamar se precisar de mais detalhes"
+            className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+          />
+        </div>
 
         <div className="mt-4">
           <div className="text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">

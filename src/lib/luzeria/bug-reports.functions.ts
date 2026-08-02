@@ -18,10 +18,11 @@ async function signBugReportPaths(supabase: any, paths: (string | null | undefin
 
 export const reportBug = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { message: string; pageUrl?: string; screenshotBase64?: string; screenshotContentType?: string }) =>
+  .inputValidator((d: { message: string; pageUrl?: string; whatsapp?: string; screenshotBase64?: string; screenshotContentType?: string }) =>
     z.object({
       message: z.string().trim().min(1).max(4000),
       pageUrl: z.string().max(500).optional(),
+      whatsapp: z.string().trim().max(30).optional(),
       screenshotBase64: z.string().max(8_000_000).optional(),
       screenshotContentType: z.string().max(80).optional(),
     }).parse(d))
@@ -47,6 +48,7 @@ export const reportBug = createServerFn({ method: "POST" })
       message: data.message,
       screenshot_path: screenshotPath,
       page_url: data.pageUrl ?? null,
+      whatsapp: data.whatsapp?.trim() || null,
     });
     if (insErr) throw new Error(insErr.message);
 
@@ -64,6 +66,7 @@ export const reportBug = createServerFn({ method: "POST" })
           <p><strong>Agência:</strong> ${org?.name ?? "—"}</p>
           <p><strong>De:</strong> ${profile?.name ?? "—"}</p>
           <p><strong>Página:</strong> ${data.pageUrl ?? "—"}</p>
+          ${data.whatsapp ? `<p><strong>WhatsApp:</strong> ${data.whatsapp}</p>` : ""}
           <p><strong>Mensagem:</strong></p>
           <p>${data.message.replace(/\n/g, "<br>")}</p>
           ${screenshotUrl ? `<p><a href="${screenshotUrl}">Ver print anexado</a></p>` : ""}
@@ -77,11 +80,14 @@ export const reportBug = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export type BugReportStatus = "novo" | "em_andamento" | "resolvido";
+
 export type MyBugReport = {
   id: string;
   message: string;
   pageUrl: string | null;
   screenshotUrl: string | null;
+  status: BugReportStatus;
   createdAt: string;
 };
 
@@ -90,7 +96,7 @@ export const listMyBugReports = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<MyBugReport[]> => {
     const { data, error } = await context.supabase
       .from("bug_reports")
-      .select("id, message, page_url, screenshot_path, created_at")
+      .select("id, message, page_url, screenshot_path, status, created_at")
       .eq("reported_by", context.userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -100,11 +106,12 @@ export const listMyBugReports = createServerFn({ method: "GET" })
       message: r.message,
       pageUrl: r.page_url,
       screenshotUrl: r.screenshot_path ? signed.get(r.screenshot_path) ?? null : null,
+      status: (r.status ?? "novo") as BugReportStatus,
       createdAt: r.created_at,
     }));
   });
 
-export type AllBugReport = MyBugReport & { orgName: string; reporterName: string };
+export type AllBugReport = MyBugReport & { orgName: string; reporterName: string; whatsapp: string | null };
 
 export const listAllBugReports = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
@@ -119,8 +126,26 @@ export const listAllBugReports = createServerFn({ method: "GET" })
       message: r.message,
       pageUrl: r.page_url,
       screenshotUrl: r.screenshot_path ? signed.get(r.screenshot_path) ?? null : null,
+      status: (r.status ?? "novo") as BugReportStatus,
+      whatsapp: r.whatsapp ?? null,
       createdAt: r.created_at,
       orgName: r.org_name ?? "—",
       reporterName: r.reporter_name ?? "—",
     }));
+  });
+
+export const updateBugReportStatus = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string; status: BugReportStatus }) =>
+    z.object({
+      id: z.string().uuid(),
+      status: z.enum(["novo", "em_andamento", "resolvido"]),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("bug_reports").update({ status: data.status }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

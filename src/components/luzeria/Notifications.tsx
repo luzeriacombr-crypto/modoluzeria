@@ -95,6 +95,10 @@ export function NotificationsBell() {
                     selectMonth(n.monthKey);
                     setTimeout(() => { openItem(n.itemId); flash(n.itemId); }, 50);
                     setTimeout(() => flash(null), 2050);
+                  } else if (n.type === "bug_report_new") {
+                    navigate({ to: "/ajuda", search: { tab: "todas" } });
+                  } else if (n.type === "bug_report_status") {
+                    navigate({ to: "/ajuda", search: { tab: "minhas" } });
                   }
                 }}
                 className="w-full text-left px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors block"

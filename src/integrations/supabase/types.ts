@@ -130,6 +130,8 @@ export type Database = {
           message: string
           screenshot_path: string | null
           page_url: string | null
+          status: string
+          whatsapp: string | null
           created_at: string
         }
         Insert: {
@@ -139,6 +141,8 @@ export type Database = {
           message: string
           screenshot_path?: string | null
           page_url?: string | null
+          status?: string
+          whatsapp?: string | null
           created_at?: string
         }
         Update: {
@@ -148,6 +152,8 @@ export type Database = {
           message?: string
           screenshot_path?: string | null
           page_url?: string | null
+          status?: string
+          whatsapp?: string | null
           created_at?: string
         }
         Relationships: []
@@ -1567,6 +1573,8 @@ export type Database = {
           page_url: string
           reporter_name: string
           screenshot_path: string
+          status: string
+          whatsapp: string
         }[]
       }
       send_daily_digest: { Args: never; Returns: number }

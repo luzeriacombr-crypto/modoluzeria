@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ExternalLink, Image as ImageIcon, Video } from "lucide-react";
-import { useMe, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/queries";
-import type { MyBugReport, AllBugReport } from "@/lib/luzeria/bug-reports.functions";
+import { ChevronDown, ExternalLink, Image as ImageIcon, MessageCircle, Video } from "lucide-react";
+import { useMe, useApi, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/queries";
+import type { MyBugReport, AllBugReport, BugReportStatus } from "@/lib/luzeria/bug-reports.functions";
 import tutorialAddPost from "@/assets/tutorials/tutorial-add-post.png";
 import tutorialFormato from "@/assets/tutorials/tutorial-formato.png";
 import tutorialNovaAutomacao from "@/assets/tutorials/tutorial-nova-automacao.png";
@@ -96,9 +96,9 @@ const TUTORIALS: { title: string; steps: string[]; images?: { src: string; alt: 
   },
 ];
 
-export function AjudaPage() {
+export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
   const me = useMe().data;
-  const [tab, setTab] = useState<Tab>("faq");
+  const [tab, setTab] = useState<Tab>((["faq", "tutoriais", "minhas", "todas"] as string[]).includes(initialTab ?? "") ? (initialTab as Tab) : "faq");
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "faq", label: "Perguntas frequentes" },
@@ -195,27 +195,83 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   );
 }
 
+const STATUS_LABEL: Record<BugReportStatus, string> = {
+  novo: "Novo",
+  em_andamento: "Em andamento",
+  resolvido: "Resolvido",
+};
+const STATUS_STYLE: Record<BugReportStatus, { bg: string; color: string }> = {
+  novo: { bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" },
+  em_andamento: { bg: "rgba(250,204,21,0.15)", color: "#FACC15" },
+  resolvido: { bg: "rgba(74,222,128,0.15)", color: "#4ADE80" },
+};
+const STATUS_ORDER: BugReportStatus[] = ["novo", "em_andamento", "resolvido"];
+
+function StatusBadge({ status }: { status: BugReportStatus }) {
+  const s = STATUS_STYLE[status];
+  return (
+    <span className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide" style={{ backgroundColor: s.bg, color: s.color }}>
+      {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
 function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugReport; showOrigin?: boolean }) {
   const asAll = report as AllBugReport;
+  const { updateBugReportStatus } = useApi();
+  const waDigits = asAll.whatsapp?.replace(/\D/g, "");
+
   return (
     <div className="bg-[#1C1C1C] rounded-lg p-5">
-      <div className="flex items-center justify-between gap-3 mb-2">
+      <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
         <div className="text-xs text-white/40">
           {new Date(report.createdAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
           {showOrigin && asAll.orgName && <> · <span className="text-white/60 font-semibold">{asAll.orgName}</span> · {asAll.reporterName}</>}
         </div>
-        {report.screenshotUrl && (
-          <a href={report.screenshotUrl} target="_blank" rel="noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-[rgb(var(--lz-brand-rgb))] hover:underline shrink-0">
-            <ImageIcon size={12} /> Ver print
+        <div className="flex items-center gap-2">
+          {!showOrigin && <StatusBadge status={report.status} />}
+          {report.screenshotUrl && (
+            <a href={report.screenshotUrl} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-[rgb(var(--lz-brand-rgb))] hover:underline shrink-0">
+              <ImageIcon size={12} /> Ver print
+            </a>
+          )}
+        </div>
+      </div>
+      <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{report.message}</p>
+      <div className="flex items-center gap-3 mt-2 flex-wrap">
+        {report.pageUrl && (
+          <a href={report.pageUrl} className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-white/60">
+            <ExternalLink size={11} /> {report.pageUrl}
+          </a>
+        )}
+        {showOrigin && waDigits && (
+          <a href={`https://wa.me/${waDigits}`} target="_blank" rel="noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-[#4ADE80] hover:underline">
+            <MessageCircle size={12} /> Falar no WhatsApp
           </a>
         )}
       </div>
-      <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{report.message}</p>
-      {report.pageUrl && (
-        <a href={report.pageUrl} className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-white/60 mt-2">
-          <ExternalLink size={11} /> {report.pageUrl}
-        </a>
+      {showOrigin && (
+        <div className="flex items-center gap-1.5 mt-4 pt-4 border-t border-white/[0.06]">
+          {STATUS_ORDER.map((s) => {
+            const active = report.status === s;
+            return (
+              <button
+                key={s}
+                disabled={active}
+                onClick={() => updateBugReportStatus.mutate({ data: { id: report.id, status: s } })}
+                className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-all duration-200 disabled:cursor-default hover:brightness-110"
+                style={{
+                  backgroundColor: active ? STATUS_STYLE[s].bg : "rgba(255,255,255,0.04)",
+                  color: active ? STATUS_STYLE[s].color : "rgba(255,255,255,0.4)",
+                }}
+              >
+                {STATUS_LABEL[s]}
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );
