@@ -192,14 +192,15 @@ export const getClientOnboarding = createServerFn({ method: "GET" })
     };
   });
 
-/** Saves a checklist item as an org-wide default: records it in the org's
- * template and backfills it onto every existing client's checklist. */
-export const addOnboardingDefaultItem = createServerFn({ method: "POST" })
+/** Replaces the org's onboarding checklist template with the given labels
+ * (the whole list a client's checklist was just built into) and backfills
+ * any of those not already present onto every other existing client. */
+export const setOnboardingDefaults = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { text: string }) =>
-    z.object({ text: z.string().trim().min(1).max(200) }).parse(d))
+  .inputValidator((d: { labels: string[] }) =>
+    z.object({ labels: z.array(z.string().trim().min(1).max(200)).max(100) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.rpc("add_onboarding_default_item", { _label: data.text });
+    const { error } = await context.supabase.rpc("set_onboarding_defaults", { _labels: data.labels });
     if (error) throw new Error(error.message);
     return { ok: true };
   });

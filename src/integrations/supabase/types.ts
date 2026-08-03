@@ -1560,7 +1560,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      add_onboarding_default_item: { Args: { _label: string }; Returns: undefined }
       add_public_feedback: {
         Args: {
           _author_name: string
@@ -1625,6 +1624,7 @@ export type Database = {
         Args: { p_item_id: string; p_status: string }
         Returns: undefined
       }
+      set_onboarding_defaults: { Args: { _labels: string[] }; Returns: undefined }
       update_feed_order: { Args: { p_updates: Json }; Returns: undefined }
       verify_public_token_file: {
         Args: { _file_id: string; _token: string }

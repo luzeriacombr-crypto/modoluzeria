@@ -25,7 +25,7 @@ import {
 import {
   updateChecklist, rateItem,
   listGoals, setGoals, getGoalProgress,
-  getClientOnboarding, updateClientOnboarding, addOnboardingDefaultItem,
+  getClientOnboarding, updateClientOnboarding, setOnboardingDefaults,
   listRecurring, upsertRecurring, deleteRecurring, generateRecurring,
   listActivity, getReportExtras, getMemberStatusDuration,
   getAppSettings, updateAppSettings,
@@ -536,8 +536,8 @@ export function useApi() {
       mutationFn: useServerFn(updateClientOnboarding),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-onboarding"] }),
     }),
-    addOnboardingDefaultItem: useMutation({
-      mutationFn: useServerFn(addOnboardingDefaultItem),
+    setOnboardingDefaults: useMutation({
+      mutationFn: useServerFn(setOnboardingDefaults),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-onboarding"] }),
     }),
     upsertRecurring: useMutation({
