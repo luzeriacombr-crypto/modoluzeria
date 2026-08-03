@@ -1175,6 +1175,38 @@ export type Database = {
           },
         ]
       }
+      onboarding_checklist_defaults: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          org_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          org_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          org_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_checklist_defaults_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_google_credentials: {
         Row: {
           connected_at: string
@@ -1528,6 +1560,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_onboarding_default_item: { Args: { _label: string }; Returns: undefined }
       add_public_feedback: {
         Args: {
           _author_name: string

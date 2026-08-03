@@ -692,6 +692,22 @@ function OnboardingBlock({ clientId }: { clientId: string }) {
             placeholder="Ex.: Acesso ao Drive, briefing assinado, identidade visual…"
             className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/30 border-b border-white/[0.06] focus:border-[rgb(var(--lz-brand-rgb))] py-1"
           />
+          {newItem.trim() && (
+            <button
+              onClick={() => {
+                api.addOnboardingDefaultItem.mutate({ data: { text: newItem.trim() } }, {
+                  onSuccess: () => toast.success("Adicionado como padrão em todos os clientes."),
+                  onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar como padrão"),
+                });
+                setNewItem("");
+              }}
+              disabled={api.addOnboardingDefaultItem.isPending}
+              title="Adiciona este item em todos os clientes (existentes e novos)"
+              className="shrink-0 text-[10px] uppercase font-semibold tracking-wide px-2 py-1 rounded text-white/50 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40"
+            >
+              Salvar como padrão
+            </button>
+          )}
         </div>
       </div>
       {onboarding?.completedAt && (

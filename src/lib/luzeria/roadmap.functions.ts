@@ -169,8 +169,18 @@ export const getClientOnboarding = createServerFn({ method: "GET" })
     if (!row) {
       const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
       if (!isAdmin) return null;
+      const { data: defaults } = await context.supabase
+        .from("onboarding_checklist_defaults")
+        .select("label")
+        .eq("org_id", context.orgId)
+        .order("sort_order");
+      const checklist = (defaults ?? []).map((d: any) => ({
+        id: (typeof crypto !== "undefined" && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : Math.random().toString(36).slice(2),
+        text: d.label as string,
+        done: false,
+      }));
       const { data: inserted } = await db.from("client_onboarding")
-        .insert({ client_id: data.clientId })
+        .insert({ client_id: data.clientId, checklist })
         .select("id, client_id, checklist, completed_at").single();
       row = inserted;
     }
@@ -180,6 +190,18 @@ export const getClientOnboarding = createServerFn({ method: "GET" })
       checklist: row.checklist ?? [],
       completedAt: row.completed_at,
     };
+  });
+
+/** Saves a checklist item as an org-wide default: records it in the org's
+ * template and backfills it onto every existing client's checklist. */
+export const addOnboardingDefaultItem = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { text: string }) =>
+    z.object({ text: z.string().trim().min(1).max(200) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("add_onboarding_default_item", { _label: data.text });
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const updateClientOnboarding = createServerFn({ method: "POST" })
