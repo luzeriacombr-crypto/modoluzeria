@@ -44,6 +44,8 @@ export const publicSignup = createServerFn({ method: "POST" })
     }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { checkSignupRateLimit } = await import("./signup-rate-limit.server");
+    await checkSignupRateLimit(supabaseAdmin);
 
     const { data: plan } = await supabaseAdmin
       .from("plans").select("id, name, price_cents").eq("id", data.planId).maybeSingle();

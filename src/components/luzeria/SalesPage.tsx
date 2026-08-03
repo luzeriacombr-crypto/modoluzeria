@@ -49,6 +49,7 @@ export function SalesPage() {
   const [password, setPassword] = useState("");
   const [taxId, setTaxId] = useState("");
   const [website, setWebsite] = useState(""); // honeypot
+  const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [invoiceUrl, setInvoiceUrl] = useState<string | null | undefined>(undefined);
@@ -63,6 +64,7 @@ export function SalesPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!planId) { setError("Escolha um plano antes de continuar."); return; }
+    if (!consent) { setError("Você precisa aceitar a Política de Privacidade para continuar."); return; }
     setLoading(true);
     setError(null);
     try {
@@ -378,9 +380,22 @@ export function SalesPage() {
               autoComplete="off" tabIndex={-1} aria-hidden="true"
               style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
             />
+            <label className="flex items-start gap-2 text-xs text-[#0A0E23]/70 cursor-pointer">
+              <input
+                type="checkbox" required checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                Li e aceito a{" "}
+                <Link to="/privacidade" target="_blank" className="underline font-semibold">
+                  Política de Privacidade
+                </Link>, e autorizo o uso dos meus dados conforme descrito nela.
+              </span>
+            </label>
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <button
-              type="submit" disabled={loading}
+              type="submit" disabled={loading || !consent}
               className="w-full font-black uppercase text-sm px-5 py-4 rounded-full transition disabled:opacity-50"
               style={{ background: LIME, color: "#0A0E23" }}
             >
@@ -428,6 +443,8 @@ export function SalesPage() {
 
       <footer style={{ background: BG_BLUE }} className="px-5 sm:px-10 py-10 text-center text-white/30 text-xs">
         Modo <span className="font-criador-serif">Criador</span> — desenvolvido pela Luzeria Estúdio.
+        {" · "}
+        <Link to="/privacidade" className="underline hover:text-white/50 transition">Política de Privacidade</Link>
       </footer>
 
       <a

@@ -1585,6 +1585,11 @@ export type Database = {
       }
       send_daily_digest: { Args: never; Returns: number }
       send_deadline_reminders: { Args: never; Returns: number }
+      set_item_status: {
+        Args: { p_item_id: string; p_status: string }
+        Returns: undefined
+      }
+      update_feed_order: { Args: { p_updates: Json }; Returns: undefined }
       verify_public_token_file: {
         Args: { _file_id: string; _token: string }
         Returns: boolean
