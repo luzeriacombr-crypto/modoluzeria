@@ -1341,6 +1341,39 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_updates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          link_label: string | null
+          link_path: string | null
+          published_at: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          link_label?: string | null
+          link_path?: string | null
+          published_at?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          link_label?: string | null
+          link_path?: string | null
+          published_at?: string
+          title?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active: boolean

@@ -11,9 +11,10 @@ import { DriveSettingsTab } from "./DriveSettingsTab";
 import { MemberGoalsTab } from "./MemberGoalsTab";
 import { AutomationsTab } from "./AutomationsTab";
 import { TeamMemberCard } from "./TeamMemberCard";
+import { UpdatesTab } from "./UpdatesTab";
 
-type SettingsTab = "team" | "report" | "drive" | "automations" | "general" | "subscription";
-const VALID_TABS: SettingsTab[] = ["team", "report", "drive", "automations", "general", "subscription"];
+type SettingsTab = "team" | "report" | "drive" | "automations" | "general" | "subscription" | "updates";
+const VALID_TABS: SettingsTab[] = ["team", "report", "drive", "automations", "general", "subscription", "updates"];
 
 export function SettingsPage({ initialTab }: { initialTab?: string }) {
   const me = useMe().data;
@@ -51,6 +52,7 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
              tab === "drive"  ? "Integração com Google Drive." :
              tab === "automations" ? "Lembretes automáticos e jobs do sistema." :
              tab === "subscription" ? "Seu plano, uso e cobrança." :
+             tab === "updates" ? "O que mudou no Modo Criador." :
              "Ajustes gerais da operação."}
           </p>
         </div>
@@ -63,6 +65,7 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
           { id: "drive", label: "Drive" },
           { id: "automations", label: "Automações" },
           { id: "subscription", label: "Assinatura" },
+          { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
         ].map((t) => {
           const active = tab === (t.id as any);
@@ -96,6 +99,7 @@ export function SettingsPage({ initialTab }: { initialTab?: string }) {
 
       {tab === "general" ? <GeneralSettings /> :
        tab === "subscription" ? <SubscriptionSettings /> :
+       tab === "updates" ? <UpdatesTab /> :
        tab === "drive" ? <DriveSettingsTab /> :
        tab === "automations" ? <AutomationsTab /> :
        tab === "report" ? <ReportsTab /> : (

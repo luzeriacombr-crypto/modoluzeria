@@ -46,7 +46,9 @@ import {
   getOrCreateShareToken, rotateShareToken, listClientFeedback, getFeedApprovalSummary,
   getPublicFeed, getPublicDriveThumbnail, addPublicFeedback,
 } from "./feed-share.functions";
+import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from "./platform-updates.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
+export const platformUpdatesQO = () => queryOptions({ queryKey: ["platform-updates"], queryFn: () => listPlatformUpdates() });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
 export const clientsQO = () => queryOptions({ queryKey: ["clients"], queryFn: () => listClients() });
 export const monthQO = (clientId: string, key: string) =>
@@ -539,6 +541,14 @@ export function useApi() {
     setOnboardingDefaults: useMutation({
       mutationFn: useServerFn(setOnboardingDefaults),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-onboarding"] }),
+    }),
+    createPlatformUpdate: useMutation({
+      mutationFn: useServerFn(createPlatformUpdate),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["platform-updates"] }),
+    }),
+    deletePlatformUpdate: useMutation({
+      mutationFn: useServerFn(deletePlatformUpdate),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["platform-updates"] }),
     }),
     upsertRecurring: useMutation({
       mutationFn: useServerFn(upsertRecurring),
