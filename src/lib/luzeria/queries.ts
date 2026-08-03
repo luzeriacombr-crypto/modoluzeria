@@ -43,7 +43,7 @@ import {
 import { listAutomationRules, createAutomationRule, deleteAutomationRule } from "./automation-rules.functions";
 import { listMyBugReports, listAllBugReports, updateBugReportStatus } from "./bug-reports.functions";
 import {
-  getOrCreateShareToken, rotateShareToken, listClientFeedback,
+  getOrCreateShareToken, rotateShareToken, listClientFeedback, getFeedApprovalSummary,
   getPublicFeed, getPublicDriveThumbnail, addPublicFeedback,
 } from "./feed-share.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
@@ -281,6 +281,15 @@ export const gridThumbnailsQO = (itemIds: string[]) =>
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,
     retry: 2,
+  });
+
+/** Client approval status for the "Preview de Feed" tab — feed-level
+ * approval timestamp plus per-item approved/comment breakdown. Admin only. */
+export const feedApprovalSummaryQO = (clientId: string, monthId: string, itemIds: string[]) =>
+  queryOptions({
+    queryKey: ["feed-approval-summary", clientId, monthId, [...itemIds].sort()],
+    queryFn: () => getFeedApprovalSummary({ data: { clientId, monthId, itemIds } }),
+    staleTime: 1000 * 30,
   });
 
 export const clientDeliveriesFolderQO = (clientId: string | null) =>

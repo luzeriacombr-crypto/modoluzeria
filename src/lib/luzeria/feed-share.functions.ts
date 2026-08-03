@@ -108,6 +108,61 @@ export const listClientFeedback = createServerFn({ method: "GET" })
     }));
   });
 
+/* ============ TEAM: approval summary for the "Preview de Feed" tab ============ */
+
+export type FeedApprovalItem = { itemId: string; approved: boolean; comment: string | null };
+
+export const getFeedApprovalSummary = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; monthId: string; itemIds: string[] }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      monthId: z.string().uuid(),
+      itemIds: z.array(z.string().uuid()),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { data: tokenRow } = await context.supabase
+      .from("feed_share_tokens")
+      .select("client_approved_at")
+      .eq("client_id", data.clientId).eq("month_id", data.monthId)
+      .maybeSingle();
+
+    let items: FeedApprovalItem[] = data.itemIds.map((id) => ({ itemId: id, approved: false, comment: null }));
+
+    if (data.itemIds.length > 0) {
+      const { data: fbRows, error: fbErr } = await context.supabase
+        .from("client_feedback")
+        .select("item_id, text, created_at")
+        .in("item_id", data.itemIds)
+        .order("created_at", { ascending: false });
+      if (fbErr) throw new Error(fbErr.message);
+
+      // Rows arrive newest-first, so the first non-approval text seen per
+      // item is its most recent actual suggestion/comment.
+      const byItem = new Map<string, { approved: boolean; comment: string | null }>();
+      for (const row of fbRows ?? []) {
+        const id = row.item_id as string;
+        const entry = byItem.get(id) ?? { approved: false, comment: null };
+        if (row.text === "✅ APROVADO") entry.approved = true;
+        else if (entry.comment === null) entry.comment = row.text as string;
+        byItem.set(id, entry);
+      }
+      items = data.itemIds.map((id) => ({
+        itemId: id,
+        approved: byItem.get(id)?.approved ?? false,
+        comment: byItem.get(id)?.comment ?? null,
+      }));
+    }
+
+    return {
+      feedApprovedAt: (tokenRow?.client_approved_at as string | null) ?? null,
+      items,
+    };
+  });
+
 /* ============ PUBLIC: get feed by token ============ */
 
 export type PublicFeedFile = {

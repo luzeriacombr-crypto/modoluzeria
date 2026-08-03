@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Copy as CopyIcon, Film, Image as ImageIcon, Layers, RefreshCw, Share2 } from "lucide-react";
-import { itemFilesQO, gridThumbnailsQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { Check, CheckCircle2, Copy as CopyIcon, Film, Image as ImageIcon, Layers, MessageSquare, RefreshCw, Share2 } from "lucide-react";
+import { itemFilesQO, gridThumbnailsQO, feedApprovalSummaryQO, useApi, useMe } from "@/lib/luzeria/queries";
 import type { Client, ContentItem, MonthData } from "@/lib/luzeria/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { InstagramPostModal, type IGModalItem } from "./InstagramPostModal";
@@ -173,6 +173,14 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
             </div>
           ))}
         </div>
+        {isAdmin && cells.items.length > 0 && (
+          <FeedApprovalDetails
+            clientId={client.id}
+            monthId={month.id}
+            items={cells.items}
+            onOpenItem={setActiveItemId}
+          />
+        )}
       </div>
       {activeItemId && (
         <InternalPostModal
@@ -181,6 +189,77 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
           onClose={() => setActiveItemId(null)}
         />
       )}
+    </div>
+  );
+}
+
+/* ============ Approval details (admin only) ============ */
+function FeedApprovalDetails({
+  clientId, monthId, items, onOpenItem,
+}: {
+  clientId: string;
+  monthId: string;
+  items: FeedItem[];
+  onOpenItem: (itemId: string) => void;
+}) {
+  const itemIds = useMemo(() => items.map((i) => i.id), [items]);
+  const { data } = useQuery(feedApprovalSummaryQO(clientId, monthId, itemIds));
+  if (!data) return null;
+
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const approved = data.items.filter((r) => r.approved);
+  const withComment = data.items.filter((r) => !r.approved && r.comment);
+
+  return (
+    <div className="mt-5 pt-4 border-t border-white/[0.06]">
+      <div className="text-[12px] uppercase tracking-wider text-white/40 font-semibold mb-3">Detalhes</div>
+
+      <div className="text-[13px] mb-4" style={{ color: data.feedApprovedAt ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.4)" }}>
+        {data.feedApprovedAt
+          ? `✓ Feed aprovado pelo cliente em ${new Date(data.feedApprovedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`
+          : "Feed ainda não aprovado pelo cliente."}
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold text-white/50 mb-1.5">
+            <CheckCircle2 size={13} /> Posts aprovados ({approved.length})
+          </div>
+          {approved.length === 0 ? (
+            <div className="text-[12px] text-white/30">Nenhum ainda.</div>
+          ) : (
+            <ul className="space-y-1">
+              {approved.map((r) => (
+                <li key={r.itemId}>
+                  <button onClick={() => onOpenItem(r.itemId)} className="text-[12.5px] text-white/70 hover:text-white transition-colors text-left">
+                    {byId.get(r.itemId)?.title || "Sem título"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold text-white/50 mb-1.5">
+            <MessageSquare size={13} /> Posts com sugestão de alteração ({withComment.length})
+          </div>
+          {withComment.length === 0 ? (
+            <div className="text-[12px] text-white/30">Nenhum ainda.</div>
+          ) : (
+            <ul className="space-y-1.5">
+              {withComment.map((r) => (
+                <li key={r.itemId}>
+                  <button onClick={() => onOpenItem(r.itemId)} className="text-[12.5px] text-white/70 hover:text-white transition-colors text-left">
+                    {byId.get(r.itemId)?.title || "Sem título"}
+                  </button>
+                  <div className="text-[11.5px] text-white/40 pl-0.5">{r.comment}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
