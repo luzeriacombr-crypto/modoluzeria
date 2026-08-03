@@ -298,6 +298,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          notes: string
           phone: string
           position: number
           role: string
@@ -308,6 +309,7 @@ export type Database = {
           email?: string
           id?: string
           name: string
+          notes?: string
           phone?: string
           position?: number
           role?: string
@@ -318,6 +320,7 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          notes?: string
           phone?: string
           position?: number
           role?: string
