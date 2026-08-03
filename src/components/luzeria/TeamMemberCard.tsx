@@ -52,7 +52,7 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
 
 function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
   const me = useMe().data;
-  const { setUserRole, setUserActive, deleteUser, adminSendPasswordReset, adminSetUserPassword, adminUpdateMemberAvatar } = useApi();
+  const { setUserRole, setUserActive, setExcludeFromRanking, deleteUser, adminSendPasswordReset, adminSetUserPassword, adminUpdateMemberAvatar } = useApi();
   const { setViewAs } = useUI();
   const navigate = useNavigate();
   const isSelf = profile.id === me?.id;
@@ -139,6 +139,12 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
           <input type="checkbox" checked={profile.active} disabled={isSelf}
             onChange={(e) => setUserActive.mutate({ data: { userId: profile.id, active: e.target.checked } })} />
           Ativo
+        </label>
+
+        <label className="flex items-center gap-2 text-sm text-white/70" title="Não conta pontos no ranking de Top Membros">
+          <input type="checkbox" checked={profile.excludeFromRanking ?? false}
+            onChange={(e) => setExcludeFromRanking.mutate({ data: { userId: profile.id, excludeFromRanking: e.target.checked } })} />
+          Excluir do ranking
         </label>
 
         <div className="flex flex-col gap-1.5 pt-2 border-t border-white/[0.06]">

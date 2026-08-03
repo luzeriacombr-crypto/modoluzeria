@@ -5,7 +5,7 @@ import {
   addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, duplicateMonth,
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
-  setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile, adminUpdateMemberAvatar,
+  setUserActive, setUserRole, setExcludeFromRanking, deleteUser, updateClient, updateItem, updateMyProfile, adminUpdateMemberAvatar,
   listStories, upsertStoryDay, setStoryDone, deleteStoryEntry, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   listCleaningTasks, addCleaningTask, renameCleaningTask, deleteCleaningTask,
   adminCreateUser, createAgency, updateMyOrg, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getMemberFinalizations,
@@ -82,11 +82,11 @@ export const myActivityCountsQO = (monthKey: string, userId?: string) =>
     enabled: !!monthKey,
   });
 
-export const storiesQO = (monthKey: string) =>
+export const storiesQO = (clientId: string, monthKey: string) =>
   queryOptions({
-    queryKey: ["stories", monthKey],
-    queryFn: () => listStories({ data: { monthKey } }),
-    enabled: !!monthKey,
+    queryKey: ["stories", clientId, monthKey],
+    queryFn: () => listStories({ data: { clientId, monthKey } }),
+    enabled: !!monthKey && !!clientId,
   });
 export const cleaningQO = () =>
   queryOptions({ queryKey: ["cleaning"], queryFn: () => getCleaning() });
@@ -434,6 +434,7 @@ export function useApi() {
     }),
     setUserRole: useMutation({ mutationFn: useServerFn(setUserRole), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     setUserActive: useMutation({ mutationFn: useServerFn(setUserActive), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
+    setExcludeFromRanking: useMutation({ mutationFn: useServerFn(setExcludeFromRanking), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     adminUpdateMemberAvatar: useMutation({ mutationFn: useServerFn(adminUpdateMemberAvatar), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     updateBugReportStatus: useMutation({ mutationFn: useServerFn(updateBugReportStatus), onSuccess: () => qc.invalidateQueries({ queryKey: ["bug-reports"] }) }),
     deleteUser: useMutation({ mutationFn: useServerFn(deleteUser), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),

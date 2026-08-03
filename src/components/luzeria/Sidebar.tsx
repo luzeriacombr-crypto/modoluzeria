@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Settings, LogOut, Plus, Camera, Sparkles, Info, CircleHelp,
+  Settings, LogOut, Plus, Sparkles, Info, CircleHelp,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -94,12 +94,6 @@ export function Sidebar({
           label="Dashboard"
           active={pathname === "/admin"}
           onClick={() => navigate({ to: "/admin" })}
-        />
-        <NavButton
-          icon={<Camera size={15} />}
-          label="Stories"
-          active={pathname === "/stories"}
-          onClick={() => navigate({ to: "/stories" })}
         />
         <NavButton
           icon={<Sparkles size={15} />}

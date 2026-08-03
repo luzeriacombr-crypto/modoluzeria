@@ -49,7 +49,8 @@ export type Database = {
           id: string
           org_id: string
           active: boolean
-          trigger_status: string
+          trigger_status: string | null
+          on_create: boolean
           action_type: string
           action_status: string | null
           action_user_id: string | null
@@ -60,7 +61,8 @@ export type Database = {
           id?: string
           org_id: string
           active?: boolean
-          trigger_status: string
+          trigger_status?: string | null
+          on_create?: boolean
           action_type: string
           action_status?: string | null
           action_user_id?: string | null
@@ -71,7 +73,8 @@ export type Database = {
           id?: string
           org_id?: string
           active?: boolean
-          trigger_status?: string
+          trigger_status?: string | null
+          on_create?: boolean
           action_type?: string
           action_status?: string | null
           action_user_id?: string | null
@@ -1381,6 +1384,7 @@ export type Database = {
           color: string
           created_at: string
           email: string
+          exclude_from_ranking: boolean
           icon: string | null
           id: string
           name: string
@@ -1394,6 +1398,7 @@ export type Database = {
           color?: string
           created_at?: string
           email: string
+          exclude_from_ranking?: boolean
           icon?: string | null
           id: string
           name: string
@@ -1407,6 +1412,7 @@ export type Database = {
           color?: string
           created_at?: string
           email?: string
+          exclude_from_ranking?: boolean
           icon?: string | null
           id?: string
           name?: string

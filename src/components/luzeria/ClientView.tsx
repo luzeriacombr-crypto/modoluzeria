@@ -11,6 +11,7 @@ import { ClientFichaContent } from "./ClientFichaPanel";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { useMe } from "@/lib/luzeria/queries";
 import { MaisAtividadesTab } from "./MaisAtividadesTab";
+import { ClientStoriesTab } from "./ClientStoriesTab";
 
 type OrderMode = "personalizada" | "cronologica";
 type OrderDirection = "asc" | "desc";
@@ -35,7 +36,7 @@ export function ClientView({ clientId }: { clientId: string }) {
   const { selectedMonthKey, selectMonth } = useUI();
   const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
-  const [tab, setTab] = useState<"posts" | "reels" | "mais" | "feed" | "ficha">("posts");
+  const [tab, setTab] = useState<"posts" | "reels" | "stories" | "mais" | "feed" | "ficha">("posts");
   const [orderMode, setOrderMode] = useState<OrderMode>(
     () => (typeof window !== "undefined" && (localStorage.getItem(ORDER_MODE_KEY) as OrderMode)) || "personalizada",
   );
@@ -62,7 +63,7 @@ export function ClientView({ clientId }: { clientId: string }) {
     reels: { label: "Reels", type: "reel" as const, items: month?.reels ?? [] },
   } as const;
 
-  const tabs = ["posts", "reels", "mais", "feed", "ficha"] as const;
+  const tabs = ["posts", "reels", "stories", "mais", "feed", "ficha"] as const;
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
   const idx = sortedKeys.indexOf(selectedMonthKey);
@@ -125,7 +126,7 @@ export function ClientView({ clientId }: { clientId: string }) {
           <button key={t} onClick={() => setTab(t as any)}
             className="relative py-3 text-sm font-semibold transition-colors"
             style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
-            {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais atividades" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
+            {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais atividades" : t === "stories" ? "Stories" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
             {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
           </button>
         ))}
@@ -208,6 +209,7 @@ export function ClientView({ clientId }: { clientId: string }) {
             isAdmin={isAdmin}
           />
         )}
+        {tab === "stories" && <ClientStoriesTab clientId={clientId} />}
         {tab === "ficha" && (
           <div className="mt-2 -mx-4 sm:-mx-6 md:mx-0 md:rounded-lg md:overflow-hidden md:border md:border-white/[0.06]">
             <ClientFichaContent clientId={client.id} />

@@ -15,7 +15,6 @@ import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
-import { Route as AuthenticatedStoriesRouteImport } from './routes/_authenticated/stories'
 import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated/rotina'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
@@ -54,11 +53,6 @@ const PreviewTokenRoute = PreviewTokenRouteImport.update({
   id: '/preview/$token',
   path: '/preview/$token',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedStoriesRoute = AuthenticatedStoriesRouteImport.update({
-  id: '/stories',
-  path: '/stories',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRotinaRoute = AuthenticatedRotinaRouteImport.update({
   id: '/rotina',
@@ -123,7 +117,6 @@ export interface FileRoutesByFullPath {
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
-  '/stories': typeof AuthenticatedStoriesRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
@@ -140,7 +133,6 @@ export interface FileRoutesByTo {
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
-  '/stories': typeof AuthenticatedStoriesRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
@@ -159,7 +151,6 @@ export interface FileRoutesById {
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/rotina': typeof AuthenticatedRotinaRoute
-  '/_authenticated/stories': typeof AuthenticatedStoriesRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/_authenticated/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/_authenticated/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
@@ -178,7 +169,6 @@ export interface FileRouteTypes {
     | '/minhas-tarefas'
     | '/perfil'
     | '/rotina'
-    | '/stories'
     | '/preview/$token'
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
@@ -195,7 +185,6 @@ export interface FileRouteTypes {
     | '/minhas-tarefas'
     | '/perfil'
     | '/rotina'
-    | '/stories'
     | '/preview/$token'
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
@@ -213,7 +202,6 @@ export interface FileRouteTypes {
     | '/_authenticated/minhas-tarefas'
     | '/_authenticated/perfil'
     | '/_authenticated/rotina'
-    | '/_authenticated/stories'
     | '/preview/$token'
     | '/_authenticated/cliente/$clientId'
     | '/_authenticated/oauth/drive-callback'
@@ -271,13 +259,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/preview/$token'
       preLoaderRoute: typeof PreviewTokenRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/stories': {
-      id: '/_authenticated/stories'
-      path: '/stories'
-      fullPath: '/stories'
-      preLoaderRoute: typeof AuthenticatedStoriesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/rotina': {
       id: '/_authenticated/rotina'
@@ -353,7 +334,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedRotinaRoute: typeof AuthenticatedRotinaRoute
-  AuthenticatedStoriesRoute: typeof AuthenticatedStoriesRoute
   AuthenticatedClienteClientIdRoute: typeof AuthenticatedClienteClientIdRoute
   AuthenticatedOauthDriveCallbackRoute: typeof AuthenticatedOauthDriveCallbackRoute
 }
@@ -366,7 +346,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedRotinaRoute: AuthenticatedRotinaRoute,
-  AuthenticatedStoriesRoute: AuthenticatedStoriesRoute,
   AuthenticatedClienteClientIdRoute: AuthenticatedClienteClientIdRoute,
   AuthenticatedOauthDriveCallbackRoute: AuthenticatedOauthDriveCallbackRoute,
 }

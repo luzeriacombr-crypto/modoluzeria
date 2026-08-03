@@ -176,6 +176,9 @@ export interface Profile {
   icon: string | null;
   active: boolean;
   role: Role;
+  /** Admin opted this member out of the "Top Membros" ranking (e.g. an
+   * automation-only account that shouldn't compete in the internal bonus). */
+  excludeFromRanking?: boolean;
   /** Public/signed URL of the uploaded avatar image, or null. */
   avatarUrl?: string | null;
   /** Path inside the `avatars` bucket (raw value stored in DB). */

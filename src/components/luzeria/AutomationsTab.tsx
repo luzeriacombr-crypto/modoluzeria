@@ -164,7 +164,11 @@ function AutomationRulesSection() {
         {rules.map((r) => (
           <div key={r.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.05] last:border-b-0">
             <span className="text-sm text-white/85 flex-1 min-w-0">
-              Quando o status virar <strong style={{ color: STATUS_META[r.triggerStatus as Status]?.color }}>{STATUS_META[r.triggerStatus as Status]?.label ?? r.triggerStatus}</strong>
+              {r.onCreate ? (
+                <>Quando o item for <strong>criado</strong></>
+              ) : (
+                <>Quando o status virar <strong style={{ color: STATUS_META[r.triggerStatus as Status]?.color }}>{STATUS_META[r.triggerStatus as Status]?.label ?? r.triggerStatus}</strong></>
+              )}
               {" → "}
               {r.actionType === "set_status" ? (
                 <>alterar status para <strong style={{ color: STATUS_META[r.actionStatus as Status]?.color }}>{STATUS_META[r.actionStatus as Status]?.label ?? r.actionStatus}</strong></>
@@ -207,8 +211,9 @@ function NewRuleForm({
 }: {
   profiles: { id: string; name: string }[];
   onCancel: () => void;
-  onSubmit: (payload: { triggerStatus: string; actionType: "set_status" | "assign_member"; actionStatus?: string; actionUserId?: string }) => void;
+  onSubmit: (payload: { triggerStatus?: string; onCreate?: boolean; actionType: "set_status" | "assign_member"; actionStatus?: string; actionUserId?: string }) => void;
 }) {
+  const [triggerMode, setTriggerMode] = useState<"status" | "create">("status");
   const [triggerStatus, setTriggerStatus] = useState<Status>(STATUS_OPTIONS[0]);
   const [actionType, setActionType] = useState<"set_status" | "assign_member">("set_status");
   const [actionStatus, setActionStatus] = useState<Status>(STATUS_OPTIONS[0]);
@@ -219,10 +224,15 @@ function NewRuleForm({
   return (
     <div className="px-5 py-4 border-t border-white/[0.06] space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-xs text-white/70">
-        <span>Quando o status virar</span>
-        <select value={triggerStatus} onChange={(e) => setTriggerStatus(e.target.value as Status)} className={selectClass}>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+        <select value={triggerMode} onChange={(e) => setTriggerMode(e.target.value as any)} className={selectClass}>
+          <option value="status">Quando o status virar</option>
+          <option value="create">Quando o item for criado</option>
         </select>
+        {triggerMode === "status" && (
+          <select value={triggerStatus} onChange={(e) => setTriggerStatus(e.target.value as Status)} className={selectClass}>
+            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+          </select>
+        )}
         <span>então</span>
         <select value={actionType} onChange={(e) => setActionType(e.target.value as any)} className={selectClass}>
           <option value="set_status">Alterar status para</option>
@@ -243,7 +253,8 @@ function NewRuleForm({
         <button
           disabled={actionType === "assign_member" && !actionUserId}
           onClick={() => onSubmit({
-            triggerStatus,
+            triggerStatus: triggerMode === "status" ? triggerStatus : undefined,
+            onCreate: triggerMode === "create" ? true : undefined,
             actionType,
             actionStatus: actionType === "set_status" ? actionStatus : undefined,
             actionUserId: actionType === "assign_member" ? actionUserId : undefined,

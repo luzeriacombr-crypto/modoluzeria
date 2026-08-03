@@ -40,7 +40,7 @@ export const listProfiles = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: profiles, error } = await context.supabase
       .from("profiles")
-      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, exclude_from_ranking")
       .order("name");
     if (error) throw new Error(error.message);
     const { data: roles } = await context.supabase.from("user_roles").select("user_id, role");
@@ -63,6 +63,7 @@ export const listProfiles = createServerFn({ method: "GET" })
       avatarUrl: p.avatar_url ? signed.get(p.avatar_url) ?? null : null,
       onboardedAt: p.onboarded_at ?? null,
       tourCompletedAt: p.tour_completed_at ?? null,
+      excludeFromRanking: p.exclude_from_ranking ?? false,
     }));
   });
 
@@ -71,7 +72,7 @@ export const getMe = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: profile } = await context.supabase
       .from("profiles")
-      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, org_id")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, org_id, exclude_from_ranking")
       .eq("id", context.userId).maybeSingle();
     const { data: roleRow } = await context.supabase
       .from("user_roles").select("role").eq("user_id", context.userId).maybeSingle();
@@ -88,6 +89,7 @@ export const getMe = createServerFn({ method: "GET" })
     return {
       id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
+      excludeFromRanking: (profile as any).exclude_from_ranking ?? false,
       role,
       avatarPath: profile.avatar_url ?? null,
       avatarUrl: profile.avatar_url ? signed.get(profile.avatar_url) ?? null : null,
@@ -324,6 +326,18 @@ export const setUserActive = createServerFn({ method: "POST" })
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
     if (!isMaster) throw new Error("Forbidden");
     const { error } = await context.supabase.from("profiles").update({ active: data.active }).eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setExcludeFromRanking = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId: string; excludeFromRanking: boolean }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("profiles")
+      .update({ exclude_from_ranking: data.excludeFromRanking }).eq("id", data.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1426,7 +1440,7 @@ export const getMyActivityCounts = createServerFn({ method: "GET" })
 
 export const listStories = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { monthKey: string }) => d)
+  .inputValidator((d: { clientId: string; monthKey: string }) => d)
   .handler(async ({ data, context }) => {
     const [y, m] = data.monthKey.split("-").map(Number);
     const start = `${y}-${String(m).padStart(2, "0")}-01`;
@@ -1435,6 +1449,7 @@ export const listStories = createServerFn({ method: "GET" })
     const { data: rows, error } = await context.supabase
       .from("stories_schedule")
       .select("id, day, user_id, label, status, done_at, done_by, client_id, clients(name, color)")
+      .eq("client_id", data.clientId)
       .gte("day", start).lt("day", end);
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
@@ -1450,16 +1465,23 @@ export const listStories = createServerFn({ method: "GET" })
     }));
   });
 
-/** Upserts one story entry. Pass `id` to edit/clear an existing entry;
- * omit it to add a new entry to that day — several can now coexist per
- * day (one per client), e.g. Luzeria's own stories alongside a client's. */
+/** Upserts one story entry for a client. Pass `id` to edit/clear an
+ * existing entry; omit it to add a new entry to that day — several can
+ * coexist per day (one per client). Every entry now belongs to a client. */
 export const upsertStoryDay = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { id?: string | null; day: string; userId?: string | null; label?: string | null; clientId?: string | null }) => d)
+  .inputValidator((d: { id?: string | null; day: string; userId?: string | null; label?: string | null; clientId: string }) =>
+    z.object({
+      id: z.string().uuid().optional().nullable(),
+      day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      userId: z.string().uuid().optional().nullable(),
+      label: z.string().optional().nullable(),
+      clientId: z.string().uuid(),
+    }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
-    const isEmpty = !data.userId && !data.label && !data.clientId;
+    const isEmpty = !data.userId && !data.label;
 
     if (data.id) {
       if (isEmpty) {
@@ -1469,7 +1491,7 @@ export const upsertStoryDay = createServerFn({ method: "POST" })
       }
       const { error } = await context.supabase
         .from("stories_schedule")
-        .update({ user_id: data.userId ?? null, label: data.label ?? null, client_id: data.clientId ?? null, updated_at: new Date().toISOString() })
+        .update({ user_id: data.userId ?? null, label: data.label ?? null, client_id: data.clientId, updated_at: new Date().toISOString() })
         .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { ok: true };
@@ -1478,7 +1500,7 @@ export const upsertStoryDay = createServerFn({ method: "POST" })
     if (isEmpty) return { ok: true };
     const { error } = await context.supabase
       .from("stories_schedule")
-      .insert({ org_id: context.orgId, day: data.day, user_id: data.userId ?? null, label: data.label ?? null, client_id: data.clientId ?? null });
+      .insert({ org_id: context.orgId, day: data.day, user_id: data.userId ?? null, label: data.label ?? null, client_id: data.clientId });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1831,7 +1853,8 @@ export const getTopMembers = createServerFn({ method: "GET" })
     (finals ?? []).forEach((f: any) => counts.set(f.user_id, (counts.get(f.user_id) ?? 0) + 1));
 
     const { data: profiles } = await context.supabase
-      .from("profiles").select("id, name, color, icon, avatar_url");
+      .from("profiles").select("id, name, color, icon, avatar_url, exclude_from_ranking")
+      .eq("exclude_from_ranking", false);
     const avatarMap = await signAvatarPaths(context.supabase, (profiles ?? []).map((p: any) => p.avatar_url));
     const ranking = (profiles ?? [])
       .map((p: any) => ({
