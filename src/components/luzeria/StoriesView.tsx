@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Camera, Check, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Camera, Check, X, Plus } from "lucide-react";
 import { profilesQO, storiesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { AssigneePicker, colorForLabel } from "./AssigneePicker";
@@ -19,6 +19,7 @@ function todayKey() {
 }
 
 type DayEntry = {
+  id: string;
   userId: string | null; label: string | null; status: "pending" | "done" | "missed";
   clientId: string | null; clientName: string | null; clientColor: string | null;
 };
@@ -32,16 +33,21 @@ export function StoriesView() {
   const key = monthKey(cursor);
   const { data: rows = [] } = useQuery(storiesQO(key));
   const { data: profiles = [] } = useQuery(profilesQO());
-  const { upsertStoryDay, setStoryDone } = useApi();
-  const [assigneePicker, setAssigneePicker] = useState<{ rect: DOMRect; day: string } | null>(null);
-  const [clientPicker, setClientPicker] = useState<{ rect: DOMRect; day: string } | null>(null);
+  const { upsertStoryDay, setStoryDone, deleteStoryEntry } = useApi();
+  const [assigneePicker, setAssigneePicker] = useState<{ rect: DOMRect; day: string; entryId: string | null } | null>(null);
+  const [clientPicker, setClientPicker] = useState<{ rect: DOMRect; day: string; entryId: string } | null>(null);
 
   const byDay = useMemo(() => {
-    const m = new Map<string, DayEntry>();
-    rows.forEach((r) => m.set(r.day, {
-      userId: r.userId, label: r.label, status: r.status,
-      clientId: r.clientId, clientName: r.clientName, clientColor: r.clientColor,
-    }));
+    const m = new Map<string, DayEntry[]>();
+    rows.forEach((r) => {
+      const list = m.get(r.day) ?? [];
+      list.push({
+        id: r.id,
+        userId: r.userId, label: r.label, status: r.status,
+        clientId: r.clientId, clientName: r.clientName, clientColor: r.clientColor,
+      });
+      m.set(r.day, list);
+    });
     return m;
   }, [rows]);
 
@@ -62,8 +68,7 @@ export function StoriesView() {
     const d = new Date(cursor); d.setMonth(d.getMonth() + delta); setCursor(d);
   }
 
-  function personInfo(entry?: DayEntry) {
-    if (!entry) return null;
+  function personInfo(entry: DayEntry) {
     if (entry.userId) {
       const p = profiles.find((x) => x.id === entry.userId);
       if (p) return { name: p.name, color: p.color, profile: p };
@@ -80,7 +85,7 @@ export function StoriesView() {
             <Camera size={13} /> <span>Escala</span>
           </div>
           <h1 className="text-[32px] font-bold text-white leading-none tracking-tight">Stories</h1>
-          <p className="text-sm text-white/50 mt-2">Cliente e responsável pelos stories do dia.</p>
+          <p className="text-sm text-white/50 mt-2">Cliente e responsável pelos stories do dia. Um dia pode ter mais de um.</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => shift(-1)} className="p-2 rounded-md bg-[#1C1C1C] hover:bg-white/5 text-white/70">
@@ -100,92 +105,116 @@ export function StoriesView() {
       </div>
       <div className="grid grid-cols-7 gap-2">
         {cells.map((c, i) => {
-          if (!c) return <div key={`e-${i}`} className="aspect-square" />;
-          const entry = byDay.get(c.key);
-          const person = personInfo(entry);
-          const hasClient = !!entry?.clientId;
+          if (!c) return <div key={`e-${i}`} className="min-h-[76px]" />;
+          const entries = byDay.get(c.key) ?? [];
           const isToday = c.key === today;
-          const isMine = !!entry?.userId && entry.userId === me?.id;
-          const status = entry?.status ?? "pending";
-          const canToggle = !!entry?.userId && (isMine || isAdmin);
           return (
             <div
               key={c.key}
-              className="aspect-square rounded-md p-1.5 flex flex-col gap-1 relative"
+              className="min-h-[76px] rounded-md p-1.5 flex flex-col gap-1"
               style={{
-                backgroundColor: (person || hasClient) ? "rgba(255,255,255,0.04)" : "rgba(28,28,28,0.6)",
-                border: isMine ? "2px solid rgb(var(--lz-brand-rgb))" : isToday ? "1px solid rgba(var(--lz-brand-light-rgb),0.4)" : "1px solid transparent",
+                backgroundColor: entries.length ? "rgba(255,255,255,0.04)" : "rgba(28,28,28,0.6)",
+                border: isToday ? "1px solid rgba(var(--lz-brand-light-rgb),0.4)" : "1px solid transparent",
               }}
             >
               <span className="text-xs font-bold shrink-0" style={{ color: isToday ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.6)" }}>
                 {String(c.day).padStart(2, "0")}
               </span>
 
-              {/* Client (independent of responsible person) */}
-              <button
-                type="button"
-                disabled={!isAdmin}
-                onClick={(e) => isAdmin && setClientPicker({ rect: (e.currentTarget as HTMLElement).getBoundingClientRect(), day: c.key })}
-                className="flex-1 min-h-0 rounded px-1 flex items-center text-left transition-colors"
-                style={{
-                  backgroundColor: hasClient ? `${entry!.clientColor}22` : "transparent",
-                  cursor: isAdmin ? "pointer" : "default",
-                }}
-                title={hasClient ? `Cliente: ${entry!.clientName}` : isAdmin ? "Definir cliente" : undefined}
-              >
-                {hasClient ? (
-                  <span className="flex items-center gap-1 min-w-0">
-                    <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: entry!.clientColor ?? "#888" }} />
-                    <span className="text-[9px] font-semibold truncate" style={{ color: entry!.clientColor ?? "#fff" }}>{entry!.clientName}</span>
-                  </span>
-                ) : isAdmin ? (
-                  <span className="text-[9px] text-white/20">+ cliente</span>
-                ) : null}
-              </button>
-
-              {/* Responsible person */}
-              <button
-                type="button"
-                disabled={!isAdmin}
-                onClick={(e) => isAdmin && setAssigneePicker({ rect: (e.currentTarget as HTMLElement).getBoundingClientRect(), day: c.key })}
-                className="flex-1 min-h-0 rounded px-1 flex items-center justify-between gap-1 transition-colors"
-                style={{ cursor: isAdmin ? "pointer" : "default" }}
-              >
-                {person ? (
-                  <span className="flex items-center gap-1 min-w-0">
-                    {person.profile && <Avatar profile={person.profile} size={14} />}
-                    <span className="text-[9px] font-semibold truncate" style={{ color: person.color === "#FFFFFF" ? "#FFFFFF" : person.color }}>{person.name}</span>
-                  </span>
-                ) : isAdmin ? (
-                  <span className="text-[9px] text-white/20">+ responsável</span>
-                ) : <span />}
-                {entry?.userId && (
-                  <span
-                    role={canToggle ? "button" : undefined}
-                    title={status === "done" ? "Feito — clique para desfazer" : status === "missed" ? "Não feito" : isToday ? "Pendente — clique para marcar feito" : "Pendente"}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!canToggle) return;
-                      if (status === "missed" && !isAdmin) return;
-                      setStoryDone.mutate({ data: { day: c.key, done: status !== "done" } });
-                    }}
-                    className="h-3.5 w-3.5 rounded-full flex items-center justify-center shrink-0"
-                    style={{
-                      backgroundColor:
-                        status === "done" ? "rgb(var(--lz-brand-rgb))"
-                        : status === "missed" ? "#FF4444"
-                        : "rgba(255,255,255,0.15)",
-                      color: status === "missed" ? "#FFFFFF" : "#0D0D0D",
-                      cursor: canToggle ? "pointer" : "default",
-                      border: status === "pending" ? "1px solid rgba(255,255,255,0.25)" : "none",
-                    }}
+              {entries.map((entry) => {
+                const person = personInfo(entry);
+                const hasClient = !!entry.clientId;
+                const isMine = entry.userId === me?.id;
+                const canToggle = !!entry.userId && (isMine || isAdmin);
+                return (
+                  <div
+                    key={entry.id}
+                    className="rounded p-1 flex flex-col gap-0.5 group relative"
+                    style={{ border: isMine ? "1.5px solid rgb(var(--lz-brand-rgb))" : "1px solid rgba(255,255,255,0.05)" }}
                   >
-                    {status === "done" ? <Check size={9} strokeWidth={3} />
-                      : status === "missed" ? <X size={9} strokeWidth={3} />
-                      : null}
-                  </span>
-                )}
-              </button>
+                    <button
+                      type="button"
+                      disabled={!isAdmin}
+                      onClick={(e) => isAdmin && setClientPicker({ rect: (e.currentTarget as HTMLElement).getBoundingClientRect(), day: c.key, entryId: entry.id })}
+                      className="rounded px-1 flex items-center text-left transition-colors"
+                      style={{
+                        backgroundColor: hasClient ? `${entry.clientColor}22` : "transparent",
+                        cursor: isAdmin ? "pointer" : "default",
+                      }}
+                      title={hasClient ? `Cliente: ${entry.clientName}` : isAdmin ? "Definir cliente" : undefined}
+                    >
+                      {hasClient ? (
+                        <span className="flex items-center gap-1 min-w-0">
+                          <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: entry.clientColor ?? "#888" }} />
+                          <span className="text-[9px] font-semibold truncate" style={{ color: entry.clientColor ?? "#fff" }}>{entry.clientName}</span>
+                        </span>
+                      ) : isAdmin ? (
+                        <span className="text-[9px] text-white/20">+ cliente</span>
+                      ) : null}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={!isAdmin}
+                      onClick={(e) => isAdmin && setAssigneePicker({ rect: (e.currentTarget as HTMLElement).getBoundingClientRect(), day: c.key, entryId: entry.id })}
+                      className="rounded px-1 flex items-center justify-between gap-1 transition-colors"
+                      style={{ cursor: isAdmin ? "pointer" : "default" }}
+                    >
+                      {person ? (
+                        <span className="flex items-center gap-1 min-w-0">
+                          {person.profile && <Avatar profile={person.profile} size={14} />}
+                          <span className="text-[9px] font-semibold truncate" style={{ color: person.color === "#FFFFFF" ? "#FFFFFF" : person.color }}>{person.name}</span>
+                        </span>
+                      ) : isAdmin ? (
+                        <span className="text-[9px] text-white/20">+ responsável</span>
+                      ) : <span />}
+                      {entry.userId && (
+                        <span
+                          role={canToggle ? "button" : undefined}
+                          title={entry.status === "done" ? "Feito — clique para desfazer" : entry.status === "missed" ? "Não feito" : isToday ? "Pendente — clique para marcar feito" : "Pendente"}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!canToggle) return;
+                            if (entry.status === "missed" && !isAdmin) return;
+                            setStoryDone.mutate({ data: { id: entry.id, done: entry.status !== "done" } });
+                          }}
+                          className="h-3.5 w-3.5 rounded-full flex items-center justify-center shrink-0"
+                          style={{
+                            backgroundColor:
+                              entry.status === "done" ? "rgb(var(--lz-brand-rgb))"
+                              : entry.status === "missed" ? "#FF4444"
+                              : "rgba(255,255,255,0.15)",
+                            color: entry.status === "missed" ? "#FFFFFF" : "#0D0D0D",
+                            cursor: canToggle ? "pointer" : "default",
+                            border: entry.status === "pending" ? "1px solid rgba(255,255,255,0.25)" : "none",
+                          }}
+                        >
+                          {entry.status === "done" ? <Check size={9} strokeWidth={3} />
+                            : entry.status === "missed" ? <X size={9} strokeWidth={3} />
+                            : null}
+                        </span>
+                      )}
+                    </button>
+
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => deleteStoryEntry.mutate({ data: { id: entry.id } })}
+                        title="Remover esta entrada"
+                        className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-[#1C1C1C] border border-white/10 items-center justify-center hover:border-red-400 hover:text-red-400 text-white/40 hidden group-hover:flex"
+                      ><X size={8} /></button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={(e) => setAssigneePicker({ rect: (e.currentTarget as HTMLElement).getBoundingClientRect(), day: c.key, entryId: null })}
+                  className="text-[9px] text-white/20 hover:text-white/50 flex items-center gap-0.5 px-1"
+                ><Plus size={9} /> nova entrada</button>
+              )}
             </div>
           );
         })}
@@ -196,8 +225,12 @@ export function StoriesView() {
           anchorRect={assigneePicker.rect}
           onClose={() => setAssigneePicker(null)}
           onPick={(p) => {
-            const current = byDay.get(assigneePicker.day);
-            upsertStoryDay.mutate({ data: { day: assigneePicker.day, userId: p.userId, label: p.label, clientId: current?.clientId ?? null } });
+            if (assigneePicker.entryId) {
+              const current = (byDay.get(assigneePicker.day) ?? []).find((e) => e.id === assigneePicker.entryId);
+              upsertStoryDay.mutate({ data: { id: assigneePicker.entryId, day: assigneePicker.day, userId: p.userId, label: p.label, clientId: current?.clientId ?? null } });
+            } else {
+              upsertStoryDay.mutate({ data: { day: assigneePicker.day, userId: p.userId, label: p.label, clientId: null } });
+            }
           }}
         />,
         document.body,
@@ -207,8 +240,8 @@ export function StoriesView() {
           anchorRect={clientPicker.rect}
           onClose={() => setClientPicker(null)}
           onPick={(clientId) => {
-            const current = byDay.get(clientPicker.day);
-            upsertStoryDay.mutate({ data: { day: clientPicker.day, userId: current?.userId ?? null, label: current?.label ?? null, clientId } });
+            const current = (byDay.get(clientPicker.day) ?? []).find((e) => e.id === clientPicker.entryId);
+            upsertStoryDay.mutate({ data: { id: clientPicker.entryId, day: clientPicker.day, userId: current?.userId ?? null, label: current?.label ?? null, clientId } });
           }}
         />,
         document.body,

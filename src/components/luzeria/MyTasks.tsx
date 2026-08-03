@@ -168,22 +168,23 @@ export function MyTasks() {
         ))}
       </div>
 
-      {(today?.stories || (today?.cleaningTasks?.length ?? 0) > 0) && (
+      {((today?.stories?.length ?? 0) > 0 || (today?.cleaningTasks?.length ?? 0) > 0) && (
         <div className="space-y-3 mb-8">
           {(() => {
             const isMe = !isAdmin || !viewAs || viewAs === me?.id;
             return (
               <>
-                {today?.stories && (
+                {today?.stories?.map((s) => (
                   <DailyTaskCard
+                    key={s.id}
                     icon={<Camera size={18} />}
-                    title={today?.storyClientName ? `É seu dia nos Stories — ${today.storyClientName}` : "É seu dia nos Stories"}
+                    title={s.clientName ? `É seu dia nos Stories — ${s.clientName}` : "É seu dia nos Stories"}
                     subtitle="Publique pelo menos uma sequência com 5."
-                    status={today?.storyStatus ?? "pending"}
+                    status={s.status}
                     canAct={isMe}
-                    onDone={() => setStoryDone.mutate({ data: { day: todayStr, done: true } })}
+                    onDone={() => setStoryDone.mutate({ data: { id: s.id, done: true } })}
                   />
-                )}
+                ))}
                 {today?.cleaningTasks?.map(({ taskId, taskName: rawName }) => {
                   const st = (today?.cleaningStatuses ?? []).find((s) => s.taskId === taskId)?.status ?? "pending";
                   const raw = rawName || "rotina";

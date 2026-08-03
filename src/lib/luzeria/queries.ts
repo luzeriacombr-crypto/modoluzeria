@@ -6,7 +6,7 @@ import {
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, deleteUser, updateClient, updateItem, updateMyProfile, adminUpdateMemberAvatar,
-  listStories, upsertStoryDay, setStoryDone, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
+  listStories, upsertStoryDay, setStoryDone, deleteStoryEntry, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   listCleaningTasks, addCleaningTask, renameCleaningTask, deleteCleaningTask,
   adminCreateUser, createAgency, updateMyOrg, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getMemberFinalizations,
   updateMyAccount,
@@ -462,6 +462,10 @@ export function useApi() {
     }),
     setStoryDone: useMutation({
       mutationFn: useServerFn(setStoryDone),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["stories"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
+    }),
+    deleteStoryEntry: useMutation({
+      mutationFn: useServerFn(deleteStoryEntry),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["stories"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
     }),
     upsertCleaningCell: useMutation({

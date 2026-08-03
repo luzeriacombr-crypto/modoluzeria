@@ -1450,29 +1450,55 @@ export const listStories = createServerFn({ method: "GET" })
     }));
   });
 
+/** Upserts one story entry. Pass `id` to edit/clear an existing entry;
+ * omit it to add a new entry to that day — several can now coexist per
+ * day (one per client), e.g. Luzeria's own stories alongside a client's. */
 export const upsertStoryDay = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { day: string; userId?: string | null; label?: string | null; clientId?: string | null }) => d)
+  .inputValidator((d: { id?: string | null; day: string; userId?: string | null; label?: string | null; clientId?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
-    if (!data.userId && !data.label && !data.clientId) {
-      const { error } = await context.supabase.from("stories_schedule").delete().eq("day", data.day);
+    const isEmpty = !data.userId && !data.label && !data.clientId;
+
+    if (data.id) {
+      if (isEmpty) {
+        const { error } = await context.supabase.from("stories_schedule").delete().eq("id", data.id);
+        if (error) throw new Error(error.message);
+        return { ok: true };
+      }
+      const { error } = await context.supabase
+        .from("stories_schedule")
+        .update({ user_id: data.userId ?? null, label: data.label ?? null, client_id: data.clientId ?? null, updated_at: new Date().toISOString() })
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { ok: true };
     }
+
+    if (isEmpty) return { ok: true };
     const { error } = await context.supabase
       .from("stories_schedule")
-      .upsert({ org_id: context.orgId, day: data.day, user_id: data.userId ?? null, label: data.label ?? null, client_id: data.clientId ?? null, updated_at: new Date().toISOString() }, { onConflict: "org_id,day" });
+      .insert({ org_id: context.orgId, day: data.day, user_id: data.userId ?? null, label: data.label ?? null, client_id: data.clientId ?? null });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteStoryEntry = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("stories_schedule").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 export const setStoryDone = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { day: string; done: boolean }) =>
+  .inputValidator((d: { id: string; done: boolean }) =>
     z.object({
-      day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      id: z.string().uuid(),
       done: z.boolean(),
     }).parse(d))
   .handler(async ({ data, context }) => {
@@ -1480,16 +1506,16 @@ export const setStoryDone = createServerFn({ method: "POST" })
     const { data: row, error: selErr } = await context.supabase
       .from("stories_schedule")
       .select("id, user_id")
-      .eq("day", data.day).maybeSingle();
+      .eq("id", data.id).maybeSingle();
     if (selErr) throw new Error(selErr.message);
-    if (!row) throw new Error("Sem escala para esse dia");
+    if (!row) throw new Error("Escala não encontrada");
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin && row.user_id !== context.userId) throw new Error("Forbidden");
     const patch = data.done
       ? { status: "done", done_at: new Date().toISOString(), done_by: context.userId }
       : { status: "pending", done_at: null, done_by: null };
     const { error } = await context.supabase
-      .from("stories_schedule").update(patch).eq("id", row.id);
+      .from("stories_schedule").update(patch).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1504,8 +1530,8 @@ export const getMyToday = createServerFn({ method: "GET" })
       if (!isAdmin) throw new Error("Forbidden");
       targetUser = data.userId;
     }
-    const { data: story } = await context.supabase
-      .from("stories_schedule").select("day, status, client_id, clients(name)").eq("day", data.today).eq("user_id", targetUser).maybeSingle();
+    const { data: storyRows } = await context.supabase
+      .from("stories_schedule").select("id, status, client_id, clients(name)").eq("day", data.today).eq("user_id", targetUser);
     let cleaningTasks: { taskId: string; taskName: string }[] = [];
     let cleaningStatuses: { taskId: string; status: "done" | "missed" }[] = [];
     if (data.weekday >= 0 && data.weekday <= 5) {
@@ -1525,9 +1551,11 @@ export const getMyToday = createServerFn({ method: "GET" })
       }
     }
     return {
-      stories: !!story,
-      storyStatus: (story?.status ?? null) as "pending" | "done" | "missed" | null,
-      storyClientName: ((story as any)?.clients?.name ?? null) as string | null,
+      stories: (storyRows ?? []).map((s: any) => ({
+        id: s.id as string,
+        status: (s.status ?? "pending") as "pending" | "done" | "missed",
+        clientName: (s.clients?.name ?? null) as string | null,
+      })),
       cleaningTasks,
       cleaningStatuses,
     };
