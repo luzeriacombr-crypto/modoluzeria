@@ -1822,7 +1822,11 @@ export const getTopMembers = createServerFn({ method: "GET" })
     const { data: finals } = await context.supabase
       .from("finalizations").select("user_id")
       .gte("finalized_at", start.toISOString())
-      .lt("finalized_at", end.toISOString());
+      .lt("finalized_at", end.toISOString())
+      // item_id is set NULL (not row-deleted) when its content_item is
+      // removed — e.g. test items created then deleted. Excluding those
+      // keeps deleted-item credit from lingering in the ranking forever.
+      .not("item_id", "is", null);
     const counts = new Map<string, number>();
     (finals ?? []).forEach((f: any) => counts.set(f.user_id, (counts.get(f.user_id) ?? 0) + 1));
 
