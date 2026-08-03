@@ -52,12 +52,14 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
 
 function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
   const me = useMe().data;
-  const { setUserRole, setUserActive, deleteUser, adminSendPasswordReset, adminUpdateMemberAvatar } = useApi();
+  const { setUserRole, setUserActive, deleteUser, adminSendPasswordReset, adminSetUserPassword, adminUpdateMemberAvatar } = useApi();
   const { setViewAs } = useUI();
   const navigate = useNavigate();
   const isSelf = profile.id === me?.id;
   const [avatarPreview, setAvatarPreview] = useState<string | null>(profile.avatarUrl ?? null);
   const [uploading, setUploading] = useState(false);
+  const [showPasswordField, setShowPasswordField] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
 
   async function onPickFile(file: File) {
     setUploading(true);
@@ -83,6 +85,18 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
     adminSendPasswordReset.mutate({ data: { userId: profile.id } }, {
       onSuccess: (res: any) => toast.success(`Email enviado para ${res?.email ?? profile.email}.`),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao enviar email"),
+    });
+  }
+
+  function handleSetPassword() {
+    if (newPassword.length < 8) { toast.error("A senha precisa ter pelo menos 8 caracteres."); return; }
+    adminSetUserPassword.mutate({ data: { userId: profile.id, password: newPassword } }, {
+      onSuccess: () => {
+        toast.success(`Senha de ${profile.name} atualizada.`);
+        setNewPassword("");
+        setShowPasswordField(false);
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao definir senha"),
     });
   }
 
@@ -136,7 +150,25 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
             onClick={handleResetPassword}
             disabled={adminSendPasswordReset.isPending}
             className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left disabled:opacity-40"
-          ><KeyRound size={15} /> Resetar senha</button>
+          ><KeyRound size={15} /> Resetar senha (por e-mail)</button>
+          <button
+            onClick={() => setShowPasswordField((v) => !v)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
+          ><KeyRound size={15} /> Definir senha diretamente</button>
+          {showPasswordField && (
+            <div className="flex items-center gap-2 px-3 pb-1">
+              <input
+                type="text" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Nova senha (mín. 8 caracteres)"
+                className="flex-1 bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+              />
+              <button
+                onClick={handleSetPassword}
+                disabled={adminSetUserPassword.isPending}
+                className="px-3 py-2 rounded-md text-sm font-semibold bg-[rgb(var(--lz-brand-rgb))] text-black disabled:opacity-40 shrink-0"
+              >Salvar</button>
+            </div>
+          )}
           <button
             onClick={handleRemove}
             disabled={isSelf}

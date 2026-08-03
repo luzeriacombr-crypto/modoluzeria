@@ -433,11 +433,37 @@ export const adminSendPasswordReset = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string }) =>
     z.object({ userId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     const result = await callAdminEdgeFn("sendPasswordReset", {
       targetUserId: data.userId,
     });
-    return { ok: true, email: result?.email };
+    // generateLink() (inside the edge function) only mints the link — it
+    // never sends anything. Delivery happens here, via Resend, since only
+    // the Node side has RESEND_API_KEY.
+    const { sendEmail } = await import("./resend.server");
+    await sendEmail({
+      to: result.email,
+      subject: "Redefinição de senha — Modo Criador",
+      html: `
+        <p>Olá, ${result.name ?? ""}!</p>
+        <p>Foi solicitada uma redefinição de senha para sua conta no Modo Criador.</p>
+        <p><a href="${result.actionLink}">Clique aqui para criar uma nova senha</a></p>
+        <p>Se você não pediu isso, pode ignorar este e-mail.</p>
+      `,
+    });
+    return { ok: true, email: result.email };
+  });
+
+export const adminSetUserPassword = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId: string; password: string }) =>
+    z.object({ userId: z.string().uuid(), password: z.string().min(8).max(72) }).parse(d))
+  .handler(async ({ data }) => {
+    await callAdminEdgeFn("updateUser", {
+      targetUserId: data.userId,
+      password: data.password,
+    });
+    return { ok: true };
   });
 
 /* ============== CLIENTS ============== */

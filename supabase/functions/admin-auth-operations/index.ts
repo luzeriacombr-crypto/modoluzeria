@@ -119,19 +119,28 @@ Deno.serve(async (req) => {
       }
 
       case "sendPasswordReset": {
-        const { email } = params;
-        if (!email) return fail("email required");
+        const { targetUserId } = params;
+        if (!targetUserId) return fail("targetUserId required");
         const { data: targetProfile } = await supabaseAdmin
-          .from("profiles").select("org_id").eq("email", email).maybeSingle();
-        if ((targetProfile?.org_id ?? null) !== callerOrgId && !callerIsPlatformAdmin) {
+          .from("profiles").select("org_id, email, name").eq("id", targetUserId).maybeSingle();
+        if (!targetProfile) return fail("Usuário não encontrado", 404);
+        if ((targetProfile.org_id ?? null) !== callerOrgId && !callerIsPlatformAdmin) {
           return fail("Forbidden: cannot manage users from another organization", 403);
         }
+        // generateLink() only mints the recovery link — it does not send an
+        // email itself. Delivery happens in adminSendPasswordReset() (Node
+        // side, via Resend), which is why this returns the link + recipient
+        // instead of treating a success response here as "email sent".
         const { data, error } = await supabaseAdmin.auth.admin.generateLink({
           type: "recovery",
-          email,
+          email: targetProfile.email,
         });
         if (error) return fail(error.message, 400);
-        return ok(data);
+        return ok({
+          actionLink: data.properties?.action_link,
+          email: targetProfile.email,
+          name: targetProfile.name,
+        });
       }
 
       case "updateUser": {
