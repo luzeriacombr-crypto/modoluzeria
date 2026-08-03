@@ -32,7 +32,7 @@ export const publicSignup = createServerFn({ method: "POST" })
       agencyName: z.string().trim().min(2).max(80),
       name: z.string().trim().min(2).max(80),
       email: z.string().trim().toLowerCase().email(),
-      password: z.string().min(6).max(72),
+      password: z.string().min(8).max(72),
       planId: z.string().min(1),
       taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/, "CNPJ ou CPF inválido."),
       website: z.string().max(0).optional().or(z.literal("")), // honeypot — must stay empty

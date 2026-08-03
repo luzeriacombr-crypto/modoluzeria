@@ -20,7 +20,9 @@ const STATUS_BY_EVENT: Record<string, string> = {
 export async function handleAsaasWebhook(request: Request): Promise<Response> {
   const expectedToken = process.env.ASAAS_WEBHOOK_TOKEN;
   const receivedToken = request.headers.get("asaas-access-token");
-  if (expectedToken && receivedToken !== expectedToken) {
+  // Fail closed: if the token isn't configured, this endpoint can't be
+  // verified, so reject everything instead of silently accepting any caller.
+  if (!expectedToken || receivedToken !== expectedToken) {
     return new Response("Forbidden", { status: 403 });
   }
 

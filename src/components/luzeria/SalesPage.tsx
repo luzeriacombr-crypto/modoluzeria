@@ -369,7 +369,7 @@ export function SalesPage() {
               <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="lz-input-onlight" />
             </Field>
             <Field label="Crie uma senha">
-              <input required type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="lz-input-onlight" />
+              <input required type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="lz-input-onlight" />
             </Field>
             <Field label="CNPJ ou CPF da agência">
               <input required value={taxId} onChange={(e) => setTaxId(e.target.value)} className="lz-input-onlight" placeholder="Somente números" maxLength={18} />
