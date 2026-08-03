@@ -531,6 +531,7 @@ export type Database = {
           name: string
           niche: string | null
           notes: string | null
+          notify_stories_in_tasks: boolean
           org_id: string | null
           posts_per_week: number | null
           reels_per_week: number | null
@@ -550,6 +551,7 @@ export type Database = {
           name: string
           niche?: string | null
           notes?: string | null
+          notify_stories_in_tasks?: boolean
           org_id?: string | null
           posts_per_week?: number | null
           reels_per_week?: number | null
@@ -569,6 +571,7 @@ export type Database = {
           name?: string
           niche?: string | null
           notes?: string | null
+          notify_stories_in_tasks?: boolean
           org_id?: string | null
           posts_per_week?: number | null
           reels_per_week?: number | null
@@ -1687,7 +1690,7 @@ export type Database = {
         | "PRONTO_PARA_PUBLICAR"
         | "PENDENTE"
         | "CONCLUIDO"
-      content_type: "post" | "reel" | "outros" | "gravacao" | "roteiro" | "sistema"
+      content_type: "post" | "reel" | "story" | "outros" | "gravacao" | "roteiro" | "sistema"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1832,7 +1835,7 @@ export const Constants = {
         "PENDENTE",
         "CONCLUIDO",
       ],
-      content_type: ["post", "reel", "outros", "gravacao", "roteiro", "sistema"],
+      content_type: ["post", "reel", "story", "outros", "gravacao", "roteiro", "sistema"],
     },
   },
 } as const

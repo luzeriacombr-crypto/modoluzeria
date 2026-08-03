@@ -33,12 +33,13 @@ export const ACTIVITY_DATE_LABEL: Record<string, string> = {
   outros: "Data de entrega",
 };
 
-export type ContentType = "post" | "reel" | "outros" | "gravacao" | "roteiro" | "sistema";
+export type ContentType = "post" | "reel" | "story" | "outros" | "gravacao" | "roteiro" | "sistema";
 
 /** Label de exibição para cada tipo de conteúdo. */
 export const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
   post: "Post",
   reel: "Reel",
+  story: "Story",
   outros: "Outro",
   gravacao: "Gravação",
   roteiro: "Roteiro",
@@ -49,6 +50,7 @@ export const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
 export const CONTENT_TYPE_ICON: Record<ContentType, string> = {
   post: "🖼️",
   reel: "🎬",
+  story: "📸",
   outros: "📦",
   gravacao: "🎥",
   roteiro: "📝",
@@ -133,6 +135,7 @@ export interface MonthData {
   feedOrderDirection: "asc" | "desc";
   posts: ContentItem[];
   reels: ContentItem[];
+  stories: ContentItem[];
   outros: ContentItem[];
   gravacoes: ContentItem[];
   roteiros: ContentItem[];
@@ -164,6 +167,10 @@ export interface Client {
   photoUrl?: string | null;
   /** Raw storage path in the avatars bucket. */
   photoPath?: string | null;
+  /** Whether Stories assigned for this client show up in the assignee's
+   * "Minhas Demandas" — off by default so high-frequency Stories work
+   * doesn't clutter the task list unless the agency opts in per client. */
+  notifyStoriesInTasks?: boolean;
 }
 
 export type Role = "master" | "setor" | "member";
@@ -280,7 +287,7 @@ export function statusOptionsFor(type: ContentType): Status[] {
     "AGENDAMENTO",
     "REVISAO_AGENDAMENTO",
   ];
-  if (type === "post") {
+  if (type === "post" || type === "story") {
     return [
       "PLANEJAMENTO",
       "COPY",

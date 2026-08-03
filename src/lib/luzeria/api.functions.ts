@@ -505,7 +505,7 @@ export const listClients = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.from("clients")
-      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url")
+      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks")
       .order("name");
     if (error) throw new Error(error.message);
     const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
@@ -526,7 +526,20 @@ export const listClients = createServerFn({ method: "GET" })
       description: c.description ?? null,
       photoPath: c.photo_url ?? null,
       photoUrl: c.photo_url ? (signedPhotos.get(c.photo_url) ?? null) : null,
+      notifyStoriesInTasks: c.notify_stories_in_tasks ?? false,
     }));
+  });
+
+export const setNotifyStoriesInTasks = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; enabled: boolean }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("clients")
+      .update({ notify_stories_in_tasks: data.enabled }).eq("id", data.clientId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 function monthKey(d: Date) {
@@ -628,7 +641,7 @@ export const duplicateMonth = createServerFn({ method: "POST" })
         const counts: Record<string, number> = {};
         oldItems.forEach((it: any) => { counts[it.type] = (counts[it.type] ?? 0) + 1; });
         const rows: any[] = [];
-        (["post", "reel", "outros"] as const).forEach((t) => {
+        (["post", "reel", "story", "outros"] as const).forEach((t) => {
           const n = counts[t] ?? 0;
           const status: Status = isActivityType(t) ? "PENDENTE" : "PLANEJAMENTO";
           for (let i = 1; i <= n; i++) {
@@ -719,6 +732,7 @@ export const getMonth = createServerFn({ method: "GET" })
       feedOrderDirection: ((month as any).feed_order_direction ?? "asc") as any,
       posts: mapped.filter((i) => i.type === "post"),
       reels: mapped.filter((i) => i.type === "reel"),
+      stories: mapped.filter((i) => i.type === "story"),
       outros: mapped.filter((i) => i.type === "outros"),
       gravacoes: mapped.filter((i) => i.type === "gravacao"),
       roteiros: mapped.filter((i) => i.type === "roteiro"),
@@ -1177,7 +1191,7 @@ export const addContentItem = createServerFn({ method: "POST" })
     z.object({
       clientId: z.string().uuid(),
       key: z.string(),
-      type: z.enum(["post", "reel", "outros", "gravacao", "roteiro", "sistema"]),
+      type: z.enum(["post", "reel", "story", "outros", "gravacao", "roteiro", "sistema"]),
       title: z.string().trim().max(200).optional(),
       dueDate: z.string().nullable().optional(),
       notes: z.string().trim().max(2000).nullable().optional(),
@@ -1198,7 +1212,7 @@ export const addContentItem = createServerFn({ method: "POST" })
       .from("content_items").select("idx").eq("month_id", month.id).eq("type", data.type)
       .order("idx", { ascending: false }).limit(1).maybeSingle();
     const nextIdx = ((maxRow as any)?.idx ?? 0) + 1;
-    const typeLabels: Record<string, string> = { post: "Post", reel: "Reel", outros: "Item", gravacao: "Gravação", roteiro: "Roteiro", sistema: "Sistema" };
+    const typeLabels: Record<string, string> = { post: "Post", reel: "Reel", story: "Story", outros: "Item", gravacao: "Gravação", roteiro: "Roteiro", sistema: "Sistema" };
     const fallback = `${typeLabels[data.type] ?? "Item"} ${nextIdx}`;
     const insertRow: Record<string, any> = {
       month_id: month.id, type: data.type, idx: nextIdx,
@@ -1338,15 +1352,19 @@ export const listMyTasks = createServerFn({ method: "GET" })
     if (itemIds.length === 0) return [];
     const { data: items } = await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, due_date, month_id, months!inner(client_id, key, clients!inner(id, name, color, category))")
+      .select("id, type, idx, title, status, due_date, month_id, months!inner(client_id, key, clients!inner(id, name, color, category, notify_stories_in_tasks))")
       .in("id", itemIds);
-    return (items ?? []).map((it: any) => ({
-      id: it.id, type: it.type, idx: it.idx, title: it.title, status: it.status,
-      dueDate: it.due_date ?? null,
-      monthKey: it.months.key, clientId: it.months.clients.id,
-      clientName: it.months.clients.name, clientColor: it.months.clients.color,
-      clientCategory: it.months.clients.category ?? "Social Media",
-    }));
+    return (items ?? [])
+      // Stories only show up here for clients that opted in — otherwise
+      // high-frequency Stories work would clutter everyone's task list.
+      .filter((it: any) => it.type !== "story" || it.months.clients.notify_stories_in_tasks)
+      .map((it: any) => ({
+        id: it.id, type: it.type, idx: it.idx, title: it.title, status: it.status,
+        dueDate: it.due_date ?? null,
+        monthKey: it.months.key, clientId: it.months.clients.id,
+        clientName: it.months.clients.name, clientColor: it.months.clients.color,
+        clientCategory: it.months.clients.category ?? "Social Media",
+      }));
   });
 
 /* ============== PRODUCTIVITY ============== */
@@ -1436,112 +1454,6 @@ export const getMyActivityCounts = createServerFn({ method: "GET" })
     return counts;
   });
 
-/* ============== STORIES SCHEDULE ============== */
-
-export const listStories = createServerFn({ method: "GET" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; monthKey: string }) => d)
-  .handler(async ({ data, context }) => {
-    const [y, m] = data.monthKey.split("-").map(Number);
-    const start = `${y}-${String(m).padStart(2, "0")}-01`;
-    const endDate = new Date(Date.UTC(y, m, 1));
-    const end = `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, "0")}-01`;
-    const { data: rows, error } = await context.supabase
-      .from("stories_schedule")
-      .select("id, day, user_id, label, status, done_at, done_by, client_id, clients(name, color)")
-      .eq("client_id", data.clientId)
-      .gte("day", start).lt("day", end);
-    if (error) throw new Error(error.message);
-    return (rows ?? []).map((r: any) => ({
-      id: r.id as string, day: r.day as string,
-      userId: (r.user_id ?? null) as string | null,
-      label: (r.label ?? null) as string | null,
-      status: (r.status ?? "pending") as "pending" | "done" | "missed",
-      doneAt: (r.done_at ?? null) as string | null,
-      doneBy: (r.done_by ?? null) as string | null,
-      clientId: (r.client_id ?? null) as string | null,
-      clientName: (r.clients?.name ?? null) as string | null,
-      clientColor: (r.clients?.color ?? null) as string | null,
-    }));
-  });
-
-/** Upserts one story entry for a client. Pass `id` to edit/clear an
- * existing entry; omit it to add a new entry to that day — several can
- * coexist per day (one per client). Every entry now belongs to a client. */
-export const upsertStoryDay = createServerFn({ method: "POST" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { id?: string | null; day: string; userId?: string | null; label?: string | null; clientId: string }) =>
-    z.object({
-      id: z.string().uuid().optional().nullable(),
-      day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      userId: z.string().uuid().optional().nullable(),
-      label: z.string().optional().nullable(),
-      clientId: z.string().uuid(),
-    }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-    const isEmpty = !data.userId && !data.label;
-
-    if (data.id) {
-      if (isEmpty) {
-        const { error } = await context.supabase.from("stories_schedule").delete().eq("id", data.id);
-        if (error) throw new Error(error.message);
-        return { ok: true };
-      }
-      const { error } = await context.supabase
-        .from("stories_schedule")
-        .update({ user_id: data.userId ?? null, label: data.label ?? null, client_id: data.clientId, updated_at: new Date().toISOString() })
-        .eq("id", data.id);
-      if (error) throw new Error(error.message);
-      return { ok: true };
-    }
-
-    if (isEmpty) return { ok: true };
-    const { error } = await context.supabase
-      .from("stories_schedule")
-      .insert({ org_id: context.orgId, day: data.day, user_id: data.userId ?? null, label: data.label ?? null, client_id: data.clientId });
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
-export const deleteStoryEntry = createServerFn({ method: "POST" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-    const { error } = await context.supabase.from("stories_schedule").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
-export const setStoryDone = createServerFn({ method: "POST" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string; done: boolean }) =>
-    z.object({
-      id: z.string().uuid(),
-      done: z.boolean(),
-    }).parse(d))
-  .handler(async ({ data, context }) => {
-    // Check responsibility or admin
-    const { data: row, error: selErr } = await context.supabase
-      .from("stories_schedule")
-      .select("id, user_id")
-      .eq("id", data.id).maybeSingle();
-    if (selErr) throw new Error(selErr.message);
-    if (!row) throw new Error("Escala não encontrada");
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin && row.user_id !== context.userId) throw new Error("Forbidden");
-    const patch = data.done
-      ? { status: "done", done_at: new Date().toISOString(), done_by: context.userId }
-      : { status: "pending", done_at: null, done_by: null };
-    const { error } = await context.supabase
-      .from("stories_schedule").update(patch).eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
 export const getMyToday = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId?: string; today: string; weekday: number }) => d)
@@ -1552,8 +1464,6 @@ export const getMyToday = createServerFn({ method: "GET" })
       if (!isAdmin) throw new Error("Forbidden");
       targetUser = data.userId;
     }
-    const { data: storyRows } = await context.supabase
-      .from("stories_schedule").select("id, status, client_id, clients(name)").eq("day", data.today).eq("user_id", targetUser);
     let cleaningTasks: { taskId: string; taskName: string }[] = [];
     let cleaningStatuses: { taskId: string; status: "done" | "missed" }[] = [];
     if (data.weekday >= 0 && data.weekday <= 5) {
@@ -1573,11 +1483,6 @@ export const getMyToday = createServerFn({ method: "GET" })
       }
     }
     return {
-      stories: (storyRows ?? []).map((s: any) => ({
-        id: s.id as string,
-        status: (s.status ?? "pending") as "pending" | "done" | "missed",
-        clientName: (s.clients?.name ?? null) as string | null,
-      })),
       cleaningTasks,
       cleaningStatuses,
     };

@@ -6,7 +6,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Camera, Sparkles, List, CalendarDays, Clock, Check, X, AtSign } from "lucide-react";
+import { Sparkles, List, CalendarDays, Clock, Check, X, AtSign } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
@@ -20,7 +20,7 @@ export function MyTasks() {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
   const isAdmin = me?.role === "master" || me?.role === "setor";
-  const { setStoryDone, setCleaningDone, markMentionRead } = useApi();
+  const { setCleaningDone, markMentionRead } = useApi();
   const [viewAs, setViewAs] = useState<string>("");
   const targetId = isAdmin && viewAs ? viewAs : me?.id;
   const { data: tasks = [] } = useQuery({
@@ -168,23 +168,12 @@ export function MyTasks() {
         ))}
       </div>
 
-      {((today?.stories?.length ?? 0) > 0 || (today?.cleaningTasks?.length ?? 0) > 0) && (
+      {((today?.cleaningTasks?.length ?? 0) > 0) && (
         <div className="space-y-3 mb-8">
           {(() => {
             const isMe = !isAdmin || !viewAs || viewAs === me?.id;
             return (
               <>
-                {today?.stories?.map((s) => (
-                  <DailyTaskCard
-                    key={s.id}
-                    icon={<Camera size={18} />}
-                    title={s.clientName ? `É seu dia nos Stories — ${s.clientName}` : "É seu dia nos Stories"}
-                    subtitle="Publique pelo menos uma sequência com 5."
-                    status={s.status}
-                    canAct={isMe}
-                    onDone={() => setStoryDone.mutate({ data: { id: s.id, done: true } })}
-                  />
-                ))}
                 {today?.cleaningTasks?.map(({ taskId, taskName: rawName }) => {
                   const st = (today?.cleaningStatuses ?? []).find((s) => s.taskId === taskId)?.status ?? "pending";
                   const raw = rawName || "rotina";

@@ -258,6 +258,23 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
           </Section>
         )}
 
+        {/* Stories (admin) */}
+        {isAdmin && (
+          <Section label="Stories">
+            <label className="flex items-center gap-2 text-sm text-white/70">
+              <input
+                type="checkbox"
+                checked={client.notifyStoriesInTasks ?? false}
+                onChange={(e) => api.setNotifyStoriesInTasks.mutate({ data: { clientId: client.id, enabled: e.target.checked } })}
+              />
+              Notificar Stories em Minhas Demandas
+            </label>
+            <p className="text-[11px] text-white/40 mt-1.5">
+              Quando ativado, Stories atribuídos deste cliente aparecem na lista de tarefas do responsável — como Posts e Reels.
+            </p>
+          </Section>
+        )}
+
         {/* Onboarding (admin) */}
         {isAdmin && (
           <Section label="Onboarding do cliente">

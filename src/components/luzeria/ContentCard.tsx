@@ -36,7 +36,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete }
   const assignees = item.assigneeIds
     .map((id) => profiles.find((p) => p.id === id))
     .filter(Boolean) as Profile[];
-  const editor = item.type === "reel" && item.editorId
+  const editor = (item.type === "reel" || item.type === "story") && item.editorId
     ? profiles.find((p) => p.id === item.editorId)
     : null;
   const editorInitials = editor
@@ -152,7 +152,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete }
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {item.type === "reel" && editor && (
+            {(item.type === "reel" || item.type === "story") && editor && (
               <span
                 className="flex items-center gap-1 text-[10px] font-semibold tabular-nums"
                 style={{ color: "rgba(255,255,255,0.4)" }}

@@ -2,11 +2,11 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/r
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, duplicateMonth,
+  addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, duplicateMonth, setNotifyStoriesInTasks,
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, setExcludeFromRanking, deleteUser, updateClient, updateItem, updateMyProfile, adminUpdateMemberAvatar,
-  listStories, upsertStoryDay, setStoryDone, deleteStoryEntry, getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
+  getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   listCleaningTasks, addCleaningTask, renameCleaningTask, deleteCleaningTask,
   adminCreateUser, createAgency, updateMyOrg, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getMemberFinalizations,
   updateMyAccount,
@@ -82,12 +82,6 @@ export const myActivityCountsQO = (monthKey: string, userId?: string) =>
     enabled: !!monthKey,
   });
 
-export const storiesQO = (clientId: string, monthKey: string) =>
-  queryOptions({
-    queryKey: ["stories", clientId, monthKey],
-    queryFn: () => listStories({ data: { clientId, monthKey } }),
-    enabled: !!monthKey && !!clientId,
-  });
 export const cleaningQO = () =>
   queryOptions({ queryKey: ["cleaning"], queryFn: () => getCleaning() });
 export const cleaningTasksQO = () =>
@@ -369,6 +363,10 @@ export function useApi() {
       qc.invalidateQueries({ queryKey: ["clients"] });
       qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
     } }),
+    setNotifyStoriesInTasks: useMutation({
+      mutationFn: useServerFn(setNotifyStoriesInTasks),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["clients"] }); qc.invalidateQueries({ queryKey: ["my-tasks"] }); },
+    }),
     deleteClient: useMutation({ mutationFn: useServerFn(deleteClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) }),
     duplicateMonth: useMutation({
       mutationFn: useServerFn(duplicateMonth),
@@ -456,18 +454,6 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["my-mentions"] });
         qc.invalidateQueries({ queryKey: ["notifications"] });
       },
-    }),
-    upsertStoryDay: useMutation({
-      mutationFn: useServerFn(upsertStoryDay),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["stories"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
-    }),
-    setStoryDone: useMutation({
-      mutationFn: useServerFn(setStoryDone),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["stories"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
-    }),
-    deleteStoryEntry: useMutation({
-      mutationFn: useServerFn(deleteStoryEntry),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["stories"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
     }),
     upsertCleaningCell: useMutation({
       mutationFn: useServerFn(upsertCleaningCell),

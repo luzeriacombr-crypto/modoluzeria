@@ -335,7 +335,7 @@ export function DetailPanel() {
                   el?.scrollIntoView({ behavior: "smooth", block: "center" });
                 }}
               />
-              {item.type === "reel" && canEditFiles && (
+              {(item.type === "reel" || item.type === "story") && canEditFiles && (
                 <button
                   type="button"
                   onClick={() => setCoverOpen(true)}
@@ -560,8 +560,8 @@ export function DetailPanel() {
           </div>
         </ModalSection>
 
-        {/* Editor (Posts e Reels) */}
-        {(item.type === "post" || item.type === "reel") && (
+        {/* Editor (Posts, Reels e Stories) */}
+        {(item.type === "post" || item.type === "reel" || item.type === "story") && (
           <ModalSection label="Editor">
             <div className="relative">
               <button

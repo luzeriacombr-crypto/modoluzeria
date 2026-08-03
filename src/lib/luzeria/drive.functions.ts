@@ -270,7 +270,12 @@ async function ensureMonthFolder(parentId: string, monthLabel: string): Promise<
   return driveCreateFolder(monthLabel, parentId);
 }
 
-/** Resolve the target month folder for an item; null if cannot organize. */
+/** Posts, Reels and Stories each get their own subfolder inside the month
+ * folder — activity items (gravação/roteiro/sistema/outros) stay directly
+ * in the month folder, unchanged. */
+const TYPE_FOLDER_LABEL: Record<string, string> = { post: "Posts", reel: "Reels", story: "Stories" };
+
+/** Resolve the target month (or month/type) folder for an item; null if cannot organize. */
 async function resolveTargetFolderForItem(
   supabase: any,
   userId: string,
@@ -279,20 +284,22 @@ async function resolveTargetFolderForItem(
 ): Promise<string | null> {
   const { data: item } = await supabase
     .from("content_items")
-    .select("month_id, months!inner(key, client_id, clients!inner(id, name))")
+    .select("month_id, type, months!inner(key, client_id, clients!inner(id, name))")
     .eq("id", itemId)
     .maybeSingle();
   if (!item) return null;
   const months: any = item.months;
   const client: any = months?.clients;
   if (!client?.id || !client?.name) return null;
+  const typeLabel = TYPE_FOLDER_LABEL[item.type as string];
 
   // New flow: require an admin-configured deliveries folder per client.
   const map = await loadClientFolderMap(supabase, client.id);
   if (map?.deliveries_folder_id) {
     const label = monthLabelWithYear(months?.key);
     if (!label) return null;
-    return ensureMonthFolder(map.deliveries_folder_id, label);
+    const monthFolderId = await ensureMonthFolder(map.deliveries_folder_id, label);
+    return typeLabel ? ensureMonthFolder(monthFolderId, typeLabel) : monthFolderId;
   }
 
   // Legacy fallback: only used by `reorganizeAllDriveFiles` / `ensureClientDeliveriesFolder`,
@@ -308,7 +315,8 @@ async function resolveTargetFolderForItem(
     supabase, client.id, client.name, rootId, userId, opts,
   );
   if (!tree) return null;
-  return ensureMonthFolder(tree.deliveriesFolderId, monthLabel);
+  const monthFolderId = await ensureMonthFolder(tree.deliveriesFolderId, monthLabel);
+  return typeLabel ? ensureMonthFolder(monthFolderId, typeLabel) : monthFolderId;
 }
 
 /** Extract a Drive file ID from a URL or return the raw ID. */
