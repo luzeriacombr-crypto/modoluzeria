@@ -7,6 +7,7 @@ import { useMe, clientsQO } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
+import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
@@ -114,7 +115,7 @@ export function MobileNav() {
               className="mt-6 px-5 py-2 rounded-md text-xs font-bold"
               style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
             >Editar perfil</button>
-            <button onClick={() => supabase.auth.signOut().then(() => (location.href = "/auth"))}
+            <button onClick={() => clearOneSignalUserId().then(() => supabase.auth.signOut()).then(() => (location.href = "/auth"))}
               className="mt-3 text-xs text-red-400 hover:underline">Sair</button>
           </div>
         </div>

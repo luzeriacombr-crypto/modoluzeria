@@ -1,6 +1,7 @@
 import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { setOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { ArrowLeft } from "lucide-react";
@@ -32,7 +33,14 @@ function AuthPage() {
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      if (s) nav({ to: "/minhas-tarefas" });
+      if (s) {
+        // A client-side nav (below) never remounts __root.tsx, so this is
+        // the only place a fresh login on an already-open tab re-identifies
+        // the device to OneSignal — without it, the device can stay tagged
+        // as whoever was logged in before, and keep getting their pushes.
+        setOneSignalUserId(s.user.id);
+        nav({ to: "/minhas-tarefas" });
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, [nav]);

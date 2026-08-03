@@ -11,6 +11,7 @@ import { NotificationsBell } from "./Notifications";
 import { HelpButton } from "./HelpButton";
 import { NewClientModal, CustomFieldsModal } from "./Modals";
 import { supabase } from "@/integrations/supabase/client";
+import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
@@ -85,7 +86,7 @@ export function App() {
             Um Administrador precisa autorizar seu acesso antes que você possa usar o sistema. Você receberá acesso assim que for aprovado.
           </p>
           <button
-            onClick={async () => { await supabase.auth.signOut(); window.location.href = "/auth"; }}
+            onClick={async () => { await clearOneSignalUserId(); await supabase.auth.signOut(); window.location.href = "/auth"; }}
             className="text-xs text-white/60 hover:text-white transition">
             Sair
           </button>

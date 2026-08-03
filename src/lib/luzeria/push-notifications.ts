@@ -27,6 +27,19 @@ export async function setOneSignalUserId(userId: string) {
   });
 }
 
+/** Must run on sign-out, before supabase.auth.signOut(). Without this,
+ * OneSignal's external ID stays tied to this device/browser — the next
+ * person who logs in on the same device can keep receiving the previous
+ * user's push notifications (or vice versa) until login() overwrites it,
+ * which OneSignal doesn't guarantee happens cleanly without a prior logout(). */
+export async function clearOneSignalUserId() {
+  if (typeof window === "undefined") return;
+  window.OneSignalDeferred = window.OneSignalDeferred ?? [];
+  window.OneSignalDeferred.push(async (OneSignal: any) => {
+    await OneSignal.logout();
+  });
+}
+
 export async function requestNotificationPermission(): Promise<boolean> {
   if (typeof window === "undefined" || !("Notification" in window)) return false;
   if (Notification.permission === "granted") return true;

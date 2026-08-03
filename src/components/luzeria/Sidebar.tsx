@@ -11,6 +11,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { toast } from "sonner";
 import type { Client } from "@/lib/luzeria/types";
 
@@ -404,6 +405,7 @@ function UserFooter({ onSettings, onProfile }: { onSettings: () => void; onProfi
   const me = useMe().data;
   const isMaster = me?.role === "master";
   async function logout() {
+    await clearOneSignalUserId();
     await supabase.auth.signOut();
     location.href = "/auth";
   }
