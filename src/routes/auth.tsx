@@ -27,6 +27,7 @@ function FaviconMark({ size = 18 }: { size?: number }) {
 
 function AuthPage() {
   const nav = useNavigate();
+  const [mode, setMode] = useState<"login" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -56,6 +57,22 @@ function AuthPage() {
     } finally { setLoading(false); }
   }
 
+  async function submitForgot(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/redefinir-senha`,
+      });
+      // Always show the same message, whether or not the e-mail exists —
+      // avoids leaking which e-mails have an account.
+      toast.success("Se esse e-mail tiver uma conta, enviamos um link de redefinição.");
+      setMode("login");
+    } catch (err: any) {
+      toast.error(err.message ?? "Erro ao enviar o link de redefinição");
+    } finally { setLoading(false); }
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 relative"
       style={{ background: "linear-gradient(to bottom left, #090E24, #111F5C)" }}>
@@ -73,20 +90,43 @@ function AuthPage() {
         </div>
 
         <p className="text-white text-xs uppercase tracking-widest text-center font-semibold mb-6">
-          Acesse sua conta:
+          {mode === "login" ? "Acesse sua conta:" : "Redefinir senha:"}
         </p>
 
-        <form onSubmit={submit} className="space-y-3">
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Email"
-            className="w-full bg-white/10 border border-white/15 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#CDFF00] focus:ring-1 focus:ring-[#CDFF00] placeholder:text-white/40 transition-colors" />
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="Senha"
-            className="w-full bg-white/10 border border-white/15 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#CDFF00] focus:ring-1 focus:ring-[#CDFF00] placeholder:text-white/40 transition-colors" />
-          <button type="submit" disabled={loading}
-            className="w-full rounded-md py-2.5 mt-2 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
-            style={{ background: "#CDFF00", color: "#090E24" }}>
-            {loading ? "..." : "Entrar"}
-          </button>
-        </form>
+        {mode === "login" ? (
+          <form onSubmit={submit} className="space-y-3">
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Email"
+              className="w-full bg-white/10 border border-white/15 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#CDFF00] focus:ring-1 focus:ring-[#CDFF00] placeholder:text-white/40 transition-colors" />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="Senha"
+              className="w-full bg-white/10 border border-white/15 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#CDFF00] focus:ring-1 focus:ring-[#CDFF00] placeholder:text-white/40 transition-colors" />
+            <button type="submit" disabled={loading}
+              className="w-full rounded-md py-2.5 mt-2 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ background: "#CDFF00", color: "#090E24" }}>
+              {loading ? "..." : "Entrar"}
+            </button>
+            <button type="button" onClick={() => setMode("forgot")}
+              className="w-full text-center text-white/50 hover:text-white text-xs pt-1 transition-colors">
+              Esqueci minha senha
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={submitForgot} className="space-y-3">
+            <p className="text-white/60 text-xs text-center -mt-2 mb-1">
+              Informe seu e-mail de cadastro e enviaremos um link pra você criar uma nova senha.
+            </p>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Email"
+              className="w-full bg-white/10 border border-white/15 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#CDFF00] focus:ring-1 focus:ring-[#CDFF00] placeholder:text-white/40 transition-colors" />
+            <button type="submit" disabled={loading}
+              className="w-full rounded-md py-2.5 mt-2 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ background: "#CDFF00", color: "#090E24" }}>
+              {loading ? "..." : "Enviar link"}
+            </button>
+            <button type="button" onClick={() => setMode("login")}
+              className="w-full text-center text-white/50 hover:text-white text-xs pt-1 transition-colors">
+              Voltar pro login
+            </button>
+          </form>
+        )}
       </div>
 
       <div className="mt-8 flex items-center gap-2">

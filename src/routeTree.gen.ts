@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AssinarRouteImport } from './routes/assinar'
@@ -25,6 +26,11 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedOauthDriveCallbackRouteImport } from './routes/_authenticated/oauth.drive-callback'
 import { Route as AuthenticatedClienteClientIdRouteImport } from './routes/_authenticated/cliente.$clientId'
 
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
   id: '/privacidade',
   path: '/privacidade',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/assinar': typeof AssinarRoute
   '/auth': typeof AuthRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/assinar': typeof AssinarRoute
   '/auth': typeof AuthRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/assinar': typeof AssinarRoute
   '/auth': typeof AuthRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/ajuda': typeof AuthenticatedAjudaRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/assinar'
     | '/auth'
     | '/privacidade'
+    | '/redefinir-senha'
     | '/admin'
     | '/ajuda'
     | '/configuracoes'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/assinar'
     | '/auth'
     | '/privacidade'
+    | '/redefinir-senha'
     | '/admin'
     | '/ajuda'
     | '/configuracoes'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/assinar'
     | '/auth'
     | '/privacidade'
+    | '/redefinir-senha'
     | '/_authenticated/admin'
     | '/_authenticated/ajuda'
     | '/_authenticated/configuracoes'
@@ -213,11 +225,19 @@ export interface RootRouteChildren {
   AssinarRoute: typeof AssinarRoute
   AuthRoute: typeof AuthRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacidade': {
       id: '/privacidade'
       path: '/privacidade'
@@ -359,6 +379,7 @@ const rootRouteChildren: RootRouteChildren = {
   AssinarRoute: AssinarRoute,
   AuthRoute: AuthRoute,
   PrivacidadeRoute: PrivacidadeRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
   PreviewTokenRoute: PreviewTokenRoute,
 }
 export const routeTree = rootRouteImport
