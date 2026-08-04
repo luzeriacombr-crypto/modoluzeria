@@ -6,6 +6,7 @@ import {
   Rocket, CalendarDays, Users, Link2, FolderOpen, Check, X, ChevronDown, Zap, Lock,
 } from "lucide-react";
 import { getPublicPlans, publicSignup } from "@/lib/luzeria/signup.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import clickupTrelloLogos from "@/assets/clickup-trello-logos.png";
 import heroDesktopMockup from "@/assets/hero-desktop-mockup.png";
@@ -25,6 +26,19 @@ const BG_GRAY = "#18181B";
 // nothing until there's at least one entry, so it's safe to ship empty.
 type Testimonial = { image: string; alt: string };
 const TESTIMONIALS: Testimonial[] = [];
+
+const PENDING_GOOGLE_SIGNUP_KEY = "modocriador:pending-google-signup";
+
+function GoogleMark({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" className="shrink-0">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z" />
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 19 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.1 29.6 4 24 4c-7.5 0-14 4.2-17.7 10.7z" />
+      <path fill="#4CAF50" d="M24 44c5.5 0 10.4-2.1 14.1-5.5l-6.5-5.5C29.5 34.9 26.9 36 24 36c-5.3 0-9.7-3.1-11.3-8l-6.5 5C9.9 39.7 16.4 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.5l6.5 5.5C39.9 37.4 44 31.5 44 24c0-1.3-.1-2.7-.4-3.5z" />
+    </svg>
+  );
+}
 
 const EASE = { transitionTimingFunction: "var(--ease-premium)" as const };
 // Same curve premium buttons/cards use elsewhere in the app.
@@ -51,6 +65,7 @@ export function SalesPage() {
   const [website, setWebsite] = useState(""); // honeypot
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [invoiceUrl, setInvoiceUrl] = useState<string | null | undefined>(undefined);
 
@@ -77,6 +92,30 @@ export function SalesPage() {
       setError(err?.message ?? "Não foi possível concluir seu cadastro. Tente novamente.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function signUpWithGoogle() {
+    if (!agencyName.trim() || !name.trim() || !taxId.trim()) {
+      setError("Preenche o nome da agência, seu nome e o CNPJ/CPF antes de continuar com o Google.");
+      return;
+    }
+    if (!planId) { setError("Escolha um plano antes de continuar."); return; }
+    if (!consent) { setError("Você precisa aceitar a Política de Privacidade para continuar."); return; }
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      sessionStorage.setItem(PENDING_GOOGLE_SIGNUP_KEY, JSON.stringify({
+        agencyName, name, taxId: taxId.replace(/\D/g, ""), planId,
+      }));
+      const { error: oauthErr } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/assinar/completar` },
+      });
+      if (oauthErr) throw oauthErr;
+    } catch (err: any) {
+      setError(err?.message ?? "Erro ao continuar com o Google");
+      setGoogleLoading(false);
     }
   }
 
@@ -401,6 +440,21 @@ export function SalesPage() {
             >
               {loading ? "Criando conta…" : "Começar meu teste grátis →"}
             </button>
+
+            <div className="flex items-center gap-3 pt-1">
+              <div className="h-px flex-1 bg-black/10" />
+              <span className="text-[#0A0E23]/30 text-[10px] uppercase tracking-wider">ou</span>
+              <div className="h-px flex-1 bg-black/10" />
+            </div>
+
+            <button
+              type="button" onClick={signUpWithGoogle} disabled={googleLoading}
+              className="w-full flex items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold border border-black/15 bg-white transition disabled:opacity-50 hover:bg-black/[0.03]"
+            >
+              <GoogleMark size={16} />
+              {googleLoading ? "..." : "Continuar com Google"}
+            </button>
+
             <p className="flex items-center justify-center gap-1.5 text-[11px] text-[#0A0E23]/45 pt-1">
               <Lock size={11} /> Ambiente seguro · Seus dados ficam protegidos
             </p>

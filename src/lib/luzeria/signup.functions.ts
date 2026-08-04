@@ -4,6 +4,7 @@
 // nothing to authenticate against at this point.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const getPublicPlans = createServerFn({ method: "GET" })
   .handler(async () => {
@@ -130,6 +131,105 @@ export const publicSignup = createServerFn({ method: "POST" })
       // out that pre-existing row instead of anything this attempt made.
       if (earInserted) {
         await supabaseAdmin.from("email_role_assignments").delete().eq("email", data.email).eq("org_id", org.id);
+      }
+      throw e;
+    }
+  });
+
+/** Second half of the self-service trial signup for people who chose
+ * "Entrar com Google" on /assinar instead of e-mail+senha. By the time this
+ * runs, Supabase already created their auth.users/profiles row via OAuth —
+ * handle_new_user() found no email_role_assignments match yet, so it landed
+ * inactive on the Luzeria fallback org (see 20260803220000 migration). This
+ * provisions the real org/plan/subscription, same as publicSignup, then
+ * activates that existing profile into it instead of creating a new user. */
+export const completeGoogleSignup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { agencyName: string; name: string; taxId: string; planId: string }) =>
+    z.object({
+      agencyName: z.string().trim().min(2).max(80),
+      name: z.string().trim().min(2).max(80),
+      taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/, "CNPJ ou CPF inválido."),
+      planId: z.string().min(1),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims.email as string | undefined)?.toLowerCase();
+    if (!email) throw new Error("Não foi possível identificar seu e-mail do Google.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { checkSignupRateLimit } = await import("./signup-rate-limit.server");
+    await checkSignupRateLimit(supabaseAdmin);
+
+    const { data: plan } = await supabaseAdmin
+      .from("plans").select("id, name, price_cents").eq("id", data.planId).maybeSingle();
+    if (!plan) throw new Error("Plano não encontrado.");
+    if (plan.price_cents == null) throw new Error("Este plano é sob consulta — fale com a gente pra contratar.");
+
+    const { data: existingAssignment } = await supabaseAdmin
+      .from("email_role_assignments")
+      .select("email")
+      .eq("email", email)
+      .maybeSingle();
+    if (existingAssignment) {
+      throw new Error("Essa conta do Google já está vinculada a uma agência.");
+    }
+
+    const slugBase = data.agencyName.trim().toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "agencia";
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
+
+    const { data: org, error: orgErr } = await supabaseAdmin
+      .from("orgs")
+      .insert({
+        name: data.agencyName.trim(),
+        slug: `${slugBase}-${Date.now().toString(36)}`,
+        plan_id: plan.id,
+        subscription_status: "trialing",
+        trial_ends_at: trialEndsAt.toISOString(),
+        tax_id: data.taxId,
+      })
+      .select("id").single();
+    if (orgErr) throw new Error(orgErr.message);
+
+    let earInserted = false;
+    try {
+      const { error: earErr } = await supabaseAdmin.from("email_role_assignments").insert({
+        email, role: "master", name: data.name.trim(), org_id: org.id,
+      });
+      if (earErr) throw new Error(earErr.message);
+      earInserted = true;
+
+      const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
+      const customer = await createAsaasCustomer({ name: data.agencyName.trim(), cpfCnpj: data.taxId, email });
+      const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
+        customerId: customer.id,
+        valueCents: plan.price_cents,
+        description: `Modo Criador — Plano ${plan.name}`,
+        billingType: "CREDIT_CARD",
+        trialDays: TRIAL_DAYS,
+      });
+
+      await supabaseAdmin.from("orgs")
+        .update({ asaas_customer_id: customer.id, asaas_subscription_id: subscriptionId })
+        .eq("id", org.id);
+
+      const { error: profileErr } = await supabaseAdmin.from("profiles")
+        .update({ org_id: org.id, active: true, name: data.name.trim() })
+        .eq("id", context.userId);
+      if (profileErr) throw new Error(profileErr.message);
+
+      const { error: roleErr } = await supabaseAdmin.from("user_roles")
+        .update({ role: "master" })
+        .eq("user_id", context.userId);
+      if (roleErr) throw new Error(roleErr.message);
+
+      return { invoiceUrl };
+    } catch (e) {
+      await supabaseAdmin.from("orgs").delete().eq("id", org.id);
+      if (earInserted) {
+        await supabaseAdmin.from("email_role_assignments").delete().eq("email", email).eq("org_id", org.id);
       }
       throw e;
     }

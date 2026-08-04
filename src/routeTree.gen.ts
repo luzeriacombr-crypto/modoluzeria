@@ -16,6 +16,7 @@ import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
+import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
 import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated/rotina'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
@@ -59,6 +60,11 @@ const PreviewTokenRoute = PreviewTokenRouteImport.update({
   id: '/preview/$token',
   path: '/preview/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AssinarCompletarRoute = AssinarCompletarRouteImport.update({
+  id: '/completar',
+  path: '/completar',
+  getParentRoute: () => AssinarRoute,
 } as any)
 const AuthenticatedRotinaRoute = AuthenticatedRotinaRouteImport.update({
   id: '/rotina',
@@ -113,7 +119,7 @@ const AuthenticatedClienteClientIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/assinar': typeof AssinarRoute
+  '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
@@ -124,13 +130,14 @@ export interface FileRoutesByFullPath {
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
+  '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/assinar': typeof AssinarRoute
+  '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
+  '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
@@ -149,7 +157,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
-  '/assinar': typeof AssinarRoute
+  '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/rotina': typeof AuthenticatedRotinaRoute
+  '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/_authenticated/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/_authenticated/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/minhas-tarefas'
     | '/perfil'
     | '/rotina'
+    | '/assinar/completar'
     | '/preview/$token'
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
     | '/minhas-tarefas'
     | '/perfil'
     | '/rotina'
+    | '/assinar/completar'
     | '/preview/$token'
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
@@ -214,6 +225,7 @@ export interface FileRouteTypes {
     | '/_authenticated/minhas-tarefas'
     | '/_authenticated/perfil'
     | '/_authenticated/rotina'
+    | '/assinar/completar'
     | '/preview/$token'
     | '/_authenticated/cliente/$clientId'
     | '/_authenticated/oauth/drive-callback'
@@ -222,7 +234,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  AssinarRoute: typeof AssinarRoute
+  AssinarRoute: typeof AssinarRouteWithChildren
   AuthRoute: typeof AuthRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
@@ -279,6 +291,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/preview/$token'
       preLoaderRoute: typeof PreviewTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/assinar/completar': {
+      id: '/assinar/completar'
+      path: '/completar'
+      fullPath: '/assinar/completar'
+      preLoaderRoute: typeof AssinarCompletarRouteImport
+      parentRoute: typeof AssinarRoute
     }
     '/_authenticated/rotina': {
       id: '/_authenticated/rotina'
@@ -373,10 +392,21 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface AssinarRouteChildren {
+  AssinarCompletarRoute: typeof AssinarCompletarRoute
+}
+
+const AssinarRouteChildren: AssinarRouteChildren = {
+  AssinarCompletarRoute: AssinarCompletarRoute,
+}
+
+const AssinarRouteWithChildren =
+  AssinarRoute._addFileChildren(AssinarRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  AssinarRoute: AssinarRoute,
+  AssinarRoute: AssinarRouteWithChildren,
   AuthRoute: AuthRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
