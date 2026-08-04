@@ -52,8 +52,17 @@ export const publicSignup = createServerFn({ method: "POST" })
     if (!plan) throw new Error("Plano não encontrado.");
     if (plan.price_cents == null) throw new Error("Este plano é sob consulta — fale com a gente pra contratar.");
 
-    const { data: existing } = await supabaseAdmin.auth.admin.listUsers();
-    if (existing?.users?.some((u) => u.email?.toLowerCase() === data.email)) {
+    // Check email_role_assignments (the table whose primary key this would
+    // collide on) directly — auth.admin.listUsers() is paginated (50/page
+    // by default) and silently misses existing accounts once the project
+    // has more users than that, letting duplicate signups reach the insert
+    // and fail with a raw Postgres constraint error instead of this message.
+    const { data: existingAssignment } = await supabaseAdmin
+      .from("email_role_assignments")
+      .select("email")
+      .eq("email", data.email)
+      .maybeSingle();
+    if (existingAssignment) {
       throw new Error("Já existe uma conta com esse e-mail.");
     }
 
