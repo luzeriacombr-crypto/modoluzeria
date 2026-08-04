@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { ChevronDown, ExternalLink, Image as ImageIcon, MessageCircle, Video } from "lucide-react";
 import { useMe, useApi, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/queries";
 import type { MyBugReport, AllBugReport, BugReportStatus } from "@/lib/luzeria/bug-reports.functions";
@@ -260,7 +261,10 @@ function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugRepo
               <button
                 key={s}
                 disabled={active}
-                onClick={() => updateBugReportStatus.mutate({ data: { id: report.id, status: s } })}
+                onClick={() => updateBugReportStatus.mutate(
+                  { data: { id: report.id, status: s } },
+                  { onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar status") },
+                )}
                 className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-all duration-200 disabled:cursor-default hover:brightness-110"
                 style={{
                   backgroundColor: active ? STATUS_STYLE[s].bg : "rgba(255,255,255,0.04)",
