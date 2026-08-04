@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -35,6 +36,11 @@ const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
   id: '/privacidade',
   path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MfaRoute = MfaRouteImport.update({
+  id: '/mfa',
+  path: '/mfa',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
+  '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/admin': typeof AuthenticatedAdminRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
+  '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/admin': typeof AuthenticatedAdminRoute
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
+  '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/'
     | '/assinar'
     | '/auth'
+    | '/mfa'
     | '/privacidade'
     | '/redefinir-senha'
     | '/admin'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/'
     | '/assinar'
     | '/auth'
+    | '/mfa'
     | '/privacidade'
     | '/redefinir-senha'
     | '/admin'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/assinar'
     | '/auth'
+    | '/mfa'
     | '/privacidade'
     | '/redefinir-senha'
     | '/_authenticated/admin'
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AssinarRoute: typeof AssinarRouteWithChildren
   AuthRoute: typeof AuthRoute
+  MfaRoute: typeof MfaRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
@@ -255,6 +268,13 @@ declare module '@tanstack/react-router' {
       path: '/privacidade'
       fullPath: '/privacidade'
       preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mfa': {
+      id: '/mfa'
+      path: '/mfa'
+      fullPath: '/mfa'
+      preLoaderRoute: typeof MfaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -408,6 +428,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AssinarRoute: AssinarRouteWithChildren,
   AuthRoute: AuthRoute,
+  MfaRoute: MfaRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   PreviewTokenRoute: PreviewTokenRoute,
