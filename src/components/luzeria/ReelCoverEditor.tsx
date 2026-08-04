@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { X, Film, Upload, Scissors, Loader2, Trash2, Check } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { itemFilesQO, useApi } from "@/lib/luzeria/queries";
@@ -131,6 +132,7 @@ export function ReelCoverEditor({
           source: mode === "frame" ? "frame" : "upload",
         },
       });
+      toast.success("Capa salva.");
       onClose();
     } catch (e: any) {
       setVideoError(e?.message ?? "Falha ao salvar capa.");
@@ -143,6 +145,7 @@ export function ReelCoverEditor({
     setBusy("remove");
     try {
       await setItemCover.mutateAsync({ data: { itemId, coverPath: null, coverSource: null } });
+      toast.success("Capa removida.");
       onClose();
     } catch (e: any) {
       setVideoError(e?.message ?? "Falha ao remover capa.");
