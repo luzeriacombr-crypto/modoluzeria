@@ -85,11 +85,13 @@ export const publicSignup = createServerFn({ method: "POST" })
       .select("id").single();
     if (orgErr) throw new Error(orgErr.message);
 
+    let earInserted = false;
     try {
       const { error: earErr } = await supabaseAdmin.from("email_role_assignments").insert({
         email: data.email, role: "master", name: data.name.trim(), org_id: org.id,
       });
       if (earErr) throw new Error(earErr.message);
+      earInserted = true;
 
       const { data: created, error: userErr } = await supabaseAdmin.auth.admin.createUser({
         email: data.email,
@@ -121,7 +123,14 @@ export const publicSignup = createServerFn({ method: "POST" })
     } catch (e) {
       // Best-effort cleanup so a failed signup doesn't leave an orphaned org behind.
       await supabaseAdmin.from("orgs").delete().eq("id", org.id);
-      await supabaseAdmin.from("email_role_assignments").delete().eq("email", data.email);
+      // Only remove the email_role_assignments row if THIS attempt created
+      // it (earInserted). If the insert itself is what failed — e.g. a
+      // duplicate-key error because the email already had a row from a
+      // different, unrelated account — deleting by e-mail here would wipe
+      // out that pre-existing row instead of anything this attempt made.
+      if (earInserted) {
+        await supabaseAdmin.from("email_role_assignments").delete().eq("email", data.email).eq("org_id", org.id);
+      }
       throw e;
     }
   });
