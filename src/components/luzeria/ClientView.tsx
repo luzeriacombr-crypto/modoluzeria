@@ -28,14 +28,20 @@ function byScheduledAt(direction: OrderDirection) {
   };
 }
 
-export function ClientView({ clientId }: { clientId: string }) {
+type ClientTab = "posts" | "reels" | "stories" | "mais" | "feed" | "ficha";
+const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "mais", "feed", "ficha"];
+
+export function ClientView({ clientId, tab: tabParam, onTabChange }: {
+  clientId: string; tab?: string; onTabChange: (tab: ClientTab) => void;
+}) {
   const { data: clients = [] } = useQuery(clientsQO());
   const client = clients.find((c) => c.id === clientId);
   const { data: profiles = [] } = useQuery(profilesQO());
   const { selectedMonthKey, selectMonth } = useUI();
   const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
-  const [tab, setTab] = useState<"posts" | "reels" | "stories" | "mais" | "feed" | "ficha">("posts");
+  const tab: ClientTab = (VALID_CLIENT_TABS as string[]).includes(tabParam ?? "") ? (tabParam as ClientTab) : "posts";
+  const setTab = onTabChange;
   const [orderMode, setOrderMode] = useState<OrderMode>(
     () => (typeof window !== "undefined" && (localStorage.getItem(ORDER_MODE_KEY) as OrderMode)) || "personalizada",
   );
