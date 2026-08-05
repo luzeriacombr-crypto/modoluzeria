@@ -25,6 +25,7 @@ import { Route as AuthenticatedInvestigacaoRouteImport } from './routes/_authent
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/ajuda'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as ApiCronPublishInstagramRouteImport } from './routes/api.cron.publish-instagram'
 import { Route as AuthenticatedOauthInstagramCallbackRouteImport } from './routes/_authenticated/oauth.instagram-callback'
 import { Route as AuthenticatedOauthDriveCallbackRouteImport } from './routes/_authenticated/oauth.drive-callback'
 import { Route as AuthenticatedClienteClientIdRouteImport } from './routes/_authenticated/cliente.$clientId'
@@ -111,6 +112,11 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiCronPublishInstagramRoute = ApiCronPublishInstagramRouteImport.update({
+  id: '/api/cron/publish-instagram',
+  path: '/api/cron/publish-instagram',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedOauthInstagramCallbackRoute =
   AuthenticatedOauthInstagramCallbackRouteImport.update({
     id: '/oauth/instagram-callback',
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
+  '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -169,6 +176,7 @@ export interface FileRoutesByTo {
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
+  '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -191,6 +199,7 @@ export interface FileRoutesById {
   '/_authenticated/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/_authenticated/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
   '/_authenticated/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
+  '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
     | '/oauth/instagram-callback'
+    | '/api/cron/publish-instagram'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
     | '/oauth/instagram-callback'
+    | '/api/cron/publish-instagram'
   id:
     | '__root__'
     | '/'
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cliente/$clientId'
     | '/_authenticated/oauth/drive-callback'
     | '/_authenticated/oauth/instagram-callback'
+    | '/api/cron/publish-instagram'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -265,6 +277,7 @@ export interface RootRouteChildren {
   PrivacidadeRoute: typeof PrivacidadeRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
+  ApiCronPublishInstagramRoute: typeof ApiCronPublishInstagramRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -381,6 +394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/cron/publish-instagram': {
+      id: '/api/cron/publish-instagram'
+      path: '/api/cron/publish-instagram'
+      fullPath: '/api/cron/publish-instagram'
+      preLoaderRoute: typeof ApiCronPublishInstagramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/oauth/instagram-callback': {
       id: '/_authenticated/oauth/instagram-callback'
       path: '/oauth/instagram-callback'
@@ -455,6 +475,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadeRoute: PrivacidadeRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   PreviewTokenRoute: PreviewTokenRoute,
+  ApiCronPublishInstagramRoute: ApiCronPublishInstagramRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

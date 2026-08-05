@@ -47,7 +47,7 @@ import {
   getPublicFeed, getPublicDriveThumbnail, addPublicFeedback,
 } from "./feed-share.functions";
 import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from "./platform-updates.functions";
-import { publishToInstagram } from "./instagram.functions";
+import { publishToInstagram, setInstagramAutoPublish } from "./instagram.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const platformUpdatesQO = () => queryOptions({ queryKey: ["platform-updates"], queryFn: () => listPlatformUpdates() });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
@@ -433,6 +433,10 @@ export function useApi() {
     }),
     publishToInstagram: useMutation({
       mutationFn: useServerFn(publishToInstagram),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
+    }),
+    setInstagramAutoPublish: useMutation({
+      mutationFn: useServerFn(setInstagramAutoPublish),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
     }),
     setUserRole: useMutation({ mutationFn: useServerFn(setUserRole), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),

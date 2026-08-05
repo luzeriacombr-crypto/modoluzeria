@@ -693,6 +693,7 @@ export type Database = {
           finished_at: string | null
           id: string
           idx: number
+          ig_auto_publish: boolean
           last_status_change_at: string | null
           legacy_assignee: string | null
           month_id: string
@@ -722,6 +723,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           idx: number
+          ig_auto_publish?: boolean
           last_status_change_at?: string | null
           legacy_assignee?: string | null
           month_id: string
@@ -751,6 +753,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           idx?: number
+          ig_auto_publish?: boolean
           last_status_change_at?: string | null
           legacy_assignee?: string | null
           month_id?: string

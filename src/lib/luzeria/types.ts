@@ -104,6 +104,8 @@ export interface ContentItem {
   dueDate?: string | null;
   /** Real scheduled publish date+time (ISO timestamp). Shown to clients in the preview. */
   scheduledAt?: string | null;
+  /** When true, the scheduled-publish cron auto-publishes this post to Instagram once scheduledAt arrives. */
+  igAutoPublish?: boolean;
   /** Set automatically when item leaves PLANEJAMENTO for the first time. */
   startedAt?: string | null;
   /** Set automatically when item reaches PRONTO_PARA_PUBLICAR. */

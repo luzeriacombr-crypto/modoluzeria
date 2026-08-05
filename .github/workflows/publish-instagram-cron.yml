@@ -1,0 +1,16 @@
+name: Publish scheduled Instagram posts
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call publish endpoint
+        run: |
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.modocriador.com.br/api/cron/publish-instagram
