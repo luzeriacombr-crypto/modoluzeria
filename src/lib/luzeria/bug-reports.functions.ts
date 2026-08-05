@@ -149,3 +149,29 @@ export const updateBugReportStatus = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** Lets the platform owner reply to a bug report with a custom message —
+ * delivered as an in-app notification to the reporter (not WhatsApp/email),
+ * reusing the same "bug_report_status" type so clicking it opens /ajuda. */
+export const sendBugReportMessage = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string; message: string }) =>
+    z.object({
+      id: z.string().uuid(),
+      message: z.string().trim().min(1).max(500),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { data: report } = await context.supabase
+      .from("bug_reports").select("reported_by").eq("id", data.id).maybeSingle();
+    if (!report) throw new Error("Solicitação não encontrada.");
+    const { error } = await context.supabase.from("notifications").insert({
+      user_id: report.reported_by,
+      type: "bug_report_status",
+      message: data.message,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

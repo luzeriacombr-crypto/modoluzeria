@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ExternalLink, Image as ImageIcon, MessageCircle, Video } from "lucide-react";
+import { ChevronDown, ExternalLink, Image as ImageIcon, MessageCircle, Video, Send } from "lucide-react";
 import { useMe, useApi, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/queries";
 import type { MyBugReport, AllBugReport, BugReportStatus } from "@/lib/luzeria/bug-reports.functions";
 import tutorialAddPost from "@/assets/tutorials/tutorial-add-post.png";
@@ -219,8 +219,18 @@ function StatusBadge({ status }: { status: BugReportStatus }) {
 
 function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugReport; showOrigin?: boolean }) {
   const asAll = report as AllBugReport;
-  const { updateBugReportStatus } = useApi();
+  const { updateBugReportStatus, sendBugReportMessage } = useApi();
   const waDigits = asAll.whatsapp?.replace(/\D/g, "");
+  const [replyText, setReplyText] = useState("");
+
+  function sendReply() {
+    const message = replyText.trim();
+    if (!message) return;
+    sendBugReportMessage.mutate({ data: { id: report.id, message } }, {
+      onSuccess: () => { toast.success("Mensagem enviada."); setReplyText(""); },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao enviar mensagem"),
+    });
+  }
 
   return (
     <div className="bg-[#1C1C1C] rounded-lg p-5">
@@ -275,6 +285,26 @@ function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugRepo
               </button>
             );
           })}
+        </div>
+      )}
+      {showOrigin && (
+        <div className="flex items-center gap-2 mt-3">
+          <input
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") sendReply(); }}
+            placeholder="Mandar uma mensagem pra quem reportou (aparece nas notificações dela)…"
+            maxLength={500}
+            className="flex-1 bg-[#141414] border border-white/10 rounded-md px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+          />
+          <button
+            onClick={sendReply}
+            disabled={!replyText.trim() || sendBugReportMessage.isPending}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold text-black disabled:opacity-40"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+          >
+            <Send size={12} /> Enviar
+          </button>
         </div>
       )}
     </div>

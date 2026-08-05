@@ -41,7 +41,7 @@ import {
   runDailyDigestNow, runDeadlineRemindersNow, listCronJobs,
 } from "./automations.functions";
 import { listAutomationRules, createAutomationRule, deleteAutomationRule } from "./automation-rules.functions";
-import { listMyBugReports, listAllBugReports, updateBugReportStatus } from "./bug-reports.functions";
+import { listMyBugReports, listAllBugReports, updateBugReportStatus, sendBugReportMessage } from "./bug-reports.functions";
 import {
   getOrCreateShareToken, rotateShareToken, listClientFeedback, getFeedApprovalSummary,
   getPublicFeed, getPublicDriveThumbnail, addPublicFeedback,
@@ -435,6 +435,7 @@ export function useApi() {
     setExcludeFromRanking: useMutation({ mutationFn: useServerFn(setExcludeFromRanking), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     adminUpdateMemberAvatar: useMutation({ mutationFn: useServerFn(adminUpdateMemberAvatar), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     updateBugReportStatus: useMutation({ mutationFn: useServerFn(updateBugReportStatus), onSuccess: () => qc.invalidateQueries({ queryKey: ["bug-reports"] }) }),
+    sendBugReportMessage: useMutation({ mutationFn: useServerFn(sendBugReportMessage) }),
     deleteUser: useMutation({ mutationFn: useServerFn(deleteUser), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     adminCreateUser: useMutation({ mutationFn: useServerFn(adminCreateUser), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     createAgency: useMutation({ mutationFn: useServerFn(createAgency) }),
