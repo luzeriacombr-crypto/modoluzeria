@@ -10,8 +10,8 @@ import { requireActiveProfile } from "./require-active";
 
 const GRAPH_API = "https://graph.facebook.com/v21.0";
 const IG_SCOPES = [
-  "instagram_basic",
-  "instagram_content_publish",
+  "instagram_business_basic",
+  "instagram_business_content_publish",
   "pages_show_list",
   "pages_read_engagement",
   "business_management",
