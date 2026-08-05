@@ -117,10 +117,16 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
       throw new Error(longJson?.error?.message ?? "Não foi possível validar o acesso ao Instagram.");
     }
 
-    const igId = String(shortJson.user_id);
-    const meRes = await fetch(`${IG_GRAPH_API}/${igId}?fields=username&access_token=${encodeURIComponent(longJson.access_token)}`);
+    // The user_id from the token exchange isn't reliably the same ID the
+    // /media publishing endpoints expect — fetch the authoritative id via
+    // /me with the long-lived token instead of trusting it.
+    const meRes = await fetch(`${IG_GRAPH_API}/me?fields=id,username&access_token=${encodeURIComponent(longJson.access_token)}`);
     const meJson: any = await meRes.json();
-    const igUsername: string | null = meRes.ok ? (meJson.username ?? null) : null;
+    if (!meRes.ok || !meJson.id) {
+      throw new Error(meJson?.error?.message ?? "Não foi possível identificar a conta do Instagram.");
+    }
+    const igId = String(meJson.id);
+    const igUsername: string | null = meJson.username ?? null;
 
     const { error } = await context.supabase.from("client_instagram_credentials").upsert({
       client_id: data.clientId,
