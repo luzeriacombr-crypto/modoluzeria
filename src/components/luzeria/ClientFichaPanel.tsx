@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
-  Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save, Camera,
+  Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save, Camera, Instagram,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO } from "@/lib/luzeria/queries";
@@ -11,6 +12,7 @@ import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
 import { ImageCropModal } from "./ImageCropModal";
+import { getInstagramConnectionStatus, getInstagramConnectUrl, disconnectInstagram } from "@/lib/luzeria/instagram.functions";
 
 function formatHours(h: number | null) {
   if (h == null) return "—";
@@ -275,6 +277,13 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
           </Section>
         )}
 
+        {/* Instagram (master) */}
+        {isMaster && (
+          <Section label="Instagram">
+            <InstagramSection clientId={client.id} />
+          </Section>
+        )}
+
         {/* Onboarding (admin) */}
         {isAdmin && (
           <Section label="Onboarding do cliente">
@@ -459,6 +468,73 @@ function Section({ label, children, last }: { label: string; children: React.Rea
     <div className={`px-6 py-5 ${last ? "" : "border-b border-white/[0.08]"}`}>
       <div className="text-[10px] uppercase font-bold tracking-wider mb-3" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{label}</div>
       {children}
+    </div>
+  );
+}
+
+function InstagramSection({ clientId }: { clientId: string }) {
+  const getConnStatus = useServerFn(getInstagramConnectionStatus);
+  const getConnectUrl = useServerFn(getInstagramConnectUrl);
+  const disconnect = useServerFn(disconnectInstagram);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  const status = useQuery({
+    queryKey: ["instagram-connection-status", clientId],
+    queryFn: () => getConnStatus({ data: { clientId } }),
+  });
+
+  async function connect() {
+    setConnecting(true);
+    try {
+      const r: any = await getConnectUrl({ data: { clientId, redirectOrigin: window.location.origin } });
+      window.location.href = r.url;
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao iniciar conexão com o Instagram");
+      setConnecting(false);
+    }
+  }
+
+  async function handleDisconnect() {
+    if (!confirm("Desconectar o Instagram desse cliente? A publicação automática para de funcionar até reconectar.")) return;
+    setDisconnecting(true);
+    try {
+      await disconnect({ data: { clientId } });
+      toast.success("Instagram desconectado.");
+      status.refetch();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao desconectar");
+    } finally {
+      setDisconnecting(false);
+    }
+  }
+
+  const data = status.data;
+
+  return (
+    <div>
+      <p className="text-[11px] text-white/40 mb-3">
+        Conecte a conta do Instagram (Business ou Criador de Conteúdo) desse cliente pra poder publicar Posts direto pelo Modo Criador.
+      </p>
+      {status.isLoading ? (
+        <div className="text-white/40 text-sm">Verificando…</div>
+      ) : data?.connected ? (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-[rgb(var(--lz-brand-rgb))] font-medium flex items-center gap-1.5">
+            <Instagram size={14} /> Conectado{data.igUsername ? ` — @${data.igUsername}` : ""}
+          </div>
+          <button onClick={handleDisconnect} disabled={disconnecting}
+            className="text-[11px] text-white/50 hover:text-red-400 transition disabled:opacity-50">
+            Desconectar
+          </button>
+        </div>
+      ) : (
+        <button onClick={connect} disabled={connecting}
+          className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 disabled:opacity-50">
+          {connecting ? <Loader2 size={14} className="animate-spin" /> : <Instagram size={14} />}
+          Conectar Instagram
+        </button>
+      )}
     </div>
   );
 }

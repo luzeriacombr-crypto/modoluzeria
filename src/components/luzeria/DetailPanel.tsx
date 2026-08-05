@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Instagram } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
@@ -158,7 +158,7 @@ export function DetailPanel() {
   const { data: profiles = [] } = useQuery(profilesQO());
   const { data: clients = [] } = useQuery(clientsQO());
   const me = useMe().data;
-  const { setItemStatus, updateItem, addAssignee, removeAssignee, addCommentWithMentions, rateItem } = useApi();
+  const { setItemStatus, updateItem, addAssignee, removeAssignee, addCommentWithMentions, rateItem, publishToInstagram } = useApi();
   const { data: appSettings } = useQuery(appSettingsQO());
 
   const item = useMemo(() => (selectedItemId && month ? findItem(month, selectedItemId) : undefined), [month, selectedItemId]);
@@ -692,6 +692,30 @@ export function DetailPanel() {
                 );
               })}
             </div>
+          </ModalSection>
+        )}
+
+        {/* Publicar no Instagram (Posts, admin, só quando pronto pra publicar) */}
+        {item.type === "post" && isAdmin && item.status === "PRONTO_PARA_PUBLICAR" && (
+          <ModalSection label="Publicar">
+            <button
+              onClick={() => {
+                if (!confirm('Publicar esse post no Instagram do cliente agora? Isso é uma ação real e pública.')) return;
+                publishToInstagram.mutate({ data: { itemId: item.id } }, {
+                  onSuccess: () => toast.success("Publicado no Instagram!"),
+                  onError: (e: any) => toast.error(e?.message ?? "Falha ao publicar no Instagram"),
+                });
+              }}
+              disabled={publishToInstagram.isPending}
+              className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold disabled:opacity-50"
+              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+            >
+              {publishToInstagram.isPending ? <Loader2 size={14} className="animate-spin" /> : <Instagram size={14} />}
+              Publicar no Instagram agora
+            </button>
+            <p className="text-[11px] text-white/40 mt-2">
+              Publica direto na conta do cliente e marca o item como Finalizado. Precisa do Instagram conectado na Ficha do Cliente.
+            </p>
           </ModalSection>
         )}
 

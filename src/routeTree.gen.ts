@@ -25,6 +25,7 @@ import { Route as AuthenticatedInvestigacaoRouteImport } from './routes/_authent
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/ajuda'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedOauthInstagramCallbackRouteImport } from './routes/_authenticated/oauth.instagram-callback'
 import { Route as AuthenticatedOauthDriveCallbackRouteImport } from './routes/_authenticated/oauth.drive-callback'
 import { Route as AuthenticatedClienteClientIdRouteImport } from './routes/_authenticated/cliente.$clientId'
 
@@ -110,6 +111,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedOauthInstagramCallbackRoute =
+  AuthenticatedOauthInstagramCallbackRouteImport.update({
+    id: '/oauth/instagram-callback',
+    path: '/oauth/instagram-callback',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedOauthDriveCallbackRoute =
   AuthenticatedOauthDriveCallbackRouteImport.update({
     id: '/oauth/drive-callback',
@@ -141,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/preview/$token': typeof PreviewTokenRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
+  '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -160,6 +168,7 @@ export interface FileRoutesByTo {
   '/preview/$token': typeof PreviewTokenRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
+  '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -181,6 +190,7 @@ export interface FileRoutesById {
   '/preview/$token': typeof PreviewTokenRoute
   '/_authenticated/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/_authenticated/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
+  '/_authenticated/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/preview/$token'
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
+    | '/oauth/instagram-callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/preview/$token'
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
+    | '/oauth/instagram-callback'
   id:
     | '__root__'
     | '/'
@@ -241,6 +253,7 @@ export interface FileRouteTypes {
     | '/preview/$token'
     | '/_authenticated/cliente/$clientId'
     | '/_authenticated/oauth/drive-callback'
+    | '/_authenticated/oauth/instagram-callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -368,6 +381,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/oauth/instagram-callback': {
+      id: '/_authenticated/oauth/instagram-callback'
+      path: '/oauth/instagram-callback'
+      fullPath: '/oauth/instagram-callback'
+      preLoaderRoute: typeof AuthenticatedOauthInstagramCallbackRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/oauth/drive-callback': {
       id: '/_authenticated/oauth/drive-callback'
       path: '/oauth/drive-callback'
@@ -395,6 +415,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRotinaRoute: typeof AuthenticatedRotinaRoute
   AuthenticatedClienteClientIdRoute: typeof AuthenticatedClienteClientIdRoute
   AuthenticatedOauthDriveCallbackRoute: typeof AuthenticatedOauthDriveCallbackRoute
+  AuthenticatedOauthInstagramCallbackRoute: typeof AuthenticatedOauthInstagramCallbackRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -407,6 +428,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRotinaRoute: AuthenticatedRotinaRoute,
   AuthenticatedClienteClientIdRoute: AuthenticatedClienteClientIdRoute,
   AuthenticatedOauthDriveCallbackRoute: AuthenticatedOauthDriveCallbackRoute,
+  AuthenticatedOauthInstagramCallbackRoute:
+    AuthenticatedOauthInstagramCallbackRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

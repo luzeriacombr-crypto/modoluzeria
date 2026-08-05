@@ -294,6 +294,51 @@ export type Database = {
         }
         Relationships: []
       }
+      client_instagram_credentials: {
+        Row: {
+          client_id: string
+          connected_at: string
+          connected_by: string | null
+          facebook_page_id: string
+          ig_username: string | null
+          instagram_business_account_id: string
+          page_access_token: string
+        }
+        Insert: {
+          client_id: string
+          connected_at?: string
+          connected_by?: string | null
+          facebook_page_id: string
+          ig_username?: string | null
+          instagram_business_account_id: string
+          page_access_token: string
+        }
+        Update: {
+          client_id?: string
+          connected_at?: string
+          connected_by?: string | null
+          facebook_page_id?: string
+          ig_username?: string | null
+          instagram_business_account_id?: string
+          page_access_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_instagram_credentials_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_instagram_credentials_connected_by_fkey"
+            columns: ["connected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_contacts: {
         Row: {
           client_id: string
