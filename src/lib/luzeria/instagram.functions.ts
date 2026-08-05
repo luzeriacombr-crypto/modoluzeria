@@ -220,16 +220,24 @@ export const publishToInstagram = createServerFn({ method: "POST" })
       // Instagram processes the container asynchronously — publishing
       // immediately after creation can fail with "Media ID is not
       // available". Poll status_code until it's FINISHED (or give up).
-      for (let attempt = 0; attempt < 10; attempt++) {
+      let finished = false;
+      let lastStatus = "UNKNOWN";
+      for (let attempt = 0; attempt < 15; attempt++) {
         const statusRes = await fetch(
-          `${IG_GRAPH_API}/${containerJson.id}?fields=status_code&access_token=${encodeURIComponent(creds.access_token)}`,
+          `${IG_GRAPH_API}/${containerJson.id}?fields=status_code,status&access_token=${encodeURIComponent(creds.access_token)}`,
         );
         const statusJson: any = await statusRes.json();
-        if (statusJson.status_code === "FINISHED") break;
-        if (statusJson.status_code === "ERROR") {
-          throw new Error("O Instagram falhou ao processar a imagem.");
+        lastStatus = statusJson.status_code ?? "UNKNOWN";
+        if (lastStatus === "FINISHED") { finished = true; break; }
+        if (lastStatus === "ERROR" || lastStatus === "EXPIRED") {
+          console.error("[Instagram] container processing failed:", statusJson);
+          throw new Error(`O Instagram falhou ao processar a imagem (${statusJson.status ?? lastStatus}).`);
         }
         await new Promise((r) => setTimeout(r, 2000));
+      }
+      if (!finished) {
+        console.error("[Instagram] container timed out, last status:", lastStatus);
+        throw new Error("O Instagram está demorando pra processar a imagem. Tente publicar de novo em instantes.");
       }
 
       const publishRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media_publish`, {
