@@ -1147,6 +1147,12 @@ export const addAssignee = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { itemId: string; userId: string }) => d)
   .handler(async ({ data, context }) => {
+    const { data: assigneeProfile } = await context.supabase
+      .from("profiles").select("org_id").eq("id", data.userId).maybeSingle();
+    if (!assigneeProfile || assigneeProfile.org_id !== context.orgId) {
+      throw new Error("Forbidden: usuário não pertence a esta agência");
+    }
+
     const { error } = await context.supabase.from("item_assignees")
       .insert({ item_id: data.itemId, user_id: data.userId });
     if (error && !error.message.includes("duplicate")) throw new Error(error.message);
