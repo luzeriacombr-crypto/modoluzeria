@@ -199,8 +199,8 @@ export const publishToInstagram = createServerFn({ method: "POST" })
     try {
       const containerRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
           image_url: publicImageUrl,
           caption: item.caption ?? "",
           access_token: creds.access_token,
@@ -213,8 +213,8 @@ export const publishToInstagram = createServerFn({ method: "POST" })
 
       const publishRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media_publish`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ creation_id: containerJson.id, access_token: creds.access_token }),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ creation_id: containerJson.id, access_token: creds.access_token }),
       });
       const publishJson: any = await publishRes.json();
       if (!publishRes.ok || !publishJson.id) {
