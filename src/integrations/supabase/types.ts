@@ -299,28 +299,25 @@ export type Database = {
           client_id: string
           connected_at: string
           connected_by: string | null
-          facebook_page_id: string
           ig_username: string | null
           instagram_business_account_id: string
-          page_access_token: string
+          access_token: string
         }
         Insert: {
           client_id: string
           connected_at?: string
           connected_by?: string | null
-          facebook_page_id: string
           ig_username?: string | null
           instagram_business_account_id: string
-          page_access_token: string
+          access_token: string
         }
         Update: {
           client_id?: string
           connected_at?: string
           connected_by?: string | null
-          facebook_page_id?: string
           ig_username?: string | null
           instagram_business_account_id?: string
-          page_access_token?: string
+          access_token?: string
         }
         Relationships: [
           {

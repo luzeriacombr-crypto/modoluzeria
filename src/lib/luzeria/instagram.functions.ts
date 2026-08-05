@@ -1,20 +1,18 @@
 // Publicação automática no Instagram — Fase 1 (só Posts, botão manual
 // "Publicar agora"). A conexão é por CLIENTE (cada cliente tem a própria
-// conta), diferente do Drive (uma conexão por agência). Usa Facebook Login
-// for Business: o app da Meta (META_APP_ID/META_APP_SECRET, compartilhado
-// por toda a plataforma) pede permissão pra postar na conta do Instagram
-// Business/Criador de Conteúdo vinculada à Página do Facebook do cliente.
+// conta), diferente do Drive (uma conexão por agência). Usa o produto
+// "Instagram API com Login do Instagram" da Meta (INSTAGRAM_APP_ID/
+// INSTAGRAM_APP_SECRET — credenciais separadas do app principal): o master
+// loga direto na conta Instagram Business/Criador de Conteúdo do cliente,
+// sem precisar de Página do Facebook.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
 
-const GRAPH_API = "https://graph.facebook.com/v21.0";
+const IG_GRAPH_API = "https://graph.instagram.com/v21.0";
 const IG_SCOPES = [
   "instagram_business_basic",
   "instagram_business_content_publish",
-  "pages_show_list",
-  "pages_read_engagement",
-  "business_management",
 ].join(",");
 
 async function assertMaster(supabase: any, userId: string) {
@@ -52,9 +50,10 @@ export const disconnectInstagram = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Builds the Facebook consent URL for this client's master to connect
- * the client's Instagram. `state` carries the clientId through the
- * redirect — re-validated (belongs to caller's org) in completeInstagramConnect. */
+/** Builds the Instagram consent URL for this client's master to connect
+ * the client's Instagram account directly. `state` carries the clientId
+ * through the redirect — re-validated (belongs to caller's org) in
+ * completeInstagramConnect. */
 export const getInstagramConnectUrl = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string; redirectOrigin: string }) =>
@@ -62,8 +61,8 @@ export const getInstagramConnectUrl = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertMaster(context.supabase, context.userId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
-    const appId = process.env.META_APP_ID;
-    if (!appId) throw new Error("META_APP_ID ausente no servidor.");
+    const appId = process.env.INSTAGRAM_APP_ID;
+    if (!appId) throw new Error("INSTAGRAM_APP_ID ausente no servidor.");
     const redirectUri = `${data.redirectOrigin}/oauth/instagram-callback`;
     const params = new URLSearchParams({
       client_id: appId,
@@ -72,23 +71,14 @@ export const getInstagramConnectUrl = createServerFn({ method: "POST" })
       scope: IG_SCOPES,
       state: data.clientId,
     });
-    return { url: `https://www.facebook.com/v21.0/dialog/oauth?${params.toString()}` };
+    return { url: `https://www.instagram.com/oauth/authorize?${params.toString()}` };
   });
 
-export type InstagramPageCandidate = {
-  pageId: string;
-  pageName: string;
-  pageAccessToken: string;
-  igId: string;
-  igUsername: string | null;
-};
-
-/** Exchanges the OAuth code for a long-lived user token, then lists every
- * Facebook Page the user manages that has a connected Instagram Business
- * account. Returns the single match already connected (ok: true), or the
- * full candidate list for the frontend to ask the user to pick one from
- * (ok: false — see finalizeInstagramConnect). Nothing is persisted yet
- * when there's more than one candidate. */
+/** Exchanges the OAuth code for a short-lived token, upgrades it to a
+ * long-lived (60-day) token, fetches the connected account's username, and
+ * persists the credentials for this client. Instagram Business Login
+ * authenticates directly to one Instagram professional account — no
+ * Facebook Page picker needed. */
 export const completeInstagramConnect = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { code: string; clientId: string; redirectOrigin: string }) =>
@@ -100,81 +90,49 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertMaster(context.supabase, context.userId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
-    const appId = process.env.META_APP_ID;
-    const appSecret = process.env.META_APP_SECRET;
-    if (!appId || !appSecret) throw new Error("Credenciais da Meta ausentes no servidor.");
+    const appId = process.env.INSTAGRAM_APP_ID;
+    const appSecret = process.env.INSTAGRAM_APP_SECRET;
+    if (!appId || !appSecret) throw new Error("Credenciais do Instagram ausentes no servidor.");
     const redirectUri = `${data.redirectOrigin}/oauth/instagram-callback`;
 
-    const shortRes = await fetch(
-      `${GRAPH_API}/oauth/access_token?` + new URLSearchParams({
-        client_id: appId, client_secret: appSecret, redirect_uri: redirectUri, code: data.code,
-      }),
-    );
+    const shortBody = new URLSearchParams({
+      client_id: appId, client_secret: appSecret, grant_type: "authorization_code",
+      redirect_uri: redirectUri, code: data.code,
+    });
+    const shortRes = await fetch("https://api.instagram.com/oauth/access_token", {
+      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: shortBody,
+    });
     const shortJson: any = await shortRes.json();
-    if (!shortRes.ok || !shortJson.access_token) {
-      throw new Error(shortJson?.error?.message ?? "Não foi possível conectar ao Facebook. Tente novamente.");
+    if (!shortRes.ok || !shortJson.access_token || !shortJson.user_id) {
+      throw new Error(shortJson?.error_message ?? "Não foi possível conectar ao Instagram. Tente novamente.");
     }
 
     const longRes = await fetch(
-      `${GRAPH_API}/oauth/access_token?` + new URLSearchParams({
-        grant_type: "fb_exchange_token", client_id: appId, client_secret: appSecret,
-        fb_exchange_token: shortJson.access_token,
+      `${IG_GRAPH_API.replace("/v21.0", "")}/access_token?` + new URLSearchParams({
+        grant_type: "ig_exchange_token", client_secret: appSecret, access_token: shortJson.access_token,
       }),
     );
     const longJson: any = await longRes.json();
     if (!longRes.ok || !longJson.access_token) {
-      throw new Error(longJson?.error?.message ?? "Não foi possível validar o acesso ao Facebook.");
+      throw new Error(longJson?.error?.message ?? "Não foi possível validar o acesso ao Instagram.");
     }
 
-    const pagesRes = await fetch(`${GRAPH_API}/me/accounts?access_token=${encodeURIComponent(longJson.access_token)}`);
-    const pagesJson: any = await pagesRes.json();
-    if (!pagesRes.ok) throw new Error(pagesJson?.error?.message ?? "Não foi possível listar as Páginas do Facebook.");
+    const igId = String(shortJson.user_id);
+    const meRes = await fetch(`${IG_GRAPH_API}/${igId}?fields=username&access_token=${encodeURIComponent(longJson.access_token)}`);
+    const meJson: any = await meRes.json();
+    const igUsername: string | null = meRes.ok ? (meJson.username ?? null) : null;
 
-    const candidates: InstagramPageCandidate[] = [];
-    for (const page of pagesJson.data ?? []) {
-      const igRes = await fetch(
-        `${GRAPH_API}/${page.id}?fields=instagram_business_account{id,username}&access_token=${encodeURIComponent(page.access_token)}`,
-      );
-      const igJson: any = await igRes.json();
-      const ig = igJson?.instagram_business_account;
-      if (ig?.id) {
-        candidates.push({
-          pageId: page.id, pageName: page.name, pageAccessToken: page.access_token,
-          igId: ig.id, igUsername: ig.username ?? null,
-        });
-      }
-    }
+    const { error } = await context.supabase.from("client_instagram_credentials").upsert({
+      client_id: data.clientId,
+      instagram_business_account_id: igId,
+      ig_username: igUsername,
+      access_token: longJson.access_token,
+      connected_by: context.userId,
+      connected_at: new Date().toISOString(),
+    }, { onConflict: "client_id" });
+    if (error) throw new Error(error.message);
 
-    if (candidates.length === 0) {
-      throw new Error("Nenhuma conta do Instagram Business/Criador de Conteúdo encontrada nas Páginas do Facebook que você administra.");
-    }
-
-    if (candidates.length === 1) {
-      await saveInstagramCredentials(context, data.clientId, candidates[0]);
-      return { ok: true as const, igUsername: candidates[0].igUsername };
-    }
-
-    return { ok: false as const, candidates };
-  });
-
-export const finalizeInstagramConnect = createServerFn({ method: "POST" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; candidate: InstagramPageCandidate }) =>
-    z.object({
-      clientId: z.string().uuid(),
-      candidate: z.object({
-        pageId: z.string().min(1),
-        pageName: z.string().min(1),
-        pageAccessToken: z.string().min(1),
-        igId: z.string().min(1),
-        igUsername: z.string().nullable(),
-      }),
-    }).parse(d))
-  .handler(async ({ data, context }) => {
-    await assertMaster(context.supabase, context.userId);
-    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
-    await saveInstagramCredentials(context, data.clientId, data.candidate);
-    return { ok: true, igUsername: data.candidate.igUsername };
+    return { ok: true as const, igUsername };
   });
 
 /** Publishes a "post" content_item straight to the client's Instagram feed.
@@ -204,7 +162,7 @@ export const publishToInstagram = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: creds } = await supabaseAdmin
       .from("client_instagram_credentials")
-      .select("instagram_business_account_id, page_access_token")
+      .select("instagram_business_account_id, access_token")
       .eq("client_id", clientId)
       .maybeSingle();
     if (!creds) throw new Error("Esse cliente ainda não conectou o Instagram. Vá na Ficha do Cliente e conecte.");
@@ -239,13 +197,13 @@ export const publishToInstagram = createServerFn({ method: "POST" })
     const publicImageUrl = pub.publicUrl;
 
     try {
-      const containerRes = await fetch(`${GRAPH_API}/${creds.instagram_business_account_id}/media`, {
+      const containerRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           image_url: publicImageUrl,
           caption: item.caption ?? "",
-          access_token: creds.page_access_token,
+          access_token: creds.access_token,
         }),
       });
       const containerJson: any = await containerRes.json();
@@ -253,10 +211,10 @@ export const publishToInstagram = createServerFn({ method: "POST" })
         throw new Error(containerJson?.error?.message ?? "O Instagram recusou a imagem.");
       }
 
-      const publishRes = await fetch(`${GRAPH_API}/${creds.instagram_business_account_id}/media_publish`, {
+      const publishRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media_publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ creation_id: containerJson.id, access_token: creds.page_access_token }),
+        body: JSON.stringify({ creation_id: containerJson.id, access_token: creds.access_token }),
       });
       const publishJson: any = await publishRes.json();
       if (!publishRes.ok || !publishJson.id) {
@@ -275,16 +233,3 @@ export const publishToInstagram = createServerFn({ method: "POST" })
       await supabaseAdmin.storage.from("instagram-publish-temp").remove([tempPath]).catch(() => {});
     }
   });
-
-async function saveInstagramCredentials(context: any, clientId: string, c: InstagramPageCandidate) {
-  const { error } = await context.supabase.from("client_instagram_credentials").upsert({
-    client_id: clientId,
-    facebook_page_id: c.pageId,
-    instagram_business_account_id: c.igId,
-    ig_username: c.igUsername,
-    page_access_token: c.pageAccessToken,
-    connected_by: context.userId,
-    connected_at: new Date().toISOString(),
-  }, { onConflict: "client_id" });
-  if (error) throw new Error(error.message);
-}
