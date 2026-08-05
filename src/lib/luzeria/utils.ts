@@ -94,7 +94,7 @@ export interface DeadlineInfo {
 }
 
 export function deadlineInfo(dueDate?: string | null, status?: string): DeadlineInfo {
-  if (status === "PRONTO_PARA_PUBLICAR") {
+  if (status === "PRONTO_PARA_PUBLICAR" || status === "FINALIZADO") {
     return { level: "done", label: "", color: "rgba(255,255,255,0.3)", bg: "rgba(255,255,255,0.05)", days: null };
   }
   if (!dueDate) {

@@ -57,9 +57,13 @@ export function ClientView({ clientId }: { clientId: string }) {
   if (!client) return null;
   const isAvulso = client.category === "Avulsos";
 
+  // Itens "Finalizado" saem da grade de trabalho (fica limpa pro time), mas
+  // continuam existindo e visíveis no Preview de Feed — ver FeedPreview.tsx.
+  const notFinalized = (items: ContentItem[]) => items.filter((i) => i.status !== "FINALIZADO");
+
   const TAB_CONFIG = {
-    posts: { label: "Posts", type: "post" as const, items: month?.posts ?? [] },
-    reels: { label: "Reels", type: "reel" as const, items: month?.reels ?? [] },
+    posts: { label: "Posts", type: "post" as const, items: notFinalized(month?.posts ?? []) },
+    reels: { label: "Reels", type: "reel" as const, items: notFinalized(month?.reels ?? []) },
     stories: { label: "Stories", type: "story" as const, items: month?.stories ?? [] },
   } as const;
 

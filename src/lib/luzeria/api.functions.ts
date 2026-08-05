@@ -933,7 +933,7 @@ export const getClientFicha = createServerFn({ method: "GET" })
       totalItems = (items ?? []).length;
       let sumHours = 0, leadCount = 0;
       (items ?? []).forEach((it: any) => {
-        if (it.status === "PRONTO_PARA_PUBLICAR") {
+        if (it.status === "PRONTO_PARA_PUBLICAR" || it.status === "FINALIZADO") {
           finalized++;
           if (it.finished_at) {
             if (!lastDeliveryAt || it.finished_at > lastDeliveryAt) lastDeliveryAt = it.finished_at;
@@ -1395,7 +1395,7 @@ export const getProductivity = createServerFn({ method: "GET" })
     }
     const { data: done } = await context.supabase
       .from("content_items").select("id, title, updated_at")
-      .in("id", itemIds).eq("status", "PRONTO_PARA_PUBLICAR")
+      .in("id", itemIds).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
       .gte("updated_at", start).lt("updated_at", end);
     const weeks = [0, 0, 0, 0];
     const items: string[][] = [[], [], [], []];
@@ -1408,7 +1408,7 @@ export const getProductivity = createServerFn({ method: "GET" })
     const histStart = new Date(Date.UTC(y, m - 6, 1)).toISOString();
     const { data: hist } = await context.supabase
       .from("content_items").select("updated_at")
-      .in("id", itemIds).eq("status", "PRONTO_PARA_PUBLICAR")
+      .in("id", itemIds).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
       .gte("updated_at", histStart).lt("updated_at", end);
     const history: { key: string; count: number }[] = [];
     for (let i = 5; i >= 0; i--) {
@@ -1693,7 +1693,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       const posts = its.filter((i) => i.type === "post").length;
       const reels = its.filter((i) => i.type === "reel").length;
       const total = its.length;
-      const done = its.filter((i) => i.status === "PRONTO_PARA_PUBLICAR").length;
+      const done = its.filter((i) => i.status === "PRONTO_PARA_PUBLICAR" || i.status === "FINALIZADO").length;
       // % contra o combinado no contrato (posts/reels por mês), não contra o
       // que foi criado no sistema — assim dá pra ultrapassar 100% quando a
       // equipe entrega mais do que o combinado.
@@ -2034,7 +2034,7 @@ export const getReport = createServerFn({ method: "GET" })
     (statusRows ?? []).forEach((r: any) => {
       const fromLabel = r.from_status ? (STATUS_META[r.from_status as Status]?.label ?? r.from_status) : null;
       const toLabel = STATUS_META[r.to_status as Status]?.label ?? r.to_status;
-      const isFinal = r.to_status === "PRONTO_PARA_PUBLICAR" || r.to_status === "CONCLUIDO";
+      const isFinal = r.to_status === "PRONTO_PARA_PUBLICAR" || r.to_status === "CONCLUIDO" || r.to_status === "FINALIZADO";
       const desc = fromLabel ? `Mudou o status de "${fromLabel}" para "${toLabel}"` : `Definiu o status como "${toLabel}"`;
       pushActivity(isFinal ? "finalized" : "status", r.item_id, r.actor_id, r.at, desc);
     });
@@ -2304,7 +2304,7 @@ export const getMemberVelocity = createServerFn({ method: "GET" })
     const { data: items } = await context.supabase
       .from("content_items")
       .select("id, type, started_at, finished_at, item_assignees(user_id)")
-      .eq("status", "PRONTO_PARA_PUBLICAR")
+      .in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
       .not("started_at", "is", null)
       .not("finished_at", "is", null)
       .gte("finished_at", data.from)

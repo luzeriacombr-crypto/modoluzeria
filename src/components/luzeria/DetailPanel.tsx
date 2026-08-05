@@ -236,7 +236,7 @@ export function DetailPanel() {
   const activeProfiles = profiles.filter((p) => p.active);
   const isActivity = isActivityType(item.type);
   const isOverdue =
-    !isActivity && !!item.dueDate && item.status !== "PRONTO_PARA_PUBLICAR" &&
+    !isActivity && !!item.dueDate && item.status !== "PRONTO_PARA_PUBLICAR" && item.status !== "FINALIZADO" &&
     new Date(item.dueDate + "T23:59:59").getTime() < Date.now();
 
   const checklist = item.checklist ?? [];
@@ -489,7 +489,7 @@ export function DetailPanel() {
                 {statusOpen && (
                   <div className="absolute z-50 left-0 right-0 mt-1 rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto">
                     {statusOptionsFor(item.type)
-                      .filter((s) => isAdmin || s !== "PRONTO_PARA_PUBLICAR")
+                      .filter((s) => isAdmin || (s !== "PRONTO_PARA_PUBLICAR" && s !== "FINALIZADO"))
                       .map((s) => {
                       const m = STATUS_META[s]; const I = STATUS_ICONS[s];
                       const active = item.status === s;

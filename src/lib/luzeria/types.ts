@@ -6,6 +6,7 @@ export type Status =
   | "AGENDAMENTO"
   | "REVISAO_AGENDAMENTO"
   | "PRONTO_PARA_PUBLICAR"
+  | "FINALIZADO"
   | "TRAVADO"
   // Post-only
   | "CRIACAO"
@@ -223,6 +224,7 @@ export const STATUS_META: Record<
   AGENDAMENTO:         { label: "Agendamento",         bg: "#1A2E2A", color: "#7EFFD9", icon: "CalendarCheck" },
   REVISAO_AGENDAMENTO: { label: "Revisão agendamento", bg: "#2A1E1E", color: "#FF9E7E", icon: "CalendarClock" },
   PRONTO_PARA_PUBLICAR: { label: "Pronto para publicar", bg: "#1A3A1A", color: "rgb(var(--lz-brand-rgb))", icon: "CheckCircle" },
+  FINALIZADO:          { label: "Finalizado",          bg: "#20242A", color: "#9AA4B2", icon: "Archive" },
   TRAVADO:             { label: "Travado",             bg: "#3A1A1A", color: "#FF6B6B", icon: "Ban" },
   CRIACAO:             { label: "Criação de arte",     bg: "#3D2B5E", color: "#C084FC", icon: "Paintbrush" },
   REVISAO_ARTE:        { label: "Revisão de arte",     bg: "#4A2800", color: "#FF8C42", icon: "Eye" },
@@ -277,7 +279,12 @@ export function statusOptionsFor(type: ContentType): Status[] {
     return ["PENDENTE", "CONCLUIDO"];
   }
 
-  const tail: Status[] = ["TRAVADO", "PRONTO_PARA_PUBLICAR"];
+  // Stories não aparecem no Preview de Feed — não teria mais nenhum lugar
+  // pra ver de novo depois de "Finalizado", então só post/reel ganham essa
+  // etapa extra.
+  const tail: Status[] = type === "post" || type === "reel"
+    ? ["TRAVADO", "PRONTO_PARA_PUBLICAR", "FINALIZADO"]
+    : ["TRAVADO", "PRONTO_PARA_PUBLICAR"];
 
   const base: Status[] = [
     "PLANEJAMENTO",

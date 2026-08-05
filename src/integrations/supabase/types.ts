@@ -1688,6 +1688,7 @@ export type Database = {
         | "REVISAO_AGENDAMENTO"
         | "TRAVADO"
         | "PRONTO_PARA_PUBLICAR"
+        | "FINALIZADO"
         | "PENDENTE"
         | "CONCLUIDO"
       content_type: "post" | "reel" | "story" | "outros" | "gravacao" | "roteiro" | "sistema"
@@ -1832,6 +1833,7 @@ export const Constants = {
         "REVISAO_AGENDAMENTO",
         "TRAVADO",
         "PRONTO_PARA_PUBLICAR",
+        "FINALIZADO",
         "PENDENTE",
         "CONCLUIDO",
       ],

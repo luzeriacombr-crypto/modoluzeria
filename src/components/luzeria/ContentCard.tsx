@@ -43,7 +43,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete }
     ? editor.name.trim().split(/\s+/).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("")
     : "";
   const isOverdue =
-    !!item.dueDate && item.status !== "PRONTO_PARA_PUBLICAR" &&
+    !!item.dueDate && item.status !== "PRONTO_PARA_PUBLICAR" && item.status !== "FINALIZADO" &&
     new Date(item.dueDate + "T23:59:59").getTime() < Date.now();
   const dueLabel = item.dueDate
     ? new Date(item.dueDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
@@ -133,7 +133,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete }
 
         <div onClick={(e) => e.stopPropagation()}>
           <StatusBadge status={item.status}
-            options={statusOptionsFor(item.type).filter((s) => isAdmin || s !== "PRONTO_PARA_PUBLICAR")}
+            options={statusOptionsFor(item.type).filter((s) => isAdmin || (s !== "PRONTO_PARA_PUBLICAR" && s !== "FINALIZADO"))}
             isAvulso={isAvulso}
             onChange={(s) => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }} />
         </div>

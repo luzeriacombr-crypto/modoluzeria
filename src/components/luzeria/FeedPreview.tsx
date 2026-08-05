@@ -23,6 +23,7 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
     "AGENDAMENTO",
     "REVISAO_AGENDAMENTO",
     "PRONTO_PARA_PUBLICAR",
+    "FINALIZADO",
   ]);
 
   const ready = useMemo(() => {
