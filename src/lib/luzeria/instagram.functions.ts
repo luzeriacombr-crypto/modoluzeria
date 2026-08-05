@@ -217,6 +217,21 @@ export const publishToInstagram = createServerFn({ method: "POST" })
         throw new Error(containerJson?.error?.message ?? "O Instagram recusou a imagem.");
       }
 
+      // Instagram processes the container asynchronously — publishing
+      // immediately after creation can fail with "Media ID is not
+      // available". Poll status_code until it's FINISHED (or give up).
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const statusRes = await fetch(
+          `${IG_GRAPH_API}/${containerJson.id}?fields=status_code&access_token=${encodeURIComponent(creds.access_token)}`,
+        );
+        const statusJson: any = await statusRes.json();
+        if (statusJson.status_code === "FINISHED") break;
+        if (statusJson.status_code === "ERROR") {
+          throw new Error("O Instagram falhou ao processar a imagem.");
+        }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+
       const publishRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media_publish`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
