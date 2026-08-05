@@ -16,15 +16,14 @@ import { UpdatesTab } from "./UpdatesTab";
 type SettingsTab = "team" | "report" | "drive" | "automations" | "general" | "subscription" | "updates";
 const VALID_TABS: SettingsTab[] = ["team", "report", "drive", "automations", "general", "subscription", "updates"];
 
-export function SettingsPage({ initialTab }: { initialTab?: string }) {
+export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
   const { setUserActive, deleteUser, adminCreateUser, createAgency } = useApi();
   const [adding, setAdding] = useState(false);
   const [creatingAgency, setCreatingAgency] = useState(false);
-  const [tab, setTab] = useState<SettingsTab>(
-    (VALID_TABS as string[]).includes(initialTab ?? "") ? (initialTab as SettingsTab) : "team",
-  );
+  const tab: SettingsTab = (VALID_TABS as string[]).includes(tabParam ?? "") ? (tabParam as SettingsTab) : "team";
+  const setTab = onTabChange;
 
   if (me?.role !== "master") {
     return <div className="p-10 text-white/60 text-sm">Acesso restrito ao Administrador Master.</div>;

@@ -14,6 +14,12 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 function ConfiguracoesPage() {
   const setView = useUI((s) => s.setView);
   const { tab } = Route.useSearch();
+  const navigate = Route.useNavigate();
   useEffect(() => { setView("settings"); }, [setView]);
-  return <SettingsPage initialTab={tab} />;
+  return (
+    <SettingsPage
+      tab={tab}
+      onTabChange={(t) => navigate({ search: { tab: t }, replace: true })}
+    />
+  );
 }
