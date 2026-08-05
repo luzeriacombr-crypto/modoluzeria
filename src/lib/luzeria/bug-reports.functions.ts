@@ -167,7 +167,12 @@ export const sendBugReportMessage = createServerFn({ method: "POST" })
     const { data: report } = await context.supabase
       .from("bug_reports").select("reported_by").eq("id", data.id).maybeSingle();
     if (!report) throw new Error("Solicitação não encontrada.");
-    const { error } = await context.supabase.from("notifications").insert({
+    // notifications' RLS only allows inserting for auth.uid() = user_id —
+    // every cross-user notification in the app goes through a SECURITY
+    // DEFINER trigger, which bypasses RLS. This one has no trigger behind
+    // it, so it needs the admin client instead.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("notifications").insert({
       user_id: report.reported_by,
       type: "bug_report_status",
       message: data.message,
