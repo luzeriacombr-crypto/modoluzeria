@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Gift, ArrowRight, Loader2 } from "lucide-react";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { getPromotionCodeBySlug } from "@/lib/luzeria/promotion-affiliate.functions";
 
 export function PromoPage({ slug }: { slug: string }) {
   const navigate = useNavigate();
+  const getPromotionCodeBySlugFn = useServerFn(getPromotionCodeBySlug);
   const [promo, setPromo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -13,7 +15,7 @@ export function PromoPage({ slug }: { slug: string }) {
   useEffect(() => {
     (async () => {
       try {
-        const data = await getPromotionCodeBySlug({ slug });
+        const data = await getPromotionCodeBySlugFn({ data: { slug } });
         if (!data) {
           setError("Cupom não encontrado ou expirado");
           return;

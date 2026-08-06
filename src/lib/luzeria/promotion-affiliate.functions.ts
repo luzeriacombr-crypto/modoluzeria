@@ -161,7 +161,7 @@ export const getPromotionCodeBySlug = createServerFn({ method: "GET" })
 
     let query = supabase
       .from("promotion_codes")
-      .select("id, name, discount_percent, description, active, valid_from, valid_until, max_uses, used_count")
+      .select("id, name, code, discount_percent, description, active, valid_from, valid_until, max_uses, used_count")
       .eq("slug", data.slug);
 
     if (data.orgId) {
@@ -182,7 +182,16 @@ export const getPromotionCodeBySlug = createServerFn({ method: "GET" })
     if (promo.valid_until && new Date(promo.valid_until) < now) return null;
     if (promo.max_uses && promo.used_count >= promo.max_uses) return null;
 
-    return promo;
+    return {
+      id: promo.id,
+      name: promo.name,
+      code: promo.code,
+      discountPercent: promo.discount_percent,
+      description: promo.description ?? undefined,
+      validUntil: promo.valid_until ?? undefined,
+      maxUses: promo.max_uses ?? undefined,
+      usedCount: promo.used_count,
+    };
   });
 
 export const deletePromotionCode = createServerFn({ method: "POST" })
