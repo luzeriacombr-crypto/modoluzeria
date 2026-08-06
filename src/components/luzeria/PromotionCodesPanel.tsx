@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Edit2, Copy, Loader2, AlertCircle, Percent, Link2, Calendar, Users, Gift } from "lucide-react";
 import { PromotionCode } from "@/lib/luzeria/types";
@@ -39,20 +40,16 @@ export function PromotionCodesPanel() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => createPromotionCode(data),
+    mutationFn: useServerFn(createPromotionCode),
     onSuccess: () => {
-      console.log("✅ Cupom criado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["promotionCodes"] });
       resetForm();
       setShowForm(false);
     },
-    onError: (error: any) => {
-      console.error("❌ Erro ao criar cupom:", error?.message || error);
-    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: any) => updatePromotionCode(data),
+    mutationFn: useServerFn(updatePromotionCode),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["promotionCodes"] });
       setEditingId(null);
@@ -61,15 +58,14 @@ export function PromotionCodesPanel() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deletePromotionCode({ id }),
+    mutationFn: useServerFn(deletePromotionCode),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["promotionCodes"] });
     },
   });
 
   const applyMutation = useMutation({
-    mutationFn: (data: { promotionCodeId: string; orgId: string }) =>
-      applyPromotionCodeToOrg(data),
+    mutationFn: useServerFn(applyPromotionCodeToOrg),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["promotionCodes"] });
       setApplyingPromoId(null);
@@ -87,27 +83,6 @@ export function PromotionCodesPanel() {
       validUntil: "",
       maxUses: "",
     });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.error("SUBMIT FIRED WITH DATA:", formData);
-
-    const data = {
-      name: formData.name,
-      code: formData.code.toUpperCase(),
-      slug: formData.slug.toLowerCase(),
-      discountPercent: Number(formData.discountPercent),
-      description: formData.description || undefined,
-      validUntil: formData.validUntil ? new Date(formData.validUntil).toISOString() : undefined,
-      maxUses: formData.maxUses ? Number(formData.maxUses) : undefined,
-    };
-
-    if (editingId) {
-      updateMutation.mutate({ id: editingId, ...data });
-    } else {
-      createMutation.mutate(data);
-    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -255,7 +230,6 @@ export function PromotionCodesPanel() {
                 <button
                   type="button"
                   onClick={() => {
-                    console.log("BUTTON CLICKED, formData:", formData);
                     const data = {
                       name: formData.name,
                       code: formData.code.toUpperCase(),
@@ -265,11 +239,10 @@ export function PromotionCodesPanel() {
                       validUntil: formData.validUntil ? new Date(formData.validUntil).toISOString() : undefined,
                       maxUses: formData.maxUses ? Number(formData.maxUses) : undefined,
                     };
-                    console.log("DATA to send:", data);
                     if (editingId) {
-                      updateMutation.mutate({ id: editingId, ...data });
+                      updateMutation.mutate({ data: { id: editingId, ...data } });
                     } else {
-                      createMutation.mutate(data);
+                      createMutation.mutate({ data });
                     }
                   }}
                   disabled={createMutation.isPending || updateMutation.isPending}
@@ -350,7 +323,7 @@ export function PromotionCodesPanel() {
                       <Edit2 size={16} />
                     </button>
                     <button
-                      onClick={() => deleteMutation.mutate(code.id)}
+                      onClick={() => deleteMutation.mutate({ data: { id: code.id } })}
                       disabled={deleteMutation.isPending}
                       className="p-2 text-white/60 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition disabled:opacity-50"
                       title="Deletar"
@@ -461,8 +434,10 @@ export function PromotionCodesPanel() {
                   onClick={() => {
                     if (selectedOrgId && applyingPromoId) {
                       applyMutation.mutate({
-                        promotionCodeId: applyingPromoId,
-                        orgId: selectedOrgId,
+                        data: {
+                          promotionCodeId: applyingPromoId,
+                          orgId: selectedOrgId,
+                        },
                       });
                     }
                   }}
