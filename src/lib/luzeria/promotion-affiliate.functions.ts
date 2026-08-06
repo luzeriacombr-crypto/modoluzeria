@@ -1,6 +1,41 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireActiveProfile } from "./require-active";
+import type { PromotionCode, AffiliateProgram } from "./types";
+
+function mapPromotionCode(p: any): PromotionCode {
+  return {
+    id: p.id,
+    orgId: p.org_id,
+    name: p.name,
+    code: p.code,
+    slug: p.slug,
+    discountPercent: p.discount_percent,
+    description: p.description ?? undefined,
+    active: p.active,
+    validFrom: p.valid_from ?? undefined,
+    validUntil: p.valid_until ?? undefined,
+    maxUses: p.max_uses ?? undefined,
+    usedCount: p.used_count,
+    createdBy: p.created_by,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  };
+}
+
+function mapAffiliateProgram(a: any): AffiliateProgram {
+  return {
+    id: a.id,
+    orgId: a.org_id,
+    userId: a.user_id,
+    referralCode: a.referral_code,
+    commissionPercent: a.commission_percent,
+    commissionValidMonths: a.commission_valid_months,
+    active: a.active,
+    createdAt: a.created_at,
+    updatedAt: a.updated_at,
+  };
+}
 
 // ============ PROMOTION CODES ============
 
@@ -53,7 +88,7 @@ export const createPromotionCode = createServerFn({ method: "POST" })
       throw error;
     }
 
-    return promo;
+    return mapPromotionCode(promo);
   });
 
 export const updatePromotionCode = createServerFn({ method: "POST" })
@@ -95,7 +130,7 @@ export const updatePromotionCode = createServerFn({ method: "POST" })
       .single();
 
     if (error) throw error;
-    return promo;
+    return mapPromotionCode(promo);
   });
 
 export const listPromotionCodes = createServerFn({ method: "GET" })
@@ -115,7 +150,7 @@ export const listPromotionCodes = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data ?? []).map(mapPromotionCode);
   });
 
 export const getPromotionCodeBySlug = createServerFn({ method: "GET" })
@@ -208,7 +243,7 @@ export const createAffiliateProgram = createServerFn({ method: "POST" })
       throw error;
     }
 
-    return affiliate;
+    return mapAffiliateProgram(affiliate);
   });
 
 export const getMyAffiliateProgram = createServerFn({ method: "GET" })
@@ -225,7 +260,7 @@ export const getMyAffiliateProgram = createServerFn({ method: "GET" })
       .single();
 
     if (error && error.code !== "PGRST116") throw error;
-    return data || null;
+    return data ? mapAffiliateProgram(data) : null;
   });
 
 export const listAffiliatePrograms = createServerFn({ method: "GET" })

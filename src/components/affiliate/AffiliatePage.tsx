@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Users, TrendingUp, DollarSign, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { createAffiliateProgram, getMyAffiliateProgram } from "@/lib/luzeria/promotion-affiliate.functions";
@@ -7,6 +8,8 @@ import { useQuery } from "@tanstack/react-query";
 
 export function AffiliatePage() {
   const navigate = useNavigate();
+  const getMyAffiliateProgramFn = useServerFn(getMyAffiliateProgram);
+  const createAffiliateProgramFn = useServerFn(createAffiliateProgram);
   const [step, setStep] = useState<"info" | "form" | "success">("info");
   const [formData, setFormData] = useState({
     referralCode: "",
@@ -18,7 +21,7 @@ export function AffiliatePage() {
     queryKey: ["myAffiliateProgram"],
     queryFn: async () => {
       try {
-        return await getMyAffiliateProgram();
+        return await getMyAffiliateProgramFn();
       } catch {
         return null;
       }
@@ -35,8 +38,8 @@ export function AffiliatePage() {
     setLoading(true);
 
     try {
-      const result = await createAffiliateProgram({
-        referralCode: formData.referralCode.trim(),
+      await createAffiliateProgramFn({
+        data: { referralCode: formData.referralCode.trim() },
       });
       setStep("success");
     } catch (err: any) {
