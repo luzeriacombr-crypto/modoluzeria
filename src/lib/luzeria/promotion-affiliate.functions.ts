@@ -154,7 +154,7 @@ export const listPromotionCodes = createServerFn({ method: "GET" })
     return (data ?? []).map(mapPromotionCode);
   });
 
-export const getPromotionCodeBySlug = createServerFn({ method: "GET" })
+export const getPromotionCodeBySlug = createServerFn({ method: "POST" })
   .inputValidator((d: { slug: string; orgId?: string }) =>
     z.object({ slug: z.string(), orgId: z.string().optional() }).parse(d))
   .handler(async ({ data }) => {
@@ -397,7 +397,7 @@ export const markAffiliateCommissionAsPaid = createServerFn({ method: "POST" })
 
 // ============ PUBLIC HELPERS ============
 
-export const validatePromotionCode = createServerFn({ method: "GET" })
+export const validatePromotionCode = createServerFn({ method: "POST" })
   .inputValidator((d: { code: string }) => z.object({ code: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { createClient } = await import("@supabase/supabase-js");
@@ -430,7 +430,7 @@ export const validatePromotionCode = createServerFn({ method: "GET" })
     };
   });
 
-export const getAffiliateByReferralCode = createServerFn({ method: "GET" })
+export const getAffiliateByReferralCode = createServerFn({ method: "POST" })
   .inputValidator((d: { referralCode: string }) => z.object({ referralCode: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { createClient } = await import("@supabase/supabase-js");
