@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireActiveProfile } from "./require-active";
 import type { PromotionCode, AffiliateProgram } from "./types";
@@ -154,8 +155,9 @@ export const listPromotionCodes = createServerFn({ method: "GET" })
   });
 
 export const getPromotionCodeBySlug = createServerFn({ method: "GET" })
-  .handler(async (event) => {
-    const data = event.data as { slug: string; orgId?: string };
+  .inputValidator((d: { slug: string; orgId?: string }) =>
+    z.object({ slug: z.string(), orgId: z.string().optional() }).parse(d))
+  .handler(async ({ data }) => {
     // This is public - anyone can get promo code details by slug
     const { createClient } = await import("@supabase/supabase-js");
     const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
@@ -396,8 +398,8 @@ export const markAffiliateCommissionAsPaid = createServerFn({ method: "POST" })
 // ============ PUBLIC HELPERS ============
 
 export const validatePromotionCode = createServerFn({ method: "GET" })
-  .handler(async (event) => {
-    const data = event.data as { code: string };
+  .inputValidator((d: { code: string }) => z.object({ code: z.string() }).parse(d))
+  .handler(async ({ data }) => {
     const { createClient } = await import("@supabase/supabase-js");
     const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
 
@@ -429,8 +431,8 @@ export const validatePromotionCode = createServerFn({ method: "GET" })
   });
 
 export const getAffiliateByReferralCode = createServerFn({ method: "GET" })
-  .handler(async (event) => {
-    const data = event.data as { referralCode: string };
+  .inputValidator((d: { referralCode: string }) => z.object({ referralCode: z.string() }).parse(d))
+  .handler(async ({ data }) => {
     const { createClient } = await import("@supabase/supabase-js");
     const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
 
