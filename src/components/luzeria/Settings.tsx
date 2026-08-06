@@ -12,9 +12,10 @@ import { MemberGoalsTab } from "./MemberGoalsTab";
 import { AutomationsTab } from "./AutomationsTab";
 import { TeamMemberCard } from "./TeamMemberCard";
 import { UpdatesTab } from "./UpdatesTab";
+import { PromotionCodesPanel } from "./PromotionCodesPanel";
 
-type SettingsTab = "team" | "report" | "drive" | "automations" | "general" | "subscription" | "updates";
-const VALID_TABS: SettingsTab[] = ["team", "report", "drive", "automations", "general", "subscription", "updates"];
+type SettingsTab = "team" | "report" | "drive" | "automations" | "general" | "subscription" | "updates" | "promotions";
+const VALID_TABS: SettingsTab[] = ["team", "report", "drive", "automations", "general", "subscription", "updates", "promotions"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -51,6 +52,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
              tab === "drive"  ? "Integração com Google Drive." :
              tab === "automations" ? "Lembretes automáticos e jobs do sistema." :
              tab === "subscription" ? "Seu plano, uso e cobrança." :
+             tab === "promotions" ? "Gerencie cupons de desconto e programa de afiliados." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              "Ajustes gerais da operação."}
           </p>
@@ -64,6 +66,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "drive", label: "Drive" },
           { id: "automations", label: "Automações" },
           { id: "subscription", label: "Assinatura" },
+          { id: "promotions", label: "Cupons e Afiliados" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
         ].map((t) => {
@@ -101,6 +104,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "updates" ? <UpdatesTab /> :
        tab === "drive" ? <DriveSettingsTab /> :
        tab === "automations" ? <AutomationsTab /> :
+       tab === "promotions" ? <PromotionCodesPanel /> :
        tab === "report" ? <ReportsTab /> : (
         <>
       {pending.length > 0 && (
