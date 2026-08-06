@@ -265,6 +265,7 @@ export function PromotionCodesPanel() {
                       validUntil: formData.validUntil ? new Date(formData.validUntil).toISOString() : undefined,
                       maxUses: formData.maxUses ? Number(formData.maxUses) : undefined,
                     };
+                    console.log("DATA to send:", data);
                     if (editingId) {
                       updateMutation.mutate({ id: editingId, ...data });
                     } else {
