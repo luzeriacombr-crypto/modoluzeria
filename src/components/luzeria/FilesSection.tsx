@@ -51,7 +51,10 @@ function FileThumb({ fileId, mime, name }: { fileId: string; mime?: string | nul
   );
 }
 
-const MAX_UPLOAD_BYTES = 500 * 1024 * 1024; // 500 MB — Supabase Storage has no meaningful ceiling for our use case
+// 50 MB — Supabase Storage's own hard cap on the free plan (confirmed via a
+// real 413 EntityTooLarge; not configurable past this without upgrading
+// Supabase to Pro). Well past the old ~3 MB working reality either way.
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 /** PUTs the file straight to Supabase Storage's REST endpoint — unlike
  * Google Drive's upload API (confirmed: no CORS support for third-party
@@ -159,8 +162,8 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
     if (tooBig.length > 0) {
       setError(
         tooBig.length === selected.length
-          ? `Arquivo${tooBig.length > 1 ? "s" : ""} grande${tooBig.length > 1 ? "s" : ""} demais (máx. 500 MB).`
-          : `${tooBig.length} arquivo(s) ignorado(s) por serem grandes demais (máx. 500 MB): ${tooBig.map((f) => f.name).join(", ")}`,
+          ? `Arquivo${tooBig.length > 1 ? "s" : ""} grande${tooBig.length > 1 ? "s" : ""} demais (máx. 50 MB).`
+          : `${tooBig.length} arquivo(s) ignorado(s) por serem grandes demais (máx. 50 MB): ${tooBig.map((f) => f.name).join(", ")}`,
       );
     }
     if (toUpload.length === 0) return;
@@ -411,7 +414,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
       )}
 
       <p className="text-[10px] text-white/40 mt-2 leading-relaxed">
-        Arquivos ficam armazenados no Google Drive da agência. Você pode selecionar vários de uma vez, até 500 MB por arquivo.
+        Arquivos ficam armazenados no Google Drive da agência. Você pode selecionar vários de uma vez, até 50 MB por arquivo.
         Vídeos grandes podem levar mais tempo pra sincronizar com o Drive depois do envio — se der erro nessa etapa, é só tentar de novo.
       </p>
     </div>
