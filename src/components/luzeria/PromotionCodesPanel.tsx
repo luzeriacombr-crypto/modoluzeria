@@ -256,6 +256,7 @@ export function PromotionCodesPanel() {
                 <button
                   type="button"
                   onClick={() => {
+                    console.log("BUTTON CLICKED, formData:", formData);
                     const data = {
                       name: formData.name,
                       code: formData.code.toUpperCase(),
