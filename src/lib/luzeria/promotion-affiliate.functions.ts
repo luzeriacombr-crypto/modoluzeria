@@ -496,6 +496,32 @@ export const applyPromotionCodeToOrg = createServerFn({ method: "POST" })
     const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
     if (!isMaster) throw new Error("Acesso negado");
 
+    const { data: promo, error: promoErr } = await supabase
+      .from("promotion_codes")
+      .select("discount_percent")
+      .eq("id", data.promotionCodeId)
+      .single();
+    if (promoErr || !promo) throw new Error("Cupom não encontrado.");
+
+    const { data: org, error: orgErr } = await supabase
+      .from("orgs")
+      .select("asaas_subscription_id")
+      .eq("id", data.orgId)
+      .single();
+    if (orgErr || !org) throw new Error("Agência não encontrada.");
+    if (!org.asaas_subscription_id) {
+      throw new Error("Essa agência não tem assinatura ativa no Asaas — não há fatura para aplicar o desconto.");
+    }
+
+    const { getNextPendingPayment, updateAsaasPaymentValue } = await import("./asaas.server");
+    const payment = await getNextPendingPayment(org.asaas_subscription_id);
+    if (!payment) {
+      throw new Error("Nenhuma fatura pendente encontrada para essa agência (a próxima ainda não foi gerada).");
+    }
+
+    const discountedValueCents = Math.round(payment.value * 100 * (1 - promo.discount_percent / 100));
+    await updateAsaasPaymentValue(payment.id, discountedValueCents);
+
     // Apply promotion code to org
     const { error } = await supabase
       .from("orgs")
@@ -503,7 +529,7 @@ export const applyPromotionCodeToOrg = createServerFn({ method: "POST" })
       .eq("id", data.orgId);
 
     if (error) throw error;
-    return { success: true };
+    return { success: true, newValueCents: discountedValueCents };
   });
 
 export const listOrgsForPromotion = createServerFn({ method: "GET" })

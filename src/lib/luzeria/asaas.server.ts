@@ -66,3 +66,19 @@ export async function createAsaasSubscription(params: {
   const invoiceUrl = payments.data?.[0]?.invoiceUrl ?? null;
   return { subscriptionId: subscription.id, invoiceUrl };
 }
+
+/** The next unpaid invoice for a subscription — the one a manually-applied
+ * discount should land on, since past/paid invoices can't be changed. */
+export async function getNextPendingPayment(asaasSubscriptionId: string) {
+  const payments = (await asaasFetch(
+    `/payments?subscription=${asaasSubscriptionId}&status=PENDING&limit=1`,
+  )) as { data?: { id: string; value: number }[] };
+  return payments.data?.[0] ?? null;
+}
+
+export async function updateAsaasPaymentValue(paymentId: string, valueCents: number) {
+  return asaasFetch(`/payments/${paymentId}`, {
+    method: "PUT",
+    body: JSON.stringify({ value: valueCents / 100 }),
+  }) as Promise<{ id: string; value: number }>;
+}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Plus, Trash2, Edit2, Copy, Loader2, AlertCircle, Percent, Link2, Calendar, Users, Gift } from "lucide-react";
 import { PromotionCode } from "@/lib/luzeria/types";
 import {
@@ -45,7 +46,9 @@ export function PromotionCodesPanel() {
       queryClient.invalidateQueries({ queryKey: ["promotionCodes"] });
       resetForm();
       setShowForm(false);
+      toast.success("Cupom criado!");
     },
+    onError: (error: any) => toast.error(error?.message || "Erro ao criar cupom."),
   });
 
   const updateMutation = useMutation({
@@ -54,23 +57,30 @@ export function PromotionCodesPanel() {
       queryClient.invalidateQueries({ queryKey: ["promotionCodes"] });
       setEditingId(null);
       resetForm();
+      toast.success("Cupom atualizado!");
     },
+    onError: (error: any) => toast.error(error?.message || "Erro ao atualizar cupom."),
   });
 
   const deleteMutation = useMutation({
     mutationFn: useServerFn(deletePromotionCode),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["promotionCodes"] });
+      toast.success("Cupom removido.");
     },
+    onError: (error: any) => toast.error(error?.message || "Erro ao remover cupom."),
   });
 
   const applyMutation = useMutation({
     mutationFn: useServerFn(applyPromotionCodeToOrg),
-    onSuccess: () => {
+    onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ["promotionCodes"] });
       setApplyingPromoId(null);
       setSelectedOrgId("");
+      const newValue = result?.newValueCents != null ? (result.newValueCents / 100).toFixed(2) : null;
+      toast.success(newValue ? `Desconto aplicado! Próxima fatura: R$ ${newValue}` : "Desconto aplicado na próxima fatura!");
     },
+    onError: (error: any) => toast.error(error?.message || "Erro ao aplicar cupom."),
   });
 
   const resetForm = () => {
