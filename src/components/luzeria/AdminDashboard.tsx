@@ -3,8 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Users, Target, Package, Clock, AlertTriangle,
   ChevronLeft, ChevronRight, Trophy, Sparkles, Flame, Crown, Medal,
-  X, CheckCircle2, Inbox,
-  Activity, AlertOctagon, RotateCcw,
+  X, CheckCircle2, Inbox, Tag, Activity, AlertOctagon, RotateCcw,
 } from "lucide-react";
 import { adminDashboardQO, memberFinalizationsQO, topMembersQO, useMe, reportExtrasQO } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
@@ -12,6 +11,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { Avatar } from "./Avatar";
 import { SetupChecklist } from "./SetupChecklist";
+import { PromotionCodesPanel } from "./PromotionCodesPanel";
 
 type Period = "month" | "3m" | "6m" | "year";
 const PERIOD_LABEL: Record<Period, string> = {
@@ -53,6 +53,9 @@ export function AdminDashboard() {
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { selectedMonthKey, selectMonth } = useUI();
   const [period, setPeriod] = useState<Period>("month");
+  const [filterMode, setFilterMode] = useState<null | "category" | "health">(null);
+  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const [section, setSection] = useState<"dashboard" | "promotions">("dashboard");
 
   const dashboard = useQuery(adminDashboardQO(selectedMonthKey));
   const top = useQuery(topMembersQO(period, selectedMonthKey));
@@ -121,6 +124,34 @@ export function AdminDashboard() {
 
   return (
     <div className="px-5 md:px-10 py-8 max-w-[1320px] mx-auto">
+      {/* Admin Tabs */}
+      <div className="flex items-center gap-2 mb-6 border-b border-white/10 pb-4">
+        <button
+          onClick={() => setSection("dashboard")}
+          className={`px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 ${
+            section === "dashboard"
+              ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]"
+              : "text-white/60 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          <Sparkles size={16} />
+          Dashboard
+        </button>
+        <button
+          onClick={() => setSection("promotions")}
+          className={`px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 ${
+            section === "promotions"
+              ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]"
+              : "text-white/60 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          <Tag size={16} />
+          Cupons & Afiliados
+        </button>
+      </div>
+
+      {section === "dashboard" && (
+        <>
       <SetupChecklist />
       {/* HERO */}
       <div data-tour="dashboard-hero" className="relative overflow-hidden rounded-2xl mb-6"
@@ -332,13 +363,26 @@ export function AdminDashboard() {
         </div>
       </div>
 
+      {filterMode && selectedFilter && (
+        <FilteredItemsPanel
+          filterMode={filterMode}
+          selectedFilter={selectedFilter}
+          monthKey={selectedMonthKey}
+          data={data}
+          onClose={() => { setFilterMode(null); setSelectedFilter(null); }}
+          setFilterMode={setFilterMode}
+          setSelectedFilter={setSelectedFilter}
+        />
+      )}
+
       {/* Category breakdown */}
       {byCategory.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
           {byCategory.map((c) => {
             const color = CAT_COLOR[c.name] ?? PALETTE.green;
             return (
-              <div key={c.name} className="relative overflow-hidden rounded-xl p-4 bg-[#161616] border border-white/[0.06] text-left">
+              <button key={c.name} onClick={() => { setFilterMode("category"); setSelectedFilter(c.name); }}
+                className="relative overflow-hidden rounded-xl p-4 bg-[#161616] border border-white/[0.06] text-left hover:border-white/[0.12] transition-all hover:bg-[#1a1a1a] cursor-pointer">
                 <div className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-20 blur-2xl" style={{ background: color }} />
                 <div className="flex flex-row md:flex-row items-start md:items-center justify-between relative">
                   <div className="text-[11px] uppercase tracking-wider font-bold" style={{ color }}>{c.name}</div>
@@ -351,10 +395,16 @@ export function AdminDashboard() {
                   <div className="h-full rounded-full transition-all duration-500"
                     style={{ width: `${c.percent}%`, background: `linear-gradient(90deg, ${color}, ${PALETTE.lime})` }} />
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
+      )}
+        </>
+      )}
+
+      {section === "promotions" && (
+        <PromotionCodesPanel />
       )}
     </div>
   );
@@ -578,6 +628,103 @@ function hexA(hex: string, a: number) {
   return `rgba(${r},${g},${b},${a})`;
 }
 
+type FilteredItemsPanelProps = {
+  filterMode: "category" | "health";
+  selectedFilter: string;
+  monthKey: string;
+  data: any;
+  onClose: () => void;
+  setFilterMode: (mode: null | "category" | "health") => void;
+  setSelectedFilter: (filter: string | null) => void;
+};
+
+function FilteredItemsPanel({ filterMode, selectedFilter, monthKey, data, onClose, setFilterMode, setSelectedFilter }: FilteredItemsPanelProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (!panelRef.current?.contains(e.target as Node)) onClose(); };
+    const t = setTimeout(() => document.addEventListener("mousedown", h), 50);
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", h); };
+  }, [onClose]);
+
+  let items: any[] = [];
+  let title = "";
+
+  if (filterMode === "category") {
+    items = (data?.clients ?? []).filter((c: any) => (c.category || "Social Media") === selectedFilter).flatMap((c: any) =>
+      (c.items ?? []).map((i: any) => ({ ...i, clientName: c.name, clientColor: c.color, clientId: c.id }))
+    );
+    title = selectedFilter;
+  } else if (filterMode === "health") {
+    if (selectedFilter === "blocked") {
+      items = data?.blocked ?? [];
+      title = "Travados";
+    } else if (selectedFilter === "rework") {
+      items = data?.rework?.items ?? [];
+      title = "Taxa de Retrabalho";
+    } else if (selectedFilter === "quality") {
+      items = data?.quality?.items ?? [];
+      title = "Qualidade Média";
+    }
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px]" />
+      <div ref={panelRef}
+        className="fixed z-50 bg-[#0D0D0D] border-white/10 flex flex-col lz-slide-in
+          inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl border-t
+          md:rounded-none md:border-t-0 md:border-l md:right-0 md:top-0 md:bottom-0 md:left-auto md:w-[480px] md:max-h-none">
+        {/* Header */}
+        <div className="px-6 pt-5 pb-4 border-b border-white/[0.08]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-white font-bold text-[17px]">{title}</div>
+              <div className="mt-1 text-[12px] text-white/60">
+                <span className="text-white font-semibold">{items.length}</span> demanda{items.length === 1 ? "" : "s"}
+              </div>
+            </div>
+            <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {items.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-14 text-center">
+              <Inbox size={28} className="text-white/20 mb-3" />
+              <p className="text-white/40 text-xs">Nenhuma demanda encontrada</p>
+            </div>
+          )}
+          <ul className="space-y-1.5">
+            {items.map((item: any) => (
+              <li key={item.itemId || item.id}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                    {item.clientName && (
+                      <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
+                        style={{ backgroundColor: `${item.clientColor}22`, color: item.clientColor }}>
+                        {item.clientName}
+                      </span>
+                    )}
+                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
+                      style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
+                      {item.type?.toUpperCase() ?? "ITEM"}
+                    </span>
+                  </div>
+                  <div className="text-white text-sm truncate">{item.title}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ============== OPERATION HEALTH (master only) ============== */
 
 function OperationHealth({ monthKey }: { monthKey: string }) {
@@ -606,19 +753,20 @@ function OperationHealth({ monthKey }: { monthKey: string }) {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <HealthCard icon={<Clock size={14} />} tone="#4A9EFF" label="Lead time médio" value={formatHours(leadAvg)} sub={`${data?.leadTime.count ?? 0} entregas`} />
-        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} label="Travados" value={blocked} sub={blocked > 0 ? "precisam de ação" : "tudo fluindo"} valueColor={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} />
-        <HealthCard icon={<RotateCcw size={14} />} tone={reworkRate > 15 ? "#FF8C42" : "rgb(var(--lz-brand-rgb))"} label="Taxa de retrabalho" value={`${reworkRate}%`} sub={`${data?.rework.total ?? 0} itens`} />
-        <HealthCard icon={<Trophy size={14} />} tone="rgb(var(--lz-brand-rgb))" label="Qualidade média" value={quality > 0 ? `${quality}/5` : "—"} sub={`${data?.quality.count ?? 0} avaliados`} />
+        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} label="Travados" value={blocked} sub={blocked > 0 ? "precisam de ação" : "tudo fluindo"} valueColor={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} onClick={blocked > 0 ? () => { setFilterMode("health"); setSelectedFilter("blocked"); } : undefined} />
+        <HealthCard icon={<RotateCcw size={14} />} tone={reworkRate > 15 ? "#FF8C42" : "rgb(var(--lz-brand-rgb))"} label="Taxa de retrabalho" value={`${reworkRate}%`} sub={`${data?.rework.total ?? 0} itens`} onClick={() => { setFilterMode("health"); setSelectedFilter("rework"); }} />
+        <HealthCard icon={<Trophy size={14} />} tone="rgb(var(--lz-brand-rgb))" label="Qualidade média" value={quality > 0 ? `${quality}/5` : "—"} sub={`${data?.quality.count ?? 0} avaliados`} onClick={() => { setFilterMode("health"); setSelectedFilter("quality"); }} />
       </div>
     </div>
   );
 }
 
-function HealthCard({ icon, tone, label, value, sub, valueColor }: {
-  icon: React.ReactNode; tone: string; label: string; value: number | string; sub: string; valueColor?: string;
+function HealthCard({ icon, tone, label, value, sub, valueColor, onClick }: {
+  icon: React.ReactNode; tone: string; label: string; value: number | string; sub: string; valueColor?: string; onClick?: () => void;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-lg bg-[#1C1C1C] border border-white/[0.06] p-4">
+    <button onClick={onClick} disabled={!onClick}
+      className={`relative overflow-hidden rounded-lg bg-[#1C1C1C] border border-white/[0.06] p-4 text-left w-full transition-all ${onClick ? "hover:border-white/[0.12] hover:bg-[#232323] cursor-pointer" : ""}`}>
       <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: tone }} />
       <div className="relative">
         <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider" style={{ color: tone }}>
@@ -627,6 +775,6 @@ function HealthCard({ icon, tone, label, value, sub, valueColor }: {
         <div className="text-2xl font-bold tabular-nums mt-1.5" style={{ color: valueColor ?? "#FFFFFF" }}>{value}</div>
         <div className="text-[10px] text-white/40 mt-0.5">{sub}</div>
       </div>
-    </div>
+    </button>
   );
 }

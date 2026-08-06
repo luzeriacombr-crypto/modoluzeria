@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Modoluzeria Dev Server",
+      "runtimeExecutable": "/usr/bin/env",
+      "runtimeArgs": ["/Users/juniorreis/.bun/bin/bun", "run", "dev"],
+      "port": 8080
+    },
+    {
+      "name": "Modoluzeria Preview (build)",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "preview"],
+      "port": 4173
+    }
+  ]
+}

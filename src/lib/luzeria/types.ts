@@ -453,3 +453,46 @@ export interface TimelineEntry {
   text: string;
   meta?: Record<string, any>;
 }
+
+export interface PromotionCode {
+  id: string;
+  orgId: string;
+  name: string;
+  code: string;
+  slug: string;
+  discountPercent: number;
+  description?: string;
+  active: boolean;
+  validFrom?: string;
+  validUntil?: string;
+  maxUses?: number;
+  usedCount: number;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AffiliateProgram {
+  id: string;
+  orgId: string;
+  userId: string;
+  referralCode: string;
+  commissionPercent: number;
+  commissionValidMonths: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AffiliateReferral {
+  id: string;
+  affiliateId: string;
+  referredUserId: string;
+  referredOrgId?: string;
+  subscriptionId?: string;
+  commissionEarned: number;
+  commissionPaid: boolean;
+  paidAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}

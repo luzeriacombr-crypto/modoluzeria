@@ -16,8 +16,10 @@ import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as ExclusaoDeDadosRouteImport } from './routes/exclusao-de-dados'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AssinarRouteImport } from './routes/assinar'
+import { Route as AfiliarRouteImport } from './routes/afiliar'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PromoSlugRouteImport } from './routes/promo/$slug'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
 import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated/rotina'
@@ -31,6 +33,7 @@ import { Route as ApiCronPublishInstagramRouteImport } from './routes/api.cron.p
 import { Route as AuthenticatedOauthInstagramCallbackRouteImport } from './routes/_authenticated/oauth.instagram-callback'
 import { Route as AuthenticatedOauthDriveCallbackRouteImport } from './routes/_authenticated/oauth.drive-callback'
 import { Route as AuthenticatedClienteClientIdRouteImport } from './routes/_authenticated/cliente.$clientId'
+import { Route as AuthenticatedAfiliadoDashboardRouteImport } from './routes/_authenticated/afiliado/dashboard'
 
 const TermosRoute = TermosRouteImport.update({
   id: '/termos',
@@ -67,6 +70,11 @@ const AssinarRoute = AssinarRouteImport.update({
   path: '/assinar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AfiliarRoute = AfiliarRouteImport.update({
+  id: '/afiliar',
+  path: '/afiliar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -74,6 +82,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PromoSlugRoute = PromoSlugRouteImport.update({
+  id: '/promo/$slug',
+  path: '/promo/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PreviewTokenRoute = PreviewTokenRouteImport.update({
@@ -147,9 +160,16 @@ const AuthenticatedClienteClientIdRoute =
     path: '/cliente/$clientId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAfiliadoDashboardRoute =
+  AuthenticatedAfiliadoDashboardRouteImport.update({
+    id: '/afiliado/dashboard',
+    path: '/afiliado/dashboard',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/afiliar': typeof AfiliarRoute
   '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
   '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
@@ -166,6 +186,8 @@ export interface FileRoutesByFullPath {
   '/rotina': typeof AuthenticatedRotinaRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
+  '/promo/$slug': typeof PromoSlugRoute
+  '/afiliado/dashboard': typeof AuthenticatedAfiliadoDashboardRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
@@ -173,6 +195,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/afiliar': typeof AfiliarRoute
   '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
   '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
@@ -189,6 +212,8 @@ export interface FileRoutesByTo {
   '/rotina': typeof AuthenticatedRotinaRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
+  '/promo/$slug': typeof PromoSlugRoute
+  '/afiliado/dashboard': typeof AuthenticatedAfiliadoDashboardRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
@@ -198,6 +223,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/afiliar': typeof AfiliarRoute
   '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
   '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
@@ -214,6 +240,8 @@ export interface FileRoutesById {
   '/_authenticated/rotina': typeof AuthenticatedRotinaRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
+  '/promo/$slug': typeof PromoSlugRoute
+  '/_authenticated/afiliado/dashboard': typeof AuthenticatedAfiliadoDashboardRoute
   '/_authenticated/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/_authenticated/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
   '/_authenticated/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
@@ -223,6 +251,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/afiliar'
     | '/assinar'
     | '/auth'
     | '/exclusao-de-dados'
@@ -239,6 +268,8 @@ export interface FileRouteTypes {
     | '/rotina'
     | '/assinar/completar'
     | '/preview/$token'
+    | '/promo/$slug'
+    | '/afiliado/dashboard'
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
     | '/oauth/instagram-callback'
@@ -246,6 +277,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/afiliar'
     | '/assinar'
     | '/auth'
     | '/exclusao-de-dados'
@@ -262,6 +294,8 @@ export interface FileRouteTypes {
     | '/rotina'
     | '/assinar/completar'
     | '/preview/$token'
+    | '/promo/$slug'
+    | '/afiliado/dashboard'
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
     | '/oauth/instagram-callback'
@@ -270,6 +304,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/afiliar'
     | '/assinar'
     | '/auth'
     | '/exclusao-de-dados'
@@ -286,6 +321,8 @@ export interface FileRouteTypes {
     | '/_authenticated/rotina'
     | '/assinar/completar'
     | '/preview/$token'
+    | '/promo/$slug'
+    | '/_authenticated/afiliado/dashboard'
     | '/_authenticated/cliente/$clientId'
     | '/_authenticated/oauth/drive-callback'
     | '/_authenticated/oauth/instagram-callback'
@@ -295,6 +332,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AfiliarRoute: typeof AfiliarRoute
   AssinarRoute: typeof AssinarRouteWithChildren
   AuthRoute: typeof AuthRoute
   ExclusaoDeDadosRoute: typeof ExclusaoDeDadosRoute
@@ -303,6 +341,7 @@ export interface RootRouteChildren {
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   TermosRoute: typeof TermosRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
+  PromoSlugRoute: typeof PromoSlugRoute
   ApiCronPublishInstagramRoute: typeof ApiCronPublishInstagramRoute
 }
 
@@ -357,6 +396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssinarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/afiliar': {
+      id: '/afiliar'
+      path: '/afiliar'
+      fullPath: '/afiliar'
+      preLoaderRoute: typeof AfiliarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
@@ -369,6 +415,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/promo/$slug': {
+      id: '/promo/$slug'
+      path: '/promo/$slug'
+      fullPath: '/promo/$slug'
+      preLoaderRoute: typeof PromoSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/preview/$token': {
@@ -462,6 +515,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedClienteClientIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/afiliado/dashboard': {
+      id: '/_authenticated/afiliado/dashboard'
+      path: '/afiliado/dashboard'
+      fullPath: '/afiliado/dashboard'
+      preLoaderRoute: typeof AuthenticatedAfiliadoDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -473,6 +533,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedRotinaRoute: typeof AuthenticatedRotinaRoute
+  AuthenticatedAfiliadoDashboardRoute: typeof AuthenticatedAfiliadoDashboardRoute
   AuthenticatedClienteClientIdRoute: typeof AuthenticatedClienteClientIdRoute
   AuthenticatedOauthDriveCallbackRoute: typeof AuthenticatedOauthDriveCallbackRoute
   AuthenticatedOauthInstagramCallbackRoute: typeof AuthenticatedOauthInstagramCallbackRoute
@@ -486,6 +547,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedRotinaRoute: AuthenticatedRotinaRoute,
+  AuthenticatedAfiliadoDashboardRoute: AuthenticatedAfiliadoDashboardRoute,
   AuthenticatedClienteClientIdRoute: AuthenticatedClienteClientIdRoute,
   AuthenticatedOauthDriveCallbackRoute: AuthenticatedOauthDriveCallbackRoute,
   AuthenticatedOauthInstagramCallbackRoute:
@@ -509,6 +571,7 @@ const AssinarRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AfiliarRoute: AfiliarRoute,
   AssinarRoute: AssinarRouteWithChildren,
   AuthRoute: AuthRoute,
   ExclusaoDeDadosRoute: ExclusaoDeDadosRoute,
@@ -517,6 +580,7 @@ const rootRouteChildren: RootRouteChildren = {
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   TermosRoute: TermosRoute,
   PreviewTokenRoute: PreviewTokenRoute,
+  PromoSlugRoute: PromoSlugRoute,
   ApiCronPublishInstagramRoute: ApiCronPublishInstagramRoute,
 }
 export const routeTree = rootRouteImport
