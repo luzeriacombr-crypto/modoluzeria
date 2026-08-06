@@ -6,16 +6,17 @@ import { requireActiveProfile } from "./require-active";
 
 export const createPromotionCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
-  .handler(async (event, data: {
-    name: string;
-    code: string;
-    slug: string;
-    discountPercent: number;
-    description?: string;
-    validFrom?: string;
-    validUntil?: string;
-    maxUses?: number;
-  }) => {
+  .handler(async (event) => {
+    const data = event.data as {
+      name: string;
+      code: string;
+      slug: string;
+      discountPercent: number;
+      description?: string;
+      validFrom?: string;
+      validUntil?: string;
+      maxUses?: number;
+    };
     const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
@@ -57,16 +58,17 @@ export const createPromotionCode = createServerFn({ method: "POST" })
 
 export const updatePromotionCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
-  .handler(async (event, data: {
-    id: string;
-    name?: string;
-    discountPercent?: number;
-    description?: string;
-    validFrom?: string;
-    validUntil?: string;
-    maxUses?: number | null;
-    active?: boolean;
-  }) => {
+  .handler(async (event) => {
+    const data = event.data as {
+      id: string;
+      name?: string;
+      discountPercent?: number;
+      description?: string;
+      validFrom?: string;
+      validUntil?: string;
+      maxUses?: number | null;
+      active?: boolean;
+    };
     const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
@@ -117,7 +119,8 @@ export const listPromotionCodes = createServerFn({ method: "GET" })
   });
 
 export const getPromotionCodeBySlug = createServerFn({ method: "GET" })
-  .handler(async (event, data: { slug: string; orgId?: string }) => {
+  .handler(async (event) => {
+    const data = event.data as { slug: string; orgId?: string };
     // This is public - anyone can get promo code details by slug
     const { supabase } = event.context;
 
@@ -149,7 +152,8 @@ export const getPromotionCodeBySlug = createServerFn({ method: "GET" })
 
 export const deletePromotionCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
-  .handler(async (event, data: { id: string }) => {
+  .handler(async (event) => {
+    const data = event.data as { id: string };
     const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
@@ -171,11 +175,12 @@ export const deletePromotionCode = createServerFn({ method: "POST" })
 
 export const createAffiliateProgram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
-  .handler(async (event, data: {
-    referralCode: string;
-    commissionPercent?: number;
-    commissionValidMonths?: number;
-  }) => {
+  .handler(async (event) => {
+    const data = event.data as {
+      referralCode: string;
+      commissionPercent?: number;
+      commissionValidMonths?: number;
+    };
     const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
@@ -310,7 +315,8 @@ export const getAffiliateReferrals = createServerFn({ method: "GET" })
 
 export const markAffiliateCommissionAsPaid = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
-  .handler(async (event, data: { referralId: string }) => {
+  .handler(async (event) => {
+    const data = event.data as { referralId: string };
     const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
@@ -345,7 +351,8 @@ export const markAffiliateCommissionAsPaid = createServerFn({ method: "POST" })
 // ============ PUBLIC HELPERS ============
 
 export const validatePromotionCode = createServerFn({ method: "GET" })
-  .handler(async (event, data: { code: string }) => {
+  .handler(async (event) => {
+    const data = event.data as { code: string };
     const { supabase } = event.context;
 
     // Find promotion code by code (case-insensitive)
@@ -376,7 +383,8 @@ export const validatePromotionCode = createServerFn({ method: "GET" })
   });
 
 export const getAffiliateByReferralCode = createServerFn({ method: "GET" })
-  .handler(async (event, data: { referralCode: string }) => {
+  .handler(async (event) => {
+    const data = event.data as { referralCode: string };
     const { supabase } = event.context;
 
     const { data: affiliate, error } = await supabase
@@ -399,13 +407,14 @@ export const getAffiliateByReferralCode = createServerFn({ method: "GET" })
 
 export const recordPurchaseEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async (event, data: {
-    orgId: string;
-    planId: string;
-    promotionCodeId?: string;
-    affiliateReferralId?: string;
-    amountCents?: number;
-  }) => {
+  .handler(async (event) => {
+    const data = event.data as {
+      orgId: string;
+      planId: string;
+      promotionCodeId?: string;
+      affiliateReferralId?: string;
+      amountCents?: number;
+    };
     const { supabase } = event.context;
 
     const { data: purchase, error } = await supabase
@@ -426,10 +435,11 @@ export const recordPurchaseEvent = createServerFn({ method: "POST" })
 
 export const applyPromotionCodeToOrg = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
-  .handler(async (event, data: {
-    promotionCodeId: string;
-    orgId: string;
-  }) => {
+  .handler(async (event) => {
+    const data = event.data as {
+      promotionCodeId: string;
+      orgId: string;
+    };
     const { userId } = event.context as any;
     const { supabase } = event.context;
 
