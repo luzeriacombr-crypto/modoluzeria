@@ -108,51 +108,59 @@ export const publicSignup = createServerFn({ method: "POST" })
       const { error: resendErr } = await supabaseAdmin.auth.resend({ type: "signup", email: data.email });
       if (resendErr) console.error("Falha ao enviar e-mail de confirmação:", resendErr.message);
 
-      const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
-      const customer = await createAsaasCustomer({ name: data.agencyName.trim(), cpfCnpj: data.taxId, email: data.email });
-      const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
-        customerId: customer.id,
-        valueCents: plan.price_cents,
-        description: `Modo Criador — Plano ${plan.name}`,
-        billingType: "CREDIT_CARD",
-        trialDays: TRIAL_DAYS,
-      });
-
       let promotionCodeId: string | undefined;
       let affiliateReferralId: string | undefined;
+      let discountedValueCents = plan.price_cents;
 
-      // Resolve promotion code if provided
+      // Resolve promotion code if provided — must happen before the Asaas
+      // subscription is created so the discount actually reaches the charge.
       if (data.promoCode) {
         try {
           const { validatePromotionCode } = await import("./promotion-affiliate.functions");
-          const promo = await validatePromotionCode({ code: data.promoCode });
-          if (promo) promotionCodeId = promo.id;
+          const promo = await validatePromotionCode({ data: { code: data.promoCode } });
+          if (promo) {
+            promotionCodeId = promo.id;
+            discountedValueCents = Math.round(plan.price_cents * (1 - promo.discountPercent / 100));
+          }
         } catch (err) {
           console.error("Failed to validate promo code:", err);
         }
       }
 
-      // Resolve affiliate program and create referral if provided
+      // Resolve affiliate program (referral record is created after the
+      // user/org exist, further below).
+      let affiliateId: string | undefined;
       if (data.affiliateCode) {
         try {
           const { getAffiliateByReferralCode } = await import("./promotion-affiliate.functions");
-          const affiliate = await getAffiliateByReferralCode({ referralCode: data.affiliateCode });
-          if (affiliate) {
-            // Create affiliate referral record using the newly created user
-            const { data: referral, error: refErr } = await supabaseAdmin
-              .from("affiliate_referrals")
-              .insert({
-                affiliate_id: affiliate.id,
-                referred_user_id: created.user.id,
-                referred_org_id: org.id,
-              })
-              .select("id")
-              .single();
-            if (!refErr && referral) affiliateReferralId = referral.id;
-          }
+          const affiliate = await getAffiliateByReferralCode({ data: { referralCode: data.affiliateCode } });
+          if (affiliate) affiliateId = affiliate.id;
         } catch (err) {
           console.error("Failed to resolve affiliate code:", err);
         }
+      }
+
+      const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
+      const customer = await createAsaasCustomer({ name: data.agencyName.trim(), cpfCnpj: data.taxId, email: data.email });
+      const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
+        customerId: customer.id,
+        valueCents: discountedValueCents,
+        description: `Modo Criador — Plano ${plan.name}`,
+        billingType: "CREDIT_CARD",
+        trialDays: TRIAL_DAYS,
+      });
+
+      if (affiliateId) {
+        const { data: referral, error: refErr } = await supabaseAdmin
+          .from("affiliate_referrals")
+          .insert({
+            affiliate_id: affiliateId,
+            referred_user_id: created.user.id,
+            referred_org_id: org.id,
+          })
+          .select("id")
+          .single();
+        if (!refErr && referral) affiliateReferralId = referral.id;
       }
 
       await supabaseAdmin.from("orgs")
@@ -247,51 +255,59 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
       if (earErr) throw new Error(earErr.message);
       earInserted = true;
 
-      const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
-      const customer = await createAsaasCustomer({ name: data.agencyName.trim(), cpfCnpj: data.taxId, email });
-      const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
-        customerId: customer.id,
-        valueCents: plan.price_cents,
-        description: `Modo Criador — Plano ${plan.name}`,
-        billingType: "CREDIT_CARD",
-        trialDays: TRIAL_DAYS,
-      });
-
       let promotionCodeId: string | undefined;
       let affiliateReferralId: string | undefined;
+      let discountedValueCents = plan.price_cents;
 
-      // Resolve promotion code if provided
+      // Resolve promotion code if provided — must happen before the Asaas
+      // subscription is created so the discount actually reaches the charge.
       if (data.promoCode) {
         try {
           const { validatePromotionCode } = await import("./promotion-affiliate.functions");
-          const promo = await validatePromotionCode({ code: data.promoCode });
-          if (promo) promotionCodeId = promo.id;
+          const promo = await validatePromotionCode({ data: { code: data.promoCode } });
+          if (promo) {
+            promotionCodeId = promo.id;
+            discountedValueCents = Math.round(plan.price_cents * (1 - promo.discountPercent / 100));
+          }
         } catch (err) {
           console.error("Failed to validate promo code:", err);
         }
       }
 
-      // Resolve affiliate program and create referral if provided
+      // Resolve affiliate program (referral record is created after the
+      // user/org exist, further below).
+      let affiliateId: string | undefined;
       if (data.affiliateCode) {
         try {
           const { getAffiliateByReferralCode } = await import("./promotion-affiliate.functions");
-          const affiliate = await getAffiliateByReferralCode({ referralCode: data.affiliateCode });
-          if (affiliate) {
-            // Create affiliate referral record
-            const { data: referral, error: refErr } = await supabaseAdmin
-              .from("affiliate_referrals")
-              .insert({
-                affiliate_id: affiliate.id,
-                referred_user_id: context.userId,
-                referred_org_id: org.id,
-              })
-              .select("id")
-              .single();
-            if (!refErr && referral) affiliateReferralId = referral.id;
-          }
+          const affiliate = await getAffiliateByReferralCode({ data: { referralCode: data.affiliateCode } });
+          if (affiliate) affiliateId = affiliate.id;
         } catch (err) {
           console.error("Failed to resolve affiliate code:", err);
         }
+      }
+
+      const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
+      const customer = await createAsaasCustomer({ name: data.agencyName.trim(), cpfCnpj: data.taxId, email });
+      const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
+        customerId: customer.id,
+        valueCents: discountedValueCents,
+        description: `Modo Criador — Plano ${plan.name}`,
+        billingType: "CREDIT_CARD",
+        trialDays: TRIAL_DAYS,
+      });
+
+      if (affiliateId) {
+        const { data: referral, error: refErr } = await supabaseAdmin
+          .from("affiliate_referrals")
+          .insert({
+            affiliate_id: affiliateId,
+            referred_user_id: context.userId,
+            referred_org_id: org.id,
+          })
+          .select("id")
+          .single();
+        if (!refErr && referral) affiliateReferralId = referral.id;
       }
 
       await supabaseAdmin.from("orgs")
