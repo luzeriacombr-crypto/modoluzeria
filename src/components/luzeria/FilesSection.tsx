@@ -48,31 +48,80 @@ function FileThumb({ fileId, mime, name }: { fileId: string; mime?: string | nul
 
 const MAX_UPLOAD_BYTES = 500 * 1024 * 1024; // 500 MB — direct-to-Drive, bypasses Vercel's request body limit
 
-/** PUTs the file straight to the Drive resumable-upload session URL — never
- * touches our server, so it isn't subject to Vercel's 4.5 MB body limit.
- * Uses XHR (not fetch) so we get upload progress events. */
-function putToUploadUrl(uploadUrl: string, file: File, onProgress: (pct: number) => void): Promise<{ id: string }> {
+/** One PUT attempt against the Drive resumable-upload session URL, starting
+ * at `startByte` (0 for a fresh attempt, >0 to resume after an interruption).
+ * Resolves with the created file's metadata on success (2xx), `null` if
+ * Drive reports the upload incomplete (308 — caller should resume), or
+ * rejects with a message that includes Drive's actual response body so
+ * failures are diagnosable instead of a bare status code. */
+function attemptPut(uploadUrl: string, file: File, startByte: number, onProgress: (pct: number) => void): Promise<{ id: string } | null> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", uploadUrl, true);
-    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    if (startByte > 0) {
+      xhr.setRequestHeader("Content-Range", `bytes ${startByte}-${file.size - 1}/${file.size}`);
+    } else {
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    }
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      if (e.lengthComputable) onProgress(Math.round(((startByte + e.loaded) / file.size) * 100));
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           resolve(JSON.parse(xhr.responseText));
         } catch {
-          reject(new Error("Resposta inválida do Drive."));
+          reject(new Error(`Resposta inválida do Drive: ${xhr.responseText?.slice(0, 200) || "(vazia)"}`));
         }
+      } else if (xhr.status === 308) {
+        resolve(null); // incomplete — caller resumes from the confirmed offset
       } else {
-        reject(new Error(`Upload falhou (${xhr.status}).`));
+        reject(new Error(`Upload falhou (${xhr.status} ${xhr.statusText}): ${xhr.responseText?.slice(0, 240) || "sem detalhes"}`));
       }
     };
     xhr.onerror = () => reject(new Error("Falha de rede durante o upload."));
-    xhr.send(file);
+    xhr.send(startByte > 0 ? file.slice(startByte) : file);
   });
+}
+
+/** Asks Drive how many bytes of this session it has actually received, per
+ * the resumable-upload protocol (empty PUT with Content-Range: bytes *\/size). */
+function queryUploadedBytes(uploadUrl: string, fileSize: number): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", uploadUrl, true);
+    xhr.setRequestHeader("Content-Range", `bytes */${fileSize}`);
+    xhr.onload = () => {
+      if (xhr.status === 308) {
+        const range = xhr.getResponseHeader("Range");
+        resolve(range ? parseInt(range.split("-")[1], 10) + 1 : 0);
+      } else if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(fileSize);
+      } else {
+        reject(new Error(`Não foi possível verificar o progresso do upload (${xhr.status}).`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Falha de rede ao verificar progresso do upload."));
+    xhr.send();
+  });
+}
+
+/** PUTs the file straight to the Drive resumable-upload session URL — never
+ * touches our server, so it isn't subject to Vercel's 4.5 MB body limit.
+ * Resumes automatically (querying the confirmed offset) if a single attempt
+ * gets interrupted partway through, which matters most for large videos on
+ * flaky connections. */
+async function putToUploadUrl(uploadUrl: string, file: File, onProgress: (pct: number) => void): Promise<{ id: string }> {
+  let result = await attemptPut(uploadUrl, file, 0, onProgress);
+  let retries = 0;
+  while (result === null && retries < 5) {
+    retries++;
+    const uploadedBytes = await queryUploadedBytes(uploadUrl, file.size);
+    if (uploadedBytes >= file.size) break;
+    result = await attemptPut(uploadUrl, file, uploadedBytes, onProgress);
+  }
+  if (!result) throw new Error("Não foi possível concluir o upload após várias tentativas — tente novamente.");
+  return result;
 }
 
 export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; canEdit: boolean; clientId?: string | null }) {
@@ -158,7 +207,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
     if (toUpload.length === 0) return;
 
     setUploadProgress({ done: 0, total: toUpload.length, pct: 0 });
-    const failed: string[] = [];
+    const failed: { name: string; msg: string }[] = [];
     for (const file of toUpload) {
       try {
         const { uploadUrl } = await createDriveUploadSession.mutateAsync({
@@ -179,12 +228,12 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
           setMissingClientId(p.clientId);
           break;
         }
-        failed.push(file.name);
+        failed.push({ name: file.name, msg: p.msg });
       }
     }
     setUploadProgress(null);
     if (failed.length > 0) {
-      setError(`Falha ao enviar: ${failed.join(", ")}`);
+      setError(failed.map((f) => `${f.name}: ${f.msg}`).join(" | "));
     }
   }
 
