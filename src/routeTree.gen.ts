@@ -9,9 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as MfaRouteImport } from './routes/mfa'
+import { Route as ExclusaoDeDadosRouteImport } from './routes/exclusao-de-dados'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -30,6 +32,11 @@ import { Route as AuthenticatedOauthInstagramCallbackRouteImport } from './route
 import { Route as AuthenticatedOauthDriveCallbackRouteImport } from './routes/_authenticated/oauth.drive-callback'
 import { Route as AuthenticatedClienteClientIdRouteImport } from './routes/_authenticated/cliente.$clientId'
 
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
   id: '/redefinir-senha',
   path: '/redefinir-senha',
@@ -43,6 +50,11 @@ const PrivacidadeRoute = PrivacidadeRouteImport.update({
 const MfaRoute = MfaRouteImport.update({
   id: '/mfa',
   path: '/mfa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExclusaoDeDadosRoute = ExclusaoDeDadosRouteImport.update({
+  id: '/exclusao-de-dados',
+  path: '/exclusao-de-dados',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -140,9 +152,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
+  '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -161,9 +175,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
+  '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -184,9 +200,11 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
+  '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/termos': typeof TermosRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/ajuda': typeof AuthenticatedAjudaRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -207,9 +225,11 @@ export interface FileRouteTypes {
     | '/'
     | '/assinar'
     | '/auth'
+    | '/exclusao-de-dados'
     | '/mfa'
     | '/privacidade'
     | '/redefinir-senha'
+    | '/termos'
     | '/admin'
     | '/ajuda'
     | '/configuracoes'
@@ -228,9 +248,11 @@ export interface FileRouteTypes {
     | '/'
     | '/assinar'
     | '/auth'
+    | '/exclusao-de-dados'
     | '/mfa'
     | '/privacidade'
     | '/redefinir-senha'
+    | '/termos'
     | '/admin'
     | '/ajuda'
     | '/configuracoes'
@@ -250,9 +272,11 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/assinar'
     | '/auth'
+    | '/exclusao-de-dados'
     | '/mfa'
     | '/privacidade'
     | '/redefinir-senha'
+    | '/termos'
     | '/_authenticated/admin'
     | '/_authenticated/ajuda'
     | '/_authenticated/configuracoes'
@@ -273,15 +297,24 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AssinarRoute: typeof AssinarRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ExclusaoDeDadosRoute: typeof ExclusaoDeDadosRoute
   MfaRoute: typeof MfaRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
+  TermosRoute: typeof TermosRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
   ApiCronPublishInstagramRoute: typeof ApiCronPublishInstagramRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/redefinir-senha': {
       id: '/redefinir-senha'
       path: '/redefinir-senha'
@@ -301,6 +334,13 @@ declare module '@tanstack/react-router' {
       path: '/mfa'
       fullPath: '/mfa'
       preLoaderRoute: typeof MfaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exclusao-de-dados': {
+      id: '/exclusao-de-dados'
+      path: '/exclusao-de-dados'
+      fullPath: '/exclusao-de-dados'
+      preLoaderRoute: typeof ExclusaoDeDadosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -471,9 +511,11 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AssinarRoute: AssinarRouteWithChildren,
   AuthRoute: AuthRoute,
+  ExclusaoDeDadosRoute: ExclusaoDeDadosRoute,
   MfaRoute: MfaRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
+  TermosRoute: TermosRoute,
   PreviewTokenRoute: PreviewTokenRoute,
   ApiCronPublishInstagramRoute: ApiCronPublishInstagramRoute,
 }
