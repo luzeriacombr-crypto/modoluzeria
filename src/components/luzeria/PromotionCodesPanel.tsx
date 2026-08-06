@@ -12,7 +12,6 @@ import {
 } from "@/lib/luzeria/promotion-affiliate.functions";
 
 export function PromotionCodesPanel() {
-  console.log("PromotionCodesPanel rendering");
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

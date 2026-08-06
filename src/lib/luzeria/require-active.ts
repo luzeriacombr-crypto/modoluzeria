@@ -18,5 +18,5 @@ export const requireActiveProfile = createMiddleware({ type: "function" })
     if (!data || data.active !== true) {
       throw new Error("Unauthorized: account pending approval or deactivated");
     }
-    return next({ context: { orgId: data.org_id as string } });
+    return next({ context: { ...context, orgId: data.org_id as string } });
   });

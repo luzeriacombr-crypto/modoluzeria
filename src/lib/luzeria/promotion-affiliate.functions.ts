@@ -16,7 +16,7 @@ export const createPromotionCode = createServerFn()
     validUntil?: string;
     maxUses?: number;
   }) => {
-    const { orgId, userId } = event.context.auth;
+    const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
     // Validate is_master
@@ -67,7 +67,7 @@ export const updatePromotionCode = createServerFn()
     maxUses?: number | null;
     active?: boolean;
   }) => {
-    const { orgId, userId } = event.context.auth;
+    const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
     // Validate is_master
@@ -99,7 +99,7 @@ export const updatePromotionCode = createServerFn()
 export const listPromotionCodes = createServerFn()
   .middleware([requireSupabaseAuth, requireActiveProfile])
   .handler(async (event) => {
-    const { orgId, userId } = event.context.auth;
+    const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
     // Validate is_master
@@ -150,7 +150,7 @@ export const getPromotionCodeBySlug = createServerFn()
 export const deletePromotionCode = createServerFn()
   .middleware([requireSupabaseAuth, requireActiveProfile])
   .handler(async (event, data: { id: string }) => {
-    const { orgId, userId } = event.context.auth;
+    const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
     // Validate is_master
@@ -176,7 +176,7 @@ export const createAffiliateProgram = createServerFn()
     commissionPercent?: number;
     commissionValidMonths?: number;
   }) => {
-    const { orgId, userId } = event.context.auth;
+    const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
     // Validate referral code format
@@ -209,7 +209,7 @@ export const createAffiliateProgram = createServerFn()
 export const getMyAffiliateProgram = createServerFn()
   .middleware([requireSupabaseAuth, requireActiveProfile])
   .handler(async (event) => {
-    const { orgId, userId } = event.context.auth;
+    const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
     const { data, error } = await supabase
@@ -226,7 +226,7 @@ export const getMyAffiliateProgram = createServerFn()
 export const listAffiliatePrograms = createServerFn()
   .middleware([requireSupabaseAuth, requireActiveProfile])
   .handler(async (event) => {
-    const { orgId, userId } = event.context.auth;
+    const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
     // Validate is_master
@@ -246,7 +246,7 @@ export const listAffiliatePrograms = createServerFn()
 export const getAffiliateStats = createServerFn()
   .middleware([requireSupabaseAuth, requireActiveProfile])
   .handler(async (event) => {
-    const { userId } = event.context.auth;
+    const { userId } = event.context as any;
     const { supabase } = event.context;
 
     // Get affiliate program
@@ -285,7 +285,7 @@ export const getAffiliateStats = createServerFn()
 export const getAffiliateReferrals = createServerFn()
   .middleware([requireSupabaseAuth, requireActiveProfile])
   .handler(async (event) => {
-    const { userId } = event.context.auth;
+    const { userId } = event.context as any;
     const { supabase } = event.context;
 
     // Get affiliate program
@@ -311,7 +311,7 @@ export const getAffiliateReferrals = createServerFn()
 export const markAffiliateCommissionAsPaid = createServerFn()
   .middleware([requireSupabaseAuth, requireActiveProfile])
   .handler(async (event, data: { referralId: string }) => {
-    const { orgId, userId } = event.context.auth;
+    const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
     // Validate is_master
@@ -430,7 +430,7 @@ export const applyPromotionCodeToOrg = createServerFn()
     promotionCodeId: string;
     orgId: string;
   }) => {
-    const { userId } = event.context.auth;
+    const { userId } = event.context as any;
     const { supabase } = event.context;
 
     // Validate is_master
@@ -450,7 +450,7 @@ export const applyPromotionCodeToOrg = createServerFn()
 export const listOrgsForPromotion = createServerFn()
   .middleware([requireSupabaseAuth, requireActiveProfile])
   .handler(async (event) => {
-    const { orgId: currentOrgId, userId } = event.context.auth;
+    const { orgId: currentOrgId, userId } = event.context as any;
     const { supabase } = event.context;
 
     // Validate is_master
