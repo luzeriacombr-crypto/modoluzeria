@@ -535,6 +535,54 @@ export const attachDriveFile = createServerFn({ method: "POST" })
 
 /* ============== UPLOAD ============== */
 
+/** Starts a Google Drive resumable upload session and hands the client the
+ * session URL to PUT the file bytes to directly — the file itself never
+ * passes through our server, so it isn't subject to Vercel's 4.5 MB request
+ * body limit. Once the client-side PUT finishes, call attachDriveFile with
+ * the returned file id to register it on the item like any other file. */
+export const createDriveUploadSession = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; name: string; mimeType: string; sizeBytes: number }) =>
+    z.object({
+      itemId: z.string().uuid(),
+      name: z.string().min(1).max(255),
+      mimeType: z.string().min(1).max(200),
+      sizeBytes: z.number().int().positive().max(500 * 1024 * 1024), // 500 MB ceiling
+    }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    await assertCanWrite(context.supabase, context.userId, data.itemId);
+
+    // Uploads require the client's deliveries folder to be configured;
+    // this throws DELIVERIES_FOLDER_MISSING when it isn't.
+    const targetParentId = await resolveTargetFolderForItem(
+      context.supabase, context.userId, data.itemId, {},
+    );
+
+    const metadata: any = { name: data.name, mimeType: data.mimeType };
+    if (targetParentId) metadata.parents = [targetParentId];
+
+    const res = await fetch(
+      `${UPLOAD_BASE}/files?uploadType=resumable&supportsAllDrives=true&fields=${encodeURIComponent(DRIVE_FIELDS)}`,
+      {
+        method: "POST",
+        headers: {
+          ...await driveHeaders(),
+          "Content-Type": "application/json; charset=UTF-8",
+          "X-Upload-Content-Type": data.mimeType,
+          "X-Upload-Content-Length": String(data.sizeBytes),
+        },
+        body: JSON.stringify(metadata),
+      },
+    );
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Não foi possível iniciar o upload (${res.status}): ${txt.slice(0, 240)}`);
+    }
+    const uploadUrl = res.headers.get("Location");
+    if (!uploadUrl) throw new Error("O Drive não retornou uma URL de upload.");
+    return { uploadUrl };
+  }));
+
 export const uploadDriveFile = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: {

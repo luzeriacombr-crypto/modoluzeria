@@ -46,24 +46,38 @@ function FileThumb({ fileId, mime, name }: { fileId: string; mime?: string | nul
   );
 }
 
-function fileToBase64(file: File): Promise<string> {
+const MAX_UPLOAD_BYTES = 500 * 1024 * 1024; // 500 MB — direct-to-Drive, bypasses Vercel's request body limit
+
+/** PUTs the file straight to the Drive resumable-upload session URL — never
+ * touches our server, so it isn't subject to Vercel's 4.5 MB body limit.
+ * Uses XHR (not fetch) so we get upload progress events. */
+function putToUploadUrl(uploadUrl: string, file: File, onProgress: (pct: number) => void): Promise<{ id: string }> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const idx = result.indexOf(",");
-      resolve(idx >= 0 ? result.slice(idx + 1) : result);
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", uploadUrl, true);
+    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          reject(new Error("Resposta inválida do Drive."));
+        }
+      } else {
+        reject(new Error(`Upload falhou (${xhr.status}).`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Falha de rede durante o upload."));
+    xhr.send(file);
   });
 }
 
-const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
-
 export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; canEdit: boolean; clientId?: string | null }) {
   const { data: files = [], isLoading } = useQuery(itemFilesQO(itemId));
-  const { attachDriveFile, uploadDriveFile, detachItemFile, reorderItemFiles } = useApi();
+  const { attachDriveFile, createDriveUploadSession, detachItemFile, reorderItemFiles } = useApi();
   const me = useMe().data;
   const { openFicha } = useUI();
 
@@ -71,7 +85,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
   const [linkValue, setLinkValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [missingClientId, setMissingClientId] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number; pct: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Local optimistic order (array of file ids). Synced from server data.
@@ -137,26 +151,28 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
     if (tooBig.length > 0) {
       setError(
         tooBig.length === selected.length
-          ? `Arquivo${tooBig.length > 1 ? "s" : ""} grande${tooBig.length > 1 ? "s" : ""} demais (máx. 25 MB). Faça upload direto no Drive e cole o link.`
-          : `${tooBig.length} arquivo(s) ignorado(s) por serem grandes demais (máx. 25 MB): ${tooBig.map((f) => f.name).join(", ")}`,
+          ? `Arquivo${tooBig.length > 1 ? "s" : ""} grande${tooBig.length > 1 ? "s" : ""} demais (máx. 500 MB).`
+          : `${tooBig.length} arquivo(s) ignorado(s) por serem grandes demais (máx. 500 MB): ${tooBig.map((f) => f.name).join(", ")}`,
       );
     }
     if (toUpload.length === 0) return;
 
-    setUploadProgress({ done: 0, total: toUpload.length });
+    setUploadProgress({ done: 0, total: toUpload.length, pct: 0 });
     const failed: string[] = [];
     for (const file of toUpload) {
       try {
-        const base64 = await fileToBase64(file);
-        await uploadDriveFile.mutateAsync({
+        const { uploadUrl } = await createDriveUploadSession.mutateAsync({
           data: {
             itemId,
             name: file.name,
             mimeType: file.type || "application/octet-stream",
-            base64,
+            sizeBytes: file.size,
           },
         });
-        setUploadProgress((p) => (p ? { ...p, done: p.done + 1 } : p));
+        const uploaded = await putToUploadUrl(uploadUrl, file, (pct) =>
+          setUploadProgress((p) => (p ? { ...p, pct } : p)));
+        await attachDriveFile.mutateAsync({ data: { itemId, fileIdOrUrl: uploaded.id } });
+        setUploadProgress((p) => (p ? { done: p.done + 1, total: p.total, pct: 0 } : p));
       } catch (err: any) {
         const p = parseDriveError(err?.message);
         if (p.kind === "missing") {
@@ -188,7 +204,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
     }
   }
 
-  const busy = uploadProgress !== null || uploadDriveFile.isPending || attachDriveFile.isPending;
+  const busy = uploadProgress !== null || createDriveUploadSession.isPending || attachDriveFile.isPending;
 
   return (
     <div>
@@ -302,7 +318,11 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
               ) : (
                 <Upload size={12} />
               )}
-              {uploadProgress ? `Enviando ${uploadProgress.done}/${uploadProgress.total}...` : "Enviar arquivo"}
+              {uploadProgress
+                ? uploadProgress.total > 1
+                  ? `Enviando ${uploadProgress.done + 1}/${uploadProgress.total} (${uploadProgress.pct}%)...`
+                  : `Enviando... ${uploadProgress.pct}%`
+                : "Enviar arquivo"}
             </button>
             <button
               type="button"
@@ -372,7 +392,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
 
       <p className="text-[10px] text-white/40 mt-2 leading-relaxed">
         Arquivos ficam armazenados no Google Drive da agência. Você pode selecionar vários de uma vez;
-        upload direto até 25 MB por arquivo — para arquivos maiores, faça upload no Drive e cole o link aqui.
+        upload direto até 500 MB por arquivo — ideal pra vídeos de Reels. Para arquivos maiores, faça upload no Drive e cole o link aqui.
       </p>
     </div>
   );
