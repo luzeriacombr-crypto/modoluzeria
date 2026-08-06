@@ -27,7 +27,7 @@ const TRIAL_DAYS = 7;
 export const publicSignup = createServerFn({ method: "POST" })
   .inputValidator((d: {
     agencyName: string; name: string; email: string; password: string;
-    planId: string; taxId: string; website?: string;
+    planId: string; taxId: string; website?: string; promoCode?: string; affiliateCode?: string;
   }) =>
     z.object({
       agencyName: z.string().trim().min(2).max(80),
@@ -37,6 +37,8 @@ export const publicSignup = createServerFn({ method: "POST" })
       planId: z.string().min(1),
       taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/, "CNPJ ou CPF inválido."),
       website: z.string().max(0).optional().or(z.literal("")), // honeypot — must stay empty
+      promoCode: z.string().optional(),
+      affiliateCode: z.string().optional(),
     }).parse(d))
   .handler(async ({ data }) => {
     if (data.website) {
@@ -116,8 +118,50 @@ export const publicSignup = createServerFn({ method: "POST" })
         trialDays: TRIAL_DAYS,
       });
 
+      let promotionCodeId: string | undefined;
+      let affiliateReferralId: string | undefined;
+
+      // Resolve promotion code if provided
+      if (data.promoCode) {
+        try {
+          const { validatePromotionCode } = await import("./promotion-affiliate.functions");
+          const promo = await validatePromotionCode({ code: data.promoCode });
+          if (promo) promotionCodeId = promo.id;
+        } catch (err) {
+          console.error("Failed to validate promo code:", err);
+        }
+      }
+
+      // Resolve affiliate program and create referral if provided
+      if (data.affiliateCode) {
+        try {
+          const { getAffiliateByReferralCode } = await import("./promotion-affiliate.functions");
+          const affiliate = await getAffiliateByReferralCode({ referralCode: data.affiliateCode });
+          if (affiliate) {
+            // Create affiliate referral record using the newly created user
+            const { data: referral, error: refErr } = await supabaseAdmin
+              .from("affiliate_referrals")
+              .insert({
+                affiliate_id: affiliate.id,
+                referred_user_id: created.user.id,
+                referred_org_id: org.id,
+              })
+              .select("id")
+              .single();
+            if (!refErr && referral) affiliateReferralId = referral.id;
+          }
+        } catch (err) {
+          console.error("Failed to resolve affiliate code:", err);
+        }
+      }
+
       await supabaseAdmin.from("orgs")
-        .update({ asaas_customer_id: customer.id, asaas_subscription_id: subscriptionId })
+        .update({
+          asaas_customer_id: customer.id,
+          asaas_subscription_id: subscriptionId,
+          promotion_code_id: promotionCodeId,
+          affiliate_referral_id: affiliateReferralId,
+        })
         .eq("id", org.id);
 
       return { invoiceUrl };
@@ -145,12 +189,14 @@ export const publicSignup = createServerFn({ method: "POST" })
  * activates that existing profile into it instead of creating a new user. */
 export const completeGoogleSignup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { agencyName: string; name: string; taxId: string; planId: string }) =>
+  .inputValidator((d: { agencyName: string; name: string; taxId: string; planId: string; promoCode?: string; affiliateCode?: string }) =>
     z.object({
       agencyName: z.string().trim().min(2).max(80),
       name: z.string().trim().min(2).max(80),
       taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/, "CNPJ ou CPF inválido."),
       planId: z.string().min(1),
+      promoCode: z.string().optional(),
+      affiliateCode: z.string().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const email = (context.claims.email as string | undefined)?.toLowerCase();
@@ -211,8 +257,50 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
         trialDays: TRIAL_DAYS,
       });
 
+      let promotionCodeId: string | undefined;
+      let affiliateReferralId: string | undefined;
+
+      // Resolve promotion code if provided
+      if (data.promoCode) {
+        try {
+          const { validatePromotionCode } = await import("./promotion-affiliate.functions");
+          const promo = await validatePromotionCode({ code: data.promoCode });
+          if (promo) promotionCodeId = promo.id;
+        } catch (err) {
+          console.error("Failed to validate promo code:", err);
+        }
+      }
+
+      // Resolve affiliate program and create referral if provided
+      if (data.affiliateCode) {
+        try {
+          const { getAffiliateByReferralCode } = await import("./promotion-affiliate.functions");
+          const affiliate = await getAffiliateByReferralCode({ referralCode: data.affiliateCode });
+          if (affiliate) {
+            // Create affiliate referral record
+            const { data: referral, error: refErr } = await supabaseAdmin
+              .from("affiliate_referrals")
+              .insert({
+                affiliate_id: affiliate.id,
+                referred_user_id: context.userId,
+                referred_org_id: org.id,
+              })
+              .select("id")
+              .single();
+            if (!refErr && referral) affiliateReferralId = referral.id;
+          }
+        } catch (err) {
+          console.error("Failed to resolve affiliate code:", err);
+        }
+      }
+
       await supabaseAdmin.from("orgs")
-        .update({ asaas_customer_id: customer.id, asaas_subscription_id: subscriptionId })
+        .update({
+          asaas_customer_id: customer.id,
+          asaas_subscription_id: subscriptionId,
+          promotion_code_id: promotionCodeId,
+          affiliate_referral_id: affiliateReferralId,
+        })
         .eq("id", org.id);
 
       const { error: profileErr } = await supabaseAdmin.from("profiles")

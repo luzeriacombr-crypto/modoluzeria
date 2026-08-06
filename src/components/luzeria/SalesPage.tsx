@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import {
   Rocket, CalendarDays, Users, Link2, FolderOpen, Check, X, ChevronDown, Zap, Lock,
 } from "lucide-react";
@@ -53,6 +53,11 @@ const STEPS = [
 ];
 
 export function SalesPage() {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const promoCode = searchParams.get("promoCode") || undefined;
+  const affiliateCode = searchParams.get("affiliateCode") || undefined;
+
   const plans = useQuery({ queryKey: ["public-plans"], queryFn: () => getPublicPlans() });
   const signup = useServerFn(publicSignup);
 
@@ -84,7 +89,11 @@ export function SalesPage() {
     setError(null);
     try {
       const r = await signup({
-        data: { agencyName, name, email, password, planId, taxId: taxId.replace(/\D/g, ""), website },
+        data: {
+          agencyName, name, email, password, planId, taxId: taxId.replace(/\D/g, ""), website,
+          promoCode,
+          affiliateCode,
+        },
       });
       setInvoiceUrl(r.invoiceUrl);
       if (r.invoiceUrl) window.open(r.invoiceUrl, "_blank");
@@ -107,6 +116,8 @@ export function SalesPage() {
     try {
       sessionStorage.setItem(PENDING_GOOGLE_SIGNUP_KEY, JSON.stringify({
         agencyName, name, taxId: taxId.replace(/\D/g, ""), planId,
+        promoCode,
+        affiliateCode,
       }));
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
         provider: "google",
