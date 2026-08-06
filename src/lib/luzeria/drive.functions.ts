@@ -535,19 +535,27 @@ export const attachDriveFile = createServerFn({ method: "POST" })
 
 /* ============== UPLOAD ============== */
 
-/** Starts a Google Drive resumable upload session and hands the client the
- * session URL to PUT the file bytes to directly — the file itself never
- * passes through our server, so it isn't subject to Vercel's 4.5 MB request
- * body limit. Once the client-side PUT finishes, call attachDriveFile with
- * the returned file id to register it on the item like any other file. */
-export const createDriveUploadSession = createServerFn({ method: "POST" })
+/** Google Drive's upload API doesn't support direct browser uploads (no
+ * CORS on googleapis.com's upload endpoints — confirmed live, not assumed),
+ * so large files can't go straight from the browser to Drive the way they
+ * can to Supabase Storage. Two-step flow instead: the browser PUTs the file
+ * to the `item-uploads-temp` Supabase bucket directly (see FilesSection.tsx),
+ * then calls this to relay it into Drive. To fit Vercel Hobby's 10s function
+ * duration limit for anything but small files, the download (from Supabase)
+ * and upload (to Drive) are piped together as one stream instead of done
+ * sequentially — Drive receives bytes as Supabase serves them, roughly
+ * halving the time versus buffering the whole file twice. Still not a
+ * guarantee for very large files on a slow connection between the two
+ * services; if it times out the file simply stays in the temp bucket
+ * (nothing is lost) and the user can retry. */
+export const syncUploadToDrive = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { itemId: string; name: string; mimeType: string; sizeBytes: number }) =>
+  .inputValidator((d: { itemId: string; storagePath: string; name: string; mimeType: string }) =>
     z.object({
       itemId: z.string().uuid(),
+      storagePath: z.string().min(1).max(500),
       name: z.string().min(1).max(255),
       mimeType: z.string().min(1).max(200),
-      sizeBytes: z.number().int().positive().max(500 * 1024 * 1024), // 500 MB ceiling
     }).parse(d))
   .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     await assertCanWrite(context.supabase, context.userId, data.itemId);
@@ -558,10 +566,21 @@ export const createDriveUploadSession = createServerFn({ method: "POST" })
       context.supabase, context.userId, data.itemId, {},
     );
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: signed, error: signErr } = await supabaseAdmin.storage
+      .from("item-uploads-temp")
+      .createSignedUrl(data.storagePath, 300);
+    if (signErr || !signed?.signedUrl) throw new Error("Não foi possível acessar o arquivo enviado.");
+
+    const downloadRes = await fetch(signed.signedUrl);
+    if (!downloadRes.ok || !downloadRes.body) {
+      throw new Error(`Falha ao ler o arquivo enviado (${downloadRes.status}).`);
+    }
+
     const metadata: any = { name: data.name, mimeType: data.mimeType };
     if (targetParentId) metadata.parents = [targetParentId];
 
-    const res = await fetch(
+    const sessionRes = await fetch(
       `${UPLOAD_BASE}/files?uploadType=resumable&supportsAllDrives=true&fields=${encodeURIComponent(DRIVE_FIELDS)}`,
       {
         method: "POST",
@@ -569,18 +588,51 @@ export const createDriveUploadSession = createServerFn({ method: "POST" })
           ...await driveHeaders(),
           "Content-Type": "application/json; charset=UTF-8",
           "X-Upload-Content-Type": data.mimeType,
-          "X-Upload-Content-Length": String(data.sizeBytes),
         },
         body: JSON.stringify(metadata),
       },
     );
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      throw new Error(`Não foi possível iniciar o upload (${res.status}): ${txt.slice(0, 240)}`);
+    if (!sessionRes.ok) {
+      const txt = await sessionRes.text().catch(() => "");
+      throw new Error(`Não foi possível iniciar o envio pro Drive (${sessionRes.status}): ${txt.slice(0, 240)}`);
     }
-    const uploadUrl = res.headers.get("Location");
+    const uploadUrl = sessionRes.headers.get("Location");
     if (!uploadUrl) throw new Error("O Drive não retornou uma URL de upload.");
-    return { uploadUrl };
+
+    const uploadRes = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": data.mimeType },
+      body: downloadRes.body,
+      // @ts-expect-error - Node's fetch requires `duplex` to stream a body; not in the TS lib yet.
+      duplex: "half",
+    });
+    if (!uploadRes.ok) {
+      const txt = await uploadRes.text().catch(() => "");
+      throw new Error(`O Drive recusou o arquivo (${uploadRes.status}): ${txt.slice(0, 240)}`);
+    }
+    const meta: any = await uploadRes.json();
+
+    const row = {
+      item_id: data.itemId,
+      drive_file_id: meta.id,
+      name: meta.name ?? data.name,
+      mime_type: meta.mimeType ?? data.mimeType,
+      icon_url: meta.iconLink ?? null,
+      thumbnail_url: meta.thumbnailLink ?? null,
+      web_view_url: meta.webViewLink ?? `https://drive.google.com/file/d/${meta.id}/view`,
+      size_bytes: meta.size ? Number(meta.size) : null,
+      added_by: context.userId,
+      sort_order: 0,
+    };
+    const { error } = await context.supabase
+      .from("item_files")
+      .upsert(row, { onConflict: "item_id,drive_file_id" });
+    if (error) throw new Error(error.message);
+
+    await syncLegacyDriveLink(context.supabase, data.itemId);
+    await supabaseAdmin.storage.from("item-uploads-temp").remove([data.storagePath]).catch(() => {});
+
+    return { ok: true, file: { id: meta.id, name: row.name } };
   }));
 
 export const uploadDriveFile = createServerFn({ method: "POST" })

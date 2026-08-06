@@ -6,6 +6,11 @@ import {
 } from "lucide-react";
 import { itemFilesQO, driveThumbnailQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
+import { supabase } from "@/integrations/supabase/client";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+const UPLOAD_BUCKET = "item-uploads-temp";
 
 function formatSize(n: number | null | undefined) {
   if (!n || n <= 0) return "";
@@ -46,87 +51,41 @@ function FileThumb({ fileId, mime, name }: { fileId: string; mime?: string | nul
   );
 }
 
-const MAX_UPLOAD_BYTES = 500 * 1024 * 1024; // 500 MB — direct-to-Drive, bypasses Vercel's request body limit
+const MAX_UPLOAD_BYTES = 500 * 1024 * 1024; // 500 MB — Supabase Storage has no meaningful ceiling for our use case
 
-/** One PUT attempt against the Drive resumable-upload session URL, starting
- * at `startByte` (0 for a fresh attempt, >0 to resume after an interruption).
- * Resolves with the created file's metadata on success (2xx), `null` if
- * Drive reports the upload incomplete (308 — caller should resume), or
- * rejects with a message that includes Drive's actual response body so
- * failures are diagnosable instead of a bare status code. */
-function attemptPut(uploadUrl: string, file: File, startByte: number, onProgress: (pct: number) => void): Promise<{ id: string } | null> {
+/** PUTs the file straight to Supabase Storage's REST endpoint — unlike
+ * Google Drive's upload API (confirmed: no CORS support for third-party
+ * origins), Supabase Storage is built for exactly this direct-from-browser
+ * use case, so it isn't subject to Vercel's 4.5 MB request-body limit
+ * either. Uses XHR (not fetch) for real upload-progress events. The file
+ * lands in a temp bucket; a server call then relays it into the org's
+ * Drive (see syncUploadToDrive). */
+function putToSupabaseStorage(path: string, file: File, accessToken: string, onProgress: (pct: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("PUT", uploadUrl, true);
-    if (startByte > 0) {
-      xhr.setRequestHeader("Content-Range", `bytes ${startByte}-${file.size - 1}/${file.size}`);
-    } else {
-      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-    }
+    xhr.open("PUT", `${SUPABASE_URL}/storage/v1/object/${UPLOAD_BUCKET}/${encodeURIComponent(path).replace(/%2F/g, "/")}`, true);
+    xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+    xhr.setRequestHeader("apikey", SUPABASE_PUBLISHABLE_KEY);
+    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    xhr.setRequestHeader("x-upsert", "true");
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round(((startByte + e.loaded) / file.size) * 100));
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          resolve(JSON.parse(xhr.responseText));
-        } catch {
-          reject(new Error(`Resposta inválida do Drive: ${xhr.responseText?.slice(0, 200) || "(vazia)"}`));
-        }
-      } else if (xhr.status === 308) {
-        resolve(null); // incomplete — caller resumes from the confirmed offset
+        resolve();
       } else {
         reject(new Error(`Upload falhou (${xhr.status} ${xhr.statusText}): ${xhr.responseText?.slice(0, 240) || "sem detalhes"}`));
       }
     };
     xhr.onerror = () => reject(new Error("Falha de rede durante o upload."));
-    xhr.send(startByte > 0 ? file.slice(startByte) : file);
+    xhr.send(file);
   });
-}
-
-/** Asks Drive how many bytes of this session it has actually received, per
- * the resumable-upload protocol (empty PUT with Content-Range: bytes *\/size). */
-function queryUploadedBytes(uploadUrl: string, fileSize: number): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", uploadUrl, true);
-    xhr.setRequestHeader("Content-Range", `bytes */${fileSize}`);
-    xhr.onload = () => {
-      if (xhr.status === 308) {
-        const range = xhr.getResponseHeader("Range");
-        resolve(range ? parseInt(range.split("-")[1], 10) + 1 : 0);
-      } else if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(fileSize);
-      } else {
-        reject(new Error(`Não foi possível verificar o progresso do upload (${xhr.status}).`));
-      }
-    };
-    xhr.onerror = () => reject(new Error("Falha de rede ao verificar progresso do upload."));
-    xhr.send();
-  });
-}
-
-/** PUTs the file straight to the Drive resumable-upload session URL — never
- * touches our server, so it isn't subject to Vercel's 4.5 MB body limit.
- * Resumes automatically (querying the confirmed offset) if a single attempt
- * gets interrupted partway through, which matters most for large videos on
- * flaky connections. */
-async function putToUploadUrl(uploadUrl: string, file: File, onProgress: (pct: number) => void): Promise<{ id: string }> {
-  let result = await attemptPut(uploadUrl, file, 0, onProgress);
-  let retries = 0;
-  while (result === null && retries < 5) {
-    retries++;
-    const uploadedBytes = await queryUploadedBytes(uploadUrl, file.size);
-    if (uploadedBytes >= file.size) break;
-    result = await attemptPut(uploadUrl, file, uploadedBytes, onProgress);
-  }
-  if (!result) throw new Error("Não foi possível concluir o upload após várias tentativas — tente novamente.");
-  return result;
 }
 
 export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; canEdit: boolean; clientId?: string | null }) {
   const { data: files = [], isLoading } = useQuery(itemFilesQO(itemId));
-  const { attachDriveFile, createDriveUploadSession, detachItemFile, reorderItemFiles } = useApi();
+  const { attachDriveFile, syncUploadToDrive, detachItemFile, reorderItemFiles } = useApi();
   const me = useMe().data;
   const { openFicha } = useUI();
 
@@ -134,7 +93,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
   const [linkValue, setLinkValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [missingClientId, setMissingClientId] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number; pct: number } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number; pct: number; phase: "uploading" | "syncing" } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Local optimistic order (array of file ids). Synced from server data.
@@ -206,22 +165,30 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
     }
     if (toUpload.length === 0) return;
 
-    setUploadProgress({ done: 0, total: toUpload.length, pct: 0 });
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      setError("Sessão expirada — recarregue a página e tente de novo.");
+      return;
+    }
+
+    setUploadProgress({ done: 0, total: toUpload.length, pct: 0, phase: "uploading" });
     const failed: { name: string; msg: string }[] = [];
     for (const file of toUpload) {
+      const storagePath = `${itemId}/${Date.now()}-${file.name}`;
       try {
-        const { uploadUrl } = await createDriveUploadSession.mutateAsync({
+        await putToSupabaseStorage(storagePath, file, accessToken, (pct) =>
+          setUploadProgress((p) => (p ? { ...p, pct, phase: "uploading" } : p)));
+        setUploadProgress((p) => (p ? { ...p, pct: 100, phase: "syncing" } : p));
+        await syncUploadToDrive.mutateAsync({
           data: {
             itemId,
+            storagePath,
             name: file.name,
             mimeType: file.type || "application/octet-stream",
-            sizeBytes: file.size,
           },
         });
-        const uploaded = await putToUploadUrl(uploadUrl, file, (pct) =>
-          setUploadProgress((p) => (p ? { ...p, pct } : p)));
-        await attachDriveFile.mutateAsync({ data: { itemId, fileIdOrUrl: uploaded.id } });
-        setUploadProgress((p) => (p ? { done: p.done + 1, total: p.total, pct: 0 } : p));
+        setUploadProgress((p) => (p ? { done: p.done + 1, total: p.total, pct: 0, phase: "uploading" } : p));
       } catch (err: any) {
         const p = parseDriveError(err?.message);
         if (p.kind === "missing") {
@@ -253,7 +220,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
     }
   }
 
-  const busy = uploadProgress !== null || createDriveUploadSession.isPending || attachDriveFile.isPending;
+  const busy = uploadProgress !== null || syncUploadToDrive.isPending || attachDriveFile.isPending;
 
   return (
     <div>
@@ -368,9 +335,13 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
                 <Upload size={12} />
               )}
               {uploadProgress
-                ? uploadProgress.total > 1
-                  ? `Enviando ${uploadProgress.done + 1}/${uploadProgress.total} (${uploadProgress.pct}%)...`
-                  : `Enviando... ${uploadProgress.pct}%`
+                ? uploadProgress.phase === "syncing"
+                  ? (uploadProgress.total > 1
+                    ? `Sincronizando ${uploadProgress.done + 1}/${uploadProgress.total} com o Drive...`
+                    : "Sincronizando com o Drive...")
+                  : (uploadProgress.total > 1
+                    ? `Enviando ${uploadProgress.done + 1}/${uploadProgress.total} (${uploadProgress.pct}%)...`
+                    : `Enviando... ${uploadProgress.pct}%`)
                 : "Enviar arquivo"}
             </button>
             <button
@@ -440,8 +411,8 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
       )}
 
       <p className="text-[10px] text-white/40 mt-2 leading-relaxed">
-        Arquivos ficam armazenados no Google Drive da agência. Você pode selecionar vários de uma vez;
-        upload direto até 500 MB por arquivo — ideal pra vídeos de Reels. Para arquivos maiores, faça upload no Drive e cole o link aqui.
+        Arquivos ficam armazenados no Google Drive da agência. Você pode selecionar vários de uma vez, até 500 MB por arquivo.
+        Vídeos grandes podem levar mais tempo pra sincronizar com o Drive depois do envio — se der erro nessa etapa, é só tentar de novo.
       </p>
     </div>
   );
