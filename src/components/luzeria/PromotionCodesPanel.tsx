@@ -12,6 +12,7 @@ import {
 } from "@/lib/luzeria/promotion-affiliate.functions";
 
 export function PromotionCodesPanel() {
+  console.log("PromotionCodesPanel rendering");
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -41,9 +42,13 @@ export function PromotionCodesPanel() {
   const createMutation = useMutation({
     mutationFn: (data: any) => createPromotionCode(data),
     onSuccess: () => {
+      console.log("✅ Cupom criado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["promotionCodes"] });
       resetForm();
       setShowForm(false);
+    },
+    onError: (error: any) => {
+      console.error("❌ Erro ao criar cupom:", error?.message || error);
     },
   });
 
@@ -87,6 +92,7 @@ export function PromotionCodesPanel() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.error("SUBMIT FIRED WITH DATA:", formData);
 
     const data = {
       name: formData.name,
@@ -147,7 +153,7 @@ export function PromotionCodesPanel() {
               {editingId ? "✏️ Editar Cupom" : "✨ Criar Novo Cupom"}
             </h3>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-6">
               {/* Row 1 */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
@@ -248,7 +254,23 @@ export function PromotionCodesPanel() {
               {/* Buttons */}
               <div className="flex gap-3 pt-2">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={() => {
+                    const data = {
+                      name: formData.name,
+                      code: formData.code.toUpperCase(),
+                      slug: formData.slug.toLowerCase(),
+                      discountPercent: Number(formData.discountPercent),
+                      description: formData.description || undefined,
+                      validUntil: formData.validUntil ? new Date(formData.validUntil).toISOString() : undefined,
+                      maxUses: formData.maxUses ? Number(formData.maxUses) : undefined,
+                    };
+                    if (editingId) {
+                      updateMutation.mutate({ id: editingId, ...data });
+                    } else {
+                      createMutation.mutate(data);
+                    }
+                  }}
                   disabled={createMutation.isPending || updateMutation.isPending}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-[rgb(var(--lz-brand-rgb))] to-[rgba(var(--lz-brand-rgb),0.8)] hover:opacity-90 disabled:opacity-50 text-white font-bold rounded-xl transition transform hover:scale-105"
                 >
@@ -266,7 +288,7 @@ export function PromotionCodesPanel() {
                   Cancelar
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         )}
       </div>
