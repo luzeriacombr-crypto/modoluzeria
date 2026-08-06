@@ -423,3 +423,47 @@ export const recordPurchaseEvent = createServerFn()
     if (error) throw error;
     return purchase;
   });
+
+export const applyPromotionCodeToOrg = createServerFn()
+  .middleware([requireSupabaseAuth, requireActiveProfile])
+  .handler(async (event, data: {
+    promotionCodeId: string;
+    orgId: string;
+  }) => {
+    const { userId } = event.context.auth;
+    const { supabase } = event.context;
+
+    // Validate is_master
+    const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
+    if (!isMaster) throw new Error("Acesso negado");
+
+    // Apply promotion code to org
+    const { error } = await supabase
+      .from("orgs")
+      .update({ promotion_code_id: data.promotionCodeId })
+      .eq("id", data.orgId);
+
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const listOrgsForPromotion = createServerFn()
+  .middleware([requireSupabaseAuth, requireActiveProfile])
+  .handler(async (event) => {
+    const { orgId: currentOrgId, userId } = event.context.auth;
+    const { supabase } = event.context;
+
+    // Validate is_master
+    const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
+    if (!isMaster) throw new Error("Acesso negado");
+
+    // List all orgs except current one
+    const { data, error } = await supabase
+      .from("orgs")
+      .select("id, name, slug")
+      .neq("id", currentOrgId)
+      .order("name");
+
+    if (error) throw error;
+    return data || [];
+  });

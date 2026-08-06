@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Edit2, Copy, Loader2, AlertCircle, Percent, Link2, Calendar, Users } from "lucide-react";
+import { Plus, Trash2, Edit2, Copy, Loader2, AlertCircle, Percent, Link2, Calendar, Users, Gift } from "lucide-react";
 import { PromotionCode } from "@/lib/luzeria/types";
 import {
   listPromotionCodes,
   createPromotionCode,
   updatePromotionCode,
   deletePromotionCode,
+  applyPromotionCodeToOrg,
+  listOrgsForPromotion,
 } from "@/lib/luzeria/promotion-affiliate.functions";
 
 export function PromotionCodesPanel() {
@@ -14,6 +16,8 @@ export function PromotionCodesPanel() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [copied, setCopied] = useState("");
+  const [applyingPromoId, setApplyingPromoId] = useState<string | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -22,6 +26,11 @@ export function PromotionCodesPanel() {
     description: "",
     validUntil: "",
     maxUses: "",
+  });
+
+  const { data: orgs = [] } = useQuery({
+    queryKey: ["orgsForPromotion"],
+    queryFn: () => listOrgsForPromotion(),
   });
 
   const { data: codes, isLoading } = useQuery({
@@ -51,6 +60,16 @@ export function PromotionCodesPanel() {
     mutationFn: (id: string) => deletePromotionCode({ id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["promotionCodes"] });
+    },
+  });
+
+  const applyMutation = useMutation({
+    mutationFn: (data: { promotionCodeId: string; orgId: string }) =>
+      applyPromotionCodeToOrg(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["promotionCodes"] });
+      setApplyingPromoId(null);
+      setSelectedOrgId("");
     },
   });
 
@@ -280,6 +299,13 @@ export function PromotionCodesPanel() {
                   {/* Actions */}
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
                     <button
+                      onClick={() => setApplyingPromoId(code.id)}
+                      className="p-2 text-white/60 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-[rgb(var(--lz-brand-rgb))]/10 rounded-lg transition"
+                      title="Aplicar a agência"
+                    >
+                      <Gift size={16} />
+                    </button>
+                    <button
                       onClick={() => {
                         setEditingId(code.id);
                         setFormData({
@@ -377,6 +403,65 @@ export function PromotionCodesPanel() {
           </div>
         )}
       </div>
+
+      {/* Apply Promo Modal */}
+      {applyingPromoId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-white/[0.1] to-white/[0.05] border border-white/20 rounded-2xl p-8 max-w-md w-full backdrop-blur-xl">
+            <h3 className="text-xl font-bold text-white mb-6">Aplicar Cupom a Agência</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-white/50 mb-2">
+                  Selecione a agência
+                </label>
+                <select
+                  value={selectedOrgId}
+                  onChange={(e) => setSelectedOrgId(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/[0.08] border border-white/15 rounded-xl text-white focus:outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition"
+                >
+                  <option value="">Escolha uma agência...</option>
+                  {orgs.map((org: any) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <p className="text-sm text-white/60">
+                O cupom será aplicado à próxima fatura dessa agência.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    if (selectedOrgId && applyingPromoId) {
+                      applyMutation.mutate({
+                        promotionCodeId: applyingPromoId,
+                        orgId: selectedOrgId,
+                      });
+                    }
+                  }}
+                  disabled={!selectedOrgId || applyMutation.isPending}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-[rgb(var(--lz-brand-rgb))] to-[rgba(var(--lz-brand-rgb),0.8)] hover:opacity-90 disabled:opacity-50 text-white font-bold rounded-xl transition"
+                >
+                  {applyMutation.isPending ? "Aplicando..." : "Aplicar"}
+                </button>
+                <button
+                  onClick={() => {
+                    setApplyingPromoId(null);
+                    setSelectedOrgId("");
+                  }}
+                  className="flex-1 px-6 py-3 bg-white/[0.08] hover:bg-white/[0.12] text-white font-bold rounded-xl transition border border-white/10"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
