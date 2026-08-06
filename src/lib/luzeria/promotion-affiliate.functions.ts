@@ -157,7 +157,8 @@ export const getPromotionCodeBySlug = createServerFn({ method: "GET" })
   .handler(async (event) => {
     const data = event.data as { slug: string; orgId?: string };
     // This is public - anyone can get promo code details by slug
-    const { supabase } = event.context;
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
 
     let query = supabase
       .from("promotion_codes")
@@ -397,7 +398,8 @@ export const markAffiliateCommissionAsPaid = createServerFn({ method: "POST" })
 export const validatePromotionCode = createServerFn({ method: "GET" })
   .handler(async (event) => {
     const data = event.data as { code: string };
-    const { supabase } = event.context;
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
 
     // Find promotion code by code (case-insensitive)
     const { data: promo, error } = await supabase
@@ -429,7 +431,8 @@ export const validatePromotionCode = createServerFn({ method: "GET" })
 export const getAffiliateByReferralCode = createServerFn({ method: "GET" })
   .handler(async (event) => {
     const data = event.data as { referralCode: string };
-    const { supabase } = event.context;
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
 
     const { data: affiliate, error } = await supabase
       .from("affiliate_programs")
