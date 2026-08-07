@@ -25,7 +25,7 @@ function MyAffiliateCard() {
     queryFn: () => getMyAffiliateProgram(),
   });
 
-  const referralLink = affiliate ? `modocriador.com.br/afiliar?referral=${affiliate.referralCode}` : "";
+  const referralLink = affiliate ? `modocriador.com.br/assinar?affiliateCode=${affiliate.referralCode}` : "";
 
   const copyLink = () => {
     navigator.clipboard.writeText(referralLink);

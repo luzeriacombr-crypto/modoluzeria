@@ -20,7 +20,7 @@ export function AffiliateDashboard() {
   });
 
   const referralLink = stats
-    ? `https://www.modocriador.com.br/afiliar?referral=${stats.referralCode || ""}`
+    ? `https://www.modocriador.com.br/assinar?affiliateCode=${stats.referralCode || ""}`
     : "";
 
   const copyToClipboard = (text: string, key: string) => {
