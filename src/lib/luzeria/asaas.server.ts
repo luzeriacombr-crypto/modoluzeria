@@ -82,3 +82,10 @@ export async function updateAsaasPaymentValue(paymentId: string, valueCents: num
     body: JSON.stringify({ value: valueCents / 100 }),
   }) as Promise<{ id: string; value: number }>;
 }
+
+/** Cancels a subscription in Asaas — stops future charges and removes any
+ * still-pending (unpaid) invoice for it. Already-paid invoices stay in
+ * Asaas's history untouched. */
+export async function cancelAsaasSubscription(subscriptionId: string) {
+  return asaasFetch(`/subscriptions/${subscriptionId}`, { method: "DELETE" }) as Promise<{ deleted: boolean }>;
+}

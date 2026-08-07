@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Receipt, Building2 } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle } from "lucide-react";
 import { orgsBillingQO } from "@/lib/luzeria/queries";
-import { getOrgNextInvoice } from "@/lib/luzeria/api.functions";
+import { getOrgNextInvoice, deleteOrg } from "@/lib/luzeria/api.functions";
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   trialing: { label: "Em teste", color: "#4A9EFF" },
@@ -20,6 +21,7 @@ function daysUntil(iso: string) {
 export function AgenciesBillingPanel() {
   const { data: orgs = [], isLoading } = useQuery(orgsBillingQO());
   const [invoiceForId, setInvoiceForId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; hasAsaasSubscription: boolean } | null>(null);
 
   const fetchInvoice = useMutation({
     mutationFn: useServerFn(getOrgNextInvoice),
@@ -109,7 +111,15 @@ export function AgenciesBillingPanel() {
                           : <span className="text-white/30">—</span>}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-white/70">{o.clientsUsed}</td>
-                    <td className="px-4 py-3"></td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => setDeleteTarget({ id: o.id, name: o.name, hasAsaasSubscription: o.hasAsaasSubscription })}
+                        title="Remover agência"
+                        className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -117,6 +127,79 @@ export function AgenciesBillingPanel() {
           </table>
         </div>
       )}
+
+      {deleteTarget && (
+        <DeleteOrgModal target={deleteTarget} onClose={() => setDeleteTarget(null)} />
+      )}
+    </div>
+  );
+}
+
+function DeleteOrgModal({ target, onClose }: {
+  target: { id: string; name: string; hasAsaasSubscription: boolean };
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [confirmName, setConfirmName] = useState("");
+  const matches = confirmName.trim().toLowerCase() === target.name.trim().toLowerCase();
+
+  const removeOrg = useMutation({
+    mutationFn: useServerFn(deleteOrg),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orgs-billing"] });
+      toast.success(`${target.name} removida.`);
+      onClose();
+    },
+    onError: (error: any) => toast.error(error?.message || "Erro ao remover agência."),
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#161616] border border-red-500/30 rounded-2xl p-6 max-w-md w-full">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2 text-red-400">
+            <AlertTriangle size={18} />
+            <h3 className="text-lg font-bold text-white">Remover agência</h3>
+          </div>
+          <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition">
+            <X size={16} />
+          </button>
+        </div>
+
+        <p className="text-sm text-white/70 mb-3">
+          Isso apaga <span className="text-white font-semibold">{target.name}</span> e tudo dela — clientes,
+          posts, arquivos, equipe — pra sempre. Não tem como desfazer.
+          {target.hasAsaasSubscription && " A assinatura no Asaas também é cancelada."}
+        </p>
+
+        <label className="block text-xs font-bold uppercase text-white/50 mb-2 tracking-wider">
+          Digite "{target.name}" pra confirmar
+        </label>
+        <input
+          type="text"
+          value={confirmName}
+          onChange={(e) => setConfirmName(e.target.value)}
+          className="w-full px-4 py-3 bg-white/[0.08] border border-white/15 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-red-500/60 transition mb-4"
+          placeholder={target.name}
+          autoFocus
+        />
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => removeOrg.mutate({ data: { orgId: target.id, confirmName } })}
+            disabled={!matches || removeOrg.isPending}
+            className="flex-1 px-6 py-3 bg-red-500/90 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl transition"
+          >
+            {removeOrg.isPending ? "Removendo…" : "Remover pra sempre"}
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 px-6 py-3 bg-white/[0.08] hover:bg-white/[0.12] text-white font-bold rounded-xl transition border border-white/10"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

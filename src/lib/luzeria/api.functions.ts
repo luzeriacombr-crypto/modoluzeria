@@ -264,6 +264,62 @@ export const getOrgNextInvoice = createServerFn({ method: "POST" })
     return payment ? { id: payment.id, valueCents: Math.round(payment.value * 100) } : null;
   });
 
+/** Platform-admin only, and only for test/throwaway agencies: permanently
+ * deletes an org and everything in it. Requires typing the org's exact
+ * name as `confirmName` — this has no undo.
+ *
+ * Order matters: promotion_codes.created_by is ON DELETE RESTRICT against
+ * profiles, so it has to go before any profile/auth user is removed, or
+ * that deletion would fail outright. Asaas cancellation runs first and
+ * aborts the whole thing on failure, so a failed cancel never leaves an
+ * orphaned subscription with no org left to reference it. */
+export const deleteOrg = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { orgId: string; confirmName: string }) =>
+    z.object({ orgId: z.string().uuid(), confirmName: z.string() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    if (data.orgId === LUZERIA_ORG_ID) throw new Error("Não é possível remover a agência da Luzeria.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: org, error: orgErr } = await supabaseAdmin
+      .from("orgs").select("id, name, asaas_subscription_id").eq("id", data.orgId).maybeSingle();
+    if (orgErr || !org) throw new Error("Agência não encontrada.");
+    if ((org as any).name.trim().toLowerCase() !== data.confirmName.trim().toLowerCase()) {
+      throw new Error("O nome digitado não confere com o nome da agência.");
+    }
+
+    if ((org as any).asaas_subscription_id) {
+      const { cancelAsaasSubscription } = await import("./asaas.server");
+      try {
+        await cancelAsaasSubscription((org as any).asaas_subscription_id);
+      } catch (err: any) {
+        throw new Error(`Não foi possível cancelar a assinatura no Asaas: ${err.message}. Nada foi apagado.`);
+      }
+    }
+
+    await supabaseAdmin.from("promotion_codes").delete().eq("org_id", data.orgId);
+    await supabaseAdmin.from("clients").delete().eq("org_id", data.orgId);
+    await supabaseAdmin.from("email_role_assignments").delete().eq("org_id", data.orgId);
+    await supabaseAdmin.from("stories_schedule").delete().eq("org_id", data.orgId);
+    await supabaseAdmin.from("cleaning_schedule").delete().eq("org_id", data.orgId);
+    await supabaseAdmin.from("cleaning_log").delete().eq("org_id", data.orgId);
+    await supabaseAdmin.from("cleaning_settings").delete().eq("org_id", data.orgId);
+
+    const { data: profiles } = await supabaseAdmin.from("profiles").select("id").eq("org_id", data.orgId);
+    for (const p of profiles ?? []) {
+      await supabaseAdmin.auth.admin.deleteUser((p as any).id);
+    }
+
+    const { error: delErr } = await supabaseAdmin.from("orgs").delete().eq("id", data.orgId);
+    if (delErr) throw new Error(delErr.message);
+
+    return { ok: true };
+  });
+
 /** Master clicks "Assinar" for a plan: creates (or reuses) the org's Asaas
  * customer + a monthly subscription for that plan's price, returns the
  * invoice URL so the org can complete the first payment (boleto/PIX/cartão). */
