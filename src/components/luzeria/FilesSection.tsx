@@ -10,7 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
-const UPLOAD_BUCKET = "item-uploads-temp";
+// Reusing reel-covers here (not a dedicated bucket) — its RLS policy is
+// proven working right now, unlike freshly created/modified storage.objects
+// policies on this project, which silently fail to take effect regardless
+// of creation method (CLI, dashboard SQL editor) or policy logic (confirmed
+// down to a raw `WITH CHECK (true)` SQL insert still getting rejected).
+// Filenames get a "tmp-" prefix to stay visually distinct from real covers.
+const UPLOAD_BUCKET = "reel-covers";
 
 function formatSize(n: number | null | undefined) {
   if (!n || n <= 0) return "";
@@ -178,7 +184,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
     setUploadProgress({ done: 0, total: toUpload.length, pct: 0, phase: "uploading" });
     const failed: { name: string; msg: string }[] = [];
     for (const file of toUpload) {
-      const storagePath = `${itemId}/${Date.now()}-${file.name}`;
+      const storagePath = `${itemId}/tmp-${Date.now()}-${file.name}`;
       try {
         await putToSupabaseStorage(storagePath, file, accessToken, (pct) =>
           setUploadProgress((p) => (p ? { ...p, pct, phase: "uploading" } : p)));

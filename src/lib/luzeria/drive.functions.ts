@@ -539,15 +539,22 @@ export const attachDriveFile = createServerFn({ method: "POST" })
  * CORS on googleapis.com's upload endpoints — confirmed live, not assumed),
  * so large files can't go straight from the browser to Drive the way they
  * can to Supabase Storage. Two-step flow instead: the browser PUTs the file
- * to the `item-uploads-temp` Supabase bucket directly (see FilesSection.tsx),
- * then calls this to relay it into Drive. To fit Vercel Hobby's 10s function
- * duration limit for anything but small files, the download (from Supabase)
- * and upload (to Drive) are piped together as one stream instead of done
- * sequentially — Drive receives bytes as Supabase serves them, roughly
- * halving the time versus buffering the whole file twice. Still not a
- * guarantee for very large files on a slow connection between the two
- * services; if it times out the file simply stays in the temp bucket
- * (nothing is lost) and the user can retry. */
+ * to the `reel-covers` Supabase bucket directly (see FilesSection.tsx, path
+ * `<itemId>/tmp-*`), then calls this to relay it into Drive. Reusing
+ * reel-covers rather than a dedicated bucket: a fresh `item-uploads-temp`
+ * bucket's storage.objects RLS policies never took effect no matter how
+ * they were created (CLI, dashboard SQL editor, even a raw `WITH CHECK
+ * (true)` SQL insert still got rejected) — some platform-level anomaly on
+ * this project, not a policy-logic bug. reel-covers' existing, long-lived
+ * policy is proven to work, so temp uploads land there instead and get
+ * swept up by this function same as before.
+ * To fit Vercel Hobby's 10s function duration limit for anything but small
+ * files, the download (from Supabase) and upload (to Drive) are piped
+ * together as one stream instead of done sequentially — Drive receives
+ * bytes as Supabase serves them, roughly halving the time versus buffering
+ * the whole file twice. Still not a guarantee for very large files on a
+ * slow connection between the two services; if it times out the file
+ * simply stays in the temp bucket (nothing is lost) and the user can retry. */
 export const syncUploadToDrive = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { itemId: string; storagePath: string; name: string; mimeType: string }) =>
@@ -568,7 +575,7 @@ export const syncUploadToDrive = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: signed, error: signErr } = await supabaseAdmin.storage
-      .from("item-uploads-temp")
+      .from("reel-covers")
       .createSignedUrl(data.storagePath, 300);
     if (signErr || !signed?.signedUrl) throw new Error("Não foi possível acessar o arquivo enviado.");
 
@@ -630,7 +637,7 @@ export const syncUploadToDrive = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     await syncLegacyDriveLink(context.supabase, data.itemId);
-    await supabaseAdmin.storage.from("item-uploads-temp").remove([data.storagePath]).catch(() => {});
+    await supabaseAdmin.storage.from("reel-covers").remove([data.storagePath]).catch(() => {});
 
     return { ok: true, file: { id: meta.id, name: row.name } };
   }));
