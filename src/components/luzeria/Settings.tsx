@@ -15,8 +15,8 @@ import { UpdatesTab } from "./UpdatesTab";
 import { PromotionCodesPanel } from "./PromotionCodesPanel";
 import { AffiliateProgramPanel } from "./AffiliateProgramPanel";
 
-type SettingsTab = "team" | "report" | "drive" | "automations" | "general" | "subscription" | "updates" | "promotions";
-const VALID_TABS: SettingsTab[] = ["team", "report", "drive", "automations", "general", "subscription", "updates", "promotions"];
+type SettingsTab = "team" | "report" | "automations" | "general" | "subscription" | "updates";
+const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "subscription", "updates"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -50,10 +50,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           <p className="text-sm text-white/50 mt-2">
             {tab === "team"   ? "Gerencie acessos, funções e metas da equipe." :
              tab === "report" ? "Relatório consolidado de entregas." :
-             tab === "drive"  ? "Integração com Google Drive." :
-             tab === "automations" ? "Lembretes automáticos e jobs do sistema." :
-             tab === "subscription" ? "Seu plano, uso e cobrança." :
-             tab === "promotions" ? "Gerencie cupons de desconto e programa de afiliados." :
+             tab === "automations" ? "Google Drive, lembretes automáticos e jobs do sistema." :
+             tab === "subscription" ? "Seu plano, cobrança, cupons e programa de afiliados." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              "Ajustes gerais da operação."}
           </p>
@@ -64,10 +62,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         {[
           { id: "team", label: "Equipe" },
           { id: "report", label: "Relatório" },
-          { id: "drive", label: "Drive" },
           { id: "automations", label: "Automações" },
-          { id: "subscription", label: "Assinatura" },
-          { id: "promotions", label: "Afiliados" },
+          { id: "subscription", label: "Financeiro" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
         ].map((t) => {
@@ -101,18 +97,29 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
       )}
 
       {tab === "general" ? <GeneralSettings /> :
-       tab === "subscription" ? <SubscriptionSettings /> :
-       tab === "updates" ? <UpdatesTab /> :
-       tab === "drive" ? <DriveSettingsTab /> :
-       tab === "automations" ? <AutomationsTab /> :
-       tab === "promotions" ? (
+       tab === "subscription" ? (
         <div className="space-y-10">
-          <AffiliateProgramPanel isPlatformAdmin={!!me.isPlatformAdmin} />
+          <SubscriptionSettings />
+          <div className="pt-2 border-t border-white/10">
+            <AffiliateProgramPanel isPlatformAdmin={!!me.isPlatformAdmin} />
+          </div>
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-white/10">
               <PromotionCodesPanel />
             </div>
           )}
+        </div>
+       ) :
+       tab === "updates" ? <UpdatesTab /> :
+       tab === "automations" ? (
+        <div className="space-y-10">
+          <div>
+            <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3">Google Drive</h2>
+            <DriveSettingsTab />
+          </div>
+          <div className="pt-2 border-t border-white/10">
+            <AutomationsTab />
+          </div>
         </div>
        ) :
        tab === "report" ? <ReportsTab /> : (

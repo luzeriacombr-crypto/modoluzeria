@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Settings, LogOut, Plus, Sparkles, Info, CircleHelp, CalendarDays,
+  LogOut, Plus, Sparkles, Info, CircleHelp, CalendarDays,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -172,7 +172,7 @@ export function Sidebar({
       </div>
 
       {/* Footer user */}
-      <UserFooter onSettings={() => navigate({ to: "/configuracoes" })} onProfile={() => navigate({ to: "/perfil" })} />
+      <UserFooter onProfile={() => navigate({ to: "/perfil" })} />
     </aside>
   );
 }
@@ -407,9 +407,8 @@ function MenuItem({ children, onClick, destructive }: { children: React.ReactNod
   );
 }
 
-function UserFooter({ onSettings, onProfile }: { onSettings: () => void; onProfile: () => void }) {
+function UserFooter({ onProfile }: { onProfile: () => void }) {
   const me = useMe().data;
-  const isMaster = me?.role === "master";
   async function logout() {
     await clearOneSignalUserId();
     await supabase.auth.signOut();
@@ -434,12 +433,6 @@ function UserFooter({ onSettings, onProfile }: { onSettings: () => void; onProfi
           </div>
         </button>
         <div className="flex items-center gap-0.5">
-          {isMaster && (
-            <button onClick={onSettings} title="Configurações"
-              className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white transition">
-              <Settings size={14} />
-            </button>
-          )}
           <button onClick={logout} title="Sair"
             className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white transition">
             <LogOut size={14} />

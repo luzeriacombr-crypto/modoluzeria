@@ -40,7 +40,7 @@ export function SetupChecklist() {
       title: "Conecte seu Google Drive",
       desc: "Seus conteúdos vão direto pro seu arquivo — evita precisar fazer backup.",
       action: (
-        <Link to="/configuracoes" search={{ tab: "drive" }}
+        <Link to="/configuracoes" search={{ tab: "automations" }}
           className="text-xs font-bold px-3 py-1.5 rounded-md whitespace-nowrap transition"
           style={{ background: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
           Conectar →

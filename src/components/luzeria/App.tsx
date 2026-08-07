@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon } from "lucide-react";
 import { Outlet, useNavigate } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { useMe } from "@/lib/luzeria/queries";
@@ -165,6 +165,15 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
         </span>
       )}
       <div className="flex-1" />
+      {me?.role === "master" && (
+        <button
+          onClick={() => navigate({ to: "/configuracoes" })}
+          title="Configurações"
+          className="flex items-center justify-center h-8 w-8 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <SettingsIcon size={18} />
+        </button>
+      )}
       <HelpButton />
       <NotificationsBell />
       {me && (
