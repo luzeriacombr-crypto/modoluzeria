@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireActiveProfile } from "./require-active";
+import { LUZERIA_ORG_ID } from "./api.functions";
 import type { PromotionCode, AffiliateProgram } from "./types";
 
 function mapPromotionCode(p: any): PromotionCode {
@@ -285,10 +286,36 @@ export const listAffiliatePrograms = createServerFn({ method: "GET" })
     const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
     if (!isMaster) throw new Error("Acesso negado");
 
-    const { data, error } = await supabase
+    // The Luzeria platform admin tracks affiliates across every agency
+    // (RLS grants it via platform_admin_affiliate_programs_read); any other
+    // org's master only sees affiliates within their own org.
+    let query = supabase
       .from("affiliate_programs")
-      .select("*, user:user_id(id, name, avatar_url)")
-      .eq("org_id", orgId)
+      .select("*, user:user_id(id, name, avatar_url), org:org_id(id, name)")
+      .order("created_at", { ascending: false });
+    if (orgId !== LUZERIA_ORG_ID) {
+      query = query.eq("org_id", orgId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  });
+
+export const listAllAffiliateReferrals = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth, requireActiveProfile])
+  .handler(async (event) => {
+    const { orgId, userId } = event.context as any;
+    const { supabase } = event.context;
+
+    const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
+    if (!isMaster || orgId !== LUZERIA_ORG_ID) throw new Error("Acesso negado");
+
+    const { data, error } = await supabase
+      .from("affiliate_referrals")
+      .select(
+        "*, affiliate:affiliate_id(id, referral_code, org:org_id(id, name), user:user_id(id, name)), referred_user:referred_user_id(id, name, email)",
+      )
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -371,14 +398,16 @@ export const markAffiliateCommissionAsPaid = createServerFn({ method: "POST" })
     const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
     if (!isMaster) throw new Error("Acesso negado");
 
-    // Verify this referral belongs to an affiliate in this org
+    // Verify this referral belongs to an affiliate in this org — or that
+    // the caller is the Luzeria platform admin, who can pay out any agency's
+    // affiliate (RLS grants that cross-org read/update explicitly).
     const { data: referral, error: refError } = await supabase
       .from("affiliate_referrals")
       .select("*, affiliate:affiliate_id(org_id)")
       .eq("id", data.referralId)
       .single();
 
-    if (refError || referral.affiliate.org_id !== orgId) {
+    if (refError || !referral || (referral.affiliate.org_id !== orgId && orgId !== LUZERIA_ORG_ID)) {
       throw new Error("Referência não encontrada.");
     }
 
@@ -509,27 +538,29 @@ export const applyPromotionCodeToOrg = createServerFn({ method: "POST" })
       .eq("id", data.orgId)
       .single();
     if (orgErr || !org) throw new Error("Agência não encontrada.");
-    if (!org.asaas_subscription_id) {
-      throw new Error("Essa agência não tem assinatura ativa no Asaas — não há fatura para aplicar o desconto.");
+
+    // If there's already a pending invoice, discount it immediately — this
+    // is a one-time gift, so nothing is persisted on the org afterward.
+    if (org.asaas_subscription_id) {
+      const { getNextPendingPayment, updateAsaasPaymentValue } = await import("./asaas.server");
+      const payment = await getNextPendingPayment(org.asaas_subscription_id);
+      if (payment) {
+        const discountedValueCents = Math.round(payment.value * 100 * (1 - promo.discount_percent / 100));
+        await updateAsaasPaymentValue(payment.id, discountedValueCents);
+        return { success: true, appliedNow: true, newValueCents: discountedValueCents };
+      }
     }
 
-    const { getNextPendingPayment, updateAsaasPaymentValue } = await import("./asaas.server");
-    const payment = await getNextPendingPayment(org.asaas_subscription_id);
-    if (!payment) {
-      throw new Error("Nenhuma fatura pendente encontrada para essa agência (a próxima ainda não foi gerada).");
-    }
-
-    const discountedValueCents = Math.round(payment.value * 100 * (1 - promo.discount_percent / 100));
-    await updateAsaasPaymentValue(payment.id, discountedValueCents);
-
-    // Apply promotion code to org
+    // No pending invoice yet (still trialing, or between cycles) — record
+    // the promo on the org so the Asaas webhook can discount it the moment
+    // the next invoice is actually generated (PAYMENT_CREATED event), then
+    // clear it right after so it never discounts more than that one invoice.
     const { error } = await supabase
       .from("orgs")
       .update({ promotion_code_id: data.promotionCodeId })
       .eq("id", data.orgId);
-
     if (error) throw error;
-    return { success: true, newValueCents: discountedValueCents };
+    return { success: true, appliedNow: false };
   });
 
 export const listOrgsForPromotion = createServerFn({ method: "GET" })

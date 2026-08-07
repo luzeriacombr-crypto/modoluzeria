@@ -13,6 +13,7 @@ import { AutomationsTab } from "./AutomationsTab";
 import { TeamMemberCard } from "./TeamMemberCard";
 import { UpdatesTab } from "./UpdatesTab";
 import { PromotionCodesPanel } from "./PromotionCodesPanel";
+import { AffiliateProgramPanel } from "./AffiliateProgramPanel";
 
 type SettingsTab = "team" | "report" | "drive" | "automations" | "general" | "subscription" | "updates" | "promotions";
 const VALID_TABS: SettingsTab[] = ["team", "report", "drive", "automations", "general", "subscription", "updates", "promotions"];
@@ -104,7 +105,16 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "updates" ? <UpdatesTab /> :
        tab === "drive" ? <DriveSettingsTab /> :
        tab === "automations" ? <AutomationsTab /> :
-       tab === "promotions" ? <PromotionCodesPanel /> :
+       tab === "promotions" ? (
+        <div className="space-y-10">
+          <AffiliateProgramPanel isPlatformAdmin={!!me.isPlatformAdmin} />
+          {me.isPlatformAdmin && (
+            <div className="pt-2 border-t border-white/10">
+              <PromotionCodesPanel />
+            </div>
+          )}
+        </div>
+       ) :
        tab === "report" ? <ReportsTab /> : (
         <>
       {pending.length > 0 && (

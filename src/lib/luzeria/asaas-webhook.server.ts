@@ -53,5 +53,35 @@ export async function handleAsaasWebhook(request: Request): Promise<Response> {
     if (updateError) console.error("[asaas-webhook] failed to update org status", updateError);
   }
 
+  // A one-time gift discount (see applyPromotionCodeToOrg) may be waiting
+  // for this org's next invoice. Apply it now that the invoice exists, then
+  // clear it so it never discounts more than that single payment.
+  if (payload.event === "PAYMENT_CREATED" && payload.payment?.subscription) {
+    const { data: org } = await supabaseAdmin
+      .from("orgs")
+      .select("id, promotion_code_id")
+      .eq("asaas_subscription_id", payload.payment.subscription)
+      .maybeSingle();
+    if (org?.promotion_code_id) {
+      const { data: promo } = await supabaseAdmin
+        .from("promotion_codes")
+        .select("discount_percent")
+        .eq("id", org.promotion_code_id)
+        .maybeSingle();
+      if (promo) {
+        const { updateAsaasPaymentValue } = await import("./asaas.server");
+        const discountedValueCents = Math.round(
+          payload.payment.value * 100 * (1 - promo.discount_percent / 100),
+        );
+        try {
+          await updateAsaasPaymentValue(payload.payment.id, discountedValueCents);
+        } catch (err) {
+          console.error("[asaas-webhook] failed to apply gift discount", err);
+        }
+      }
+      await supabaseAdmin.from("orgs").update({ promotion_code_id: null }).eq("id", org.id);
+    }
+  }
+
   return new Response("OK", { status: 200 });
 }
