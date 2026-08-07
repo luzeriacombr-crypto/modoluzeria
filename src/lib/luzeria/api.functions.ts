@@ -802,7 +802,7 @@ export const getMonth = createServerFn({ method: "GET" })
     const itemIds = (items ?? []).map((it: any) => it.id);
     const [{ data: assignees }, { data: comments }] = await Promise.all([
       context.supabase.from("item_assignees").select("item_id, user_id").in("item_id", itemIds),
-      context.supabase.from("comments").select("id, item_id, author_id, text, is_system, created_at").in("item_id", itemIds).order("created_at"),
+      context.supabase.from("comments").select("id, item_id, author_id, text, is_system, created_at, edited_at").in("item_id", itemIds).order("created_at"),
     ]);
     const itemAssignees = new Map<string, string[]>();
     (assignees ?? []).forEach((a) => {
@@ -812,7 +812,7 @@ export const getMonth = createServerFn({ method: "GET" })
     const itemComments = new Map<string, ContentItem["comments"]>();
     (comments ?? []).forEach((c) => {
       const arr = itemComments.get(c.item_id) ?? [];
-      arr.push({ id: c.id, text: c.text, authorId: c.author_id, createdAt: c.created_at, system: c.is_system });
+      arr.push({ id: c.id, text: c.text, authorId: c.author_id, createdAt: c.created_at, editedAt: c.edited_at, system: c.is_system });
       itemComments.set(c.item_id, arr);
     });
     const mapped = (items ?? []).map<ContentItem>((it) => ({

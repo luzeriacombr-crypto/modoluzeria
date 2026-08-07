@@ -720,3 +720,23 @@ export const addCommentWithMentions = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+export const updateComment = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { commentId: string; text: string }) =>
+    z.object({
+      commentId: z.string().uuid(),
+      text: z.string().trim().min(1).max(2000),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    // RLS (author-only, non-system) does the real enforcement — .single()
+    // just turns "0 rows affected" into a clear error instead of a silent no-op.
+    const { error } = await context.supabase
+      .from("comments")
+      .update({ text: data.text, edited_at: new Date().toISOString() })
+      .eq("id", data.commentId)
+      .select("id")
+      .single();
+    if (error) throw new Error("Só dá pra editar seus próprios comentários.");
+    return { ok: true };
+  });

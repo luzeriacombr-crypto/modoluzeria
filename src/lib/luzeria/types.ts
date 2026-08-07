@@ -82,6 +82,7 @@ export interface Comment {
   authorId: string | null;
   authorName?: string | null;
   createdAt: string;
+  editedAt?: string | null;
   system?: boolean;
 }
 

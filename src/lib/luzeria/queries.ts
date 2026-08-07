@@ -30,7 +30,7 @@ import {
   listRecurring, upsertRecurring, deleteRecurring, generateRecurring,
   listActivity, getReportExtras, getMemberStatusDuration,
   getAppSettings, updateAppSettings,
-  getMyWeek, getWorkload, getItemTimeline, addCommentWithMentions,
+  getMyWeek, getWorkload, getItemTimeline, addCommentWithMentions, updateComment,
 } from "./roadmap.functions";
 import {
   listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, syncUploadToDrive, detachItemFile,
@@ -583,6 +583,10 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["month"] });
         qc.invalidateQueries({ queryKey: ["notifications"] });
       },
+    }),
+    updateComment: useMutation({
+      mutationFn: useServerFn(updateComment),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
     }),
     /* ===== DRIVE FILES ===== */
     attachDriveFile: useMutation({

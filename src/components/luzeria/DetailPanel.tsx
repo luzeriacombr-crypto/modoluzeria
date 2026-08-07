@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Instagram, Clock } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Instagram, Clock, Pencil } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
@@ -159,7 +159,7 @@ export function DetailPanel() {
   const { data: profiles = [] } = useQuery(profilesQO());
   const { data: clients = [] } = useQuery(clientsQO());
   const me = useMe().data;
-  const { setItemStatus, updateItem, addAssignee, removeAssignee, addCommentWithMentions, rateItem, publishToInstagram, setInstagramAutoPublish } = useApi();
+  const { setItemStatus, updateItem, addAssignee, removeAssignee, addCommentWithMentions, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish } = useApi();
   const { data: appSettings } = useQuery(appSettingsQO());
 
   const item = useMemo(() => (selectedItemId && month ? findItem(month, selectedItemId) : undefined), [month, selectedItemId]);
@@ -187,6 +187,8 @@ export function DetailPanel() {
   const [drive, setDrive] = useState("");
   const [comment, setComment] = useState("");
   const [commentMentions, setCommentMentions] = useState<string[]>([]);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentText, setEditCommentText] = useState("");
   const [qualityFor, setQualityFor] = useState<Status | null>(null);
   const [dueDate, setDueDate] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
@@ -422,15 +424,68 @@ export function DetailPanel() {
                       <span className="text-white/40 ml-2 not-italic">{relTime(c.createdAt)}</span>
                     </div>
                   );
+                  const isOwn = c.authorId === me?.id;
+                  const isEditing = editingCommentId === c.id;
                   return (
-                    <div key={c.id} className="flex gap-2.5">
+                    <div key={c.id} className="flex gap-2.5 group">
                       <Avatar profile={author ?? undefined} size={26} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2">
                           <span className="text-xs font-semibold text-white">{author?.name ?? "Alguém"}</span>
                           <span className="text-[10px] text-white/40">{relTime(c.createdAt)}</span>
+                          {c.editedAt && <span className="text-[10px] text-white/30 italic">(editado)</span>}
+                          {isOwn && !isEditing && (
+                            <button
+                              onClick={() => { setEditingCommentId(c.id); setEditCommentText(c.text); }}
+                              className="text-white/30 hover:text-white opacity-0 group-hover:opacity-100 transition"
+                              title="Editar comentário"
+                            >
+                              <Pencil size={11} />
+                            </button>
+                          )}
                         </div>
-                        <div className="text-xs text-white/80 whitespace-pre-wrap mt-0.5">{renderMentions(c.text)}</div>
+                        {isEditing ? (
+                          <div className="mt-1">
+                            <textarea
+                              value={editCommentText}
+                              onChange={(e) => setEditCommentText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                                  e.preventDefault();
+                                  if (editCommentText.trim()) {
+                                    updateComment.mutate({ data: { commentId: c.id, text: editCommentText.trim() } });
+                                    setEditingCommentId(null);
+                                  }
+                                } else if (e.key === "Escape") {
+                                  setEditingCommentId(null);
+                                }
+                              }}
+                              rows={2}
+                              autoFocus
+                              className="w-full text-xs bg-white/[0.06] border border-white/15 rounded-md px-2 py-1.5 text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
+                            />
+                            <div className="flex gap-2 mt-1">
+                              <button
+                                disabled={!editCommentText.trim()}
+                                onClick={() => {
+                                  updateComment.mutate({ data: { commentId: c.id, text: editCommentText.trim() } });
+                                  setEditingCommentId(null);
+                                }}
+                                className="text-[10px] font-bold text-[rgb(var(--lz-brand-rgb))] disabled:opacity-40 hover:underline"
+                              >
+                                Salvar
+                              </button>
+                              <button
+                                onClick={() => setEditingCommentId(null)}
+                                className="text-[10px] font-bold text-white/50 hover:text-white hover:underline"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-white/80 whitespace-pre-wrap mt-0.5">{renderMentions(c.text)}</div>
+                        )}
                       </div>
                     </div>
                   );
