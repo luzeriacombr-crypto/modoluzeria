@@ -225,7 +225,11 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
     const { data: plans } = await context.supabase.from("plans").select("id, name, price_cents");
     const planMap = new Map((plans ?? []).map((p: any) => [p.id, p]));
 
-    const { data: clientRows } = await context.supabase
+    // clients RLS only allows org_id = current_org_id() — even for the
+    // platform admin — so this needs the service-role client to see every
+    // agency's clients, not just Luzeria's own.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: clientRows } = await supabaseAdmin
       .from("clients").select("org_id").eq("archived", false).neq("category", "Ex-clientes");
     const clientsByOrg = new Map<string, number>();
     (clientRows ?? []).forEach((c: any) => clientsByOrg.set(c.org_id, (clientsByOrg.get(c.org_id) ?? 0) + 1));
