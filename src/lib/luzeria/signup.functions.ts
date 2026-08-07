@@ -28,6 +28,7 @@ export const publicSignup = createServerFn({ method: "POST" })
   .inputValidator((d: {
     agencyName: string; name: string; email: string; password: string;
     planId: string; taxId: string; website?: string; promoCode?: string; affiliateCode?: string;
+    billingType?: "CREDIT_CARD" | "UNDEFINED";
   }) =>
     z.object({
       agencyName: z.string().trim().min(2).max(80),
@@ -39,6 +40,10 @@ export const publicSignup = createServerFn({ method: "POST" })
       website: z.string().max(0).optional().or(z.literal("")), // honeypot — must stay empty
       promoCode: z.string().optional(),
       affiliateCode: z.string().optional(),
+      // UNDEFINED lets the customer pick PIX/Boleto/Cartão on Asaas's own
+      // invoice page — for whoever doesn't have a card. Defaults to
+      // CREDIT_CARD so existing behavior (auto-recurring charge) is unchanged.
+      billingType: z.enum(["CREDIT_CARD", "UNDEFINED"]).optional(),
     }).parse(d))
   .handler(async ({ data }) => {
     if (data.website) {
@@ -146,7 +151,7 @@ export const publicSignup = createServerFn({ method: "POST" })
         customerId: customer.id,
         valueCents: discountedValueCents,
         description: `Modo Criador — Plano ${plan.name}`,
-        billingType: "CREDIT_CARD",
+        billingType: data.billingType ?? "CREDIT_CARD",
         trialDays: TRIAL_DAYS,
       });
 
@@ -197,7 +202,7 @@ export const publicSignup = createServerFn({ method: "POST" })
  * activates that existing profile into it instead of creating a new user. */
 export const completeGoogleSignup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { agencyName: string; name: string; taxId: string; planId: string; promoCode?: string; affiliateCode?: string }) =>
+  .inputValidator((d: { agencyName: string; name: string; taxId: string; planId: string; promoCode?: string; affiliateCode?: string; billingType?: "CREDIT_CARD" | "UNDEFINED" }) =>
     z.object({
       agencyName: z.string().trim().min(2).max(80),
       name: z.string().trim().min(2).max(80),
@@ -205,6 +210,7 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
       planId: z.string().min(1),
       promoCode: z.string().optional(),
       affiliateCode: z.string().optional(),
+      billingType: z.enum(["CREDIT_CARD", "UNDEFINED"]).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const email = (context.claims.email as string | undefined)?.toLowerCase();
@@ -293,7 +299,7 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
         customerId: customer.id,
         valueCents: discountedValueCents,
         description: `Modo Criador — Plano ${plan.name}`,
-        billingType: "CREDIT_CARD",
+        billingType: data.billingType ?? "CREDIT_CARD",
         trialDays: TRIAL_DAYS,
       });
 

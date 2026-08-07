@@ -102,9 +102,22 @@ export function AgenciesBillingPanel() {
                               ) : invoiceResult === null ? (
                                 <span className="text-[11px] text-white/40">Sem fatura pendente</span>
                               ) : (
-                                <span className="text-[11px] text-white/80">
-                                  Próxima: R$ {(invoiceResult.valueCents / 100).toFixed(2)}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[11px] text-white/80">
+                                    R$ {(invoiceResult.valueCents / 100).toFixed(2)}
+                                  </span>
+                                  {invoiceResult.invoiceUrl && (
+                                    <button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(invoiceResult.invoiceUrl!);
+                                        toast.success("Link copiado — manda pro cliente escolher PIX/boleto/cartão.");
+                                      }}
+                                      className="text-[11px] font-bold text-white/60 hover:text-white transition underline"
+                                    >
+                                      Copiar link
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
                           )

@@ -72,7 +72,7 @@ export async function createAsaasSubscription(params: {
 export async function getNextPendingPayment(asaasSubscriptionId: string) {
   const payments = (await asaasFetch(
     `/payments?subscription=${asaasSubscriptionId}&status=PENDING&limit=1`,
-  )) as { data?: { id: string; value: number }[] };
+  )) as { data?: { id: string; value: number; invoiceUrl?: string }[] };
   return payments.data?.[0] ?? null;
 }
 

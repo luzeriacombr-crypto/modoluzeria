@@ -67,6 +67,7 @@ export function SalesPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [taxId, setTaxId] = useState("");
+  const [billingType, setBillingType] = useState<"CREDIT_CARD" | "UNDEFINED">("CREDIT_CARD");
   const [website, setWebsite] = useState(""); // honeypot
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -93,6 +94,7 @@ export function SalesPage() {
           agencyName, name, email, password, planId, taxId: taxId.replace(/\D/g, ""), website,
           promoCode,
           affiliateCode,
+          billingType,
         },
       });
       setInvoiceUrl(r.invoiceUrl);
@@ -118,6 +120,7 @@ export function SalesPage() {
         agencyName, name, taxId: taxId.replace(/\D/g, ""), planId,
         promoCode,
         affiliateCode,
+        billingType,
       }));
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -394,7 +397,9 @@ export function SalesPage() {
             {invoiceUrl ? (
               <>
                 <p className="text-[#0A0E23]/70 text-sm mb-4">
-                  Abrimos numa nova aba o link seguro pra você cadastrar o cartão (sem cobrança agora — só depois dos 7 dias de teste).
+                  {billingType === "UNDEFINED"
+                    ? "Abrimos numa nova aba o link seguro com sua primeira fatura, onde dá pra escolher PIX, boleto ou cartão (sem cobrança agora — só depois dos 7 dias de teste)."
+                    : "Abrimos numa nova aba o link seguro pra você cadastrar o cartão (sem cobrança agora — só depois dos 7 dias de teste)."}
                 </p>
                 <a href={invoiceUrl} target="_blank" rel="noreferrer" className="font-bold uppercase text-sm px-5 py-3 rounded-full inline-block" style={{ background: LIME, color: "#0A0E23" }}>
                   Abrir cadastro de pagamento
@@ -423,6 +428,28 @@ export function SalesPage() {
             </Field>
             <Field label="CNPJ ou CPF da agência">
               <input required value={taxId} onChange={(e) => setTaxId(e.target.value)} className="lz-input-onlight" placeholder="Somente números" maxLength={18} />
+            </Field>
+            <Field label="Forma de pagamento">
+              <div className="flex gap-2">
+                {([
+                  { id: "CREDIT_CARD" as const, label: "Cartão de crédito" },
+                  { id: "UNDEFINED" as const, label: "PIX ou Boleto" },
+                ]).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setBillingType(opt.id)}
+                    className="flex-1 px-3 py-2.5 rounded-lg text-sm font-semibold border transition"
+                    style={{
+                      borderColor: billingType === opt.id ? "#0A0E23" : "rgba(10,14,35,0.15)",
+                      background: billingType === opt.id ? "#0A0E23" : "transparent",
+                      color: billingType === opt.id ? "#fff" : "#0A0E23",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </Field>
             {/* Honeypot — invisible to real users, bots tend to fill every field */}
             <input

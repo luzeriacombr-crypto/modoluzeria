@@ -265,7 +265,9 @@ export const getOrgNextInvoice = createServerFn({ method: "POST" })
     if (!(org as any)?.asaas_subscription_id) return null;
     const { getNextPendingPayment } = await import("./asaas.server");
     const payment = await getNextPendingPayment((org as any).asaas_subscription_id);
-    return payment ? { id: payment.id, valueCents: Math.round(payment.value * 100) } : null;
+    return payment
+      ? { id: payment.id, valueCents: Math.round(payment.value * 100), invoiceUrl: payment.invoiceUrl ?? null }
+      : null;
   });
 
 /** Platform-admin only, and only for test/throwaway agencies: permanently
