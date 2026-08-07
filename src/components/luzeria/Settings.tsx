@@ -67,7 +67,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "drive", label: "Drive" },
           { id: "automations", label: "Automações" },
           { id: "subscription", label: "Assinatura" },
-          { id: "promotions", label: "Cupons e Afiliados" },
+          { id: "promotions", label: "Afiliados" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
         ].map((t) => {
