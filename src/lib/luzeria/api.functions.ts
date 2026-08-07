@@ -1685,7 +1685,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     (months ?? []).forEach((m) => monthByClient.set(m.client_id, m.id));
     const { data: items } = monthIds.length
       ? await context.supabase
-          .from("content_items").select("id, month_id, type, status").in("month_id", monthIds)
+          .from("content_items").select("id, month_id, type, status, title").in("month_id", monthIds)
       : { data: [] as any[] };
 
     type Row = {
@@ -1723,6 +1723,24 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     const ontime = active.filter((r) => r.total > 0 && r.percent >= 80).length;
     const behind = active.filter((r) => r.total > 0 && r.percent < 80).length;
 
+    // Item-level breakdown behind the "Entregues"/"Falta" metric cards —
+    // only active (non-archived) clients, matching totalDone/totalPlanned above.
+    const activeClientIds = new Set(active.map((r) => r.id));
+    const monthIdToClient = new Map<string, any>();
+    (months ?? []).forEach((m: any) => {
+      const c = clients.find((cl: any) => cl.id === m.client_id);
+      if (c && activeClientIds.has(c.id)) monthIdToClient.set(m.id, c);
+    });
+    const doneItems: { id: string; title: string; type: string; clientName: string; clientColor: string }[] = [];
+    const pendingItems: typeof doneItems = [];
+    (items ?? []).forEach((it: any) => {
+      const c = monthIdToClient.get(it.month_id);
+      if (!c) return;
+      const entry = { id: it.id, title: it.title, type: it.type, clientName: c.name, clientColor: c.color };
+      if (it.status === "PRONTO_PARA_PUBLICAR" || it.status === "FINALIZADO") doneItems.push(entry);
+      else pendingItems.push(entry);
+    });
+
     return {
       monthKey: data.monthKey,
       totals: {
@@ -1734,6 +1752,8 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
         behind,
       },
       clients: rows,
+      doneItems,
+      pendingItems,
     };
   });
 

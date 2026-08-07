@@ -26,6 +26,13 @@ function shiftMonth(key: string, delta: number) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+function monthRange(monthKey: string) {
+  const [y, m] = monthKey.split("-").map(Number);
+  const from = new Date(Date.UTC(y, m - 1, 1)).toISOString();
+  const to = new Date(Date.UTC(y, m, 1)).toISOString();
+  return { from, to };
+}
+
 function pctColor(p: number) {
   if (p >= 80) return "rgb(var(--lz-brand-rgb))";
   if (p >= 50) return "#FF8C42";
@@ -52,11 +59,16 @@ export function AdminDashboard() {
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { selectedMonthKey, selectMonth } = useUI();
   const [period, setPeriod] = useState<Period>("month");
-  const [filterMode, setFilterMode] = useState<null | "category" | "health">(null);
+  const [filterMode, setFilterMode] = useState<null | "category" | "health" | "metric">(null);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
 
   const dashboard = useQuery(adminDashboardQO(selectedMonthKey));
   const top = useQuery(topMembersQO(period, selectedMonthKey));
+  const { from: healthFrom, to: healthTo } = monthRange(selectedMonthKey);
+  const health = useQuery({
+    ...reportExtrasQO({ from: healthFrom, to: healthTo }),
+    enabled: me?.role === "master",
+  });
   const [openMember, setOpenMember] = useState<null | { id: string; name: string; color: string; avatarUrl: string | null }>(null);
 
   // Modo TV: quando a sidebar está oculta, reflag o dashboard a cada 5 minutos.
@@ -179,18 +191,26 @@ export function AdminDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <MetricCard tone={PALETTE.lime}      icon={<Users size={16} />}          label="Clientes ativos" value={t?.clients ?? 0} />
         <MetricCard tone={PALETTE.blue}      icon={<Target size={16} />}         label="Meta do mês"     value={t?.planned ?? 0} />
-        <MetricCard tone={"rgb(var(--lz-sidebar-rgb))"}          icon={<Package size={16} />}        label="Entregues"       value={t?.done ?? 0} />
+        <MetricCard tone={"rgb(var(--lz-sidebar-rgb))"}          icon={<Package size={16} />}        label="Entregues"       value={t?.done ?? 0}
+          onClick={() => { setFilterMode("metric"); setSelectedFilter("done"); }} />
         <MetricCard
           tone={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
           icon={<Clock size={16} />}
           label="Falta"
           value={((t?.planned ?? 0) - (t?.done ?? 0))}
           valueColor={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
+          onClick={() => { setFilterMode("metric"); setSelectedFilter("pending"); }}
         />
       </div>
 
       {/* Saúde da Operação — admin master only */}
-      {me?.role === "master" && <OperationHealth monthKey={selectedMonthKey} />}
+      {me?.role === "master" && (
+        <OperationHealth
+          data={health.data}
+          onOpenBlocked={() => { setFilterMode("health"); setSelectedFilter("blocked"); }}
+          onOpenRework={() => { setFilterMode("health"); setSelectedFilter("rework"); }}
+        />
+      )}
 
       {/* Top members */}
       <div className="rounded-xl bg-[#161616] border border-white/[0.07] p-5 mb-6 relative overflow-hidden">
@@ -339,6 +359,7 @@ export function AdminDashboard() {
           selectedFilter={selectedFilter}
           monthKey={selectedMonthKey}
           data={data}
+          health={health.data}
           onClose={() => { setFilterMode(null); setSelectedFilter(null); }}
           setFilterMode={setFilterMode}
           setSelectedFilter={setSelectedFilter}
@@ -534,10 +555,11 @@ function formatFinalized(iso: string) {
 }
 
 function MetricCard({
-  icon, label, value, tone, valueColor,
-}: { icon: React.ReactNode; label: string; value: number | string; tone: string; valueColor?: string }) {
+  icon, label, value, tone, valueColor, onClick,
+}: { icon: React.ReactNode; label: string; value: number | string; tone: string; valueColor?: string; onClick?: () => void }) {
   return (
-    <div className="relative overflow-hidden rounded-xl p-4 transition-transform hover:-translate-y-0.5 text-center md:text-left"
+    <div onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
+      className={`relative overflow-hidden rounded-xl p-4 transition-transform hover:-translate-y-0.5 text-center md:text-left ${onClick ? "cursor-pointer hover:border-white/[0.3]" : ""}`}
       style={{
         background: `linear-gradient(160deg, ${hexA(tone, 0.16)} 0%, rgba(22,22,22,1) 70%)`,
         border: `1px solid ${hexA(tone, 0.22)}`,
@@ -593,16 +615,17 @@ function hexA(hex: string, a: number) {
 }
 
 type FilteredItemsPanelProps = {
-  filterMode: "category" | "health";
+  filterMode: "category" | "health" | "metric";
   selectedFilter: string;
   monthKey: string;
   data: any;
+  health?: any;
   onClose: () => void;
-  setFilterMode: (mode: null | "category" | "health") => void;
+  setFilterMode: (mode: null | "category" | "health" | "metric") => void;
   setSelectedFilter: (filter: string | null) => void;
 };
 
-function FilteredItemsPanel({ filterMode, selectedFilter, monthKey, data, onClose, setFilterMode, setSelectedFilter }: FilteredItemsPanelProps) {
+function FilteredItemsPanel({ filterMode, selectedFilter, monthKey, data, health, onClose, setFilterMode, setSelectedFilter }: FilteredItemsPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const h = (e: MouseEvent) => { if (!panelRef.current?.contains(e.target as Node)) onClose(); };
@@ -620,14 +643,19 @@ function FilteredItemsPanel({ filterMode, selectedFilter, monthKey, data, onClos
     title = selectedFilter;
   } else if (filterMode === "health") {
     if (selectedFilter === "blocked") {
-      items = data?.blocked ?? [];
+      items = health?.blocked ?? [];
       title = "Travados";
     } else if (selectedFilter === "rework") {
-      items = data?.rework?.items ?? [];
+      items = health?.rework?.items ?? [];
       title = "Taxa de Retrabalho";
-    } else if (selectedFilter === "quality") {
-      items = data?.quality?.items ?? [];
-      title = "Qualidade Média";
+    }
+  } else if (filterMode === "metric") {
+    if (selectedFilter === "done") {
+      items = data?.doneItems ?? [];
+      title = "Entregues";
+    } else if (selectedFilter === "pending") {
+      items = data?.pendingItems ?? [];
+      title = "Falta";
     }
   }
 
@@ -691,12 +719,11 @@ function FilteredItemsPanel({ filterMode, selectedFilter, monthKey, data, onClos
 
 /* ============== OPERATION HEALTH (master only) ============== */
 
-function OperationHealth({ monthKey }: { monthKey: string }) {
-  const [y, m] = monthKey.split("-").map(Number);
-  const from = new Date(Date.UTC(y, m - 1, 1)).toISOString();
-  const to = new Date(Date.UTC(y, m, 1)).toISOString();
-  const { data } = useQuery(reportExtrasQO({ from, to }));
-
+function OperationHealth({ data, onOpenBlocked, onOpenRework }: {
+  data: any;
+  onOpenBlocked: () => void;
+  onOpenRework: () => void;
+}) {
   const leadAvg = data?.leadTime.avgHours ?? 0;
   const blocked = data?.blocked.length ?? 0;
   const reworkRate = data?.rework.ratePercent ?? 0;
@@ -717,9 +744,9 @@ function OperationHealth({ monthKey }: { monthKey: string }) {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <HealthCard icon={<Clock size={14} />} tone="#4A9EFF" label="Lead time médio" value={formatHours(leadAvg)} sub={`${data?.leadTime.count ?? 0} entregas`} />
-        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} label="Travados" value={blocked} sub={blocked > 0 ? "precisam de ação" : "tudo fluindo"} valueColor={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} onClick={blocked > 0 ? () => { setFilterMode("health"); setSelectedFilter("blocked"); } : undefined} />
-        <HealthCard icon={<RotateCcw size={14} />} tone={reworkRate > 15 ? "#FF8C42" : "rgb(var(--lz-brand-rgb))"} label="Taxa de retrabalho" value={`${reworkRate}%`} sub={`${data?.rework.total ?? 0} itens`} onClick={() => { setFilterMode("health"); setSelectedFilter("rework"); }} />
-        <HealthCard icon={<Trophy size={14} />} tone="rgb(var(--lz-brand-rgb))" label="Qualidade média" value={quality > 0 ? `${quality}/5` : "—"} sub={`${data?.quality.count ?? 0} avaliados`} onClick={() => { setFilterMode("health"); setSelectedFilter("quality"); }} />
+        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} label="Travados" value={blocked} sub={blocked > 0 ? "precisam de ação" : "tudo fluindo"} valueColor={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} onClick={blocked > 0 ? onOpenBlocked : undefined} />
+        <HealthCard icon={<RotateCcw size={14} />} tone={reworkRate > 15 ? "#FF8C42" : "rgb(var(--lz-brand-rgb))"} label="Taxa de retrabalho" value={`${reworkRate}%`} sub={`${data?.rework.total ?? 0} itens`} onClick={onOpenRework} />
+        <HealthCard icon={<Trophy size={14} />} tone="rgb(var(--lz-brand-rgb))" label="Qualidade média" value={quality > 0 ? `${quality}/5` : "—"} sub={`${data?.quality.count ?? 0} avaliados`} />
       </div>
     </div>
   );
