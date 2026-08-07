@@ -48,7 +48,14 @@ import {
 } from "./feed-share.functions";
 import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from "./platform-updates.functions";
 import { publishToInstagram, setInstagramAutoPublish } from "./instagram.functions";
+import { getCalendarItems } from "./calendar.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
+export const calendarItemsQO = (from: string, to: string) =>
+  queryOptions({
+    queryKey: ["calendar-items", from, to],
+    queryFn: () => getCalendarItems({ data: { from, to } }),
+    enabled: !!from && !!to,
+  });
 export const platformUpdatesQO = () => queryOptions({ queryKey: ["platform-updates"], queryFn: () => listPlatformUpdates() });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
 export const clientsQO = () => queryOptions({ queryKey: ["clients"], queryFn: () => listClients() });

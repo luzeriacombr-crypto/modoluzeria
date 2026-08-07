@@ -27,6 +27,7 @@ import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
 import { Route as AuthenticatedInvestigacaoRouteImport } from './routes/_authenticated/investigacao'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
 import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/ajuda'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as ApiCronPublishInstagramRouteImport } from './routes/api.cron.publish-instagram'
@@ -127,6 +128,11 @@ const AuthenticatedConfiguracoesRoute =
     path: '/configuracoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCalendarioRoute = AuthenticatedCalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAjudaRoute = AuthenticatedAjudaRouteImport.update({
   id: '/ajuda',
   path: '/ajuda',
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
+  '/calendario': typeof AuthenticatedCalendarioRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
+  '/calendario': typeof AuthenticatedCalendarioRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/termos': typeof TermosRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/ajuda': typeof AuthenticatedAjudaRoute
+  '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
@@ -261,6 +270,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/admin'
     | '/ajuda'
+    | '/calendario'
     | '/configuracoes'
     | '/investigacao'
     | '/minhas-tarefas'
@@ -287,6 +297,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/admin'
     | '/ajuda'
+    | '/calendario'
     | '/configuracoes'
     | '/investigacao'
     | '/minhas-tarefas'
@@ -314,6 +325,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/_authenticated/admin'
     | '/_authenticated/ajuda'
+    | '/_authenticated/calendario'
     | '/_authenticated/configuracoes'
     | '/_authenticated/investigacao'
     | '/_authenticated/minhas-tarefas'
@@ -473,6 +485,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/calendario': {
+      id: '/_authenticated/calendario'
+      path: '/calendario'
+      fullPath: '/calendario'
+      preLoaderRoute: typeof AuthenticatedCalendarioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ajuda': {
       id: '/_authenticated/ajuda'
       path: '/ajuda'
@@ -528,6 +547,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAjudaRoute: typeof AuthenticatedAjudaRoute
+  AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedInvestigacaoRoute: typeof AuthenticatedInvestigacaoRoute
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
@@ -542,6 +562,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAjudaRoute: AuthenticatedAjudaRoute,
+  AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedInvestigacaoRoute: AuthenticatedInvestigacaoRoute,
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
