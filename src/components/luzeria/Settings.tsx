@@ -14,6 +14,7 @@ import { TeamMemberCard } from "./TeamMemberCard";
 import { UpdatesTab } from "./UpdatesTab";
 import { PromotionCodesPanel } from "./PromotionCodesPanel";
 import { AffiliateProgramPanel } from "./AffiliateProgramPanel";
+import { AgenciesBillingPanel } from "./AgenciesBillingPanel";
 
 type SettingsTab = "team" | "report" | "automations" | "general" | "subscription" | "updates";
 const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "subscription", "updates"];
@@ -100,6 +101,11 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "subscription" ? (
         <div className="space-y-10">
           <SubscriptionSettings />
+          {me.isPlatformAdmin && (
+            <div className="pt-2 border-t border-white/10">
+              <AgenciesBillingPanel />
+            </div>
+          )}
           <div className="pt-2 border-t border-white/10">
             <AffiliateProgramPanel isPlatformAdmin={!!me.isPlatformAdmin} />
           </div>

@@ -209,6 +209,61 @@ export const getOrgPlanStatus = createServerFn({ method: "GET" })
     };
   });
 
+/** Platform-admin only: every agency on Modo Criador with its plan and
+ * billing status, for the "Financeiro" tab in Settings. */
+export const listOrgsBilling = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+
+    const { data: orgs, error } = await context.supabase
+      .from("orgs")
+      .select("id, name, slug, plan_id, subscription_status, trial_ends_at, asaas_subscription_id, created_at")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const { data: plans } = await context.supabase.from("plans").select("id, name, price_cents");
+    const planMap = new Map((plans ?? []).map((p: any) => [p.id, p]));
+
+    const { data: clientRows } = await context.supabase
+      .from("clients").select("org_id").eq("archived", false).neq("category", "Ex-clientes");
+    const clientsByOrg = new Map<string, number>();
+    (clientRows ?? []).forEach((c: any) => clientsByOrg.set(c.org_id, (clientsByOrg.get(c.org_id) ?? 0) + 1));
+
+    return (orgs ?? []).map((o: any) => {
+      const plan = planMap.get(o.plan_id);
+      return {
+        id: o.id as string,
+        name: o.name as string,
+        slug: o.slug as string,
+        planId: o.plan_id as string,
+        planName: (plan as any)?.name ?? o.plan_id,
+        priceCents: (plan as any)?.price_cents ?? null,
+        subscriptionStatus: o.subscription_status as string,
+        trialEndsAt: o.trial_ends_at as string | null,
+        hasAsaasSubscription: !!o.asaas_subscription_id,
+        clientsUsed: clientsByOrg.get(o.id) ?? 0,
+        createdAt: o.created_at as string,
+      };
+    });
+  });
+
+/** Platform-admin only: fetches an org's next pending Asaas invoice on
+ * demand (not batched with listOrgsBilling — avoids one Asaas call per
+ * agency on every load). */
+export const getOrgNextInvoice = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { orgId: string }) => z.object({ orgId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { data: org } = await context.supabase
+      .from("orgs").select("asaas_subscription_id").eq("id", data.orgId).maybeSingle();
+    if (!(org as any)?.asaas_subscription_id) return null;
+    const { getNextPendingPayment } = await import("./asaas.server");
+    const payment = await getNextPendingPayment((org as any).asaas_subscription_id);
+    return payment ? { id: payment.id, valueCents: Math.round(payment.value * 100) } : null;
+  });
+
 /** Master clicks "Assinar" for a plan: creates (or reuses) the org's Asaas
  * customer + a monthly subscription for that plan's price, returns the
  * invoice URL so the org can complete the first payment (boleto/PIX/cartão). */

@@ -9,6 +9,7 @@ import {
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   listCleaningTasks, addCleaningTask, renameCleaningTask, deleteCleaningTask,
   adminCreateUser, createAgency, updateMyOrg, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getMemberFinalizations,
+  listOrgsBilling, getOrgNextInvoice,
   updateMyAccount,
   getReport, getMemberReportDetail, getMemberVelocity,
   updateFeedOrder,
@@ -222,6 +223,8 @@ export const appSettingsQO = () =>
 
 export const orgPlanStatusQO = () =>
   queryOptions({ queryKey: ["org-plan-status"], queryFn: () => getOrgPlanStatus() });
+export const orgsBillingQO = () =>
+  queryOptions({ queryKey: ["orgs-billing"], queryFn: () => listOrgsBilling() });
 
 export const setupChecklistQO = () =>
   queryOptions({ queryKey: ["setup-checklist"], queryFn: () => getSetupChecklist() });
