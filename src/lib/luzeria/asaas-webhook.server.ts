@@ -75,6 +75,11 @@ export async function handleAsaasWebhook(request: Request): Promise<Response> {
         );
         try {
           await updateAsaasPaymentValue(payload.payment.id, discountedValueCents);
+          const { notifyOrgMasters } = await import("./promotion-affiliate.functions");
+          await notifyOrgMasters(
+            org.id,
+            `Desconto de ${promo.discount_percent}% aplicado na sua fatura deste mês! Novo valor: R$ ${(discountedValueCents / 100).toFixed(2)}.`,
+          );
         } catch (err) {
           console.error("[asaas-webhook] failed to apply gift discount", err);
         }

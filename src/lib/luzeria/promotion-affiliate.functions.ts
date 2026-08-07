@@ -511,6 +511,22 @@ export const recordPurchaseEvent = createServerFn({ method: "POST" })
     return purchase;
   });
 
+/** Notify every master of an org with an in-app notification (bell icon). */
+export async function notifyOrgMasters(orgId: string, message: string, type = "promo_gift") {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: profiles } = await supabaseAdmin.from("profiles").select("id").eq("org_id", orgId);
+  if (!profiles?.length) return;
+  const { data: masters } = await supabaseAdmin
+    .from("user_roles")
+    .select("user_id")
+    .eq("role", "master")
+    .in("user_id", profiles.map((p) => p.id));
+  if (!masters?.length) return;
+  await supabaseAdmin
+    .from("notifications")
+    .insert(masters.map((m) => ({ user_id: m.user_id, type, message })));
+}
+
 export const applyPromotionCodeToOrg = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
   .handler(async (event) => {
@@ -547,6 +563,10 @@ export const applyPromotionCodeToOrg = createServerFn({ method: "POST" })
       if (payment) {
         const discountedValueCents = Math.round(payment.value * 100 * (1 - promo.discount_percent / 100));
         await updateAsaasPaymentValue(payment.id, discountedValueCents);
+        await notifyOrgMasters(
+          data.orgId,
+          `Você ganhou ${promo.discount_percent}% de desconto! Sua fatura deste mês foi atualizada para R$ ${(discountedValueCents / 100).toFixed(2)}.`,
+        );
         return { success: true, appliedNow: true, newValueCents: discountedValueCents };
       }
     }
@@ -560,6 +580,10 @@ export const applyPromotionCodeToOrg = createServerFn({ method: "POST" })
       .update({ promotion_code_id: data.promotionCodeId })
       .eq("id", data.orgId);
     if (error) throw error;
+    await notifyOrgMasters(
+      data.orgId,
+      `Você ganhou ${promo.discount_percent}% de desconto na sua próxima fatura!`,
+    );
     return { success: true, appliedNow: false };
   });
 
