@@ -57,6 +57,16 @@ function FileThumb({ fileId, mime, name }: { fileId: string; mime?: string | nul
   );
 }
 
+/** Supabase Storage keys only allow word chars, whitespace, and a specific
+ * punctuation set — accented characters (e.g. macOS screenshot names like
+ * "Captura de Tela ... às ...") get rejected with a 400 InvalidKey. Only
+ * used for the temp storage key; the real filename (kept accented) still
+ * goes to Drive via syncUploadToDrive's `name` field. */
+function sanitizeStorageFileName(name: string): string {
+  const ascii = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return ascii.replace(/[^\w\s!\-.*'()&$@=;:+,?]/g, "_");
+}
+
 // 50 MB — Supabase Storage's own hard cap on the free plan (confirmed via a
 // real 413 EntityTooLarge; not configurable past this without upgrading
 // Supabase to Pro). Well past the old ~3 MB working reality either way.
@@ -184,7 +194,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
     setUploadProgress({ done: 0, total: toUpload.length, pct: 0, phase: "uploading" });
     const failed: { name: string; msg: string }[] = [];
     for (const file of toUpload) {
-      const storagePath = `${itemId}/tmp-${Date.now()}-${file.name}`;
+      const storagePath = `${itemId}/tmp-${Date.now()}-${sanitizeStorageFileName(file.name)}`;
       try {
         await putToSupabaseStorage(storagePath, file, accessToken, (pct) =>
           setUploadProgress((p) => (p ? { ...p, pct, phase: "uploading" } : p)));
