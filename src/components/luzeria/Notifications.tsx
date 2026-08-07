@@ -99,6 +99,8 @@ export function NotificationsBell() {
                     navigate({ to: "/ajuda", search: { tab: "todas" } });
                   } else if (n.type === "bug_report_status") {
                     navigate({ to: "/ajuda", search: { tab: "minhas" } });
+                  } else if (n.type === "platform_update") {
+                    navigate({ to: "/configuracoes", search: { tab: "updates" } });
                   }
                 }}
                 className="w-full text-left px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors block"
