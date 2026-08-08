@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   Rocket, CalendarDays, Users, Link2, FolderOpen, Check, X, ChevronDown, Zap, Lock,
+  MessageCircle, LayoutDashboard, BarChart3, Bell, ShieldCheck, Smartphone, Tablet, Monitor,
+  ChevronLeft, ChevronRight, Play, Heart, Send, Bookmark,
 } from "lucide-react";
 import { getPublicPlans, publicSignup } from "@/lib/luzeria/signup.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +53,289 @@ const STEPS = [
   { n: "03", Icon: Link2, t: "Cliente aprova pelo link", d: "Manda um link público bonito, o cliente aprova ou comenta alterações, sem login." },
   { n: "04", Icon: FolderOpen, t: "Arquivos no Drive", d: "Conecte sua própria conta do Google Drive e faça o Backup dos arquivos automaticamente." },
 ];
+
+/* ---------------------------------------------------------------------- *
+ * Dobras de funcionalidades — uma seção por feature "épica", cada uma com
+ * uma mini-recriação visual da própria tela do app (mesmas cores e tokens
+ * usados no produto de verdade), em vez de screenshot estático.
+ * ---------------------------------------------------------------------- */
+
+type IconType = React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>;
+
+function AppCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div
+      className={`w-full max-w-[420px] rounded-2xl border border-white/10 shadow-2xl overflow-hidden ${LIFT} ${className}`}
+      style={{ background: "#141414", ...EASE }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function FeatureFold({
+  icon: Icon, eyebrow, title, description, visual, background, dark, reverse,
+}: {
+  icon: IconType;
+  eyebrow: string;
+  title: React.ReactNode;
+  description: string;
+  visual: React.ReactNode;
+  background: string;
+  dark?: boolean;
+  reverse?: boolean;
+}) {
+  const textColor = dark ? "#fff" : "#0A0E23";
+  const eyebrowColor = dark ? LIME : ACCENT_ON_LIGHT;
+  const bodyClass = dark ? "text-white/65" : "text-[#0A0E23]/60";
+  return (
+    <section style={{ background, color: textColor }} className="border-t border-white/10">
+      <Reveal className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14 sm:py-20">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          <div className={reverse ? "lg:order-2" : ""}>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: eyebrowColor }}>
+              <Icon size={13} /> {eyebrow}
+            </div>
+            <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-4 text-balance">{title}</h2>
+            <p className={`${bodyClass} text-base leading-relaxed max-w-[460px]`}>{description}</p>
+          </div>
+          <div className={`flex justify-center ${reverse ? "lg:order-1" : ""}`}>{visual}</div>
+        </div>
+      </Reveal>
+    </section>
+  );
+}
+
+/** Preview de feed — mini recriação do modal estilo Instagram que o cliente
+ * usa pra aprovar posts, sem precisar criar conta. */
+function FeedPreviewVisual() {
+  return (
+    <AppCard className="max-w-[300px]">
+      <div className="relative w-full aspect-[4/5]" style={{ background: "linear-gradient(135deg, #2A1E3A, #0D2B4A)" }}>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="h-14 w-14 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.1)" }}>
+            <Play size={20} className="text-white/70 fill-white/70 ml-0.5" />
+          </div>
+        </div>
+        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 bg-black/50 rounded-full pl-1 pr-2.5 py-1">
+          <span className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-black" style={{ background: LIME, color: "#0A0E23" }}>C</span>
+          <span className="text-[10px] font-semibold text-white">Clínica Vitta</span>
+        </div>
+        <div className="absolute top-2.5 right-2.5 text-[9px] font-bold text-white bg-black/50 rounded-full px-2 py-0.5">1/5</div>
+      </div>
+      <div className="px-3.5 pt-3 pb-1 flex items-center gap-3 text-white/70">
+        <Heart size={17} /> <MessageCircle size={17} /> <Send size={17} /> <div className="flex-1" /> <Bookmark size={17} />
+      </div>
+      <div className="px-3.5 pb-3.5 flex gap-2">
+        <div className="flex-1 rounded-lg py-2.5 text-center text-[11px] font-bold" style={{ background: LIME, color: "#0A0E23" }}>✓ Aprovar post</div>
+        <div className="flex-1 rounded-lg py-2.5 text-center text-[11px] font-bold border border-white/20 text-white/80">Sugerir</div>
+      </div>
+    </AppCard>
+  );
+}
+
+/** Dashboard — anel de progresso (conic-gradient) + tiles de métrica, iguais
+ * aos do Dashboard real (Entregues / Falta / Travados / Clientes ativos). */
+function DashboardVisual() {
+  const pct = 85;
+  const tiles = [
+    { label: "Clientes ativos", value: "22", color: "#7EB3FF" },
+    { label: "Entregues", value: "199", color: "rgb(var(--lz-brand-rgb))" },
+    { label: "Falta", value: "34", color: "#FF6B6B" },
+  ];
+  return (
+    <AppCard>
+      <div className="p-5">
+        <div className="text-[10px] uppercase font-bold tracking-wider text-white/40 mb-3">Dashboard · Julho 2026</div>
+        <div className="flex items-center gap-4 mb-4">
+          <div
+            className="h-20 w-20 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: `conic-gradient(rgb(var(--lz-brand-rgb)) ${pct * 3.6}deg, rgba(255,255,255,0.08) 0deg)` }}
+          >
+            <div className="h-14 w-14 rounded-full flex flex-col items-center justify-center" style={{ background: "#141414" }}>
+              <span className="text-base font-black text-white">{pct}%</span>
+              <span className="text-[8px] text-white/40 uppercase tracking-wide">entregas</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-white font-bold text-sm">Bom ritmo!</div>
+            <div className="text-white/40 text-xs">Vamos fechar forte esse mês.</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {tiles.map((t) => (
+            <div key={t.label} className="rounded-lg p-2.5 border border-white/[0.06]" style={{ background: "rgba(255,255,255,0.03)" }}>
+              <div className="text-lg font-black" style={{ color: t.color }}>{t.value}</div>
+              <div className="text-[9px] text-white/40 leading-tight mt-0.5">{t.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </AppCard>
+  );
+}
+
+/** Relatório por membro — ranking com avatar, entregues no mês e barra de
+ * produtividade, no mesmo espírito do ranking real da equipe. */
+function ReportVisual() {
+  const rows = [
+    { name: "Andreia R.", done: 34, pct: 92, color: "rgb(var(--lz-brand-rgb))" },
+    { name: "Bruno M.", done: 29, pct: 81, color: "#7EB3FF" },
+    { name: "Carol S.", done: 21, pct: 63, color: "#FFD97E" },
+  ];
+  return (
+    <AppCard>
+      <div className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-[10px] uppercase font-bold tracking-wider text-white/40">Produtividade da equipe</div>
+          <BarChart3 size={14} className="text-white/30" />
+        </div>
+        <div className="space-y-3.5">
+          {rows.map((r, i) => (
+            <div key={r.name} className="flex items-center gap-3">
+              <span
+                className="h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0"
+                style={{ background: r.color, color: "#0A0E23" }}
+              >{r.name.charAt(0)}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11.5px] font-semibold text-white truncate">{r.name}</span>
+                  <span className="text-[10px] text-white/40">{r.done} entregues</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${r.pct}%`, background: r.color }} />
+                </div>
+              </div>
+              {i === 0 && <span className="text-[13px] shrink-0">🏆</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </AppCard>
+  );
+}
+
+/** Calendário geral — mini grade mensal, com pílulas coloridas nos dias que
+ * têm post/reel programado, igual ao Calendário real. */
+function CalendarVisual() {
+  const dots: Record<number, string[]> = {
+    3: ["rgb(var(--lz-brand-rgb))"], 7: ["#7EB3FF", "#FFD97E"], 12: ["#B97EFF"],
+    15: ["rgb(var(--lz-brand-rgb))", "#7EB3FF"], 21: ["#4A9EFF"], 26: ["#FFD97E"],
+  };
+  return (
+    <AppCard>
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3 px-0.5">
+          <ChevronLeft size={14} className="text-white/30" />
+          <span className="text-[11px] font-bold text-white">Agosto 2026</span>
+          <ChevronRight size={14} className="text-white/30" />
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {["S", "T", "Q", "Q", "S", "S", "D"].map((d, i) => (
+            <div key={i} className="text-center text-[8px] font-bold text-white/30 pb-1">{d}</div>
+          ))}
+          {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+            <div key={day} className="aspect-square rounded-md flex flex-col items-center justify-center gap-0.5 border border-white/[0.04]" style={{ background: "rgba(255,255,255,0.02)" }}>
+              <span className="text-[8px] text-white/40">{day}</span>
+              <div className="flex gap-0.5">
+                {(dots[day] ?? []).map((c, i) => <span key={i} className="h-1 w-1 rounded-full" style={{ background: c }} />)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </AppCard>
+  );
+}
+
+/** Notificações no celular — banner de push notification, igual ao que
+ * chega no aparelho quando ativa notificações pelo sino no app. */
+function NotificationVisual() {
+  return (
+    <AppCard className="max-w-[340px]">
+      <div className="p-5">
+        <div className="text-[10px] uppercase font-bold tracking-wider text-white/40 mb-4">Notificações · agora</div>
+        {[
+          { t: "Novo comentário", d: "Bruno comentou no Post 02 — Clínica Vitta", time: "agora" },
+          { t: "Prazo se aproximando", d: "Reel \"Bastidores\" vence amanhã", time: "há 12min" },
+          { t: "Post aprovado ✓", d: "Cliente aprovou \"Depoimento — Ana\"", time: "há 1h" },
+        ].map((n) => (
+          <div key={n.t} className="flex items-start gap-2.5 rounded-lg p-2.5 mb-2 last:mb-0 border border-white/[0.06]" style={{ background: "rgba(255,255,255,0.03)" }}>
+            <span className="h-7 w-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(var(--lz-brand-light-rgb),0.15)" }}>
+              <Bell size={13} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-bold text-white truncate">{n.t}</div>
+              <div className="text-[10px] text-white/45 leading-snug">{n.d}</div>
+            </div>
+            <span className="text-[9px] text-white/30 shrink-0">{n.time}</span>
+          </div>
+        ))}
+      </div>
+    </AppCard>
+  );
+}
+
+/** Rapidez e responsividade — três "molduras" de dispositivo lado a lado,
+ * mostrando que a mesma tela se adapta em qualquer tamanho. */
+function ResponsiveVisual() {
+  const devices = [
+    { Icon: Monitor, w: "w-28", h: "h-20" },
+    { Icon: Tablet, w: "w-16", h: "h-20" },
+    { Icon: Smartphone, w: "w-10", h: "h-20" },
+  ];
+  return (
+    <AppCard className="max-w-[420px]">
+      <div className="p-6 flex items-end justify-center gap-4">
+        {devices.map(({ Icon, w, h }, i) => (
+          <div key={i} className={`${w} ${h} rounded-lg border border-white/10 flex flex-col overflow-hidden shrink-0`} style={{ background: "rgba(255,255,255,0.03)" }}>
+            <div className="flex-1 flex flex-col gap-1 p-1.5">
+              <div className="h-1.5 rounded-full w-full" style={{ background: "rgb(var(--lz-brand-rgb))" }} />
+              <div className="h-1 rounded-full w-3/4 bg-white/15" />
+              <div className="h-1 rounded-full w-1/2 bg-white/15" />
+            </div>
+            <div className="flex items-center justify-center py-1.5 border-t border-white/[0.06]">
+              <Icon size={12} className="text-white/40" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="px-5 pb-4 flex items-center justify-center gap-1.5 text-[10px] text-white/40">
+        <Zap size={11} style={{ color: "rgb(var(--lz-brand-rgb))" }} /> Carrega rápido em qualquer tela
+      </div>
+    </AppCard>
+  );
+}
+
+/** Segurança e LGPD — selo central com os pontos que mais importam pra
+ * quem vai confiar dados de cliente na plataforma. */
+function SecurityVisual() {
+  const rows = [
+    "Dados isolados por agência (nunca cruzam entre contas)",
+    "Conexão criptografada de ponta a ponta",
+    "Backup automático no seu próprio Google Drive",
+    "Conformidade com a LGPD, com política de privacidade clara",
+  ];
+  return (
+    <AppCard className="max-w-[400px]">
+      <div className="p-6">
+        <div className="flex justify-center mb-4">
+          <span className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ background: "rgba(var(--lz-brand-light-rgb),0.12)" }}>
+            <ShieldCheck size={26} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
+          </span>
+        </div>
+        <div className="space-y-2.5">
+          {rows.map((r) => (
+            <div key={r} className="flex items-start gap-2">
+              <Check size={13} className="shrink-0 mt-0.5" style={{ color: "rgb(var(--lz-brand-rgb))" }} strokeWidth={2.5} />
+              <span className="text-[11.5px] text-white/70 leading-relaxed">{r}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </AppCard>
+  );
+}
 
 export function SalesPage() {
   const location = useLocation();
@@ -289,6 +574,76 @@ export function SalesPage() {
           </div>
         </Reveal>
       </section>
+
+      <FeatureFold
+        icon={MessageCircle}
+        eyebrow="Preview de feed"
+        title="O cliente aprova em segundos, sem sair do celular."
+        description="Manda um link, ele vê o post do jeitinho que vai ficar no Instagram — imagem, legenda, tudo — e aprova ou pede ajuste com um toque. Sem precisar criar conta, sem confusão de WhatsApp."
+        visual={<FeedPreviewVisual />}
+        background={BG_GRAY}
+        dark
+      />
+
+      <FeatureFold
+        icon={LayoutDashboard}
+        eyebrow="Dashboard geral"
+        title="A saúde da operação, num piscar de olhos."
+        description="Veja quantos posts foram entregues, quantos ainda faltam e onde estão os gargalos — de todos os clientes, de uma vez só. Clique em qualquer número e já cai na lista de tarefas por trás dele."
+        visual={<DashboardVisual />}
+        background={BG_WHITE}
+        reverse
+      />
+
+      <FeatureFold
+        icon={BarChart3}
+        eyebrow="Relatórios da equipe"
+        title="Saiba exatamente quem está entregando (e quem precisa de ajuda)."
+        description="Ranking de produtividade por pessoa, taxa de retrabalho, prazos cumpridos. Chega de planilha manual pra saber como a equipe está performando no mês."
+        visual={<ReportVisual />}
+        background={BG_BLUE_2}
+        dark
+      />
+
+      <FeatureFold
+        icon={CalendarDays}
+        eyebrow="Calendário geral"
+        title="Todos os clientes, num calendário só."
+        description="Veja tudo que está programado pra publicar em qualquer dia, de qualquer cliente, sem precisar abrir pasta por pasta. Passe o mouse e já vê a miniatura do post."
+        visual={<CalendarVisual />}
+        background={BG_WHITE}
+        reverse
+      />
+
+      <FeatureFold
+        icon={Bell}
+        eyebrow="Notificações no celular"
+        title="Um comentário novo? Você fica sabendo na hora."
+        description="Ative as notificações push no seu celular e receba avisos de comentário, prazo próximo ou aprovação de cliente — direto na tela de bloqueio, sem precisar ficar checando o app."
+        visual={<NotificationVisual />}
+        background={BG_GRAY}
+        dark
+      />
+
+      <FeatureFold
+        icon={Zap}
+        eyebrow="Rapidez e responsividade"
+        title="Rápido no computador. Rápido no celular. Sempre."
+        description="O Modo Criador foi construído pra carregar rápido e funcionar liso em qualquer tela — desktop, tablet ou celular — porque sua equipe não trabalha só sentada na frente do computador."
+        visual={<ResponsiveVisual />}
+        background={BG_WHITE}
+        reverse
+      />
+
+      <FeatureFold
+        icon={ShieldCheck}
+        eyebrow="Segurança e LGPD"
+        title="Os dados dos seus clientes, protegidos de verdade."
+        description="Cada agência tem seus dados totalmente isolados dos de outras contas, com conexão criptografada e conformidade com a LGPD — pra você confiar informação sensível de cliente na plataforma sem medo."
+        visual={<SecurityVisual />}
+        background={BG_BLUE_2}
+        dark
+      />
 
       {/* Benefícios */}
       <section style={{ background: BG_GRAY }} className="border-t border-white/10">
