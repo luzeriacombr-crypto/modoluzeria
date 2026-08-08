@@ -24,7 +24,7 @@ async function signAvatarPaths(supabase: any, paths: (string | null | undefined)
 }
 
 /** Generate signed read URLs for reel-cover storage paths (1 year). */
-async function signCoverPaths(supabase: any, paths: (string | null | undefined)[]): Promise<Map<string, string>> {
+export async function signCoverPaths(supabase: any, paths: (string | null | undefined)[]): Promise<Map<string, string>> {
   const unique = Array.from(new Set(paths.filter((p): p is string => !!p)));
   const result = new Map<string, string>();
   if (unique.length === 0) return result;

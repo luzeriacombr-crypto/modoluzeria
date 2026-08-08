@@ -1,11 +1,16 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, X, Inbox, CalendarDays } from "lucide-react";
-import { calendarItemsQO } from "@/lib/luzeria/queries";
+import { ChevronLeft, ChevronRight, X, Inbox, CalendarDays, Image as ImageIcon } from "lucide-react";
+import { calendarItemsQO, itemFilesQO, driveThumbnailQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { CONTENT_TYPE_LABEL, STATUS_META, type Status } from "@/lib/luzeria/types";
 import { formatMonth } from "@/lib/luzeria/utils";
+
+type CalendarItem = {
+  id: string; title: string; type: string; status: string; scheduledAt: string | null;
+  monthKey: string; clientId: string; clientName: string; clientColor: string; coverUrl: string | null;
+};
 
 const WEEKDAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"];
 const MAX_VISIBLE = 3;
@@ -57,6 +62,17 @@ export function CalendarioPage() {
   const navigate = useNavigate();
   const monthKey = selectedMonthKey || currentMonthKey();
   const [dayOpen, setDayOpen] = useState<string | null>(null);
+  const [hover, setHover] = useState<{ item: CalendarItem; top: number; left: number; placeAbove: boolean } | null>(null);
+
+  function showHover(item: CalendarItem, el: HTMLElement) {
+    const rect = el.getBoundingClientRect();
+    const POPUP_W = 220;
+    const POPUP_H = 260;
+    const placeAbove = rect.top - POPUP_H - 8 >= 8;
+    const top = placeAbove ? rect.top - POPUP_H - 8 : rect.bottom + 8;
+    const left = Math.min(Math.max(rect.left, 8), window.innerWidth - POPUP_W - 8);
+    setHover({ item, top, left, placeAbove });
+  }
 
   const days = useMemo(() => gridRange(monthKey), [monthKey]);
   const from = useMemo(() => new Date(days[0].getFullYear(), days[0].getMonth(), days[0].getDate()).toISOString(), [days]);
@@ -153,7 +169,8 @@ export function CalendarioPage() {
                     <button
                       key={it.id}
                       onClick={() => goToItem(it.clientId, it.monthKey, it.id)}
-                      title={`${it.clientName} | ${it.title}`}
+                      onMouseEnter={(e) => showHover(it, e.currentTarget)}
+                      onMouseLeave={() => setHover(null)}
                       className="w-full text-left px-1.5 py-1 rounded text-[10.5px] leading-tight truncate transition hover:opacity-80"
                       style={{
                         backgroundColor: `${STATUS_META[it.status as Status]?.color ?? "#5BA88A"}22`,
@@ -214,6 +231,8 @@ export function CalendarioPage() {
                   <li key={it.id}>
                     <button
                       onClick={() => { setDayOpen(null); goToItem(it.clientId, it.monthKey, it.id); }}
+                      onMouseEnter={(e) => showHover(it, e.currentTarget)}
+                      onMouseLeave={() => setHover(null)}
                       className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                     >
                       <div className="flex-1 min-w-0">
@@ -240,6 +259,41 @@ export function CalendarioPage() {
           </div>
         </>
       )}
+
+      {/* Hover preview popup */}
+      {hover && (
+        <div
+          className="fixed z-[60] w-[220px] rounded-xl border border-white/15 bg-[#1C1C1C] shadow-2xl overflow-hidden pointer-events-none"
+          style={{ top: hover.top, left: hover.left }}
+        >
+          <div className="relative w-full aspect-square bg-[#111]">
+            <HoverThumb itemId={hover.item.id} coverUrl={hover.item.coverUrl} />
+          </div>
+          <div className="p-2.5">
+            <span className="inline-block text-[10px] font-bold uppercase px-1.5 py-0.5 rounded mb-1.5"
+              style={{ backgroundColor: `${hover.item.clientColor}22`, color: hover.item.clientColor }}>
+              {hover.item.clientName}
+            </span>
+            <div className="text-white text-xs font-medium leading-snug line-clamp-3">{hover.item.title}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function HoverThumb({ itemId, coverUrl }: { itemId: string; coverUrl: string | null }) {
+  const filesQ = useQuery({ ...itemFilesQO(itemId), enabled: !coverUrl });
+  const fileId = filesQ.data?.[0]?.driveFileId ?? null;
+  const thumbQ = useQuery(driveThumbnailQO(fileId, !!fileId && !coverUrl));
+  const url = coverUrl ?? thumbQ.data?.dataUrl ?? null;
+
+  if (!url) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center">
+        <ImageIcon size={28} style={{ color: "rgba(255,255,255,0.2)" }} />
+      </div>
+    );
+  }
+  return <img src={url} alt="" className="absolute inset-0 w-full h-full object-cover" />;
 }
