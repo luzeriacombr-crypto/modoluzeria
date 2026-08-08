@@ -68,3 +68,26 @@ export function isStandalonePWA(): boolean {
   if (typeof window === "undefined") return false;
   return window.matchMedia?.("(display-mode: standalone)").matches || (navigator as any).standalone === true;
 }
+
+/** Fires right after permission is granted, so the person sees an actual
+ * notification land on their device instead of just a checkmark in the UI.
+ * Most mobile browsers require notifications to be shown through the
+ * service worker (`new Notification()` throws there) — OneSignal already
+ * registers one (see public/OneSignalSDKWorker.js), so we reuse it. */
+export async function showWelcomeNotification() {
+  if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") return;
+  const title = "Modo Criador";
+  const options = { body: "Olha que demais, agora temos notificações ativadas! 🎉", icon: "/icon-192.png" };
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.showNotification(title, options);
+        return;
+      }
+    }
+    new Notification(title, options);
+  } catch {
+    // best-effort confirmation only — permission is already granted either way
+  }
+}

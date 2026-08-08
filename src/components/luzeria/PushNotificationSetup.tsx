@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { BellRing, BellOff, Bell, X, Share, Plus, MoreVertical, Check, AlertTriangle } from "lucide-react";
 import {
-  requestNotificationPermission, getNotificationPermission, getMobileOS, isStandalonePWA,
+  requestNotificationPermission, getNotificationPermission, getMobileOS, isStandalonePWA, showWelcomeNotification,
 } from "@/lib/luzeria/push-notifications";
 
 function StepList({ children }: { children: React.ReactNode }) {
@@ -54,6 +54,7 @@ function PushNotificationModal({ onClose }: { onClose: () => void }) {
       }
       const ok = await requestNotificationPermission();
       setPerm(ok ? "granted" : getNotificationPermission());
+      if (ok) showWelcomeNotification();
     } finally {
       setRequesting(false);
     }
