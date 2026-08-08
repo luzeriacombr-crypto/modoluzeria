@@ -12,6 +12,7 @@ import { ItemTimeline } from "./ItemTimeline";
 import { QualityModal } from "./QualityModal";
 import { FilesSection } from "./FilesSection";
 import { BriefingUploads } from "./BriefingUploads";
+import { CarouselLightbox } from "./CarouselLightbox";
 import { ReelCoverEditor } from "./ReelCoverEditor";
 import { useItemFileUpload } from "@/lib/luzeria/use-item-file-upload";
 
@@ -107,17 +108,16 @@ function extractDriveFileId(url: string): string | null {
 }
 
 /** Small square thumbnail used for carrossel tiles — same thumbnail source as
- * FilesSection's FileThumb, just sized for a row of tiles instead of a list. */
-function CarouselThumb({ file }: { file: { id: string; driveFileId: string; name: string; webViewUrl: string } }) {
+ * FilesSection's FileThumb, just sized for a row of tiles instead of a list.
+ * Clicking opens the in-app carousel viewer (CarouselLightbox) instead of
+ * jumping to Google Drive. */
+function CarouselThumb({ file, onClick }: { file: { id: string; driveFileId: string; name: string; webViewUrl: string }; onClick: () => void }) {
   const { data, isLoading } = useQuery(driveThumbnailQO(file.driveFileId, true));
   const url = data?.dataUrl ?? null;
-  const href = normalizeExternalUrl(file.webViewUrl);
   return (
-    <a
-      href={href ?? "#"}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e) => { if (!href) e.preventDefault(); e.stopPropagation(); }}
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
       title={file.name}
       className="w-16 h-16 shrink-0 rounded-md overflow-hidden bg-[#141414] border border-white/[0.08] flex items-center justify-center"
     >
@@ -128,7 +128,7 @@ function CarouselThumb({ file }: { file: { id: string; driveFileId: string; name
       ) : (
         <ImageIcon size={14} className="text-white/20" />
       )}
-    </a>
+    </button>
   );
 }
 
@@ -140,6 +140,7 @@ function MediaPreview({
   const { data: files = [], isLoading: filesLoading } = useQuery(itemFilesQO(itemId));
   const { upload, busy, error, missingClientId } = useItemFileUpload(itemId, "media");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const isCarrossel = itemType === "post" && postFormat === "carrossel";
   const first = files[0];
   const fileId = first?.driveFileId ?? null;
@@ -165,7 +166,7 @@ function MediaPreview({
   if (isCarrossel) {
     return (
       <div className="flex flex-wrap gap-1.5">
-        {files.map((f) => <CarouselThumb key={f.id} file={f} />)}
+        {files.map((f, i) => <CarouselThumb key={f.id} file={f} onClick={() => setLightboxIndex(i)} />)}
         {canEdit && (
           <button
             type="button"
@@ -177,6 +178,9 @@ function MediaPreview({
           </button>
         )}
         {inputEl}
+        {lightboxIndex !== null && (
+          <CarouselLightbox files={files} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
+        )}
       </div>
     );
   }

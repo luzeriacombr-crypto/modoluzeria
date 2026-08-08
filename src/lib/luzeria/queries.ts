@@ -268,10 +268,10 @@ export const driveSearchQO = (query: string, enabled: boolean) =>
     staleTime: 30_000,
   });
 
-export const driveThumbnailQO = (fileId: string | null | undefined, enabled = true) =>
+export const driveThumbnailQO = (fileId: string | null | undefined, enabled = true, size?: number) =>
   queryOptions({
-    queryKey: ["drive-thumb", fileId],
-    queryFn: () => getDriveThumbnail({ data: { fileId: fileId! } }),
+    queryKey: ["drive-thumb", fileId, size],
+    queryFn: () => getDriveThumbnail({ data: { fileId: fileId!, size } }),
     enabled: !!fileId && enabled,
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,
