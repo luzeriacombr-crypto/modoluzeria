@@ -6,6 +6,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { notificationsQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { PushNotificationButton } from "./PushNotificationSetup";
 
 export function NotificationsBell() {
   const { data: list = [] } = useQuery(notificationsQO());
@@ -77,10 +78,13 @@ export function NotificationsBell() {
               )}
               <span className="text-sm font-bold text-white">Notificações</span>
             </div>
-            {unread > 0 && (
-              <button onClick={() => markNotificationRead.mutate({ data: { all: true } })}
-                className="text-[11px] text-[rgb(var(--lz-brand-rgb))] hover:underline">Marcar todas como lidas</button>
-            )}
+            <div className="flex items-center gap-3">
+              <PushNotificationButton />
+              {unread > 0 && (
+                <button onClick={() => markNotificationRead.mutate({ data: { all: true } })}
+                  className="text-[11px] text-[rgb(var(--lz-brand-rgb))] hover:underline">Marcar todas como lidas</button>
+              )}
+            </div>
           </div>
           <div className={isMobile ? "flex-1 overflow-y-auto" : "max-h-[480px] overflow-y-auto"}>
             {list.length === 0 && <p className="text-xs text-white/40 px-4 py-6 text-center">Sem notificações.</p>}

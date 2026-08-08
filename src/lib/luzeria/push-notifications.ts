@@ -52,3 +52,19 @@ export function getNotificationPermission(): NotificationPermission | "unsupport
   if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
   return Notification.permission;
 }
+
+export function getMobileOS(): "ios" | "android" | "other" {
+  if (typeof navigator === "undefined") return "other";
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "ios";
+  if (/Android/.test(ua)) return "android";
+  return "other";
+}
+
+/** iOS Safari only supports Web Push when the site was added to the Home
+ * Screen and is running standalone (no browser chrome) — asking for
+ * permission from a regular Safari tab silently does nothing on iOS. */
+export function isStandalonePWA(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia?.("(display-mode: standalone)").matches || (navigator as any).standalone === true;
+}
