@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       activity_log: {
@@ -44,42 +69,136 @@ export type Database = {
         }
         Relationships: []
       }
-      automation_rules: {
+      affiliate_programs: {
         Row: {
+          active: boolean
+          commission_percent: number
+          commission_valid_months: number
+          created_at: string
           id: string
           org_id: string
-          active: boolean
-          trigger_status: string | null
-          on_create: boolean
-          action_type: string
-          action_status: string | null
-          action_user_id: string | null
-          created_at: string
-          created_by: string | null
+          referral_code: string
+          updated_at: string
+          user_id: string
         }
         Insert: {
+          active?: boolean
+          commission_percent?: number
+          commission_valid_months?: number
+          created_at?: string
           id?: string
           org_id: string
-          active?: boolean
-          trigger_status?: string | null
-          on_create?: boolean
-          action_type: string
-          action_status?: string | null
-          action_user_id?: string | null
-          created_at?: string
-          created_by?: string | null
+          referral_code: string
+          updated_at?: string
+          user_id: string
         }
         Update: {
+          active?: boolean
+          commission_percent?: number
+          commission_valid_months?: number
+          created_at?: string
           id?: string
           org_id?: string
-          active?: boolean
-          trigger_status?: string | null
-          on_create?: boolean
-          action_type?: string
-          action_status?: string | null
-          action_user_id?: string | null
+          referral_code?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_programs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_programs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_referrals: {
+        Row: {
+          affiliate_id: string
+          commission_earned: number
+          commission_paid: boolean
+          created_at: string
+          id: string
+          paid_at: string | null
+          referred_org_id: string | null
+          referred_user_id: string
+          subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id: string
+          commission_earned?: number
+          commission_paid?: boolean
           created_at?: string
-          created_by?: string | null
+          id?: string
+          paid_at?: string | null
+          referred_org_id?: string | null
+          referred_user_id: string
+          subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string
+          commission_earned?: number
+          commission_paid?: boolean
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          referred_org_id?: string | null
+          referred_user_id?: string
+          subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_referrals_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_referrals_referred_org_id_fkey"
+            columns: ["referred_org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_referrals_referred_user_id_fkey"
+            columns: ["referred_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
         }
         Relationships: []
       }
@@ -104,62 +223,96 @@ export type Database = {
         }
         Relationships: []
       }
-      app_settings: {
+      automation_rules: {
         Row: {
-          key: string
-          updated_at: string
-          updated_by: string | null
-          value: Json
+          action_status: string | null
+          action_type: string
+          action_user_id: string | null
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          on_create: boolean
+          org_id: string
+          trigger_status: string | null
         }
         Insert: {
-          key: string
-          updated_at?: string
-          updated_by?: string | null
-          value?: Json
+          action_status?: string | null
+          action_type: string
+          action_user_id?: string | null
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          on_create?: boolean
+          org_id: string
+          trigger_status?: string | null
         }
         Update: {
-          key?: string
-          updated_at?: string
-          updated_by?: string | null
-          value?: Json
+          action_status?: string | null
+          action_type?: string
+          action_user_id?: string | null
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          on_create?: boolean
+          org_id?: string
+          trigger_status?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bug_reports: {
         Row: {
+          created_at: string
           id: string
-          org_id: string
-          reported_by: string
           message: string
-          screenshot_path: string | null
+          org_id: string
           page_url: string | null
+          reported_by: string
+          screenshot_path: string | null
           status: string
           whatsapp: string | null
-          created_at: string
         }
         Insert: {
+          created_at?: string
           id?: string
-          org_id: string
-          reported_by: string
           message: string
-          screenshot_path?: string | null
+          org_id: string
           page_url?: string | null
+          reported_by: string
+          screenshot_path?: string | null
           status?: string
           whatsapp?: string | null
-          created_at?: string
         }
         Update: {
+          created_at?: string
           id?: string
-          org_id?: string
-          reported_by?: string
           message?: string
-          screenshot_path?: string | null
+          org_id?: string
           page_url?: string | null
+          reported_by?: string
+          screenshot_path?: string | null
           status?: string
           whatsapp?: string | null
-          created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bug_reports_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cleaning_log: {
         Row: {
@@ -203,6 +356,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "cleaning_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cleaning_log_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
@@ -244,10 +404,43 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "cleaning_schedule_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cleaning_schedule_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "cleaning_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cleaning_settings: {
+        Row: {
+          note: string
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          note?: string
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          note?: string
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cleaning_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "orgs"
             referencedColumns: ["id"]
           },
         ]
@@ -274,64 +467,12 @@ export type Database = {
           org_id?: string
           sort_order?: number
         }
-        Relationships: []
-      }
-      cleaning_settings: {
-        Row: {
-          note: string
-          org_id: string
-          updated_at: string
-        }
-        Insert: {
-          note?: string
-          org_id: string
-          updated_at?: string
-        }
-        Update: {
-          note?: string
-          org_id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      client_instagram_credentials: {
-        Row: {
-          client_id: string
-          connected_at: string
-          connected_by: string | null
-          ig_username: string | null
-          instagram_business_account_id: string
-          access_token: string
-        }
-        Insert: {
-          client_id: string
-          connected_at?: string
-          connected_by?: string | null
-          ig_username?: string | null
-          instagram_business_account_id: string
-          access_token: string
-        }
-        Update: {
-          client_id?: string
-          connected_at?: string
-          connected_by?: string | null
-          ig_username?: string | null
-          instagram_business_account_id?: string
-          access_token?: string
-        }
         Relationships: [
           {
-            foreignKeyName: "client_instagram_credentials_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: true
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_instagram_credentials_connected_by_fkey"
-            columns: ["connected_by"]
+            foreignKeyName: "cleaning_tasks_org_id_fkey"
+            columns: ["org_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "orgs"
             referencedColumns: ["id"]
           },
         ]
@@ -446,6 +587,48 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_instagram_credentials: {
+        Row: {
+          access_token: string
+          client_id: string
+          connected_at: string
+          connected_by: string | null
+          ig_username: string | null
+          instagram_business_account_id: string
+        }
+        Insert: {
+          access_token: string
+          client_id: string
+          connected_at?: string
+          connected_by?: string | null
+          ig_username?: string | null
+          instagram_business_account_id: string
+        }
+        Update: {
+          access_token?: string
+          client_id?: string
+          connected_at?: string
+          connected_by?: string | null
+          ig_username?: string | null
+          instagram_business_account_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_instagram_credentials_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_instagram_credentials_connected_by_fkey"
+            columns: ["connected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -575,6 +758,7 @@ export type Database = {
           notes: string | null
           notify_stories_in_tasks: boolean
           org_id: string | null
+          photo_url: string | null
           posts_per_week: number | null
           reels_per_week: number | null
           review_day: string | null
@@ -595,6 +779,7 @@ export type Database = {
           notes?: string | null
           notify_stories_in_tasks?: boolean
           org_id?: string | null
+          photo_url?: string | null
           posts_per_week?: number | null
           reels_per_week?: number | null
           review_day?: string | null
@@ -615,6 +800,7 @@ export type Database = {
           notes?: string | null
           notify_stories_in_tasks?: boolean
           org_id?: string | null
+          photo_url?: string | null
           posts_per_week?: number | null
           reels_per_week?: number | null
           review_day?: string | null
@@ -640,6 +826,7 @@ export type Database = {
         Row: {
           author_id: string | null
           created_at: string
+          edited_at: string | null
           id: string
           is_system: boolean
           item_id: string
@@ -648,6 +835,7 @@ export type Database = {
         Insert: {
           author_id?: string | null
           created_at?: string
+          edited_at?: string | null
           id?: string
           is_system?: boolean
           item_id: string
@@ -656,6 +844,7 @@ export type Database = {
         Update: {
           author_id?: string | null
           created_at?: string
+          edited_at?: string | null
           id?: string
           is_system?: boolean
           item_id?: string
@@ -727,7 +916,7 @@ export type Database = {
           last_status_change_at?: string | null
           legacy_assignee?: string | null
           month_id: string
-          org_id?: string
+          org_id: string
           post_format?: string | null
           quality_rating?: number | null
           reel_type?: string | null
@@ -979,6 +1168,7 @@ export type Database = {
           icon_url: string | null
           id: string
           item_id: string
+          kind: string
           mime_type: string | null
           name: string
           size_bytes: number | null
@@ -994,6 +1184,7 @@ export type Database = {
           icon_url?: string | null
           id?: string
           item_id: string
+          kind?: string
           mime_type?: string | null
           name: string
           size_bytes?: number | null
@@ -1009,6 +1200,7 @@ export type Database = {
           icon_url?: string | null
           id?: string
           item_id?: string
+          kind?: string
           mime_type?: string | null
           name?: string
           size_bytes?: number | null
@@ -1113,8 +1305,8 @@ export type Database = {
         Row: {
           client_id: string
           created_at: string
-          feed_order_mode: string
           feed_order_direction: string
+          feed_order_mode: string
           id: string
           key: string
           org_id: string
@@ -1122,17 +1314,17 @@ export type Database = {
         Insert: {
           client_id: string
           created_at?: string
-          feed_order_mode?: string
           feed_order_direction?: string
+          feed_order_mode?: string
           id?: string
           key: string
-          org_id?: string
+          org_id: string
         }
         Update: {
           client_id?: string
           created_at?: string
-          feed_order_mode?: string
           feed_order_direction?: string
+          feed_order_mode?: string
           id?: string
           key?: string
           org_id?: string
@@ -1309,6 +1501,7 @@ export type Database = {
           logo_path: string | null
           name: string
           plan_id: string
+          promotion_code_id: string | null
           slug: string
           subscription_status: string
           tagline: string | null
@@ -1326,6 +1519,7 @@ export type Database = {
           logo_path?: string | null
           name: string
           plan_id?: string
+          promotion_code_id?: string | null
           slug: string
           subscription_status?: string
           tagline?: string | null
@@ -1343,6 +1537,7 @@ export type Database = {
           logo_path?: string | null
           name?: string
           plan_id?: string
+          promotion_code_id?: string | null
           slug?: string
           subscription_status?: string
           tagline?: string | null
@@ -1355,6 +1550,13 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orgs_promotion_code_id_fkey"
+            columns: ["promotion_code_id"]
+            isOneToOne: false
+            referencedRelation: "promotion_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -1478,6 +1680,137 @@ export type Database = {
           },
         ]
       }
+      promotion_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          created_by: string
+          description: string | null
+          discount_percent: number
+          id: string
+          max_uses: number | null
+          name: string
+          org_id: string
+          slug: string
+          updated_at: string
+          used_count: number
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          discount_percent: number
+          id?: string
+          max_uses?: number | null
+          name: string
+          org_id: string
+          slug: string
+          updated_at?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          discount_percent?: number
+          id?: string
+          max_uses?: number | null
+          name?: string
+          org_id?: string
+          slug?: string
+          updated_at?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_codes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_codes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_events: {
+        Row: {
+          affiliate_referral_id: string | null
+          amount_cents: number | null
+          created_at: string
+          discount_percent: number | null
+          id: string
+          org_id: string
+          plan_id: string
+          promotion_code_id: string | null
+        }
+        Insert: {
+          affiliate_referral_id?: string | null
+          amount_cents?: number | null
+          created_at?: string
+          discount_percent?: number | null
+          id?: string
+          org_id: string
+          plan_id: string
+          promotion_code_id?: string | null
+        }
+        Update: {
+          affiliate_referral_id?: string | null
+          amount_cents?: number | null
+          created_at?: string
+          discount_percent?: number | null
+          id?: string
+          org_id?: string
+          plan_id?: string
+          promotion_code_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_events_affiliate_referral_id_fkey"
+            columns: ["affiliate_referral_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_referrals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_events_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_events_promotion_code_id_fkey"
+            columns: ["promotion_code_id"]
+            isOneToOne: false
+            referencedRelation: "promotion_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurring_templates: {
         Row: {
           active: boolean
@@ -1527,6 +1860,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      signup_attempts: {
+        Row: {
+          created_at: string
+          id: string
+          ip: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip?: string
+        }
+        Relationships: []
       }
       status_transitions: {
         Row: {
@@ -1622,7 +1973,22 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stories_schedule_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stories_schedule_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -1670,6 +2036,7 @@ export type Database = {
         Returns: number
       }
       get_my_email: { Args: never; Returns: string }
+      get_org_id_for_token: { Args: { _token: string }; Returns: string }
       get_public_feed: { Args: { _token: string }; Returns: Json }
       has_role: {
         Args: {
@@ -1711,7 +2078,10 @@ export type Database = {
         Args: { p_item_id: string; p_status: string }
         Returns: undefined
       }
-      set_onboarding_defaults: { Args: { _labels: string[] }; Returns: undefined }
+      set_onboarding_defaults: {
+        Args: { _labels: string[] }
+        Returns: undefined
+      }
       update_feed_order: { Args: { p_updates: Json }; Returns: undefined }
       verify_public_token_file: {
         Args: { _file_id: string; _token: string }
@@ -1733,10 +2103,17 @@ export type Database = {
         | "REVISAO_AGENDAMENTO"
         | "TRAVADO"
         | "PRONTO_PARA_PUBLICAR"
-        | "FINALIZADO"
         | "PENDENTE"
         | "CONCLUIDO"
-      content_type: "post" | "reel" | "story" | "outros" | "gravacao" | "roteiro" | "sistema"
+        | "FINALIZADO"
+      content_type:
+        | "post"
+        | "reel"
+        | "outros"
+        | "gravacao"
+        | "roteiro"
+        | "sistema"
+        | "story"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1862,6 +2239,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["master", "setor", "member"],
@@ -1878,11 +2258,19 @@ export const Constants = {
         "REVISAO_AGENDAMENTO",
         "TRAVADO",
         "PRONTO_PARA_PUBLICAR",
-        "FINALIZADO",
         "PENDENTE",
         "CONCLUIDO",
+        "FINALIZADO",
       ],
-      content_type: ["post", "reel", "story", "outros", "gravacao", "roteiro", "sistema"],
+      content_type: [
+        "post",
+        "reel",
+        "outros",
+        "gravacao",
+        "roteiro",
+        "sistema",
+        "story",
+      ],
     },
   },
 } as const

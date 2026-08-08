@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Instagram, Clock, Pencil } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
@@ -11,7 +11,9 @@ import { MentionInput, renderMentions } from "./MentionInput";
 import { ItemTimeline } from "./ItemTimeline";
 import { QualityModal } from "./QualityModal";
 import { FilesSection } from "./FilesSection";
+import { BriefingUploads } from "./BriefingUploads";
 import { ReelCoverEditor } from "./ReelCoverEditor";
+import { useItemFileUpload } from "@/lib/luzeria/use-item-file-upload";
 
 // Desligado enquanto a revisão do app junto à Meta (instagram_business_content_publish)
 // não é aprovada — a publicação real só funciona pro Instagram de teste
@@ -104,57 +106,131 @@ function extractDriveFileId(url: string): string | null {
   return null;
 }
 
-function MediaPreview({ itemId, onEmpty, coverUrl }: { itemId: string; onEmpty: () => void; coverUrl: string | null }) {
-  const { data: files = [], isLoading: filesLoading } = useQuery(itemFilesQO(itemId));
-  const first = files[0];
-  const fileId = first?.driveFileId ?? null;
-  const { data: thumbData, isLoading: thumbLoading } = useQuery(driveThumbnailQO(fileId, !!fileId && !coverUrl));
-  const thumb = coverUrl ?? thumbData?.dataUrl ?? null;
-  const href = first ? normalizeExternalUrl(first.webViewUrl) : null;
-
-  if (!filesLoading && !first && !coverUrl) {
-    return (
-      <button
-        type="button"
-        onClick={onEmpty}
-        className="group w-full aspect-[4/5] rounded-[10px] border border-dashed border-white/15 bg-[#141414] hover:border-[rgb(var(--lz-brand-rgb))] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-2"
-      >
-        <Upload size={22} className="text-white/30 group-hover:text-[rgb(var(--lz-brand-rgb))] transition-colors" />
-        <span className="text-xs text-white/40 group-hover:text-white/70 transition-colors">
-          Envie um arquivo ou cole o link do Drive
-        </span>
-      </button>
-    );
-  }
-
+/** Small square thumbnail used for carrossel tiles — same thumbnail source as
+ * FilesSection's FileThumb, just sized for a row of tiles instead of a list. */
+function CarouselThumb({ file }: { file: { id: string; driveFileId: string; name: string; webViewUrl: string } }) {
+  const { data, isLoading } = useQuery(driveThumbnailQO(file.driveFileId, true));
+  const url = data?.dataUrl ?? null;
+  const href = normalizeExternalUrl(file.webViewUrl);
   return (
     <a
       href={href ?? "#"}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={(e) => { if (!href) e.preventDefault(); }}
-      className="group relative block w-full aspect-[4/5] rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
-      title={first?.name}
+      onClick={(e) => { if (!href) e.preventDefault(); e.stopPropagation(); }}
+      title={file.name}
+      className="w-16 h-16 shrink-0 rounded-md overflow-hidden bg-[#141414] border border-white/[0.08] flex items-center justify-center"
     >
-      {thumb ? (
-        <img src={thumb} alt={first?.name ?? "Preview"} className="w-full h-full object-cover" loading="lazy" />
-      ) : thumbLoading || filesLoading ? (
-        <div className="w-full h-full flex items-center justify-center">
-          <Loader2 size={18} className="animate-spin text-white/30" />
-        </div>
+      {url ? (
+        <img src={url} alt={file.name} className="w-full h-full object-cover" loading="lazy" />
+      ) : isLoading ? (
+        <Loader2 size={12} className="animate-spin text-white/30" />
       ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-white/40 px-4 text-center">
-          <ExternalLink size={20} />
-          <span className="text-[11px] truncate max-w-full">{first?.name ?? "Abrir no Drive"}</span>
-        </div>
+        <ImageIcon size={14} className="text-white/20" />
       )}
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/55 transition-colors flex items-center justify-center">
-        <ExternalLink
-          size={28}
-          className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg"
-        />
-      </div>
     </a>
+  );
+}
+
+function MediaPreview({
+  itemId, coverUrl, postFormat, itemType, canEdit,
+}: {
+  itemId: string; coverUrl: string | null; postFormat: PostFormat | null | undefined; itemType: string; canEdit: boolean;
+}) {
+  const { data: files = [], isLoading: filesLoading } = useQuery(itemFilesQO(itemId));
+  const { upload, busy, error, missingClientId } = useItemFileUpload(itemId, "media");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const isCarrossel = itemType === "post" && postFormat === "carrossel";
+  const first = files[0];
+  const fileId = first?.driveFileId ?? null;
+  const { data: thumbData, isLoading: thumbLoading } = useQuery(driveThumbnailQO(fileId, !!fileId && !coverUrl && !isCarrossel));
+  const thumb = coverUrl ?? thumbData?.dataUrl ?? null;
+  const href = first ? normalizeExternalUrl(first.webViewUrl) : null;
+
+  useEffect(() => { if (error) toast.error(error); }, [error]);
+  useEffect(() => {
+    if (missingClientId) toast.error("Configure a pasta de entregas no Perfil do Cliente antes de fazer upload.");
+  }, [missingClientId]);
+
+  function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    upload(selected);
+  }
+
+  const inputEl = canEdit ? (
+    <input ref={fileRef} type="file" multiple hidden onChange={onPick} accept="image/*,video/*" />
+  ) : null;
+
+  if (isCarrossel) {
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {files.map((f) => <CarouselThumb key={f.id} file={f} />)}
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={busy}
+            className="w-16 h-16 shrink-0 rounded-md border border-dashed border-white/15 bg-[#141414] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors disabled:opacity-50"
+          >
+            {busy ? <Loader2 size={14} className="animate-spin text-white/40" /> : <Plus size={16} className="text-white/40" />}
+          </button>
+        )}
+        {inputEl}
+      </div>
+    );
+  }
+
+  if (!filesLoading && !first && !coverUrl) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => canEdit && fileRef.current?.click()}
+          disabled={busy || !canEdit}
+          className="group w-24 h-24 rounded-[10px] border border-dashed border-white/15 bg-[#141414] hover:border-[rgb(var(--lz-brand-rgb))] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-default"
+        >
+          {busy ? (
+            <Loader2 size={16} className="animate-spin text-white/40" />
+          ) : (
+            <Upload size={16} className="text-white/30 group-hover:text-[rgb(var(--lz-brand-rgb))] transition-colors" />
+          )}
+        </button>
+        {inputEl}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <a
+        href={href ?? "#"}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => { if (!href) e.preventDefault(); }}
+        className="group relative block w-24 h-24 rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
+        title={first?.name}
+      >
+        {thumb ? (
+          <img src={thumb} alt={first?.name ?? "Preview"} className="w-full h-full object-cover" loading="lazy" />
+        ) : thumbLoading || filesLoading ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <Loader2 size={14} className="animate-spin text-white/30" />
+          </div>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-white/40">
+            <ExternalLink size={16} />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/55 transition-colors flex items-center justify-center">
+          <ExternalLink
+            size={18}
+            className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg"
+          />
+        </div>
+      </a>
+      {inputEl}
+    </>
   );
 }
 
@@ -188,6 +264,13 @@ export function DetailPanel() {
   const [copy, setCopy] = useState("");
   const [caption, setCaption] = useState("");
   const [editingCopy, setEditingCopy] = useState(false);
+  const copyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = copyTextareaRef.current;
+    if (!editingCopy || !el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [editingCopy, copy]);
   const [editingCaption, setEditingCaption] = useState(false);
   const [drive, setDrive] = useState("");
   const [comment, setComment] = useState("");
@@ -338,10 +421,9 @@ export function DetailPanel() {
               <MediaPreview
                 itemId={item.id}
                 coverUrl={item.coverUrl ?? null}
-                onEmpty={() => {
-                  const el = document.getElementById("lz-files-section");
-                  el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }}
+                postFormat={item.postFormat}
+                itemType={item.type}
+                canEdit={canEditFiles}
               />
               {(item.type === "reel" || item.type === "story") && canEditFiles && (
                 <button
@@ -359,16 +441,16 @@ export function DetailPanel() {
             <ModalSection label={isActivity ? "Observações" : "Briefing"}>
               {editingCopy ? (
                 <textarea
+                  ref={copyTextareaRef}
                   autoFocus
                   value={copy}
                   onChange={(e) => setCopy(e.target.value)}
-                  rows={5}
                   onBlur={() => {
                     setEditingCopy(false);
                     if (copy !== item.copy) updateItem.mutate({ data: { id: item.id, patch: { copy } } });
                   }}
                   placeholder={isActivity ? "Observações sobre essa atividade..." : "Descreva o briefing do conteúdo..."}
-                  className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 resize-none transition-colors"
+                  className="w-full min-h-[110px] bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 resize-none overflow-hidden transition-colors"
                 />
               ) : (
                 <div
@@ -379,6 +461,9 @@ export function DetailPanel() {
                     <span className="text-white/30">{isActivity ? "Observações sobre essa atividade..." : "Descreva o briefing do conteúdo..."}</span>
                   )}
                 </div>
+              )}
+              {!isActivity && (
+                <BriefingUploads itemId={item.id} clientId={selectedClientId} canEdit={canEditFiles} />
               )}
             </ModalSection>
 

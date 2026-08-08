@@ -275,12 +275,14 @@ async function ensureMonthFolder(parentId: string, monthLabel: string): Promise<
  * in the month folder, unchanged. */
 const TYPE_FOLDER_LABEL: Record<string, string> = { post: "Posts", reel: "Reels", story: "Stories" };
 
-/** Resolve the target month (or month/type) folder for an item; null if cannot organize. */
+/** Resolve the target month (or month/type) folder for an item; null if cannot organize.
+ * `kind: "briefing"` bypasses the month/type tree entirely — briefing/reference
+ * images all land in one shared "Imagens de Briefing" folder per client. */
 async function resolveTargetFolderForItem(
   supabase: any,
   userId: string,
   itemId: string,
-  opts: { autoCreate?: boolean; forceClientFolderId?: string } = {},
+  opts: { autoCreate?: boolean; forceClientFolderId?: string; kind?: "media" | "briefing" } = {},
 ): Promise<string | null> {
   const { data: item } = await supabase
     .from("content_items")
@@ -296,6 +298,9 @@ async function resolveTargetFolderForItem(
   // New flow: require an admin-configured deliveries folder per client.
   const map = await loadClientFolderMap(supabase, client.id);
   if (map?.deliveries_folder_id) {
+    if (opts.kind === "briefing") {
+      return ensureMonthFolder(map.deliveries_folder_id, "Imagens de Briefing");
+    }
     const label = monthLabelWithYear(months?.key);
     if (!label) return null;
     const monthFolderId = await ensureMonthFolder(map.deliveries_folder_id, label);
@@ -350,6 +355,7 @@ async function syncLegacyDriveLink(supabase: any, itemId: string) {
     .from("item_files")
     .select("web_view_url")
     .eq("item_id", itemId)
+    .eq("kind", "media")
     .order("sort_order")
     .order("created_at")
     .limit(1)
@@ -364,13 +370,14 @@ async function syncLegacyDriveLink(supabase: any, itemId: string) {
 
 export const listItemFiles = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { itemId: string }) =>
-    z.object({ itemId: z.string().uuid() }).parse(d))
+  .inputValidator((d: { itemId: string; kind?: "media" | "briefing" }) =>
+    z.object({ itemId: z.string().uuid(), kind: z.enum(["media", "briefing"]).default("media") }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("item_files")
-      .select("id, drive_file_id, name, mime_type, icon_url, thumbnail_url, web_view_url, size_bytes, added_by, sort_order, created_at")
+      .select("id, drive_file_id, name, mime_type, icon_url, thumbnail_url, web_view_url, size_bytes, added_by, sort_order, created_at, kind")
       .eq("item_id", data.itemId)
+      .eq("kind", data.kind)
       .order("sort_order")
       .order("created_at");
     if (error) throw new Error(error.message);
@@ -386,6 +393,7 @@ export const listItemFiles = createServerFn({ method: "GET" })
       addedBy: r.added_by,
       sortOrder: r.sort_order,
       createdAt: r.created_at,
+      kind: r.kind,
     }));
   });
 
@@ -407,6 +415,7 @@ export const getGridThumbnails = createServerFn({ method: "GET" })
       .from("item_files")
       .select("item_id, drive_file_id")
       .in("item_id", data.itemIds)
+      .eq("kind", "media")
       .order("sort_order")
       .order("created_at");
     if (error) throw new Error(error.message);
@@ -557,12 +566,13 @@ export const attachDriveFile = createServerFn({ method: "POST" })
  * simply stays in the temp bucket (nothing is lost) and the user can retry. */
 export const syncUploadToDrive = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { itemId: string; storagePath: string; name: string; mimeType: string }) =>
+  .inputValidator((d: { itemId: string; storagePath: string; name: string; mimeType: string; kind?: "media" | "briefing" }) =>
     z.object({
       itemId: z.string().uuid(),
       storagePath: z.string().min(1).max(500),
       name: z.string().min(1).max(255),
       mimeType: z.string().min(1).max(200),
+      kind: z.enum(["media", "briefing"]).default("media"),
     }).parse(d))
   .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     await assertCanWrite(context.supabase, context.userId, data.itemId);
@@ -570,7 +580,7 @@ export const syncUploadToDrive = createServerFn({ method: "POST" })
     // Uploads require the client's deliveries folder to be configured;
     // this throws DELIVERIES_FOLDER_MISSING when it isn't.
     const targetParentId = await resolveTargetFolderForItem(
-      context.supabase, context.userId, data.itemId, {},
+      context.supabase, context.userId, data.itemId, { kind: data.kind },
     );
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -630,6 +640,7 @@ export const syncUploadToDrive = createServerFn({ method: "POST" })
       size_bytes: meta.size ? Number(meta.size) : null,
       added_by: context.userId,
       sort_order: 0,
+      kind: data.kind,
     };
     const { error } = await context.supabase
       .from("item_files")
