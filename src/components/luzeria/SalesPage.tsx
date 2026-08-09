@@ -134,7 +134,16 @@ export function SalesPage() {
       {/* Planos */}
       <section style={{ background: BG_BLUE_2 }} className="border-t border-white/10">
         <Reveal className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14">
-          <h2 className="font-black uppercase text-2xl sm:text-3xl mb-10 text-center">Escolha seu plano</h2>
+          <div className="flex justify-center mb-3">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full"
+              style={{ background: "rgba(215,255,63,0.12)", color: LIME }}>
+              🚀 Oferta de lançamento
+            </span>
+          </div>
+          <h2 className="font-black uppercase text-2xl sm:text-3xl mb-2 text-center">Escolha seu plano</h2>
+          <p className="text-white/50 text-sm text-center mb-10">
+            Preço de estreia — o valor sobe assim que a oferta de lançamento acabar.
+          </p>
           {plans.isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {[0, 1, 2].map((i) => (
@@ -159,9 +168,16 @@ export function SalesPage() {
                       </span>
                     )}
                     <div className="font-black text-xl mb-1">{p.name}</div>
+                    <div className="text-white/40 text-xs mb-0.5">
+                      Depois: <span className="line-through">R$ {(Math.round(p.priceCents! * 1.3) / 100).toFixed(2).replace(".", ",")}</span>
+                    </div>
                     <div className="text-3xl font-black mb-1">
                       R$ {(p.priceCents! / 100).toFixed(2).replace(".", ",")}
                       <span className="text-sm font-normal text-white/50">/mês</span>
+                    </div>
+                    <div className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide px-2 py-1 rounded-full mb-4"
+                      style={{ background: "rgba(215,255,63,0.15)", color: LIME }}>
+                      🎟️ Cupom de estreia aplicado · -30%
                     </div>
                     <div className="text-white/50 text-sm mb-6">
                       até {p.maxClients} clientes · até {p.maxCollaborators} colaboradores
