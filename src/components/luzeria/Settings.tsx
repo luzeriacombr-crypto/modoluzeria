@@ -15,9 +15,10 @@ import { UpdatesTab } from "./UpdatesTab";
 import { PromotionCodesPanel } from "./PromotionCodesPanel";
 import { AffiliateProgramPanel } from "./AffiliateProgramPanel";
 import { AgenciesBillingPanel } from "./AgenciesBillingPanel";
+import { SalesPageEditorTab } from "./SalesPageEditorTab";
 
-type SettingsTab = "team" | "report" | "automations" | "general" | "subscription" | "updates";
-const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "subscription", "updates"];
+type SettingsTab = "team" | "report" | "automations" | "general" | "subscription" | "updates" | "site";
+const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "subscription", "updates", "site"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -54,6 +55,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
              tab === "automations" ? "Google Drive, lembretes automáticos e jobs do sistema." :
              tab === "subscription" ? "Seu plano, cobrança, cupons e programa de afiliados." :
              tab === "updates" ? "O que mudou no Modo Criador." :
+             tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
              "Ajustes gerais da operação."}
           </p>
         </div>
@@ -67,6 +69,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "subscription", label: "Financeiro" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
+          ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }] : []),
         ].map((t) => {
           const active = tab === (t.id as any);
           return (
@@ -117,6 +120,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         </div>
        ) :
        tab === "updates" ? <UpdatesTab /> :
+       tab === "site" ? (me.isPlatformAdmin ? <SalesPageEditorTab /> : null) :
        tab === "automations" ? (
         <div className="space-y-10">
           <div>

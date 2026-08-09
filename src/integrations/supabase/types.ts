@@ -1861,6 +1861,39 @@ export type Database = {
           },
         ]
       }
+      sales_page_blocks: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          is_visible: boolean
+          sort_order: number
+          type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          sort_order?: number
+          type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          sort_order?: number
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       signup_attempts: {
         Row: {
           created_at: string

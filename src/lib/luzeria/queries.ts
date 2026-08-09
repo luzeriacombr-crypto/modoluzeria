@@ -50,6 +50,10 @@ import {
 import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from "./platform-updates.functions";
 import { publishToInstagram, setInstagramAutoPublish } from "./instagram.functions";
 import { getCalendarItems } from "./calendar.functions";
+import {
+  getSalesPageBlocks, listSalesPageBlocksAdmin, createSalesPageBlock, updateSalesPageBlock,
+  deleteSalesPageBlock, reorderSalesPageBlocks,
+} from "./sales-page.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const calendarItemsQO = (from: string, to: string) =>
   queryOptions({
@@ -58,6 +62,8 @@ export const calendarItemsQO = (from: string, to: string) =>
     enabled: !!from && !!to,
   });
 export const platformUpdatesQO = () => queryOptions({ queryKey: ["platform-updates"], queryFn: () => listPlatformUpdates() });
+export const salesPageBlocksQO = () => queryOptions({ queryKey: ["sales-page-blocks"], queryFn: () => getSalesPageBlocks() });
+export const salesPageBlocksAdminQO = () => queryOptions({ queryKey: ["sales-page-blocks-admin"], queryFn: () => listSalesPageBlocksAdmin() });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
 export const clientsQO = () => queryOptions({ queryKey: ["clients"], queryFn: () => listClients() });
 export const monthQO = (clientId: string, key: string) =>
@@ -560,6 +566,34 @@ export function useApi() {
     deletePlatformUpdate: useMutation({
       mutationFn: useServerFn(deletePlatformUpdate),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["platform-updates"] }),
+    }),
+    createSalesPageBlock: useMutation({
+      mutationFn: useServerFn(createSalesPageBlock),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["sales-page-blocks"] });
+        qc.invalidateQueries({ queryKey: ["sales-page-blocks-admin"] });
+      },
+    }),
+    updateSalesPageBlock: useMutation({
+      mutationFn: useServerFn(updateSalesPageBlock),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["sales-page-blocks"] });
+        qc.invalidateQueries({ queryKey: ["sales-page-blocks-admin"] });
+      },
+    }),
+    deleteSalesPageBlock: useMutation({
+      mutationFn: useServerFn(deleteSalesPageBlock),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["sales-page-blocks"] });
+        qc.invalidateQueries({ queryKey: ["sales-page-blocks-admin"] });
+      },
+    }),
+    reorderSalesPageBlocks: useMutation({
+      mutationFn: useServerFn(reorderSalesPageBlocks),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["sales-page-blocks"] });
+        qc.invalidateQueries({ queryKey: ["sales-page-blocks-admin"] });
+      },
     }),
     upsertRecurring: useMutation({
       mutationFn: useServerFn(upsertRecurring),
