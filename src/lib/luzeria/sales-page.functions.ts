@@ -95,6 +95,18 @@ const imageBannerContentSchema = z.object({
   size: SIZE,
 });
 
+// Uma única imagem CONTIDA (largura normal da página, com padding e cantos
+// arredondados) — diferente do image_banner, que vai de ponta a ponta sem
+// container. `background`/`backgroundImage` valem porque sobra espaço ao
+// redor da imagem aqui (no banner não sobra, por isso ele não tem esse campo).
+const singleImageContentSchema = z.object({
+  imageUrl: z.string().max(2000).optional().nullable(),
+  alt: z.string().max(200).optional(),
+  background: BACKGROUND,
+  backgroundImage: BACKGROUND_IMAGE,
+  size: SIZE,
+});
+
 const CONTENT_BY_TYPE = {
   hero: heroContentSchema,
   bullet_list: bulletListContentSchema,
@@ -103,6 +115,7 @@ const CONTENT_BY_TYPE = {
   gallery: galleryContentSchema,
   text_blurb: textBlurbContentSchema,
   image_banner: imageBannerContentSchema,
+  single_image: singleImageContentSchema,
 } as const;
 
 const blockInputSchema = z.discriminatedUnion("type", [
@@ -113,6 +126,7 @@ const blockInputSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("gallery"), content: galleryContentSchema }),
   z.object({ type: z.literal("text_blurb"), content: textBlurbContentSchema }),
   z.object({ type: z.literal("image_banner"), content: imageBannerContentSchema }),
+  z.object({ type: z.literal("single_image"), content: singleImageContentSchema }),
 ]);
 
 export type SalesPageBlockType = keyof typeof CONTENT_BY_TYPE;

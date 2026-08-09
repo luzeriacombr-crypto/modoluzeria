@@ -1056,6 +1056,61 @@ export function ImageBannerBlock({ content, onChange }: { content: any; onChange
   );
 }
 
+/** Uma única imagem CONTIDA (largura normal da página, cantos arredondados,
+ * altura natural pela proporção da foto) — complementa o ImageBannerBlock
+ * (ponta a ponta, altura fixa) com uma variante mais discreta. */
+export function SingleImageBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
+  const editable = !!onChange;
+  const set = (patch: any) => onChange?.({ ...content, ...patch });
+  const { style: bgStyle } = sectionBackgroundStyle(content);
+  const { upload, uploading } = useMarketingAssetUpload();
+
+  async function handleFile(file: File) {
+    const url = await upload(file);
+    if (url) set({ imageUrl: url });
+  }
+
+  if (!editable) {
+    if (!content.imageUrl) return null;
+    return (
+      <section style={bgStyle} className="border-t border-white/10">
+        <Reveal className={`px-5 sm:px-10 max-w-[860px] mx-auto ${sectionPadding(content.size)}`}>
+          <img src={content.imageUrl} alt={content.alt ?? ""} className={`w-full h-auto rounded-xl shadow-xl block ${LIFT}`} />
+        </Reveal>
+      </section>
+    );
+  }
+
+  return (
+    <section style={bgStyle} className="border-t border-white/10">
+      <div className={`px-5 sm:px-10 max-w-[860px] mx-auto ${sectionPadding(content.size)}`}>
+        <div className="relative group/single">
+          {content.imageUrl ? (
+            <>
+              <img src={content.imageUrl} alt={content.alt ?? ""} className="w-full h-auto rounded-xl shadow-xl block" />
+              <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover/single:opacity-100 focus-within:opacity-100 transition">
+                <label className="bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90 cursor-pointer" title="Trocar imagem">
+                  {uploading ? <Loader2 size={13} className="animate-spin" /> : <Pencil size={13} />}
+                  <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+                </label>
+                <button onClick={() => set({ imageUrl: null })} className="bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90" title="Remover imagem">
+                  <X size={13} />
+                </button>
+              </div>
+            </>
+          ) : (
+            <label className="w-full aspect-video rounded-xl flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/20 hover:border-[rgb(var(--lz-brand-rgb))] text-white/40 hover:text-white cursor-pointer transition">
+              {uploading ? <Loader2 size={22} className="animate-spin" /> : <ImagePlus size={22} />}
+              <span className="text-xs">Adicionar imagem</span>
+              <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+            </label>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ---------------------------------------------------------------------- *
  * Hero — extraído como componente próprio pra poder ser usado tanto pelo
  * corpo público quanto diretamente pelo editor (que precisa dele editável
@@ -1123,6 +1178,7 @@ export function renderBlockNode(block: { id: string; type: string; content: any 
     case "gallery": return <GalleryBlock key={block.id} content={block.content} onChange={onChange} />;
     case "text_blurb": return <TextBlurbBlock key={block.id} content={block.content} onChange={onChange} />;
     case "image_banner": return <ImageBannerBlock key={block.id} content={block.content} onChange={onChange} />;
+    case "single_image": return <SingleImageBlock key={block.id} content={block.content} onChange={onChange} />;
     default: return null;
   }
 }

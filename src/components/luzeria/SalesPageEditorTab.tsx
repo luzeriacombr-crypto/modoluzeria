@@ -17,6 +17,7 @@ const TYPE_LABELS: Record<Exclude<SalesPageBlockType, "hero">, string> = {
   gallery: "Galeria de imagens",
   text_blurb: "Texto simples",
   image_banner: "Imagem de ponta a ponta",
+  single_image: "Uma imagem",
 };
 const TYPE_DESCRIPTIONS: Record<Exclude<SalesPageBlockType, "hero">, string> = {
   bullet_list: "Título + lista de itens com ✓ ou ✕ (ex.: \"Dores\", \"Você vai ter...\")",
@@ -25,6 +26,7 @@ const TYPE_DESCRIPTIONS: Record<Exclude<SalesPageBlockType, "hero">, string> = {
   gallery: "Título + grade de imagens (ex.: depoimentos, prints de clientes)",
   text_blurb: "Só um texto curto com ícone (ex.: \"Sobre nós\")",
   image_banner: "Só uma foto, ocupando a seção inteira de ponta a ponta na horizontal",
+  single_image: "Só uma foto centralizada, com cantos arredondados, dentro da largura normal da página",
 };
 
 function emptyContent(type: Exclude<SalesPageBlockType, "hero">): any {
@@ -35,6 +37,7 @@ function emptyContent(type: Exclude<SalesPageBlockType, "hero">): any {
     case "gallery": return { heading: "Nova galeria", background: "white", size: "normal", images: [] };
     case "text_blurb": return { eyebrowIcon: "star", eyebrowLabel: "Texto", paragraph: "", background: "white", size: "normal" };
     case "image_banner": return { imageUrl: null, alt: "", background: "white", size: "normal" };
+    case "single_image": return { imageUrl: null, alt: "", background: "white", size: "normal" };
   }
 }
 
