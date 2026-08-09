@@ -4,6 +4,7 @@ import {
   MessageCircle, LayoutDashboard, BarChart3, Bell, ShieldCheck, Smartphone, Tablet, Monitor,
   ChevronLeft, ChevronRight, Play, Heart, Send, Bookmark,
 } from "lucide-react";
+import clickupTrelloLogos from "@/assets/clickup-trello-logos.png";
 
 /* ---------------------------------------------------------------------- *
  * Módulo compartilhado entre o site de vendas público (SalesPage.tsx) e o
@@ -493,5 +494,76 @@ export function TextBlurbBlock({ content }: { content: any }) {
         <p className={`text-sm leading-relaxed ${dark ? "text-white/70" : "text-[#0A0E23]/70"}`}>{content.paragraph}</p>
       </div>
     </section>
+  );
+}
+
+/* ---------------------------------------------------------------------- *
+ * Corpo do site (Hero + blocos) — usado tanto pelo site público
+ * (SalesPage.tsx) quanto pela prévia ao vivo do editor
+ * (SalesPageEditorTab.tsx), pra garantir que os dois renderizem
+ * exatamente igual.
+ * ---------------------------------------------------------------------- */
+export function SalesPageBody({
+  hero, blocks, onCtaClick,
+}: {
+  hero: { content: any } | undefined;
+  blocks: { id: string; type: string; content: any }[];
+  onCtaClick?: () => void;
+}) {
+  const HeroEyebrowIcon = BLOCK_ICONS[hero?.content?.eyebrowIcon ?? "rocket"] ?? Rocket;
+  return (
+    <>
+      {hero && (
+        <section className="px-5 sm:px-10 max-w-[1200px] mx-auto pt-8 pb-16">
+          <div className="grid lg:grid-cols-2 gap-2 lg:gap-8 items-center">
+            <div className="order-2 lg:order-1">
+              <div className="inline-flex items-center gap-2 border border-white/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide mb-6">
+                <HeroEyebrowIcon size={13} style={{ color: LIME }} /> {hero.content.eyebrowLabel}
+              </div>
+              <h1 className="font-black uppercase leading-[0.95] text-[clamp(2rem,5.5vw,3.75rem)]">
+                {hero.content.titleLine1}
+                <br />
+                {hero.content.titleLine2}
+                <br />
+                <span className="font-criador-serif normal-case block" style={{ color: LIME }}>
+                  {hero.content.titleAccentLine1}
+                  <br />
+                  {hero.content.titleAccentLine2}
+                </span>
+              </h1>
+              <p className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">
+                {hero.content.subtitle}
+              </p>
+              <button
+                onClick={onCtaClick}
+                className={`mt-8 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full ${POP}`}
+                style={{ background: LIME, color: "#0A0E23", ...EASE }}
+              >
+                {hero.content.ctaLabel}
+              </button>
+              <div className="flex items-center gap-3 mt-3 max-w-[480px]">
+                <img src={clickupTrelloLogos} alt="Logos do ClickUp e do Trello" className="h-9 w-auto shrink-0 opacity-80" />
+                <p className="text-white/40 text-xs">
+                  Usava o ClickUp ou Trello? Sem problemas, você pode migrar todo o seu fluxo com facilidade.
+                </p>
+              </div>
+            </div>
+            <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
+              <ImageStack images={hero.content.images ?? []} alt="Modo Criador" aspectClassName="aspect-[1182/854] max-w-[460px] lg:max-w-none" />
+            </div>
+          </div>
+        </section>
+      )}
+      {blocks.map((b) => {
+        switch (b.type) {
+          case "bullet_list": return <BulletListBlock key={b.id} content={b.content} />;
+          case "steps": return <StepsBlock key={b.id} content={b.content} />;
+          case "feature": return <FeatureBlock key={b.id} content={b.content} />;
+          case "gallery": return <GalleryBlock key={b.id} content={b.content} />;
+          case "text_blurb": return <TextBlurbBlock key={b.id} content={b.content} />;
+          default: return null;
+        }
+      })}
+    </>
   );
 }

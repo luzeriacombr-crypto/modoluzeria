@@ -2,16 +2,12 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link, useLocation } from "@tanstack/react-router";
-import { Rocket, Check, ChevronDown, Lock } from "lucide-react";
+import { Check, ChevronDown, Lock } from "lucide-react";
 import { getPublicPlans, publicSignup } from "@/lib/luzeria/signup.functions";
 import { salesPageBlocksQO } from "@/lib/luzeria/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
-import clickupTrelloLogos from "@/assets/clickup-trello-logos.png";
-import {
-  LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, LIFT, Reveal,
-  BLOCK_ICONS, ImageStack, BulletListBlock, StepsBlock, FeatureBlock, GalleryBlock, TextBlurbBlock,
-} from "./salesPageBlocks";
+import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, LIFT, Reveal, SalesPageBody } from "./salesPageBlocks";
 
 const PENDING_GOOGLE_SIGNUP_KEY = "modocriador:pending-google-signup";
 
@@ -53,7 +49,6 @@ export function SalesPage() {
   const selectablePlans = (plans.data ?? []).filter((p) => p.priceCents != null);
   const hero = blocks.find((b) => b.type === "hero");
   const restBlocks = blocks.filter((b) => b.type !== "hero");
-  const HeroEyebrowIcon = BLOCK_ICONS[hero?.content?.eyebrowIcon ?? "rocket"] ?? Rocket;
 
   function scrollToForm(id?: string) {
     if (id) setPlanId(id);
@@ -133,60 +128,8 @@ export function SalesPage() {
         </div>
       </header>
 
-      {/* Hero */}
-      {hero && (
-        <section className="px-5 sm:px-10 max-w-[1200px] mx-auto pt-8 pb-16">
-          <div className="grid lg:grid-cols-2 gap-2 lg:gap-8 items-center">
-            <div className="order-2 lg:order-1">
-              <div className="inline-flex items-center gap-2 border border-white/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide mb-6">
-                <HeroEyebrowIcon size={13} style={{ color: LIME }} /> {hero.content.eyebrowLabel}
-              </div>
-              <h1 className="font-black uppercase leading-[0.95] text-[clamp(2rem,5.5vw,3.75rem)]">
-                {hero.content.titleLine1}
-                <br />
-                {hero.content.titleLine2}
-                <br />
-                <span className="font-criador-serif normal-case block" style={{ color: LIME }}>
-                  {hero.content.titleAccentLine1}
-                  <br />
-                  {hero.content.titleAccentLine2}
-                </span>
-              </h1>
-              <p className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">
-                {hero.content.subtitle}
-              </p>
-              <button
-                onClick={() => scrollToForm()}
-                className={`mt-8 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full ${POP}`}
-                style={{ background: LIME, color: "#0A0E23", ...EASE }}
-              >
-                {hero.content.ctaLabel}
-              </button>
-              <div className="flex items-center gap-3 mt-3 max-w-[480px]">
-                <img src={clickupTrelloLogos} alt="Logos do ClickUp e do Trello" className="h-9 w-auto shrink-0 opacity-80" />
-                <p className="text-white/40 text-xs">
-                  Usava o ClickUp ou Trello? Sem problemas, você pode migrar todo o seu fluxo com facilidade.
-                </p>
-              </div>
-            </div>
-            <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
-              <ImageStack images={hero.content.images ?? []} alt="Modo Criador" aspectClassName="aspect-[1182/854] max-w-[460px] lg:max-w-none" />
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Blocos de conteúdo, editáveis em Configurações > Site */}
-      {restBlocks.map((b) => {
-        switch (b.type) {
-          case "bullet_list": return <BulletListBlock key={b.id} content={b.content} />;
-          case "steps": return <StepsBlock key={b.id} content={b.content} />;
-          case "feature": return <FeatureBlock key={b.id} content={b.content} />;
-          case "gallery": return <GalleryBlock key={b.id} content={b.content} />;
-          case "text_blurb": return <TextBlurbBlock key={b.id} content={b.content} />;
-          default: return null;
-        }
-      })}
+      {/* Hero + blocos de conteúdo, editáveis em Configurações > Site */}
+      <SalesPageBody hero={hero} blocks={restBlocks} onCtaClick={() => scrollToForm()} />
 
       {/* Planos */}
       <section style={{ background: BG_BLUE_2 }} className="border-t border-white/10">

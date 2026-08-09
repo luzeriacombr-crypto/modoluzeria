@@ -61,7 +61,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         </div>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-white/10 mb-6 overflow-x-auto">
+      <div className="flex items-center gap-1 border-b border-white/10 mb-6 overflow-x-auto overflow-y-hidden">
         {[
           { id: "team", label: "Equipe" },
           { id: "report", label: "Relatório" },

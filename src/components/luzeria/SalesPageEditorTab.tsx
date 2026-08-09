@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff, Loader2, ImagePlus, X, GripVertical,
+  Monitor, Smartphone, Circle,
 } from "lucide-react";
 import { salesPageBlocksAdminQO, useApi } from "@/lib/luzeria/queries";
 import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
 import {
-  BACKGROUND_SWATCHES, type BackgroundKey, ICON_KEYS, BLOCK_ICONS, BUILTIN_KEYS, BUILTIN_LABELS,
-  BUILTIN_ILLUSTRATIONS, type ImageSpec,
+  BACKGROUND_SWATCHES, type BackgroundKey, ICON_KEYS, BUILTIN_KEYS, BUILTIN_LABELS,
+  BUILTIN_ILLUSTRATIONS, type ImageSpec, SalesPageBody,
 } from "./salesPageBlocks";
 import type { SalesPageBlock, SalesPageBlockType } from "@/lib/luzeria/sales-page.functions";
 
@@ -46,9 +47,29 @@ export function SalesPageEditorTab() {
   const api = useApi();
   const [adding, setAdding] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [previewWidth, setPreviewWidth] = useState<"desktop" | "mobile">("desktop");
+  // Draft content per block id — a live copy the fields edit immediately,
+  // so the preview updates as you type instead of only after "Salvar".
+  const [drafts, setDrafts] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    setDrafts((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const b of blocks) {
+        if (!(b.id in next)) { next[b.id] = b.content; changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [blocks]);
 
   const hero = blocks.find((b) => b.type === "hero");
   const rest = blocks.filter((b) => b.type !== "hero");
+
+  const previewHero = hero ? { content: drafts[hero.id] ?? hero.content } : undefined;
+  const previewBlocks = rest
+    .filter((b) => b.isVisible)
+    .map((b) => ({ id: b.id, type: b.type, content: drafts[b.id] ?? b.content }));
 
   function moveBy(id: string, delta: number) {
     const idx = rest.findIndex((b) => b.id === id);
@@ -72,63 +93,105 @@ export function SalesPageEditorTab() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <p className="text-sm text-white/50">
-        Edita o conteúdo do site de vendas (modocriador.com.br) — textos, imagens e cores de cada seção.
-        Cabeçalho, planos, formulário de cadastro, dúvidas frequentes e rodapé não fazem parte daqui.
-      </p>
+    <div className="grid lg:grid-cols-[420px_1fr] gap-6 items-start">
+      {/* Coluna de edição */}
+      <div className="space-y-6 min-w-0">
+        <p className="text-sm text-white/50">
+          Edita o conteúdo do site de vendas (modocriador.com.br). Cabeçalho, planos, formulário de cadastro,
+          dúvidas frequentes e rodapé não fazem parte daqui — veja a prévia ao lado.
+        </p>
 
-      {hero && <HeroCard block={hero} />}
-
-      <div className="space-y-3">
-        {rest.map((b, i) => (
-          <BlockRow
-            key={b.id}
-            block={b}
-            isFirst={i === 0}
-            isLast={i === rest.length - 1}
-            expanded={expandedId === b.id}
-            onToggleExpand={() => setExpandedId(expandedId === b.id ? null : b.id)}
-            onMoveUp={() => moveBy(b.id, -1)}
-            onMoveDown={() => moveBy(b.id, 1)}
+        {hero && (
+          <HeroCard
+            block={hero}
+            draftContent={drafts[hero.id] ?? hero.content}
+            onDraftChange={(c) => setDrafts((d) => ({ ...d, [hero.id]: c }))}
           />
-        ))}
-      </div>
+        )}
 
-      {adding ? (
-        <div className="bg-[#1C1C1C] rounded-lg p-5 space-y-2">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-bold text-white">Que tipo de seção?</span>
-            <button onClick={() => setAdding(false)} className="text-white/40 hover:text-white"><X size={16} /></button>
-          </div>
-          {(Object.keys(TYPE_LABELS) as Exclude<SalesPageBlockType, "hero">[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => addBlock(t)}
-              disabled={api.createSalesPageBlock.isPending}
-              className="w-full text-left px-4 py-3 rounded-md bg-[#0D0D0D] border border-white/[0.08] hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
-            >
-              <div className="text-sm font-semibold text-white">{TYPE_LABELS[t]}</div>
-              <div className="text-xs text-white/40 mt-0.5">{TYPE_DESCRIPTIONS[t]}</div>
-            </button>
+        <div className="space-y-3">
+          {rest.map((b, i) => (
+            <BlockRow
+              key={b.id}
+              block={b}
+              draftContent={drafts[b.id] ?? b.content}
+              onDraftChange={(c) => setDrafts((d) => ({ ...d, [b.id]: c }))}
+              isFirst={i === 0}
+              isLast={i === rest.length - 1}
+              expanded={expandedId === b.id}
+              onToggleExpand={() => setExpandedId(expandedId === b.id ? null : b.id)}
+              onMoveUp={() => moveBy(b.id, -1)}
+              onMoveDown={() => moveBy(b.id, 1)}
+            />
           ))}
         </div>
-      ) : (
-        <button onClick={() => setAdding(true)} className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
-          <Plus size={14} /> Adicionar seção
-        </button>
-      )}
+
+        {adding ? (
+          <div className="bg-[#1C1C1C] rounded-lg p-5 space-y-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold text-white">Que tipo de seção?</span>
+              <button onClick={() => setAdding(false)} className="text-white/40 hover:text-white"><X size={16} /></button>
+            </div>
+            {(Object.keys(TYPE_LABELS) as Exclude<SalesPageBlockType, "hero">[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => addBlock(t)}
+                disabled={api.createSalesPageBlock.isPending}
+                className="w-full text-left px-4 py-3 rounded-md bg-[#0D0D0D] border border-white/[0.08] hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
+              >
+                <div className="text-sm font-semibold text-white">{TYPE_LABELS[t]}</div>
+                <div className="text-xs text-white/40 mt-0.5">{TYPE_DESCRIPTIONS[t]}</div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <button onClick={() => setAdding(true)} className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
+            <Plus size={14} /> Adicionar seção
+          </button>
+        )}
+      </div>
+
+      {/* Prévia ao vivo */}
+      <div className="lg:sticky lg:top-6 min-w-0">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-white/40">Prévia do site</span>
+          <div className="inline-flex items-center gap-1 rounded-full bg-[#1C1C1C] p-1 border border-white/10">
+            <button
+              onClick={() => setPreviewWidth("desktop")}
+              title="Desktop"
+              className="h-7 w-7 rounded-full flex items-center justify-center transition"
+              style={{ background: previewWidth === "desktop" ? "rgb(var(--lz-brand-rgb))" : "transparent", color: previewWidth === "desktop" ? "#0D0D0D" : "rgba(255,255,255,0.5)" }}
+            ><Monitor size={13} /></button>
+            <button
+              onClick={() => setPreviewWidth("mobile")}
+              title="Celular"
+              className="h-7 w-7 rounded-full flex items-center justify-center transition"
+              style={{ background: previewWidth === "mobile" ? "rgb(var(--lz-brand-rgb))" : "transparent", color: previewWidth === "mobile" ? "#0D0D0D" : "rgba(255,255,255,0.5)" }}
+            ><Smartphone size={13} /></button>
+          </div>
+        </div>
+        <div className="rounded-xl border border-white/10 overflow-hidden">
+          <div className="overflow-y-auto overflow-x-hidden" style={{ height: "80vh", background: "#0A0E23" }}>
+            <div style={{ width: previewWidth === "mobile" ? 390 : "100%", margin: "0 auto" }}>
+              <div className="text-white" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+                <SalesPageBody hero={previewHero} blocks={previewBlocks} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function HeroCard({ block }: { block: SalesPageBlock }) {
+function HeroCard({ block, draftContent, onDraftChange }: { block: SalesPageBlock; draftContent: any; onDraftChange: (c: any) => void }) {
   const api = useApi();
-  const [open, setOpen] = useState(false);
-  const [content, setContent] = useState(block.content);
+  const [open, setOpen] = useState(true);
+  const dirty = JSON.stringify(draftContent) !== JSON.stringify(block.content);
+  const set = (patch: any) => onDraftChange({ ...draftContent, ...patch });
 
   function save() {
-    api.updateSalesPageBlock.mutate({ data: { id: block.id, type: "hero", content } as any }, {
+    api.updateSalesPageBlock.mutate({ data: { id: block.id, type: "hero", content: draftContent } as any }, {
       onSuccess: () => toast.success("Hero salvo."),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
     });
@@ -142,25 +205,26 @@ function HeroCard({ block }: { block: SalesPageBlock }) {
             Fixo
           </span>
           <span className="text-sm font-bold text-white">Topo do site (Hero)</span>
+          {dirty && <Circle size={7} className="fill-amber-400 text-amber-400" />}
         </div>
         {open ? <ChevronUp size={16} className="text-white/40" /> : <ChevronDown size={16} className="text-white/40" />}
       </button>
       {open && (
         <div className="px-5 pb-5 space-y-3 border-t border-white/[0.06] pt-4">
-          <TextField label="Selo (eyebrow)" value={content.eyebrowLabel} onChange={(v) => setContent({ ...content, eyebrowLabel: v })} />
-          <IconPicker label="Ícone do selo" value={content.eyebrowIcon} onChange={(v) => setContent({ ...content, eyebrowIcon: v })} />
+          <TextField label="Selo (eyebrow)" value={draftContent.eyebrowLabel} onChange={(v) => set({ eyebrowLabel: v })} />
+          <IconPicker label="Ícone do selo" value={draftContent.eyebrowIcon} onChange={(v) => set({ eyebrowIcon: v })} />
           <div className="grid grid-cols-2 gap-3">
-            <TextField label="Título — linha 1" value={content.titleLine1} onChange={(v) => setContent({ ...content, titleLine1: v })} />
-            <TextField label="Título — linha 2" value={content.titleLine2} onChange={(v) => setContent({ ...content, titleLine2: v })} />
-            <TextField label="Título destaque — linha 1" value={content.titleAccentLine1} onChange={(v) => setContent({ ...content, titleAccentLine1: v })} />
-            <TextField label="Título destaque — linha 2" value={content.titleAccentLine2} onChange={(v) => setContent({ ...content, titleAccentLine2: v })} />
+            <TextField label="Título — linha 1" value={draftContent.titleLine1} onChange={(v) => set({ titleLine1: v })} />
+            <TextField label="Título — linha 2" value={draftContent.titleLine2} onChange={(v) => set({ titleLine2: v })} />
+            <TextField label="Título destaque — linha 1" value={draftContent.titleAccentLine1} onChange={(v) => set({ titleAccentLine1: v })} />
+            <TextField label="Título destaque — linha 2" value={draftContent.titleAccentLine2} onChange={(v) => set({ titleAccentLine2: v })} />
           </div>
-          <TextArea label="Subtítulo" value={content.subtitle} onChange={(v) => setContent({ ...content, subtitle: v })} rows={3} />
-          <TextField label="Texto do botão" value={content.ctaLabel} onChange={(v) => setContent({ ...content, ctaLabel: v })} />
-          <ImageStackEditor images={content.images ?? []} onChange={(images) => setContent({ ...content, images })} />
+          <TextArea label="Subtítulo" value={draftContent.subtitle} onChange={(v) => set({ subtitle: v })} rows={3} />
+          <TextField label="Texto do botão" value={draftContent.ctaLabel} onChange={(v) => set({ ctaLabel: v })} />
+          <ImageStackEditor images={draftContent.images ?? []} onChange={(images) => set({ images })} />
           <div className="flex justify-end pt-1">
-            <button onClick={save} disabled={api.updateSalesPageBlock.isPending} className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50">
-              {api.updateSalesPageBlock.isPending ? "Salvando..." : "Salvar"}
+            <button onClick={save} disabled={api.updateSalesPageBlock.isPending || !dirty} className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50">
+              {api.updateSalesPageBlock.isPending ? "Salvando..." : dirty ? "Salvar" : "Salvo ✓"}
             </button>
           </div>
         </div>
@@ -170,16 +234,17 @@ function HeroCard({ block }: { block: SalesPageBlock }) {
 }
 
 function BlockRow({
-  block, isFirst, isLast, expanded, onToggleExpand, onMoveUp, onMoveDown,
+  block, draftContent, onDraftChange, isFirst, isLast, expanded, onToggleExpand, onMoveUp, onMoveDown,
 }: {
-  block: SalesPageBlock; isFirst: boolean; isLast: boolean; expanded: boolean;
+  block: SalesPageBlock; draftContent: any; onDraftChange: (c: any) => void;
+  isFirst: boolean; isLast: boolean; expanded: boolean;
   onToggleExpand: () => void; onMoveUp: () => void; onMoveDown: () => void;
 }) {
   const api = useApi();
-  const [content, setContent] = useState(block.content);
+  const dirty = JSON.stringify(draftContent) !== JSON.stringify(block.content);
 
   function save() {
-    api.updateSalesPageBlock.mutate({ data: { id: block.id, type: block.type, content, isVisible: block.isVisible } as any }, {
+    api.updateSalesPageBlock.mutate({ data: { id: block.id, type: block.type, content: draftContent, isVisible: block.isVisible } as any }, {
       onSuccess: () => toast.success("Seção salva."),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
     });
@@ -204,9 +269,10 @@ function BlockRow({
           <button onClick={onMoveUp} disabled={isFirst} className="text-white/30 hover:text-white disabled:opacity-20"><ChevronUp size={13} /></button>
           <button onClick={onMoveDown} disabled={isLast} className="text-white/30 hover:text-white disabled:opacity-20"><ChevronDown size={13} /></button>
         </div>
-        <button onClick={onToggleExpand} className="flex-1 min-w-0 text-left">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-white/30 mr-2">{TYPE_LABELS[block.type as Exclude<SalesPageBlockType, "hero">]}</span>
+        <button onClick={onToggleExpand} className="flex-1 min-w-0 text-left flex items-center gap-1.5">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-white/30">{TYPE_LABELS[block.type as Exclude<SalesPageBlockType, "hero">]}</span>
           <span className="text-sm font-semibold text-white truncate">{headingOf(block)}</span>
+          {dirty && <Circle size={7} className="fill-amber-400 text-amber-400 shrink-0" />}
         </button>
         <button onClick={toggleVisible} title={block.isVisible ? "Ocultar do site" : "Mostrar no site"} className="text-white/40 hover:text-white shrink-0">
           {block.isVisible ? <Eye size={15} /> : <EyeOff size={15} />}
@@ -215,10 +281,10 @@ function BlockRow({
       </div>
       {expanded && (
         <div className="px-4 pb-4 space-y-3 border-t border-white/[0.06] pt-4">
-          <BlockFields type={block.type as Exclude<SalesPageBlockType, "hero">} content={content} onChange={setContent} />
+          <BlockFields type={block.type as Exclude<SalesPageBlockType, "hero">} content={draftContent} onChange={onDraftChange} />
           <div className="flex justify-end pt-1">
-            <button onClick={save} disabled={api.updateSalesPageBlock.isPending} className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50">
-              {api.updateSalesPageBlock.isPending ? "Salvando..." : "Salvar"}
+            <button onClick={save} disabled={api.updateSalesPageBlock.isPending || !dirty} className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50">
+              {api.updateSalesPageBlock.isPending ? "Salvando..." : dirty ? "Salvar" : "Salvo ✓"}
             </button>
           </div>
         </div>
