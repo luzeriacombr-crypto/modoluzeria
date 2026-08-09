@@ -74,6 +74,9 @@ const galleryContentSchema = z.object({
   backgroundImage: BACKGROUND_IMAGE,
   size: SIZE,
   images: z.array(imageSpecSchema).max(12),
+  // "natural" (padrão): cada quadro acompanha o tamanho real da foto, mais
+  // orgânico. "fill": corta tudo em 1:1 pra grade uniforme.
+  imageFit: z.enum(["natural", "fill"]).optional(),
 });
 
 const textBlurbContentSchema = z.object({

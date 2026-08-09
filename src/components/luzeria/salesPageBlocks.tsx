@@ -517,12 +517,14 @@ export type ImageSpec = {
   z: number;
 };
 
-function ImageSpecVisual({ img, alt }: { img: ImageSpec; alt: string }) {
+function ImageSpecVisual({ img, alt, fill }: { img: ImageSpec; alt: string; fill?: boolean }) {
   if (img.source === "builtin") {
     const Cmp = BUILTIN_ILLUSTRATIONS[img.builtinKey ?? ""];
     return Cmp ? <Cmp /> : null;
   }
-  return img.url ? <img src={img.url} alt={alt} className="w-full h-auto drop-shadow-xl" /> : null;
+  return img.url ? (
+    <img src={img.url} alt={alt} className={fill ? "w-full h-full object-cover drop-shadow-xl" : "w-full h-auto drop-shadow-xl"} />
+  ) : null;
 }
 
 // Tailwind's scanner needs the literal class names visible somewhere in the
@@ -668,9 +670,10 @@ function ImageStackEditor({ images, onChange, simple, topicHint }: { images: Ima
 }
 
 function EditImagesModal({
-  title, images, onChange, onClose, simple, topicHint,
+  title, images, onChange, onClose, simple, topicHint, imageFit, onImageFit,
 }: {
   title: string; images: ImageSpec[]; onChange: (images: ImageSpec[]) => void; onClose: () => void; simple?: boolean; topicHint?: string;
+  imageFit?: "natural" | "fill"; onImageFit?: (fit: "natural" | "fill") => void;
 }) {
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
@@ -679,6 +682,40 @@ function EditImagesModal({
           <h3 className="text-sm font-bold text-white">{title}</h3>
           <button onClick={onClose} className="text-white/40 hover:text-white"><X size={16} /></button>
         </div>
+        {onImageFit && (
+          <div className="mb-4">
+            <div className="text-[9px] uppercase tracking-wide text-white/30 mb-1.5">Como as imagens aparecem</div>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => onImageFit("natural")}
+                className="flex-1 text-[11px] font-semibold px-2.5 py-2 rounded-md transition"
+                style={{
+                  background: (imageFit ?? "natural") === "natural" ? "rgb(var(--lz-brand-rgb))" : "transparent",
+                  color: (imageFit ?? "natural") === "natural" ? "#0D0D0D" : "rgba(255,255,255,0.6)",
+                  border: (imageFit ?? "natural") === "natural" ? "none" : "1px solid rgba(255,255,255,0.15)",
+                }}
+              >
+                Manter dimensões
+              </button>
+              <button
+                onClick={() => onImageFit("fill")}
+                className="flex-1 text-[11px] font-semibold px-2.5 py-2 rounded-md transition"
+                style={{
+                  background: imageFit === "fill" ? "rgb(var(--lz-brand-rgb))" : "transparent",
+                  color: imageFit === "fill" ? "#0D0D0D" : "rgba(255,255,255,0.6)",
+                  border: imageFit === "fill" ? "none" : "1px solid rgba(255,255,255,0.15)",
+                }}
+              >
+                Preencher (1:1)
+              </button>
+            </div>
+            <p className="text-[10px] text-white/30 mt-1.5 leading-relaxed">
+              {(imageFit ?? "natural") === "natural"
+                ? "Cada quadro acompanha o tamanho real da foto — fica mais orgânico."
+                : "Corta as fotos num quadrado igual, deixando a grade uniforme."}
+            </p>
+          </div>
+        )}
         <ImageStackEditor images={images} onChange={onChange} simple={simple} topicHint={topicHint} />
         <button onClick={onClose} className="lz-btn-primary text-xs px-4 py-2.5 rounded-md mt-5 w-full">Concluído</button>
       </div>
@@ -690,23 +727,25 @@ function EditImagesModal({
  * modo edição, clicar abre o modal de imagens, e mostra um "+" quando
  * ainda não tem nenhuma. */
 function EditableImageArea({
-  images, onChange, alt, mode, topicHint,
+  images, onChange, alt, mode, topicHint, imageFit, onImageFit,
 }: {
   images: ImageSpec[]; onChange?: (images: ImageSpec[]) => void; alt: string;
   mode: "hero" | "feature" | "gallery"; topicHint?: string;
+  imageFit?: "natural" | "fill"; onImageFit?: (fit: "natural" | "fill") => void;
 }) {
   const [open, setOpen] = useState(false);
   const editable = !!onChange;
+  const fill = imageFit === "fill";
 
   if (!editable) {
     if (mode === "hero") return <ImageStack images={images} alt={alt} aspectClassName="aspect-[1182/854] max-w-[460px] lg:max-w-none" />;
     if (mode === "gallery") {
       if (images.length === 0) return null;
       return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
           {images.map((img) => (
-            <div key={img.id} className={`rounded-xl overflow-hidden border shadow-sm border-black/10 ${LIFT}`} style={EASE}>
-              <ImageSpecVisual img={img} alt={alt} />
+            <div key={img.id} className={`rounded-xl overflow-hidden border shadow-sm border-black/10 ${LIFT} ${fill ? "aspect-square" : ""}`} style={EASE}>
+              <ImageSpecVisual img={img} alt={alt} fill={fill} />
             </div>
           ))}
         </div>
@@ -736,10 +775,10 @@ function EditableImageArea({
         <>
           {mode === "hero" && <ImageStack images={images} alt={alt} aspectClassName="aspect-[1182/854] max-w-[460px] lg:max-w-none" />}
           {mode === "gallery" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
               {images.map((img) => (
-                <div key={img.id} className="rounded-xl overflow-hidden border border-white/10 shadow-sm">
-                  <ImageSpecVisual img={img} alt={alt} />
+                <div key={img.id} className={`rounded-xl overflow-hidden border border-white/10 shadow-sm ${fill ? "aspect-square" : ""}`}>
+                  <ImageSpecVisual img={img} alt={alt} fill={fill} />
                 </div>
               ))}
             </div>
@@ -760,7 +799,14 @@ function EditableImageArea({
           </button>
         </>
       )}
-      {open && <EditImagesModal title={title} images={images} onChange={(imgs) => onChange!(imgs)} onClose={() => setOpen(false)} simple={mode === "gallery"} topicHint={topicHint} />}
+      {open && (
+        <EditImagesModal
+          title={title} images={images} onChange={(imgs) => onChange!(imgs)} onClose={() => setOpen(false)}
+          simple={mode === "gallery"} topicHint={topicHint}
+          imageFit={mode === "gallery" ? imageFit : undefined}
+          onImageFit={mode === "gallery" ? onImageFit : undefined}
+        />
+      )}
     </div>
   );
 }
@@ -974,7 +1020,10 @@ export function GalleryBlock({ content, onChange }: { content: any; onChange?: (
         ) : (
           <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">{content.heading}</h2>
         )}
-        <EditableImageArea images={images} onChange={editable ? (imgs) => set({ images: imgs }) : undefined} alt={content.heading} mode="gallery" topicHint={content.heading} />
+        <EditableImageArea
+          images={images} onChange={editable ? (imgs) => set({ images: imgs }) : undefined} alt={content.heading} mode="gallery" topicHint={content.heading}
+          imageFit={content.imageFit} onImageFit={editable ? (fit) => set({ imageFit: fit }) : undefined}
+        />
       </Reveal>
     </section>
   );
