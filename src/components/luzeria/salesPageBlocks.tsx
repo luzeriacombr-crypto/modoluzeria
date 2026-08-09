@@ -416,6 +416,27 @@ export const BUILTIN_LABELS: Record<string, string> = {
   feedPreview: "Preview de feed", dashboard: "Dashboard", report: "Relatórios",
   calendar: "Calendário", notifications: "Notificações", responsive: "Responsividade", security: "Segurança",
 };
+// Ordem importa: termos mais específicos primeiro, porque alguns textos de
+// seção citam "celular" tanto em notificações quanto em responsividade —
+// checar os mais distintos antes evita escolher a ilustração errada.
+const BUILTIN_KEYWORDS: [string, string[]][] = [
+  ["security", ["segurança", "seguro", "lgpd", "protegid", "criptograf", "isolados"]],
+  ["notifications", ["notificaç", "aviso", "push"]],
+  ["calendar", ["calendário", "agenda"]],
+  ["report", ["relatório", "relatorio", "produtividade", "ranking", "desempenho"]],
+  ["dashboard", ["dashboard", "painel", "gargalo", "saúde da operação"]],
+  ["responsive", ["responsiv", "rapidez", "qualquer tela", "qualquer dispositivo"]],
+  ["feedPreview", ["feed", "aprova"]],
+];
+/** Sugere a ilustração pronta mais relacionada ao assunto da seção (pelo
+ * eyebrow/título), pra não sempre cair no "Preview de feed" por padrão. */
+export function guessBuiltinKey(topicHint?: string): string {
+  const text = (topicHint ?? "").toLowerCase();
+  for (const [key, words] of BUILTIN_KEYWORDS) {
+    if (words.some((w) => text.includes(w))) return key;
+  }
+  return BUILTIN_KEYS[0];
+}
 
 /* ---------------------------------------------------------------------- *
  * Pilha de imagens — 1 imagem parada = fluxo normal; 2+ ou flutuante =
@@ -481,11 +502,19 @@ export function ImageStack({ images, alt, aspectClassName }: { images: ImageSpec
  * imagem no próprio site) — enviar foto ou usar ilustração pronta,
  * flutuante/parada, tamanho e posição.
  * ---------------------------------------------------------------------- */
-function ImageStackEditor({ images, onChange, simple }: { images: ImageSpec[]; onChange: (images: ImageSpec[]) => void; simple?: boolean }) {
+function ImageStackEditor({ images, onChange, simple, topicHint }: { images: ImageSpec[]; onChange: (images: ImageSpec[]) => void; simple?: boolean; topicHint?: string }) {
   const { upload, uploading } = useMarketingAssetUpload();
+  // Upload é assíncrono (rede) — se o usuário mexer em outra imagem enquanto
+  // ele está rolando, um `updateAt` que fechasse sobre o array antigo (`images`
+  // capturado no render em que o upload começou) reconstruiria o array a
+  // partir de um estado desatualizado e apagaria essa outra edição. O ref
+  // sempre aponta pro array mais recente, não importa quanto tempo o upload
+  // demore nem quantos renders aconteçam nesse meio tempo.
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
 
   function updateAt(i: number, patch: Partial<ImageSpec>) {
-    const next = [...images];
+    const next = [...imagesRef.current];
     next[i] = { ...next[i], ...patch };
     onChange(next);
   }
@@ -496,11 +525,16 @@ function ImageStackEditor({ images, onChange, simple }: { images: ImageSpec[]; o
   }
 
   function addImage() {
-    if (images.length >= 4) return;
-    onChange([...images, {
-      id: `img-${Date.now()}`, source: "builtin", builtinKey: BUILTIN_KEYS[0],
-      floating: false, floatVariant: "a", widthPct: 100, top: 0, left: 0, z: images.length,
+    if (imagesRef.current.length >= 4) return;
+    onChange([...imagesRef.current, {
+      id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, source: "builtin", builtinKey: guessBuiltinKey(topicHint),
+      floating: false, floatVariant: "a", widthPct: 100, top: 0, left: 0, z: imagesRef.current.length,
     }]);
+  }
+
+  function removeAt(i: number) {
+    if (imagesRef.current.length === 1 && !confirm("Remover a única imagem desta seção?")) return;
+    onChange(imagesRef.current.filter((_, j) => j !== i));
   }
 
   return (
@@ -515,11 +549,11 @@ function ImageStackEditor({ images, onChange, simple }: { images: ImageSpec[]; o
                   className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${img.source === "upload" ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "border border-white/15 text-white/60"}`}
                 >Enviar foto</button>
                 <button
-                  onClick={() => updateAt(i, { source: "builtin", builtinKey: img.builtinKey ?? BUILTIN_KEYS[0] })}
+                  onClick={() => updateAt(i, { source: "builtin", builtinKey: img.builtinKey ?? guessBuiltinKey(topicHint) })}
                   className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${img.source === "builtin" ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "border border-white/15 text-white/60"}`}
                 >Usar ilustração pronta</button>
               </div>
-              <button onClick={() => onChange(images.filter((_, j) => j !== i))} className="text-white/40 hover:text-red-400"><X size={14} /></button>
+              <button onClick={() => removeAt(i)} className="text-white/40 hover:text-red-400"><X size={14} /></button>
             </div>
 
             {img.source === "upload" ? (
@@ -574,9 +608,9 @@ function ImageStackEditor({ images, onChange, simple }: { images: ImageSpec[]; o
 }
 
 function EditImagesModal({
-  title, images, onChange, onClose, simple,
+  title, images, onChange, onClose, simple, topicHint,
 }: {
-  title: string; images: ImageSpec[]; onChange: (images: ImageSpec[]) => void; onClose: () => void; simple?: boolean;
+  title: string; images: ImageSpec[]; onChange: (images: ImageSpec[]) => void; onClose: () => void; simple?: boolean; topicHint?: string;
 }) {
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
@@ -585,7 +619,7 @@ function EditImagesModal({
           <h3 className="text-sm font-bold text-white">{title}</h3>
           <button onClick={onClose} className="text-white/40 hover:text-white"><X size={16} /></button>
         </div>
-        <ImageStackEditor images={images} onChange={onChange} simple={simple} />
+        <ImageStackEditor images={images} onChange={onChange} simple={simple} topicHint={topicHint} />
         <button onClick={onClose} className="lz-btn-primary text-xs px-4 py-2.5 rounded-md mt-5 w-full">Concluído</button>
       </div>
     </div>
@@ -596,10 +630,10 @@ function EditImagesModal({
  * modo edição, clicar abre o modal de imagens, e mostra um "+" quando
  * ainda não tem nenhuma. */
 function EditableImageArea({
-  images, onChange, alt, mode,
+  images, onChange, alt, mode, topicHint,
 }: {
   images: ImageSpec[]; onChange?: (images: ImageSpec[]) => void; alt: string;
-  mode: "hero" | "feature" | "gallery";
+  mode: "hero" | "feature" | "gallery"; topicHint?: string;
 }) {
   const [open, setOpen] = useState(false);
   const editable = !!onChange;
@@ -666,7 +700,7 @@ function EditableImageArea({
           </button>
         </>
       )}
-      {open && <EditImagesModal title={title} images={images} onChange={(imgs) => onChange!(imgs)} onClose={() => setOpen(false)} simple={mode === "gallery"} />}
+      {open && <EditImagesModal title={title} images={images} onChange={(imgs) => onChange!(imgs)} onClose={() => setOpen(false)} simple={mode === "gallery"} topicHint={topicHint} />}
     </div>
   );
 }
@@ -823,7 +857,7 @@ export function FeatureBlock({ content, onChange }: { content: any; onChange?: (
             )}
           </div>
           <div className={`flex justify-center ${content.reverse ? "lg:order-1" : ""}`}>
-            <EditableImageArea images={content.images ?? []} onChange={editable ? (images) => set({ images }) : undefined} alt={content.title} mode="feature" />
+            <EditableImageArea images={content.images ?? []} onChange={editable ? (images) => set({ images }) : undefined} alt={content.title} mode="feature" topicHint={`${content.eyebrowLabel ?? ""} ${content.title ?? ""}`} />
           </div>
         </div>
       </Reveal>
@@ -845,7 +879,7 @@ export function GalleryBlock({ content, onChange }: { content: any; onChange?: (
         ) : (
           <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">{content.heading}</h2>
         )}
-        <EditableImageArea images={images} onChange={editable ? (imgs) => set({ images: imgs }) : undefined} alt={content.heading} mode="gallery" />
+        <EditableImageArea images={images} onChange={editable ? (imgs) => set({ images: imgs }) : undefined} alt={content.heading} mode="gallery" topicHint={content.heading} />
       </Reveal>
     </section>
   );
@@ -927,7 +961,7 @@ export function HeroSection({ content, onChange, onCtaClick }: { content: any; o
           </div>
         </div>
         <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
-          <EditableImageArea images={content.images ?? []} onChange={editable ? (images) => set({ images }) : undefined} alt="Modo Criador" mode="hero" />
+          <EditableImageArea images={content.images ?? []} onChange={editable ? (images) => set({ images }) : undefined} alt="Modo Criador" mode="hero" topicHint={`${content.eyebrowLabel ?? ""} ${content.titleLine1 ?? ""} ${content.titleAccentLine1 ?? ""}`} />
         </div>
       </div>
     </section>
