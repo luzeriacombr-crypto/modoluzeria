@@ -74,8 +74,8 @@ export function PrivacyPolicyPage() {
             <p>
               Dúvidas sobre esta política ou solicitações relacionadas aos seus dados podem ser enviadas
               para{" "}
-              <a href="mailto:junioreisfoto2@gmail.com" className="underline">
-                junioreisfoto2@gmail.com
+              <a href="mailto:junior.reis@live.com" className="underline">
+                junior.reis@live.com
               </a>.
             </p>
           </section>
