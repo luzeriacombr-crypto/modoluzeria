@@ -85,6 +85,16 @@ const textBlurbContentSchema = z.object({
   size: SIZE,
 });
 
+// Uma única imagem de ponta a ponta na horizontal — sem texto, sem container
+// centralizado. `background` serve só de placeholder enquanto nenhuma imagem
+// foi enviada ainda.
+const imageBannerContentSchema = z.object({
+  imageUrl: z.string().max(2000).optional().nullable(),
+  alt: z.string().max(200).optional(),
+  background: BACKGROUND,
+  size: SIZE,
+});
+
 const CONTENT_BY_TYPE = {
   hero: heroContentSchema,
   bullet_list: bulletListContentSchema,
@@ -92,6 +102,7 @@ const CONTENT_BY_TYPE = {
   feature: featureContentSchema,
   gallery: galleryContentSchema,
   text_blurb: textBlurbContentSchema,
+  image_banner: imageBannerContentSchema,
 } as const;
 
 const blockInputSchema = z.discriminatedUnion("type", [
@@ -101,6 +112,7 @@ const blockInputSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("feature"), content: featureContentSchema }),
   z.object({ type: z.literal("gallery"), content: galleryContentSchema }),
   z.object({ type: z.literal("text_blurb"), content: textBlurbContentSchema }),
+  z.object({ type: z.literal("image_banner"), content: imageBannerContentSchema }),
 ]);
 
 export type SalesPageBlockType = keyof typeof CONTENT_BY_TYPE;

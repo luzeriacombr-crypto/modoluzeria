@@ -70,6 +70,15 @@ export function sectionPadding(key: string | undefined): string {
   return SECTION_PADDING[(key as SizeKey) ?? "normal"] ?? SECTION_PADDING.normal;
 }
 
+const BANNER_HEIGHT: Record<SizeKey, string> = {
+  compact: "h-[220px] sm:h-[320px]",
+  normal: "h-[320px] sm:h-[460px]",
+  spacious: "h-[440px] sm:h-[640px]",
+};
+export function bannerHeight(key: string | undefined): string {
+  return BANNER_HEIGHT[(key as SizeKey) ?? "normal"] ?? BANNER_HEIGHT.normal;
+}
+
 export const EASE = { transitionTimingFunction: "var(--ease-premium)" as const };
 export const POP = "transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97]";
 export const LIFT = "transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-2xl";
@@ -928,6 +937,57 @@ export function TextBlurbBlock({ content, onChange }: { content: any; onChange?:
   );
 }
 
+/** Uma única imagem de ponta a ponta na horizontal — sem texto, sem container
+ * centralizado, cobrindo a seção inteira (largura e altura). */
+export function ImageBannerBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
+  const editable = !!onChange;
+  const set = (patch: any) => onChange?.({ ...content, ...patch });
+  const { upload, uploading } = useMarketingAssetUpload();
+
+  async function handleFile(file: File) {
+    const url = await upload(file);
+    if (url) set({ imageUrl: url });
+  }
+
+  if (!editable) {
+    if (!content.imageUrl) return null;
+    return (
+      <section className="border-t border-white/10">
+        <img src={content.imageUrl} alt={content.alt ?? ""} className={`w-full object-cover block ${bannerHeight(content.size)}`} />
+      </section>
+    );
+  }
+
+  const { style: bgStyle } = sectionBackgroundStyle({ background: content.background });
+
+  return (
+    <section style={bgStyle} className="border-t border-white/10">
+      <div className={`relative w-full group/banner ${bannerHeight(content.size)}`}>
+        {content.imageUrl ? (
+          <>
+            <img src={content.imageUrl} alt={content.alt ?? ""} className="w-full h-full object-cover block" />
+            <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover/banner:opacity-100 focus-within:opacity-100 transition">
+              <label className="bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90 cursor-pointer" title="Trocar imagem">
+                {uploading ? <Loader2 size={13} className="animate-spin" /> : <Pencil size={13} />}
+                <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+              </label>
+              <button onClick={() => set({ imageUrl: null })} className="bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90" title="Remover imagem">
+                <X size={13} />
+              </button>
+            </div>
+          </>
+        ) : (
+          <label className="w-full h-full flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/20 hover:border-[rgb(var(--lz-brand-rgb))] text-white/40 hover:text-white cursor-pointer transition">
+            {uploading ? <Loader2 size={22} className="animate-spin" /> : <ImagePlus size={22} />}
+            <span className="text-xs">Adicionar imagem</span>
+            <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+          </label>
+        )}
+      </div>
+    </section>
+  );
+}
+
 /* ---------------------------------------------------------------------- *
  * Hero — extraído como componente próprio pra poder ser usado tanto pelo
  * corpo público quanto diretamente pelo editor (que precisa dele editável
@@ -994,6 +1054,7 @@ export function renderBlockNode(block: { id: string; type: string; content: any 
     case "feature": return <FeatureBlock key={block.id} content={block.content} onChange={onChange} />;
     case "gallery": return <GalleryBlock key={block.id} content={block.content} onChange={onChange} />;
     case "text_blurb": return <TextBlurbBlock key={block.id} content={block.content} onChange={onChange} />;
+    case "image_banner": return <ImageBannerBlock key={block.id} content={block.content} onChange={onChange} />;
     default: return null;
   }
 }

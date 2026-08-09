@@ -16,6 +16,7 @@ const TYPE_LABELS: Record<Exclude<SalesPageBlockType, "hero">, string> = {
   feature: "Destaque com imagem",
   gallery: "Galeria de imagens",
   text_blurb: "Texto simples",
+  image_banner: "Imagem de ponta a ponta",
 };
 const TYPE_DESCRIPTIONS: Record<Exclude<SalesPageBlockType, "hero">, string> = {
   bullet_list: "Título + lista de itens com ✓ ou ✕ (ex.: \"Dores\", \"Você vai ter...\")",
@@ -23,6 +24,7 @@ const TYPE_DESCRIPTIONS: Record<Exclude<SalesPageBlockType, "hero">, string> = {
   feature: "Título + texto + até 4 imagens de um lado, ideal pra mostrar uma funcionalidade",
   gallery: "Título + grade de imagens (ex.: depoimentos, prints de clientes)",
   text_blurb: "Só um texto curto com ícone (ex.: \"Sobre nós\")",
+  image_banner: "Só uma foto, ocupando a seção inteira de ponta a ponta na horizontal",
 };
 
 function emptyContent(type: Exclude<SalesPageBlockType, "hero">): any {
@@ -32,6 +34,7 @@ function emptyContent(type: Exclude<SalesPageBlockType, "hero">): any {
     case "feature": return { eyebrowIcon: "star", eyebrowLabel: "Novo destaque", title: "Título do destaque", description: "", background: "white", size: "normal", reverse: false, images: [] };
     case "gallery": return { heading: "Nova galeria", background: "white", size: "normal", images: [] };
     case "text_blurb": return { eyebrowIcon: "star", eyebrowLabel: "Texto", paragraph: "", background: "white", size: "normal" };
+    case "image_banner": return { imageUrl: null, alt: "", background: "white", size: "normal" };
   }
 }
 
@@ -237,6 +240,7 @@ export function SalesPageEditorTab() {
                         onBackground={(bg) => saveContent(b, { ...(drafts[b.id] ?? b.content), background: bg })}
                         backgroundImage={(drafts[b.id] ?? b.content).backgroundImage}
                         onBackgroundImage={(url) => saveContent(b, { ...(drafts[b.id] ?? b.content), backgroundImage: url })}
+                        hideBackgroundImage={b.type === "image_banner"}
                         size={(drafts[b.id] ?? b.content).size}
                         onSize={(sz) => saveContent(b, { ...(drafts[b.id] ?? b.content), size: sz })}
                         onFlip={b.type === "feature" ? () => saveContent(b, { ...(drafts[b.id] ?? b.content), reverse: !(drafts[b.id] ?? b.content).reverse }) : undefined}
@@ -324,11 +328,11 @@ export function SalesPageEditorTab() {
 }
 
 function BlockToolbar({
-  isVisible, canUp, canDown, onMoveUp, onMoveDown, background, onBackground, backgroundImage, onBackgroundImage, size, onSize, onFlip, onToggleVisible, onDelete,
+  isVisible, canUp, canDown, onMoveUp, onMoveDown, background, onBackground, backgroundImage, onBackgroundImage, hideBackgroundImage, size, onSize, onFlip, onToggleVisible, onDelete,
 }: {
   isVisible: boolean; canUp: boolean; canDown: boolean; onMoveUp: () => void; onMoveDown: () => void;
   background: string; onBackground: (key: any) => void;
-  backgroundImage: string | null | undefined; onBackgroundImage: (url: string | null) => void;
+  backgroundImage: string | null | undefined; onBackgroundImage: (url: string | null) => void; hideBackgroundImage?: boolean;
   size: string | undefined; onSize: (key: any) => void;
   onFlip?: () => void; onToggleVisible: () => void; onDelete: () => void;
 }) {
@@ -386,18 +390,22 @@ function BlockToolbar({
                 />
               ))}
             </div>
-            <div className="text-[9px] uppercase tracking-wide text-white/30 mb-1.5 px-0.5 border-t border-white/10 pt-2">Imagem de fundo</div>
-            {backgroundImage ? (
-              <div className="flex items-center gap-2">
-                <img src={backgroundImage} alt="" className="h-8 w-12 rounded object-cover border border-white/10 shrink-0" />
-                <button onClick={() => onBackgroundImage(null)} className="text-[10px] text-white/50 hover:text-red-400">Remover</button>
-              </div>
-            ) : (
-              <label className="flex items-center justify-center gap-1.5 text-[11px] text-white/60 hover:text-white cursor-pointer border border-white/15 rounded-md px-2.5 py-1.5 w-full">
-                {uploading ? <Loader2 size={12} className="animate-spin" /> : <ImagePlus size={12} />}
-                Enviar foto
-                <input type="file" accept="image/*" hidden onChange={handleBackgroundFile} />
-              </label>
+            {!hideBackgroundImage && (
+              <>
+                <div className="text-[9px] uppercase tracking-wide text-white/30 mb-1.5 px-0.5 border-t border-white/10 pt-2">Imagem de fundo</div>
+                {backgroundImage ? (
+                  <div className="flex items-center gap-2">
+                    <img src={backgroundImage} alt="" className="h-8 w-12 rounded object-cover border border-white/10 shrink-0" />
+                    <button onClick={() => onBackgroundImage(null)} className="text-[10px] text-white/50 hover:text-red-400">Remover</button>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-1.5 text-[11px] text-white/60 hover:text-white cursor-pointer border border-white/15 rounded-md px-2.5 py-1.5 w-full">
+                    {uploading ? <Loader2 size={12} className="animate-spin" /> : <ImagePlus size={12} />}
+                    Enviar foto
+                    <input type="file" accept="image/*" hidden onChange={handleBackgroundFile} />
+                  </label>
+                )}
+              </>
             )}
           </div>
         )}
