@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff, Loader2, X,
-  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil, Maximize2,
+  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil, Maximize2, Undo2,
 } from "lucide-react";
 import { salesPageBlocksAdminQO, useApi } from "@/lib/luzeria/queries";
 import { BACKGROUND_SWATCHES, SIZE_OPTIONS, HeroSection, renderBlockNode, SalesPageBody, BG_BLUE } from "./salesPageBlocks";
@@ -110,6 +110,24 @@ export function SalesPageEditorTab() {
     });
   }
 
+  function cancelEdit() {
+    if (pendingCount === 0) return;
+    if (!confirm(`Descartar ${pendingCount} alteração${pendingCount > 1 ? "ões" : ""} não publicada${pendingCount > 1 ? "s" : ""} e voltar pro que já está no ar?`)) return;
+    api.discardSalesPageDraft.mutate(undefined as any, {
+      onSuccess: () => {
+        // Volta os campos pro conteúdo publicado na hora, sem esperar o refetch —
+        // a lista de blocos (`blocks`) só é atualizada depois que a query revalida.
+        setDrafts((d) => {
+          const next = { ...d };
+          for (const b of blocks) if (b.draftContent != null) next[b.id] = b.content;
+          return next;
+        });
+        toast.success("Edição cancelada.");
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao cancelar"),
+    });
+  }
+
   function scrollTo(id: string) {
     sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
     setSectionsOpen(false);
@@ -165,6 +183,14 @@ export function SalesPageEditorTab() {
               : { background: "transparent", color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.15)" }}
           >
             {previewMode ? <><Pencil size={13} /> Editar</> : <><Eye size={13} /> Visualizar</>}
+          </button>
+          <button
+            onClick={cancelEdit}
+            disabled={pendingCount === 0 || api.discardSalesPageDraft.isPending}
+            title="Descartar alterações não publicadas"
+            className="text-xs font-semibold inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition border border-white/15 text-white/60 hover:text-red-400 hover:border-red-400/40 disabled:opacity-30 disabled:hover:text-white/60 disabled:hover:border-white/15"
+          >
+            <Undo2 size={13} /> Cancelar edição
           </button>
           <button
             onClick={publish}

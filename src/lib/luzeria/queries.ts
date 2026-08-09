@@ -52,7 +52,7 @@ import { publishToInstagram, setInstagramAutoPublish } from "./instagram.functio
 import { getCalendarItems } from "./calendar.functions";
 import {
   getSalesPageBlocks, listSalesPageBlocksAdmin, createSalesPageBlock, updateSalesPageBlock,
-  deleteSalesPageBlock, reorderSalesPageBlocks, publishSalesPageBlocks,
+  deleteSalesPageBlock, reorderSalesPageBlocks, publishSalesPageBlocks, discardSalesPageDraft,
 } from "./sales-page.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const calendarItemsQO = (from: string, to: string) =>
@@ -597,6 +597,13 @@ export function useApi() {
     }),
     publishSalesPageBlocks: useMutation({
       mutationFn: useServerFn(publishSalesPageBlocks),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["sales-page-blocks"] });
+        qc.invalidateQueries({ queryKey: ["sales-page-blocks-admin"] });
+      },
+    }),
+    discardSalesPageDraft: useMutation({
+      mutationFn: useServerFn(discardSalesPageDraft),
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["sales-page-blocks"] });
         qc.invalidateQueries({ queryKey: ["sales-page-blocks-admin"] });

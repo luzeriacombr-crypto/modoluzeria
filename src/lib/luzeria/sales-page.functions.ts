@@ -216,6 +216,21 @@ export const publishSalesPageBlocks = createServerFn({ method: "POST" })
     return { ok: true, count: (data ?? []).length };
   });
 
+/** Zera draft_content em todos os blocos com rascunho pendente, descartando
+ * as edições de texto/imagem não publicadas (volta a mostrar `content`). */
+export const discardSalesPageDraft = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    await assertLuzeriaMaster(context);
+    const { data, error } = await context.supabase
+      .from("sales_page_blocks")
+      .update({ draft_content: null })
+      .not("draft_content", "is", null)
+      .select("id");
+    if (error) throw new Error(error.message);
+    return { ok: true, count: (data ?? []).length };
+  });
+
 export const deleteSalesPageBlock = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
