@@ -18,6 +18,7 @@ import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ClientFichaPanel } from "./ClientFichaPanel";
 import { AppTour } from "./AppTour";
 import { LuzeriaLoader } from "./LuzeriaLoader";
+import { TrialEndingBanner } from "./TrialEndingBanner";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { hexToRgbChannels } from "@/lib/luzeria/utils";
@@ -120,6 +121,7 @@ export function App() {
       </div>
       <div className="flex-1 flex flex-col min-w-0">
         <Header sidebarHidden={sidebarHidden} onToggleSidebar={toggleSidebar} />
+        <TrialEndingBanner isMaster={me.data?.role === "master"} />
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
           <Outlet />
         </main>

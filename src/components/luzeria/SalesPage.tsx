@@ -38,7 +38,7 @@ export function SalesPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [taxId, setTaxId] = useState("");
-  const [billingType, setBillingType] = useState<"CREDIT_CARD" | "UNDEFINED">("CREDIT_CARD");
+  const [billingType, setBillingType] = useState<"CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY">("CREDIT_CARD");
   const [website, setWebsite] = useState(""); // honeypot
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -228,7 +228,14 @@ export function SalesPage() {
                 </a>
               </>
             ) : (
-              <p className="text-[#0A0E23]/70 text-sm">Enviamos um e-mail de confirmação — clique no link pra ativar sua conta.</p>
+              <>
+                <p className="text-[#0A0E23]/70 text-sm">Enviamos um e-mail de confirmação — clique no link pra ativar sua conta.</p>
+                {billingType === "TRIAL_ONLY" && (
+                  <p className="text-[#0A0E23]/50 text-xs mt-2">
+                    Você já pode usar o Modo Criador por 7 dias sem cadastrar pagamento. Quando quiser, é só adicionar a forma de pagamento em Configurações.
+                  </p>
+                )}
+              </>
             )}
             <p className="text-[#0A0E23]/50 text-xs mt-6">
               Também mandamos um e-mail de confirmação — confirme antes de tentar entrar em <Link to="/auth" className="underline">/auth</Link>.
@@ -256,6 +263,7 @@ export function SalesPage() {
                 {([
                   { id: "CREDIT_CARD" as const, label: "Cartão de crédito" },
                   { id: "UNDEFINED" as const, label: "PIX ou Boleto" },
+                  { id: "TRIAL_ONLY" as const, label: "Vou testar primeiro" },
                 ]).map((opt) => (
                   <button
                     key={opt.id}
@@ -272,6 +280,11 @@ export function SalesPage() {
                   </button>
                 ))}
               </div>
+              {billingType === "TRIAL_ONLY" && (
+                <p className="text-[#0A0E23]/50 text-xs mt-2">
+                  Sem cartão, sem PIX, sem nada agora. No último dia do teste avisamos você pra decidir se quer continuar.
+                </p>
+              )}
             </Field>
             {/* Honeypot — invisible to real users, bots tend to fill every field */}
             <input

@@ -28,7 +28,7 @@ export const publicSignup = createServerFn({ method: "POST" })
   .inputValidator((d: {
     agencyName: string; name: string; email: string; password: string;
     planId: string; taxId: string; website?: string; promoCode?: string; affiliateCode?: string;
-    billingType?: "CREDIT_CARD" | "UNDEFINED";
+    billingType?: "CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY";
   }) =>
     z.object({
       agencyName: z.string().trim().min(2).max(80),
@@ -41,9 +41,12 @@ export const publicSignup = createServerFn({ method: "POST" })
       promoCode: z.string().optional(),
       affiliateCode: z.string().optional(),
       // UNDEFINED lets the customer pick PIX/Boleto/Cartão on Asaas's own
-      // invoice page — for whoever doesn't have a card. Defaults to
+      // invoice page. TRIAL_ONLY ("Vou testar primeiro") skips Asaas
+      // entirely at signup — no customer/subscription is created, so
+      // there's nothing to charge; the org can add payment info later
+      // (see subscribeToPlan) before the trial ends. Defaults to
       // CREDIT_CARD so existing behavior (auto-recurring charge) is unchanged.
-      billingType: z.enum(["CREDIT_CARD", "UNDEFINED"]).optional(),
+      billingType: z.enum(["CREDIT_CARD", "UNDEFINED", "TRIAL_ONLY"]).optional(),
     }).parse(d))
   .handler(async ({ data }) => {
     if (data.website) {
@@ -145,15 +148,24 @@ export const publicSignup = createServerFn({ method: "POST" })
         }
       }
 
-      const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
-      const customer = await createAsaasCustomer({ name: data.agencyName.trim(), cpfCnpj: data.taxId, email: data.email });
-      const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
-        customerId: customer.id,
-        valueCents: discountedValueCents,
-        description: `Modo Criador — Plano ${plan.name}`,
-        billingType: data.billingType ?? "CREDIT_CARD",
-        trialDays: TRIAL_DAYS,
-      });
+      let invoiceUrl: string | null = null;
+      let asaasCustomerId: string | undefined;
+      let asaasSubscriptionId: string | undefined;
+
+      if (data.billingType !== "TRIAL_ONLY") {
+        const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
+        const customer = await createAsaasCustomer({ name: data.agencyName.trim(), cpfCnpj: data.taxId, email: data.email });
+        const sub = await createAsaasSubscription({
+          customerId: customer.id,
+          valueCents: discountedValueCents,
+          description: `Modo Criador — Plano ${plan.name}`,
+          billingType: data.billingType ?? "CREDIT_CARD",
+          trialDays: TRIAL_DAYS,
+        });
+        asaasCustomerId = customer.id;
+        asaasSubscriptionId = sub.subscriptionId;
+        invoiceUrl = sub.invoiceUrl;
+      }
 
       if (affiliateId) {
         const { data: referral, error: refErr } = await supabaseAdmin
@@ -170,8 +182,8 @@ export const publicSignup = createServerFn({ method: "POST" })
 
       await supabaseAdmin.from("orgs")
         .update({
-          asaas_customer_id: customer.id,
-          asaas_subscription_id: subscriptionId,
+          asaas_customer_id: asaasCustomerId,
+          asaas_subscription_id: asaasSubscriptionId,
           promotion_code_id: promotionCodeId,
           affiliate_referral_id: affiliateReferralId,
         })
@@ -202,7 +214,7 @@ export const publicSignup = createServerFn({ method: "POST" })
  * activates that existing profile into it instead of creating a new user. */
 export const completeGoogleSignup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { agencyName: string; name: string; taxId: string; planId: string; promoCode?: string; affiliateCode?: string; billingType?: "CREDIT_CARD" | "UNDEFINED" }) =>
+  .inputValidator((d: { agencyName: string; name: string; taxId: string; planId: string; promoCode?: string; affiliateCode?: string; billingType?: "CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY" }) =>
     z.object({
       agencyName: z.string().trim().min(2).max(80),
       name: z.string().trim().min(2).max(80),
@@ -210,7 +222,7 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
       planId: z.string().min(1),
       promoCode: z.string().optional(),
       affiliateCode: z.string().optional(),
-      billingType: z.enum(["CREDIT_CARD", "UNDEFINED"]).optional(),
+      billingType: z.enum(["CREDIT_CARD", "UNDEFINED", "TRIAL_ONLY"]).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const email = (context.claims.email as string | undefined)?.toLowerCase();
@@ -293,15 +305,24 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
         }
       }
 
-      const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
-      const customer = await createAsaasCustomer({ name: data.agencyName.trim(), cpfCnpj: data.taxId, email });
-      const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
-        customerId: customer.id,
-        valueCents: discountedValueCents,
-        description: `Modo Criador — Plano ${plan.name}`,
-        billingType: data.billingType ?? "CREDIT_CARD",
-        trialDays: TRIAL_DAYS,
-      });
+      let invoiceUrl: string | null = null;
+      let asaasCustomerId: string | undefined;
+      let asaasSubscriptionId: string | undefined;
+
+      if (data.billingType !== "TRIAL_ONLY") {
+        const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
+        const customer = await createAsaasCustomer({ name: data.agencyName.trim(), cpfCnpj: data.taxId, email });
+        const sub = await createAsaasSubscription({
+          customerId: customer.id,
+          valueCents: discountedValueCents,
+          description: `Modo Criador — Plano ${plan.name}`,
+          billingType: data.billingType ?? "CREDIT_CARD",
+          trialDays: TRIAL_DAYS,
+        });
+        asaasCustomerId = customer.id;
+        asaasSubscriptionId = sub.subscriptionId;
+        invoiceUrl = sub.invoiceUrl;
+      }
 
       if (affiliateId) {
         const { data: referral, error: refErr } = await supabaseAdmin
@@ -318,8 +339,8 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
 
       await supabaseAdmin.from("orgs")
         .update({
-          asaas_customer_id: customer.id,
-          asaas_subscription_id: subscriptionId,
+          asaas_customer_id: asaasCustomerId,
+          asaas_subscription_id: asaasSubscriptionId,
           promotion_code_id: promotionCodeId,
           affiliate_referral_id: affiliateReferralId,
         })
