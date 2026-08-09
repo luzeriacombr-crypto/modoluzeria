@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff, Loader2, X,
-  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil, Maximize2, Undo2, ImagePlus,
+  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil, Maximize2, Undo2, ImagePlus, GripVertical,
 } from "lucide-react";
 import { salesPageBlocksAdminQO, useApi } from "@/lib/luzeria/queries";
-import { BACKGROUND_SWATCHES, SIZE_OPTIONS, HeroSection, renderBlockNode, SalesPageBody, BG_BLUE } from "./salesPageBlocks";
+import { BACKGROUND_SWATCHES, SIZE_OPTIONS, HeroSection, renderBlockNode, SalesPageBody, BG_BLUE, useDragReorder } from "./salesPageBlocks";
 import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
 import type { SalesPageBlock, SalesPageBlockType } from "@/lib/luzeria/sales-page.functions";
 
@@ -98,6 +98,10 @@ export function SalesPageEditorTab() {
     api.reorderSalesPageBlocks.mutate({ data: { orderedIds: order } });
   }
 
+  const blockDrag = useDragReorder(rest, (next) => {
+    api.reorderSalesPageBlocks.mutate({ data: { orderedIds: next.map((b) => b.id) } });
+  });
+
   function addBlock(type: Exclude<SalesPageBlockType, "hero">) {
     api.createSalesPageBlock.mutate({ data: { type, content: emptyContent(type) } as any }, {
       onSuccess: () => setAdding(false),
@@ -155,7 +159,7 @@ export function SalesPageEditorTab() {
             : "Clique em qualquer texto ou imagem abaixo pra editar direto. Cabeçalho, planos, formulário, dúvidas frequentes e rodapé não entram aqui."}
         </p>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          <a href="https://modocriador.com.br" target="_blank" rel="noopener noreferrer"
+          <a href="https://modocriador.com.br/assinar" target="_blank" rel="noopener noreferrer"
             className="text-xs text-white/50 hover:text-white inline-flex items-center gap-1.5">
             Site no ar <ExternalLink size={12} />
           </a>
@@ -226,8 +230,10 @@ export function SalesPageEditorTab() {
                     <div
                       key={b.id}
                       ref={(el) => { sectionRefs.current[b.id] = el; }}
-                      className="relative group/block"
+                      className={`relative group/block transition ${blockDrag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))] outline-offset-[-4px]" : ""}`}
                       style={{ opacity: b.isVisible ? 1 : 0.4 }}
+                      onDragOver={(e) => blockDrag.onDragOverItem(e, i)}
+                      onDrop={(e) => blockDrag.onDropItem(e, i)}
                     >
                       {renderBlockNode({ id: b.id, type: b.type, content: drafts[b.id] ?? b.content }, (c) => saveContent(b, c))}
                       <BlockToolbar
@@ -236,6 +242,8 @@ export function SalesPageEditorTab() {
                         canDown={i < rest.length - 1}
                         onMoveUp={() => moveBy(b.id, -1)}
                         onMoveDown={() => moveBy(b.id, 1)}
+                        onDragHandleStart={() => blockDrag.onDragStart(i)}
+                        onDragHandleEnd={blockDrag.onDragEnd}
                         background={(drafts[b.id] ?? b.content).background}
                         onBackground={(bg) => saveContent(b, { ...(drafts[b.id] ?? b.content), background: bg })}
                         backgroundImage={(drafts[b.id] ?? b.content).backgroundImage}
@@ -306,7 +314,22 @@ export function SalesPageEditorTab() {
             )}
             <div className="space-y-1.5">
               {rest.map((b, i) => (
-                <div key={b.id} className="flex items-center gap-1 bg-white/[0.03] rounded-md px-2 py-1.5" style={{ opacity: b.isVisible ? 1 : 0.5 }}>
+                <div
+                  key={b.id}
+                  className={`flex items-center gap-1 bg-white/[0.03] rounded-md px-2 py-1.5 transition ${blockDrag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))]" : ""}`}
+                  style={{ opacity: b.isVisible ? 1 : 0.5 }}
+                  onDragOver={(e) => blockDrag.onDragOverItem(e, i)}
+                  onDrop={(e) => blockDrag.onDropItem(e, i)}
+                >
+                  <span
+                    draggable
+                    onDragStart={() => blockDrag.onDragStart(i)}
+                    onDragEnd={blockDrag.onDragEnd}
+                    title="Arrastar pra reordenar"
+                    className="text-white/30 hover:text-white cursor-grab active:cursor-grabbing shrink-0 touch-none"
+                  >
+                    <GripVertical size={13} />
+                  </span>
                   <button onClick={() => scrollTo(b.id)} className="flex-1 min-w-0 text-left text-xs text-white truncate flex items-center gap-1.5">
                     {b.draftContent != null && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" title="Tem alteração não publicada" />}
                     <span className="truncate">{headingOf(drafts[b.id] ?? b.content)}</span>
@@ -328,9 +351,10 @@ export function SalesPageEditorTab() {
 }
 
 function BlockToolbar({
-  isVisible, canUp, canDown, onMoveUp, onMoveDown, background, onBackground, backgroundImage, onBackgroundImage, hideBackgroundImage, size, onSize, onFlip, onToggleVisible, onDelete,
+  isVisible, canUp, canDown, onMoveUp, onMoveDown, onDragHandleStart, onDragHandleEnd, background, onBackground, backgroundImage, onBackgroundImage, hideBackgroundImage, size, onSize, onFlip, onToggleVisible, onDelete,
 }: {
   isVisible: boolean; canUp: boolean; canDown: boolean; onMoveUp: () => void; onMoveDown: () => void;
+  onDragHandleStart: () => void; onDragHandleEnd: () => void;
   background: string; onBackground: (key: any) => void;
   backgroundImage: string | null | undefined; onBackgroundImage: (url: string | null) => void; hideBackgroundImage?: boolean;
   size: string | undefined; onSize: (key: any) => void;
@@ -351,6 +375,15 @@ function BlockToolbar({
       className="absolute top-3 right-3 z-30 opacity-0 group-hover/block:opacity-100 focus-within:opacity-100 transition flex items-center gap-0.5 bg-black/80 backdrop-blur rounded-lg p-1 shadow-xl"
       onMouseLeave={() => { setColorOpen(false); setSizeOpen(false); }}
     >
+      <span
+        draggable
+        onDragStart={onDragHandleStart}
+        onDragEnd={onDragHandleEnd}
+        title="Arrastar pra mover a seção"
+        className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10 cursor-grab active:cursor-grabbing touch-none"
+      >
+        <GripVertical size={14} />
+      </span>
       <button onClick={onMoveUp} disabled={!canUp} title="Mover pra cima" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent"><ChevronUp size={14} /></button>
       <button onClick={onMoveDown} disabled={!canDown} title="Mover pra baixo" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent"><ChevronDown size={14} /></button>
       {onFlip && <button onClick={onFlip} title="Inverter lado da imagem" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10"><FlipHorizontal size={14} /></button>}

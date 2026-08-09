@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import {
   Rocket, CalendarDays, Users, Link2, FolderOpen, Check, X, Zap, Lock, Star,
   MessageCircle, LayoutDashboard, BarChart3, Bell, ShieldCheck, Smartphone, Tablet, Monitor,
-  ChevronLeft, ChevronRight, Play, Heart, Send, Bookmark, Plus, Pencil, ImagePlus, Loader2,
+  ChevronLeft, ChevronRight, Play, Heart, Send, Bookmark, Plus, Pencil, ImagePlus, Loader2, GripVertical,
 } from "lucide-react";
 import clickupTrelloLogos from "@/assets/clickup-trello-logos.png";
 import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
@@ -77,6 +77,39 @@ const BANNER_HEIGHT: Record<SizeKey, string> = {
 };
 export function bannerHeight(key: string | undefined): string {
   return BANNER_HEIGHT[(key as SizeKey) ?? "normal"] ?? BANNER_HEIGHT.normal;
+}
+
+/** Native HTML5 drag-and-drop reorder — no external DnD library needed for
+ * a plain same-list reorder (grip handle drags an item/block, drop target
+ * splices it into place). Shared by list items here and by whole-block
+ * reordering in the editor. */
+export function useDragReorder<T>(items: T[], onReorder: (next: T[]) => void) {
+  const dragIndexRef = useRef<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  function onDragStart(i: number) {
+    dragIndexRef.current = i;
+  }
+  function onDragOverItem(e: React.DragEvent, i: number) {
+    e.preventDefault();
+    if (overIndex !== i) setOverIndex(i);
+  }
+  function onDropItem(e: React.DragEvent, i: number) {
+    e.preventDefault();
+    setOverIndex(null);
+    const from = dragIndexRef.current;
+    dragIndexRef.current = null;
+    if (from === null || from === i) return;
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(i, 0, moved);
+    onReorder(next);
+  }
+  function onDragEnd() {
+    dragIndexRef.current = null;
+    setOverIndex(null);
+  }
+  return { overIndex, onDragStart, onDragOverItem, onDropItem, onDragEnd };
 }
 
 export const EASE = { transitionTimingFunction: "var(--ease-premium)" as const };
@@ -744,6 +777,7 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
   const items: string[] = content.items ?? [];
   const set = (patch: any) => onChange?.({ ...content, ...patch });
   const hasClosing = content.closingTextAccent || content.closingTextPlain;
+  const drag = useDragReorder(items, (next) => set({ items: next }));
 
   return (
     <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
@@ -755,7 +789,23 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
         )}
         <ul className="space-y-4">
           {items.map((t, i) => (
-            <li key={i} className={`group/item flex gap-3 text-base sm:text-lg items-start ${dark ? "text-white/80" : "text-[#0A0E23]/75"}`}>
+            <li
+              key={i}
+              className={`group/item flex gap-3 text-base sm:text-lg items-start rounded-md transition ${dark ? "text-white/80" : "text-[#0A0E23]/75"} ${drag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))] outline-offset-4" : ""}`}
+              onDragOver={editable ? (e) => drag.onDragOverItem(e, i) : undefined}
+              onDrop={editable ? (e) => drag.onDropItem(e, i) : undefined}
+            >
+              {editable && (
+                <span
+                  draggable
+                  onDragStart={() => drag.onDragStart(i)}
+                  onDragEnd={drag.onDragEnd}
+                  className="cursor-grab active:cursor-grabbing opacity-0 group-hover/item:opacity-40 hover:!opacity-100 shrink-0 mt-0.5 touch-none"
+                  title="Arrastar pra reordenar"
+                >
+                  <GripVertical size={16} />
+                </span>
+              )}
               <IconCmp size={20} className="shrink-0 mt-0.5" style={{ color: iconColor }} strokeWidth={2.5} />
               {editable ? (
                 <>
@@ -799,6 +849,7 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
   const items: any[] = content.items ?? [];
   const set = (patch: any) => onChange?.({ ...content, ...patch });
   const setItem = (i: number, patch: any) => { const next = [...items]; next[i] = { ...next[i], ...patch }; set({ items: next }); };
+  const drag = useDragReorder(items, (next) => set({ items: next }));
 
   return (
     <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
@@ -810,9 +861,26 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {items.map((s, i) => (
-            <div key={i} className={`relative group/step rounded-xl p-5 border ${dark ? "bg-white/[0.04] border-white/10" : "bg-black/[0.04] border-black/10"} ${LIFT}`} style={EASE}>
+            <div
+              key={i}
+              className={`relative group/step rounded-xl p-5 border transition ${dark ? "bg-white/[0.04] border-white/10" : "bg-black/[0.04] border-black/10"} ${LIFT} ${drag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))] outline-offset-4" : ""}`}
+              style={EASE}
+              onDragOver={editable ? (e) => drag.onDragOverItem(e, i) : undefined}
+              onDrop={editable ? (e) => drag.onDropItem(e, i) : undefined}
+            >
               {editable && (
-                <button onClick={() => set({ items: items.filter((_, j) => j !== i) })} className="absolute top-2 right-2 opacity-0 group-hover/step:opacity-100 text-white/40 hover:text-red-400"><X size={14} /></button>
+                <>
+                  <span
+                    draggable
+                    onDragStart={() => drag.onDragStart(i)}
+                    onDragEnd={drag.onDragEnd}
+                    className="absolute top-2 left-2 cursor-grab active:cursor-grabbing opacity-0 group-hover/step:opacity-40 hover:!opacity-100 touch-none"
+                    title="Arrastar pra reordenar"
+                  >
+                    <GripVertical size={16} />
+                  </span>
+                  <button onClick={() => set({ items: items.filter((_, j) => j !== i) })} className="absolute top-2 right-2 opacity-0 group-hover/step:opacity-100 text-white/40 hover:text-red-400"><X size={14} /></button>
+                </>
               )}
               <div className="flex items-center gap-2 mb-3">
                 <span className="h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-black shrink-0" style={{ background: LIME, color: "#0A0E23" }}>
