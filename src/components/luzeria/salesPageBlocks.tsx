@@ -35,6 +35,24 @@ export function backgroundStyle(key: BackgroundKey) {
   return { color: found.color, dark: found.dark };
 }
 
+/** Quando a seção tem uma imagem de fundo, sempre usa texto claro (escurece
+ * a foto com um véu escuro por cima) — assim o texto continua legível sem
+ * depender de qual das 4 cores estava selecionada antes de trocar pra imagem. */
+export function sectionBackgroundStyle(content: { background: BackgroundKey; backgroundImage?: string | null }): { style: React.CSSProperties; dark: boolean } {
+  if (content.backgroundImage) {
+    return {
+      style: {
+        backgroundImage: `linear-gradient(rgba(10,14,35,0.6), rgba(10,14,35,0.6)), url(${content.backgroundImage})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      },
+      dark: true,
+    };
+  }
+  const { color, dark } = backgroundStyle(content.background);
+  return { style: { background: color }, dark };
+}
+
 export type SizeKey = "compact" | "normal" | "spacious";
 export const SIZE_OPTIONS: { key: SizeKey; label: string }[] = [
   { key: "compact", label: "Compacta" },
@@ -710,7 +728,7 @@ function EditableImageArea({
  * pra ficar editável clicando direto no conteúdo renderizado.
  * ---------------------------------------------------------------------- */
 export function BulletListBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
-  const { color, dark } = backgroundStyle(content.background);
+  const { style: bgStyle, dark } = sectionBackgroundStyle(content);
   const IconCmp = content.icon === "x" ? X : Check;
   const iconColor = content.icon === "x" ? "#f87171" : LIME;
   const editable = !!onChange;
@@ -719,7 +737,7 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
   const hasClosing = content.closingTextAccent || content.closingTextPlain;
 
   return (
-    <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
       <Reveal className={`px-5 sm:px-10 max-w-[820px] mx-auto ${sectionPadding(content.size)}`}>
         {editable ? (
           <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8 block" />
@@ -767,14 +785,14 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
 }
 
 export function StepsBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
-  const { color, dark } = backgroundStyle(content.background);
+  const { style: bgStyle, dark } = sectionBackgroundStyle(content);
   const editable = !!onChange;
   const items: any[] = content.items ?? [];
   const set = (patch: any) => onChange?.({ ...content, ...patch });
   const setItem = (i: number, patch: any) => { const next = [...items]; next[i] = { ...next[i], ...patch }; set({ items: next }); };
 
   return (
-    <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
       <Reveal className={`px-5 sm:px-10 max-w-[1000px] mx-auto ${sectionPadding(content.size)}`}>
         {editable ? (
           <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 block text-center" />
@@ -827,13 +845,13 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
 }
 
 export function FeatureBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
-  const { color, dark } = backgroundStyle(content.background);
+  const { style: bgStyle, dark } = sectionBackgroundStyle(content);
   const editable = !!onChange;
   const bodyClass = dark ? "text-white/65" : "text-[#0A0E23]/60";
   const set = (patch: any) => onChange?.({ ...content, ...patch });
 
   return (
-    <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
       <Reveal className={`px-5 sm:px-10 max-w-[1100px] mx-auto ${sectionPadding(content.size)}`}>
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <div className={content.reverse ? "lg:order-2" : ""}>
@@ -866,13 +884,13 @@ export function FeatureBlock({ content, onChange }: { content: any; onChange?: (
 }
 
 export function GalleryBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
-  const { color, dark } = backgroundStyle(content.background);
+  const { style: bgStyle, dark } = sectionBackgroundStyle(content);
   const editable = !!onChange;
   const images: ImageSpec[] = content.images ?? [];
   const set = (patch: any) => onChange?.({ ...content, ...patch });
   if (!editable && images.length === 0) return null;
   return (
-    <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
       <Reveal className={`px-5 sm:px-10 max-w-[1000px] mx-auto ${sectionPadding(content.size)}`}>
         {editable ? (
           <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 block text-center" />
@@ -886,11 +904,11 @@ export function GalleryBlock({ content, onChange }: { content: any; onChange?: (
 }
 
 export function TextBlurbBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
-  const { color, dark } = backgroundStyle(content.background);
+  const { style: bgStyle, dark } = sectionBackgroundStyle(content);
   const editable = !!onChange;
   const set = (patch: any) => onChange?.({ ...content, ...patch });
   return (
-    <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 text-center">
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 text-center">
       <div className={`px-5 sm:px-10 max-w-[720px] mx-auto ${sectionPadding(content.size)}`}>
         <div className="inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: dark ? LIME : ACCENT_ON_LIGHT }}>
           {editable ? (

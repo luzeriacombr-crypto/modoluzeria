@@ -5,6 +5,7 @@ import { LUZERIA_ORG_ID } from "./api.functions";
 
 const BACKGROUND = z.enum(["white", "gray", "blue", "blue2"]);
 const SIZE = z.enum(["compact", "normal", "spacious"]).optional();
+const BACKGROUND_IMAGE = z.string().max(2000).optional().nullable();
 
 const imageSpecSchema = z.object({
   id: z.string().max(60),
@@ -38,12 +39,14 @@ const bulletListContentSchema = z.object({
   closingTextPlain: z.string().max(200).optional(),
   closingTextAccent: z.string().max(200).optional(),
   background: BACKGROUND,
+  backgroundImage: BACKGROUND_IMAGE,
   size: SIZE,
 });
 
 const stepsContentSchema = z.object({
   heading: z.string().max(160),
   background: BACKGROUND,
+  backgroundImage: BACKGROUND_IMAGE,
   size: SIZE,
   items: z.array(z.object({
     icon: z.string().max(40),
@@ -59,6 +62,7 @@ const featureContentSchema = z.object({
   title: z.string().max(200),
   description: z.string().max(600),
   background: BACKGROUND,
+  backgroundImage: BACKGROUND_IMAGE,
   size: SIZE,
   reverse: z.boolean(),
   images: z.array(imageSpecSchema).max(4),
@@ -67,6 +71,7 @@ const featureContentSchema = z.object({
 const galleryContentSchema = z.object({
   heading: z.string().max(160),
   background: BACKGROUND,
+  backgroundImage: BACKGROUND_IMAGE,
   size: SIZE,
   images: z.array(imageSpecSchema).max(12),
 });
@@ -76,6 +81,7 @@ const textBlurbContentSchema = z.object({
   eyebrowLabel: z.string().max(120),
   paragraph: z.string().max(800),
   background: BACKGROUND,
+  backgroundImage: BACKGROUND_IMAGE,
   size: SIZE,
 });
 

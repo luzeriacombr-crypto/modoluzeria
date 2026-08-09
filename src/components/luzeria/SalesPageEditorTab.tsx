@@ -3,10 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff, Loader2, X,
-  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil, Maximize2, Undo2,
+  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil, Maximize2, Undo2, ImagePlus,
 } from "lucide-react";
 import { salesPageBlocksAdminQO, useApi } from "@/lib/luzeria/queries";
 import { BACKGROUND_SWATCHES, SIZE_OPTIONS, HeroSection, renderBlockNode, SalesPageBody, BG_BLUE } from "./salesPageBlocks";
+import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
 import type { SalesPageBlock, SalesPageBlockType } from "@/lib/luzeria/sales-page.functions";
 
 const TYPE_LABELS: Record<Exclude<SalesPageBlockType, "hero">, string> = {
@@ -234,6 +235,8 @@ export function SalesPageEditorTab() {
                         onMoveDown={() => moveBy(b.id, 1)}
                         background={(drafts[b.id] ?? b.content).background}
                         onBackground={(bg) => saveContent(b, { ...(drafts[b.id] ?? b.content), background: bg })}
+                        backgroundImage={(drafts[b.id] ?? b.content).backgroundImage}
+                        onBackgroundImage={(url) => saveContent(b, { ...(drafts[b.id] ?? b.content), backgroundImage: url })}
                         size={(drafts[b.id] ?? b.content).size}
                         onSize={(sz) => saveContent(b, { ...(drafts[b.id] ?? b.content), size: sz })}
                         onFlip={b.type === "feature" ? () => saveContent(b, { ...(drafts[b.id] ?? b.content), reverse: !(drafts[b.id] ?? b.content).reverse }) : undefined}
@@ -321,15 +324,24 @@ export function SalesPageEditorTab() {
 }
 
 function BlockToolbar({
-  isVisible, canUp, canDown, onMoveUp, onMoveDown, background, onBackground, size, onSize, onFlip, onToggleVisible, onDelete,
+  isVisible, canUp, canDown, onMoveUp, onMoveDown, background, onBackground, backgroundImage, onBackgroundImage, size, onSize, onFlip, onToggleVisible, onDelete,
 }: {
   isVisible: boolean; canUp: boolean; canDown: boolean; onMoveUp: () => void; onMoveDown: () => void;
   background: string; onBackground: (key: any) => void;
+  backgroundImage: string | null | undefined; onBackgroundImage: (url: string | null) => void;
   size: string | undefined; onSize: (key: any) => void;
   onFlip?: () => void; onToggleVisible: () => void; onDelete: () => void;
 }) {
   const [colorOpen, setColorOpen] = useState(false);
   const [sizeOpen, setSizeOpen] = useState(false);
+  const { upload, uploading } = useMarketingAssetUpload();
+
+  async function handleBackgroundFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = await upload(file);
+    if (url) { onBackgroundImage(url); setColorOpen(false); }
+  }
   return (
     <div
       className="absolute top-3 right-3 z-30 opacity-0 group-hover/block:opacity-100 focus-within:opacity-100 transition flex items-center gap-0.5 bg-black/80 backdrop-blur rounded-lg p-1 shadow-xl"
@@ -359,18 +371,34 @@ function BlockToolbar({
         )}
       </div>
       <div className="relative">
-        <button onClick={() => setColorOpen((v) => !v)} title="Cor de fundo" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10"><Palette size={14} /></button>
+        <button onClick={() => setColorOpen((v) => !v)} title="Fundo da seção" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10"><Palette size={14} /></button>
         {colorOpen && (
-          <div className="absolute top-full right-0 mt-1 bg-[#1C1C1C] border border-white/10 rounded-lg p-1.5 flex gap-1.5 shadow-xl">
-            {BACKGROUND_SWATCHES.map((s) => (
-              <button
-                key={s.key}
-                onClick={() => { onBackground(s.key); setColorOpen(false); }}
-                title={s.label}
-                className="h-6 w-6 rounded border-2"
-                style={{ background: s.color, borderColor: background === s.key ? "rgb(var(--lz-brand-rgb))" : "transparent" }}
-              />
-            ))}
+          <div className="absolute top-full right-0 mt-1 bg-[#1C1C1C] border border-white/10 rounded-lg p-2 shadow-xl w-[190px]">
+            <div className="text-[9px] uppercase tracking-wide text-white/30 mb-1.5 px-0.5">Cor de fundo</div>
+            <div className="flex gap-1.5 mb-2.5">
+              {BACKGROUND_SWATCHES.map((s) => (
+                <button
+                  key={s.key}
+                  onClick={() => { onBackground(s.key); setColorOpen(false); }}
+                  title={s.label}
+                  className="h-6 w-6 rounded border-2"
+                  style={{ background: s.color, borderColor: !backgroundImage && background === s.key ? "rgb(var(--lz-brand-rgb))" : "transparent" }}
+                />
+              ))}
+            </div>
+            <div className="text-[9px] uppercase tracking-wide text-white/30 mb-1.5 px-0.5 border-t border-white/10 pt-2">Imagem de fundo</div>
+            {backgroundImage ? (
+              <div className="flex items-center gap-2">
+                <img src={backgroundImage} alt="" className="h-8 w-12 rounded object-cover border border-white/10 shrink-0" />
+                <button onClick={() => onBackgroundImage(null)} className="text-[10px] text-white/50 hover:text-red-400">Remover</button>
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-1.5 text-[11px] text-white/60 hover:text-white cursor-pointer border border-white/15 rounded-md px-2.5 py-1.5 w-full">
+                {uploading ? <Loader2 size={12} className="animate-spin" /> : <ImagePlus size={12} />}
+                Enviar foto
+                <input type="file" accept="image/*" hidden onChange={handleBackgroundFile} />
+              </label>
+            )}
           </div>
         )}
       </div>
