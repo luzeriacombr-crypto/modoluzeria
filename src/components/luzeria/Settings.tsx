@@ -59,7 +59,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         </div>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-white/10 mb-6">
+      <div className="flex items-center gap-1 border-b border-white/10 mb-6 overflow-x-auto">
         {[
           { id: "team", label: "Equipe" },
           { id: "report", label: "Relatório" },
@@ -71,7 +71,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           const active = tab === (t.id as any);
           return (
             <button key={t.id} onClick={() => setTab(t.id as any)}
-              className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
+              className="shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
               style={{
                 color: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.5)",
                 borderColor: active ? "rgb(var(--lz-brand-rgb))" : "transparent",
