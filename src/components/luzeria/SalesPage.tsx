@@ -169,7 +169,7 @@ export function SalesPage() {
                     )}
                     <div className="font-black text-xl mb-1">{p.name}</div>
                     <div className="text-white/40 text-xs mb-0.5">
-                      Depois: <span className="line-through">R$ {(Math.round(p.priceCents! * 1.3) / 100).toFixed(2).replace(".", ",")}</span>
+                      De: <span className="line-through">R$ {(Math.round(p.priceCents! * 1.3) / 100).toFixed(2).replace(".", ",")}</span>
                     </div>
                     <div className="text-3xl font-black mb-1">
                       R$ {(p.priceCents! / 100).toFixed(2).replace(".", ",")}
