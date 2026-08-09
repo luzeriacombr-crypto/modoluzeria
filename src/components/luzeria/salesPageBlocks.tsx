@@ -35,6 +35,23 @@ export function backgroundStyle(key: BackgroundKey) {
   return { color: found.color, dark: found.dark };
 }
 
+export type SizeKey = "compact" | "normal" | "spacious";
+export const SIZE_OPTIONS: { key: SizeKey; label: string }[] = [
+  { key: "compact", label: "Compacta" },
+  { key: "normal", label: "Normal" },
+  { key: "spacious", label: "Grande" },
+];
+// Mesma técnica do FLOAT_CLASS: classes por extenso num objeto estático,
+// pro scanner do Tailwind enxergar o literal e não purgar do CSS de produção.
+const SECTION_PADDING: Record<SizeKey, string> = {
+  compact: "py-8 sm:py-10",
+  normal: "py-14 sm:py-16",
+  spacious: "py-20 sm:py-28",
+};
+export function sectionPadding(key: string | undefined): string {
+  return SECTION_PADDING[(key as SizeKey) ?? "normal"] ?? SECTION_PADDING.normal;
+}
+
 export const EASE = { transitionTimingFunction: "var(--ease-premium)" as const };
 export const POP = "transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97]";
 export const LIFT = "transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-2xl";
@@ -669,7 +686,7 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
 
   return (
     <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
-      <Reveal className="px-5 sm:px-10 max-w-[820px] mx-auto py-14">
+      <Reveal className={`px-5 sm:px-10 max-w-[820px] mx-auto ${sectionPadding(content.size)}`}>
         {editable ? (
           <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8 block" />
         ) : (
@@ -724,7 +741,7 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
 
   return (
     <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
-      <Reveal className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14">
+      <Reveal className={`px-5 sm:px-10 max-w-[1000px] mx-auto ${sectionPadding(content.size)}`}>
         {editable ? (
           <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 block text-center" />
         ) : (
@@ -783,7 +800,7 @@ export function FeatureBlock({ content, onChange }: { content: any; onChange?: (
 
   return (
     <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
-      <Reveal className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14 sm:py-20">
+      <Reveal className={`px-5 sm:px-10 max-w-[1100px] mx-auto ${sectionPadding(content.size)}`}>
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <div className={content.reverse ? "lg:order-2" : ""}>
             <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: dark ? LIME : ACCENT_ON_LIGHT }}>
@@ -822,7 +839,7 @@ export function GalleryBlock({ content, onChange }: { content: any; onChange?: (
   if (!editable && images.length === 0) return null;
   return (
     <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
-      <Reveal className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14">
+      <Reveal className={`px-5 sm:px-10 max-w-[1000px] mx-auto ${sectionPadding(content.size)}`}>
         {editable ? (
           <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 block text-center" />
         ) : (
@@ -840,7 +857,7 @@ export function TextBlurbBlock({ content, onChange }: { content: any; onChange?:
   const set = (patch: any) => onChange?.({ ...content, ...patch });
   return (
     <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 text-center">
-      <div className="px-5 sm:px-10 max-w-[720px] mx-auto py-14">
+      <div className={`px-5 sm:px-10 max-w-[720px] mx-auto ${sectionPadding(content.size)}`}>
         <div className="inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: dark ? LIME : ACCENT_ON_LIGHT }}>
           {editable ? (
             <EditableIcon value={content.eyebrowIcon} onChange={(v) => set({ eyebrowIcon: v })} />

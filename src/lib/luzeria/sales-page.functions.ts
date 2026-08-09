@@ -4,6 +4,7 @@ import { requireActiveProfile } from "./require-active";
 import { LUZERIA_ORG_ID } from "./api.functions";
 
 const BACKGROUND = z.enum(["white", "gray", "blue", "blue2"]);
+const SIZE = z.enum(["compact", "normal", "spacious"]).optional();
 
 const imageSpecSchema = z.object({
   id: z.string().max(60),
@@ -37,11 +38,13 @@ const bulletListContentSchema = z.object({
   closingTextPlain: z.string().max(200).optional(),
   closingTextAccent: z.string().max(200).optional(),
   background: BACKGROUND,
+  size: SIZE,
 });
 
 const stepsContentSchema = z.object({
   heading: z.string().max(160),
   background: BACKGROUND,
+  size: SIZE,
   items: z.array(z.object({
     icon: z.string().max(40),
     number: z.string().max(10),
@@ -56,6 +59,7 @@ const featureContentSchema = z.object({
   title: z.string().max(200),
   description: z.string().max(600),
   background: BACKGROUND,
+  size: SIZE,
   reverse: z.boolean(),
   images: z.array(imageSpecSchema).max(4),
 });
@@ -63,6 +67,7 @@ const featureContentSchema = z.object({
 const galleryContentSchema = z.object({
   heading: z.string().max(160),
   background: BACKGROUND,
+  size: SIZE,
   images: z.array(imageSpecSchema).max(12),
 });
 
@@ -71,6 +76,7 @@ const textBlurbContentSchema = z.object({
   eyebrowLabel: z.string().max(120),
   paragraph: z.string().max(800),
   background: BACKGROUND,
+  size: SIZE,
 });
 
 const CONTENT_BY_TYPE = {

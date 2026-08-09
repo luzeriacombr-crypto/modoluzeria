@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff, Loader2, X,
-  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil,
+  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil, Maximize2,
 } from "lucide-react";
 import { salesPageBlocksAdminQO, useApi } from "@/lib/luzeria/queries";
-import { BACKGROUND_SWATCHES, HeroSection, renderBlockNode, SalesPageBody, BG_BLUE } from "./salesPageBlocks";
+import { BACKGROUND_SWATCHES, SIZE_OPTIONS, HeroSection, renderBlockNode, SalesPageBody, BG_BLUE } from "./salesPageBlocks";
 import type { SalesPageBlock, SalesPageBlockType } from "@/lib/luzeria/sales-page.functions";
 
 const TYPE_LABELS: Record<Exclude<SalesPageBlockType, "hero">, string> = {
@@ -26,11 +26,11 @@ const TYPE_DESCRIPTIONS: Record<Exclude<SalesPageBlockType, "hero">, string> = {
 
 function emptyContent(type: Exclude<SalesPageBlockType, "hero">): any {
   switch (type) {
-    case "bullet_list": return { heading: "Novo título", icon: "check", items: ["Novo item"], background: "white" };
-    case "steps": return { heading: "Novo título", background: "white", items: [{ icon: "star", number: "01", title: "Passo 1", description: "" }] };
-    case "feature": return { eyebrowIcon: "star", eyebrowLabel: "Novo destaque", title: "Título do destaque", description: "", background: "white", reverse: false, images: [] };
-    case "gallery": return { heading: "Nova galeria", background: "white", images: [] };
-    case "text_blurb": return { eyebrowIcon: "star", eyebrowLabel: "Texto", paragraph: "", background: "white" };
+    case "bullet_list": return { heading: "Novo título", icon: "check", items: ["Novo item"], background: "white", size: "normal" };
+    case "steps": return { heading: "Novo título", background: "white", size: "normal", items: [{ icon: "star", number: "01", title: "Passo 1", description: "" }] };
+    case "feature": return { eyebrowIcon: "star", eyebrowLabel: "Novo destaque", title: "Título do destaque", description: "", background: "white", size: "normal", reverse: false, images: [] };
+    case "gallery": return { heading: "Nova galeria", background: "white", size: "normal", images: [] };
+    case "text_blurb": return { eyebrowIcon: "star", eyebrowLabel: "Texto", paragraph: "", background: "white", size: "normal" };
   }
 }
 
@@ -208,6 +208,8 @@ export function SalesPageEditorTab() {
                         onMoveDown={() => moveBy(b.id, 1)}
                         background={(drafts[b.id] ?? b.content).background}
                         onBackground={(bg) => saveContent(b, { ...(drafts[b.id] ?? b.content), background: bg })}
+                        size={(drafts[b.id] ?? b.content).size}
+                        onSize={(sz) => saveContent(b, { ...(drafts[b.id] ?? b.content), size: sz })}
                         onFlip={b.type === "feature" ? () => saveContent(b, { ...(drafts[b.id] ?? b.content), reverse: !(drafts[b.id] ?? b.content).reverse }) : undefined}
                         onToggleVisible={() => toggleVisible(b)}
                         onDelete={() => remove(b)}
@@ -293,20 +295,43 @@ export function SalesPageEditorTab() {
 }
 
 function BlockToolbar({
-  isVisible, canUp, canDown, onMoveUp, onMoveDown, background, onBackground, onFlip, onToggleVisible, onDelete,
+  isVisible, canUp, canDown, onMoveUp, onMoveDown, background, onBackground, size, onSize, onFlip, onToggleVisible, onDelete,
 }: {
   isVisible: boolean; canUp: boolean; canDown: boolean; onMoveUp: () => void; onMoveDown: () => void;
-  background: string; onBackground: (key: any) => void; onFlip?: () => void; onToggleVisible: () => void; onDelete: () => void;
+  background: string; onBackground: (key: any) => void;
+  size: string | undefined; onSize: (key: any) => void;
+  onFlip?: () => void; onToggleVisible: () => void; onDelete: () => void;
 }) {
   const [colorOpen, setColorOpen] = useState(false);
+  const [sizeOpen, setSizeOpen] = useState(false);
   return (
     <div
       className="absolute top-3 right-3 z-30 opacity-0 group-hover/block:opacity-100 focus-within:opacity-100 transition flex items-center gap-0.5 bg-black/80 backdrop-blur rounded-lg p-1 shadow-xl"
-      onMouseLeave={() => setColorOpen(false)}
+      onMouseLeave={() => { setColorOpen(false); setSizeOpen(false); }}
     >
       <button onClick={onMoveUp} disabled={!canUp} title="Mover pra cima" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent"><ChevronUp size={14} /></button>
       <button onClick={onMoveDown} disabled={!canDown} title="Mover pra baixo" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent"><ChevronDown size={14} /></button>
       {onFlip && <button onClick={onFlip} title="Inverter lado da imagem" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10"><FlipHorizontal size={14} /></button>}
+      <div className="relative">
+        <button onClick={() => setSizeOpen((v) => !v)} title="Tamanho da seção" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10"><Maximize2 size={14} /></button>
+        {sizeOpen && (
+          <div className="absolute top-full right-0 mt-1 bg-[#1C1C1C] border border-white/10 rounded-lg p-1.5 flex flex-col gap-0.5 shadow-xl min-w-[110px]">
+            {SIZE_OPTIONS.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => { onSize(s.key); setSizeOpen(false); }}
+                className="text-[11px] text-left px-2 py-1.5 rounded font-semibold"
+                style={{
+                  background: (size ?? "normal") === s.key ? "rgb(var(--lz-brand-rgb))" : "transparent",
+                  color: (size ?? "normal") === s.key ? "#0D0D0D" : "rgba(255,255,255,0.7)",
+                }}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="relative">
         <button onClick={() => setColorOpen((v) => !v)} title="Cor de fundo" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10"><Palette size={14} /></button>
         {colorOpen && (
