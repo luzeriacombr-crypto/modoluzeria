@@ -97,12 +97,16 @@ export type SalesPageBlock = {
   id: string;
   type: SalesPageBlockType;
   content: any;
+  draftContent: any | null;
   sortOrder: number;
   isVisible: boolean;
 };
 
 function mapRow(r: any): SalesPageBlock {
-  return { id: r.id, type: r.type, content: r.content, sortOrder: r.sort_order, isVisible: r.is_visible };
+  return {
+    id: r.id, type: r.type, content: r.content, draftContent: r.draft_content ?? null,
+    sortOrder: r.sort_order, isVisible: r.is_visible,
+  };
 }
 
 /** Público — visitante deslogado do site de vendas. Mesmo padrão de
@@ -133,7 +137,7 @@ export const listSalesPageBlocksAdmin = createServerFn({ method: "GET" })
     await assertLuzeriaMaster(context);
     const { data, error } = await context.supabase
       .from("sales_page_blocks")
-      .select("id, type, content, sort_order, is_visible")
+      .select("id, type, content, draft_content, sort_order, is_visible")
       .order("sort_order");
     if (error) throw new Error(error.message);
     return (data ?? []).map(mapRow);
@@ -161,6 +165,9 @@ export const createSalesPageBlock = createServerFn({ method: "POST" })
     return { id: inserted.id as string };
   });
 
+/** Edições de conteúdo (texto/imagem) gravam em draft_content — só viram
+ * públicas quando publishSalesPageBlocks copia pra content. isVisible
+ * continua imediato (não é "conteúdo", é estrutura da página). */
 export const updateSalesPageBlock = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string; type: SalesPageBlockType; content: any; isVisible?: boolean }) => {
@@ -175,11 +182,32 @@ export const updateSalesPageBlock = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     await assertLuzeriaMaster(context);
-    const patch: { content: any; updated_by: string; is_visible?: boolean } = { content: data.content, updated_by: context.userId };
+    const patch: { draft_content: any; updated_by: string; is_visible?: boolean } = { draft_content: data.content, updated_by: context.userId };
     if (data.isVisible !== undefined) patch.is_visible = data.isVisible;
     const { error } = await context.supabase.from("sales_page_blocks").update(patch).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/** Copia draft_content -> content em todos os blocos com rascunho pendente,
+ * publicando de uma vez tudo que foi editado desde a última publicação. */
+export const publishSalesPageBlocks = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    await assertLuzeriaMaster(context);
+    const { data, error } = await context.supabase
+      .from("sales_page_blocks")
+      .select("id, draft_content")
+      .not("draft_content", "is", null);
+    if (error) throw new Error(error.message);
+    for (const row of data ?? []) {
+      const { error: updErr } = await context.supabase
+        .from("sales_page_blocks")
+        .update({ content: row.draft_content, draft_content: null, updated_by: context.userId })
+        .eq("id", row.id);
+      if (updErr) throw new Error(updErr.message);
+    }
+    return { ok: true, count: (data ?? []).length };
   });
 
 export const deleteSalesPageBlock = createServerFn({ method: "POST" })

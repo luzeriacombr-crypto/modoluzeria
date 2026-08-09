@@ -1865,6 +1865,7 @@ export type Database = {
         Row: {
           content: Json
           created_at: string
+          draft_content: Json | null
           id: string
           is_visible: boolean
           sort_order: number
@@ -1875,6 +1876,7 @@ export type Database = {
         Insert: {
           content?: Json
           created_at?: string
+          draft_content?: Json | null
           id?: string
           is_visible?: boolean
           sort_order?: number
@@ -1885,6 +1887,7 @@ export type Database = {
         Update: {
           content?: Json
           created_at?: string
+          draft_content?: Json | null
           id?: string
           is_visible?: boolean
           sort_order?: number

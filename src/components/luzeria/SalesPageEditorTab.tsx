@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff, Loader2, X,
-  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink,
+  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil,
 } from "lucide-react";
 import { salesPageBlocksAdminQO, useApi } from "@/lib/luzeria/queries";
-import { BACKGROUND_SWATCHES, HeroSection, renderBlockNode, BG_BLUE } from "./salesPageBlocks";
+import { BACKGROUND_SWATCHES, HeroSection, renderBlockNode, SalesPageBody, BG_BLUE } from "./salesPageBlocks";
 import type { SalesPageBlock, SalesPageBlockType } from "@/lib/luzeria/sales-page.functions";
 
 const TYPE_LABELS: Record<Exclude<SalesPageBlockType, "hero">, string> = {
@@ -34,21 +34,29 @@ function emptyContent(type: Exclude<SalesPageBlockType, "hero">): any {
   }
 }
 
+function headingOf(content: any): string {
+  return content.heading || content.title || content.eyebrowLabel || "(sem título)";
+}
+
 export function SalesPageEditorTab() {
   const { data: blocks = [], isLoading } = useQuery(salesPageBlocksAdminQO());
   const api = useApi();
   const [adding, setAdding] = useState(false);
   const [previewWidth, setPreviewWidth] = useState<"desktop" | "mobile">("desktop");
+  const [previewMode, setPreviewMode] = useState(false);
+  const [sectionsOpen, setSectionsOpen] = useState(false);
   // Cópia local de rascunho por bloco — os campos editam ela na hora (feedback
-  // instantâneo), e cada edição também dispara o salvamento automático.
+  // instantâneo), e cada edição também dispara o salvamento automático como
+  // rascunho (draft_content) — só vira público quando clica em "Publicar".
   const [drafts, setDrafts] = useState<Record<string, any>>({});
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     setDrafts((prev) => {
       let changed = false;
       const next = { ...prev };
       for (const b of blocks) {
-        if (!(b.id in next)) { next[b.id] = b.content; changed = true; }
+        if (!(b.id in next)) { next[b.id] = b.draftContent ?? b.content; changed = true; }
       }
       return changed ? next : prev;
     });
@@ -56,6 +64,7 @@ export function SalesPageEditorTab() {
 
   const hero = blocks.find((b) => b.type === "hero");
   const rest = blocks.filter((b) => b.type !== "hero");
+  const pendingCount = blocks.filter((b) => b.draftContent != null).length;
 
   function saveContent(b: SalesPageBlock, content: any) {
     setDrafts((d) => ({ ...d, [b.id]: content }));
@@ -92,23 +101,48 @@ export function SalesPageEditorTab() {
     });
   }
 
+  function publish() {
+    if (pendingCount === 0) return;
+    if (!confirm(`Publicar ${pendingCount} alteração${pendingCount > 1 ? "ões" : ""} pro site ao vivo?`)) return;
+    api.publishSalesPageBlocks.mutate(undefined as any, {
+      onSuccess: (r: any) => toast.success(`${r?.count ?? pendingCount} alteração(ões) publicada(s)!`),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao publicar"),
+    });
+  }
+
+  function scrollTo(id: string) {
+    sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setSectionsOpen(false);
+  }
+
   if (isLoading) {
     return <div className="flex items-center gap-2 text-sm text-white/40 py-10"><Loader2 size={14} className="animate-spin" /> Carregando...</div>;
   }
 
+  const previewHero = hero ? { content: drafts[hero.id] ?? hero.content } : undefined;
+  const previewBlocks = rest
+    .filter((b) => b.isVisible)
+    .map((b) => ({ id: b.id, type: b.type, content: drafts[b.id] ?? b.content }));
+
   return (
     <div className="max-w-[1200px]">
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <p className="text-sm text-white/50 max-w-lg">
-          Clique em qualquer texto ou imagem abaixo pra editar direto — é o site de verdade. Passe o mouse
-          numa seção pra ver as opções de reordenar, cor e visibilidade. Cabeçalho, planos, formulário,
-          dúvidas frequentes e rodapé não entram aqui.
+        <p className="text-sm text-white/50 max-w-md">
+          {previewMode
+            ? "Prévia de como o site vai ficar depois de publicar — sem os controles de edição."
+            : "Clique em qualquer texto ou imagem abaixo pra editar direto. Cabeçalho, planos, formulário, dúvidas frequentes e rodapé não entram aqui."}
         </p>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <a href="https://modocriador.com.br" target="_blank" rel="noopener noreferrer"
             className="text-xs text-white/50 hover:text-white inline-flex items-center gap-1.5">
-            Ver site publicado <ExternalLink size={12} />
+            Site no ar <ExternalLink size={12} />
           </a>
+          {!previewMode && (
+            <button onClick={() => setSectionsOpen(true)}
+              className="text-xs font-semibold text-white/70 hover:text-white inline-flex items-center gap-1.5 border border-white/15 hover:border-white/30 rounded-full px-3 py-1.5 transition">
+              <Layers size={13} /> Seções
+            </button>
+          )}
           <div className="inline-flex items-center gap-1 rounded-full bg-[#1C1C1C] p-1 border border-white/10">
             <button
               onClick={() => setPreviewWidth("desktop")}
@@ -123,6 +157,24 @@ export function SalesPageEditorTab() {
               style={{ background: previewWidth === "mobile" ? "rgb(var(--lz-brand-rgb))" : "transparent", color: previewWidth === "mobile" ? "#0D0D0D" : "rgba(255,255,255,0.5)" }}
             ><Smartphone size={13} /></button>
           </div>
+          <button
+            onClick={() => setPreviewMode((v) => !v)}
+            className="text-xs font-semibold inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition border"
+            style={previewMode
+              ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D", borderColor: "rgb(var(--lz-brand-rgb))" }
+              : { background: "transparent", color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.15)" }}
+          >
+            {previewMode ? <><Pencil size={13} /> Editar</> : <><Eye size={13} /> Visualizar</>}
+          </button>
+          <button
+            onClick={publish}
+            disabled={pendingCount === 0 || api.publishSalesPageBlocks.isPending}
+            className="text-xs font-black uppercase tracking-wide inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 transition disabled:opacity-40"
+            style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+          >
+            <Rocket size={13} />
+            {api.publishSalesPageBlocks.isPending ? "Publicando..." : pendingCount > 0 ? `Publicar (${pendingCount})` : "Publicado"}
+          </button>
         </div>
       </div>
 
@@ -130,39 +182,49 @@ export function SalesPageEditorTab() {
         <div className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: "85vh", background: BG_BLUE }}>
           <div style={{ width: previewWidth === "mobile" ? 390 : "100%", margin: "0 auto" }}>
             <div className="text-white" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
-              {hero && (
-                <HeroSection
-                  content={drafts[hero.id] ?? hero.content}
-                  onChange={(c) => saveContent(hero, c)}
-                />
+              {previewMode ? (
+                <SalesPageBody hero={previewHero} blocks={previewBlocks} />
+              ) : (
+                <>
+                  {hero && (
+                    <div ref={(el) => { sectionRefs.current[hero.id] = el; }}>
+                      <HeroSection content={drafts[hero.id] ?? hero.content} onChange={(c) => saveContent(hero, c)} />
+                    </div>
+                  )}
+
+                  {rest.map((b, i) => (
+                    <div
+                      key={b.id}
+                      ref={(el) => { sectionRefs.current[b.id] = el; }}
+                      className="relative group/block"
+                      style={{ opacity: b.isVisible ? 1 : 0.4 }}
+                    >
+                      {renderBlockNode({ id: b.id, type: b.type, content: drafts[b.id] ?? b.content }, (c) => saveContent(b, c))}
+                      <BlockToolbar
+                        isVisible={b.isVisible}
+                        canUp={i > 0}
+                        canDown={i < rest.length - 1}
+                        onMoveUp={() => moveBy(b.id, -1)}
+                        onMoveDown={() => moveBy(b.id, 1)}
+                        background={(drafts[b.id] ?? b.content).background}
+                        onBackground={(bg) => saveContent(b, { ...(drafts[b.id] ?? b.content), background: bg })}
+                        onFlip={b.type === "feature" ? () => saveContent(b, { ...(drafts[b.id] ?? b.content), reverse: !(drafts[b.id] ?? b.content).reverse }) : undefined}
+                        onToggleVisible={() => toggleVisible(b)}
+                        onDelete={() => remove(b)}
+                      />
+                    </div>
+                  ))}
+
+                  <div className="px-5 sm:px-10 py-8 flex justify-center border-t border-white/10">
+                    <button
+                      onClick={() => setAdding(true)}
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-white/50 hover:text-white border-2 border-dashed border-white/15 hover:border-[rgb(var(--lz-brand-rgb))] rounded-xl px-6 py-3 transition"
+                    >
+                      <Plus size={16} /> Adicionar seção
+                    </button>
+                  </div>
+                </>
               )}
-
-              {rest.map((b, i) => (
-                <div key={b.id} className="relative group/block" style={{ opacity: b.isVisible ? 1 : 0.4 }}>
-                  {renderBlockNode({ id: b.id, type: b.type, content: drafts[b.id] ?? b.content }, (c) => saveContent(b, c))}
-                  <BlockToolbar
-                    isVisible={b.isVisible}
-                    canUp={i > 0}
-                    canDown={i < rest.length - 1}
-                    onMoveUp={() => moveBy(b.id, -1)}
-                    onMoveDown={() => moveBy(b.id, 1)}
-                    background={(drafts[b.id] ?? b.content).background}
-                    onBackground={(bg) => saveContent(b, { ...(drafts[b.id] ?? b.content), background: bg })}
-                    onFlip={b.type === "feature" ? () => saveContent(b, { ...(drafts[b.id] ?? b.content), reverse: !(drafts[b.id] ?? b.content).reverse }) : undefined}
-                    onToggleVisible={() => toggleVisible(b)}
-                    onDelete={() => remove(b)}
-                  />
-                </div>
-              ))}
-
-              <div className="px-5 sm:px-10 py-8 flex justify-center border-t border-white/10">
-                <button
-                  onClick={() => setAdding(true)}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-white/50 hover:text-white border-2 border-dashed border-white/15 hover:border-[rgb(var(--lz-brand-rgb))] rounded-xl px-6 py-3 transition"
-                >
-                  <Plus size={16} /> Adicionar seção
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -189,6 +251,41 @@ export function SalesPageEditorTab() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {sectionsOpen && (
+        <div className="fixed inset-0 z-[280] flex" onClick={() => setSectionsOpen(false)}>
+          <div className="w-80 max-w-[85vw] bg-[#1C1C1C] border-r border-white/10 h-full overflow-y-auto p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm font-bold text-white">Seções do site</span>
+              <button onClick={() => setSectionsOpen(false)} className="text-white/40 hover:text-white"><X size={16} /></button>
+            </div>
+            <p className="text-[11px] text-white/40 mb-3 leading-relaxed">
+              Reordene, oculte ou clique pra ir direto numa seção — útil pra enxugar a página.
+            </p>
+            {hero && (
+              <button onClick={() => scrollTo(hero.id)} className="w-full text-left px-3 py-2.5 rounded-md text-xs text-white/60 bg-white/[0.03] mb-3 hover:bg-white/[0.06] transition">
+                Topo (Hero) — fixo
+              </button>
+            )}
+            <div className="space-y-1.5">
+              {rest.map((b, i) => (
+                <div key={b.id} className="flex items-center gap-1 bg-white/[0.03] rounded-md px-2 py-1.5" style={{ opacity: b.isVisible ? 1 : 0.5 }}>
+                  <button onClick={() => scrollTo(b.id)} className="flex-1 min-w-0 text-left text-xs text-white truncate flex items-center gap-1.5">
+                    {b.draftContent != null && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" title="Tem alteração não publicada" />}
+                    <span className="truncate">{headingOf(drafts[b.id] ?? b.content)}</span>
+                  </button>
+                  <button onClick={() => moveBy(b.id, -1)} disabled={i === 0} className="text-white/40 hover:text-white disabled:opacity-20 shrink-0"><ChevronUp size={13} /></button>
+                  <button onClick={() => moveBy(b.id, 1)} disabled={i === rest.length - 1} className="text-white/40 hover:text-white disabled:opacity-20 shrink-0"><ChevronDown size={13} /></button>
+                  <button onClick={() => toggleVisible(b)} className="text-white/40 hover:text-white shrink-0">
+                    {b.isVisible ? <Eye size={13} /> : <EyeOff size={13} />}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex-1" />
         </div>
       )}
     </div>
