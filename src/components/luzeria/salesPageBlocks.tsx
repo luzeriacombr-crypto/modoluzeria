@@ -2,14 +2,18 @@ import { useRef, useState, useEffect } from "react";
 import {
   Rocket, CalendarDays, Users, Link2, FolderOpen, Check, X, Zap, Lock, Star,
   MessageCircle, LayoutDashboard, BarChart3, Bell, ShieldCheck, Smartphone, Tablet, Monitor,
-  ChevronLeft, ChevronRight, Play, Heart, Send, Bookmark,
+  ChevronLeft, ChevronRight, Play, Heart, Send, Bookmark, Plus, Pencil, ImagePlus, Loader2,
 } from "lucide-react";
 import clickupTrelloLogos from "@/assets/clickup-trello-logos.png";
+import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
 
 /* ---------------------------------------------------------------------- *
  * Módulo compartilhado entre o site de vendas público (SalesPage.tsx) e o
  * editor visual (SalesPageEditorTab.tsx) — os dois precisam renderizar os
- * blocos exatamente da mesma forma, então a lógica visual mora só aqui.
+ * blocos exatamente da mesma forma. Cada renderizador de bloco aceita um
+ * `onChange` opcional: quando presente, o próprio texto/imagem renderizado
+ * vira editável ao clicar nele (usado só pelo editor); quando ausente,
+ * fica só leitura (usado pelo site público).
  * ---------------------------------------------------------------------- */
 
 export const LIME = "#D7FF3F";
@@ -61,7 +65,8 @@ export function Reveal({ children, className }: { children: React.ReactNode; cla
 }
 
 /* ---------------------------------------------------------------------- *
- * Ícones selecionáveis no editor (eyebrow dos blocos, ícone dos passos)
+ * Ícones — catálogo fixo selecionável, e um overlay de <select> invisível
+ * em cima do ícone renderizado (clicar no ícone abre o seletor nativo).
  * ---------------------------------------------------------------------- */
 export type IconType = React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>;
 export const BLOCK_ICONS: Record<string, IconType> = {
@@ -73,6 +78,85 @@ export const ICON_KEYS = Object.keys(BLOCK_ICONS);
 function Icon({ iconKey, size, style }: { iconKey: string; size?: number; style?: React.CSSProperties }) {
   const Cmp = BLOCK_ICONS[iconKey] ?? Star;
   return <Cmp size={size} style={style} />;
+}
+function EditableIcon({ value, onChange, size = 13, style }: { value: string; onChange: (v: string) => void; size?: number; style?: React.CSSProperties }) {
+  return (
+    <span className="relative inline-flex shrink-0" style={{ width: size, height: size }} onClick={(e) => e.stopPropagation()}>
+      <Icon iconKey={value} size={size} style={style} />
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        title="Trocar ícone"
+        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+      >
+        {ICON_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
+      </select>
+    </span>
+  );
+}
+
+/* ---------------------------------------------------------------------- *
+ * Texto clicável — em modo leitura é só o texto; quando `onCommit` é
+ * passado, clicar transforma no campo editável, e sair do campo salva.
+ * ---------------------------------------------------------------------- */
+function Editable({
+  value, onCommit, as: Tag = "span", className = "", style, multiline, placeholder = "Clique pra editar",
+}: {
+  value: string; onCommit: (v: string) => void; as?: any; className?: string;
+  style?: React.CSSProperties; multiline?: boolean; placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+  useEffect(() => { if (!editing) setDraft(value ?? ""); }, [value, editing]);
+
+  function commit() {
+    setEditing(false);
+    if (draft !== value) onCommit(draft);
+  }
+
+  if (editing) {
+    const commonClass = `${className} bg-white/10 outline outline-2 outline-[rgb(var(--lz-brand-rgb))] rounded px-1 -mx-1`;
+    if (multiline) {
+      return (
+        <textarea
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === "Escape") { setDraft(value ?? ""); setEditing(false); } }}
+          onClick={(e) => e.stopPropagation()}
+          className={`${commonClass} resize-none block w-full`}
+          style={style}
+          rows={3}
+        />
+      );
+    }
+    return (
+      <input
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Escape") { setDraft(value ?? ""); setEditing(false); }
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className={`${commonClass} inline-block w-full`}
+        style={style}
+      />
+    );
+  }
+
+  return (
+    <Tag
+      className={`${className} cursor-text rounded-sm outline outline-1 outline-dashed outline-transparent hover:outline-white/40 transition-colors`}
+      style={style}
+      onClick={(e: any) => { e.stopPropagation(); setEditing(true); }}
+    >
+      {value || <span className="opacity-40 italic not-italic">{placeholder}</span>}
+    </Tag>
+  );
 }
 
 /* ---------------------------------------------------------------------- *
@@ -376,86 +460,353 @@ export function ImageStack({ images, alt, aspectClassName }: { images: ImageSpec
 }
 
 /* ---------------------------------------------------------------------- *
- * Renderizadores por tipo de bloco
+ * Editor de pilha de imagens (dentro do modal aberto ao clicar numa
+ * imagem no próprio site) — enviar foto ou usar ilustração pronta,
+ * flutuante/parada, tamanho e posição.
  * ---------------------------------------------------------------------- */
-export function BulletListBlock({ content }: { content: any }) {
+function ImageStackEditor({ images, onChange, simple }: { images: ImageSpec[]; onChange: (images: ImageSpec[]) => void; simple?: boolean }) {
+  const { upload, uploading } = useMarketingAssetUpload();
+
+  function updateAt(i: number, patch: Partial<ImageSpec>) {
+    const next = [...images];
+    next[i] = { ...next[i], ...patch };
+    onChange(next);
+  }
+
+  async function handleUpload(i: number, file: File) {
+    const url = await upload(file);
+    if (url) updateAt(i, { source: "upload", url, builtinKey: undefined });
+  }
+
+  function addImage() {
+    if (images.length >= 4) return;
+    onChange([...images, {
+      id: `img-${Date.now()}`, source: "builtin", builtinKey: BUILTIN_KEYS[0],
+      floating: false, floatVariant: "a", widthPct: 100, top: 0, left: 0, z: images.length,
+    }]);
+  }
+
+  return (
+    <div>
+      <div className="space-y-3">
+        {images.map((img, i) => (
+          <div key={img.id} className="bg-[#0D0D0D] rounded-md p-3 border border-white/[0.06] space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => updateAt(i, { source: "upload" })}
+                  className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${img.source === "upload" ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "border border-white/15 text-white/60"}`}
+                >Enviar foto</button>
+                <button
+                  onClick={() => updateAt(i, { source: "builtin", builtinKey: img.builtinKey ?? BUILTIN_KEYS[0] })}
+                  className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${img.source === "builtin" ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "border border-white/15 text-white/60"}`}
+                >Usar ilustração pronta</button>
+              </div>
+              <button onClick={() => onChange(images.filter((_, j) => j !== i))} className="text-white/40 hover:text-red-400"><X size={14} /></button>
+            </div>
+
+            {img.source === "upload" ? (
+              <div className="flex items-center gap-3">
+                {img.url && <img src={img.url} alt="" className="h-14 w-14 rounded-md object-cover border border-white/10" />}
+                <label className="inline-flex items-center gap-1.5 text-xs text-white/60 hover:text-white cursor-pointer border border-white/15 rounded-md px-3 py-2">
+                  {uploading ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
+                  {img.url ? "Trocar imagem" : "Escolher imagem"}
+                  <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(i, f); }} />
+                </label>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="h-14 w-20 rounded-md overflow-hidden border border-white/10 flex items-center justify-center bg-[#141414] shrink-0 scale-[0.3] origin-top-left" style={{ width: 420, height: 200 }}>
+                  {(() => { const Cmp = BUILTIN_ILLUSTRATIONS[img.builtinKey ?? ""]; return Cmp ? <Cmp /> : null; })()}
+                </div>
+                <select value={img.builtinKey} onChange={(e) => updateAt(i, { builtinKey: e.target.value })} className="lz-input-dark text-xs">
+                  {BUILTIN_KEYS.map((k) => <option key={k} value={k}>{BUILTIN_LABELS[k] ?? k}</option>)}
+                </select>
+              </div>
+            )}
+
+            {!simple && (
+              <>
+                <label className="flex items-center gap-2 text-xs text-white/70">
+                  <input type="checkbox" checked={img.floating} onChange={(e) => updateAt(i, { floating: e.target.checked })} /> Flutuante
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="block">
+                    <span className="block text-[9px] uppercase text-white/30 mb-0.5">Tamanho %</span>
+                    <input type="number" min={5} max={100} value={img.widthPct} onChange={(e) => updateAt(i, { widthPct: Number(e.target.value) })} className="lz-input-dark w-full text-xs" />
+                  </label>
+                  <label className="block">
+                    <span className="block text-[9px] uppercase text-white/30 mb-0.5">Topo %</span>
+                    <input type="number" min={-20} max={120} value={img.top} onChange={(e) => updateAt(i, { top: Number(e.target.value) })} className="lz-input-dark w-full text-xs" />
+                  </label>
+                  <label className="block">
+                    <span className="block text-[9px] uppercase text-white/30 mb-0.5">Esquerda %</span>
+                    <input type="number" min={-20} max={120} value={img.left} onChange={(e) => updateAt(i, { left: Number(e.target.value) })} className="lz-input-dark w-full text-xs" />
+                  </label>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+      {images.length < 4 && (
+        <button onClick={addImage} className="mt-3 text-xs text-white/50 hover:text-white inline-flex items-center gap-1"><Plus size={12} /> Adicionar imagem</button>
+      )}
+    </div>
+  );
+}
+
+function EditImagesModal({
+  title, images, onChange, onClose, simple,
+}: {
+  title: string; images: ImageSpec[]; onChange: (images: ImageSpec[]) => void; onClose: () => void; simple?: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-lg bg-[#1C1C1C] border border-white/10 rounded-2xl p-6 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-white">{title}</h3>
+          <button onClick={onClose} className="text-white/40 hover:text-white"><X size={16} /></button>
+        </div>
+        <ImageStackEditor images={images} onChange={onChange} simple={simple} />
+        <button onClick={onClose} className="lz-btn-primary text-xs px-4 py-2.5 rounded-md mt-5 w-full">Concluído</button>
+      </div>
+    </div>
+  );
+}
+
+/** Pilha de imagens clicável — em modo leitura renderiza igual antes; em
+ * modo edição, clicar abre o modal de imagens, e mostra um "+" quando
+ * ainda não tem nenhuma. */
+function EditableImageArea({
+  images, onChange, alt, mode,
+}: {
+  images: ImageSpec[]; onChange?: (images: ImageSpec[]) => void; alt: string;
+  mode: "hero" | "feature" | "gallery";
+}) {
+  const [open, setOpen] = useState(false);
+  const editable = !!onChange;
+
+  if (!editable) {
+    if (mode === "hero") return <ImageStack images={images} alt={alt} aspectClassName="aspect-[1182/854] max-w-[460px] lg:max-w-none" />;
+    if (mode === "gallery") {
+      if (images.length === 0) return null;
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {images.map((img) => (
+            <div key={img.id} className={`rounded-xl overflow-hidden border shadow-sm border-black/10 ${LIFT}`} style={EASE}>
+              <ImageSpecVisual img={img} alt={alt} />
+            </div>
+          ))}
+        </div>
+      );
+    }
+    // feature
+    if (!images.length) return null;
+    return images.length === 1 && !images[0].floating ? (
+      images[0].source === "builtin" ? <ImageSpecVisual img={images[0]} alt={alt} /> : <AppCard><ImageSpecVisual img={images[0]} alt={alt} /></AppCard>
+    ) : (
+      <ImageStack images={images} alt={alt} aspectClassName="aspect-square max-w-[420px]" />
+    );
+  }
+
+  const title = mode === "gallery" ? "Imagens da galeria" : mode === "hero" ? "Imagens do topo" : "Imagens";
+
+  return (
+    <div className="relative group/img w-full">
+      {images.length === 0 ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="w-full aspect-square max-w-[220px] mx-auto rounded-xl border-2 border-dashed border-white/20 hover:border-[rgb(var(--lz-brand-rgb))] flex flex-col items-center justify-center gap-2 text-white/40 hover:text-white transition"
+        >
+          <ImagePlus size={22} /> <span className="text-xs">Adicionar imagem</span>
+        </button>
+      ) : (
+        <>
+          {mode === "hero" && <ImageStack images={images} alt={alt} aspectClassName="aspect-[1182/854] max-w-[460px] lg:max-w-none" />}
+          {mode === "gallery" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {images.map((img) => (
+                <div key={img.id} className="rounded-xl overflow-hidden border border-white/10 shadow-sm">
+                  <ImageSpecVisual img={img} alt={alt} />
+                </div>
+              ))}
+            </div>
+          )}
+          {mode === "feature" && (
+            images.length === 1 && !images[0].floating ? (
+              images[0].source === "builtin" ? <ImageSpecVisual img={images[0]} alt={alt} /> : <AppCard><ImageSpecVisual img={images[0]} alt={alt} /></AppCard>
+            ) : (
+              <ImageStack images={images} alt={alt} aspectClassName="aspect-square max-w-[420px]" />
+            )
+          )}
+          <button
+            onClick={() => setOpen(true)}
+            className="absolute top-2 right-2 opacity-0 group-hover/img:opacity-100 focus:opacity-100 transition bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90 z-10"
+            title="Editar imagens"
+          >
+            <Pencil size={13} />
+          </button>
+        </>
+      )}
+      {open && <EditImagesModal title={title} images={images} onChange={(imgs) => onChange!(imgs)} onClose={() => setOpen(false)} simple={mode === "gallery"} />}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- *
+ * Renderizadores por tipo de bloco — cada um aceita `onChange` opcional
+ * pra ficar editável clicando direto no conteúdo renderizado.
+ * ---------------------------------------------------------------------- */
+export function BulletListBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
   const { color, dark } = backgroundStyle(content.background);
   const IconCmp = content.icon === "x" ? X : Check;
   const iconColor = content.icon === "x" ? "#f87171" : LIME;
+  const editable = !!onChange;
+  const items: string[] = content.items ?? [];
+  const set = (patch: any) => onChange?.({ ...content, ...patch });
+  const hasClosing = content.closingTextAccent || content.closingTextPlain;
+
   return (
     <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
       <Reveal className="px-5 sm:px-10 max-w-[820px] mx-auto py-14">
-        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">{content.heading}</h2>
+        {editable ? (
+          <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8 block" />
+        ) : (
+          <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">{content.heading}</h2>
+        )}
         <ul className="space-y-4">
-          {(content.items ?? []).map((t: string, i: number) => (
-            <li key={i} className={`flex gap-3 text-base sm:text-lg ${dark ? "text-white/80" : "text-[#0A0E23]/75"}`}>
+          {items.map((t, i) => (
+            <li key={i} className={`group/item flex gap-3 text-base sm:text-lg items-start ${dark ? "text-white/80" : "text-[#0A0E23]/75"}`}>
               <IconCmp size={20} className="shrink-0 mt-0.5" style={{ color: iconColor }} strokeWidth={2.5} />
-              <span className="text-balance">{t}</span>
+              {editable ? (
+                <>
+                  <Editable
+                    value={t} multiline
+                    onCommit={(v) => { const next = [...items]; next[i] = v; set({ items: next }); }}
+                    className="text-balance flex-1"
+                  />
+                  <button onClick={() => set({ items: items.filter((_, j) => j !== i) })} className="opacity-0 group-hover/item:opacity-100 text-white/30 hover:text-red-400 shrink-0 mt-0.5"><X size={14} /></button>
+                </>
+              ) : (
+                <span className="text-balance">{t}</span>
+              )}
             </li>
           ))}
+          {editable && (
+            <li>
+              <button onClick={() => set({ items: [...items, "Novo item"] })} className="text-xs opacity-50 hover:opacity-100 inline-flex items-center gap-1"><Plus size={12} /> Adicionar item</button>
+            </li>
+          )}
         </ul>
-        {(content.closingTextAccent || content.closingTextPlain) && (
+        {editable ? (
+          <div className={`mt-8 flex flex-wrap gap-x-1.5 gap-y-1 items-baseline ${dark ? "text-white" : "text-[#0A0E23]"}`}>
+            <Editable value={content.closingTextPlain ?? ""} onCommit={(v) => set({ closingTextPlain: v })} placeholder="Frase de fechamento (opcional)" />
+            <Editable value={content.closingTextAccent ?? ""} onCommit={(v) => set({ closingTextAccent: v })} className="font-bold" style={{ color: LIME }} placeholder="parte destacada (opcional)" />
+          </div>
+        ) : hasClosing ? (
           <p className={`mt-8 text-balance ${dark ? "text-white" : "text-[#0A0E23]"}`}>
             {content.closingTextPlain ? `${content.closingTextPlain} ` : ""}
             <span className="font-bold" style={{ color: LIME }}>{content.closingTextAccent}</span>
           </p>
-        )}
+        ) : null}
       </Reveal>
     </section>
   );
 }
 
-export function StepsBlock({ content }: { content: any }) {
+export function StepsBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
   const { color, dark } = backgroundStyle(content.background);
+  const editable = !!onChange;
+  const items: any[] = content.items ?? [];
+  const set = (patch: any) => onChange?.({ ...content, ...patch });
+  const setItem = (i: number, patch: any) => { const next = [...items]; next[i] = { ...next[i], ...patch }; set({ items: next }); };
+
   return (
     <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
       <Reveal className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14">
-        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">{content.heading}</h2>
+        {editable ? (
+          <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 block text-center" />
+        ) : (
+          <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">{content.heading}</h2>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {(content.items ?? []).map((s: any, i: number) => (
-            <div key={i} className={`rounded-xl p-5 border ${dark ? "bg-white/[0.04] border-white/10" : "bg-black/[0.04] border-black/10"} ${LIFT}`} style={EASE}>
+          {items.map((s, i) => (
+            <div key={i} className={`relative group/step rounded-xl p-5 border ${dark ? "bg-white/[0.04] border-white/10" : "bg-black/[0.04] border-black/10"} ${LIFT}`} style={EASE}>
+              {editable && (
+                <button onClick={() => set({ items: items.filter((_, j) => j !== i) })} className="absolute top-2 right-2 opacity-0 group-hover/step:opacity-100 text-white/40 hover:text-red-400"><X size={14} /></button>
+              )}
               <div className="flex items-center gap-2 mb-3">
                 <span className="h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-black shrink-0" style={{ background: LIME, color: "#0A0E23" }}>
-                  {s.number}
+                  {editable ? (
+                    <Editable value={s.number} onCommit={(v) => setItem(i, { number: v })} className="w-full text-center" style={{ color: "#0A0E23" }} />
+                  ) : s.number}
                 </span>
-                <Icon iconKey={s.icon} size={20} style={{ color: dark ? LIME : ACCENT_ON_LIGHT }} />
+                {editable ? (
+                  <EditableIcon value={s.icon} onChange={(v) => setItem(i, { icon: v })} size={20} style={{ color: dark ? LIME : ACCENT_ON_LIGHT }} />
+                ) : (
+                  <Icon iconKey={s.icon} size={20} style={{ color: dark ? LIME : ACCENT_ON_LIGHT }} />
+                )}
               </div>
-              <div className="font-bold mb-1">{s.title}</div>
-              <div className={`text-sm leading-relaxed ${dark ? "text-white/60" : "text-[#0A0E23]/60"}`}>{s.description}</div>
+              {editable ? (
+                <>
+                  <Editable value={s.title} onCommit={(v) => setItem(i, { title: v })} className="font-bold mb-1 block" />
+                  <Editable value={s.description} multiline onCommit={(v) => setItem(i, { description: v })} className={`text-sm leading-relaxed block ${dark ? "text-white/60" : "text-[#0A0E23]/60"}`} />
+                </>
+              ) : (
+                <>
+                  <div className="font-bold mb-1">{s.title}</div>
+                  <div className={`text-sm leading-relaxed ${dark ? "text-white/60" : "text-[#0A0E23]/60"}`}>{s.description}</div>
+                </>
+              )}
             </div>
           ))}
+          {editable && (
+            <button
+              onClick={() => set({ items: [...items, { icon: "star", number: String(items.length + 1).padStart(2, "0"), title: "Novo passo", description: "" }] })}
+              className={`rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 min-h-[120px] transition ${dark ? "border-white/15 hover:border-[rgb(var(--lz-brand-rgb))] text-white/40" : "border-black/15 hover:border-[rgb(var(--lz-brand-rgb))] text-black/40"} hover:text-white`}
+            >
+              <Plus size={18} /> <span className="text-xs">Adicionar passo</span>
+            </button>
+          )}
         </div>
       </Reveal>
     </section>
   );
 }
 
-export function FeatureBlock({ content }: { content: any }) {
+export function FeatureBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
   const { color, dark } = backgroundStyle(content.background);
+  const editable = !!onChange;
   const bodyClass = dark ? "text-white/65" : "text-[#0A0E23]/60";
+  const set = (patch: any) => onChange?.({ ...content, ...patch });
+
   return (
     <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
       <Reveal className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14 sm:py-20">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <div className={content.reverse ? "lg:order-2" : ""}>
             <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: dark ? LIME : ACCENT_ON_LIGHT }}>
-              <Icon iconKey={content.eyebrowIcon} size={13} /> {content.eyebrowLabel}
+              {editable ? (
+                <EditableIcon value={content.eyebrowIcon} onChange={(v) => set({ eyebrowIcon: v })} />
+              ) : (
+                <Icon iconKey={content.eyebrowIcon} size={13} />
+              )}
+              {editable ? <Editable value={content.eyebrowLabel} onCommit={(v) => set({ eyebrowLabel: v })} /> : content.eyebrowLabel}
             </div>
-            <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-4 text-balance">{content.title}</h2>
-            <p className={`${bodyClass} text-base leading-relaxed max-w-[460px]`}>{content.description}</p>
+            {editable ? (
+              <Editable as="h2" value={content.title} onCommit={(v) => set({ title: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-4 block text-balance" />
+            ) : (
+              <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-4 text-balance">{content.title}</h2>
+            )}
+            {editable ? (
+              <Editable value={content.description} multiline onCommit={(v) => set({ description: v })} className={`${bodyClass} text-base leading-relaxed max-w-[460px] block`} />
+            ) : (
+              <p className={`${bodyClass} text-base leading-relaxed max-w-[460px]`}>{content.description}</p>
+            )}
           </div>
           <div className={`flex justify-center ${content.reverse ? "lg:order-1" : ""}`}>
-            {content.images?.length ? (
-              content.images.length === 1 && !content.images[0].floating ? (
-                content.images[0].source === "builtin" ? (
-                  <ImageSpecVisual img={content.images[0]} alt={content.title} />
-                ) : (
-                  <AppCard><ImageSpecVisual img={content.images[0]} alt={content.title} /></AppCard>
-                )
-              ) : (
-                <ImageStack images={content.images} alt={content.title} aspectClassName="aspect-square max-w-[420px]" />
-              )
-            ) : null}
+            <EditableImageArea images={content.images ?? []} onChange={editable ? (images) => set({ images }) : undefined} alt={content.title} mode="feature" />
           </div>
         </div>
       </Reveal>
@@ -463,45 +814,125 @@ export function FeatureBlock({ content }: { content: any }) {
   );
 }
 
-export function GalleryBlock({ content }: { content: any }) {
+export function GalleryBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
   const { color, dark } = backgroundStyle(content.background);
+  const editable = !!onChange;
   const images: ImageSpec[] = content.images ?? [];
-  if (images.length === 0) return null;
+  const set = (patch: any) => onChange?.({ ...content, ...patch });
+  if (!editable && images.length === 0) return null;
   return (
     <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
       <Reveal className="px-5 sm:px-10 max-w-[1000px] mx-auto py-14">
-        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">{content.heading}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {images.map((img) => (
-            <div key={img.id} className={`rounded-xl overflow-hidden border shadow-sm ${dark ? "border-white/10" : "border-black/10"} ${LIFT}`} style={EASE}>
-              <ImageSpecVisual img={img} alt={content.heading} />
-            </div>
-          ))}
-        </div>
+        {editable ? (
+          <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 block text-center" />
+        ) : (
+          <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">{content.heading}</h2>
+        )}
+        <EditableImageArea images={images} onChange={editable ? (imgs) => set({ images: imgs }) : undefined} alt={content.heading} mode="gallery" />
       </Reveal>
     </section>
   );
 }
 
-export function TextBlurbBlock({ content }: { content: any }) {
+export function TextBlurbBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
   const { color, dark } = backgroundStyle(content.background);
+  const editable = !!onChange;
+  const set = (patch: any) => onChange?.({ ...content, ...patch });
   return (
     <section style={{ background: color, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 text-center">
       <div className="px-5 sm:px-10 max-w-[720px] mx-auto py-14">
-        <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: dark ? LIME : ACCENT_ON_LIGHT }}>
-          <Icon iconKey={content.eyebrowIcon} size={13} /> {content.eyebrowLabel}
+        <div className="inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: dark ? LIME : ACCENT_ON_LIGHT }}>
+          {editable ? (
+            <EditableIcon value={content.eyebrowIcon} onChange={(v) => set({ eyebrowIcon: v })} />
+          ) : (
+            <Icon iconKey={content.eyebrowIcon} size={13} />
+          )}
+          {editable ? <Editable value={content.eyebrowLabel} onCommit={(v) => set({ eyebrowLabel: v })} /> : content.eyebrowLabel}
         </div>
-        <p className={`text-sm leading-relaxed ${dark ? "text-white/70" : "text-[#0A0E23]/70"}`}>{content.paragraph}</p>
+        {editable ? (
+          <Editable value={content.paragraph} multiline onCommit={(v) => set({ paragraph: v })} className={`text-sm leading-relaxed block ${dark ? "text-white/70" : "text-[#0A0E23]/70"}`} />
+        ) : (
+          <p className={`text-sm leading-relaxed ${dark ? "text-white/70" : "text-[#0A0E23]/70"}`}>{content.paragraph}</p>
+        )}
       </div>
     </section>
   );
 }
 
 /* ---------------------------------------------------------------------- *
- * Corpo do site (Hero + blocos) — usado tanto pelo site público
- * (SalesPage.tsx) quanto pela prévia ao vivo do editor
- * (SalesPageEditorTab.tsx), pra garantir que os dois renderizem
- * exatamente igual.
+ * Hero — extraído como componente próprio pra poder ser usado tanto pelo
+ * corpo público quanto diretamente pelo editor (que precisa dele editável
+ * fora da lista de blocos reordenável).
+ * ---------------------------------------------------------------------- */
+export function HeroSection({ content, onChange, onCtaClick }: { content: any; onChange?: (c: any) => void; onCtaClick?: () => void }) {
+  const editable = !!onChange;
+  const set = (patch: any) => onChange?.({ ...content, ...patch });
+  return (
+    <section className="px-5 sm:px-10 max-w-[1200px] mx-auto pt-8 pb-16">
+      <div className="grid lg:grid-cols-2 gap-2 lg:gap-8 items-center">
+        <div className="order-2 lg:order-1">
+          <div className="inline-flex items-center gap-2 border border-white/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide mb-6">
+            {editable ? (
+              <EditableIcon value={content.eyebrowIcon} onChange={(v) => set({ eyebrowIcon: v })} style={{ color: LIME }} />
+            ) : (
+              <Icon iconKey={content.eyebrowIcon} size={13} style={{ color: LIME }} />
+            )}
+            {editable ? <Editable value={content.eyebrowLabel} onCommit={(v) => set({ eyebrowLabel: v })} /> : content.eyebrowLabel}
+          </div>
+          <h1 className="font-black uppercase leading-[0.95] text-[clamp(2rem,5.5vw,3.75rem)]">
+            {editable ? <Editable value={content.titleLine1} onCommit={(v) => set({ titleLine1: v })} className="block" /> : content.titleLine1}
+            <br />
+            {editable ? <Editable value={content.titleLine2} onCommit={(v) => set({ titleLine2: v })} className="block" /> : content.titleLine2}
+            <br />
+            <span className="font-criador-serif normal-case block" style={{ color: LIME }}>
+              {editable ? <Editable value={content.titleAccentLine1} onCommit={(v) => set({ titleAccentLine1: v })} className="block" /> : content.titleAccentLine1}
+              <br />
+              {editable ? <Editable value={content.titleAccentLine2} onCommit={(v) => set({ titleAccentLine2: v })} className="block" /> : content.titleAccentLine2}
+            </span>
+          </h1>
+          {editable ? (
+            <Editable value={content.subtitle} multiline onCommit={(v) => set({ subtitle: v })} className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed block" />
+          ) : (
+            <p className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">{content.subtitle}</p>
+          )}
+          <div
+            className={`mt-8 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full ${editable ? "" : POP}`}
+            style={{ background: LIME, color: "#0A0E23", ...EASE }}
+            onClick={editable ? undefined : onCtaClick}
+          >
+            {editable ? <Editable value={content.ctaLabel} onCommit={(v) => set({ ctaLabel: v })} /> : content.ctaLabel}
+          </div>
+          <div className="flex items-center gap-3 mt-3 max-w-[480px]">
+            <img src={clickupTrelloLogos} alt="Logos do ClickUp e do Trello" className="h-9 w-auto shrink-0 opacity-80" />
+            <p className="text-white/40 text-xs">
+              Usava o ClickUp ou Trello? Sem problemas, você pode migrar todo o seu fluxo com facilidade.
+            </p>
+          </div>
+        </div>
+        <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
+          <EditableImageArea images={content.images ?? []} onChange={editable ? (images) => set({ images }) : undefined} alt="Modo Criador" mode="hero" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Despacha um bloco (que não seja hero) pro componente certo. */
+export function renderBlockNode(block: { id: string; type: string; content: any }, onChange?: (c: any) => void) {
+  switch (block.type) {
+    case "bullet_list": return <BulletListBlock key={block.id} content={block.content} onChange={onChange} />;
+    case "steps": return <StepsBlock key={block.id} content={block.content} onChange={onChange} />;
+    case "feature": return <FeatureBlock key={block.id} content={block.content} onChange={onChange} />;
+    case "gallery": return <GalleryBlock key={block.id} content={block.content} onChange={onChange} />;
+    case "text_blurb": return <TextBlurbBlock key={block.id} content={block.content} onChange={onChange} />;
+    default: return null;
+  }
+}
+
+/* ---------------------------------------------------------------------- *
+ * Corpo do site (Hero + blocos), só leitura — usado pelo site público
+ * (SalesPage.tsx). O editor (SalesPageEditorTab.tsx) usa HeroSection e
+ * renderBlockNode diretamente, com onChange, pra ficar editável.
  * ---------------------------------------------------------------------- */
 export function SalesPageBody({
   hero, blocks, onCtaClick,
@@ -510,60 +941,10 @@ export function SalesPageBody({
   blocks: { id: string; type: string; content: any }[];
   onCtaClick?: () => void;
 }) {
-  const HeroEyebrowIcon = BLOCK_ICONS[hero?.content?.eyebrowIcon ?? "rocket"] ?? Rocket;
   return (
     <>
-      {hero && (
-        <section className="px-5 sm:px-10 max-w-[1200px] mx-auto pt-8 pb-16">
-          <div className="grid lg:grid-cols-2 gap-2 lg:gap-8 items-center">
-            <div className="order-2 lg:order-1">
-              <div className="inline-flex items-center gap-2 border border-white/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide mb-6">
-                <HeroEyebrowIcon size={13} style={{ color: LIME }} /> {hero.content.eyebrowLabel}
-              </div>
-              <h1 className="font-black uppercase leading-[0.95] text-[clamp(2rem,5.5vw,3.75rem)]">
-                {hero.content.titleLine1}
-                <br />
-                {hero.content.titleLine2}
-                <br />
-                <span className="font-criador-serif normal-case block" style={{ color: LIME }}>
-                  {hero.content.titleAccentLine1}
-                  <br />
-                  {hero.content.titleAccentLine2}
-                </span>
-              </h1>
-              <p className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">
-                {hero.content.subtitle}
-              </p>
-              <button
-                onClick={onCtaClick}
-                className={`mt-8 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full ${POP}`}
-                style={{ background: LIME, color: "#0A0E23", ...EASE }}
-              >
-                {hero.content.ctaLabel}
-              </button>
-              <div className="flex items-center gap-3 mt-3 max-w-[480px]">
-                <img src={clickupTrelloLogos} alt="Logos do ClickUp e do Trello" className="h-9 w-auto shrink-0 opacity-80" />
-                <p className="text-white/40 text-xs">
-                  Usava o ClickUp ou Trello? Sem problemas, você pode migrar todo o seu fluxo com facilidade.
-                </p>
-              </div>
-            </div>
-            <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
-              <ImageStack images={hero.content.images ?? []} alt="Modo Criador" aspectClassName="aspect-[1182/854] max-w-[460px] lg:max-w-none" />
-            </div>
-          </div>
-        </section>
-      )}
-      {blocks.map((b) => {
-        switch (b.type) {
-          case "bullet_list": return <BulletListBlock key={b.id} content={b.content} />;
-          case "steps": return <StepsBlock key={b.id} content={b.content} />;
-          case "feature": return <FeatureBlock key={b.id} content={b.content} />;
-          case "gallery": return <GalleryBlock key={b.id} content={b.content} />;
-          case "text_blurb": return <TextBlurbBlock key={b.id} content={b.content} />;
-          default: return null;
-        }
-      })}
+      {hero && <HeroSection content={hero.content} onCtaClick={onCtaClick} />}
+      {blocks.map((b) => renderBlockNode(b))}
     </>
   );
 }
