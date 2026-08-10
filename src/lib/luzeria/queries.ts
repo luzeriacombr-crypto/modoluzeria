@@ -56,7 +56,7 @@ import {
 } from "./sales-page.functions";
 import {
   listJourneyStages, upsertJourneyStage, deleteJourneyStage,
-  setClientStage, logClientStageUpdate, getClientStageHistory,
+  setClientStage, logClientStageUpdate, getClientStageHistory, getWeeklyClientReminders,
 } from "./journey-stages.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const calendarItemsQO = (from: string, to: string) =>
@@ -174,6 +174,9 @@ export const clientStageHistoryQO = (clientId: string | null) =>
     queryFn: () => getClientStageHistory({ data: { clientId: clientId! } }),
     enabled: !!clientId,
   });
+
+export const weeklyClientRemindersQO = () =>
+  queryOptions({ queryKey: ["weekly-client-reminders"], queryFn: () => getWeeklyClientReminders() });
 
 /* ====== ROADMAP QUERIES ====== */
 
@@ -574,7 +577,10 @@ export function useApi() {
     }),
     logClientStageUpdate: useMutation({
       mutationFn: useServerFn(logClientStageUpdate),
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-stage-history"] }),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["client-stage-history"] });
+        qc.invalidateQueries({ queryKey: ["weekly-client-reminders"] });
+      },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao registrar envio."),
     }),
     /* ===== ROADMAP MUTATIONS ===== */

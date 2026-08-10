@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, profilesQO, myMentionsQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, Clock, Check, X, AtSign } from "lucide-react";
+import { Sparkles, List, CalendarDays, Clock, Check, X, AtSign, MessageCircle } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
@@ -20,17 +20,18 @@ export function MyTasks() {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
   const isAdmin = me?.role === "master" || me?.role === "setor";
-  const { setCleaningDone, markMentionRead } = useApi();
+  const { setCleaningDone, markMentionRead, logClientStageUpdate } = useApi();
   const [viewAs, setViewAs] = useState<string>("");
   const targetId = isAdmin && viewAs ? viewAs : me?.id;
   const { data: tasks = [] } = useQuery({
     ...myTasksQO(targetId),
     enabled: !!targetId,
   });
-  const { selectMonth, openItem, flash } = useUI();
+  const { selectMonth, openItem, flash, openFicha, openStageComposer } = useUI();
   const navigate = useNavigate();
   const isMeView = !isAdmin || !viewAs || viewAs === me?.id;
   const { data: mentions = [] } = useQuery({ ...myMentionsQO(), enabled: isMeView });
+  const { data: weeklyReminders = [] } = useQuery({ ...weeklyClientRemindersQO(), enabled: isAdmin && isMeView });
   const monthKey = useUI((s) => s.selectedMonthKey);
   const { data: prod } = useQuery(productivityQO(monthKey, targetId));
 
@@ -109,6 +110,46 @@ export function MyTasks() {
       {targetId && <div data-tour="goals"><GoalsWidget monthKey={monthKey} userId={targetId} /></div>}
 
       {targetId && <ActivityCountsWidget monthKey={monthKey} userId={targetId} />}
+
+      {isAdmin && isMeView && weeklyReminders.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="rounded p-1" style={{ backgroundColor: "rgba(37,211,102,0.18)", color: "#25D366" }}>
+              <MessageCircle size={11} />
+            </span>
+            <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Avisar clientes no WhatsApp</h2>
+            <span className="text-[11px] text-white/40">· {weeklyReminders.length}</span>
+          </div>
+          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
+            {weeklyReminders.map((r) => (
+              <div key={r.clientId} className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.05] last:border-b-0">
+                <button
+                  onClick={() => { openFicha(r.clientId); openStageComposer(r.clientId); }}
+                  className="flex-1 min-w-0 flex items-center gap-2 text-left hover:opacity-80 transition"
+                >
+                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
+                    style={{ backgroundColor: r.clientColor + "33", color: r.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : r.clientColor }}>
+                    {r.clientName}
+                  </span>
+                  <span className="text-sm text-white/70 truncate">{r.stageName ?? "Sem etapa definida"}</span>
+                </button>
+                <button
+                  onClick={() => logClientStageUpdate.mutate({
+                    data: {
+                      clientId: r.clientId, stageId: r.stageId ?? undefined,
+                      message: r.stageDescription ?? "Atualização enviada.", trigger: "weekly_nudge",
+                    },
+                  })}
+                  className="shrink-0 text-[11px] font-semibold px-3 py-1.5 rounded-md inline-flex items-center gap-1.5"
+                  style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+                >
+                  <Check size={12} strokeWidth={3} /> Marcar feito
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isMeView && mentions.length > 0 && (
         <div className="mb-6">

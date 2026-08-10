@@ -159,3 +159,64 @@ export const getClientStageHistory = createServerFn({ method: "GET" })
       sentByName: r.profiles?.name ?? null, sentAt: r.sent_at,
     }));
   });
+
+export type WeeklyClientReminder = {
+  clientId: string;
+  clientName: string;
+  clientColor: string;
+  stageId: string | null;
+  stageName: string | null;
+  stageDescription: string | null;
+  lastUpdateAt: string | null;
+};
+
+/** Mesma regra de "atrasado" do cron semanal (notify_stale_client_updates,
+ * 20260810040000...sql) — mas computada ao vivo, pra mostrar em Minhas
+ * Demandas. Como o "feito" vem de existir uma linha em client_stage_updates
+ * (não de um flag por usuário), assim que qualquer admin/setor manda ou
+ * marca a atualização, o cliente some da lista pra todo mundo da agência —
+ * sem precisar de nenhuma tabela nova. */
+export const getWeeklyClientReminders = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: clients } = await context.supabase
+      .from("clients")
+      .select("id, name, color, current_stage_id, created_at")
+      .eq("archived", false);
+    const list = clients ?? [];
+    if (list.length === 0) return [] as WeeklyClientReminder[];
+    const clientIds = list.map((c: any) => c.id);
+
+    const { data: updates } = await context.supabase
+      .from("client_stage_updates")
+      .select("client_id, sent_at")
+      .in("client_id", clientIds)
+      .order("sent_at", { ascending: false });
+    const lastByClient = new Map<string, string>();
+    (updates ?? []).forEach((u: any) => {
+      if (!lastByClient.has(u.client_id)) lastByClient.set(u.client_id, u.sent_at);
+    });
+
+    const stageIds = [...new Set(list.map((c: any) => c.current_stage_id).filter(Boolean))];
+    const { data: stages } = stageIds.length
+      ? await context.supabase.from("client_journey_stages").select("id, name, description").in("id", stageIds)
+      : { data: [] as any[] };
+    const stageMap = new Map((stages ?? []).map((s: any) => [s.id, s]));
+
+    const cutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return list
+      .map((c: any) => {
+        const lastUpdateAt = lastByClient.get(c.id) ?? null;
+        const lastMs = new Date(lastUpdateAt ?? c.created_at).getTime();
+        const stage = c.current_stage_id ? stageMap.get(c.current_stage_id) : null;
+        return {
+          clientId: c.id, clientName: c.name, clientColor: c.color,
+          stageId: stage?.id ?? null, stageName: stage?.name ?? null,
+          stageDescription: stage?.description ?? null, lastUpdateAt,
+          _lastMs: lastMs,
+        };
+      })
+      .filter((c: any) => c._lastMs < cutoffMs)
+      .sort((a: any, b: any) => a._lastMs - b._lastMs)
+      .map(({ _lastMs, ...rest }: any) => rest) as WeeklyClientReminder[];
+  });
