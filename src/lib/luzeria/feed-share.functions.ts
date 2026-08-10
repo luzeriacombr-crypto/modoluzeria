@@ -197,7 +197,7 @@ export type PublicFeedItem = {
   blockedReason: string | null;
 };
 export type PublicFeedPayload = {
-  client: { name: string; color: string; description: string | null };
+  client: { name: string; color: string; description: string | null; photoUrl: string | null };
   month: { key: string };
   items: PublicFeedItem[];
   stageCounts: { stage: ClientStage; label: string; count: number }[];
@@ -227,6 +227,19 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     const r = result as any;
     const { client, month, items: rawItems, files: rawFiles, feedback: rawFeedback } = r;
     if (!client || !month) return null;
+
+    // The "avatars" bucket only allows reads from authenticated users (client
+    // photos aren't meant to be publicly listable) — this public page needs
+    // to show exactly one already-known photo for the client this token
+    // belongs to, so sign it with the service-role client instead.
+    let clientPhotoUrl: string | null = null;
+    if (client.photo_path) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: signed } = await supabaseAdmin.storage
+        .from("avatars")
+        .createSignedUrl(client.photo_path, 60 * 60 * 24 * 365);
+      clientPhotoUrl = signed?.signedUrl ?? null;
+    }
 
     // Support both flat (files/feedback as top-level arrays with item_id)
     // and nested (files/feedback embedded inside each item) structures
@@ -371,6 +384,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         name: client.name as string,
         color: (client.color as string) ?? "rgb(var(--lz-brand-rgb))",
         description: client.description ?? null,
+        photoUrl: clientPhotoUrl,
       },
       month: { key: month.key as string },
       items: mappedItems,

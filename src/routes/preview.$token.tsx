@@ -105,10 +105,18 @@ function PublicPreviewPage() {
       {/* Header */}
       <div className="px-4 pt-8 pb-6 max-w-[640px] mx-auto">
         <div className="flex items-center gap-4">
-          <div
-            className="size-20 rounded-full grid place-items-center text-3xl font-bold text-white shrink-0"
-            style={{ background: client.color }}
-          >{initial}</div>
+          {client.photoUrl ? (
+            <img
+              src={client.photoUrl}
+              alt={client.name}
+              className="size-20 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <div
+              className="size-20 rounded-full grid place-items-center text-3xl font-bold text-white shrink-0"
+              style={{ background: client.color }}
+            >{initial}</div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="text-white text-xl font-bold leading-tight truncate">{client.name}</div>
             <div className="text-white/50 text-[13px] mt-0.5">Preview do feed · {formattedMonth}</div>
