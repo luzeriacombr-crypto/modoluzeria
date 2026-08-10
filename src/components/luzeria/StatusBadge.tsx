@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { STATUS_META, STATUS_ORDER, statusLabel, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
@@ -11,7 +12,9 @@ export function StatusBadge({
   const Icon = STATUS_ICONS[status];
   const [open, setOpen] = useState(false);
   const [pulse, setPulse] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const prev = useRef(status);
 
   useEffect(() => {
@@ -25,14 +28,20 @@ export function StatusBadge({
 
   useEffect(() => {
     if (!open) return;
-    const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (rect) setPos({ top: rect.bottom + 4, left: rect.left });
+    const h = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!btnRef.current?.contains(t) && !popRef.current?.contains(t)) setOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
   return (
-    <div className="relative inline-block" ref={ref}>
+    <>
       <button
+        ref={btnRef}
         type="button"
         disabled={!onChange}
         onClick={(e) => { e.stopPropagation(); if (onChange) setOpen((o) => !o); }}
@@ -58,8 +67,12 @@ export function StatusBadge({
           />
         )}
       </button>
-      {open && (
-        <div className="absolute z-50 mt-1 left-0 min-w-[180px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto">
+      {open && pos && createPortal(
+        <div
+          ref={popRef}
+          className="fixed z-[200] min-w-[180px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto"
+          style={{ top: pos.top, left: pos.left }}
+        >
           {list.map((s) => {
             const m = STATUS_META[s];
             const I = STATUS_ICONS[s];
@@ -77,8 +90,9 @@ export function StatusBadge({
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
