@@ -3,6 +3,7 @@ import {
   Rocket, CalendarDays, Users, Link2, FolderOpen, Check, X, Zap, Lock, Star,
   MessageCircle, LayoutDashboard, BarChart3, Bell, ShieldCheck, Smartphone, Tablet, Monitor,
   ChevronLeft, ChevronRight, Play, Heart, Send, Bookmark, Plus, Pencil, ImagePlus, Loader2, GripVertical,
+  Sparkles, Waves,
 } from "lucide-react";
 import clickupTrelloLogos from "@/assets/clickup-trello-logos.png";
 import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
@@ -53,30 +54,70 @@ export function sectionBackgroundStyle(content: { background: BackgroundKey; bac
   return { style: { background: color }, dark };
 }
 
-export type SizeKey = "compact" | "normal" | "spacious";
-export const SIZE_OPTIONS: { key: SizeKey; label: string }[] = [
-  { key: "compact", label: "Compacta" },
-  { key: "normal", label: "Normal" },
-  { key: "spacious", label: "Grande" },
-];
-// Mesma técnica do FLOAT_CLASS: classes por extenso num objeto estático,
-// pro scanner do Tailwind enxergar o literal e não purgar do CSS de produção.
-const SECTION_PADDING: Record<SizeKey, string> = {
-  compact: "py-8 sm:py-10",
-  normal: "py-14 sm:py-16",
-  spacious: "py-20 sm:py-28",
-};
-export function sectionPadding(key: string | undefined): string {
-  return SECTION_PADDING[(key as SizeKey) ?? "normal"] ?? SECTION_PADDING.normal;
+/* ---------------------------------------------------------------------- *
+ * Tamanho de seção — arrastar pra redimensionar (estilo Wix), em vez dos
+ * antigos 3 botões de preset. `paddingY`/`heightPx` guardam um valor livre
+ * em pixels; blocos publicados antes dessa mudança só têm o velho campo
+ * `size` (enum "compact"/"normal"/"spacious") — convertido on-the-fly pra
+ * um valor em px equivalente, sem precisar de migração de dados.
+ * ---------------------------------------------------------------------- */
+const LEGACY_SIZE_TO_PADDING_PX: Record<string, number> = { compact: 40, normal: 64, spacious: 104 };
+const LEGACY_SIZE_TO_BANNER_PX: Record<string, number> = { compact: 280, normal: 380, spacious: 520 };
+export const PADDING_PX_MIN = 12;
+export const PADDING_PX_MAX = 200;
+export const BANNER_PX_MIN = 140;
+export const BANNER_PX_MAX = 820;
+
+export function paddingYValue(content: { paddingY?: number; size?: string }): number {
+  if (typeof content.paddingY === "number") return content.paddingY;
+  return LEGACY_SIZE_TO_PADDING_PX[content.size ?? "normal"] ?? LEGACY_SIZE_TO_PADDING_PX.normal;
+}
+export function bannerHeightValue(content: { heightPx?: number; size?: string }): number {
+  if (typeof content.heightPx === "number") return content.heightPx;
+  return LEGACY_SIZE_TO_BANNER_PX[content.size ?? "normal"] ?? LEGACY_SIZE_TO_BANNER_PX.normal;
 }
 
-const BANNER_HEIGHT: Record<SizeKey, string> = {
-  compact: "h-[220px] sm:h-[320px]",
-  normal: "h-[320px] sm:h-[460px]",
-  spacious: "h-[440px] sm:h-[640px]",
-};
-export function bannerHeight(key: string | undefined): string {
-  return BANNER_HEIGHT[(key as SizeKey) ?? "normal"] ?? BANNER_HEIGHT.normal;
+/** Arraste vertical genérico: acompanha o ponteiro em tempo real (`display`)
+ * e só chama `onCommit` (que salva) ao soltar — evita disparar uma
+ * mutação por frame durante o arraste. */
+export function useResizeDrag(value: number, min: number, max: number, onCommit: (v: number) => void) {
+  const [dragValue, setDragValue] = useState<number | null>(null);
+  const startRef = useRef<{ y: number; value: number } | null>(null);
+
+  function onPointerDown(e: React.PointerEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    startRef.current = { y: e.clientY, value };
+    setDragValue(value);
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    if (!startRef.current) return;
+    e.stopPropagation();
+    const next = Math.min(max, Math.max(min, startRef.current.value + (e.clientY - startRef.current.y)));
+    setDragValue(next);
+  }
+  function onPointerUp(e: React.PointerEvent) {
+    e.stopPropagation();
+    if (dragValue !== null) onCommit(dragValue);
+    startRef.current = null;
+    setDragValue(null);
+  }
+  return { display: dragValue ?? value, dragging: dragValue !== null, handleProps: { onPointerDown, onPointerMove, onPointerUp } };
+}
+
+/** Barra fina no rodapé da seção — aparece no hover, arrasta pra
+ * redimensionar. Só é renderizada em modo edição (o site público nunca vê). */
+export function SectionResizeHandle({ resize }: { resize: ReturnType<typeof useResizeDrag> }) {
+  return (
+    <div
+      {...resize.handleProps}
+      className={`absolute left-0 right-0 bottom-0 h-3 cursor-ns-resize flex items-end justify-center z-20 group/resize touch-none transition-opacity ${resize.dragging ? "opacity-100" : "opacity-0 hover:opacity-100"}`}
+      title="Arrastar pra redimensionar a seção"
+    >
+      <div className="w-14 h-1 rounded-full mb-1 transition-colors" style={{ background: resize.dragging ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.35)" }} />
+    </div>
+  );
 }
 
 /** Native HTML5 drag-and-drop reorder — no external DnD library needed for
@@ -117,7 +158,7 @@ export const POP = "transition-transform duration-200 hover:scale-[1.03] active:
 export const LIFT = "transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-2xl";
 
 /** Fades + slides a section's content in once it enters the viewport. */
-export function Reveal({ children, className }: { children: React.ReactNode; className?: string }) {
+export function Reveal({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -132,6 +173,7 @@ export function Reveal({ children, className }: { children: React.ReactNode; cla
   }, []);
   return (
     <div ref={ref} className={className} style={{
+      ...style,
       opacity: visible ? 1 : 0,
       transform: visible ? "translateY(0)" : "translateY(28px)",
       transition: "opacity 700ms var(--ease-premium), transform 700ms var(--ease-premium)",
@@ -532,7 +574,16 @@ function ImageSpecVisual({ img, alt, fill }: { img: ImageSpec; alt: string; fill
 // the utility purged from the production CSS since it never appears whole.
 const FLOAT_CLASS: Record<string, string> = { a: "lz-float-a", b: "lz-float-b", c: "lz-float-c" };
 
-export function ImageStack({ images, alt, aspectClassName }: { images: ImageSpec[]; alt: string; aspectClassName?: string }) {
+function floatVariantClass(img: ImageSpec, floatingIndex: number, sync: boolean | undefined): string {
+  if (!img.floating) return "";
+  if (sync) return `${FLOAT_CLASS.a} absolute`;
+  return `${FLOAT_CLASS[(["a", "b", "c"] as const)[floatingIndex % 3]]} absolute`;
+}
+
+/** Só leitura — usada no site público. Renderização inalterada. */
+export function ImageStack({
+  images, alt, aspectClassName, floatSync,
+}: { images: ImageSpec[]; alt: string; aspectClassName?: string; floatSync?: boolean }) {
   if (images.length === 0) return null;
   const single = images.length === 1 && !images[0].floating;
   if (single) {
@@ -544,12 +595,13 @@ export function ImageStack({ images, alt, aspectClassName }: { images: ImageSpec
       </div>
     );
   }
+  const floatingImages = images.filter((im) => im.floating);
   return (
     <div className={`relative w-full ${aspectClassName ?? "aspect-[4/3]"}`}>
       {images.map((img) => (
         <div
           key={img.id}
-          className={img.floating ? `${FLOAT_CLASS[img.floatVariant ?? "a"]} absolute` : "absolute"}
+          className={img.floating ? floatVariantClass(img, floatingImages.indexOf(img), floatSync) : "absolute"}
           style={{ width: `${img.widthPct}%`, top: `${img.top}%`, left: `${img.left}%`, zIndex: img.z }}
         >
           <ImageSpecVisual img={img} alt={alt} />
@@ -560,11 +612,292 @@ export function ImageStack({ images, alt, aspectClassName }: { images: ImageSpec
 }
 
 /* ---------------------------------------------------------------------- *
- * Editor de pilha de imagens (dentro do modal aberto ao clicar numa
- * imagem no próprio site) — enviar foto ou usar ilustração pronta,
- * flutuante/parada, tamanho e posição.
+ * Arrastar-pra-mover e arrastar-pra-redimensionar de imagens — mesma
+ * técnica do useResizeDrag (seção): acompanha o ponteiro localmente
+ * (`display`) e só chama `onCommit` (que salva) ao soltar.
  * ---------------------------------------------------------------------- */
-function ImageStackEditor({ images, onChange, simple, topicHint }: { images: ImageSpec[]; onChange: (images: ImageSpec[]) => void; simple?: boolean; topicHint?: string }) {
+function clampImgPct(v: number) { return Math.min(120, Math.max(-20, v)); }
+function clampImgWidth(v: number) { return Math.min(100, Math.max(5, v)); }
+
+function useImageMoveDrag(top: number, left: number, containerRef: React.RefObject<HTMLElement | null>, onCommit: (top: number, left: number) => void) {
+  const [live, setLive] = useState<{ top: number; left: number } | null>(null);
+  const startRef = useRef<{ x: number; y: number; top: number; left: number } | null>(null);
+  function onPointerDown(e: React.PointerEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    startRef.current = { x: e.clientX, y: e.clientY, top, left };
+    setLive({ top, left });
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    if (!startRef.current) return;
+    e.stopPropagation();
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) return;
+    const dxPct = ((e.clientX - startRef.current.x) / rect.width) * 100;
+    const dyPct = ((e.clientY - startRef.current.y) / rect.height) * 100;
+    setLive({ top: clampImgPct(startRef.current.top + dyPct), left: clampImgPct(startRef.current.left + dxPct) });
+  }
+  function onPointerUp(e: React.PointerEvent) {
+    e.stopPropagation();
+    if (live) onCommit(live.top, live.left);
+    startRef.current = null;
+    setLive(null);
+  }
+  return { display: live ?? { top, left }, dragging: live !== null, handleProps: { onPointerDown, onPointerMove, onPointerUp } };
+}
+
+function useImageResizeDrag(widthPct: number, containerRef: React.RefObject<HTMLElement | null>, onCommit: (widthPct: number) => void) {
+  const [live, setLive] = useState<number | null>(null);
+  const startRef = useRef<{ x: number; width: number } | null>(null);
+  function onPointerDown(e: React.PointerEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    startRef.current = { x: e.clientX, width: widthPct };
+    setLive(widthPct);
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    if (!startRef.current) return;
+    e.stopPropagation();
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return;
+    const dPct = ((e.clientX - startRef.current.x) / rect.width) * 100;
+    setLive(clampImgWidth(startRef.current.width + dPct));
+  }
+  function onPointerUp(e: React.PointerEvent) {
+    e.stopPropagation();
+    if (live !== null) onCommit(live);
+    startRef.current = null;
+    setLive(null);
+  }
+  return { display: live ?? widthPct, dragging: live !== null, handleProps: { onPointerDown, onPointerMove, onPointerUp } };
+}
+
+/** Barrinha de ações que aparece no hover de uma imagem em edição — trocar
+ * foto, usar ilustração pronta, tornar flutuante, remover. Nada disso é um
+ * modal: fica ancorada na própria imagem, então o resultado real nunca
+ * fica escondido atrás de uma caixa. */
+function ImageToolbar({
+  img, uploading, onUploadFile, onPickBuiltin, onToggleFloating, onRemove,
+}: {
+  img: ImageSpec; uploading: boolean; onUploadFile: (file: File) => void; onPickBuiltin: (key: string) => void;
+  onToggleFloating: () => void; onRemove: () => void;
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  return (
+    <div
+      onPointerDown={(e) => e.stopPropagation()}
+      className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-black/85 backdrop-blur rounded-lg p-1 shadow-xl opacity-0 group-hover/stackimg:opacity-100 focus-within:opacity-100 transition z-30 whitespace-nowrap"
+    >
+      <label className="p-1.5 rounded text-white/80 hover:text-white hover:bg-white/10 cursor-pointer" title="Enviar foto">
+        {uploading ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
+        <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadFile(f); }} />
+      </label>
+      <div className="relative">
+        <button onClick={() => setPickerOpen((v) => !v)} className="p-1.5 rounded text-white/80 hover:text-white hover:bg-white/10" title="Usar ilustração pronta">
+          <Sparkles size={13} />
+        </button>
+        {pickerOpen && (
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-[#1C1C1C] border border-white/10 rounded-lg p-1 flex flex-col gap-0.5 shadow-xl min-w-[150px] max-h-48 overflow-y-auto z-40">
+            {BUILTIN_KEYS.map((k) => (
+              <button key={k} onClick={() => { onPickBuiltin(k); setPickerOpen(false); }}
+                className="text-[11px] text-left px-2 py-1.5 rounded hover:bg-white/10 text-white/80 whitespace-nowrap">
+                {BUILTIN_LABELS[k] ?? k}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <button onClick={onToggleFloating} className="p-1.5 rounded hover:bg-white/10" title={img.floating ? "Fixar (parar de flutuar)" : "Deixar flutuante"}
+        style={{ color: img.floating ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.8)" }}>
+        <Waves size={13} />
+      </button>
+      <button onClick={onRemove} className="p-1.5 rounded text-white/80 hover:text-red-400 hover:bg-white/10" title="Remover">
+        <X size={13} />
+      </button>
+    </div>
+  );
+}
+
+/** Uma imagem dentro da pilha posicionada (flutuante ou não, 2+ imagens) —
+ * arrasta pra mover, alça no canto pra redimensionar. */
+function EditableStackImage({
+  img, alt, containerRef, floatClass, onUpdate, onRemove, onUploadFile, onPickBuiltin, uploading,
+}: {
+  img: ImageSpec; alt: string; containerRef: React.RefObject<HTMLDivElement | null>; floatClass: string;
+  onUpdate: (patch: Partial<ImageSpec>) => void; onRemove: () => void;
+  onUploadFile: (file: File) => void; onPickBuiltin: (key: string) => void; uploading: boolean;
+}) {
+  const move = useImageMoveDrag(img.top, img.left, containerRef, (top, left) => onUpdate({ top, left }));
+  const resize = useImageResizeDrag(img.widthPct, containerRef, (w) => onUpdate({ widthPct: w }));
+
+  return (
+    <div
+      className={`group/stackimg absolute ${floatClass}`}
+      style={{ width: `${resize.display}%`, top: `${move.display.top}%`, left: `${move.display.left}%`, zIndex: img.z, touchAction: "none" }}
+    >
+      <div
+        {...move.handleProps}
+        className={`relative rounded-md outline outline-2 outline-dashed transition-colors ${move.dragging ? "cursor-grabbing outline-[rgb(var(--lz-brand-rgb))]" : "cursor-grab outline-transparent hover:outline-white/30"}`}
+      >
+        <ImageSpecVisual img={img} alt={alt} />
+        <ImageToolbar img={img} uploading={uploading} onUploadFile={onUploadFile} onPickBuiltin={onPickBuiltin} onToggleFloating={() => onUpdate({ floating: !img.floating })} onRemove={onRemove} />
+        <div
+          {...resize.handleProps}
+          className="absolute bottom-0 right-0 w-4 h-4 rounded-tl-md cursor-nwse-resize opacity-0 group-hover/stackimg:opacity-100 transition z-30"
+          style={{ background: resize.dragging ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.55)" }}
+          title="Arrastar pra redimensionar"
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Imagem única, centralizada (o caso mais comum) — sem arrastar pra mover
+ * (não faz sentido, já está centralizada), só redimensionar. */
+function EditableSingleImage({
+  img, alt, onUpdate, onRemove, onUploadFile, onPickBuiltin, uploading, onAdd, wrapInAppCard,
+}: {
+  img: ImageSpec; alt: string; onUpdate: (patch: Partial<ImageSpec>) => void; onRemove: () => void;
+  onUploadFile: (file: File) => void; onPickBuiltin: (key: string) => void; uploading: boolean;
+  onAdd?: () => void; wrapInAppCard?: boolean;
+}) {
+  const outerRef = useRef<HTMLDivElement>(null);
+  const resize = useImageResizeDrag(img.widthPct, outerRef, (w) => onUpdate({ widthPct: w }));
+  const visual = <ImageSpecVisual img={img} alt={alt} />;
+
+  return (
+    <div>
+      <div ref={outerRef} className="w-full flex justify-center">
+        <div className="relative group/stackimg" style={{ width: `${resize.display}%` }}>
+          {wrapInAppCard && img.source === "upload" ? <AppCard>{visual}</AppCard> : visual}
+          <ImageToolbar img={img} uploading={uploading} onUploadFile={onUploadFile} onPickBuiltin={onPickBuiltin} onToggleFloating={() => onUpdate({ floating: true })} onRemove={onRemove} />
+          <div
+            {...resize.handleProps}
+            className="absolute bottom-0 right-0 w-4 h-4 rounded-tl-md cursor-ew-resize opacity-0 group-hover/stackimg:opacity-100 transition z-30"
+            style={{ background: resize.dragging ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.55)" }}
+            title="Arrastar pra redimensionar"
+          />
+        </div>
+      </div>
+      {onAdd && (
+        <div className="flex justify-center mt-2">
+          <button onClick={onAdd} className="text-[11px] text-white/40 hover:text-white inline-flex items-center gap-1 transition"><Plus size={11} /> Adicionar mais uma imagem</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Pilha de imagens editável (hero/destaque) — arrastar pra mover, alça
+ * pra redimensionar, tudo em cima da imagem real do site (sem modal
+ * escondendo o resultado). */
+function ImageStackInteractive({
+  images, onChange, alt, aspectClassName, topicHint, wrapSingleInAppCard, floatSync, onFloatSync,
+}: {
+  images: ImageSpec[]; onChange: (images: ImageSpec[]) => void; alt: string; aspectClassName?: string;
+  topicHint?: string; wrapSingleInAppCard?: boolean;
+  floatSync?: boolean; onFloatSync?: (v: boolean) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
+  const { upload, uploading } = useMarketingAssetUpload();
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+
+  function updateAt(id: string, patch: Partial<ImageSpec>) {
+    onChange(imagesRef.current.map((im) => (im.id === id ? { ...im, ...patch } : im)));
+  }
+  function removeAt(id: string) {
+    if (imagesRef.current.length === 1 && !confirm("Remover a única imagem desta seção?")) return;
+    onChange(imagesRef.current.filter((im) => im.id !== id));
+  }
+  async function handleUploadFile(id: string, file: File) {
+    setUploadingId(id);
+    const url = await upload(file);
+    setUploadingId(null);
+    if (url) updateAt(id, { source: "upload", url, builtinKey: undefined });
+  }
+  function addImage() {
+    if (imagesRef.current.length >= 4) return;
+    const n = imagesRef.current.length;
+    onChange([...imagesRef.current, {
+      id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      source: "builtin", builtinKey: guessBuiltinKey(topicHint),
+      floating: n > 0, floatVariant: "a",
+      widthPct: n === 0 ? 90 : 50, top: n === 0 ? 5 : 15 + n * 12, left: n === 0 ? 5 : 15 + n * 12, z: n,
+    }]);
+  }
+
+  if (images.length === 0) {
+    return (
+      <button
+        onClick={addImage}
+        className="w-full aspect-square max-w-[220px] mx-auto rounded-xl border-2 border-dashed border-white/20 hover:border-[rgb(var(--lz-brand-rgb))] flex flex-col items-center justify-center gap-2 text-white/40 hover:text-white transition"
+      >
+        <ImagePlus size={22} /> <span className="text-xs">Adicionar imagem</span>
+      </button>
+    );
+  }
+
+  const single = images.length === 1 && !images[0].floating;
+  if (single) {
+    const img = images[0];
+    return (
+      <EditableSingleImage
+        img={img} alt={alt}
+        onUpdate={(patch) => updateAt(img.id, patch)}
+        onRemove={() => removeAt(img.id)}
+        onUploadFile={(f) => handleUploadFile(img.id, f)}
+        onPickBuiltin={(k) => updateAt(img.id, { source: "builtin", builtinKey: k })}
+        uploading={uploadingId === img.id}
+        onAdd={images.length < 4 ? addImage : undefined}
+        wrapInAppCard={wrapSingleInAppCard}
+      />
+    );
+  }
+
+  const floatingImages = images.filter((im) => im.floating);
+  const floatingCount = floatingImages.length;
+
+  return (
+    <div ref={containerRef} className={`relative w-full ${aspectClassName ?? "aspect-[4/3]"}`}>
+      {images.map((img) => (
+        <EditableStackImage
+          key={img.id} img={img} alt={alt} containerRef={containerRef}
+          floatClass={img.floating ? floatVariantClass(img, floatingImages.indexOf(img), floatSync) : ""}
+          onUpdate={(patch) => updateAt(img.id, patch)}
+          onRemove={() => removeAt(img.id)}
+          onUploadFile={(f) => handleUploadFile(img.id, f)}
+          onPickBuiltin={(k) => updateAt(img.id, { source: "builtin", builtinKey: k })}
+          uploading={uploadingId === img.id}
+        />
+      ))}
+      {images.length < 4 && (
+        <button onClick={addImage} className="absolute bottom-2 right-2 z-30 bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90 transition" title="Adicionar imagem">
+          <Plus size={14} />
+        </button>
+      )}
+      {floatingCount >= 2 && onFloatSync && (
+        <button
+          onClick={() => onFloatSync(!floatSync)}
+          className="absolute top-2 left-2 z-30 text-[10px] font-semibold px-2.5 py-1.5 rounded-full bg-black/70 backdrop-blur text-white hover:bg-black/90 transition inline-flex items-center gap-1"
+          title="Controla se as imagens flutuantes se movem juntas ou cada uma no seu tempo"
+        >
+          <Waves size={11} /> {floatSync ? "Sincronizado" : "Natural"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- *
+ * Editor de galeria (dentro do modal aberto ao clicar numa imagem) —
+ * enviar foto ou usar ilustração pronta. Galeria não tem posição livre
+ * (é uma grade), então não precisa do editor de arrastar.
+ * ---------------------------------------------------------------------- */
+function ImageStackEditor({ images, onChange, topicHint }: { images: ImageSpec[]; onChange: (images: ImageSpec[]) => void; topicHint?: string }) {
   const { upload, uploading } = useMarketingAssetUpload();
   // Upload é assíncrono (rede) — se o usuário mexer em outra imagem enquanto
   // ele está rolando, um `updateAt` que fechasse sobre o array antigo (`images`
@@ -587,7 +920,7 @@ function ImageStackEditor({ images, onChange, simple, topicHint }: { images: Ima
   }
 
   function addImage() {
-    if (imagesRef.current.length >= 4) return;
+    if (imagesRef.current.length >= 12) return;
     onChange([...imagesRef.current, {
       id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, source: "builtin", builtinKey: guessBuiltinKey(topicHint),
       floating: false, floatVariant: "a", widthPct: 100, top: 0, left: 0, z: imagesRef.current.length,
@@ -637,32 +970,10 @@ function ImageStackEditor({ images, onChange, simple, topicHint }: { images: Ima
                 </select>
               </div>
             )}
-
-            {!simple && (
-              <>
-                <label className="flex items-center gap-2 text-xs text-white/70">
-                  <input type="checkbox" checked={img.floating} onChange={(e) => updateAt(i, { floating: e.target.checked })} /> Flutuante
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <label className="block">
-                    <span className="block text-[9px] uppercase text-white/30 mb-0.5">Tamanho %</span>
-                    <input type="number" min={5} max={100} value={img.widthPct} onChange={(e) => updateAt(i, { widthPct: Number(e.target.value) })} className="lz-input-dark w-full text-xs" />
-                  </label>
-                  <label className="block">
-                    <span className="block text-[9px] uppercase text-white/30 mb-0.5">Topo %</span>
-                    <input type="number" min={-20} max={120} value={img.top} onChange={(e) => updateAt(i, { top: Number(e.target.value) })} className="lz-input-dark w-full text-xs" />
-                  </label>
-                  <label className="block">
-                    <span className="block text-[9px] uppercase text-white/30 mb-0.5">Esquerda %</span>
-                    <input type="number" min={-20} max={120} value={img.left} onChange={(e) => updateAt(i, { left: Number(e.target.value) })} className="lz-input-dark w-full text-xs" />
-                  </label>
-                </div>
-              </>
-            )}
           </div>
         ))}
       </div>
-      {images.length < 4 && (
+      {images.length < 12 && (
         <button onClick={addImage} className="mt-3 text-xs text-white/50 hover:text-white inline-flex items-center gap-1"><Plus size={12} /> Adicionar imagem</button>
       )}
     </div>
@@ -670,9 +981,9 @@ function ImageStackEditor({ images, onChange, simple, topicHint }: { images: Ima
 }
 
 function EditImagesModal({
-  title, images, onChange, onClose, simple, topicHint, imageFit, onImageFit,
+  title, images, onChange, onClose, topicHint, imageFit, onImageFit,
 }: {
-  title: string; images: ImageSpec[]; onChange: (images: ImageSpec[]) => void; onClose: () => void; simple?: boolean; topicHint?: string;
+  title: string; images: ImageSpec[]; onChange: (images: ImageSpec[]) => void; onClose: () => void; topicHint?: string;
   imageFit?: "natural" | "fill"; onImageFit?: (fit: "natural" | "fill") => void;
 }) {
   return (
@@ -716,29 +1027,30 @@ function EditImagesModal({
             </p>
           </div>
         )}
-        <ImageStackEditor images={images} onChange={onChange} simple={simple} topicHint={topicHint} />
+        <ImageStackEditor images={images} onChange={onChange} topicHint={topicHint} />
         <button onClick={onClose} className="lz-btn-primary text-xs px-4 py-2.5 rounded-md mt-5 w-full">Concluído</button>
       </div>
     </div>
   );
 }
 
-/** Pilha de imagens clicável — em modo leitura renderiza igual antes; em
- * modo edição, clicar abre o modal de imagens, e mostra um "+" quando
- * ainda não tem nenhuma. */
+/** Pilha de imagens clicável. Hero/Destaque: edição direta, arrastando em
+ * cima da imagem real (ImageStackInteractive). Galeria: continua com um
+ * modalzinho simples (não tem posição livre, é só uma grade). */
 function EditableImageArea({
-  images, onChange, alt, mode, topicHint, imageFit, onImageFit,
+  images, onChange, alt, mode, topicHint, imageFit, onImageFit, floatSync, onFloatSync,
 }: {
   images: ImageSpec[]; onChange?: (images: ImageSpec[]) => void; alt: string;
   mode: "hero" | "feature" | "gallery"; topicHint?: string;
   imageFit?: "natural" | "fill"; onImageFit?: (fit: "natural" | "fill") => void;
+  floatSync?: boolean; onFloatSync?: (v: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const editable = !!onChange;
   const fill = imageFit === "fill";
 
   if (!editable) {
-    if (mode === "hero") return <ImageStack images={images} alt={alt} aspectClassName="aspect-[1182/854] max-w-[460px] lg:max-w-none" />;
+    if (mode === "hero") return <ImageStack images={images} alt={alt} aspectClassName="aspect-[1182/854] max-w-[460px] lg:max-w-none" floatSync={floatSync} />;
     if (mode === "gallery") {
       if (images.length === 0) return null;
       return (
@@ -756,12 +1068,26 @@ function EditableImageArea({
     return images.length === 1 && !images[0].floating ? (
       images[0].source === "builtin" ? <ImageSpecVisual img={images[0]} alt={alt} /> : <AppCard><ImageSpecVisual img={images[0]} alt={alt} /></AppCard>
     ) : (
-      <ImageStack images={images} alt={alt} aspectClassName="aspect-square max-w-[420px]" />
+      <ImageStack images={images} alt={alt} aspectClassName="aspect-square max-w-[420px]" floatSync={floatSync} />
     );
   }
 
-  const title = mode === "gallery" ? "Imagens da galeria" : mode === "hero" ? "Imagens do topo" : "Imagens";
+  if (mode === "hero" || mode === "feature") {
+    return (
+      <ImageStackInteractive
+        images={images}
+        onChange={onChange!}
+        alt={alt}
+        topicHint={topicHint}
+        aspectClassName={mode === "hero" ? "aspect-[1182/854] max-w-[460px] lg:max-w-none" : "aspect-square max-w-[420px]"}
+        wrapSingleInAppCard={mode === "feature"}
+        floatSync={floatSync}
+        onFloatSync={onFloatSync}
+      />
+    );
+  }
 
+  // gallery
   return (
     <div className="relative group/img w-full">
       {images.length === 0 ? (
@@ -773,23 +1099,13 @@ function EditableImageArea({
         </button>
       ) : (
         <>
-          {mode === "hero" && <ImageStack images={images} alt={alt} aspectClassName="aspect-[1182/854] max-w-[460px] lg:max-w-none" />}
-          {mode === "gallery" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
-              {images.map((img) => (
-                <div key={img.id} className={`rounded-xl overflow-hidden border border-white/10 shadow-sm ${fill ? "aspect-square" : ""}`}>
-                  <ImageSpecVisual img={img} alt={alt} fill={fill} />
-                </div>
-              ))}
-            </div>
-          )}
-          {mode === "feature" && (
-            images.length === 1 && !images[0].floating ? (
-              images[0].source === "builtin" ? <ImageSpecVisual img={images[0]} alt={alt} /> : <AppCard><ImageSpecVisual img={images[0]} alt={alt} /></AppCard>
-            ) : (
-              <ImageStack images={images} alt={alt} aspectClassName="aspect-square max-w-[420px]" />
-            )
-          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
+            {images.map((img) => (
+              <div key={img.id} className={`rounded-xl overflow-hidden border border-white/10 shadow-sm ${fill ? "aspect-square" : ""}`}>
+                <ImageSpecVisual img={img} alt={alt} fill={fill} />
+              </div>
+            ))}
+          </div>
           <button
             onClick={() => setOpen(true)}
             className="absolute top-2 right-2 opacity-0 group-hover/img:opacity-100 focus:opacity-100 transition bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90 z-10"
@@ -801,10 +1117,8 @@ function EditableImageArea({
       )}
       {open && (
         <EditImagesModal
-          title={title} images={images} onChange={(imgs) => onChange!(imgs)} onClose={() => setOpen(false)}
-          simple={mode === "gallery"} topicHint={topicHint}
-          imageFit={mode === "gallery" ? imageFit : undefined}
-          onImageFit={mode === "gallery" ? onImageFit : undefined}
+          title="Imagens da galeria" images={images} onChange={(imgs) => onChange!(imgs)} onClose={() => setOpen(false)}
+          topicHint={topicHint} imageFit={imageFit} onImageFit={onImageFit}
         />
       )}
     </div>
@@ -824,10 +1138,12 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
   const set = (patch: any) => onChange?.({ ...content, ...patch });
   const hasClosing = content.closingTextAccent || content.closingTextPlain;
   const drag = useDragReorder(items, (next) => set({ items: next }));
+  const py = paddingYValue(content);
+  const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
 
   return (
-    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
-      <Reveal className={`px-5 sm:px-10 max-w-[820px] mx-auto ${sectionPadding(content.size)}`}>
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 relative">
+      <Reveal className="px-5 sm:px-10 max-w-[820px] mx-auto" style={{ paddingTop: resize.display, paddingBottom: resize.display }}>
         {editable ? (
           <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8 block" />
         ) : (
@@ -885,6 +1201,7 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
           </p>
         ) : null}
       </Reveal>
+      {editable && <SectionResizeHandle resize={resize} />}
     </section>
   );
 }
@@ -896,10 +1213,12 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
   const set = (patch: any) => onChange?.({ ...content, ...patch });
   const setItem = (i: number, patch: any) => { const next = [...items]; next[i] = { ...next[i], ...patch }; set({ items: next }); };
   const drag = useDragReorder(items, (next) => set({ items: next }));
+  const py = paddingYValue(content);
+  const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
 
   return (
-    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
-      <Reveal className={`px-5 sm:px-10 max-w-[1000px] mx-auto ${sectionPadding(content.size)}`}>
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 relative">
+      <Reveal className="px-5 sm:px-10 max-w-[1000px] mx-auto" style={{ paddingTop: resize.display, paddingBottom: resize.display }}>
         {editable ? (
           <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 block text-center" />
         ) : (
@@ -963,6 +1282,7 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
           )}
         </div>
       </Reveal>
+      {editable && <SectionResizeHandle resize={resize} />}
     </section>
   );
 }
@@ -972,10 +1292,12 @@ export function FeatureBlock({ content, onChange }: { content: any; onChange?: (
   const editable = !!onChange;
   const bodyClass = dark ? "text-white/65" : "text-[#0A0E23]/60";
   const set = (patch: any) => onChange?.({ ...content, ...patch });
+  const py = paddingYValue(content);
+  const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
 
   return (
-    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
-      <Reveal className={`px-5 sm:px-10 max-w-[1100px] mx-auto ${sectionPadding(content.size)}`}>
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 relative">
+      <Reveal className="px-5 sm:px-10 max-w-[1100px] mx-auto" style={{ paddingTop: resize.display, paddingBottom: resize.display }}>
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <div className={content.reverse ? "lg:order-2" : ""}>
             <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: dark ? LIME : ACCENT_ON_LIGHT }}>
@@ -998,10 +1320,15 @@ export function FeatureBlock({ content, onChange }: { content: any; onChange?: (
             )}
           </div>
           <div className={`flex justify-center ${content.reverse ? "lg:order-1" : ""}`}>
-            <EditableImageArea images={content.images ?? []} onChange={editable ? (images) => set({ images }) : undefined} alt={content.title} mode="feature" topicHint={`${content.eyebrowLabel ?? ""} ${content.title ?? ""}`} />
+            <EditableImageArea
+              images={content.images ?? []} onChange={editable ? (images) => set({ images }) : undefined} alt={content.title} mode="feature"
+              topicHint={`${content.eyebrowLabel ?? ""} ${content.title ?? ""}`}
+              floatSync={content.floatSync} onFloatSync={editable ? (v) => set({ floatSync: v }) : undefined}
+            />
           </div>
         </div>
       </Reveal>
+      {editable && <SectionResizeHandle resize={resize} />}
     </section>
   );
 }
@@ -1011,10 +1338,12 @@ export function GalleryBlock({ content, onChange }: { content: any; onChange?: (
   const editable = !!onChange;
   const images: ImageSpec[] = content.images ?? [];
   const set = (patch: any) => onChange?.({ ...content, ...patch });
+  const py = paddingYValue(content);
+  const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
   if (!editable && images.length === 0) return null;
   return (
-    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10">
-      <Reveal className={`px-5 sm:px-10 max-w-[1000px] mx-auto ${sectionPadding(content.size)}`}>
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 relative">
+      <Reveal className="px-5 sm:px-10 max-w-[1000px] mx-auto" style={{ paddingTop: resize.display, paddingBottom: resize.display }}>
         {editable ? (
           <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 block text-center" />
         ) : (
@@ -1025,6 +1354,7 @@ export function GalleryBlock({ content, onChange }: { content: any; onChange?: (
           imageFit={content.imageFit} onImageFit={editable ? (fit) => set({ imageFit: fit }) : undefined}
         />
       </Reveal>
+      {editable && <SectionResizeHandle resize={resize} />}
     </section>
   );
 }
@@ -1033,9 +1363,11 @@ export function TextBlurbBlock({ content, onChange }: { content: any; onChange?:
   const { style: bgStyle, dark } = sectionBackgroundStyle(content);
   const editable = !!onChange;
   const set = (patch: any) => onChange?.({ ...content, ...patch });
+  const py = paddingYValue(content);
+  const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
   return (
-    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 text-center">
-      <div className={`px-5 sm:px-10 max-w-[720px] mx-auto ${sectionPadding(content.size)}`}>
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 text-center relative">
+      <div className="px-5 sm:px-10 max-w-[720px] mx-auto" style={{ paddingTop: resize.display, paddingBottom: resize.display }}>
         <div className="inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: dark ? LIME : ACCENT_ON_LIGHT }}>
           {editable ? (
             <EditableIcon value={content.eyebrowIcon} onChange={(v) => set({ eyebrowIcon: v })} />
@@ -1050,6 +1382,7 @@ export function TextBlurbBlock({ content, onChange }: { content: any; onChange?:
           <p className={`text-sm leading-relaxed ${dark ? "text-white/70" : "text-[#0A0E23]/70"}`}>{content.paragraph}</p>
         )}
       </div>
+      {editable && <SectionResizeHandle resize={resize} />}
     </section>
   );
 }
@@ -1060,6 +1393,8 @@ export function ImageBannerBlock({ content, onChange }: { content: any; onChange
   const editable = !!onChange;
   const set = (patch: any) => onChange?.({ ...content, ...patch });
   const { upload, uploading } = useMarketingAssetUpload();
+  const heightPx = bannerHeightValue(content);
+  const resize = useResizeDrag(heightPx, BANNER_PX_MIN, BANNER_PX_MAX, (v) => set({ heightPx: v }));
 
   async function handleFile(file: File) {
     const url = await upload(file);
@@ -1070,7 +1405,7 @@ export function ImageBannerBlock({ content, onChange }: { content: any; onChange
     if (!content.imageUrl) return null;
     return (
       <section className="border-t border-white/10">
-        <img src={content.imageUrl} alt={content.alt ?? ""} className={`w-full object-cover block ${bannerHeight(content.size)}`} />
+        <img src={content.imageUrl} alt={content.alt ?? ""} className="w-full object-cover block" style={{ height: heightPx }} />
       </section>
     );
   }
@@ -1078,8 +1413,8 @@ export function ImageBannerBlock({ content, onChange }: { content: any; onChange
   const { style: bgStyle } = sectionBackgroundStyle({ background: content.background });
 
   return (
-    <section style={bgStyle} className="border-t border-white/10">
-      <div className={`relative w-full group/banner ${bannerHeight(content.size)}`}>
+    <section style={bgStyle} className="border-t border-white/10 relative">
+      <div className="relative w-full group/banner" style={{ height: resize.display }}>
         {content.imageUrl ? (
           <>
             <img src={content.imageUrl} alt={content.alt ?? ""} className="w-full h-full object-cover block" />
@@ -1101,6 +1436,7 @@ export function ImageBannerBlock({ content, onChange }: { content: any; onChange
           </label>
         )}
       </div>
+      {editable && <SectionResizeHandle resize={resize} />}
     </section>
   );
 }
@@ -1113,6 +1449,8 @@ export function SingleImageBlock({ content, onChange }: { content: any; onChange
   const set = (patch: any) => onChange?.({ ...content, ...patch });
   const { style: bgStyle } = sectionBackgroundStyle(content);
   const { upload, uploading } = useMarketingAssetUpload();
+  const py = paddingYValue(content);
+  const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
 
   async function handleFile(file: File) {
     const url = await upload(file);
@@ -1123,7 +1461,7 @@ export function SingleImageBlock({ content, onChange }: { content: any; onChange
     if (!content.imageUrl) return null;
     return (
       <section style={bgStyle} className="border-t border-white/10">
-        <Reveal className={`px-5 sm:px-10 max-w-[860px] mx-auto ${sectionPadding(content.size)}`}>
+        <Reveal className={`px-5 sm:px-10 max-w-[860px] mx-auto`} style={{ paddingTop: py, paddingBottom: py }}>
           <img src={content.imageUrl} alt={content.alt ?? ""} className={`w-full h-auto rounded-xl shadow-xl block ${LIFT}`} />
         </Reveal>
       </section>
@@ -1131,8 +1469,8 @@ export function SingleImageBlock({ content, onChange }: { content: any; onChange
   }
 
   return (
-    <section style={bgStyle} className="border-t border-white/10">
-      <div className={`px-5 sm:px-10 max-w-[860px] mx-auto ${sectionPadding(content.size)}`}>
+    <section style={bgStyle} className="border-t border-white/10 relative">
+      <div className="px-5 sm:px-10 max-w-[860px] mx-auto" style={{ paddingTop: resize.display, paddingBottom: resize.display }}>
         <div className="relative group/single">
           {content.imageUrl ? (
             <>
@@ -1156,6 +1494,7 @@ export function SingleImageBlock({ content, onChange }: { content: any; onChange
           )}
         </div>
       </div>
+      {editable && <SectionResizeHandle resize={resize} />}
     </section>
   );
 }
@@ -1211,7 +1550,11 @@ export function HeroSection({ content, onChange, onCtaClick }: { content: any; o
           </div>
         </div>
         <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
-          <EditableImageArea images={content.images ?? []} onChange={editable ? (images) => set({ images }) : undefined} alt="Modo Criador" mode="hero" topicHint={`${content.eyebrowLabel ?? ""} ${content.titleLine1 ?? ""} ${content.titleAccentLine1 ?? ""}`} />
+          <EditableImageArea
+            images={content.images ?? []} onChange={editable ? (images) => set({ images }) : undefined} alt="Modo Criador" mode="hero"
+            topicHint={`${content.eyebrowLabel ?? ""} ${content.titleLine1 ?? ""} ${content.titleAccentLine1 ?? ""}`}
+            floatSync={content.floatSync} onFloatSync={editable ? (v) => set({ floatSync: v }) : undefined}
+          />
         </div>
       </div>
     </section>

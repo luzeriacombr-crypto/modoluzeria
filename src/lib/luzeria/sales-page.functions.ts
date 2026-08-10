@@ -4,8 +4,13 @@ import { requireActiveProfile } from "./require-active";
 import { LUZERIA_ORG_ID } from "./api.functions";
 
 const BACKGROUND = z.enum(["white", "gray", "blue", "blue2"]);
+// Enum antigo, mantido só pra ler blocos publicados antes do redimensionar-
+// arrastando existir (ver paddingYValue/bannerHeightValue no front) — não é
+// mais escrito por nada.
 const SIZE = z.enum(["compact", "normal", "spacious"]).optional();
 const BACKGROUND_IMAGE = z.string().max(2000).optional().nullable();
+const PADDING_Y = z.number().min(0).max(400).optional();
+const HEIGHT_PX = z.number().min(0).max(1200).optional();
 
 const imageSpecSchema = z.object({
   id: z.string().max(60),
@@ -30,6 +35,9 @@ const heroContentSchema = z.object({
   subtitle: z.string().max(600),
   ctaLabel: z.string().max(60),
   images: z.array(imageSpecSchema).max(4),
+  // true: todas as imagens flutuantes se movem juntas (mesmo timing).
+  // false/ausente: cada uma com um delay diferente, mais orgânico.
+  floatSync: z.boolean().optional(),
 });
 
 const bulletListContentSchema = z.object({
@@ -41,6 +49,7 @@ const bulletListContentSchema = z.object({
   background: BACKGROUND,
   backgroundImage: BACKGROUND_IMAGE,
   size: SIZE,
+  paddingY: PADDING_Y,
 });
 
 const stepsContentSchema = z.object({
@@ -48,6 +57,7 @@ const stepsContentSchema = z.object({
   background: BACKGROUND,
   backgroundImage: BACKGROUND_IMAGE,
   size: SIZE,
+  paddingY: PADDING_Y,
   items: z.array(z.object({
     icon: z.string().max(40),
     number: z.string().max(10),
@@ -64,8 +74,10 @@ const featureContentSchema = z.object({
   background: BACKGROUND,
   backgroundImage: BACKGROUND_IMAGE,
   size: SIZE,
+  paddingY: PADDING_Y,
   reverse: z.boolean(),
   images: z.array(imageSpecSchema).max(4),
+  floatSync: z.boolean().optional(),
 });
 
 const galleryContentSchema = z.object({
@@ -73,6 +85,7 @@ const galleryContentSchema = z.object({
   background: BACKGROUND,
   backgroundImage: BACKGROUND_IMAGE,
   size: SIZE,
+  paddingY: PADDING_Y,
   images: z.array(imageSpecSchema).max(12),
   // "natural" (padrão): cada quadro acompanha o tamanho real da foto, mais
   // orgânico. "fill": corta tudo em 1:1 pra grade uniforme.
@@ -86,6 +99,7 @@ const textBlurbContentSchema = z.object({
   background: BACKGROUND,
   backgroundImage: BACKGROUND_IMAGE,
   size: SIZE,
+  paddingY: PADDING_Y,
 });
 
 // Uma única imagem de ponta a ponta na horizontal — sem texto, sem container
@@ -96,6 +110,7 @@ const imageBannerContentSchema = z.object({
   alt: z.string().max(200).optional(),
   background: BACKGROUND,
   size: SIZE,
+  heightPx: HEIGHT_PX,
 });
 
 // Uma única imagem CONTIDA (largura normal da página, com padding e cantos
@@ -108,6 +123,7 @@ const singleImageContentSchema = z.object({
   background: BACKGROUND,
   backgroundImage: BACKGROUND_IMAGE,
   size: SIZE,
+  paddingY: PADDING_Y,
 });
 
 const CONTENT_BY_TYPE = {

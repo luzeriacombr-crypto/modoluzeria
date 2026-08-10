@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff, Loader2, X,
-  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil, Maximize2, Undo2, ImagePlus, GripVertical,
+  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil, Maximize2, Minimize2, Undo2, ImagePlus, GripVertical,
 } from "lucide-react";
 import { salesPageBlocksAdminQO, useApi } from "@/lib/luzeria/queries";
-import { BACKGROUND_SWATCHES, SIZE_OPTIONS, HeroSection, renderBlockNode, SalesPageBody, BG_BLUE, useDragReorder } from "./salesPageBlocks";
+import { BACKGROUND_SWATCHES, HeroSection, renderBlockNode, SalesPageBody, BG_BLUE, useDragReorder } from "./salesPageBlocks";
 import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
 import type { SalesPageBlock, SalesPageBlockType } from "@/lib/luzeria/sales-page.functions";
 
@@ -52,6 +52,7 @@ export function SalesPageEditorTab() {
   const [previewWidth, setPreviewWidth] = useState<"desktop" | "mobile">("desktop");
   const [previewMode, setPreviewMode] = useState(false);
   const [sectionsOpen, setSectionsOpen] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   // Cópia local de rascunho por bloco — os campos editam ela na hora (feedback
   // instantâneo), e cada edição também dispara o salvamento automático como
   // rascunho (draft_content) — só vira público quando clica em "Publicar".
@@ -154,7 +155,7 @@ export function SalesPageEditorTab() {
     .map((b) => ({ id: b.id, type: b.type, content: drafts[b.id] ?? b.content }));
 
   return (
-    <div className="max-w-[1200px]">
+    <div className={fullscreen ? "fixed inset-0 z-[400] bg-[#0D0D0D] overflow-y-auto p-4 md:p-6" : "max-w-[1200px]"}>
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <p className="text-sm text-white/50 max-w-md">
           {previewMode
@@ -172,6 +173,13 @@ export function SalesPageEditorTab() {
               <Layers size={13} /> Seções
             </button>
           )}
+          <button
+            onClick={() => setFullscreen((v) => !v)}
+            title={fullscreen ? "Sair da tela cheia" : "Editar em tela cheia"}
+            className="h-7 w-7 rounded-full flex items-center justify-center text-white/60 hover:text-white border border-white/15 hover:border-white/30 transition shrink-0"
+          >
+            {fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+          </button>
           <div className="inline-flex items-center gap-1 rounded-full bg-[#1C1C1C] p-1 border border-white/10">
             <button
               onClick={() => setPreviewWidth("desktop")}
@@ -216,7 +224,7 @@ export function SalesPageEditorTab() {
       </div>
 
       <div className="rounded-xl border border-white/10 overflow-hidden">
-        <div className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: "85vh", background: BG_BLUE }}>
+        <div className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: fullscreen ? "calc(100vh - 120px)" : "85vh", background: BG_BLUE }}>
           <div style={{ width: previewWidth === "mobile" ? 390 : "100%", margin: "0 auto" }}>
             <div className="text-white" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
               {previewMode ? (
@@ -252,8 +260,6 @@ export function SalesPageEditorTab() {
                         backgroundImage={(drafts[b.id] ?? b.content).backgroundImage}
                         onBackgroundImage={(url) => saveContent(b, { ...(drafts[b.id] ?? b.content), backgroundImage: url })}
                         hideBackgroundImage={b.type === "image_banner"}
-                        size={(drafts[b.id] ?? b.content).size}
-                        onSize={(sz) => saveContent(b, { ...(drafts[b.id] ?? b.content), size: sz })}
                         onFlip={b.type === "feature" ? () => saveContent(b, { ...(drafts[b.id] ?? b.content), reverse: !(drafts[b.id] ?? b.content).reverse }) : undefined}
                         onToggleVisible={() => toggleVisible(b)}
                         onDelete={() => remove(b)}
@@ -354,17 +360,15 @@ export function SalesPageEditorTab() {
 }
 
 function BlockToolbar({
-  isVisible, canUp, canDown, onMoveUp, onMoveDown, onDragHandleStart, onDragHandleEnd, background, onBackground, backgroundImage, onBackgroundImage, hideBackgroundImage, size, onSize, onFlip, onToggleVisible, onDelete,
+  isVisible, canUp, canDown, onMoveUp, onMoveDown, onDragHandleStart, onDragHandleEnd, background, onBackground, backgroundImage, onBackgroundImage, hideBackgroundImage, onFlip, onToggleVisible, onDelete,
 }: {
   isVisible: boolean; canUp: boolean; canDown: boolean; onMoveUp: () => void; onMoveDown: () => void;
   onDragHandleStart: () => void; onDragHandleEnd: () => void;
   background: string; onBackground: (key: any) => void;
   backgroundImage: string | null | undefined; onBackgroundImage: (url: string | null) => void; hideBackgroundImage?: boolean;
-  size: string | undefined; onSize: (key: any) => void;
   onFlip?: () => void; onToggleVisible: () => void; onDelete: () => void;
 }) {
   const [colorOpen, setColorOpen] = useState(false);
-  const [sizeOpen, setSizeOpen] = useState(false);
   const { upload, uploading } = useMarketingAssetUpload();
 
   async function handleBackgroundFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -376,7 +380,7 @@ function BlockToolbar({
   return (
     <div
       className="absolute top-3 right-3 z-30 opacity-0 group-hover/block:opacity-100 focus-within:opacity-100 transition flex items-center gap-0.5 bg-black/80 backdrop-blur rounded-lg p-1 shadow-xl"
-      onMouseLeave={() => { setColorOpen(false); setSizeOpen(false); }}
+      onMouseLeave={() => setColorOpen(false)}
     >
       <span
         draggable
@@ -390,26 +394,6 @@ function BlockToolbar({
       <button onClick={onMoveUp} disabled={!canUp} title="Mover pra cima" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent"><ChevronUp size={14} /></button>
       <button onClick={onMoveDown} disabled={!canDown} title="Mover pra baixo" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent"><ChevronDown size={14} /></button>
       {onFlip && <button onClick={onFlip} title="Inverter lado da imagem" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10"><FlipHorizontal size={14} /></button>}
-      <div className="relative">
-        <button onClick={() => setSizeOpen((v) => !v)} title="Tamanho da seção" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10"><Maximize2 size={14} /></button>
-        {sizeOpen && (
-          <div className="absolute top-full right-0 mt-1 bg-[#1C1C1C] border border-white/10 rounded-lg p-1.5 flex flex-col gap-0.5 shadow-xl min-w-[110px]">
-            {SIZE_OPTIONS.map((s) => (
-              <button
-                key={s.key}
-                onClick={() => { onSize(s.key); setSizeOpen(false); }}
-                className="text-[11px] text-left px-2 py-1.5 rounded font-semibold"
-                style={{
-                  background: (size ?? "normal") === s.key ? "rgb(var(--lz-brand-rgb))" : "transparent",
-                  color: (size ?? "normal") === s.key ? "#0D0D0D" : "rgba(255,255,255,0.7)",
-                }}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
       <div className="relative">
         <button onClick={() => setColorOpen((v) => !v)} title="Fundo da seção" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10"><Palette size={14} /></button>
         {colorOpen && (
