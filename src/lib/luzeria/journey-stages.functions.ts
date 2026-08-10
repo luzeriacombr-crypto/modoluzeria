@@ -182,7 +182,8 @@ export const getWeeklyClientReminders = createServerFn({ method: "GET" })
     const { data: clients } = await context.supabase
       .from("clients")
       .select("id, name, color, current_stage_id, created_at")
-      .eq("archived", false);
+      .eq("archived", false)
+      .neq("category", "Ex-clientes");
     const list = clients ?? [];
     if (list.length === 0) return [] as WeeklyClientReminder[];
     const clientIds = list.map((c: any) => c.id);

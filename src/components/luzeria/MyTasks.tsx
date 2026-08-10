@@ -6,7 +6,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, Clock, Check, X, AtSign, MessageCircle } from "lucide-react";
+import { Sparkles, List, CalendarDays, Clock, Check, X, AtSign, MessageCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
@@ -15,6 +15,15 @@ import { getDailyVerse } from "@/lib/luzeria/daily-verse";
 const ProductivityBlock = lazy(() =>
   import("./ProductivityChart").then((m) => ({ default: m.ProductivityBlock })),
 );
+
+const WEEKLY_REMINDERS_OPEN_KEY = "lz.weeklyRemindersOpen";
+function readWeeklyRemindersOpen(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const raw = window.localStorage.getItem(WEEKLY_REMINDERS_OPEN_KEY);
+    return raw === null ? true : raw === "1";
+  } catch { return true; }
+}
 
 export function MyTasks() {
   const me = useMe().data;
@@ -32,6 +41,7 @@ export function MyTasks() {
   const isMeView = !isAdmin || !viewAs || viewAs === me?.id;
   const { data: mentions = [] } = useQuery({ ...myMentionsQO(), enabled: isMeView });
   const { data: weeklyReminders = [] } = useQuery({ ...weeklyClientRemindersQO(), enabled: isAdmin && isMeView });
+  const [remindersOpen, setRemindersOpen] = useState(readWeeklyRemindersOpen);
   const monthKey = useUI((s) => s.selectedMonthKey);
   const { data: prod } = useQuery(productivityQO(monthKey, targetId));
 
@@ -113,13 +123,24 @@ export function MyTasks() {
 
       {isAdmin && isMeView && weeklyReminders.length > 0 && (
         <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
+          <button
+            onClick={() => {
+              const next = !remindersOpen;
+              setRemindersOpen(next);
+              try { window.localStorage.setItem(WEEKLY_REMINDERS_OPEN_KEY, next ? "1" : "0"); } catch { /* noop */ }
+            }}
+            className="w-full flex items-center gap-2 mb-2 text-left"
+          >
             <span className="rounded p-1" style={{ backgroundColor: "rgba(37,211,102,0.18)", color: "#25D366" }}>
               <MessageCircle size={11} />
             </span>
             <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Avisar clientes no WhatsApp</h2>
             <span className="text-[11px] text-white/40">· {weeklyReminders.length}</span>
-          </div>
+            <span className="ml-auto text-white/40">
+              {remindersOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </span>
+          </button>
+          {remindersOpen && (
           <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
             {weeklyReminders.map((r) => (
               <div key={r.clientId} className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.05] last:border-b-0">
@@ -148,6 +169,7 @@ export function MyTasks() {
               </div>
             ))}
           </div>
+          )}
         </div>
       )}
 
