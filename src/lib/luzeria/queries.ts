@@ -58,6 +58,7 @@ import {
   listJourneyStages, upsertJourneyStage, deleteJourneyStage,
   setClientStage, logClientStageUpdate, getClientStageHistory, getWeeklyClientReminders,
 } from "./journey-stages.functions";
+import { getClientBlockedItems } from "./blocked-items.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const calendarItemsQO = (from: string, to: string) =>
   queryOptions({
@@ -177,6 +178,13 @@ export const clientStageHistoryQO = (clientId: string | null) =>
 
 export const weeklyClientRemindersQO = () =>
   queryOptions({ queryKey: ["weekly-client-reminders"], queryFn: () => getWeeklyClientReminders() });
+
+export const clientBlockedItemsQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["client-blocked-items", clientId],
+    queryFn: () => getClientBlockedItems({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
+  });
 
 /* ====== ROADMAP QUERIES ====== */
 

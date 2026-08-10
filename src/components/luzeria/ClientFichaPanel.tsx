@@ -13,6 +13,7 @@ import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
 import { ImageCropModal } from "./ImageCropModal";
+import { ClientBlockedItemsModal } from "./ClientBlockedItemsModal";
 import { getInstagramConnectionStatus, getInstagramConnectUrl, disconnectInstagram } from "@/lib/luzeria/instagram.functions";
 
 function formatHours(h: number | null) {
@@ -104,6 +105,8 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
   const [groupLink, setGroupLink] = useState("");
   useEffect(() => { setGroupLink(ficha?.whatsappGroupLink ?? ""); }, [ficha?.whatsappGroupLink]);
 
+  const [showBlockedModal, setShowBlockedModal] = useState(false);
+
   if (!client) return null;
   const metrics = ficha?.metrics;
 
@@ -119,6 +122,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
               label="Travados"
               value={metrics?.blocked ?? 0}
               color={(metrics?.blocked ?? 0) > 0 ? "#FF6B6B" : undefined}
+              onClick={(metrics?.blocked ?? 0) > 0 ? () => setShowBlockedModal(true) : undefined}
             />
             <MetricMini icon={<Clock size={13} />} label="Lead time médio" value={formatHours(metrics?.avgLeadTimeHours ?? null)} />
           </div>
@@ -128,6 +132,8 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             </p>
           )}
         </Section>
+
+        {showBlockedModal && <ClientBlockedItemsModal clientId={clientId} onClose={() => setShowBlockedModal(false)} />}
 
         {/* Journey stage */}
         <Section label="Etapa do projeto">
@@ -802,14 +808,18 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
   );
 }
 
-function MetricMini({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number | string; color?: string }) {
+function MetricMini({ icon, label, value, color, onClick }: { icon: React.ReactNode; label: string; value: number | string; color?: string; onClick?: () => void }) {
+  const Comp = onClick ? "button" : "div";
   return (
-    <div className="bg-[#1C1C1C] rounded-md px-3 py-2.5">
+    <Comp
+      onClick={onClick}
+      className={`bg-[#1C1C1C] rounded-md px-3 py-2.5 text-left w-full ${onClick ? "hover:bg-[#242424] transition cursor-pointer" : ""}`}
+    >
       <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-white/50">
         {icon} {label}
       </div>
       <div className="text-xl font-bold tabular-nums mt-0.5" style={{ color: color ?? "#FFFFFF" }}>{value}</div>
-    </div>
+    </Comp>
   );
 }
 
