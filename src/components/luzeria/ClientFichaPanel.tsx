@@ -535,11 +535,11 @@ function ClientStageSection({ clientId, isAdmin }: { clientId: string; isAdmin: 
           className="flex-1 bg-[#1C1C1C] border border-white/10 rounded-md px-2.5 py-1.5 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
         >
           <option value="" disabled>Selecionar etapa…</option>
-          <optgroup label={TRACK_LABEL.onboarding}>
-            {onboardingStages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </optgroup>
           <optgroup label={TRACK_LABEL.operational}>
             {operationalStages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </optgroup>
+          <optgroup label={TRACK_LABEL.onboarding}>
+            {onboardingStages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </optgroup>
         </select>
       </div>
