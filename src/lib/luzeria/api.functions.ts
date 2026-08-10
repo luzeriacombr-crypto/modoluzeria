@@ -1141,8 +1141,8 @@ export const upsertClientContact = createServerFn({ method: "POST" })
     if (!isAdmin) throw new Error("Forbidden");
     const db: any = context.supabase;
     const payload: any = {
-      name: data.name, role: data.role ?? null, email: data.email ?? null,
-      phone: data.phone ?? null, notes: data.notes ?? null, position: data.sortOrder ?? 0,
+      name: data.name, role: data.role ?? "", email: data.email ?? "",
+      phone: data.phone ?? "", notes: data.notes ?? "", position: data.sortOrder ?? 0,
     };
     if (data.id) {
       const { error } = await db.from("client_contacts").update(payload).eq("id", data.id);
