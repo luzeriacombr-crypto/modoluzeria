@@ -863,6 +863,7 @@ export type Database = {
           posts_per_week: number | null
           reels_per_week: number | null
           review_day: string | null
+          whatsapp_group_link: string | null
         }
         Insert: {
           archived?: boolean
@@ -885,6 +886,7 @@ export type Database = {
           posts_per_week?: number | null
           reels_per_week?: number | null
           review_day?: string | null
+          whatsapp_group_link?: string | null
         }
         Update: {
           archived?: boolean
@@ -907,6 +909,7 @@ export type Database = {
           posts_per_week?: number | null
           reels_per_week?: number | null
           review_day?: string | null
+          whatsapp_group_link?: string | null
         }
         Relationships: [
           {

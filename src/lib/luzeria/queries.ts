@@ -2,7 +2,7 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/r
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, duplicateMonth, setNotifyStoriesInTasks,
+  addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, duplicateMonth, setNotifyStoriesInTasks, setWhatsappGroupLink,
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, setExcludeFromRanking, deleteUser, updateClient, updateItem, updateMyProfile, adminUpdateMemberAvatar,
@@ -397,6 +397,11 @@ export function useApi() {
     setNotifyStoriesInTasks: useMutation({
       mutationFn: useServerFn(setNotifyStoriesInTasks),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["clients"] }); qc.invalidateQueries({ queryKey: ["my-tasks"] }); },
+    }),
+    setWhatsappGroupLink: useMutation({
+      mutationFn: useServerFn(setWhatsappGroupLink),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar link do grupo."),
     }),
     deleteClient: useMutation({ mutationFn: useServerFn(deleteClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) }),
     duplicateMonth: useMutation({

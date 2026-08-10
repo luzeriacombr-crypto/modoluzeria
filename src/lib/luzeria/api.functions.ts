@@ -659,6 +659,19 @@ export const setNotifyStoriesInTasks = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const setWhatsappGroupLink = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; link: string | null }) =>
+    z.object({ clientId: z.string().uuid(), link: z.string().trim().max(500).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("clients")
+      .update({ whatsapp_group_link: data.link || null }).eq("id", data.clientId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 function monthKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
@@ -1020,7 +1033,7 @@ export const getClientFicha = createServerFn({ method: "GET" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
 
     const { data: client } = await context.supabase
-      .from("clients").select("description, current_stage_id").eq("id", data.clientId).maybeSingle();
+      .from("clients").select("description, current_stage_id, whatsapp_group_link").eq("id", data.clientId).maybeSingle();
 
     const [linksRes, contactsRes, secretsRes] = await Promise.all([
       context.supabase.from("client_links")
@@ -1076,6 +1089,7 @@ export const getClientFicha = createServerFn({ method: "GET" })
       description: (client as any)?.description ?? "",
       currentStageId: (client as any)?.current_stage_id ?? null,
       whatsappPhone: whatsappContact?.phone ?? null,
+      whatsappGroupLink: (client as any)?.whatsapp_group_link ?? null,
       links: (linksRes.data ?? []).map((l: any) => ({
         id: l.id, clientId: l.client_id, label: l.label, url: l.url, sortOrder: l.position,
       })),

@@ -5,7 +5,7 @@ import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
   Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save, Camera, Instagram,
-  MessageCircle, Milestone,
+  MessageCircle, Milestone, Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, journeyStagesQO } from "@/lib/luzeria/queries";
@@ -100,6 +100,9 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
 
   const [description, setDescription] = useState("");
   useEffect(() => { setDescription(ficha?.description ?? ""); }, [ficha?.description]);
+
+  const [groupLink, setGroupLink] = useState("");
+  useEffect(() => { setGroupLink(ficha?.whatsappGroupLink ?? ""); }, [ficha?.whatsappGroupLink]);
 
   if (!client) return null;
   const metrics = ficha?.metrics;
@@ -207,6 +210,27 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
 
         {/* Contacts */}
         <Section label="Contatos" id="contatos-section">
+          <div className="mb-3 pb-3 border-b border-white/[0.06]">
+            <label className="flex items-center gap-1.5 text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">
+              <Users size={11} /> Grupo com o cliente (WhatsApp)
+            </label>
+            <input
+              value={groupLink}
+              onChange={(e) => setGroupLink(e.target.value)}
+              onBlur={() => {
+                const v = groupLink.trim();
+                if (v !== (ficha?.whatsappGroupLink ?? "")) {
+                  api.setWhatsappGroupLink.mutate({ data: { clientId: client.id, link: v || null } });
+                }
+              }}
+              disabled={!isAdmin}
+              placeholder={isAdmin ? "Link de convite do grupo (chat.whatsapp.com/…)" : "Nenhum grupo cadastrado."}
+              className="w-full bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 disabled:opacity-70"
+            />
+            <p className="mt-1 text-[10px] text-white/30">
+              Quando preenchido, as mensagens de atualização vão pro grupo em vez do contato individual.
+            </p>
+          </div>
           <div className="space-y-2">
             {(ficha?.contacts ?? []).length === 0 && (
               <p className="text-xs text-white/40">Nenhum contato cadastrado.</p>
@@ -524,12 +548,20 @@ function ClientStageSection({ clientId, isAdmin }: { clientId: string; isAdmin: 
         <StageUpdateComposer
           composer={composer}
           whatsappPhone={ficha?.whatsappPhone ?? null}
+          whatsappGroupLink={ficha?.whatsappGroupLink ?? null}
           onChangeMessage={(msg) => setComposer({ ...composer, message: msg })}
           onClose={() => setComposer(null)}
-          onSend={() => {
-            const digits = (ficha?.whatsappPhone ?? "").replace(/\D/g, "");
-            if (!digits) return;
-            window.open(`https://wa.me/${digits}?text=${encodeURIComponent(composer.message)}`, "_blank");
+          onSend={async () => {
+            const groupLink = ficha?.whatsappGroupLink?.trim();
+            if (groupLink) {
+              try { await navigator.clipboard.writeText(composer.message); } catch { /* clipboard unavailable, still open the group */ }
+              window.open(groupLink, "_blank");
+              toast.success("Mensagem copiada! Cole no grupo que abriu.");
+            } else {
+              const digits = (ficha?.whatsappPhone ?? "").replace(/\D/g, "");
+              if (!digits) return;
+              window.open(`https://wa.me/${digits}?text=${encodeURIComponent(composer.message)}`, "_blank");
+            }
             api.logClientStageUpdate.mutate({
               data: { clientId, stageId: composer.stageId ?? undefined, message: composer.message, trigger: composer.trigger },
             });
@@ -541,18 +573,26 @@ function ClientStageSection({ clientId, isAdmin }: { clientId: string; isAdmin: 
   );
 }
 
-function StageUpdateComposer({ composer, whatsappPhone, onChangeMessage, onClose, onSend }: {
+function StageUpdateComposer({ composer, whatsappPhone, whatsappGroupLink, onChangeMessage, onClose, onSend }: {
   composer: { stageId: string | null; message: string; trigger: "stage_change" | "weekly_nudge" };
   whatsappPhone: string | null;
+  whatsappGroupLink: string | null;
   onChangeMessage: (msg: string) => void;
   onClose: () => void;
   onSend: () => void;
 }) {
+  const hasGroup = !!whatsappGroupLink?.trim();
+  const hasTarget = hasGroup || !!whatsappPhone;
   return (
     <div className="mt-3 bg-[#1C1C1C] border border-white/[0.08] rounded-md p-3 space-y-2">
       <div className="text-[11px] font-semibold text-white/70">
         {composer.trigger === "weekly_nudge" ? "Lembrete: avisar o cliente sobre o andamento" : "Avisar o cliente sobre a nova etapa"}
       </div>
+      {hasGroup && (
+        <div className="text-[10px] text-white/40 inline-flex items-center gap-1">
+          <Users size={10} /> Vai pro grupo com o cliente
+        </div>
+      )}
       <textarea
         value={composer.message}
         onChange={(e) => onChangeMessage(e.target.value)}
@@ -561,19 +601,19 @@ function StageUpdateComposer({ composer, whatsappPhone, onChangeMessage, onClose
       />
       <div className="flex items-center justify-between gap-2">
         <button onClick={onClose} className="text-[11px] text-white/50 hover:text-white px-2 py-1">Fechar</button>
-        {whatsappPhone ? (
+        {hasTarget ? (
           <button
             onClick={onSend}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold bg-[#25D366] text-[#0D0D0D] hover:brightness-95 transition"
           >
-            <MessageCircle size={13} /> Enviar no WhatsApp
+            <MessageCircle size={13} /> {hasGroup ? "Copiar e abrir grupo" : "Enviar no WhatsApp"}
           </button>
         ) : (
           <button
             onClick={() => document.getElementById("contatos-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
             className="text-[11px] font-semibold text-amber-400 hover:underline"
           >
-            Falta preencher o telefone — clique pra ir aos contatos
+            Falta preencher o grupo ou telefone — clique pra ir aos contatos
           </button>
         )}
       </div>
