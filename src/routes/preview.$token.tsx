@@ -4,8 +4,13 @@ import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { publicFeedQO } from "@/lib/luzeria/queries";
 import { addPublicFeedback, approvePublicFeed, approvePublicItem } from "@/lib/luzeria/feed-share.functions";
-import { Film, Layers } from "lucide-react";
+import { Film, Layers, AlertTriangle, type LucideIcon } from "lucide-react";
+import { Hammer, ClipboardCheck, Rocket, CheckCheck } from "lucide-react";
 import { InstagramPostModal, type IGModalItem } from "@/components/luzeria/InstagramPostModal";
+import { PublicProgressBar } from "@/components/luzeria/PublicProgressBar";
+import { CLIENT_STAGE_META, type ClientStage } from "@/lib/luzeria/client-stage";
+
+const STAGE_ICONS: Record<string, LucideIcon> = { Hammer, AlertTriangle, ClipboardCheck, Rocket, CheckCheck };
 
 export const Route = createFileRoute("/preview/$token")({
   component: PublicPreviewPage,
@@ -77,9 +82,12 @@ function PublicPreviewPage() {
     );
   }
 
-  const { client, items, orgName } = q.data;
+  const { client, items, orgName, stageCounts } = q.data;
   const initial = client.name.charAt(0).toUpperCase();
   const activeItem = items.find((i) => i.id === activeId) ?? null;
+  const blockedCount = items.filter((it) => it.stage === "blocked").length;
+  const producingCount = stageCounts.find((s) => s.stage === "producing")?.count ?? 0;
+  const canApproveMonth = producingCount === 0;
 
   const igModalItem: IGModalItem | null = activeItem ? {
     id: activeItem.id,
@@ -105,8 +113,8 @@ function PublicPreviewPage() {
             <div className="text-white text-xl font-bold leading-tight truncate">{client.name}</div>
             <div className="text-white/50 text-[13px] mt-0.5">Preview do feed · {formattedMonth}</div>
             <div className="text-white/40 text-[12px] mt-2 leading-snug">
-              {items.length} publicaç{items.length === 1 ? "ão" : "ões"} aprovada{items.length === 1 ? "" : "s"}.
-              Toque em uma publicação para ver detalhes e deixar um comentário.
+              {items.length} publicaç{items.length === 1 ? "ão planejada" : "ões planejadas"} para {formattedMonth}.
+              Acompanhe o progresso de cada uma abaixo.
             </div>
           </div>
         </div>
@@ -116,22 +124,25 @@ function PublicPreviewPage() {
       <div className="max-w-[640px] mx-auto px-4 pb-16">
         {items.length === 0 ? (
           <div className="rounded-xl py-14 text-center text-white/40 text-sm" style={{ background: "#1C1C1C" }}>
-            Ainda não há publicações prontas neste mês.
+            Nenhuma publicação foi planejada para este mês ainda.
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-[3px] bg-black/30 p-[3px] rounded-md">
-            {items.map((it) => (
-              <PublicGridCell
-                key={it.id}
-                item={it}
-                onClick={() => setActiveId(it.id)}
-              />
-            ))}
-          </div>
+          <>
+            <PublicProgressBar stageCounts={stageCounts} blockedCount={blockedCount} />
+            <div className="grid grid-cols-3 gap-[3px] bg-black/30 p-[3px] rounded-md">
+              {items.map((it) => (
+                <PublicGridCell
+                  key={it.id}
+                  item={it}
+                  onClick={() => setActiveId(it.id)}
+                />
+              ))}
+            </div>
+          </>
         )}
 
-        {/* Approval button */}
-        {items.length > 0 && (
+        {/* Approval button — só faz sentido quando não há mais nada em produção */}
+        {items.length > 0 && canApproveMonth && (
           <div className="mt-8 rounded-xl p-5 text-center" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.08)" }}>
             {approved ? (
               <div>
@@ -197,18 +208,25 @@ function driveThumbnailUrl(fileId: string, size = 480) {
 }
 
 function PublicGridCell({ item, onClick }: {
-  item: { id: string; type: string; gridThumb?: string | null; files: { driveFileId: string }[] };
+  item: {
+    id: string; type: string; gridThumb?: string | null; files: { driveFileId: string }[];
+    stage: ClientStage; stageLabel: string;
+  };
   onClick: () => void;
 }) {
   const thumbUrl = item.gridThumb ?? null;
   const isReel = item.type === "reel";
   const isCarousel = item.files.length > 1;
+  const clickable = item.files.length > 0;
+  const meta = CLIENT_STAGE_META[item.stage];
+  const StageIcon = STAGE_ICONS[meta.icon];
 
   return (
     <button
       type="button"
-      onClick={onClick}
-      className="relative aspect-square overflow-hidden group"
+      onClick={clickable ? onClick : undefined}
+      aria-disabled={!clickable}
+      className={`relative aspect-square overflow-hidden group ${clickable ? "" : "cursor-default"}`}
       style={{ background: "#1C1C1C" }}
     >
       {thumbUrl ? (
@@ -225,7 +243,21 @@ function PublicGridCell({ item, onClick }: {
           {isReel ? <Film size={16} /> : <Layers size={16} />}
         </div>
       )}
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
+      <div
+        className="absolute bottom-0 left-0 right-0 flex items-center gap-1 px-1.5 py-1"
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)" }}
+      >
+        <span
+          className="size-4 rounded-full grid place-items-center shrink-0"
+          style={{ background: meta.color, color: "#0D0D0D" }}
+        >
+          <StageIcon size={10} />
+        </span>
+        <span className="text-white text-[9px] font-semibold leading-tight text-left line-clamp-2">
+          {item.stageLabel}
+        </span>
+      </div>
+      {clickable && <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />}
     </button>
   );
 }

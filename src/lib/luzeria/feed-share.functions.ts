@@ -2,6 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import { getAccessToken, withDriveOrg } from "./drive.functions";
+import type { Status } from "./types";
+import {
+  type ClientStage,
+  CLIENT_STAGE_ORDER,
+  CLIENT_STAGE_META,
+  CLIENT_STAGE_BLOCKED_FALLBACK,
+  mapStatusToClientStage,
+} from "./client-stage";
 
 const DRIVE_BASE = "https://www.googleapis.com/drive/v3";
 
@@ -174,7 +182,7 @@ export type PublicFeedFile = {
 };
 export type PublicFeedItem = {
   id: string;
-  type: "post" | "reel" | "outros";
+  type: "post" | "reel";
   idx: number;
   title: string;
   caption: string;
@@ -183,11 +191,16 @@ export type PublicFeedItem = {
   gridThumb: string | null;
   files: PublicFeedFile[];
   feedback: Array<{ id: string; authorName: string; text: string; createdAt: string }>;
+  status: Status;
+  stage: ClientStage;
+  stageLabel: string;
+  blockedReason: string | null;
 };
 export type PublicFeedPayload = {
   client: { name: string; color: string; description: string | null };
   month: { key: string };
   items: PublicFeedItem[];
+  stageCounts: { stage: ClientStage; label: string; count: number }[];
   orgName: string | null;
 };
 
@@ -309,6 +322,50 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       );
     }
 
+    const mappedItems: PublicFeedItem[] = sorted.map((it: any) => {
+      const files = (filesByItem.get(it.id) ?? []).map((f: any) => ({
+        id: f.id,
+        driveFileId: f.drive_file_id ?? f.driveFileId,
+        mimeType: f.mime_type ?? f.mimeType,
+        webViewUrl: f.web_view_url ?? f.webViewUrl,
+        thumbUrl: thumbUrls.get(f.drive_file_id ?? f.driveFileId) ?? null,
+      }));
+      const gridThumb = files[0]?.thumbUrl ?? null;
+      const status = it.status as Status;
+      const stage = mapStatusToClientStage(status);
+      const blockedReason: string | null = it.blocked_reason ?? null;
+      const stageLabel = stage === "blocked"
+        ? (blockedReason || CLIENT_STAGE_BLOCKED_FALLBACK)
+        : CLIENT_STAGE_META[stage].label;
+      return {
+        id: it.id,
+        type: it.type,
+        idx: it.idx,
+        title: it.title,
+        caption: it.caption ?? "",
+        scheduledAt: it.scheduled_at ?? null,
+        coverUrl: null,
+        gridThumb,
+        files,
+        feedback: (fbByItem.get(it.id) ?? []).map((f: any) => ({
+          id: f.id,
+          authorName: f.author_name ?? f.authorName,
+          text: f.text,
+          createdAt: f.created_at ?? f.createdAt,
+        })),
+        status,
+        stage,
+        stageLabel,
+        blockedReason,
+      };
+    });
+
+    const stageCounts = CLIENT_STAGE_ORDER.map((stage) => ({
+      stage,
+      label: CLIENT_STAGE_META[stage].label,
+      count: mappedItems.filter((it) => it.stage === stage).length,
+    }));
+
     return {
       client: {
         name: client.name as string,
@@ -316,33 +373,8 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         description: client.description ?? null,
       },
       month: { key: month.key as string },
-      items: sorted.map((it: any) => {
-        const files = (filesByItem.get(it.id) ?? []).map((f: any) => ({
-          id: f.id,
-          driveFileId: f.drive_file_id ?? f.driveFileId,
-          mimeType: f.mime_type ?? f.mimeType,
-          webViewUrl: f.web_view_url ?? f.webViewUrl,
-          thumbUrl: thumbUrls.get(f.drive_file_id ?? f.driveFileId) ?? null,
-        }));
-        const gridThumb = files[0]?.thumbUrl ?? null;
-        return {
-          id: it.id,
-          type: it.type,
-          idx: it.idx,
-          title: it.title,
-          caption: it.caption ?? "",
-          scheduledAt: it.scheduled_at ?? null,
-          coverUrl: null,
-          gridThumb,
-          files,
-          feedback: (fbByItem.get(it.id) ?? []).map((f: any) => ({
-            id: f.id,
-            authorName: f.author_name ?? f.authorName,
-            text: f.text,
-            createdAt: f.created_at ?? f.createdAt,
-          })),
-        };
-      }),
+      items: mappedItems,
+      stageCounts,
       orgName,
     };
   });
