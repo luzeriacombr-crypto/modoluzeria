@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
@@ -142,6 +142,7 @@ function MediaPreview({
   const fileRef = useRef<HTMLInputElement>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const isCarrossel = itemType === "post" && postFormat === "carrossel";
+  const isEstatico = itemType === "post" && postFormat === "estatico";
   const first = files[0];
   const fileId = first?.driveFileId ?? null;
   const { data: thumbData, isLoading: thumbLoading } = useQuery(driveThumbnailQO(fileId, !!fileId && !coverUrl && !isCarrossel));
@@ -205,35 +206,57 @@ function MediaPreview({
     );
   }
 
+  const opensLightbox = isEstatico && files.length > 0;
+  const thumbContent = (
+    <>
+      {thumb ? (
+        <img src={thumb} alt={first?.name ?? "Preview"} className="w-full h-full object-cover" loading="lazy" />
+      ) : thumbLoading || filesLoading ? (
+        <div className="w-full h-full flex items-center justify-center">
+          <Loader2 size={14} className="animate-spin text-white/30" />
+        </div>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-white/40">
+          {opensLightbox ? <Expand size={16} /> : <ExternalLink size={16} />}
+        </div>
+      )}
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/55 transition-colors flex items-center justify-center">
+        {opensLightbox ? (
+          <Expand size={18} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+        ) : (
+          <ExternalLink size={18} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+        )}
+      </div>
+    </>
+  );
+
   return (
     <>
-      <a
-        href={href ?? "#"}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => { if (!href) e.preventDefault(); }}
-        className="group relative block w-24 h-24 rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
-        title={first?.name}
-      >
-        {thumb ? (
-          <img src={thumb} alt={first?.name ?? "Preview"} className="w-full h-full object-cover" loading="lazy" />
-        ) : thumbLoading || filesLoading ? (
-          <div className="w-full h-full flex items-center justify-center">
-            <Loader2 size={14} className="animate-spin text-white/30" />
-          </div>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-white/40">
-            <ExternalLink size={16} />
-          </div>
-        )}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/55 transition-colors flex items-center justify-center">
-          <ExternalLink
-            size={18}
-            className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg"
-          />
-        </div>
-      </a>
+      {opensLightbox ? (
+        <button
+          type="button"
+          onClick={() => setLightboxIndex(0)}
+          className="group relative block w-24 h-24 rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
+          title={first?.name}
+        >
+          {thumbContent}
+        </button>
+      ) : (
+        <a
+          href={href ?? "#"}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => { if (!href) e.preventDefault(); }}
+          className="group relative block w-24 h-24 rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
+          title={first?.name}
+        >
+          {thumbContent}
+        </a>
+      )}
       {inputEl}
+      {opensLightbox && lightboxIndex !== null && (
+        <CarouselLightbox files={files} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
+      )}
     </>
   );
 }
