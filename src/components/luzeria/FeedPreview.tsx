@@ -167,7 +167,7 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
           {Array.from({ length: cells.placeholders }).map((_, i) => (
             <div
               key={`ph-${i}`}
-              className="aspect-square flex items-center justify-center"
+              className="aspect-[4/5] flex items-center justify-center"
               style={{ background: "#161616" }}
             >
               <ImageIcon size={22} style={{ color: "rgba(255,255,255,0.10)" }} />
@@ -296,7 +296,7 @@ function FeedCell({
       onDrop={draggable ? onDrop : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
       onClick={onOpen}
-      className="relative aspect-square overflow-hidden group transition"
+      className="relative aspect-[4/5] overflow-hidden group transition"
       style={{
         background: "#1C1C1C",
         cursor: draggable ? "grab" : "pointer",

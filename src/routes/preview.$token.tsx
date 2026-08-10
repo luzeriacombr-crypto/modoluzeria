@@ -234,7 +234,7 @@ function PublicGridCell({ item, onClick }: {
       type="button"
       onClick={clickable ? onClick : undefined}
       aria-disabled={!clickable}
-      className={`relative aspect-square overflow-hidden group ${clickable ? "" : "cursor-default"}`}
+      className={`relative aspect-[4/5] overflow-hidden group ${clickable ? "" : "cursor-default"}`}
       style={{ background: "#1C1C1C" }}
     >
       {thumbUrl ? (
