@@ -23,6 +23,7 @@ const imageSpecSchema = z.object({
   top: z.number().min(-20).max(120),
   left: z.number().min(-20).max(120),
   z: z.number().min(0).max(10),
+  rounded: z.boolean().optional(),
 });
 
 const heroContentSchema = z.object({

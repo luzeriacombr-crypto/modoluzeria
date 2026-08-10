@@ -3,7 +3,7 @@ import {
   Rocket, CalendarDays, Users, Link2, FolderOpen, Check, X, Zap, Lock, Star,
   MessageCircle, LayoutDashboard, BarChart3, Bell, ShieldCheck, Smartphone, Tablet, Monitor,
   ChevronLeft, ChevronRight, Play, Heart, Send, Bookmark, Plus, Pencil, ImagePlus, Loader2, GripVertical,
-  Sparkles, Waves,
+  Sparkles, Waves, Squircle,
 } from "lucide-react";
 import clickupTrelloLogos from "@/assets/clickup-trello-logos.png";
 import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
@@ -557,6 +557,7 @@ export type ImageSpec = {
   top: number;
   left: number;
   z: number;
+  rounded?: boolean;
 };
 
 function ImageSpecVisual({ img, alt, fill }: { img: ImageSpec; alt: string; fill?: boolean }) {
@@ -564,8 +565,9 @@ function ImageSpecVisual({ img, alt, fill }: { img: ImageSpec; alt: string; fill
     const Cmp = BUILTIN_ILLUSTRATIONS[img.builtinKey ?? ""];
     return Cmp ? <Cmp /> : null;
   }
+  const roundedClass = img.rounded ? "rounded-2xl overflow-hidden" : "";
   return img.url ? (
-    <img src={img.url} alt={alt} className={fill ? "w-full h-full object-cover drop-shadow-xl" : "w-full h-auto drop-shadow-xl"} />
+    <img src={img.url} alt={alt} className={`${fill ? "w-full h-full object-cover" : "w-full h-auto"} drop-shadow-xl ${roundedClass}`} />
   ) : null;
 }
 
@@ -585,19 +587,24 @@ export function ImageStack({
   images, alt, aspectClassName, floatSync,
 }: { images: ImageSpec[]; alt: string; aspectClassName?: string; floatSync?: boolean }) {
   if (images.length === 0) return null;
-  const single = images.length === 1 && !images[0].floating;
+  // Com uma imagem só, "flutuante" vira apenas a animação de balanço — não
+  // precisa (e não deve) usar posicionamento absoluto por top/left%, que é
+  // pensado pra empilhar 2+ imagens e pode jogar a única imagem pra fora do
+  // centro dependendo do valor salvo.
+  const single = images.length === 1;
   if (single) {
+    const img = images[0];
     return (
       <div className="w-full flex justify-center">
-        <div style={{ width: `${images[0].widthPct}%` }}>
-          <ImageSpecVisual img={images[0]} alt={alt} />
+        <div className={img.floating ? FLOAT_CLASS.a : ""} style={{ width: `${img.widthPct}%` }}>
+          <ImageSpecVisual img={img} alt={alt} />
         </div>
       </div>
     );
   }
   const floatingImages = images.filter((im) => im.floating);
   return (
-    <div className={`relative w-full ${aspectClassName ?? "aspect-[4/3]"}`}>
+    <div className={`relative w-full mx-auto ${aspectClassName ?? "aspect-[4/3]"}`}>
       {images.map((img) => (
         <div
           key={img.id}
@@ -679,10 +686,10 @@ function useImageResizeDrag(widthPct: number, containerRef: React.RefObject<HTML
  * modal: fica ancorada na própria imagem, então o resultado real nunca
  * fica escondido atrás de uma caixa. */
 function ImageToolbar({
-  img, uploading, onUploadFile, onPickBuiltin, onToggleFloating, onRemove,
+  img, uploading, onUploadFile, onPickBuiltin, onToggleFloating, onToggleRounded, onRemove,
 }: {
   img: ImageSpec; uploading: boolean; onUploadFile: (file: File) => void; onPickBuiltin: (key: string) => void;
-  onToggleFloating: () => void; onRemove: () => void;
+  onToggleFloating: () => void; onToggleRounded: () => void; onRemove: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   return (
@@ -713,6 +720,10 @@ function ImageToolbar({
         style={{ color: img.floating ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.8)" }}>
         <Waves size={13} />
       </button>
+      <button onClick={onToggleRounded} className="p-1.5 rounded hover:bg-white/10" title={img.rounded ? "Cantos arredondados (clique pra deixar reto)" : "Cantos retos (clique pra arredondar)"}
+        style={{ color: img.rounded ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.8)" }}>
+        <Squircle size={13} />
+      </button>
       <button onClick={onRemove} className="p-1.5 rounded text-white/80 hover:text-red-400 hover:bg-white/10" title="Remover">
         <X size={13} />
       </button>
@@ -742,7 +753,7 @@ function EditableStackImage({
         className={`relative rounded-md outline outline-2 outline-dashed transition-colors ${move.dragging ? "cursor-grabbing outline-[rgb(var(--lz-brand-rgb))]" : "cursor-grab outline-transparent hover:outline-white/30"}`}
       >
         <ImageSpecVisual img={img} alt={alt} />
-        <ImageToolbar img={img} uploading={uploading} onUploadFile={onUploadFile} onPickBuiltin={onPickBuiltin} onToggleFloating={() => onUpdate({ floating: !img.floating })} onRemove={onRemove} />
+        <ImageToolbar img={img} uploading={uploading} onUploadFile={onUploadFile} onPickBuiltin={onPickBuiltin} onToggleFloating={() => onUpdate({ floating: !img.floating })} onToggleRounded={() => onUpdate({ rounded: !img.rounded })} onRemove={onRemove} />
         <div
           {...resize.handleProps}
           className="absolute bottom-0 right-0 w-4 h-4 rounded-tl-md cursor-nwse-resize opacity-0 group-hover/stackimg:opacity-100 transition z-30"
@@ -770,9 +781,9 @@ function EditableSingleImage({
   return (
     <div>
       <div ref={outerRef} className="w-full flex justify-center">
-        <div className="relative group/stackimg" style={{ width: `${resize.display}%` }}>
+        <div className={`relative group/stackimg ${img.floating ? FLOAT_CLASS.a : ""}`} style={{ width: `${resize.display}%` }}>
           {wrapInAppCard && img.source === "upload" ? <AppCard>{visual}</AppCard> : visual}
-          <ImageToolbar img={img} uploading={uploading} onUploadFile={onUploadFile} onPickBuiltin={onPickBuiltin} onToggleFloating={() => onUpdate({ floating: true })} onRemove={onRemove} />
+          <ImageToolbar img={img} uploading={uploading} onUploadFile={onUploadFile} onPickBuiltin={onPickBuiltin} onToggleFloating={() => onUpdate({ floating: !img.floating })} onToggleRounded={() => onUpdate({ rounded: !img.rounded })} onRemove={onRemove} />
           <div
             {...resize.handleProps}
             className="absolute bottom-0 right-0 w-4 h-4 rounded-tl-md cursor-ew-resize opacity-0 group-hover/stackimg:opacity-100 transition z-30"
@@ -841,7 +852,7 @@ function ImageStackInteractive({
     );
   }
 
-  const single = images.length === 1 && !images[0].floating;
+  const single = images.length === 1;
   if (single) {
     const img = images[0];
     return (
@@ -862,7 +873,7 @@ function ImageStackInteractive({
   const floatingCount = floatingImages.length;
 
   return (
-    <div ref={containerRef} className={`relative w-full ${aspectClassName ?? "aspect-[4/3]"}`}>
+    <div ref={containerRef} className={`relative w-full mx-auto ${aspectClassName ?? "aspect-[4/3]"}`}>
       {images.map((img) => (
         <EditableStackImage
           key={img.id} img={img} alt={alt} containerRef={containerRef}
