@@ -19,6 +19,7 @@ interface UI {
   viewAsUserId: string | null;
   sidebarHidden: boolean;
   fichaClientId: string | null;
+  stageComposerClientId: string | null;
   selectClient: (id: string | null) => void;
   selectMonth: (key: string) => void;
   openItem: (id: string | null) => void;
@@ -28,6 +29,7 @@ interface UI {
   toggleSidebar: () => void;
   setSidebarHidden: (v: boolean) => void;
   openFicha: (id: string | null) => void;
+  openStageComposer: (id: string | null) => void;
 }
 
 function currentMonthKey() {
@@ -44,6 +46,7 @@ export const useUI = create<UI>((set) => ({
   viewAsUserId: null,
   sidebarHidden: readSidebarHidden(),
   fichaClientId: null,
+  stageComposerClientId: null,
   selectClient: (id) =>
     set({ selectedClientId: id, selectedItemId: null, view: id ? "client" : "my" }),
   selectMonth: (key) => set({ selectedMonthKey: key }),
@@ -54,4 +57,5 @@ export const useUI = create<UI>((set) => ({
   toggleSidebar: () => set((s) => { const next = !s.sidebarHidden; writeSidebarHidden(next); return { sidebarHidden: next }; }),
   setSidebarHidden: (v) => { writeSidebarHidden(v); set({ sidebarHidden: v }); },
   openFicha: (id) => set({ fichaClientId: id }),
+  openStageComposer: (id) => set({ stageComposerClientId: id }),
 }));

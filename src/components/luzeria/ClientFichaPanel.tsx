@@ -5,9 +5,10 @@ import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
   Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save, Camera, Instagram,
+  MessageCircle, Milestone,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO } from "@/lib/luzeria/queries";
+import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, journeyStagesQO } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
@@ -125,6 +126,11 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
           )}
         </Section>
 
+        {/* Journey stage */}
+        <Section label="Etapa do projeto">
+          <ClientStageSection clientId={clientId} isAdmin={isAdmin} />
+        </Section>
+
         {/* Description */}
         <Section label="Sobre">
           <textarea
@@ -200,7 +206,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         </Section>
 
         {/* Contacts */}
-        <Section label="Contatos">
+        <Section label="Contatos" id="contatos-section">
           <div className="space-y-2">
             {(ficha?.contacts ?? []).length === 0 && (
               <p className="text-xs text-white/40">Nenhum contato cadastrado.</p>
@@ -454,6 +460,127 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
   );
 }
 
+/* ============== ETAPA DO PROJETO ============== */
+
+const TRACK_LABEL: Record<string, string> = { onboarding: "Onboarding (1º mês)", operational: "Operação (ciclo mensal)" };
+
+function ClientStageSection({ clientId, isAdmin }: { clientId: string; isAdmin: boolean }) {
+  const { data: ficha } = useQuery(clientFichaQO(clientId));
+  const { data: stages = [] } = useQuery(journeyStagesQO());
+  const api = useApi();
+  const { stageComposerClientId, openStageComposer } = useUI();
+
+  const [composer, setComposer] = useState<{ stageId: string | null; message: string; trigger: "stage_change" | "weekly_nudge" } | null>(null);
+
+  useEffect(() => {
+    if (stageComposerClientId !== clientId) return;
+    if (!ficha || stages.length === 0) return;
+    const current = stages.find((s) => s.id === ficha.currentStageId);
+    setComposer({
+      stageId: ficha.currentStageId ?? null,
+      message: current?.description ?? "Passando pra dar um retorno rápido sobre o andamento do seu projeto.",
+      trigger: "weekly_nudge",
+    });
+    openStageComposer(null);
+  }, [stageComposerClientId, clientId, ficha, stages, openStageComposer]);
+
+  if (!isAdmin) {
+    const current = stages.find((s) => s.id === ficha?.currentStageId);
+    return (
+      <p className="text-sm text-white/70">{current ? current.name : "Nenhuma etapa definida ainda."}</p>
+    );
+  }
+
+  const onboardingStages = stages.filter((s) => s.track === "onboarding");
+  const operationalStages = stages.filter((s) => s.track === "operational");
+
+  function handleChange(stageId: string) {
+    const stage = stages.find((s) => s.id === stageId);
+    api.setClientStage.mutate({ data: { clientId, stageId } }, {
+      onSuccess: () => setComposer({ stageId, message: stage?.description ?? "", trigger: "stage_change" }),
+    });
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <Milestone size={14} className="text-white/40 shrink-0" />
+        <select
+          value={ficha?.currentStageId ?? ""}
+          onChange={(e) => handleChange(e.target.value)}
+          className="flex-1 bg-[#1C1C1C] border border-white/10 rounded-md px-2.5 py-1.5 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+        >
+          <option value="" disabled>Selecionar etapa…</option>
+          <optgroup label={TRACK_LABEL.onboarding}>
+            {onboardingStages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </optgroup>
+          <optgroup label={TRACK_LABEL.operational}>
+            {operationalStages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </optgroup>
+        </select>
+      </div>
+
+      {composer && (
+        <StageUpdateComposer
+          composer={composer}
+          whatsappPhone={ficha?.whatsappPhone ?? null}
+          onChangeMessage={(msg) => setComposer({ ...composer, message: msg })}
+          onClose={() => setComposer(null)}
+          onSend={() => {
+            const digits = (ficha?.whatsappPhone ?? "").replace(/\D/g, "");
+            if (!digits) return;
+            window.open(`https://wa.me/${digits}?text=${encodeURIComponent(composer.message)}`, "_blank");
+            api.logClientStageUpdate.mutate({
+              data: { clientId, stageId: composer.stageId ?? undefined, message: composer.message, trigger: composer.trigger },
+            });
+            setComposer(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function StageUpdateComposer({ composer, whatsappPhone, onChangeMessage, onClose, onSend }: {
+  composer: { stageId: string | null; message: string; trigger: "stage_change" | "weekly_nudge" };
+  whatsappPhone: string | null;
+  onChangeMessage: (msg: string) => void;
+  onClose: () => void;
+  onSend: () => void;
+}) {
+  return (
+    <div className="mt-3 bg-[#1C1C1C] border border-white/[0.08] rounded-md p-3 space-y-2">
+      <div className="text-[11px] font-semibold text-white/70">
+        {composer.trigger === "weekly_nudge" ? "Lembrete: avisar o cliente sobre o andamento" : "Avisar o cliente sobre a nova etapa"}
+      </div>
+      <textarea
+        value={composer.message}
+        onChange={(e) => onChangeMessage(e.target.value)}
+        rows={3}
+        className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2.5 py-2 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
+      />
+      <div className="flex items-center justify-between gap-2">
+        <button onClick={onClose} className="text-[11px] text-white/50 hover:text-white px-2 py-1">Fechar</button>
+        {whatsappPhone ? (
+          <button
+            onClick={onSend}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold bg-[#25D366] text-[#0D0D0D] hover:brightness-95 transition"
+          >
+            <MessageCircle size={13} /> Enviar no WhatsApp
+          </button>
+        ) : (
+          <button
+            onClick={() => document.getElementById("contatos-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="text-[11px] font-semibold text-amber-400 hover:underline"
+          >
+            Falta preencher o telefone — clique pra ir aos contatos
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ConfigField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
@@ -463,9 +590,9 @@ function ConfigField({ label, children }: { label: string; children: React.React
   );
 }
 
-function Section({ label, children, last }: { label: string; children: React.ReactNode; last?: boolean }) {
+function Section({ label, children, last, id }: { label: string; children: React.ReactNode; last?: boolean; id?: string }) {
   return (
-    <div className={`px-6 py-5 ${last ? "" : "border-b border-white/[0.08]"}`}>
+    <div id={id} className={`px-6 py-5 ${last ? "" : "border-b border-white/[0.08]"}`}>
       <div className="text-[10px] uppercase font-bold tracking-wider mb-3" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{label}</div>
       {children}
     </div>

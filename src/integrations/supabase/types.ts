@@ -633,6 +633,44 @@ export type Database = {
           },
         ]
       }
+      client_journey_stages: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          name: string
+          org_id: string
+          sort_order: number
+          track: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+          org_id: string
+          sort_order?: number
+          track: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          org_id?: string
+          sort_order?: number
+          track?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_journey_stages_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_links: {
         Row: {
           client_id: string
@@ -741,6 +779,68 @@ export type Database = {
           },
         ]
       }
+      client_stage_updates: {
+        Row: {
+          client_id: string
+          id: string
+          message: string
+          org_id: string
+          sent_at: string
+          sent_by: string
+          stage_id: string | null
+          trigger: string
+        }
+        Insert: {
+          client_id: string
+          id?: string
+          message: string
+          org_id: string
+          sent_at?: string
+          sent_by: string
+          stage_id?: string | null
+          trigger: string
+        }
+        Update: {
+          client_id?: string
+          id?: string
+          message?: string
+          org_id?: string
+          sent_at?: string
+          sent_by?: string
+          stage_id?: string | null
+          trigger?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_stage_updates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_stage_updates_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_stage_updates_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_stage_updates_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           archived: boolean
@@ -748,6 +848,7 @@ export type Database = {
           color: string
           contract_value: number | null
           created_at: string
+          current_stage_id: string | null
           description: string
           favorite: boolean
           fixed_responsible_id: string | null
@@ -769,6 +870,7 @@ export type Database = {
           color?: string
           contract_value?: number | null
           created_at?: string
+          current_stage_id?: string | null
           description?: string
           favorite?: boolean
           fixed_responsible_id?: string | null
@@ -790,6 +892,7 @@ export type Database = {
           color?: string
           contract_value?: number | null
           created_at?: string
+          current_stage_id?: string | null
           description?: string
           favorite?: boolean
           fixed_responsible_id?: string | null
@@ -806,6 +909,13 @@ export type Database = {
           review_day?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clients_current_stage_id_fkey"
+            columns: ["current_stage_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_stages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clients_fixed_responsible_id_fkey"
             columns: ["fixed_responsible_id"]
@@ -1375,6 +1485,7 @@ export type Database = {
       }
       notifications: {
         Row: {
+          client_id: string | null
           created_at: string
           id: string
           item_id: string | null
@@ -1384,6 +1495,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
           id?: string
           item_id?: string | null
@@ -1393,6 +1505,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           id?: string
           item_id?: string | null
@@ -1402,6 +1515,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_item_id_fkey"
             columns: ["item_id"]
@@ -2094,6 +2214,7 @@ export type Database = {
           schedule: string
         }[]
       }
+      notify_stale_client_updates: { Args: never; Returns: number }
       platform_list_bug_reports: {
         Args: never
         Returns: {

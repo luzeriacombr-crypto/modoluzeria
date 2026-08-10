@@ -1020,7 +1020,7 @@ export const getClientFicha = createServerFn({ method: "GET" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
 
     const { data: client } = await context.supabase
-      .from("clients").select("description").eq("id", data.clientId).maybeSingle();
+      .from("clients").select("description, current_stage_id").eq("id", data.clientId).maybeSingle();
 
     const [linksRes, contactsRes, secretsRes] = await Promise.all([
       context.supabase.from("client_links")
@@ -1066,8 +1066,16 @@ export const getClientFicha = createServerFn({ method: "GET" })
       if (leadCount > 0) avgLeadTimeHours = Math.round((sumHours / leadCount) * 10) / 10;
     }
 
+    // Contato "elegível pro WhatsApp": primeiro contato (por posição, igual já
+    // ordena na Ficha) com telefone preenchido — resolvido aqui pra não duplicar
+    // essa lógica entre a Ficha e o compositor de mensagem.
+    const whatsappContact = (contactsRes.data ?? []).find((c: any) => c.phone && c.phone.trim())
+      ?? null;
+
     return {
       description: (client as any)?.description ?? "",
+      currentStageId: (client as any)?.current_stage_id ?? null,
+      whatsappPhone: whatsappContact?.phone ?? null,
       links: (linksRes.data ?? []).map((l: any) => ({
         id: l.id, clientId: l.client_id, label: l.label, url: l.url, sortOrder: l.position,
       })),
@@ -1397,7 +1405,7 @@ export const listNotifications = createServerFn({ method: "GET" })
     return (data ?? []).map((n: any) => ({
       id: n.id, type: n.type, itemId: n.item_id,
       message: n.message, read: n.read, createdAt: n.created_at,
-      clientId: n.content_items?.months?.client_id ?? null,
+      clientId: n.client_id ?? n.content_items?.months?.client_id ?? null,
       monthKey: n.content_items?.months?.key ?? null,
     }));
   });

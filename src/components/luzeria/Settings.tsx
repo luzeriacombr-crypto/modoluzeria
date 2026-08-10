@@ -16,9 +16,10 @@ import { PromotionCodesPanel } from "./PromotionCodesPanel";
 import { AffiliateProgramPanel } from "./AffiliateProgramPanel";
 import { AgenciesBillingPanel } from "./AgenciesBillingPanel";
 import { SalesPageEditorTab } from "./SalesPageEditorTab";
+import { JourneyStagesTab } from "./JourneyStagesTab";
 
-type SettingsTab = "team" | "report" | "automations" | "general" | "subscription" | "updates" | "site";
-const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "subscription", "updates", "site"];
+type SettingsTab = "team" | "report" | "automations" | "general" | "subscription" | "updates" | "site" | "journey";
+const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "subscription", "updates", "site", "journey"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -56,6 +57,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
              tab === "subscription" ? "Seu plano, cobrança, cupons e programa de afiliados." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
+             tab === "journey" ? "Etapas do onboarding e da operação mensal, usadas pra avisar clientes no WhatsApp." :
              "Ajustes gerais da operação."}
           </p>
         </div>
@@ -66,6 +68,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "team", label: "Equipe" },
           { id: "report", label: "Relatório" },
           { id: "automations", label: "Automações" },
+          { id: "journey", label: "Jornada do cliente" },
           { id: "subscription", label: "Financeiro" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
@@ -121,6 +124,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        ) :
        tab === "updates" ? <UpdatesTab /> :
        tab === "site" ? (me.isPlatformAdmin ? <SalesPageEditorTab /> : null) :
+       tab === "journey" ? <JourneyStagesTab /> :
        tab === "automations" ? (
         <div className="space-y-10">
           <div>

@@ -17,7 +17,7 @@ export function NotificationsBell() {
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
-  const { selectMonth, openItem, flash } = useUI();
+  const { selectMonth, openItem, flash, openFicha, openStageComposer } = useUI();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -105,6 +105,9 @@ export function NotificationsBell() {
                     navigate({ to: "/ajuda", search: { tab: "minhas" } });
                   } else if (n.type === "platform_update") {
                     navigate({ to: "/configuracoes", search: { tab: "updates" } });
+                  } else if (n.type === "client_stale_update" && n.clientId) {
+                    openFicha(n.clientId);
+                    openStageComposer(n.clientId);
                   }
                 }}
                 className="w-full text-left px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors block"

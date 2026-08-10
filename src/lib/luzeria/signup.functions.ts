@@ -96,6 +96,9 @@ export const publicSignup = createServerFn({ method: "POST" })
       .select("id").single();
     if (orgErr) throw new Error(orgErr.message);
 
+    const { seedJourneyStagesForOrg } = await import("./journey-stages.functions");
+    await seedJourneyStagesForOrg(supabaseAdmin, org.id);
+
     let earInserted = false;
     try {
       const { error: earErr } = await supabaseAdmin.from("email_role_assignments").insert({
@@ -264,6 +267,9 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
       })
       .select("id").single();
     if (orgErr) throw new Error(orgErr.message);
+
+    const { seedJourneyStagesForOrg } = await import("./journey-stages.functions");
+    await seedJourneyStagesForOrg(supabaseAdmin, org.id);
 
     let earInserted = false;
     try {

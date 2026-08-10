@@ -54,6 +54,10 @@ import {
   getSalesPageBlocks, listSalesPageBlocksAdmin, createSalesPageBlock, updateSalesPageBlock,
   deleteSalesPageBlock, reorderSalesPageBlocks, publishSalesPageBlocks, discardSalesPageDraft,
 } from "./sales-page.functions";
+import {
+  listJourneyStages, upsertJourneyStage, deleteJourneyStage,
+  setClientStage, logClientStageUpdate, getClientStageHistory,
+} from "./journey-stages.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const calendarItemsQO = (from: string, to: string) =>
   queryOptions({
@@ -158,6 +162,16 @@ export const clientFichaQO = (clientId: string | null) =>
   queryOptions({
     queryKey: ["client-ficha", clientId],
     queryFn: () => getClientFicha({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
+  });
+
+export const journeyStagesQO = () =>
+  queryOptions({ queryKey: ["journey-stages"], queryFn: () => listJourneyStages() });
+
+export const clientStageHistoryQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["client-stage-history", clientId],
+    queryFn: () => getClientStageHistory({ data: { clientId: clientId! } }),
     enabled: !!clientId,
   });
 
@@ -534,6 +548,29 @@ export function useApi() {
       mutationFn: useServerFn(deleteClientSecret),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover."),
+    }),
+    upsertJourneyStage: useMutation({
+      mutationFn: useServerFn(upsertJourneyStage),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["journey-stages"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar etapa."),
+    }),
+    deleteJourneyStage: useMutation({
+      mutationFn: useServerFn(deleteJourneyStage),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["journey-stages"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover etapa."),
+    }),
+    setClientStage: useMutation({
+      mutationFn: useServerFn(setClientStage),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["client-ficha"] });
+        qc.invalidateQueries({ queryKey: ["clients"] });
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao mudar etapa."),
+    }),
+    logClientStageUpdate: useMutation({
+      mutationFn: useServerFn(logClientStageUpdate),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-stage-history"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao registrar envio."),
     }),
     /* ===== ROADMAP MUTATIONS ===== */
     updateChecklist: useMutation({
