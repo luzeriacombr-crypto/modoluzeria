@@ -380,6 +380,7 @@ function GeneralSettings() {
           orgColorPrimary={me.orgColorPrimary ?? "#C8D44E"}
           orgColorPrimaryLight={me.orgColorPrimaryLight ?? "#C8D44E"}
           orgColorSidebar={me.orgColorSidebar ?? "#1A3A2E"}
+          orgFeedPreviewImageUrl={me.orgFeedPreviewImageUrl ?? null}
         />
       )}
 
@@ -612,9 +613,13 @@ function PlanUsageSection() {
   );
 }
 
-function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar }: {
+function OrgBrandingSection({
+  orgId, orgName, orgTagline, orgLogoUrl, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar,
+  orgFeedPreviewImageUrl,
+}: {
   orgId: string; orgName: string; orgTagline: string; orgLogoUrl: string | null;
   orgColorPrimary: string; orgColorPrimaryLight: string; orgColorSidebar: string;
+  orgFeedPreviewImageUrl: string | null;
 }) {
   const { updateMyOrg } = useApi();
   const [name, setName] = useState(orgName);
@@ -623,6 +628,7 @@ function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl, orgColorPr
   const [colorPrimaryLight, setColorPrimaryLight] = useState(orgColorPrimaryLight);
   const [colorSidebar, setColorSidebar] = useState(orgColorSidebar);
   const [uploading, setUploading] = useState(false);
+  const [uploadingPreview, setUploadingPreview] = useState(false);
 
   useEffect(() => { setName(orgName); }, [orgName]);
   useEffect(() => { setTagline(orgTagline); }, [orgTagline]);
@@ -671,6 +677,36 @@ function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl, orgColorPr
   function removeLogo() {
     updateMyOrg.mutate({ data: { logoPath: null } }, {
       onSuccess: () => toast.success("Logo removida."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
+    });
+  }
+
+  async function pickFeedPreviewImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Escolha um arquivo de imagem."); return; }
+    if (file.size > MAX_LOGO_BYTES) { toast.error("Imagem muito grande (máximo 3 MB)."); return; }
+    setUploadingPreview(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `org-feed-preview/${orgId}/preview-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        contentType: file.type, upsert: true,
+      });
+      if (upErr) throw upErr;
+      await updateMyOrg.mutateAsync({ data: { feedPreviewImagePath: path } });
+      toast.success("Imagem de preview atualizada.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao enviar a imagem.");
+    } finally {
+      setUploadingPreview(false);
+    }
+  }
+
+  function resetFeedPreviewImage() {
+    updateMyOrg.mutate({ data: { feedPreviewImagePath: null } }, {
+      onSuccess: () => toast.success("Voltou pra imagem padrão do Modo Criador."),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
     });
   }
@@ -726,6 +762,40 @@ function OrgBrandingSection({ orgId, orgName, orgTagline, orgLogoUrl, orgColorPr
           className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50">
           {updateMyOrg.isPending ? "Salvando…" : "Salvar"}
         </button>
+      </div>
+
+      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+        <Star size={12} /> Preview de feed
+      </h2>
+      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-4">
+        <p className="text-[11px] text-white/50 leading-relaxed">
+          Imagem que aparece quando você manda o link de preview do feed pro cliente (WhatsApp, etc).
+          Por padrão é a imagem do Modo Criador — troque pra aparecer uma imagem da sua agência.
+        </p>
+
+        <div className="rounded-md overflow-hidden bg-black/30 border border-white/10 max-w-sm">
+          <img
+            src={orgFeedPreviewImageUrl ?? "/og-preview.jpg"}
+            alt="Preview do feed"
+            className="w-full aspect-[936/438] object-cover"
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <label className="lz-btn-ghost text-xs px-4 py-2 rounded-md cursor-pointer disabled:opacity-50">
+            {uploadingPreview ? "Enviando…" : "Enviar imagem"}
+            <input type="file" accept="image/*" className="hidden" onChange={pickFeedPreviewImage} disabled={uploadingPreview} />
+          </label>
+          {orgFeedPreviewImageUrl && (
+            <button onClick={resetFeedPreviewImage} disabled={updateMyOrg.isPending}
+              className="text-[11px] text-white/50 hover:text-red-400 transition disabled:opacity-50">
+              Voltar pra imagem padrão
+            </button>
+          )}
+        </div>
+        <p className="text-[11px] text-white/35">
+          Tamanho recomendado: 1200 x 630px (formato horizontal) · até 3 MB.
+        </p>
       </div>
     </>
   );

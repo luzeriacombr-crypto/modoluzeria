@@ -202,6 +202,7 @@ export type PublicFeedPayload = {
   items: PublicFeedItem[];
   stageCounts: { stage: ClientStage; label: string; count: number }[];
   orgName: string | null;
+  feedPreviewImageUrl: string | null;
 };
 
 export const getPublicFeed = createServerFn({ method: "GET" })
@@ -219,9 +220,11 @@ export const getPublicFeed = createServerFn({ method: "GET" })
 
     const { data: orgId } = await supabase.rpc("get_org_id_for_token", { _token: data.token });
     let orgName: string | null = null;
+    let feedPreviewImagePath: string | null = null;
     if (orgId) {
-      const { data: org } = await supabase.from("orgs").select("name").eq("id", orgId as string).maybeSingle();
+      const { data: org } = await supabase.from("orgs").select("name, feed_preview_image_path").eq("id", orgId as string).maybeSingle();
       orgName = org?.name ?? null;
+      feedPreviewImagePath = (org as any)?.feed_preview_image_path ?? null;
     }
 
     const r = result as any;
@@ -231,14 +234,22 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     // The "avatars" bucket only allows reads from authenticated users (client
     // photos aren't meant to be publicly listable) — this public page needs
     // to show exactly one already-known photo for the client this token
-    // belongs to, so sign it with the service-role client instead.
+    // belongs to, so sign it with the service-role client instead. Same deal
+    // for the agency's custom feed-preview og:image, if they set one.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let clientPhotoUrl: string | null = null;
     if (client.photo_path) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: signed } = await supabaseAdmin.storage
         .from("avatars")
         .createSignedUrl(client.photo_path, 60 * 60 * 24 * 365);
       clientPhotoUrl = signed?.signedUrl ?? null;
+    }
+    let feedPreviewImageUrl: string | null = null;
+    if (feedPreviewImagePath) {
+      const { data: signed } = await supabaseAdmin.storage
+        .from("avatars")
+        .createSignedUrl(feedPreviewImagePath, 60 * 60 * 24 * 365);
+      feedPreviewImageUrl = signed?.signedUrl ?? null;
     }
 
     // Support both flat (files/feedback as top-level arrays with item_id)
@@ -390,6 +401,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       items: mappedItems,
       stageCounts,
       orgName,
+      feedPreviewImageUrl,
     };
   });
 

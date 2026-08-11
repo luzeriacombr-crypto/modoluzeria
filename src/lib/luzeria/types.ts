@@ -205,6 +205,10 @@ export interface Profile {
   orgColorPrimary?: string | null;
   orgColorPrimaryLight?: string | null;
   orgColorSidebar?: string | null;
+  /** Imagem própria da agência usada no og:image do link público de preview
+   * de feed, ou null pra usar a imagem padrão do Modo Criador. */
+  orgFeedPreviewImageUrl?: string | null;
+  orgFeedPreviewImagePath?: string | null;
 }
 
 export interface NotificationItem {
