@@ -105,6 +105,16 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
       client_id: appId, client_secret: appSecret, grant_type: "authorization_code",
       redirect_uri: INSTAGRAM_REDIRECT_URI, code: data.code,
     });
+    console.error("[Instagram connect] enviando troca de código:", JSON.stringify({
+      at: new Date().toISOString(),
+      client_id: appId,
+      client_id_length: appId.length,
+      client_secret_length: appSecret.length,
+      client_secret_last4: appSecret.slice(-4),
+      redirect_uri: INSTAGRAM_REDIRECT_URI,
+      code_prefix: data.code.slice(0, 12),
+      code_length: data.code.length,
+    }));
     const shortRes = await fetch("https://api.instagram.com/oauth/access_token", {
       method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: shortBody,
     });
