@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
+import { getInstagramConnectionStatus } from "@/lib/luzeria/instagram.functions";
 import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS } from "./icons";
@@ -269,6 +271,14 @@ export function DetailPanel() {
   const client = clients.find((c) => c.id === selectedClientId);
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const isAvulso = client?.category === "Avulsos";
+
+  const getInstagramStatus = useServerFn(getInstagramConnectionStatus);
+  const instagramStatus = useQuery({
+    queryKey: ["instagram-connection-status", selectedClientId],
+    queryFn: () => getInstagramStatus({ data: { clientId: selectedClientId! } }),
+    enabled: !!selectedClientId,
+  });
+  const clientInstagramConnected = !!instagramStatus.data?.connected;
 
   useEffect(() => {
     if (!selectedItemId) return;
@@ -866,62 +876,81 @@ export function DetailPanel() {
         {/* Publicar no Instagram (Posts, admin, só quando pronto pra publicar) */}
         {item.type === "post" && isAdmin && item.status === "PRONTO_PARA_PUBLICAR" && (
           <ModalSection label="Publicar">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => {
-                  if (!confirm('Publicar esse post no Instagram do cliente agora? Isso é uma ação real e pública.')) return;
-                  publishToInstagram.mutate({ data: { itemId: item.id } }, {
-                    onSuccess: () => toast.success("Publicado no Instagram!"),
-                    onError: (e: any) => toast.error(e?.message ?? "Falha ao publicar no Instagram"),
-                  });
-                }}
-                disabled={publishToInstagram.isPending}
-                className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold disabled:opacity-50"
-                style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-              >
-                {publishToInstagram.isPending ? <Loader2 size={14} className="animate-spin" /> : <Instagram size={14} />}
-                Publicar no Instagram agora
-              </button>
-              {item.igAutoPublish ? (
-                <button
-                  onClick={() => {
-                    setInstagramAutoPublish.mutate({ data: { itemId: item.id, enabled: false } }, {
-                      onSuccess: () => toast.success("Publicação programada cancelada."),
-                      onError: (e: any) => toast.error(e?.message ?? "Falha ao cancelar programação"),
-                    });
-                  }}
-                  disabled={setInstagramAutoPublish.isPending}
-                  className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold border border-white/[0.08] text-white/70 hover:text-white disabled:opacity-50"
-                >
-                  <Clock size={14} />
-                  Cancelar programação
+            {clientInstagramConnected ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (!confirm('Publicar esse post no Instagram do cliente agora? Isso é uma ação real e pública.')) return;
+                      publishToInstagram.mutate({ data: { itemId: item.id } }, {
+                        onSuccess: () => toast.success("Publicado no Instagram!"),
+                        onError: (e: any) => toast.error(e?.message ?? "Falha ao publicar no Instagram"),
+                      });
+                    }}
+                    disabled={publishToInstagram.isPending}
+                    className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold disabled:opacity-50"
+                    style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+                  >
+                    {publishToInstagram.isPending ? <Loader2 size={14} className="animate-spin" /> : <Instagram size={14} />}
+                    Publicar no Instagram agora
+                  </button>
+                  {item.igAutoPublish ? (
+                    <button
+                      onClick={() => {
+                        setInstagramAutoPublish.mutate({ data: { itemId: item.id, enabled: false } }, {
+                          onSuccess: () => toast.success("Publicação programada cancelada."),
+                          onError: (e: any) => toast.error(e?.message ?? "Falha ao cancelar programação"),
+                        });
+                      }}
+                      disabled={setInstagramAutoPublish.isPending}
+                      className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold border border-white/[0.08] text-white/70 hover:text-white disabled:opacity-50"
+                    >
+                      <Clock size={14} />
+                      Cancelar programação
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setInstagramAutoPublish.mutate({ data: { itemId: item.id, enabled: true } }, {
+                          onSuccess: () => toast.success("Publicação programada!"),
+                          onError: (e: any) => toast.error(e?.message ?? "Defina data e horário de publicação futuros antes de programar."),
+                        });
+                      }}
+                      disabled={setInstagramAutoPublish.isPending || !item.scheduledAt}
+                      title={!item.scheduledAt ? "Defina uma data e horário em Data de publicação primeiro" : undefined}
+                      className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold border border-white/[0.08] text-white/70 hover:text-white disabled:opacity-50"
+                    >
+                      <Clock size={14} />
+                      Programar publicação
+                    </button>
+                  )}
+                </div>
+                {item.igAutoPublish && item.scheduledAt && (
+                  <p className="text-[11px] mt-2" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
+                    Programado pra publicar sozinho em {new Date(item.scheduledAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}.
+                  </p>
+                )}
+                <p className="text-[11px] text-white/40 mt-2">
+                  Publica direto na conta do cliente e marca o item como Finalizado. "Programar" usa a data e horário
+                  definidos em "Data de publicação" abaixo.
+                </p>
+              </>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <button disabled
+                  title="Esse cliente ainda não conectou o Instagram — conecte na Ficha do Cliente"
+                  className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold opacity-40 cursor-not-allowed border border-white/[0.08] text-white/60">
+                  <Instagram size={14} />
+                  Publicar no Instagram agora
                 </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    setInstagramAutoPublish.mutate({ data: { itemId: item.id, enabled: true } }, {
-                      onSuccess: () => toast.success("Publicação programada!"),
-                      onError: (e: any) => toast.error(e?.message ?? "Defina data e horário de publicação futuros antes de programar."),
-                    });
-                  }}
-                  disabled={setInstagramAutoPublish.isPending || !item.scheduledAt}
-                  title={!item.scheduledAt ? "Defina uma data e horário em Data de publicação primeiro" : undefined}
-                  className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold border border-white/[0.08] text-white/70 hover:text-white disabled:opacity-50"
-                >
+                <button disabled
+                  title="Esse cliente ainda não conectou o Instagram — conecte na Ficha do Cliente"
+                  className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold opacity-40 cursor-not-allowed border border-white/[0.08] text-white/60">
                   <Clock size={14} />
                   Programar publicação
                 </button>
-              )}
-            </div>
-            {item.igAutoPublish && item.scheduledAt && (
-              <p className="text-[11px] mt-2" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
-                Programado pra publicar sozinho em {new Date(item.scheduledAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}.
-              </p>
+              </div>
             )}
-            <p className="text-[11px] text-white/40 mt-2">
-              Publica direto na conta do cliente e marca o item como Finalizado. Precisa do Instagram conectado na Ficha do Cliente.
-              "Programar" usa a data e horário definidos em "Data de publicação" abaixo.
-            </p>
           </ModalSection>
         )}
 
