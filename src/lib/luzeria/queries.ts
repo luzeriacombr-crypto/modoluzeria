@@ -48,7 +48,7 @@ import {
   getPublicFeed, getPublicDriveThumbnail, addPublicFeedback,
 } from "./feed-share.functions";
 import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from "./platform-updates.functions";
-import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity } from "./instagram.functions";
+import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications } from "./instagram.functions";
 import { getCalendarItems } from "./calendar.functions";
 import {
   getSalesPageBlocks, listSalesPageBlocksAdmin, createSalesPageBlock, updateSalesPageBlock,
@@ -62,6 +62,11 @@ import { getClientBlockedItems } from "./blocked-items.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const instagramActivityQO = () =>
   queryOptions({ queryKey: ["instagram-activity"], queryFn: () => getInstagramActivity() });
+export const todayPublicationsQO = (from: string, to: string, userId?: string) =>
+  queryOptions({
+    queryKey: ["today-publications", from, to, userId ?? null],
+    queryFn: () => getTodayPublications({ data: { from, to, userId } }),
+  });
 export const calendarItemsQO = (from: string, to: string) =>
   queryOptions({
     queryKey: ["calendar-items", from, to],

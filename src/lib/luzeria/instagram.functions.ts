@@ -398,3 +398,60 @@ export const getInstagramActivity = createServerFn({ method: "GET" })
         monthKey: r.months.key,
       })) as InstagramActivityItem[];
   });
+
+export type TodayPublicationItem = {
+  id: string;
+  title: string;
+  type: string;
+  postFormat: string | null;
+  scheduledAt: string;
+  clientId: string;
+  clientName: string;
+  clientColor: string;
+  monthKey: string;
+};
+
+/** Posts/Reels com "Data de publicação" caindo no dia de hoje, dos clientes
+ * onde o usuário é o "Responsável fixo" — pra ele não esquecer de publicar
+ * manualmente enquanto a Meta não libera publicação automática pra todo
+ * mundo (hoje só funciona pra Luzeria, ver INSTAGRAM_CONNECT_ENABLED em
+ * ClientFichaPanel.tsx). Some da lista sozinho assim que ig_published_at é
+ * setado (publicado pelo app) — publicação manual direto no Instagram não
+ * teria como o sistema saber, então continua aparecendo até o item ser
+ * movido de status/data por quem publicou. */
+export const getTodayPublications = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId?: string; from: string; to: string }) => d)
+  .handler(async ({ data, context }) => {
+    let targetUser = context.userId;
+    if (data.userId && data.userId !== context.userId) {
+      const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+      if (!isAdmin) throw new Error("Forbidden");
+      targetUser = data.userId;
+    }
+    const { data: clients } = await context.supabase
+      .from("clients")
+      .select("id")
+      .eq("fixed_responsible_id", targetUser)
+      .eq("archived", false)
+      .neq("category", "Ex-clientes");
+    const clientIds = (clients ?? []).map((c: any) => c.id);
+    if (clientIds.length === 0) return [] as TodayPublicationItem[];
+
+    const { data: rows, error } = await context.supabase
+      .from("content_items")
+      .select("id, title, type, post_format, scheduled_at, months!inner(client_id, key, clients!inner(id, name, color))")
+      .in("type", ["post", "reel"])
+      .gte("scheduled_at", data.from)
+      .lt("scheduled_at", data.to)
+      .is("ig_published_at", null)
+      .in("months.client_id", clientIds)
+      .order("scheduled_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r: any) => ({
+      id: r.id, title: r.title, type: r.type, postFormat: r.post_format,
+      scheduledAt: r.scheduled_at,
+      clientId: r.months.clients.id, clientName: r.months.clients.name, clientColor: r.months.clients.color,
+      monthKey: r.months.key,
+    })) as TodayPublicationItem[];
+  });

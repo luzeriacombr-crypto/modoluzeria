@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, useMe, useApi } from "@/lib/luzeria/queries";
-import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, Clock, Check, X, AtSign, MessageCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { Sparkles, List, CalendarDays, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronRight } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
@@ -52,6 +52,12 @@ export function MyTasks() {
   const weekdayIdx = dow === 0 ? -1 : dow - 1;
   const { data: today } = useQuery({
     ...myTodayQO(todayStr, weekdayIdx, targetId),
+    enabled: !!targetId,
+  });
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+  const { data: todayPublications = [] } = useQuery({
+    ...todayPublicationsQO(todayStart, todayEnd, targetId),
     enabled: !!targetId,
   });
 
@@ -120,6 +126,46 @@ export function MyTasks() {
       {targetId && <div data-tour="goals"><GoalsWidget monthKey={monthKey} userId={targetId} /></div>}
 
       {targetId && <ActivityCountsWidget monthKey={monthKey} userId={targetId} />}
+
+      {isMeView && todayPublications.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
+              <Instagram size={11} />
+            </span>
+            <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Publicações de hoje</h2>
+            <span className="text-[11px] text-white/40">· {todayPublications.length}</span>
+          </div>
+          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
+            {todayPublications.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  navigate({ to: "/cliente/$clientId", params: { clientId: p.clientId } });
+                  selectMonth(p.monthKey);
+                  setTimeout(() => { openItem(p.id); flash(p.id); }, 30);
+                  setTimeout(() => flash(null), 2050);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left border-b border-white/[0.05] last:border-b-0"
+              >
+                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
+                  style={{ backgroundColor: p.clientColor + "33", color: p.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : p.clientColor }}>
+                  {p.clientName}
+                </span>
+                <span className="text-[11px] text-white/50 uppercase font-semibold shrink-0">
+                  {p.type === "post" && p.postFormat
+                    ? (POST_FORMAT_LABEL[p.postFormat as keyof typeof POST_FORMAT_LABEL] ?? p.postFormat)
+                    : (CONTENT_TYPE_LABEL[p.type as keyof typeof CONTENT_TYPE_LABEL] ?? p.type)}
+                </span>
+                <span className="text-sm text-white/90 truncate flex-1">{p.title}</span>
+                <span className="text-[10px] text-white/40 shrink-0 tabular-nums">
+                  {new Date(p.scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isAdmin && isMeView && weeklyReminders.length > 0 && (
         <div className="mb-6">
