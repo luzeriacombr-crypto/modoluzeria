@@ -108,7 +108,8 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
     });
     const shortJson: any = await shortRes.json();
     if (!shortRes.ok || !shortJson.access_token || !shortJson.user_id) {
-      throw new Error(shortJson?.error_message ?? "Não foi possível conectar ao Instagram. Tente novamente.");
+      console.error("[Instagram connect] falha na troca do código curto:", shortRes.status, JSON.stringify(shortJson));
+      throw new Error(`[1/3 troca de código] ${shortJson?.error_message ?? shortJson?.error?.message ?? "Não foi possível conectar ao Instagram. Tente novamente."}`);
     }
 
     const longRes = await fetch(
@@ -118,7 +119,8 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
     );
     const longJson: any = await longRes.json();
     if (!longRes.ok || !longJson.access_token) {
-      throw new Error(longJson?.error?.message ?? "Não foi possível validar o acesso ao Instagram.");
+      console.error("[Instagram connect] falha ao trocar por token longo:", longRes.status, JSON.stringify(longJson));
+      throw new Error(`[2/3 token de 60 dias] ${longJson?.error?.message ?? "Não foi possível validar o acesso ao Instagram."}`);
     }
 
     // The user_id from the token exchange isn't reliably the same ID the
@@ -127,7 +129,8 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
     const meRes = await fetch(`${IG_GRAPH_API}/me?fields=id,username&access_token=${encodeURIComponent(longJson.access_token)}`);
     const meJson: any = await meRes.json();
     if (!meRes.ok || !meJson.id) {
-      throw new Error(meJson?.error?.message ?? "Não foi possível identificar a conta do Instagram.");
+      console.error("[Instagram connect] falha ao buscar conta:", meRes.status, JSON.stringify(meJson));
+      throw new Error(`[3/3 identificar conta] ${meJson?.error?.message ?? "Não foi possível identificar a conta do Instagram."}`);
     }
     const igId = String(meJson.id);
     const igUsername: string | null = meJson.username ?? null;
