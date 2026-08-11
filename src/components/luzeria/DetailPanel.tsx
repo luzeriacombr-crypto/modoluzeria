@@ -16,10 +16,7 @@ import { CarouselLightbox } from "./CarouselLightbox";
 import { ReelCoverEditor } from "./ReelCoverEditor";
 import { useItemFileUpload } from "@/lib/luzeria/use-item-file-upload";
 
-// Desligado enquanto a revisão do app junto à Meta (instagram_business_content_publish)
-// não é aprovada — a publicação real só funciona pro Instagram de teste
-// cadastrado no painel deles. Volta pra `true` assim que aprovar.
-const INSTAGRAM_PUBLISH_ENABLED = false;
+const INSTAGRAM_PUBLISH_ENABLED = true;
 
 function findItem(month: any, id: string): ContentItem | undefined {
   return (
