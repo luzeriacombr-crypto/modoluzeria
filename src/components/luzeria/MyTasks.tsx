@@ -16,13 +16,32 @@ const ProductivityBlock = lazy(() =>
   import("./ProductivityChart").then((m) => ({ default: m.ProductivityBlock })),
 );
 
-const WEEKLY_REMINDERS_OPEN_KEY = "lz.weeklyRemindersOpen";
-function readWeeklyRemindersOpen(): boolean {
-  if (typeof window === "undefined") return true;
+// Cada seção de Minhas Demandas (publicações de hoje, avisos, menções, e
+// cada status da lista) pode ser expandida/escondida — guarda um mapa
+// { sectionId: aberto } no localStorage, aberto por padrão quando ausente.
+const SECTIONS_OPEN_KEY = "lz.myTasksSectionsOpen";
+function readOpenSections(): Record<string, boolean> {
+  if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(WEEKLY_REMINDERS_OPEN_KEY);
-    return raw === null ? true : raw === "1";
-  } catch { return true; }
+    const raw = window.localStorage.getItem(SECTIONS_OPEN_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+function SectionHeader({ icon, iconBg, iconColor, label, count, open, onToggle }: {
+  icon: React.ReactNode; iconBg: string; iconColor: string; label: string; count: number;
+  open: boolean; onToggle: () => void;
+}) {
+  return (
+    <button onClick={onToggle} className="w-full flex items-center gap-2 mb-2 text-left">
+      <span className="rounded p-1" style={{ backgroundColor: iconBg, color: iconColor }}>{icon}</span>
+      <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">{label}</h2>
+      <span className="text-[11px] text-white/40">· {count}</span>
+      <span className="ml-auto text-white/40">
+        {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+      </span>
+    </button>
+  );
 }
 
 export function MyTasks() {
@@ -41,7 +60,15 @@ export function MyTasks() {
   const isMeView = !isAdmin || !viewAs || viewAs === me?.id;
   const { data: mentions = [] } = useQuery({ ...myMentionsQO(), enabled: isMeView });
   const { data: weeklyReminders = [] } = useQuery({ ...weeklyClientRemindersQO(), enabled: isAdmin && isMeView });
-  const [remindersOpen, setRemindersOpen] = useState(readWeeklyRemindersOpen);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(readOpenSections);
+  const isSectionOpen = (id: string) => openSections[id] ?? true;
+  const toggleSection = (id: string) => {
+    setOpenSections((prev) => {
+      const next = { ...prev, [id]: !(prev[id] ?? true) };
+      try { window.localStorage.setItem(SECTIONS_OPEN_KEY, JSON.stringify(next)); } catch { /* noop */ }
+      return next;
+    });
+  };
   const monthKey = useUI((s) => s.selectedMonthKey);
   const { data: prod } = useQuery(productivityQO(monthKey, targetId));
 
@@ -129,13 +156,13 @@ export function MyTasks() {
 
       {isMeView && todayPublications.length > 0 && (
         <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
-              <Instagram size={11} />
-            </span>
-            <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Publicações de hoje</h2>
-            <span className="text-[11px] text-white/40">· {todayPublications.length}</span>
-          </div>
+          <SectionHeader
+            icon={<Instagram size={11} />}
+            iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="rgb(var(--lz-brand-rgb))"
+            label="Publicações de hoje" count={todayPublications.length}
+            open={isSectionOpen("today-publications")} onToggle={() => toggleSection("today-publications")}
+          />
+          {isSectionOpen("today-publications") && (
           <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
             {todayPublications.map((p) => (
               <button
@@ -164,29 +191,19 @@ export function MyTasks() {
               </button>
             ))}
           </div>
+          )}
         </div>
       )}
 
       {isAdmin && isMeView && weeklyReminders.length > 0 && (
         <div className="mb-6">
-          <button
-            onClick={() => {
-              const next = !remindersOpen;
-              setRemindersOpen(next);
-              try { window.localStorage.setItem(WEEKLY_REMINDERS_OPEN_KEY, next ? "1" : "0"); } catch { /* noop */ }
-            }}
-            className="w-full flex items-center gap-2 mb-2 text-left"
-          >
-            <span className="rounded p-1" style={{ backgroundColor: "rgba(37,211,102,0.18)", color: "#25D366" }}>
-              <MessageCircle size={11} />
-            </span>
-            <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Avisar clientes no WhatsApp</h2>
-            <span className="text-[11px] text-white/40">· {weeklyReminders.length}</span>
-            <span className="ml-auto text-white/40">
-              {remindersOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </span>
-          </button>
-          {remindersOpen && (
+          <SectionHeader
+            icon={<MessageCircle size={11} />}
+            iconBg="rgba(37,211,102,0.18)" iconColor="#25D366"
+            label="Avisar clientes no WhatsApp" count={weeklyReminders.length}
+            open={isSectionOpen("weekly-reminders")} onToggle={() => toggleSection("weekly-reminders")}
+          />
+          {isSectionOpen("weekly-reminders") && (
           <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
             {weeklyReminders.map((r) => (
               <div key={r.clientId} className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.05] last:border-b-0">
@@ -221,13 +238,13 @@ export function MyTasks() {
 
       {isMeView && mentions.length > 0 && (
         <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
-              <AtSign size={11} />
-            </span>
-            <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Mencionado em</h2>
-            <span className="text-[11px] text-white/40">· {mentions.length}</span>
-          </div>
+          <SectionHeader
+            icon={<AtSign size={11} />}
+            iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="rgb(var(--lz-brand-rgb))"
+            label="Mencionado em" count={mentions.length}
+            open={isSectionOpen("mentions")} onToggle={() => toggleSection("mentions")}
+          />
+          {isSectionOpen("mentions") && (
           <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
             {mentions.map((m: any) => (
               <button
@@ -261,6 +278,7 @@ export function MyTasks() {
               </button>
             ))}
           </div>
+          )}
         </div>
       )}
 
@@ -315,13 +333,17 @@ export function MyTasks() {
           {STATUS_ORDER.map((s) => {
             if (!grouped[s].length) return null;
             const m = STATUS_META[s]; const I = STATUS_ICONS[s];
+            const sectionId = `status:${s}`;
+            const open = isSectionOpen(sectionId);
             return (
               <div key={s}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="rounded p-1" style={{ backgroundColor: m.bg, color: m.color }}><I size={11} /></span>
-                  <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">{m.label}</h2>
-                  <span className="text-[11px] text-white/40">· {grouped[s].length}</span>
-                </div>
+                <SectionHeader
+                  icon={<I size={11} />}
+                  iconBg={m.bg} iconColor={m.color}
+                  label={m.label} count={grouped[s].length}
+                  open={open} onToggle={() => toggleSection(sectionId)}
+                />
+                {open && (
                 <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
                   {grouped[s].map((t) => (
                     <button key={t.id}
@@ -345,6 +367,7 @@ export function MyTasks() {
                     </button>
                   ))}
                 </div>
+                )}
               </div>
             );
           })}
