@@ -18,6 +18,12 @@ const IG_SCOPES = [
   "instagram_business_basic",
   "instagram_business_content_publish",
 ].join(",");
+// Fixo, sem www — precisa bater byte a byte com o redirect_uri cadastrado
+// em Meta for Developers > Modo Criador > Casos de uso > Instagram Business
+// > "Configurar o login da empresa no Instagram" (confirmado no "URL
+// incorporado" de lá). Não usar VITE_APP_URL aqui — esse é usado com www em
+// outros pontos do app (e-mails, og:image) e é um valor diferente.
+const INSTAGRAM_REDIRECT_URI = "https://modocriador.com.br/oauth/instagram-callback";
 
 async function assertMaster(supabase: any, userId: string) {
   const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
@@ -66,14 +72,9 @@ export const getInstagramConnectUrl = createServerFn({ method: "POST" })
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const appId = process.env.INSTAGRAM_APP_ID;
     if (!appId) throw new Error("INSTAGRAM_APP_ID ausente no servidor.");
-    // Fixo (não window.location.origin) — precisa bater exatamente com o
-    // redirect_uri cadastrado no app da Meta e com o usado em
-    // completeInstagramConnect, senão a Meta recusa a troca do código com
-    // "Error validating verification code... redirect_uri is identical".
-    const redirectUri = `${process.env.VITE_APP_URL ?? "https://www.modocriador.com.br"}/oauth/instagram-callback`;
     const params = new URLSearchParams({
       client_id: appId,
-      redirect_uri: redirectUri,
+      redirect_uri: INSTAGRAM_REDIRECT_URI,
       response_type: "code",
       scope: IG_SCOPES,
       state: data.clientId,
@@ -99,12 +100,10 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
     const appId = process.env.INSTAGRAM_APP_ID;
     const appSecret = process.env.INSTAGRAM_APP_SECRET;
     if (!appId || !appSecret) throw new Error("Credenciais do Instagram ausentes no servidor.");
-    // Mesmo valor fixo de getInstagramConnectUrl — tem que bater byte a byte.
-    const redirectUri = `${process.env.VITE_APP_URL ?? "https://www.modocriador.com.br"}/oauth/instagram-callback`;
 
     const shortBody = new URLSearchParams({
       client_id: appId, client_secret: appSecret, grant_type: "authorization_code",
-      redirect_uri: redirectUri, code: data.code,
+      redirect_uri: INSTAGRAM_REDIRECT_URI, code: data.code,
     });
     const shortRes = await fetch("https://api.instagram.com/oauth/access_token", {
       method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: shortBody,
