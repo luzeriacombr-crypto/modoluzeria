@@ -366,13 +366,13 @@ export const getInstagramActivity = createServerFn({ method: "GET" })
     const { data: rows, error } = await context.supabase
       .from("content_items")
       .select(
-        "id, title, type, post_format, scheduled_at, ig_published_at, ig_auto_publish, months!inner(key, clients!inner(id, name, color, archived))",
+        "id, title, type, post_format, scheduled_at, ig_published_at, ig_auto_publish, months!inner(key, clients!inner(id, name, color, archived, category))",
       )
       .or("ig_auto_publish.eq.true,ig_published_at.not.is.null")
       .order("ig_published_at", { ascending: false, nullsFirst: false });
     if (error) throw new Error(error.message);
     return (rows ?? [])
-      .filter((r: any) => r.months?.clients && !r.months.clients.archived)
+      .filter((r: any) => r.months?.clients && !r.months.clients.archived && r.months.clients.category !== "Ex-clientes")
       .map((r: any) => ({
         id: r.id, title: r.title, type: r.type, postFormat: r.post_format,
         scheduledAt: r.scheduled_at, igPublishedAt: r.ig_published_at, igAutoPublish: r.ig_auto_publish,
