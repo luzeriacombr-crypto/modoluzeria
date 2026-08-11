@@ -60,14 +60,17 @@ export const disconnectInstagram = createServerFn({ method: "POST" })
  * completeInstagramConnect. */
 export const getInstagramConnectUrl = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; redirectOrigin: string }) =>
-    z.object({ clientId: z.string().uuid(), redirectOrigin: z.string().url() }).parse(d))
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertMaster(context.supabase, context.userId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const appId = process.env.INSTAGRAM_APP_ID;
     if (!appId) throw new Error("INSTAGRAM_APP_ID ausente no servidor.");
-    const redirectUri = `${data.redirectOrigin}/oauth/instagram-callback`;
+    // Fixo (não window.location.origin) — precisa bater exatamente com o
+    // redirect_uri cadastrado no app da Meta e com o usado em
+    // completeInstagramConnect, senão a Meta recusa a troca do código com
+    // "Error validating verification code... redirect_uri is identical".
+    const redirectUri = `${process.env.VITE_APP_URL ?? "https://www.modocriador.com.br"}/oauth/instagram-callback`;
     const params = new URLSearchParams({
       client_id: appId,
       redirect_uri: redirectUri,
@@ -85,11 +88,10 @@ export const getInstagramConnectUrl = createServerFn({ method: "POST" })
  * Facebook Page picker needed. */
 export const completeInstagramConnect = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { code: string; clientId: string; redirectOrigin: string }) =>
+  .inputValidator((d: { code: string; clientId: string }) =>
     z.object({
       code: z.string().min(1),
       clientId: z.string().uuid(),
-      redirectOrigin: z.string().url(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertMaster(context.supabase, context.userId);
@@ -97,7 +99,8 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
     const appId = process.env.INSTAGRAM_APP_ID;
     const appSecret = process.env.INSTAGRAM_APP_SECRET;
     if (!appId || !appSecret) throw new Error("Credenciais do Instagram ausentes no servidor.");
-    const redirectUri = `${data.redirectOrigin}/oauth/instagram-callback`;
+    // Mesmo valor fixo de getInstagramConnectUrl — tem que bater byte a byte.
+    const redirectUri = `${process.env.VITE_APP_URL ?? "https://www.modocriador.com.br"}/oauth/instagram-callback`;
 
     const shortBody = new URLSearchParams({
       client_id: appId, client_secret: appSecret, grant_type: "authorization_code",

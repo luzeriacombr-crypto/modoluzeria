@@ -30,7 +30,7 @@ function InstagramCallbackPage() {
       return;
     }
     setClientId(state);
-    complete({ data: { code, clientId: state, redirectOrigin: url.origin } })
+    complete({ data: { code, clientId: state } })
       .then((r: any) => {
         setStatus("success");
         setMessage(r.igUsername ? `Conectado como @${r.igUsername}.` : "Instagram conectado com sucesso.");

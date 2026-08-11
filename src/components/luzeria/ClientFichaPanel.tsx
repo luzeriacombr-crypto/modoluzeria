@@ -660,7 +660,7 @@ function InstagramSection({ clientId }: { clientId: string }) {
   async function connect() {
     setConnecting(true);
     try {
-      const r: any = await getConnectUrl({ data: { clientId, redirectOrigin: window.location.origin } });
+      const r: any = await getConnectUrl({ data: { clientId } });
       window.location.href = r.url;
     } catch (e: any) {
       toast.error(e?.message ?? "Falha ao iniciar conexão com o Instagram");
