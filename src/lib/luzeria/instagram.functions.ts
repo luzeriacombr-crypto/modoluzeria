@@ -259,7 +259,11 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       // log, notifications) identical to a manual status change.
       await supabaseAdmin.rpc("set_item_status", { p_item_id: itemId, p_status: "FINALIZADO" });
     }
-    await supabaseAdmin.from("content_items").update({ ig_auto_publish: false }).eq("id", itemId);
+    await supabaseAdmin.from("content_items").update({
+      ig_auto_publish: false,
+      ig_published_at: new Date().toISOString(),
+      ig_media_id: publishJson.id,
+    }).eq("id", itemId);
 
     return { ok: true as const, instagramMediaId: publishJson.id as string };
   } finally {
@@ -335,3 +339,44 @@ export async function runScheduledInstagramPublishes() {
   }
   return results;
 }
+
+export type InstagramActivityItem = {
+  id: string;
+  title: string;
+  type: string;
+  postFormat: string | null;
+  scheduledAt: string | null;
+  igPublishedAt: string | null;
+  igAutoPublish: boolean;
+  clientId: string;
+  clientName: string;
+  clientColor: string;
+  monthKey: string;
+};
+
+/** Tudo que já foi publicado no Instagram pelo app, ou que está programado
+ * pra sair sozinho — de todos os clientes da agência, pra tela "Instagram"
+ * do menu lateral. Publicação manual direto no Instagram (fora do app) não
+ * entra aqui, porque não passa por runInstagramPublish. */
+export const getInstagramActivity = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { data: rows, error } = await context.supabase
+      .from("content_items")
+      .select(
+        "id, title, type, post_format, scheduled_at, ig_published_at, ig_auto_publish, months!inner(key, clients!inner(id, name, color, archived))",
+      )
+      .or("ig_auto_publish.eq.true,ig_published_at.not.is.null")
+      .order("ig_published_at", { ascending: false, nullsFirst: false });
+    if (error) throw new Error(error.message);
+    return (rows ?? [])
+      .filter((r: any) => r.months?.clients && !r.months.clients.archived)
+      .map((r: any) => ({
+        id: r.id, title: r.title, type: r.type, postFormat: r.post_format,
+        scheduledAt: r.scheduled_at, igPublishedAt: r.ig_published_at, igAutoPublish: r.ig_auto_publish,
+        clientId: r.months.clients.id, clientName: r.months.clients.name, clientColor: r.months.clients.color,
+        monthKey: r.months.key,
+      })) as InstagramActivityItem[];
+  });

@@ -26,6 +26,7 @@ import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
 import { Route as AuthenticatedInvestigacaoRouteImport } from './routes/_authenticated/investigacao'
+import { Route as AuthenticatedInstagramRouteImport } from './routes/_authenticated/instagram'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
 import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/ajuda'
@@ -122,6 +123,11 @@ const AuthenticatedInvestigacaoRoute =
     path: '/investigacao',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedInstagramRoute = AuthenticatedInstagramRouteImport.update({
+  id: '/instagram',
+  path: '/instagram',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedConfiguracoesRoute =
   AuthenticatedConfiguracoesRouteImport.update({
     id: '/configuracoes',
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/ajuda': typeof AuthenticatedAjudaRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/instagram': typeof AuthenticatedInstagramRoute
   '/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
@@ -214,6 +221,7 @@ export interface FileRoutesByTo {
   '/ajuda': typeof AuthenticatedAjudaRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/instagram': typeof AuthenticatedInstagramRoute
   '/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
@@ -243,6 +251,7 @@ export interface FileRoutesById {
   '/_authenticated/ajuda': typeof AuthenticatedAjudaRoute
   '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/instagram': typeof AuthenticatedInstagramRoute
   '/_authenticated/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
@@ -272,6 +281,7 @@ export interface FileRouteTypes {
     | '/ajuda'
     | '/calendario'
     | '/configuracoes'
+    | '/instagram'
     | '/investigacao'
     | '/minhas-tarefas'
     | '/perfil'
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/ajuda'
     | '/calendario'
     | '/configuracoes'
+    | '/instagram'
     | '/investigacao'
     | '/minhas-tarefas'
     | '/perfil'
@@ -327,6 +338,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ajuda'
     | '/_authenticated/calendario'
     | '/_authenticated/configuracoes'
+    | '/_authenticated/instagram'
     | '/_authenticated/investigacao'
     | '/_authenticated/minhas-tarefas'
     | '/_authenticated/perfil'
@@ -478,6 +490,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInvestigacaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/instagram': {
+      id: '/_authenticated/instagram'
+      path: '/instagram'
+      fullPath: '/instagram'
+      preLoaderRoute: typeof AuthenticatedInstagramRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/configuracoes': {
       id: '/_authenticated/configuracoes'
       path: '/configuracoes'
@@ -549,6 +568,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAjudaRoute: typeof AuthenticatedAjudaRoute
   AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedInstagramRoute: typeof AuthenticatedInstagramRoute
   AuthenticatedInvestigacaoRoute: typeof AuthenticatedInvestigacaoRoute
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
@@ -564,6 +584,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAjudaRoute: AuthenticatedAjudaRoute,
   AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedInstagramRoute: AuthenticatedInstagramRoute,
   AuthenticatedInvestigacaoRoute: AuthenticatedInvestigacaoRoute,
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,

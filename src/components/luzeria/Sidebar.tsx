@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  LogOut, Plus, Sparkles, Info, CircleHelp, CalendarDays,
+  LogOut, Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -102,6 +102,14 @@ export function Sidebar({
           active={pathname === "/calendario"}
           onClick={() => navigate({ to: "/calendario" })}
         />
+        {isAdmin && (
+          <NavButton
+            icon={<Instagram size={15} />}
+            label="Instagram"
+            active={pathname === "/instagram"}
+            onClick={() => navigate({ to: "/instagram" })}
+          />
+        )}
         <NavButton
           icon={<Sparkles size={15} />}
           label="Rotina"

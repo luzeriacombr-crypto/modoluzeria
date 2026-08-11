@@ -996,6 +996,8 @@ export type Database = {
           id: string
           idx: number
           ig_auto_publish: boolean
+          ig_media_id: string | null
+          ig_published_at: string | null
           last_status_change_at: string | null
           legacy_assignee: string | null
           month_id: string
@@ -1026,6 +1028,8 @@ export type Database = {
           id?: string
           idx: number
           ig_auto_publish?: boolean
+          ig_media_id?: string | null
+          ig_published_at?: string | null
           last_status_change_at?: string | null
           legacy_assignee?: string | null
           month_id: string
@@ -1056,6 +1060,8 @@ export type Database = {
           id?: string
           idx?: number
           ig_auto_publish?: boolean
+          ig_media_id?: string | null
+          ig_published_at?: string | null
           last_status_change_at?: string | null
           legacy_assignee?: string | null
           month_id?: string
