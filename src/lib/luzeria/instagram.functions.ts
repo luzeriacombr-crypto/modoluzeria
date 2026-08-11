@@ -18,12 +18,15 @@ const IG_SCOPES = [
   "instagram_business_basic",
   "instagram_business_content_publish",
 ].join(",");
-// Fixo, sem www — precisa bater byte a byte com o redirect_uri cadastrado
-// em Meta for Developers > Modo Criador > Casos de uso > Instagram Business
-// > "Configurar o login da empresa no Instagram" (confirmado no "URL
-// incorporado" de lá). Não usar VITE_APP_URL aqui — esse é usado com www em
-// outros pontos do app (e-mails, og:image) e é um valor diferente.
-const INSTAGRAM_REDIRECT_URI = "https://modocriador.com.br/oauth/instagram-callback";
+// Fixo — precisa bater byte a byte com o redirect_uri cadastrado em Meta
+// for Developers > Modo Criador > Casos de uso > Instagram Business >
+// "Configurar o login da empresa no Instagram". Testado sem www primeiro
+// (o que aparecia no "URL incorporado" de exemplo da Meta) e continuou
+// falhando com "redirect_uri is identical" mesmo com tudo mais correto —
+// mas o navegador sempre aterrissa em www.modocriador.com.br de verdade
+// (redirecionamento do domínio), então trocado pra www, que é o que
+// realmente acontece na prática.
+const INSTAGRAM_REDIRECT_URI = "https://www.modocriador.com.br/oauth/instagram-callback";
 
 async function assertMaster(supabase: any, userId: string) {
   const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
