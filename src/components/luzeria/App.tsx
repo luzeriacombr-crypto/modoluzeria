@@ -72,6 +72,22 @@ export function App() {
     };
   }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight, me.data?.orgColorSidebar]);
 
+  // Same idea for the tab icon: swap the favicon + apple-touch-icon (used
+  // when the client adds the app to their iOS home screen) whenever the org
+  // uploaded a custom one — revert to whatever was there on cleanup.
+  useEffect(() => {
+    const url = me.data?.orgFaviconUrl;
+    if (!url) return;
+    const links = Array.from(
+      document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]'),
+    );
+    const originals = links.map((l) => l.href);
+    links.forEach((l) => { l.href = url; });
+    return () => {
+      links.forEach((l, i) => { l.href = originals[i]; });
+    };
+  }, [me.data?.orgFaviconUrl]);
+
   if (me.isLoading) {
     return <LuzeriaLoader />;
   }

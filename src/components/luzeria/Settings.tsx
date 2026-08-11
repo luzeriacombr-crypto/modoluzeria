@@ -381,6 +381,7 @@ function GeneralSettings() {
           orgColorPrimaryLight={me.orgColorPrimaryLight ?? "#C8D44E"}
           orgColorSidebar={me.orgColorSidebar ?? "#1A3A2E"}
           orgFeedPreviewImageUrl={me.orgFeedPreviewImageUrl ?? null}
+          orgFaviconUrl={me.orgFaviconUrl ?? null}
         />
       )}
 
@@ -615,11 +616,11 @@ function PlanUsageSection() {
 
 function OrgBrandingSection({
   orgId, orgName, orgTagline, orgLogoUrl, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar,
-  orgFeedPreviewImageUrl,
+  orgFeedPreviewImageUrl, orgFaviconUrl,
 }: {
   orgId: string; orgName: string; orgTagline: string; orgLogoUrl: string | null;
   orgColorPrimary: string; orgColorPrimaryLight: string; orgColorSidebar: string;
-  orgFeedPreviewImageUrl: string | null;
+  orgFeedPreviewImageUrl: string | null; orgFaviconUrl: string | null;
 }) {
   const { updateMyOrg } = useApi();
   const [name, setName] = useState(orgName);
@@ -629,6 +630,7 @@ function OrgBrandingSection({
   const [colorSidebar, setColorSidebar] = useState(orgColorSidebar);
   const [uploading, setUploading] = useState(false);
   const [uploadingPreview, setUploadingPreview] = useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
 
   useEffect(() => { setName(orgName); }, [orgName]);
   useEffect(() => { setTagline(orgTagline); }, [orgTagline]);
@@ -707,6 +709,36 @@ function OrgBrandingSection({
   function resetFeedPreviewImage() {
     updateMyOrg.mutate({ data: { feedPreviewImagePath: null } }, {
       onSuccess: () => toast.success("Voltou pra imagem padrão do Modo Criador."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
+    });
+  }
+
+  async function pickFavicon(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Escolha um arquivo de imagem."); return; }
+    if (file.size > MAX_LOGO_BYTES) { toast.error("Imagem muito grande (máximo 3 MB)."); return; }
+    setUploadingFavicon(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `org-favicon/${orgId}/favicon-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        contentType: file.type, upsert: true,
+      });
+      if (upErr) throw upErr;
+      await updateMyOrg.mutateAsync({ data: { faviconPath: path } });
+      toast.success("Ícone atualizado.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao enviar o ícone.");
+    } finally {
+      setUploadingFavicon(false);
+    }
+  }
+
+  function resetFavicon() {
+    updateMyOrg.mutate({ data: { faviconPath: null } }, {
+      onSuccess: () => toast.success("Voltou pro ícone padrão do Modo Criador."),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
     });
   }
@@ -795,6 +827,37 @@ function OrgBrandingSection({
         </div>
         <p className="text-[11px] text-white/35">
           Tamanho recomendado: 1200 x 630px (formato horizontal) · até 3 MB.
+        </p>
+      </div>
+
+      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+        <Star size={12} /> Ícone (favicon)
+      </h2>
+      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-4">
+        <p className="text-[11px] text-white/50 leading-relaxed">
+          Ícone que aparece na aba do navegador, e como ícone do app quando alguém adiciona o
+          Modo Criador à tela inicial pelo iPhone. Por padrão é o ícone do Modo Criador.
+        </p>
+
+        <div className="flex items-center gap-4">
+          <div className="h-14 w-14 rounded-md bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+            <img src={orgFaviconUrl ?? "/icon-192.png"} alt="Ícone" className="max-h-full max-w-full object-contain" />
+          </div>
+          <div className="flex gap-2">
+            <label className="lz-btn-ghost text-xs px-4 py-2 rounded-md cursor-pointer disabled:opacity-50">
+              {uploadingFavicon ? "Enviando…" : "Enviar ícone"}
+              <input type="file" accept="image/*" className="hidden" onChange={pickFavicon} disabled={uploadingFavicon} />
+            </label>
+            {orgFaviconUrl && (
+              <button onClick={resetFavicon} disabled={updateMyOrg.isPending}
+                className="text-[11px] text-white/50 hover:text-red-400 transition disabled:opacity-50">
+                Voltar pro ícone padrão
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="text-[11px] text-white/35">
+          Tamanho recomendado: 512 x 512px (PNG, quadrado, fundo sólido) · até 3 MB.
         </p>
       </div>
     </>

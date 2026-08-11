@@ -81,13 +81,15 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path").eq("id", orgId).maybeSingle()
       : { data: null };
     const logoPath = (org as any)?.logo_path as string | null | undefined;
     const feedPreviewImagePath = (org as any)?.feed_preview_image_path as string | null | undefined;
-    const signed = await signAvatarPaths(context.supabase, [profile.avatar_url, logoPath, feedPreviewImagePath]);
+    const faviconPath = (org as any)?.favicon_path as string | null | undefined;
+    const signed = await signAvatarPaths(context.supabase, [profile.avatar_url, logoPath, feedPreviewImagePath, faviconPath]);
     const orgLogoUrl = logoPath ? signed.get(logoPath) ?? null : null;
     const orgFeedPreviewImageUrl = feedPreviewImagePath ? signed.get(feedPreviewImagePath) ?? null : null;
+    const orgFaviconUrl = faviconPath ? signed.get(faviconPath) ?? null : null;
     return {
       id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
@@ -107,6 +109,8 @@ export const getMe = createServerFn({ method: "GET" })
       orgLogoUrl,
       orgFeedPreviewImageUrl,
       orgFeedPreviewImagePath: feedPreviewImagePath ?? null,
+      orgFaviconUrl,
+      orgFaviconPath: faviconPath ?? null,
     } satisfies Profile;
   });
 
@@ -116,7 +120,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
   .inputValidator((d: {
     name?: string; tagline?: string | null; logoPath?: string | null;
     colorPrimary?: string | null; colorPrimaryLight?: string | null; colorSidebar?: string | null;
-    taxId?: string | null; feedPreviewImagePath?: string | null;
+    taxId?: string | null; feedPreviewImagePath?: string | null; faviconPath?: string | null;
   }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
@@ -127,6 +131,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       colorSidebar: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/).nullable().optional(),
       feedPreviewImagePath: z.string().max(300).nullable().optional(),
+      faviconPath: z.string().max(300).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -140,6 +145,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.colorSidebar !== undefined) patch.color_sidebar = data.colorSidebar;
     if (data.taxId !== undefined) patch.tax_id = data.taxId;
     if (data.feedPreviewImagePath !== undefined) patch.feed_preview_image_path = data.feedPreviewImagePath;
+    if (data.faviconPath !== undefined) patch.favicon_path = data.faviconPath;
     if (Object.keys(patch).length === 0) return { ok: true };
     const { data: updated, error } = await context.supabase
       .from("orgs").update(patch).eq("id", context.orgId).select("id").maybeSingle();

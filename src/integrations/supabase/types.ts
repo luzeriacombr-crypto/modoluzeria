@@ -1626,6 +1626,7 @@ export type Database = {
           color_primary_light: string | null
           color_sidebar: string | null
           created_at: string
+          favicon_path: string | null
           feed_preview_image_path: string | null
           id: string
           logo_path: string | null
@@ -1645,6 +1646,7 @@ export type Database = {
           color_primary_light?: string | null
           color_sidebar?: string | null
           created_at?: string
+          favicon_path?: string | null
           feed_preview_image_path?: string | null
           id?: string
           logo_path?: string | null
@@ -1664,6 +1666,7 @@ export type Database = {
           color_primary_light?: string | null
           color_sidebar?: string | null
           created_at?: string
+          favicon_path?: string | null
           feed_preview_image_path?: string | null
           id?: string
           logo_path?: string | null
