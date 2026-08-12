@@ -73,7 +73,9 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
     stories: { label: "Stories", type: "story" as const, items: month?.stories ?? [] },
   } as const;
 
-  const tabs = ["posts", "reels", "stories", "mais", "feed", "ficha"] as const;
+  const disabledFeatures = new Set(me?.disabledFeatures ?? []);
+  const tabs = (["posts", "reels", "stories", "mais", "feed", "ficha"] as const)
+    .filter((t) => t !== "stories" || !disabledFeatures.has("stories"));
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
   const idx = sortedKeys.indexOf(selectedMonthKey);

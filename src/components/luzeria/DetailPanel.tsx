@@ -836,7 +836,7 @@ export function DetailPanel() {
         )}
 
         {/* Formato do post (Posts) */}
-        {item.type === "post" && (
+        {item.type === "post" && !(me?.disabledFeatures ?? []).includes("formats") && (
           <ModalSection label="Formato">
             <div className="flex items-center gap-2 flex-wrap">
               {POST_FORMATS.map((pf) => {

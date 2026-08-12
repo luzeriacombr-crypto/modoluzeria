@@ -58,8 +58,10 @@ export function MyTasks() {
   const { selectMonth, openItem, flash, openFicha, openStageComposer } = useUI();
   const navigate = useNavigate();
   const isMeView = !isAdmin || !viewAs || viewAs === me?.id;
+  const disabledFeatures = new Set(me?.disabledFeatures ?? []);
+  const whatsappRemindersEnabled = !disabledFeatures.has("whatsapp_reminders");
   const { data: mentions = [] } = useQuery({ ...myMentionsQO(), enabled: isMeView });
-  const { data: weeklyReminders = [] } = useQuery({ ...weeklyClientRemindersQO(), enabled: isAdmin && isMeView });
+  const { data: weeklyReminders = [] } = useQuery({ ...weeklyClientRemindersQO(), enabled: isAdmin && isMeView && whatsappRemindersEnabled });
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(readOpenSections);
   const isSectionOpen = (id: string) => openSections[id] ?? true;
   const toggleSection = (id: string) => {
@@ -195,7 +197,7 @@ export function MyTasks() {
         </div>
       )}
 
-      {isAdmin && isMeView && weeklyReminders.length > 0 && (
+      {isAdmin && isMeView && whatsappRemindersEnabled && weeklyReminders.length > 0 && (
         <div className="mb-6">
           <SectionHeader
             icon={<MessageCircle size={11} />}

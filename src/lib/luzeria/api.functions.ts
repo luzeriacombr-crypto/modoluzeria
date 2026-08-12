@@ -81,7 +81,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features").eq("id", orgId).maybeSingle()
       : { data: null };
     const logoPath = (org as any)?.logo_path as string | null | undefined;
     const feedPreviewImagePath = (org as any)?.feed_preview_image_path as string | null | undefined;
@@ -111,6 +111,7 @@ export const getMe = createServerFn({ method: "GET" })
       orgFeedPreviewImagePath: feedPreviewImagePath ?? null,
       orgFaviconUrl,
       orgFaviconPath: faviconPath ?? null,
+      disabledFeatures: ((org as any)?.disabled_features ?? []) as string[],
     } satisfies Profile;
   });
 
@@ -121,6 +122,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     name?: string; tagline?: string | null; logoPath?: string | null;
     colorPrimary?: string | null; colorPrimaryLight?: string | null; colorSidebar?: string | null;
     taxId?: string | null; feedPreviewImagePath?: string | null; faviconPath?: string | null;
+    disabledFeatures?: string[];
   }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
@@ -132,6 +134,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/).nullable().optional(),
       feedPreviewImagePath: z.string().max(300).nullable().optional(),
       faviconPath: z.string().max(300).nullable().optional(),
+      disabledFeatures: z.array(z.string().max(40)).max(20).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -146,6 +149,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.taxId !== undefined) patch.tax_id = data.taxId;
     if (data.feedPreviewImagePath !== undefined) patch.feed_preview_image_path = data.feedPreviewImagePath;
     if (data.faviconPath !== undefined) patch.favicon_path = data.faviconPath;
+    if (data.disabledFeatures !== undefined) patch.disabled_features = data.disabledFeatures;
     if (Object.keys(patch).length === 0) return { ok: true };
     const { data: updated, error } = await context.supabase
       .from("orgs").update(patch).eq("id", context.orgId).select("id").maybeSingle();

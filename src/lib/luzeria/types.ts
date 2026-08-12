@@ -213,7 +213,46 @@ export interface Profile {
    * pra usar o ícone padrão do Modo Criador. */
   orgFaviconUrl?: string | null;
   orgFaviconPath?: string | null;
+  /** Optional features this org's team turned off in Configurações > Geral
+   * — keys from OPTIONAL_FEATURE_KEYS. Hides the corresponding UI without
+   * touching any underlying data. */
+  disabledFeatures?: string[];
 }
+
+export const OPTIONAL_FEATURE_KEYS = [
+  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive",
+] as const;
+export type OptionalFeatureKey = (typeof OPTIONAL_FEATURE_KEYS)[number];
+export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string; description: string }> = {
+  formats: {
+    label: "Formatos de post",
+    description: "Seletor de formato (Lofi, Básico, Fácil, Avançado) dentro de cada post/reel.",
+  },
+  whatsapp_reminders: {
+    label: "Avisar clientes no WhatsApp",
+    description: "Seção em Minhas Demandas com clientes prontos pra receber aviso semanal.",
+  },
+  rotina: {
+    label: "Rotina",
+    description: "Item de menu e página de tarefas de limpeza recorrentes.",
+  },
+  calendar: {
+    label: "Calendário",
+    description: "Item de menu e visão mensal em grade de todas as publicações.",
+  },
+  stories: {
+    label: "Stories",
+    description: "Aba de Stories dentro de cada cliente.",
+  },
+  instagram: {
+    label: "Instagram",
+    description: "Item de menu com publicações agendadas/publicadas pelo app.",
+  },
+  drive: {
+    label: "Google Drive",
+    description: "Integração de arquivos com o Drive, dentro de Automações.",
+  },
+};
 
 export interface NotificationItem {
   id: string;

@@ -4,6 +4,7 @@ import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO } fr
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
+import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL } from "@/lib/luzeria/types";
 import { toast } from "sonner";
 import { UserPlus, X, Settings as SettingsIcon, Star, Building2 } from "lucide-react";
 import { ReportsTab } from "./ReportsTab";
@@ -127,10 +128,12 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "journey" ? <JourneyStagesTab /> :
        tab === "automations" ? (
         <div className="space-y-10">
-          <div>
-            <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3">Google Drive</h2>
-            <DriveSettingsTab />
-          </div>
+          {!(me.disabledFeatures ?? []).includes("drive") && (
+            <div>
+              <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3">Google Drive</h2>
+              <DriveSettingsTab />
+            </div>
+          )}
           <div className="pt-2 border-t border-white/10">
             <AutomationsTab />
           </div>
@@ -409,6 +412,11 @@ function GeneralSettings() {
       </div>
 
       <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
+        <SettingsIcon size={12} /> Recursos
+      </h2>
+      <FeatureTogglesSection disabledFeatures={me?.disabledFeatures ?? []} />
+
+      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
         <SettingsIcon size={12} /> Ajuda
       </h2>
       <div className="bg-[#1C1C1C] rounded-lg p-5 flex items-center gap-4">
@@ -426,6 +434,43 @@ function GeneralSettings() {
           Refazer tour
         </button>
       </div>
+    </div>
+  );
+}
+
+function FeatureTogglesSection({ disabledFeatures }: { disabledFeatures: string[] }) {
+  const { updateMyOrg } = useApi();
+  const disabledSet = new Set(disabledFeatures);
+
+  function toggle(key: string, hide: boolean) {
+    const next = hide
+      ? [...disabledSet, key]
+      : [...disabledSet].filter((k) => k !== key);
+    updateMyOrg.mutate({ data: { disabledFeatures: next } }, {
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+    });
+  }
+
+  return (
+    <div className="bg-[#1C1C1C] rounded-lg divide-y divide-white/[0.06]">
+      {OPTIONAL_FEATURE_KEYS.map((key) => {
+        const meta = OPTIONAL_FEATURE_LABEL[key];
+        const visible = !disabledSet.has(key);
+        return (
+          <div key={key} className="p-5 flex items-start gap-4">
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-white">{meta.label}</div>
+              <div className="text-[11px] text-white/50 mt-1">{meta.description}</div>
+            </div>
+            <button onClick={() => toggle(key, visible)}
+              className={`relative h-6 w-11 rounded-full transition-colors shrink-0 ${
+                visible ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`}>
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                visible ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }

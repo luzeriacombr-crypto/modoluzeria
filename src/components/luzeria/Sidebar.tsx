@@ -64,6 +64,7 @@ export function Sidebar({
   }, [clients]);
 
   const isAdmin = me?.role === "master" || me?.role === "setor";
+  const disabled = new Set(me?.disabledFeatures ?? []);
 
   return (
     <aside data-tour="sidebar" className="sidebar-gradient w-[240px] flex flex-col text-white shrink-0">
@@ -96,13 +97,15 @@ export function Sidebar({
           active={pathname === "/admin"}
           onClick={() => navigate({ to: "/admin" })}
         />
-        <NavButton
-          icon={<CalendarDays size={15} />}
-          label="Calendário"
-          active={pathname === "/calendario"}
-          onClick={() => navigate({ to: "/calendario" })}
-        />
-        {isAdmin && (
+        {!disabled.has("calendar") && (
+          <NavButton
+            icon={<CalendarDays size={15} />}
+            label="Calendário"
+            active={pathname === "/calendario"}
+            onClick={() => navigate({ to: "/calendario" })}
+          />
+        )}
+        {isAdmin && !disabled.has("instagram") && (
           <NavButton
             icon={<Instagram size={15} />}
             label="Instagram"
@@ -110,12 +113,14 @@ export function Sidebar({
             onClick={() => navigate({ to: "/instagram" })}
           />
         )}
-        <NavButton
-          icon={<Sparkles size={15} />}
-          label="Rotina"
-          active={pathname === "/rotina"}
-          onClick={() => navigate({ to: "/rotina" })}
-        />
+        {!disabled.has("rotina") && (
+          <NavButton
+            icon={<Sparkles size={15} />}
+            label="Rotina"
+            active={pathname === "/rotina"}
+            onClick={() => navigate({ to: "/rotina" })}
+          />
+        )}
         <NavButton
           icon={<CircleHelp size={15} />}
           label="Ajuda"
