@@ -1,10 +1,25 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Loader2, Image as ImageIcon, ExternalLink } from "lucide-react";
 import { driveThumbnailQO } from "@/lib/luzeria/queries";
 
-type LightboxFile = { id: string; driveFileId: string; name: string };
+type LightboxFile = { id: string; driveFileId: string; name: string; webViewUrl?: string };
+
+function normalizeUrl(rawUrl: string | undefined) {
+  if (!rawUrl) return null;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+  try {
+    return new URL(trimmed).href;
+  } catch {
+    try {
+      return new URL(`https://${trimmed}`).href;
+    } catch {
+      return null;
+    }
+  }
+}
 
 function LightboxImage({ file }: { file: LightboxFile }) {
   const { data, isLoading } = useQuery(driveThumbnailQO(file.driveFileId, true, 1024));
@@ -50,6 +65,7 @@ export function CarouselLightbox({
   }, [onClose, total]);
 
   if (!current) return null;
+  const driveUrl = normalizeUrl(current.webViewUrl);
 
   return createPortal(
     <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-4" onClick={onClose}>
@@ -91,6 +107,17 @@ export function CarouselLightbox({
               ))}
             </div>
           </>
+        )}
+        {driveUrl && (
+          <a
+            href={driveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-white bg-black/55 hover:bg-black/70 rounded-full px-3 py-1.5 transition"
+          >
+            <ExternalLink size={12} /> Abrir no Drive
+          </a>
         )}
       </div>
     </div>,

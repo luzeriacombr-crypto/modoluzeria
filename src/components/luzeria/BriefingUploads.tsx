@@ -9,9 +9,11 @@ import { downloadDriveFile, downloadDriveFiles } from "@/lib/luzeria/drive-downl
 import { useItemFileUpload } from "@/lib/luzeria/use-item-file-upload";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { FileActionsMenu } from "./FileActionsMenu";
+import { CarouselLightbox } from "./CarouselLightbox";
 
-function BriefingThumb({ file, onRemoveAppOnly, onRemoveEverywhere, canEdit }: {
+function BriefingThumb({ file, onOpen, onRemoveAppOnly, onRemoveEverywhere, canEdit }: {
   file: { id: string; driveFileId: string; name: string; webViewUrl: string };
+  onOpen: () => void;
   onRemoveAppOnly: () => void;
   onRemoveEverywhere: () => void;
   canEdit: boolean;
@@ -34,7 +36,7 @@ function BriefingThumb({ file, onRemoveAppOnly, onRemoveEverywhere, canEdit }: {
 
   return (
     <div className="group relative w-16 h-16 shrink-0 rounded-md overflow-hidden bg-[#141414] border border-white/[0.08] flex items-center justify-center">
-      <a href={file.webViewUrl} target="_blank" rel="noopener noreferrer" title={file.name} className="absolute inset-0">
+      <button type="button" onClick={onOpen} title={file.name} className="absolute inset-0">
         {url ? (
           <img src={url} alt={file.name} className="w-full h-full object-cover" loading="lazy" />
         ) : isLoading ? (
@@ -42,7 +44,7 @@ function BriefingThumb({ file, onRemoveAppOnly, onRemoveEverywhere, canEdit }: {
         ) : (
           <div className="w-full h-full flex items-center justify-center"><ImageIcon size={14} className="text-white/20" /></div>
         )}
-      </a>
+      </button>
       <FileActionsMenu
         canEdit={canEdit}
         downloading={downloading}
@@ -62,6 +64,7 @@ export function BriefingUploads({ itemId, clientId, canEdit }: { itemId: string;
   const fileRef = useRef<HTMLInputElement>(null);
   const fetchDriveToken = useServerFn(getDriveVideoToken);
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => { if (error) toast.error(error); }, [error]);
 
@@ -115,11 +118,12 @@ export function BriefingUploads({ itemId, clientId, canEdit }: { itemId: string;
 
       {files.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {files.map((f) => (
+          {files.map((f, i) => (
             <BriefingThumb
               key={f.id}
               file={f}
               canEdit={canEdit}
+              onOpen={() => setLightboxIndex(i)}
               onRemoveAppOnly={() => detachItemFile.mutate({ data: { id: f.id } })}
               onRemoveEverywhere={() => {
                 if (confirm(`Remover "${f.name}" do Modo Criador e mover pra lixeira do Google Drive?`)) {
@@ -129,6 +133,10 @@ export function BriefingUploads({ itemId, clientId, canEdit }: { itemId: string;
             />
           ))}
         </div>
+      )}
+
+      {lightboxIndex !== null && (
+        <CarouselLightbox files={files} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
       )}
 
       {missingClientId && (
