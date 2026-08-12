@@ -247,7 +247,7 @@ export interface Profile {
 }
 
 export const OPTIONAL_FEATURE_KEYS = [
-  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive",
+  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse",
 ] as const;
 export type OptionalFeatureKey = (typeof OPTIONAL_FEATURE_KEYS)[number];
 export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string; description: string }> = {
@@ -278,6 +278,10 @@ export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string;
   drive: {
     label: "Google Drive",
     description: "Integração de arquivos com o Drive, dentro de Automações.",
+  },
+  daily_verse: {
+    label: "Versículo do dia",
+    description: "Frase e referência bíblica no topo de Minhas Demandas.",
   },
 };
 

@@ -121,14 +121,16 @@ export function MyTasks() {
             return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
           })()}! 🤩
         </div>
-        <div className="max-w-sm">
-          <p className="italic text-white/60 text-[13px] leading-relaxed text-balance">
-            "{dailyVerse.text}"
-          </p>
-          <p className="mt-1 text-[11px] font-bold uppercase tracking-wider" style={{ color: "rgba(var(--lz-brand-rgb), 0.7)" }}>
-            {dailyVerse.reference}
-          </p>
-        </div>
+        {!disabledFeatures.has("daily_verse") && (
+          <div className="max-w-sm">
+            <p className="italic text-white/60 text-[13px] leading-relaxed text-balance">
+              "{dailyVerse.text}"
+            </p>
+            <p className="mt-1 text-[11px] font-bold uppercase tracking-wider" style={{ color: "rgba(var(--lz-brand-rgb), 0.7)" }}>
+              {dailyVerse.reference}
+            </p>
+          </div>
+        )}
       </div>
       <div className="flex items-end justify-between mb-8">
         <div>
