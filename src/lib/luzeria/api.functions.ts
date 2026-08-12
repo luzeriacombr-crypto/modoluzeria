@@ -826,7 +826,7 @@ export const getMonth = createServerFn({ method: "GET" })
     if (!month) return null;
     const { data: items } = await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish")
+      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, activity_location, filmmaker, activity_quantity")
       .eq("month_id", month.id).order("type").order("idx");
     const itemIds = (items ?? []).map((it: any) => it.id);
     const [{ data: assignees }, { data: comments }] = await Promise.all([
@@ -864,6 +864,9 @@ export const getMonth = createServerFn({ method: "GET" })
       reworkCount: ((it as any).rework_count ?? 0) as any,
       qualityRating: ((it as any).quality_rating ?? null) as any,
       feedOrder: ((it as any).feed_order ?? null) as any,
+      location: ((it as any).activity_location ?? null) as any,
+      filmmaker: ((it as any).filmmaker ?? null) as any,
+      activityQuantity: ((it as any).activity_quantity ?? null) as any,
     }));
     const coverPaths = (items ?? []).map((it: any) => it.cover_path).filter(Boolean);
     const signedCovers = await signCoverPaths(context.supabase, coverPaths);
@@ -897,6 +900,7 @@ export const updateItem = createServerFn({ method: "POST" })
       title?: string; copy?: string; caption?: string; drive_link?: string;
       reel_type?: string | null; post_format?: string | null; editor_id?: string | null;
       due_date?: string | null; scheduled_at?: string | null; blocked_reason?: string | null;
+      activity_location?: string | null; filmmaker?: string | null; activity_quantity?: number | null;
     };
   }) => d)
   .handler(async ({ data, context }) => {
@@ -1349,7 +1353,7 @@ export const addAssignee = createServerFn({ method: "POST" })
 
 export const addContentItem = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string; dueDate?: string | null; notes?: string | null; location?: string | null }) =>
+  .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string; dueDate?: string | null; notes?: string | null; location?: string | null; filmmaker?: string | null; quantity?: number | null }) =>
     z.object({
       clientId: z.string().uuid(),
       key: z.string(),
@@ -1358,6 +1362,8 @@ export const addContentItem = createServerFn({ method: "POST" })
       dueDate: z.string().nullable().optional(),
       notes: z.string().trim().max(2000).nullable().optional(),
       location: z.string().trim().max(500).nullable().optional(),
+      filmmaker: z.string().trim().max(120).nullable().optional(),
+      quantity: z.number().int().min(0).max(100000).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
@@ -1383,7 +1389,9 @@ export const addContentItem = createServerFn({ method: "POST" })
     if (isActivityType(data.type)) insertRow.status = "PENDENTE";
     if (data.dueDate) insertRow.due_date = data.dueDate;
     if (data.notes) insertRow.copy = data.notes;
-    if (data.location) insertRow.drive_link = data.location;
+    if (data.location) insertRow.activity_location = data.location;
+    if (data.filmmaker) insertRow.filmmaker = data.filmmaker;
+    if (data.quantity !== undefined && data.quantity !== null) insertRow.activity_quantity = data.quantity;
     const { data: inserted, error: iErr } = await context.supabase
       .from("content_items").insert(insertRow).select("id").single();
     if (iErr) throw new Error(iErr.message);
@@ -1557,7 +1565,7 @@ export const getProductivity = createServerFn({ method: "GET" })
     }
     const { data: done } = await context.supabase
       .from("content_items").select("id, title, updated_at")
-      .in("id", itemIds).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
+      .in("id", itemIds).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"])
       .gte("updated_at", start).lt("updated_at", end);
     const weeks = [0, 0, 0, 0];
     const items: string[][] = [[], [], [], []];
@@ -1570,7 +1578,7 @@ export const getProductivity = createServerFn({ method: "GET" })
     const histStart = new Date(Date.UTC(y, m - 6, 1)).toISOString();
     const { data: hist } = await context.supabase
       .from("content_items").select("updated_at")
-      .in("id", itemIds).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
+      .in("id", itemIds).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"])
       .gte("updated_at", histStart).lt("updated_at", end);
     const history: { key: string; count: number }[] = [];
     for (let i = 5; i >= 0; i--) {
@@ -1855,7 +1863,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       const posts = its.filter((i) => i.type === "post").length;
       const reels = its.filter((i) => i.type === "reel").length;
       const total = its.length;
-      const done = its.filter((i) => i.status === "PRONTO_PARA_PUBLICAR" || i.status === "FINALIZADO").length;
+      const done = its.filter((i) => i.status === "PRONTO_PARA_PUBLICAR" || i.status === "FINALIZADO" || i.status === "CONCLUIDO").length;
       // % contra o combinado no contrato (posts/reels por mês), não contra o
       // que foi criado no sistema — assim dá pra ultrapassar 100% quando a
       // equipe entrega mais do que o combinado.
@@ -1892,7 +1900,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       const c = monthIdToClient.get(it.month_id);
       if (!c) return;
       const entry = { id: it.id, title: it.title, type: it.type, clientName: c.name, clientColor: c.color };
-      if (it.status === "PRONTO_PARA_PUBLICAR" || it.status === "FINALIZADO") doneItems.push(entry);
+      if (it.status === "PRONTO_PARA_PUBLICAR" || it.status === "FINALIZADO" || it.status === "CONCLUIDO") doneItems.push(entry);
       else pendingItems.push(entry);
     });
 
@@ -2486,7 +2494,7 @@ export const getMemberVelocity = createServerFn({ method: "GET" })
     const { data: items } = await context.supabase
       .from("content_items")
       .select("id, type, started_at, finished_at, item_assignees(user_id)")
-      .in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
+      .in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"])
       .not("started_at", "is", null)
       .not("finished_at", "is", null)
       .gte("finished_at", data.from)

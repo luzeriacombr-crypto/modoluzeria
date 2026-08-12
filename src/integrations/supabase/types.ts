@@ -992,6 +992,8 @@ export type Database = {
       }
       content_items: {
         Row: {
+          activity_location: string | null
+          activity_quantity: number | null
           blocked_reason: string | null
           caption: string
           checklist: Json
@@ -1002,6 +1004,7 @@ export type Database = {
           due_date: string | null
           editor_id: string | null
           feed_order: number | null
+          filmmaker: string | null
           finished_at: string | null
           id: string
           idx: number
@@ -1024,6 +1027,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          activity_location?: string | null
+          activity_quantity?: number | null
           blocked_reason?: string | null
           caption?: string
           checklist?: Json
@@ -1034,6 +1039,7 @@ export type Database = {
           due_date?: string | null
           editor_id?: string | null
           feed_order?: number | null
+          filmmaker?: string | null
           finished_at?: string | null
           id?: string
           idx: number
@@ -1056,6 +1062,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          activity_location?: string | null
+          activity_quantity?: number | null
           blocked_reason?: string | null
           caption?: string
           checklist?: Json
@@ -1066,6 +1074,7 @@ export type Database = {
           due_date?: string | null
           editor_id?: string | null
           feed_order?: number | null
+          filmmaker?: string | null
           finished_at?: string | null
           id?: string
           idx?: number

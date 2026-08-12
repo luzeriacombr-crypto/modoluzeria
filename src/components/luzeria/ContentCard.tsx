@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar, Image as ImageIcon, Trash2 } from "lucide-react";
-import type { ContentItem, Profile } from "@/lib/luzeria/types";
+import { isDoneStatus, type ContentItem, type Profile } from "@/lib/luzeria/types";
 import {
   statusOptionsFor, REEL_TYPE_LABEL, POST_FORMAT_LABEL,
   type ReelType, type PostFormat,
@@ -43,7 +43,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete }
     ? editor.name.trim().split(/\s+/).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("")
     : "";
   const isOverdue =
-    !!item.dueDate && item.status !== "PRONTO_PARA_PUBLICAR" && item.status !== "FINALIZADO" &&
+    !!item.dueDate && !isDoneStatus(item.status) &&
     new Date(item.dueDate + "T23:59:59").getTime() < Date.now();
   const dueLabel = item.dueDate
     ? new Date(item.dueDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })

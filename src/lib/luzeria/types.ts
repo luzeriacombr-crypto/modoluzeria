@@ -34,6 +34,26 @@ export const ACTIVITY_DATE_LABEL: Record<string, string> = {
   outros: "Data de entrega",
 };
 
+/** Label da quantidade por tipo de atividade — null quando o tipo não usa
+ * esse campo (Sistema, por natureza, não tem uma "contagem" fixa). Mirrors
+ * ACTIVITY_CONFIG in MaisAtividadesTab.tsx, kept in sync manually. */
+export const ACTIVITY_QUANTITY_LABEL: Record<string, string | null> = {
+  gravacao: "Vídeos gravados",
+  roteiro: "Roteiros",
+  sistema: null,
+  outros: "Quantidade",
+};
+
+/** True for any status that means "done" for its content type — the final
+ * publish/finalize states for posts/reels/avulsos, and the equivalent
+ * "Concluído" state for activities (gravação/roteiro/sistema/outros). Use
+ * this everywhere "is this item done" is checked instead of comparing
+ * against PRONTO_PARA_PUBLICAR/FINALIZADO directly, so activities don't
+ * fall through as perpetually pending. */
+export function isDoneStatus(status: Status): boolean {
+  return status === "PRONTO_PARA_PUBLICAR" || status === "FINALIZADO" || status === "CONCLUIDO";
+}
+
 export type ContentType = "post" | "reel" | "story" | "outros" | "gravacao" | "roteiro" | "sistema";
 
 /** Label de exibição para cada tipo de conteúdo. */
@@ -127,6 +147,13 @@ export interface ContentItem {
   coverUrl?: string | null;
   /** Origem: frame capturado do vídeo ou imagem enviada. */
   coverSource?: "frame" | "upload" | null;
+  /** Local da gravação (ex.: estúdio, externo). Só usado em type="gravacao". */
+  location?: string | null;
+  /** Nome do(a) responsável pela filmagem. Só usado em type="gravacao". */
+  filmmaker?: string | null;
+  /** Contagem livre (vídeos gravados / roteiros / itens), conforme
+   * ACTIVITY_QUANTITY_LABEL — null quando o tipo não usa quantidade. */
+  activityQuantity?: number | null;
 }
 
 export interface MonthData {

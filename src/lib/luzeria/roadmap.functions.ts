@@ -439,7 +439,7 @@ export const getReportExtras = createServerFn({ method: "GET" })
     // ---- Lead time ----
     const leadHours: { id: string; title: string; clientName: string; hours: number }[] = [];
     pool.forEach((it) => {
-      if ((it.status === "PRONTO_PARA_PUBLICAR" || it.status === "FINALIZADO") && it.started_at && it.finished_at) {
+      if ((it.status === "PRONTO_PARA_PUBLICAR" || it.status === "FINALIZADO" || it.status === "CONCLUIDO") && it.started_at && it.finished_at) {
         const h = (new Date(it.finished_at).getTime() - new Date(it.started_at).getTime()) / 3_600_000;
         if (h > 0) leadHours.push({
           id: it.id, title: it.title,
@@ -613,7 +613,7 @@ export const getMyWeek = createServerFn({ method: "GET" })
       .from("content_items")
       .select("id, type, idx, title, status, due_date, months!inner(key, clients!months_client_id_fkey!inner(id, name, color))")
       .in("id", ids)
-      .not("status", "in", "(PRONTO_PARA_PUBLICAR,FINALIZADO)");
+      .not("status", "in", "(PRONTO_PARA_PUBLICAR,FINALIZADO,CONCLUIDO)");
     return ((items ?? []) as any[]).map((it) => ({
       id: it.id, type: it.type, idx: it.idx, title: it.title, status: it.status,
       clientId: it.months.clients.id,
@@ -641,7 +641,7 @@ export const getWorkload = createServerFn({ method: "GET" })
       .from("content_items")
       .select("id, title, updated_at, last_status_change_at, months!inner(clients!months_client_id_fkey!inner(name))")
       .in("id", ids)
-      .not("status", "in", "(PRONTO_PARA_PUBLICAR,FINALIZADO)");
+      .not("status", "in", "(PRONTO_PARA_PUBLICAR,FINALIZADO,CONCLUIDO)");
     const arr = ((items ?? []) as any[]).map((it) => {
       const ref = it.last_status_change_at ?? it.updated_at;
       const days = Math.max(0, Math.floor((Date.now() - new Date(ref).getTime()) / 86_400_000));

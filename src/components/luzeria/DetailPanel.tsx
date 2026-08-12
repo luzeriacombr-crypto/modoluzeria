@@ -6,7 +6,7 @@ import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getInstagramConnectionStatus } from "@/lib/luzeria/instagram.functions";
-import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, ACTIVITY_QUANTITY_LABEL, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS } from "./icons";
 import { MentionInput, renderMentions } from "./MentionInput";
@@ -304,7 +304,9 @@ export function DetailPanel() {
     el.style.height = `${el.scrollHeight}px`;
   }, [editingCopy, copy]);
   const [editingCaption, setEditingCaption] = useState(false);
-  const [drive, setDrive] = useState("");
+  const [location, setLocation] = useState("");
+  const [filmmaker, setFilmmaker] = useState("");
+  const [quantity, setQuantity] = useState("");
   const [comment, setComment] = useState("");
   const [commentMentions, setCommentMentions] = useState<string[]>([]);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -324,7 +326,10 @@ export function DetailPanel() {
 
   useEffect(() => {
     if (item) {
-      setTitle(item.title); setCopy(item.copy); setDrive(item.driveLink);
+      setTitle(item.title); setCopy(item.copy);
+      setLocation(item.location ?? "");
+      setFilmmaker(item.filmmaker ?? "");
+      setQuantity(typeof item.activityQuantity === "number" ? String(item.activityQuantity) : "");
       setCaption(item.caption ?? "");
       setDueDate(item.dueDate ?? "");
       const scheduled = toScheduledLocalParts(item.scheduledAt);
@@ -1040,14 +1045,45 @@ export function DetailPanel() {
           </ModalSection>
         )}
 
-        {/* Local — só faz sentido pra gravação (externa, estúdio, etc.) */}
+        {/* Local e Filmmaker — só fazem sentido pra gravação */}
         {item.type === "gravacao" && (
           <ModalSection label="Local">
             <input
-              value={drive}
-              onChange={(e) => setDrive(e.target.value)}
-              onBlur={() => { if (drive !== item.driveLink) updateItem.mutate({ data: { id: item.id, patch: { drive_link: drive } } }); }}
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              onBlur={() => { if (location !== (item.location ?? "")) updateItem.mutate({ data: { id: item.id, patch: { activity_location: location || null } } }); }}
               placeholder="Ex: Clínica, estúdio, externo…"
+              className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
+            />
+          </ModalSection>
+        )}
+
+        {item.type === "gravacao" && (
+          <ModalSection label="Filmmaker">
+            <input
+              value={filmmaker}
+              onChange={(e) => setFilmmaker(e.target.value)}
+              onBlur={() => { if (filmmaker !== (item.filmmaker ?? "")) updateItem.mutate({ data: { id: item.id, patch: { filmmaker: filmmaker || null } } }); }}
+              placeholder="Nome de quem vai gravar"
+              className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
+            />
+          </ModalSection>
+        )}
+
+        {/* Quantidade — pra gravação/roteiro/outros; Sistema não usa contagem */}
+        {isActivity && ACTIVITY_QUANTITY_LABEL[item.type] && (
+          <ModalSection label={ACTIVITY_QUANTITY_LABEL[item.type]!}>
+            <input
+              type="number" min={0} step={1}
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              onBlur={() => {
+                const n = quantity.trim() ? Number(quantity) : null;
+                const prev = item.activityQuantity ?? null;
+                if (n !== prev && !Number.isNaN(n as any))
+                  updateItem.mutate({ data: { id: item.id, patch: { activity_quantity: n } } });
+              }}
+              placeholder="0"
               className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
             />
           </ModalSection>
