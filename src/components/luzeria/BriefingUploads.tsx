@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Upload, Loader2, Image as ImageIcon } from "lucide-react";
+import { Upload, Loader2, Image as ImageIcon, Download } from "lucide-react";
 import { itemFilesQO, driveThumbnailQO, useApi } from "@/lib/luzeria/queries";
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
-import { downloadDriveFile } from "@/lib/luzeria/drive-download";
+import { downloadDriveFile, downloadDriveFiles } from "@/lib/luzeria/drive-download";
 import { useItemFileUpload } from "@/lib/luzeria/use-item-file-upload";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { FileActionsMenu } from "./FileActionsMenu";
@@ -60,6 +60,8 @@ export function BriefingUploads({ itemId, clientId, canEdit }: { itemId: string;
   const { openFicha } = useUI();
   const { upload, busy, error, missingClientId } = useItemFileUpload(itemId, "briefing");
   const fileRef = useRef<HTMLInputElement>(null);
+  const fetchDriveToken = useServerFn(getDriveVideoToken);
+  const [downloadingAll, setDownloadingAll] = useState(false);
 
   useEffect(() => { if (error) toast.error(error); }, [error]);
 
@@ -69,22 +71,46 @@ export function BriefingUploads({ itemId, clientId, canEdit }: { itemId: string;
     upload(selected);
   }
 
+  async function handleDownloadAll() {
+    setDownloadingAll(true);
+    try {
+      await downloadDriveFiles(fetchDriveToken, files);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao baixar imagens.");
+    } finally {
+      setDownloadingAll(false);
+    }
+  }
+
   return (
     <div className="mt-3 pt-3 border-t border-white/[0.06]">
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider">Imagens de referência</span>
-        {canEdit && (
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[10.5px] font-semibold border border-white/15 text-white/70 hover:text-white hover:border-white/30 transition disabled:opacity-50"
-          >
-            {busy ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
-            Fazer upload para briefing
-          </button>
-        )}
-        {canEdit && <input ref={fileRef} type="file" multiple hidden onChange={onPick} accept="image/*" />}
+        <div className="flex items-center gap-2">
+          {files.length > 1 && (
+            <button
+              type="button"
+              onClick={handleDownloadAll}
+              disabled={downloadingAll}
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[10.5px] font-semibold border border-white/15 text-white/70 hover:text-white hover:border-white/30 transition disabled:opacity-50"
+            >
+              {downloadingAll ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
+              Baixar todas
+            </button>
+          )}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[10.5px] font-semibold border border-white/15 text-white/70 hover:text-white hover:border-white/30 transition disabled:opacity-50"
+            >
+              {busy ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
+              Fazer upload para briefing
+            </button>
+          )}
+          {canEdit && <input ref={fileRef} type="file" multiple hidden onChange={onPick} accept="image/*" />}
+        </div>
       </div>
 
       {files.length > 0 && (
