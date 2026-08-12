@@ -52,6 +52,10 @@ async function fetchThumbDataUrl(fileId: string, size = 480): Promise<string | n
 
 /* ============ ADMIN: get/create + rotate ============ */
 
+/** Um único link por CLIENTE (não por mês) — resolve sempre pro mês mais
+ * recente daquele cliente (ver get_public_feed). `monthId` é guardado só
+ * como referência de "gerado a partir de qual mês", não faz parte da
+ * identidade do link. */
 export const getOrCreateShareToken = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string; monthId: string }) =>
@@ -61,14 +65,14 @@ export const getOrCreateShareToken = createServerFn({ method: "POST" })
     if (!isAdmin) throw new Error("Apenas admins podem compartilhar o preview.");
     const { data: existing } = await context.supabase
       .from("feed_share_tokens").select("token, revoked_at")
-      .eq("client_id", data.clientId).eq("month_id", data.monthId).maybeSingle();
+      .eq("client_id", data.clientId).maybeSingle();
     if (existing && !existing.revoked_at) return { token: existing.token as string };
     const token = randomToken(22);
     if (existing) {
       const { error } = await context.supabase
         .from("feed_share_tokens")
-        .update({ token, revoked_at: null, created_by: context.userId })
-        .eq("client_id", data.clientId).eq("month_id", data.monthId);
+        .update({ token, month_id: data.monthId, revoked_at: null, created_by: context.userId })
+        .eq("client_id", data.clientId);
       if (error) throw new Error(error.message);
     } else {
       const { error } = await context.supabase
@@ -92,7 +96,7 @@ export const rotateShareToken = createServerFn({ method: "POST" })
       .upsert({
         client_id: data.clientId, month_id: data.monthId, token,
         revoked_at: null, created_by: context.userId,
-      }, { onConflict: "client_id,month_id" });
+      }, { onConflict: "client_id" });
     if (error) throw new Error(error.message);
     return { token };
   });
@@ -132,10 +136,10 @@ export const getFeedApprovalSummary = createServerFn({ method: "GET" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
 
-    const { data: tokenRow } = await context.supabase
-      .from("feed_share_tokens")
+    const { data: monthRow } = await context.supabase
+      .from("months")
       .select("client_approved_at")
-      .eq("client_id", data.clientId).eq("month_id", data.monthId)
+      .eq("id", data.monthId)
       .maybeSingle();
 
     let items: FeedApprovalItem[] = data.itemIds.map((id) => ({ itemId: id, approved: false, comment: null }));
@@ -166,7 +170,7 @@ export const getFeedApprovalSummary = createServerFn({ method: "GET" })
     }
 
     return {
-      feedApprovedAt: (tokenRow?.client_approved_at as string | null) ?? null,
+      feedApprovedAt: (monthRow?.client_approved_at as string | null) ?? null,
       items,
     };
   });
@@ -203,6 +207,7 @@ export type PublicFeedPayload = {
   stageCounts: { stage: ClientStage; label: string; count: number }[];
   orgName: string | null;
   feedPreviewImageUrl: string | null;
+  orgLogoUrl: string | null;
 };
 
 export const getPublicFeed = createServerFn({ method: "GET" })
@@ -221,10 +226,12 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     const { data: orgId } = await supabase.rpc("get_org_id_for_token", { _token: data.token });
     let orgName: string | null = null;
     let feedPreviewImagePath: string | null = null;
+    let orgLogoPath: string | null = null;
     if (orgId) {
-      const { data: org } = await supabase.from("orgs").select("name, feed_preview_image_path").eq("id", orgId as string).maybeSingle();
+      const { data: org } = await supabase.from("orgs").select("name, feed_preview_image_path, logo_path").eq("id", orgId as string).maybeSingle();
       orgName = org?.name ?? null;
       feedPreviewImagePath = (org as any)?.feed_preview_image_path ?? null;
+      orgLogoPath = (org as any)?.logo_path ?? null;
     }
 
     const r = result as any;
@@ -250,6 +257,13 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         .from("avatars")
         .createSignedUrl(feedPreviewImagePath, 60 * 60 * 24 * 365);
       feedPreviewImageUrl = signed?.signedUrl ?? null;
+    }
+    let orgLogoUrl: string | null = null;
+    if (orgLogoPath) {
+      const { data: signed } = await supabaseAdmin.storage
+        .from("avatars")
+        .createSignedUrl(orgLogoPath, 60 * 60 * 24 * 365);
+      orgLogoUrl = signed?.signedUrl ?? null;
     }
 
     // Support both flat (files/feedback as top-level arrays with item_id)
@@ -402,6 +416,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       stageCounts,
       orgName,
       feedPreviewImageUrl,
+      orgLogoUrl,
     };
   });
 
@@ -504,11 +519,8 @@ export const approvePublicFeed = createServerFn({ method: "POST" })
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_PUBLISHABLE_KEY!,
     );
-    const { error } = await supabase
-      .from("feed_share_tokens")
-      .update({ client_approved_at: new Date().toISOString() })
-      .eq("token", data.token)
-      .is("revoked_at", null);
+    const { data: approvedAt, error } = await supabase.rpc("approve_public_feed", { _token: data.token });
     if (error) throw new Error(error.message);
-    return { ok: true, approvedAt: new Date().toISOString() };
+    if (!approvedAt) throw new Error("Link inválido ou revogado.");
+    return { ok: true, approvedAt: approvedAt as string };
   });

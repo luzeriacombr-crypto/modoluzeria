@@ -83,7 +83,7 @@ function PublicPreviewPage() {
     );
   }
 
-  const { client, items, orgName, stageCounts } = q.data;
+  const { client, items, orgName, orgLogoUrl, stageCounts } = q.data;
   const initial = client.name.charAt(0).toUpperCase();
   const activeItem = items.find((i) => i.id === activeId) ?? null;
   const blockedCount = items.filter((it) => it.stage === "blocked").length;
@@ -183,8 +183,13 @@ function PublicPreviewPage() {
           </div>
         )}
 
-        <div className="mt-6 text-center text-white/30 text-[11px]">
-          Apresentado por <span className="font-semibold" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{orgName ?? "sua agência"}</span>
+        <div className="mt-8 flex flex-col items-center gap-2">
+          {orgLogoUrl && (
+            <img src={orgLogoUrl} alt={orgName ?? "Logo da agência"} className="max-h-10 max-w-[160px] object-contain opacity-90" />
+          )}
+          <div className="text-center text-white/30 text-[11px]">
+            Apresentado por <span className="font-semibold" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{orgName ?? "sua agência"}</span>
+          </div>
         </div>
       </div>
 

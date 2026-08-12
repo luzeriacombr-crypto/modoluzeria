@@ -400,7 +400,8 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
             <button onClick={() => setOpen(false)} className="text-[11px] text-white/40 hover:text-white">Fechar</button>
           </div>
           <div className="mt-2 text-[10.5px] text-white/40 leading-snug">
-            Quem tiver o link vê apenas as publicações prontas e pode deixar comentários.
+            Link fixo — não muda de mês pra mês, sempre mostra o mês mais recente. Quem tiver
+            o link vê apenas as publicações prontas e pode deixar comentários.
           </div>
         </div>
       )}

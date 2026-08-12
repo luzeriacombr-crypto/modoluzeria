@@ -15,10 +15,7 @@ import { toast } from "sonner";
 import { ImageCropModal } from "./ImageCropModal";
 import { ClientBlockedItemsModal } from "./ClientBlockedItemsModal";
 import { getInstagramConnectionStatus, getInstagramConnectUrl, disconnectInstagram } from "@/lib/luzeria/instagram.functions";
-
-// Fluxo de conexão via OAuth ainda está instável do lado da Meta — desligado até resolver.
-// Clientes já conectados continuam funcionando normal (ver INSTAGRAM_CONNECT_ENABLED abaixo).
-const INSTAGRAM_CONNECT_ENABLED = false;
+import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 
 function formatHours(h: number | null) {
   if (h == null) return "—";
@@ -650,6 +647,8 @@ function Section({ label, children, last, id }: { label: string; children: React
 }
 
 function InstagramSection({ clientId }: { clientId: string }) {
+  const me = useMe().data;
+  const canConnect = me?.orgId === LUZERIA_ORG_ID;
   const getConnStatus = useServerFn(getInstagramConnectionStatus);
   const getConnectUrl = useServerFn(getInstagramConnectUrl);
   const disconnect = useServerFn(disconnectInstagram);
@@ -705,7 +704,7 @@ function InstagramSection({ clientId }: { clientId: string }) {
             Desconectar
           </button>
         </div>
-      ) : INSTAGRAM_CONNECT_ENABLED ? (
+      ) : canConnect ? (
         <button onClick={connect} disabled={connecting}
           className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 disabled:opacity-50">
           {connecting ? <Loader2 size={14} className="animate-spin" /> : <Instagram size={14} />}

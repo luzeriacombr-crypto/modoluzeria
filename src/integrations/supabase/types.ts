@@ -1164,32 +1164,29 @@ export type Database = {
       }
       feed_share_tokens: {
         Row: {
-          client_approved_at: string | null
           client_id: string
           created_at: string
           created_by: string | null
           id: string
-          month_id: string
+          month_id: string | null
           revoked_at: string | null
           token: string
         }
         Insert: {
-          client_approved_at?: string | null
           client_id: string
           created_at?: string
           created_by?: string | null
           id?: string
-          month_id: string
+          month_id?: string | null
           revoked_at?: string | null
           token: string
         }
         Update: {
-          client_approved_at?: string | null
           client_id?: string
           created_at?: string
           created_by?: string | null
           id?: string
-          month_id?: string
+          month_id?: string | null
           revoked_at?: string | null
           token?: string
         }
@@ -1197,7 +1194,7 @@ export type Database = {
           {
             foreignKeyName: "feed_share_tokens_client_id_fkey"
             columns: ["client_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
@@ -1422,6 +1419,7 @@ export type Database = {
       }
       months: {
         Row: {
+          client_approved_at: string | null
           client_id: string
           created_at: string
           feed_order_direction: string
@@ -1431,6 +1429,7 @@ export type Database = {
           org_id: string
         }
         Insert: {
+          client_approved_at?: string | null
           client_id: string
           created_at?: string
           feed_order_direction?: string
@@ -1440,6 +1439,7 @@ export type Database = {
           org_id: string
         }
         Update: {
+          client_approved_at?: string | null
           client_id?: string
           created_at?: string
           feed_order_direction?: string
@@ -2200,6 +2200,7 @@ export type Database = {
           id: string
         }[]
       }
+      approve_public_feed: { Args: { _token: string }; Returns: string }
       auto_mark_missed: { Args: never; Returns: number }
       current_org_id: { Args: never; Returns: string }
       generate_recurring_for_month: {
