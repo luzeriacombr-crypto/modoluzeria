@@ -84,6 +84,10 @@ export const getInstagramConnectUrl = createServerFn({ method: "POST" })
       response_type: "code",
       scope: IG_SCOPES,
       state: data.clientId,
+      // Without this, Instagram skips straight to "you already connected
+      // this app" once authorized once — App Review needs to see the actual
+      // permissions screen, so force it to show every time.
+      auth_type: "rerequest",
     });
     return { url: `https://www.instagram.com/oauth/authorize?${params.toString()}` };
   });
