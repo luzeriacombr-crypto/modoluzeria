@@ -406,8 +406,8 @@ function GeneralSettings() {
         <button onClick={() => toggle(!settings.requireRatingOnFinalize)}
           className={`relative h-6 w-11 rounded-full transition-colors ${
             settings.requireRatingOnFinalize ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`}>
-          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-            settings.requireRatingOnFinalize ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
+            settings.requireRatingOnFinalize ? "left-[22px]" : "left-0.5"}`} />
         </button>
       </div>
 
@@ -465,8 +465,8 @@ function FeatureTogglesSection({ disabledFeatures }: { disabledFeatures: string[
             <button onClick={() => toggle(key, visible)}
               className={`relative h-6 w-11 rounded-full transition-colors shrink-0 ${
                 visible ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`}>
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                visible ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
+                visible ? "left-[22px]" : "left-0.5"}`} />
             </button>
           </div>
         );

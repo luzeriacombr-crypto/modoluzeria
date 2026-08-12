@@ -196,8 +196,8 @@ function PrefRow({ icon, title, description, value, disabled, onChange }: {
         className={`relative h-6 w-11 rounded-full transition-colors shrink-0 disabled:opacity-50 ${
           value ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"
         }`}>
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-          value ? "translate-x-[22px]" : "translate-x-0.5"
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
+          value ? "left-[22px]" : "left-0.5"
         }`} />
       </button>
     </div>
