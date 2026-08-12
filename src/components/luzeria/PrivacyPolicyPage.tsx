@@ -17,7 +17,7 @@ export function PrivacyPolicyPage() {
 
       <main className="max-w-[720px] mx-auto px-5 sm:px-10 py-14">
         <h1 className="text-3xl font-black mb-2">Política de Privacidade</h1>
-        <p className="text-white/50 text-sm mb-10">Última atualização: agosto de 2026</p>
+        <p className="text-white/50 text-sm mb-10">Última atualização: 12 de agosto de 2026</p>
 
         <div className="space-y-8 text-white/80 text-sm leading-relaxed">
           <section>
@@ -61,7 +61,28 @@ export function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-white mb-2">5. Seus direitos</h2>
+            <h2 className="text-lg font-bold text-white mb-2">5. Provedores de infraestrutura</h2>
+            <p>
+              Utilizamos provedores de infraestrutura de confiança para hospedar a plataforma: Supabase,
+              Inc. (banco de dados) e Vercel, Inc. (hospedagem da aplicação), ambos com processamento no
+              Brasil. Esses provedores têm acesso técnico aos dados armazenados na plataforma na medida
+              necessária pra operá-la, e não os utilizam para nenhuma finalidade própria.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-white mb-2">6. Integração com Instagram</h2>
+            <p>
+              Se sua agência conectar a conta profissional do Instagram de um cliente ao Modo Criador,
+              coletamos e armazenamos o nome de usuário, o ID da conta e um token de acesso, usados
+              exclusivamente para publicar conteúdo aprovado diretamente nessa conta, a pedido da agência.
+              Essa conexão pode ser desfeita a qualquer momento pela agência dentro da plataforma, o que
+              exclui imediatamente esses dados armazenados.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-white mb-2">7. Seus direitos</h2>
             <p>
               Você pode solicitar, a qualquer momento, a confirmação, correção, exportação ou exclusão dos
               seus dados pessoais, conforme previsto na LGPD. Para isso, entre em contato pelo e-mail
@@ -70,7 +91,7 @@ export function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-white mb-2">6. Contato</h2>
+            <h2 className="text-lg font-bold text-white mb-2">8. Contato</h2>
             <p>
               Dúvidas sobre esta política ou solicitações relacionadas aos seus dados podem ser enviadas
               para{" "}
