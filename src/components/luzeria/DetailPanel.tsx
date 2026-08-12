@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getInstagramConnectionStatus } from "@/lib/luzeria/instagram.functions";
+import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
+import { downloadDriveFile, downloadDriveFiles } from "@/lib/luzeria/drive-download";
+import { FileActionsMenu } from "./FileActionsMenu";
 import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, ACTIVITY_QUANTITY_LABEL, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS } from "./icons";
@@ -108,24 +111,68 @@ function extractDriveFileId(url: string): string | null {
  * FilesSection's FileThumb, just sized for a row of tiles instead of a list.
  * Clicking opens the in-app carousel viewer (CarouselLightbox) instead of
  * jumping to Google Drive. */
-function CarouselThumb({ file, onClick }: { file: { id: string; driveFileId: string; name: string; webViewUrl: string }; onClick: () => void }) {
+function CarouselThumb({
+  file, onClick, canEdit, selectMode, selected, onToggleSelect, onRemoveAppOnly, onRemoveEverywhere,
+}: {
+  file: { id: string; driveFileId: string; name: string; webViewUrl: string };
+  onClick: () => void;
+  canEdit: boolean;
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
+  onRemoveAppOnly: () => void;
+  onRemoveEverywhere: () => void;
+}) {
   const { data, isLoading } = useQuery(driveThumbnailQO(file.driveFileId, true));
   const url = data?.dataUrl ?? null;
+  const fetchDriveToken = useServerFn(getDriveVideoToken);
+  const [downloading, setDownloading] = useState(false);
+
+  async function handleDownload() {
+    setDownloading(true);
+    try {
+      await downloadDriveFile(fetchDriveToken, file.driveFileId, file.name);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao baixar arquivo.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
-    <button
-      type="button"
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
-      title={file.name}
-      className="w-16 h-16 shrink-0 rounded-md overflow-hidden bg-[#141414] border border-white/[0.08] flex items-center justify-center"
-    >
-      {url ? (
-        <img src={url} alt={file.name} className="w-full h-full object-cover" loading="lazy" />
-      ) : isLoading ? (
-        <Loader2 size={12} className="animate-spin text-white/30" />
+    <div className="group relative w-16 h-16 shrink-0">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); selectMode ? onToggleSelect() : onClick(); }}
+        title={file.name}
+        className={`w-16 h-16 shrink-0 rounded-md overflow-hidden bg-[#141414] border flex items-center justify-center transition-colors ${
+          selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-white/[0.08]"}`}
+      >
+        {url ? (
+          <img src={url} alt={file.name} className="w-full h-full object-cover" loading="lazy" />
+        ) : isLoading ? (
+          <Loader2 size={12} className="animate-spin text-white/30" />
+        ) : (
+          <ImageIcon size={14} className="text-white/20" />
+        )}
+      </button>
+      {selectMode ? (
+        <div
+          className="absolute top-0.5 left-0.5 rounded p-0.5 pointer-events-none"
+          style={{ backgroundColor: selected ? "rgb(var(--lz-brand-rgb))" : "rgba(0,0,0,0.6)" }}
+        >
+          {selected ? <CheckSquare size={11} className="text-black" /> : <Square size={11} className="text-white" />}
+        </div>
       ) : (
-        <ImageIcon size={14} className="text-white/20" />
+        <FileActionsMenu
+          canEdit={canEdit}
+          downloading={downloading}
+          onDownload={handleDownload}
+          onRemoveAppOnly={onRemoveAppOnly}
+          onRemoveEverywhere={onRemoveEverywhere}
+        />
       )}
-    </button>
+    </div>
   );
 }
 
@@ -136,8 +183,13 @@ function MediaPreview({
 }) {
   const { data: files = [], isLoading: filesLoading } = useQuery(itemFilesQO(itemId));
   const { upload, busy, error, missingClientId } = useItemFileUpload(itemId, "media");
+  const { detachItemFile, deleteItemFileAndDrive } = useApi();
+  const fetchDriveToken = useServerFn(getDriveVideoToken);
   const fileRef = useRef<HTMLInputElement>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [downloadingAll, setDownloadingAll] = useState(false);
   const isCarrossel = itemType === "post" && postFormat === "carrossel";
   const isEstatico = itemType === "post" && postFormat === "estatico";
   const first = files[0];
@@ -162,20 +214,110 @@ function MediaPreview({
   ) : null;
 
   if (isCarrossel) {
+    async function handleDownloadAll() {
+      setDownloadingAll(true);
+      try {
+        await downloadDriveFiles(fetchDriveToken, files);
+      } catch (e: any) {
+        toast.error(e?.message ?? "Erro ao baixar imagens.");
+      } finally {
+        setDownloadingAll(false);
+      }
+    }
+    async function handleDownloadSelected() {
+      const chosen = files.filter((f) => selectedIds.has(f.id));
+      if (!chosen.length) return;
+      setDownloadingAll(true);
+      try {
+        await downloadDriveFiles(fetchDriveToken, chosen);
+      } catch (e: any) {
+        toast.error(e?.message ?? "Erro ao baixar imagens.");
+      } finally {
+        setDownloadingAll(false);
+      }
+    }
+    function toggleSelected(id: string) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+      });
+    }
     return (
-      <div className="flex flex-wrap gap-1.5">
-        {files.map((f, i) => <CarouselThumb key={f.id} file={f} onClick={() => setLightboxIndex(i)} />)}
-        {canEdit && (
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={busy}
-            className="w-16 h-16 shrink-0 rounded-md border border-dashed border-white/15 bg-[#141414] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors disabled:opacity-50"
-          >
-            {busy ? <Loader2 size={14} className="animate-spin text-white/40" /> : <Plus size={16} className="text-white/40" />}
-          </button>
+      <div>
+        {files.length > 1 && (
+          <div className="flex items-center gap-2 mb-1.5">
+            {selectMode ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleDownloadSelected}
+                  disabled={downloadingAll || selectedIds.size === 0}
+                  className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-white/70 hover:text-white transition disabled:opacity-40"
+                >
+                  {downloadingAll ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
+                  Baixar selecionadas ({selectedIds.size})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
+                  className="text-[10.5px] text-white/40 hover:text-white transition"
+                >
+                  Cancelar
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleDownloadAll}
+                  disabled={downloadingAll}
+                  className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-white/70 hover:text-white transition disabled:opacity-40"
+                >
+                  {downloadingAll ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
+                  Baixar todas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectMode(true)}
+                  className="text-[10.5px] text-white/40 hover:text-white transition"
+                >
+                  Selecionar
+                </button>
+              </>
+            )}
+          </div>
         )}
-        {inputEl}
+        <div className="flex flex-wrap gap-1.5">
+          {files.map((f, i) => (
+            <CarouselThumb
+              key={f.id}
+              file={f}
+              canEdit={canEdit}
+              selectMode={selectMode}
+              selected={selectedIds.has(f.id)}
+              onToggleSelect={() => toggleSelected(f.id)}
+              onClick={() => setLightboxIndex(i)}
+              onRemoveAppOnly={() => detachItemFile.mutate({ data: { id: f.id } })}
+              onRemoveEverywhere={() => {
+                if (confirm(`Remover "${f.name}" do Modo Criador e mover pra lixeira do Google Drive?`)) {
+                  deleteItemFileAndDrive.mutate({ data: { id: f.id } });
+                }
+              }}
+            />
+          ))}
+          {canEdit && !selectMode && (
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={busy}
+              className="w-16 h-16 shrink-0 rounded-md border border-dashed border-white/15 bg-[#141414] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors disabled:opacity-50"
+            >
+              {busy ? <Loader2 size={14} className="animate-spin text-white/40" /> : <Plus size={16} className="text-white/40" />}
+            </button>
+          )}
+          {inputEl}
+        </div>
         {lightboxIndex !== null && (
           <CarouselLightbox files={files} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
         )}

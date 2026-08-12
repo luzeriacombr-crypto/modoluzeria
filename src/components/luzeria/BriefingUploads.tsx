@@ -1,18 +1,37 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Upload, Loader2, Trash2, Image as ImageIcon } from "lucide-react";
+import { Upload, Loader2, Image as ImageIcon } from "lucide-react";
 import { itemFilesQO, driveThumbnailQO, useApi } from "@/lib/luzeria/queries";
+import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
+import { downloadDriveFile } from "@/lib/luzeria/drive-download";
 import { useItemFileUpload } from "@/lib/luzeria/use-item-file-upload";
 import { useUI } from "@/lib/luzeria/ui-store";
+import { FileActionsMenu } from "./FileActionsMenu";
 
-function BriefingThumb({ file, onRemove, canEdit }: {
+function BriefingThumb({ file, onRemoveAppOnly, onRemoveEverywhere, canEdit }: {
   file: { id: string; driveFileId: string; name: string; webViewUrl: string };
-  onRemove: () => void;
+  onRemoveAppOnly: () => void;
+  onRemoveEverywhere: () => void;
   canEdit: boolean;
 }) {
   const { data, isLoading } = useQuery(driveThumbnailQO(file.driveFileId, true));
   const url = data?.dataUrl ?? null;
+  const fetchDriveToken = useServerFn(getDriveVideoToken);
+  const [downloading, setDownloading] = useState(false);
+
+  async function handleDownload() {
+    setDownloading(true);
+    try {
+      await downloadDriveFile(fetchDriveToken, file.driveFileId, file.name);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao baixar arquivo.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
     <div className="group relative w-16 h-16 shrink-0 rounded-md overflow-hidden bg-[#141414] border border-white/[0.08] flex items-center justify-center">
       <a href={file.webViewUrl} target="_blank" rel="noopener noreferrer" title={file.name} className="absolute inset-0">
@@ -24,23 +43,20 @@ function BriefingThumb({ file, onRemove, canEdit }: {
           <div className="w-full h-full flex items-center justify-center"><ImageIcon size={14} className="text-white/20" /></div>
         )}
       </a>
-      {canEdit && (
-        <button
-          type="button"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }}
-          title="Remover"
-          className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-red-500/80 text-white rounded p-0.5"
-        >
-          <Trash2 size={10} />
-        </button>
-      )}
+      <FileActionsMenu
+        canEdit={canEdit}
+        downloading={downloading}
+        onDownload={handleDownload}
+        onRemoveAppOnly={onRemoveAppOnly}
+        onRemoveEverywhere={onRemoveEverywhere}
+      />
     </div>
   );
 }
 
 export function BriefingUploads({ itemId, clientId, canEdit }: { itemId: string; clientId?: string | null; canEdit: boolean }) {
   const { data: files = [] } = useQuery(itemFilesQO(itemId, "briefing"));
-  const { detachItemFile } = useApi();
+  const { detachItemFile, deleteItemFileAndDrive } = useApi();
   const { openFicha } = useUI();
   const { upload, busy, error, missingClientId } = useItemFileUpload(itemId, "briefing");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -78,7 +94,12 @@ export function BriefingUploads({ itemId, clientId, canEdit }: { itemId: string;
               key={f.id}
               file={f}
               canEdit={canEdit}
-              onRemove={() => detachItemFile.mutate({ data: { id: f.id } })}
+              onRemoveAppOnly={() => detachItemFile.mutate({ data: { id: f.id } })}
+              onRemoveEverywhere={() => {
+                if (confirm(`Remover "${f.name}" do Modo Criador e mover pra lixeira do Google Drive?`)) {
+                  deleteItemFileAndDrive.mutate({ data: { id: f.id } });
+                }
+              }}
             />
           ))}
         </div>

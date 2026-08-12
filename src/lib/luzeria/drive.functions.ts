@@ -757,6 +757,43 @@ export const detachItemFile = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Same as detachItemFile, but also moves the underlying Drive file to the
+ * trash (recoverable there for the usual ~30 days) instead of leaving it
+ * behind in the client's folder. */
+export const deleteItemFileAndDrive = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string }) =>
+    z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    const { data: row } = await context.supabase
+      .from("item_files")
+      .select("item_id, drive_file_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!row) return { ok: true };
+    await assertCanWrite(context.supabase, context.userId, row.item_id);
+    if (row.drive_file_id) {
+      try {
+        await driveFetch(`/drive/v3/files/${encodeURIComponent(row.drive_file_id)}?supportsAllDrives=true`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trashed: true }),
+        });
+      } catch (e) {
+        // Don't block removing our own record if Drive trashing fails (file
+        // already gone, permission hiccup, etc.) — surface it but proceed.
+        console.error("[deleteItemFileAndDrive] Drive trash failed:", e);
+      }
+    }
+    const { error } = await context.supabase
+      .from("item_files")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await syncLegacyDriveLink(context.supabase, row.item_id);
+    return { ok: true };
+  }));
+
 export type ItemFile = Awaited<ReturnType<typeof listItemFiles>>[number];
 export type DriveSearchResult = Awaited<ReturnType<typeof searchDriveFiles>>[number];
 
