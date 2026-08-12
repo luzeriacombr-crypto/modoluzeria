@@ -843,6 +843,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          active_month_id: string | null
           archived: boolean
           category: string
           color: string
@@ -866,6 +867,7 @@ export type Database = {
           whatsapp_group_link: string | null
         }
         Insert: {
+          active_month_id?: string | null
           archived?: boolean
           category?: string
           color?: string
@@ -889,6 +891,7 @@ export type Database = {
           whatsapp_group_link?: string | null
         }
         Update: {
+          active_month_id?: string | null
           archived?: boolean
           category?: string
           color?: string
@@ -912,6 +915,13 @@ export type Database = {
           whatsapp_group_link?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clients_active_month_id_fkey"
+            columns: ["active_month_id"]
+            isOneToOne: false
+            referencedRelation: "months"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clients_current_stage_id_fkey"
             columns: ["current_stage_id"]

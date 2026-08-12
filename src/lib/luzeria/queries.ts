@@ -45,6 +45,7 @@ import { listAutomationRules, createAutomationRule, deleteAutomationRule } from 
 import { listMyBugReports, listAllBugReports, updateBugReportStatus, sendBugReportMessage } from "./bug-reports.functions";
 import {
   getOrCreateShareToken, rotateShareToken, listClientFeedback, getFeedApprovalSummary,
+  getActiveFeedMonth, setActiveFeedMonth,
   getPublicFeed, getPublicDriveThumbnail, addPublicFeedback,
 } from "./feed-share.functions";
 import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from "./platform-updates.functions";
@@ -335,6 +336,14 @@ export const feedApprovalSummaryQO = (clientId: string, monthId: string, itemIds
     queryKey: ["feed-approval-summary", clientId, monthId, [...itemIds].sort()],
     queryFn: () => getFeedApprovalSummary({ data: { clientId, monthId, itemIds } }),
     staleTime: 1000 * 30,
+  });
+
+/** Qual mês o link fixo de preview desse cliente está mostrando agora. */
+export const activeFeedMonthQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["active-feed-month", clientId],
+    queryFn: () => getActiveFeedMonth({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
   });
 
 export const clientDeliveriesFolderQO = (clientId: string | null) =>
@@ -777,6 +786,10 @@ export function useApi() {
     /* ===== FEED SHARE ===== */
     getOrCreateShareToken: useMutation({ mutationFn: useServerFn(getOrCreateShareToken) }),
     rotateShareToken: useMutation({ mutationFn: useServerFn(rotateShareToken) }),
+    setActiveFeedMonth: useMutation({
+      mutationFn: useServerFn(setActiveFeedMonth),
+      onSuccess: (_d, vars: any) => qc.invalidateQueries({ queryKey: ["active-feed-month", vars?.data?.clientId] }),
+    }),
     addPublicFeedback: useMutation({
       mutationFn: useServerFn(addPublicFeedback),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["public-feed"] }),

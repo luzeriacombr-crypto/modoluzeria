@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, CheckCircle2, Copy as CopyIcon, Film, Image as ImageIcon, Layers, MessageSquare, RefreshCw, Share2 } from "lucide-react";
-import { itemFilesQO, gridThumbnailsQO, feedApprovalSummaryQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { itemFilesQO, gridThumbnailsQO, feedApprovalSummaryQO, activeFeedMonthQO, useApi, useMe } from "@/lib/luzeria/queries";
 import type { Client, ContentItem, MonthData } from "@/lib/luzeria/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { InstagramPostModal, type IGModalItem } from "./InstagramPostModal";
@@ -112,6 +112,7 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
           </div>
           {isAdmin && (
             <div className="flex items-center gap-2">
+              <ActiveMonthToggle clientId={client.id} monthId={month.id} />
               <ShareButton clientId={client.id} monthId={month.id} />
             </div>
           )}
@@ -330,6 +331,37 @@ function FeedCell({
 }
 
 /* ============ Share button ============ */
+/** O link fixo do cliente sempre mostra o mês "ativo" (clients.active_month_id),
+ * escolhido manualmente — não pula sozinho pro mês mais novo, já que um mês
+ * novo pode existir (container vazio, avulso futuro) sem ainda ser o que a
+ * agência quer mostrar pro cliente. */
+function ActiveMonthToggle({ clientId, monthId }: { clientId: string; monthId: string }) {
+  const { data } = useQuery(activeFeedMonthQO(clientId));
+  const { setActiveFeedMonth } = useApi();
+  const isActive = data?.monthId === monthId;
+
+  if (isActive) {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full"
+        style={{ background: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+      >
+        <CheckCircle2 size={13} /> Mês ativo no link
+      </span>
+    );
+  }
+  return (
+    <button
+      onClick={() => setActiveFeedMonth.mutate({ data: { clientId, monthId } })}
+      disabled={setActiveFeedMonth.isPending}
+      title="Faz o link fixo do cliente passar a mostrar esse mês"
+      className="text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition disabled:opacity-50"
+    >
+      {setActiveFeedMonth.isPending ? "Ativando…" : "Ativar esse mês no link"}
+    </button>
+  );
+}
+
 function ShareButton({ clientId, monthId }: { clientId: string; monthId: string }) {
   const { getOrCreateShareToken, rotateShareToken } = useApi();
   const [open, setOpen] = useState(false);

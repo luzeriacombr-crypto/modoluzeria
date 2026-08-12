@@ -101,6 +101,36 @@ export const rotateShareToken = createServerFn({ method: "POST" })
     return { token };
   });
 
+/* ============ TEAM: which month the client's fixed link shows ============ */
+
+/** O link público é fixo por cliente e sempre mostra o mês "ativo" —
+ * escolhido manualmente pela agência (clients.active_month_id), não o
+ * mês mais recente automaticamente: um mês novo pode já existir (ex:
+ * container vazio) sem ainda ser o que deve aparecer pro cliente. */
+export const getActiveFeedMonth = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) =>
+    z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("clients").select("active_month_id").eq("id", data.clientId).maybeSingle();
+    if (error) throw new Error(error.message);
+    return { monthId: (row?.active_month_id as string | null) ?? null };
+  });
+
+export const setActiveFeedMonth = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; monthId: string }) =>
+    z.object({ clientId: z.string().uuid(), monthId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Apenas admins podem escolher o mês do link.");
+    const { error } = await context.supabase
+      .from("clients").update({ active_month_id: data.monthId }).eq("id", data.clientId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /* ============ TEAM: list feedback for an item ============ */
 
 export const listClientFeedback = createServerFn({ method: "GET" })
