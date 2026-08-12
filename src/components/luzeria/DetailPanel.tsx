@@ -190,7 +190,19 @@ function MediaPreview({
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [downloadingFirst, setDownloadingFirst] = useState(false);
   const isCarrossel = itemType === "post" && postFormat === "carrossel";
+
+  async function handleDownloadAllFiles() {
+    setDownloadingAll(true);
+    try {
+      await downloadDriveFiles(fetchDriveToken, files);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao baixar imagens.");
+    } finally {
+      setDownloadingAll(false);
+    }
+  }
   const isEstatico = itemType === "post" && postFormat === "estatico";
   const first = files[0];
   const fileId = first?.driveFileId ?? null;
@@ -214,16 +226,6 @@ function MediaPreview({
   ) : null;
 
   if (isCarrossel) {
-    async function handleDownloadAll() {
-      setDownloadingAll(true);
-      try {
-        await downloadDriveFiles(fetchDriveToken, files);
-      } catch (e: any) {
-        toast.error(e?.message ?? "Erro ao baixar imagens.");
-      } finally {
-        setDownloadingAll(false);
-      }
-    }
     async function handleDownloadSelected() {
       const chosen = files.filter((f) => selectedIds.has(f.id));
       if (!chosen.length) return;
@@ -270,7 +272,7 @@ function MediaPreview({
               <>
                 <button
                   type="button"
-                  onClick={handleDownloadAll}
+                  onClick={handleDownloadAllFiles}
                   disabled={downloadingAll}
                   className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-white/70 hover:text-white transition disabled:opacity-40"
                 >
@@ -369,29 +371,69 @@ function MediaPreview({
     </>
   );
 
+  async function handleDownloadFirst() {
+    if (!first) return;
+    setDownloadingFirst(true);
+    try {
+      await downloadDriveFile(fetchDriveToken, first.driveFileId, first.name);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao baixar arquivo.");
+    } finally {
+      setDownloadingFirst(false);
+    }
+  }
+
   return (
     <>
-      {opensLightbox ? (
-        <button
-          type="button"
-          onClick={() => setLightboxIndex(0)}
-          className="group relative block w-24 h-24 rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
-          title={first?.name}
-        >
-          {thumbContent}
-        </button>
-      ) : (
-        <a
-          href={href ?? "#"}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => { if (!href) e.preventDefault(); }}
-          className="group relative block w-24 h-24 rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
-          title={first?.name}
-        >
-          {thumbContent}
-        </a>
+      {files.length > 1 && (
+        <div className="flex items-center gap-2 mb-1.5">
+          <button
+            type="button"
+            onClick={handleDownloadAllFiles}
+            disabled={downloadingAll}
+            className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-white/70 hover:text-white transition disabled:opacity-40"
+          >
+            {downloadingAll ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
+            Baixar todas
+          </button>
+        </div>
       )}
+      <div className="group relative w-24 h-24">
+        {opensLightbox ? (
+          <button
+            type="button"
+            onClick={() => setLightboxIndex(0)}
+            className="block w-24 h-24 rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
+            title={first?.name}
+          >
+            {thumbContent}
+          </button>
+        ) : (
+          <a
+            href={href ?? "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => { if (!href) e.preventDefault(); }}
+            className="block w-24 h-24 rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
+            title={first?.name}
+          >
+            {thumbContent}
+          </a>
+        )}
+        {first && (
+          <FileActionsMenu
+            canEdit={canEdit}
+            downloading={downloadingFirst}
+            onDownload={handleDownloadFirst}
+            onRemoveAppOnly={() => detachItemFile.mutate({ data: { id: first.id } })}
+            onRemoveEverywhere={() => {
+              if (confirm(`Remover "${first.name}" do Modo Criador e mover pra lixeira do Google Drive?`)) {
+                deleteItemFileAndDrive.mutate({ data: { id: first.id } });
+              }
+            }}
+          />
+        )}
+      </div>
       {inputEl}
       {opensLightbox && lightboxIndex !== null && (
         <CarouselLightbox files={files} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
