@@ -98,12 +98,14 @@ export function Sidebar({
           onClick={() => navigate({ to: "/admin" })}
         />
         {!disabled.has("calendar") && (
-          <NavButton
-            icon={<CalendarDays size={15} />}
-            label="Calendário"
-            active={pathname === "/calendario"}
-            onClick={() => navigate({ to: "/calendario" })}
-          />
+          <div data-tour="nav-calendario">
+            <NavButton
+              icon={<CalendarDays size={15} />}
+              label="Calendário"
+              active={pathname === "/calendario"}
+              onClick={() => navigate({ to: "/calendario" })}
+            />
+          </div>
         )}
         {isAdmin && !disabled.has("instagram") && (
           <NavButton
@@ -114,19 +116,23 @@ export function Sidebar({
           />
         )}
         {!disabled.has("rotina") && (
-          <NavButton
-            icon={<Sparkles size={15} />}
-            label="Rotina"
-            active={pathname === "/rotina"}
-            onClick={() => navigate({ to: "/rotina" })}
-          />
+          <div data-tour="nav-rotina">
+            <NavButton
+              icon={<Sparkles size={15} />}
+              label="Rotina"
+              active={pathname === "/rotina"}
+              onClick={() => navigate({ to: "/rotina" })}
+            />
+          </div>
         )}
-        <NavButton
-          icon={<CircleHelp size={15} />}
-          label="Ajuda"
-          active={pathname === "/ajuda"}
-          onClick={() => navigate({ to: "/ajuda" })}
-        />
+        <div data-tour="nav-ajuda">
+          <NavButton
+            icon={<CircleHelp size={15} />}
+            label="Ajuda"
+            active={pathname === "/ajuda"}
+            onClick={() => navigate({ to: "/ajuda" })}
+          />
+        </div>
       </div>
 
       {/* Clients */}

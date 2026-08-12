@@ -14,6 +14,8 @@ type Step = {
   view?: "my" | "admin" | "settings" | "profile";
   roles?: Role[];
   mobileTarget?: string;
+  /** Skip this step when the org disabled this optional feature (OPTIONAL_FEATURE_KEYS). */
+  hideIfDisabled?: string;
 };
 
 const STEPS: Step[] = [
@@ -30,6 +32,13 @@ const STEPS: Step[] = [
     target: '[data-tour="my-tasks"]',
   },
   {
+    id: "activity-counts",
+    title: "Atividades registradas",
+    desc: "Gravações, roteiros e outras atividades que você concluiu no mês aparecem aqui. Clique em uma pílula pra ver a lista e abrir direto o item.",
+    view: "my",
+    target: '[data-tour="activity-counts"]',
+  },
+  {
     id: "goals",
     title: "Suas metas do mês",
     desc: "Acompanhe Posts, Reels e Stories em tempo real. Se a cor virar laranja/vermelho, você está atrás do esperado pro dia do mês.",
@@ -42,6 +51,26 @@ const STEPS: Step[] = [
     desc: "Clique aqui pra ver suas demandas em formato de kanban, organizado por dia da semana.",
     view: "my",
     target: '[data-tour="my-week"]',
+  },
+  {
+    id: "calendario",
+    title: "Calendário",
+    desc: "Visão mensal em grade com todas as publicações da agência. Passe o mouse num dia pra ver a miniatura e o cliente.",
+    target: '[data-tour="nav-calendario"]',
+    hideIfDisabled: "calendar",
+  },
+  {
+    id: "rotina",
+    title: "Rotina",
+    desc: "Tarefas de limpeza e organização recorrentes, marcadas como feitas dia a dia.",
+    target: '[data-tour="nav-rotina"]',
+    hideIfDisabled: "rotina",
+  },
+  {
+    id: "ajuda",
+    title: "Ajuda",
+    desc: "Tutoriais, perguntas frequentes e um botão pra reportar bugs — com acompanhamento do status direto por aqui.",
+    target: '[data-tour="nav-ajuda"]',
   },
   {
     id: "sidebar",
@@ -58,13 +87,13 @@ const STEPS: Step[] = [
   {
     id: "profile",
     title: "Seu perfil",
-    desc: "Edite sua foto, cor do avatar e refaça este tour quando quiser.",
+    desc: "Edite sua foto, cor do avatar, ative a verificação em duas etapas e refaça este tour quando quiser.",
     target: '[data-tour="profile-btn"]',
   },
   {
     id: "dashboard",
     title: "Dashboard",
-    desc: "Métricas do mês, ranking de produtividade e saúde da operação. Atualiza automaticamente em Modo TV.",
+    desc: "Métricas do mês, ranking de produtividade e saúde da operação — clique num número (Entregues/Falta) pra ver a lista de itens por trás dele. Atualiza automaticamente em Modo TV.",
     view: "admin",
     target: '[data-tour="dashboard-hero"]',
     roles: ["master", "setor"],
@@ -72,8 +101,9 @@ const STEPS: Step[] = [
   {
     id: "settings",
     title: "Configurações",
-    desc: "Aprovação de membros, exportação de relatórios (Excel) e ajustes gerais da agência.",
+    desc: "Equipe (aprovação de membros e metas), Jornada do cliente (etapas pra avisar no WhatsApp), Automações (Google Drive e lembretes), Financeiro (plano, cupons e afiliados) e Relatórios em Excel — tudo aqui.",
     view: "settings",
+    target: '[data-tour="settings-tabs"]',
     roles: ["master"],
   },
   {
@@ -95,7 +125,11 @@ export function AppTour() {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const autoStartedRef = useRef(false);
 
-  const visibleSteps = STEPS.filter((s) => !s.roles || (me?.role && s.roles.includes(me.role as Role)));
+  const disabledFeatures = new Set(me?.disabledFeatures ?? []);
+  const visibleSteps = STEPS.filter((s) =>
+    (!s.roles || (me?.role && s.roles.includes(me.role as Role))) &&
+    (!s.hideIfDisabled || !disabledFeatures.has(s.hideIfDisabled))
+  );
   const step = visibleSteps[stepIdx];
 
   // Auto-start once on first login (after onboarding completes).

@@ -1655,6 +1655,7 @@ export type Database = {
           tagline: string | null
           tax_id: string | null
           trial_ends_at: string | null
+          whatsapp: string | null
         }
         Insert: {
           asaas_customer_id?: string | null
@@ -1676,6 +1677,7 @@ export type Database = {
           tagline?: string | null
           tax_id?: string | null
           trial_ends_at?: string | null
+          whatsapp?: string | null
         }
         Update: {
           asaas_customer_id?: string | null
@@ -1697,6 +1699,7 @@ export type Database = {
           tagline?: string | null
           tax_id?: string | null
           trial_ends_at?: string | null
+          whatsapp?: string | null
         }
         Relationships: [
           {

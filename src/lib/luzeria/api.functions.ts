@@ -234,7 +234,7 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
 
     const { data: orgs, error } = await context.supabase
       .from("orgs")
-      .select("id, name, slug, plan_id, subscription_status, trial_ends_at, asaas_subscription_id, created_at")
+      .select("id, name, slug, plan_id, subscription_status, trial_ends_at, asaas_subscription_id, created_at, tax_id, whatsapp")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
 
@@ -250,8 +250,25 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
     const clientsByOrg = new Map<string, number>();
     (clientRows ?? []).forEach((c: any) => clientsByOrg.set(c.org_id, (clientsByOrg.get(c.org_id) ?? 0) + 1));
 
+    // Owner contact (name + email) — the earliest-created "master" profile
+    // in each org, same as who received the signup confirmation email.
+    const { data: masterRoles } = await supabaseAdmin
+      .from("user_roles").select("user_id").eq("role", "master");
+    const masterIds = new Set((masterRoles ?? []).map((r: any) => r.user_id));
+    const { data: ownerProfiles } = await supabaseAdmin
+      .from("profiles").select("id, org_id, name, email, created_at")
+      .in("org_id", (orgs ?? []).map((o: any) => o.id));
+    const ownerByOrg = new Map<string, { name: string; email: string }>();
+    (ownerProfiles ?? [])
+      .filter((p: any) => masterIds.has(p.id))
+      .sort((a: any, b: any) => a.created_at.localeCompare(b.created_at))
+      .forEach((p: any) => {
+        if (!ownerByOrg.has(p.org_id)) ownerByOrg.set(p.org_id, { name: p.name, email: p.email });
+      });
+
     return (orgs ?? []).map((o: any) => {
       const plan = planMap.get(o.plan_id);
+      const owner = ownerByOrg.get(o.id);
       return {
         id: o.id as string,
         name: o.name as string,
@@ -264,8 +281,25 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         hasAsaasSubscription: !!o.asaas_subscription_id,
         clientsUsed: clientsByOrg.get(o.id) ?? 0,
         createdAt: o.created_at as string,
+        taxId: o.tax_id as string | null,
+        whatsapp: o.whatsapp as string | null,
+        ownerName: owner?.name ?? null,
+        ownerEmail: owner?.email ?? null,
       };
     });
+  });
+
+/** Platform-admin only: sets the WhatsApp number recorded for an agency —
+ * not collected at signup, so it's filled in manually as Junior gets it. */
+export const updateOrgWhatsapp = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { orgId: string; whatsapp: string }) =>
+    z.object({ orgId: z.string().uuid(), whatsapp: z.string().trim().max(30) }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { error } = await context.supabase
+      .from("orgs").update({ whatsapp: data.whatsapp || null }).eq("id", data.orgId);
+    if (error) throw new Error(error.message);
   });
 
 /** Platform-admin only: fetches an org's next pending Asaas invoice on

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -410,9 +410,25 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
   const entries = counts
     ? (Object.entries(counts) as [string, number][]).filter(([, n]) => n > 0)
     : [];
+  const [openType, setOpenType] = useState<string | null>(null);
+  const { data: finalizations = [], isLoading: itemsLoading } = useQuery({
+    ...memberFinalizationsQO(userId, "month", monthKey),
+    enabled: openType !== null,
+  });
+  const items = finalizations.filter((f: any) => f.type === openType);
+  const { selectMonth, openItem, flash } = useUI();
+  const navigate = useNavigate();
+
   if (entries.length === 0) return null;
+
+  function openActivity(itemId: string, clientId: string, itemMonthKey: string) {
+    navigate({ to: "/cliente/$clientId", params: { clientId } });
+    selectMonth(itemMonthKey);
+    setTimeout(() => { openItem(itemId); flash(itemId); }, 30);
+  }
+
   return (
-    <div className="mb-6 bg-[#1C1C1C] rounded-lg overflow-hidden">
+    <div className="mb-6 bg-[#1C1C1C] rounded-lg overflow-hidden" data-tour="activity-counts">
       <div className="flex items-center gap-2 px-4 pt-3 pb-2">
         <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
           <List size={11} />
@@ -421,12 +437,43 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
       </div>
       <div className="flex flex-wrap gap-2 px-4 pb-3.5">
         {entries.map(([type, n]) => (
-          <span key={type} className="text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.12)", color: "rgb(var(--lz-brand-rgb))" }}>
+          <button
+            key={type}
+            type="button"
+            onClick={() => setOpenType((t) => (t === type ? null : type))}
+            className="text-xs font-semibold px-2.5 py-1 rounded-full transition-colors"
+            style={{
+              backgroundColor: openType === type ? "rgba(var(--lz-brand-light-rgb),0.28)" : "rgba(var(--lz-brand-light-rgb),0.12)",
+              color: "rgb(var(--lz-brand-rgb))",
+            }}
+          >
             {n} {ACTIVITY_LABELS[type] ?? type}
-          </span>
+          </button>
         ))}
       </div>
+      {openType && (
+        <div className="border-t border-white/[0.06] px-4 py-2">
+          {itemsLoading ? (
+            <p className="text-xs text-white/40 py-1.5">Carregando...</p>
+          ) : items.length === 0 ? (
+            <p className="text-xs text-white/40 py-1.5">Nenhuma atividade encontrada.</p>
+          ) : (
+            <div className="flex flex-col divide-y divide-white/[0.05]">
+              {items.map((f: any) => (
+                <button
+                  key={f.itemId}
+                  type="button"
+                  onClick={() => openActivity(f.itemId, f.clientId, monthKey)}
+                  className="flex items-center justify-between gap-3 py-2 text-left hover:text-white text-white/70 transition-colors"
+                >
+                  <span className="text-[13px] truncate">{f.title || "(sem título)"}</span>
+                  <span className="text-[11px] text-white/40 shrink-0">{f.clientName}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

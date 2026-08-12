@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle } from "lucide-react";
+import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check } from "lucide-react";
 import { orgsBillingQO } from "@/lib/luzeria/queries";
-import { getOrgNextInvoice, deleteOrg } from "@/lib/luzeria/api.functions";
+import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp } from "@/lib/luzeria/api.functions";
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   trialing: { label: "Em teste", color: "#4A9EFF" },
@@ -22,6 +22,7 @@ export function AgenciesBillingPanel() {
   const { data: orgs = [], isLoading } = useQuery(orgsBillingQO());
   const [invoiceForId, setInvoiceForId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; hasAsaasSubscription: boolean } | null>(null);
+  const [infoTarget, setInfoTarget] = useState<any>(null);
 
   const fetchInvoice = useMutation({
     mutationFn: useServerFn(getOrgNextInvoice),
@@ -69,7 +70,14 @@ export function AgenciesBillingPanel() {
                 const invoiceError = invoiceForId === o.id ? fetchInvoice.error : undefined;
                 return (
                   <tr key={o.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition">
-                    <td className="px-4 py-3 text-sm text-white font-medium">{o.name}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <button
+                        onClick={() => setInfoTarget(o)}
+                        className="text-white font-medium hover:text-[rgb(var(--lz-brand-rgb))] transition underline decoration-white/20 hover:decoration-current underline-offset-2"
+                      >
+                        {o.name}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-sm text-white/70">
                       {o.planName}
                       {o.priceCents != null && (
@@ -144,6 +152,114 @@ export function AgenciesBillingPanel() {
       {deleteTarget && (
         <DeleteOrgModal target={deleteTarget} onClose={() => setDeleteTarget(null)} />
       )}
+      {infoTarget && (
+        <AgencyInfoModal org={infoTarget} onClose={() => setInfoTarget(null)} />
+      )}
+    </div>
+  );
+}
+
+function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [whatsapp, setWhatsapp] = useState(org.whatsapp ?? "");
+
+  const saveWhatsapp = useMutation({
+    mutationFn: useServerFn(updateOrgWhatsapp),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orgs-billing"] });
+      setEditing(false);
+      toast.success("WhatsApp atualizado.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar."),
+  });
+
+  const digits = (org.whatsapp ?? "").replace(/\D/g, "");
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#161616] border border-white/10 rounded-2xl p-6 max-w-sm w-full">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Building2 size={18} className="text-[rgb(var(--lz-brand-rgb))]" />
+            <h3 className="text-lg font-bold text-white">{org.name}</h3>
+          </div>
+          <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="space-y-3 text-sm">
+          {org.ownerName && (
+            <div>
+              <p className="text-[11px] font-bold uppercase text-white/40 tracking-wider mb-0.5">Responsável</p>
+              <p className="text-white">{org.ownerName}</p>
+            </div>
+          )}
+          {org.ownerEmail && (
+            <div className="flex items-center gap-2 text-white/80">
+              <Mail size={13} className="text-white/40 shrink-0" />
+              <a href={`mailto:${org.ownerEmail}`} className="hover:text-white transition truncate">{org.ownerEmail}</a>
+            </div>
+          )}
+          {org.taxId && (
+            <div>
+              <p className="text-[11px] font-bold uppercase text-white/40 tracking-wider mb-0.5">CNPJ/CPF</p>
+              <p className="text-white/80">{org.taxId}</p>
+            </div>
+          )}
+
+          <div>
+            <div className="flex items-center justify-between mb-0.5">
+              <p className="text-[11px] font-bold uppercase text-white/40 tracking-wider">WhatsApp</p>
+              {!editing && (
+                <button onClick={() => { setWhatsapp(org.whatsapp ?? ""); setEditing(true); }} className="text-white/40 hover:text-white transition">
+                  <Pencil size={12} />
+                </button>
+              )}
+            </div>
+            {editing ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  placeholder="(11) 91234-5678"
+                  autoFocus
+                  className="flex-1 px-3 py-2 bg-white/[0.08] border border-white/15 rounded-lg text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition"
+                />
+                <button
+                  onClick={() => saveWhatsapp.mutate({ data: { orgId: org.id, whatsapp } })}
+                  disabled={saveWhatsapp.isPending}
+                  className="p-2 rounded-lg text-black disabled:opacity-50"
+                  style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+                >
+                  {saveWhatsapp.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                </button>
+              </div>
+            ) : org.whatsapp ? (
+              <div className="flex items-center gap-2 text-white/80">
+                <Phone size={13} className="text-white/40 shrink-0" />
+                {org.whatsapp}
+              </div>
+            ) : (
+              <p className="text-white/30 text-[13px]">Não cadastrado.</p>
+            )}
+          </div>
+        </div>
+
+        {!editing && digits && (
+          <a
+            href={`https://wa.me/${digits}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-black transition"
+            style={{ backgroundColor: "#25D366" }}
+          >
+            <MessageCircle size={15} /> Abrir WhatsApp
+          </a>
+        )}
+      </div>
     </div>
   );
 }
