@@ -253,12 +253,15 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     const { data: result, error } = await supabase.rpc("get_public_feed", { _token: data.token });
     if (error || !result) return null;
 
+    // orgs has no RLS policy for anon — this route is public, so the branding
+    // lookup needs the service-role client, not the anon one used above.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: orgId } = await supabase.rpc("get_org_id_for_token", { _token: data.token });
     let orgName: string | null = null;
     let feedPreviewImagePath: string | null = null;
     let orgLogoPath: string | null = null;
     if (orgId) {
-      const { data: org } = await supabase.from("orgs").select("name, feed_preview_image_path, logo_path").eq("id", orgId as string).maybeSingle();
+      const { data: org } = await supabaseAdmin.from("orgs").select("name, feed_preview_image_path, logo_path").eq("id", orgId as string).maybeSingle();
       orgName = org?.name ?? null;
       feedPreviewImagePath = (org as any)?.feed_preview_image_path ?? null;
       orgLogoPath = (org as any)?.logo_path ?? null;
@@ -273,7 +276,6 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     // to show exactly one already-known photo for the client this token
     // belongs to, so sign it with the service-role client instead. Same deal
     // for the agency's custom feed-preview og:image, if they set one.
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let clientPhotoUrl: string | null = null;
     if (client.photo_path) {
       const { data: signed } = await supabaseAdmin.storage
