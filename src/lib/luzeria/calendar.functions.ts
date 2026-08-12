@@ -11,7 +11,7 @@ export const getCalendarItems = createServerFn({ method: "GET" })
     const { data: items, error } = await context.supabase
       .from("content_items")
       .select(
-        "id, title, type, status, scheduled_at, cover_path, months!inner(key, clients!inner(id, name, color, category, archived))",
+        "id, title, type, status, scheduled_at, cover_path, months!inner(key, clients!months_client_id_fkey!inner(id, name, color, category, archived))",
       )
       .gte("scheduled_at", data.from)
       .lt("scheduled_at", data.to)

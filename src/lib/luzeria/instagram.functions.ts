@@ -177,7 +177,7 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
 
   const { data: item } = await supabaseAdmin
     .from("content_items")
-    .select("id, type, status, caption, month_id, months(client_id, clients(id, org_id))")
+    .select("id, type, status, caption, month_id, months(client_id, clients!months_client_id_fkey(id, org_id))")
     .eq("id", itemId)
     .maybeSingle();
   if (!item) throw new Error("Item não encontrado.");
@@ -313,7 +313,7 @@ export const setInstagramAutoPublish = createServerFn({ method: "POST" })
     await assertMaster(context.supabase, context.userId);
     const { data: item } = await context.supabase
       .from("content_items")
-      .select("id, type, status, scheduled_at, month_id, months(client_id, clients(org_id))")
+      .select("id, type, status, scheduled_at, month_id, months(client_id, clients!months_client_id_fkey(org_id))")
       .eq("id", data.itemId)
       .maybeSingle();
     if (!item) throw new Error("Item não encontrado.");
@@ -387,7 +387,7 @@ export const getInstagramActivity = createServerFn({ method: "GET" })
     const { data: rows, error } = await context.supabase
       .from("content_items")
       .select(
-        "id, title, type, post_format, scheduled_at, ig_published_at, ig_auto_publish, months!inner(key, clients!inner(id, name, color, archived, category))",
+        "id, title, type, post_format, scheduled_at, ig_published_at, ig_auto_publish, months!inner(key, clients!months_client_id_fkey!inner(id, name, color, archived, category))",
       )
       .or("ig_auto_publish.eq.true,ig_published_at.not.is.null")
       .order("ig_published_at", { ascending: false, nullsFirst: false });
@@ -443,7 +443,7 @@ export const getTodayPublications = createServerFn({ method: "GET" })
 
     const { data: rows, error } = await context.supabase
       .from("content_items")
-      .select("id, title, type, post_format, scheduled_at, months!inner(client_id, key, clients!inner(id, name, color))")
+      .select("id, title, type, post_format, scheduled_at, months!inner(client_id, key, clients!months_client_id_fkey!inner(id, name, color))")
       .in("type", ["post", "reel"])
       .gte("scheduled_at", data.from)
       .lt("scheduled_at", data.to)

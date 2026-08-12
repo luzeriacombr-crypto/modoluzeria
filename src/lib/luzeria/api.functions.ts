@@ -1451,7 +1451,7 @@ export const listMyMentions = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: mens } = await context.supabase
       .from("mentions")
-      .select("id, item_id, comment_id, created_at, read_at, comments(text, author_id, profiles:author_id(name, color)), content_items(id, type, idx, title, status, month_id, months(key, clients(id, name, color, category)))")
+      .select("id, item_id, comment_id, created_at, read_at, comments(text, author_id, profiles:author_id(name, color)), content_items(id, type, idx, title, status, month_id, months(key, clients!months_client_id_fkey(id, name, color, category)))")
       .eq("mentioned_user_id", context.userId)
       .is("read_at", null)
       .order("created_at", { ascending: false })
@@ -1510,7 +1510,7 @@ export const listMyTasks = createServerFn({ method: "GET" })
     if (itemIds.length === 0) return [];
     const { data: items } = await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, due_date, month_id, months!inner(client_id, key, clients!inner(id, name, color, category, notify_stories_in_tasks))")
+      .select("id, type, idx, title, status, due_date, month_id, months!inner(client_id, key, clients!months_client_id_fkey!inner(id, name, color, category, notify_stories_in_tasks))")
       .in("id", itemIds);
     return (items ?? [])
       // Stories only show up here for clients that opted in — otherwise
@@ -1977,7 +1977,7 @@ export const getMemberFinalizations = createServerFn({ method: "GET" })
     const { data: rows, error } = await context.supabase
       .from("finalizations")
       .select(
-        "finalized_at, content_items!inner(id, type, idx, title, months!inner(key, clients!inner(id, name, color, category)))"
+        "finalized_at, content_items!inner(id, type, idx, title, months!inner(key, clients!months_client_id_fkey!inner(id, name, color, category)))"
       )
       .eq("user_id", data.userId)
       .gte("finalized_at", start.toISOString())
@@ -2033,7 +2033,7 @@ export const getReport = createServerFn({ method: "GET" })
     let fq = context.supabase
       .from("finalizations")
       .select(
-        "id, user_id, finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(client_id, key, clients!inner(id, name, color, category)))"
+        "id, user_id, finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(client_id, key, clients!months_client_id_fkey!inner(id, name, color, category)))"
       )
       .gte("finalized_at", fromISO)
       .lt("finalized_at", toISO);
@@ -2189,7 +2189,7 @@ export const getReport = createServerFn({ method: "GET" })
     if (touchedItemIds.size > 0) {
       const { data: itemsInfo } = await context.supabase
         .from("content_items")
-        .select("id, type, title, months!inner(client_id, key, clients!inner(id, name, color, category))")
+        .select("id, type, title, months!inner(client_id, key, clients!months_client_id_fkey!inner(id, name, color, category))")
         .in("id", [...touchedItemIds]);
       (itemsInfo ?? []).forEach((it: any) => itemInfoById.set(it.id, it));
     }
@@ -2369,7 +2369,7 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
 
     const { data: finRows } = await context.supabase
       .from("finalizations")
-      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(key, clients!inner(id, name, color, category)))")
+      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(key, clients!months_client_id_fkey!inner(id, name, color, category)))")
       .eq("user_id", data.userId)
       .gte("finalized_at", monthlyStart);
 
@@ -2398,7 +2398,7 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
     // Reels edited by this user (editor_id)
     const { data: editedRows } = await context.supabase
       .from("finalizations")
-      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(clients!inner(id, name, color)))")
+      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(clients!months_client_id_fkey!inner(id, name, color)))")
       .eq("content_items.editor_id", data.userId)
       .gte("finalized_at", fromISO)
       .lt("finalized_at", toISO);

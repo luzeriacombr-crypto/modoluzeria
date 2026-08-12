@@ -423,7 +423,7 @@ export const getReportExtras = createServerFn({ method: "GET" })
     // ---- Build base item id pool (matching filters) ----
     let itemQuery = context.supabase
       .from("content_items")
-      .select("id, type, title, status, started_at, finished_at, rework_count, quality_rating, month_id, due_date, months!inner(client_id, clients!inner(name, color, category))")
+      .select("id, type, title, status, started_at, finished_at, rework_count, quality_rating, month_id, due_date, months!inner(client_id, clients!months_client_id_fkey!inner(name, color, category))")
       .gte("updated_at", fromIso).lt("updated_at", toIso);
     if (data.clientId) itemQuery = itemQuery.eq("months.client_id", data.clientId);
     const { data: items } = await itemQuery;
@@ -611,7 +611,7 @@ export const getMyWeek = createServerFn({ method: "GET" })
     if (!ids.length) return [];
     const { data: items } = await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, due_date, months!inner(key, clients!inner(id, name, color))")
+      .select("id, type, idx, title, status, due_date, months!inner(key, clients!months_client_id_fkey!inner(id, name, color))")
       .in("id", ids)
       .not("status", "in", "(PRONTO_PARA_PUBLICAR,FINALIZADO)");
     return ((items ?? []) as any[]).map((it) => ({
@@ -639,7 +639,7 @@ export const getWorkload = createServerFn({ method: "GET" })
     if (!ids.length) return { userId: data.userId, openCount: 0, oldest: [] };
     const { data: items } = await context.supabase
       .from("content_items")
-      .select("id, title, updated_at, last_status_change_at, months!inner(clients!inner(name))")
+      .select("id, title, updated_at, last_status_change_at, months!inner(clients!months_client_id_fkey!inner(name))")
       .in("id", ids)
       .not("status", "in", "(PRONTO_PARA_PUBLICAR,FINALIZADO)");
     const arr = ((items ?? []) as any[]).map((it) => {

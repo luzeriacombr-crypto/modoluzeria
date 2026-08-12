@@ -286,7 +286,7 @@ async function resolveTargetFolderForItem(
 ): Promise<string | null> {
   const { data: item } = await supabase
     .from("content_items")
-    .select("month_id, type, months!inner(key, client_id, clients!inner(id, name))")
+    .select("month_id, type, months!inner(key, client_id, clients!months_client_id_fkey!inner(id, name))")
     .eq("id", itemId)
     .maybeSingle();
   if (!item) return null;
@@ -1058,7 +1058,7 @@ export const reorganizeAllDriveFiles = createServerFn({ method: "POST" })
     await assertMaster(context.supabase, context.userId);
     const { data: files } = await context.supabase
       .from("item_files")
-      .select("id, drive_file_id, item_id, content_items!inner(month_id, months!inner(key, client_id, clients!inner(id, name)))");
+      .select("id, drive_file_id, item_id, content_items!inner(month_id, months!inner(key, client_id, clients!months_client_id_fkey!inner(id, name)))");
     if (!files?.length) return { ok: true, moved: 0, skipped: 0, errors: [] as string[] };
 
     const rootId = await readRootFolderId(context.supabase);
