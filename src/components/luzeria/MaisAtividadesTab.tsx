@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Video, Hash } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -7,11 +7,11 @@ import { ACTIVITY_QUANTITY_LABEL, type ContentItem, type Profile } from "@/lib/l
 
 type ActivityType = "gravacao" | "roteiro" | "sistema" | "outros";
 
-const ACTIVITY_CONFIG: Record<ActivityType, { label: string; hasLocation: boolean; hasFilmmaker: boolean; dateLabel: string; quantityLabel: string | null }> = {
-  gravacao: { label: "Gravação",       hasLocation: true,  hasFilmmaker: true,  dateLabel: "Data para gravação", quantityLabel: ACTIVITY_QUANTITY_LABEL.gravacao },
-  roteiro:  { label: "Roteiro",        hasLocation: false, hasFilmmaker: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.roteiro },
-  sistema:  { label: "Sistema",        hasLocation: false, hasFilmmaker: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.sistema },
-  outros:   { label: "Outro",          hasLocation: false, hasFilmmaker: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.outros },
+const ACTIVITY_CONFIG: Record<ActivityType, { label: string; hasLocation: boolean; dateLabel: string; quantityLabel: string | null }> = {
+  gravacao: { label: "Gravação",       hasLocation: true,  dateLabel: "Data para gravação", quantityLabel: ACTIVITY_QUANTITY_LABEL.gravacao },
+  roteiro:  { label: "Roteiro",        hasLocation: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.roteiro },
+  sistema:  { label: "Sistema",        hasLocation: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.sistema },
+  outros:   { label: "Outro",          hasLocation: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.outros },
 };
 
 const ACTIVITY_ORDER: ActivityType[] = ["gravacao", "roteiro", "sistema", "outros"];
@@ -164,18 +164,17 @@ function ActivityForm({
   type, cfg, profiles, onSubmit, onCancel, loading,
 }: {
   type: ActivityType;
-  cfg: { label: string; hasLocation: boolean; hasFilmmaker: boolean; dateLabel: string; quantityLabel: string | null };
+  cfg: { label: string; hasLocation: boolean; dateLabel: string; quantityLabel: string | null };
   clientId: string;
   monthKey: string;
   profiles: Profile[];
-  onSubmit: (vals: { title: string; dueDate?: string; location?: string; filmmaker?: string; quantity?: number; notes?: string; assigneeId?: string }) => Promise<void>;
+  onSubmit: (vals: { title: string; dueDate?: string; location?: string; quantity?: number; notes?: string; assigneeId?: string }) => Promise<void>;
   onCancel: () => void;
   loading: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [location, setLocation] = useState("");
-  const [filmmaker, setFilmmaker] = useState("");
   const [quantity, setQuantity] = useState("");
   const [notes, setNotes] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
@@ -189,7 +188,6 @@ function ActivityForm({
       title: title.trim(),
       dueDate: dueDate || undefined,
       location: cfg.hasLocation && location.trim() ? location.trim() : undefined,
-      filmmaker: cfg.hasFilmmaker && filmmaker.trim() ? filmmaker.trim() : undefined,
       quantity: cfg.quantityLabel && qty !== undefined && !Number.isNaN(qty) ? qty : undefined,
       notes: notes.trim() || undefined,
       assigneeId: assigneeId || undefined,
@@ -224,19 +222,6 @@ function ActivityForm({
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Ex: Clínica, estúdio, externo…"
-              className={inp}
-            />
-          </div>
-        )}
-        {cfg.hasFilmmaker && (
-          <div>
-            <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/40 mb-1">
-              <Video size={11} /> Filmmaker
-            </label>
-            <input
-              value={filmmaker}
-              onChange={(e) => setFilmmaker(e.target.value)}
-              placeholder="Nome de quem vai gravar"
               className={inp}
             />
           </div>

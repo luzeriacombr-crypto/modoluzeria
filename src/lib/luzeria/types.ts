@@ -149,8 +149,6 @@ export interface ContentItem {
   coverSource?: "frame" | "upload" | null;
   /** Local da gravação (ex.: estúdio, externo). Só usado em type="gravacao". */
   location?: string | null;
-  /** Nome do(a) responsável pela filmagem. Só usado em type="gravacao". */
-  filmmaker?: string | null;
   /** Contagem livre (vídeos gravados / roteiros / itens), conforme
    * ACTIVITY_QUANTITY_LABEL — null quando o tipo não usa quantidade. */
   activityQuantity?: number | null;

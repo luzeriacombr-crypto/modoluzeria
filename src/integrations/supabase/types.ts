@@ -1004,7 +1004,6 @@ export type Database = {
           due_date: string | null
           editor_id: string | null
           feed_order: number | null
-          filmmaker: string | null
           finished_at: string | null
           id: string
           idx: number
@@ -1039,7 +1038,6 @@ export type Database = {
           due_date?: string | null
           editor_id?: string | null
           feed_order?: number | null
-          filmmaker?: string | null
           finished_at?: string | null
           id?: string
           idx: number
@@ -1074,7 +1072,6 @@ export type Database = {
           due_date?: string | null
           editor_id?: string | null
           feed_order?: number | null
-          filmmaker?: string | null
           finished_at?: string | null
           id?: string
           idx?: number

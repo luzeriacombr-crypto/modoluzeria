@@ -826,7 +826,7 @@ export const getMonth = createServerFn({ method: "GET" })
     if (!month) return null;
     const { data: items } = await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, activity_location, filmmaker, activity_quantity")
+      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, activity_location, activity_quantity")
       .eq("month_id", month.id).order("type").order("idx");
     const itemIds = (items ?? []).map((it: any) => it.id);
     const [{ data: assignees }, { data: comments }] = await Promise.all([
@@ -865,7 +865,6 @@ export const getMonth = createServerFn({ method: "GET" })
       qualityRating: ((it as any).quality_rating ?? null) as any,
       feedOrder: ((it as any).feed_order ?? null) as any,
       location: ((it as any).activity_location ?? null) as any,
-      filmmaker: ((it as any).filmmaker ?? null) as any,
       activityQuantity: ((it as any).activity_quantity ?? null) as any,
     }));
     const coverPaths = (items ?? []).map((it: any) => it.cover_path).filter(Boolean);
@@ -900,7 +899,7 @@ export const updateItem = createServerFn({ method: "POST" })
       title?: string; copy?: string; caption?: string; drive_link?: string;
       reel_type?: string | null; post_format?: string | null; editor_id?: string | null;
       due_date?: string | null; scheduled_at?: string | null; blocked_reason?: string | null;
-      activity_location?: string | null; filmmaker?: string | null; activity_quantity?: number | null;
+      activity_location?: string | null; activity_quantity?: number | null;
     };
   }) => d)
   .handler(async ({ data, context }) => {
@@ -1353,7 +1352,7 @@ export const addAssignee = createServerFn({ method: "POST" })
 
 export const addContentItem = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string; dueDate?: string | null; notes?: string | null; location?: string | null; filmmaker?: string | null; quantity?: number | null }) =>
+  .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string; dueDate?: string | null; notes?: string | null; location?: string | null; quantity?: number | null }) =>
     z.object({
       clientId: z.string().uuid(),
       key: z.string(),
@@ -1362,7 +1361,6 @@ export const addContentItem = createServerFn({ method: "POST" })
       dueDate: z.string().nullable().optional(),
       notes: z.string().trim().max(2000).nullable().optional(),
       location: z.string().trim().max(500).nullable().optional(),
-      filmmaker: z.string().trim().max(120).nullable().optional(),
       quantity: z.number().int().min(0).max(100000).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
@@ -1390,7 +1388,6 @@ export const addContentItem = createServerFn({ method: "POST" })
     if (data.dueDate) insertRow.due_date = data.dueDate;
     if (data.notes) insertRow.copy = data.notes;
     if (data.location) insertRow.activity_location = data.location;
-    if (data.filmmaker) insertRow.filmmaker = data.filmmaker;
     if (data.quantity !== undefined && data.quantity !== null) insertRow.activity_quantity = data.quantity;
     const { data: inserted, error: iErr } = await context.supabase
       .from("content_items").insert(insertRow).select("id").single();

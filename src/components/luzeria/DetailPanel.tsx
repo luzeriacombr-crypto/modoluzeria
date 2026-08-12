@@ -305,7 +305,6 @@ export function DetailPanel() {
   }, [editingCopy, copy]);
   const [editingCaption, setEditingCaption] = useState(false);
   const [location, setLocation] = useState("");
-  const [filmmaker, setFilmmaker] = useState("");
   const [quantity, setQuantity] = useState("");
   const [comment, setComment] = useState("");
   const [commentMentions, setCommentMentions] = useState<string[]>([]);
@@ -328,7 +327,6 @@ export function DetailPanel() {
     if (item) {
       setTitle(item.title); setCopy(item.copy);
       setLocation(item.location ?? "");
-      setFilmmaker(item.filmmaker ?? "");
       setQuantity(typeof item.activityQuantity === "number" ? String(item.activityQuantity) : "");
       setCaption(item.caption ?? "");
       setDueDate(item.dueDate ?? "");
@@ -1045,7 +1043,7 @@ export function DetailPanel() {
           </ModalSection>
         )}
 
-        {/* Local e Filmmaker — só fazem sentido pra gravação */}
+        {/* Local — só faz sentido pra gravação */}
         {item.type === "gravacao" && (
           <ModalSection label="Local">
             <input
@@ -1053,18 +1051,6 @@ export function DetailPanel() {
               onChange={(e) => setLocation(e.target.value)}
               onBlur={() => { if (location !== (item.location ?? "")) updateItem.mutate({ data: { id: item.id, patch: { activity_location: location || null } } }); }}
               placeholder="Ex: Clínica, estúdio, externo…"
-              className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
-            />
-          </ModalSection>
-        )}
-
-        {item.type === "gravacao" && (
-          <ModalSection label="Filmmaker">
-            <input
-              value={filmmaker}
-              onChange={(e) => setFilmmaker(e.target.value)}
-              onBlur={() => { if (filmmaker !== (item.filmmaker ?? "")) updateItem.mutate({ data: { id: item.id, patch: { filmmaker: filmmaker || null } } }); }}
-              placeholder="Nome de quem vai gravar"
               className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
             />
           </ModalSection>
