@@ -1,13 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
-import { STATUS_META, STATUS_ORDER, statusLabel, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, STATUS_ORDER, STATUS_GROUPS, statusLabel, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 
 export function StatusBadge({
   status, onChange, size = "sm", options, isAvulso = false,
 }: { status: Status; onChange?: (s: Status) => void; size?: "sm" | "md"; options?: Status[]; isAvulso?: boolean }) {
   const list = options ?? STATUS_ORDER;
+  // Grouped by pipeline phase once the list is long enough that a flat wall
+  // of options is hard to scan; short lists (e.g. activities: só Pendente/
+  // Concluído) stay flat — headers would just add noise for 2-3 items.
+  const groups = list.length > 4
+    ? STATUS_GROUPS
+        .map((g) => ({ label: g.label, items: list.filter((s) => g.statuses.includes(s)) }))
+        .filter((g) => g.items.length > 0)
+    : [{ label: null as string | null, items: list }];
   const meta = STATUS_META[status];
   const Icon = STATUS_ICONS[status];
   const [open, setOpen] = useState(false);
@@ -28,14 +36,27 @@ export function StatusBadge({
 
   useEffect(() => {
     if (!open) return;
-    const rect = btnRef.current?.getBoundingClientRect();
-    if (rect) setPos({ top: rect.bottom + 4, left: rect.left });
+    // Keeps the popover glued to the button — recomputed on scroll/resize
+    // (capture phase, so it fires for scrollable ancestors too, not just
+    // window), otherwise it stays frozen where the button used to be as
+    // soon as the board/grid underneath scrolls.
+    function place() {
+      const rect = btnRef.current?.getBoundingClientRect();
+      if (rect) setPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
     const h = (e: MouseEvent) => {
       const t = e.target as Node;
       if (!btnRef.current?.contains(t) && !popRef.current?.contains(t)) setOpen(false);
     };
     document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+      document.removeEventListener("mousedown", h);
+    };
   }, [open]);
 
   return (
@@ -74,23 +95,32 @@ export function StatusBadge({
           className="fixed z-[200] min-w-[180px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto"
           style={{ top: pos.top, left: pos.left }}
         >
-          {list.map((s) => {
-            const m = STATUS_META[s];
-            const I = STATUS_ICONS[s];
-            return (
-              <button key={s}
-                onClick={(e) => { e.stopPropagation(); onChange?.(s); setOpen(false); }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs transition-all duration-150 text-left hover:translate-x-0.5"
-                style={{ backgroundColor: "transparent" }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = m.bg; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}>
-                <span className="rounded p-1" style={{ backgroundColor: m.bg, color: m.color }}>
-                  <I size={11} />
-                </span>
-                <span className="text-white/80">{statusLabel(s, isAvulso)}</span>
-              </button>
-            );
-          })}
+          {groups.map((g, gi) => (
+            <div key={g.label ?? gi}>
+              {g.label && (
+                <div className={`px-3 pb-1 text-[9.5px] font-bold uppercase tracking-wider text-white/35 ${gi > 0 ? "pt-2.5 mt-1 border-t border-white/[0.06]" : "pt-1.5"}`}>
+                  {g.label}
+                </div>
+              )}
+              {g.items.map((s) => {
+                const m = STATUS_META[s];
+                const I = STATUS_ICONS[s];
+                return (
+                  <button key={s}
+                    onClick={(e) => { e.stopPropagation(); onChange?.(s); setOpen(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs transition-all duration-150 text-left hover:translate-x-0.5"
+                    style={{ backgroundColor: "transparent" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = m.bg; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}>
+                    <span className="rounded p-1" style={{ backgroundColor: m.bg, color: m.color }}>
+                      <I size={11} />
+                    </span>
+                    <span className="text-white/80">{statusLabel(s, isAvulso)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>,
         document.body
       )}

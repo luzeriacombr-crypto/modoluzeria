@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO } from "@/lib/luzeria/queries";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
@@ -38,8 +39,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
   const pending = profiles.filter((p) => !p.active);
   const active = profiles.filter((p) => p.active);
 
-  const handleRemove = (id: string, name: string) => {
-    if (!confirm(`Remover ${name}? Esta ação é permanente.`)) return;
+  const handleRemove = async (id: string, name: string) => {
+    if (!(await requestConfirm(`Remover ${name}? Esta ação é permanente.`, { danger: true }))) return;
     deleteUser.mutate({ data: { userId: id } }, {
       onSuccess: () => toast.success("Colaborador removido."),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),

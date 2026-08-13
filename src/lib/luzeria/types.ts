@@ -351,6 +351,15 @@ export const STATUS_ORDER: Status[] = [
   "PRONTO_PARA_PUBLICAR",
 ];
 
+/** Visual grouping for the status-change dropdown — purely presentational
+ * (doesn't affect the pipeline/order itself), so a long list of statuses
+ * reads as "3 phases" instead of one flat wall of options. */
+export const STATUS_GROUPS: { label: string; statuses: Status[] }[] = [
+  { label: "Produção", statuses: ["PLANEJAMENTO", "COPY", "CRIACAO", "REVISAO_ARTE", "EM_GRAVACAO", "EM_EDICAO", "REVISAO_INTERNA", "PENDENTE"] },
+  { label: "Aprovação", statuses: ["REVISAO_CLIENTE", "AGENDAMENTO", "REVISAO_AGENDAMENTO", "TRAVADO"] },
+  { label: "Publicação", statuses: ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"] },
+];
+
 export function statusOptionsFor(type: ContentType): Status[] {
   // Atividades (gravação/roteiro/sistema/outros) não são publicadas — não fazem
   // sentido no funil de post/reel. Só registram se aconteceu ou não.

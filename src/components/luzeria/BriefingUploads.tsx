@@ -8,6 +8,7 @@ import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
 import { downloadDriveFile, downloadDriveFiles } from "@/lib/luzeria/drive-download";
 import { useItemFileUpload } from "@/lib/luzeria/use-item-file-upload";
 import { useUI } from "@/lib/luzeria/ui-store";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { FileActionsMenu } from "./FileActionsMenu";
 import { CarouselLightbox } from "./CarouselLightbox";
 
@@ -125,8 +126,8 @@ export function BriefingUploads({ itemId, clientId, canEdit }: { itemId: string;
               canEdit={canEdit}
               onOpen={() => setLightboxIndex(i)}
               onRemoveAppOnly={() => detachItemFile.mutate({ data: { id: f.id } })}
-              onRemoveEverywhere={() => {
-                if (confirm(`Remover "${f.name}" do Modo Criador e mover pra lixeira do Google Drive?`)) {
+              onRemoveEverywhere={async () => {
+                if (await requestConfirm(`Remover "${f.name}" do Modo Criador e mover pra lixeira do Google Drive?`, { danger: true })) {
                   deleteItemFileAndDrive.mutate({ data: { id: f.id } });
                 }
               }}

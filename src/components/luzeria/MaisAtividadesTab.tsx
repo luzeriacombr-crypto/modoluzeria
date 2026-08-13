@@ -3,6 +3,7 @@ import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIc
 import { toast } from "sonner";
 import { useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { ACTIVITY_QUANTITY_LABEL, type ContentItem, type Profile } from "@/lib/luzeria/types";
 
 type ActivityType = "gravacao" | "roteiro" | "sistema" | "outros";
@@ -140,7 +141,7 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                         <Pencil size={13} />
                       </button>
                       {isAdmin && (
-                        <button onClick={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }} title="Excluir" className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition">
+                        <button onClick={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }} title="Excluir" className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition">
                           <Trash2 size={13} />
                         </button>
                       )}

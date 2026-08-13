@@ -19,6 +19,7 @@ import { ClientFichaPanel } from "./ClientFichaPanel";
 import { AppTour } from "./AppTour";
 import { LuzeriaLoader } from "./LuzeriaLoader";
 import { TrialEndingBanner } from "./TrialEndingBanner";
+import { GlobalConfirmDialog } from "./GlobalConfirmDialog";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { hexToRgbChannels } from "@/lib/luzeria/utils";
@@ -157,6 +158,7 @@ export function App() {
       <ClientFichaPanel />
       <MobileNav />
       <AppTour />
+      <GlobalConfirmDialog />
       <NewClientModal open={!!creating} category={creating?.category} onClose={() => setCreating(null)} />
       <CustomFieldsModal client={customFor} onClose={() => setCustomFor(null)} />
     </div>

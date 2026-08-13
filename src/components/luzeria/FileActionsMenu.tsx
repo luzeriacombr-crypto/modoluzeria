@@ -22,14 +22,23 @@ export function FileActionsMenu({
 
   useEffect(() => {
     if (!open) return;
-    const rect = btnRef.current?.getBoundingClientRect();
-    if (rect) setPos({ top: rect.bottom + 4, left: Math.max(4, rect.right - 200) });
+    function place() {
+      const rect = btnRef.current?.getBoundingClientRect();
+      if (rect) setPos({ top: rect.bottom + 4, left: Math.max(4, rect.right - 200) });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
     const h = (e: MouseEvent) => {
       const t = e.target as Node;
       if (!btnRef.current?.contains(t) && !menuRef.current?.contains(t)) setOpen(false);
     };
     document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+      document.removeEventListener("mousedown", h);
+    };
   }, [open]);
 
   return (

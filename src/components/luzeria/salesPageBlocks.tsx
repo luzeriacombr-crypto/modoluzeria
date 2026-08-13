@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import clickupTrelloLogos from "@/assets/clickup-trello-logos.png";
 import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
 /* ---------------------------------------------------------------------- *
  * Módulo compartilhado entre o site de vendas público (SalesPage.tsx) e o
@@ -820,8 +821,8 @@ function ImageStackInteractive({
   function updateAt(id: string, patch: Partial<ImageSpec>) {
     onChange(imagesRef.current.map((im) => (im.id === id ? { ...im, ...patch } : im)));
   }
-  function removeAt(id: string) {
-    if (imagesRef.current.length === 1 && !confirm("Remover a única imagem desta seção?")) return;
+  async function removeAt(id: string) {
+    if (imagesRef.current.length === 1 && !(await requestConfirm("Remover a única imagem desta seção?", { danger: true }))) return;
     onChange(imagesRef.current.filter((im) => im.id !== id));
   }
   async function handleUploadFile(id: string, file: File) {
@@ -938,8 +939,8 @@ function ImageStackEditor({ images, onChange, topicHint }: { images: ImageSpec[]
     }]);
   }
 
-  function removeAt(i: number) {
-    if (imagesRef.current.length === 1 && !confirm("Remover a única imagem desta seção?")) return;
+  async function removeAt(i: number) {
+    if (imagesRef.current.length === 1 && !(await requestConfirm("Remover a única imagem desta seção?", { danger: true }))) return;
     onChange(imagesRef.current.filter((_, j) => j !== i));
   }
 

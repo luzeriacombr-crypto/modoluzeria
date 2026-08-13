@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { itemFilesQO, driveThumbnailQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useItemFileUpload, parseDriveError } from "@/lib/luzeria/use-item-file-upload";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
 
 function formatSize(n: number | null | undefined) {
@@ -210,9 +211,9 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
             {canEdit && (
               <button
                 type="button"
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation();
-                  if (confirm(`Remover "${f.name}" do item? O arquivo permanece no Drive.`)) {
+                  if (await requestConfirm(`Remover "${f.name}" do item? O arquivo permanece no Drive.`, { danger: true })) {
                     detachItemFile.mutate({ data: { id: f.id } });
                   }
                 }}

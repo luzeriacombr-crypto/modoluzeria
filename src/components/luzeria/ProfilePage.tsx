@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useMe, useApi, notificationPrefsQO } from "@/lib/luzeria/queries";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { AvatarEditor, ColorPicker, showAvatarError, uploadAvatar } from "./AvatarEditor";
 import { roleLabel } from "./Sidebar";
 import { supabase } from "@/integrations/supabase/client";
@@ -341,7 +342,7 @@ function TwoFactorSection() {
 
   async function disable() {
     if (!factorId) return;
-    if (!confirm("Desativar a autenticação de dois fatores? Você vai poder entrar só com a senha.")) return;
+    if (!(await requestConfirm("Desativar a autenticação de dois fatores? Você vai poder entrar só com a senha.", { danger: true }))) return;
     setBusy(true);
     try {
       const { error } = await supabase.auth.mfa.unenroll({ factorId });

@@ -113,11 +113,25 @@ export function MyTasks() {
 
   return (
     <div className="p-10 max-w-5xl mx-auto" data-tour="my-tasks">
+      {!isMeView && targetProfile && (
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg text-[12.5px]"
+          style={{ backgroundColor: "rgba(74,158,255,0.12)", color: "#7EB3FF" }}>
+          <Avatar profile={targetProfile} size={18} />
+          <span className="font-semibold">Vendo como {targetProfile.name}</span>
+          <span className="text-white/40">— tudo abaixo é da perspectiva dele(a), não sua.</span>
+          <button
+            onClick={() => setViewAs("")}
+            className="ml-auto font-bold uppercase tracking-wide text-[11px] hover:underline shrink-0"
+          >
+            Voltar pra mim
+          </button>
+        </div>
+      )}
       <div className="mb-4">
         <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[15px] font-semibold uppercase tracking-wide mb-1.5"
           style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
           Olá, {(() => {
-            const raw = (me?.name ?? "você").trim().split(" ")[0];
+            const raw = ((isMeView ? me?.name : targetProfile?.name) ?? "você").trim().split(" ")[0];
             return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
           })()}! 🤩
         </div>

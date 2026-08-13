@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List } from "lucide-react";
 import { useState } from "react";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { clientsQO, monthKeysQO, monthQO, profilesQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { ContentItem } from "@/lib/luzeria/types";
@@ -218,7 +219,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       idx={i + 1}
                       isAvulso={isAvulso}
                       isAdmin={isAdmin}
-                      onDelete={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}
+                      onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
                     />
                   ))}
                   {isAdmin && (
@@ -243,7 +244,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       idx={i + 1}
                       isAvulso={isAvulso}
                       isAdmin={isAdmin}
-                      onDelete={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}
+                      onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
                     />
                   ))}
                   {isAdmin && (

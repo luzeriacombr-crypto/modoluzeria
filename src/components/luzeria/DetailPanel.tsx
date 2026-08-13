@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getInstagramConnectionStatus } from "@/lib/luzeria/instagram.functions";
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
@@ -301,8 +302,8 @@ function MediaPreview({
               onToggleSelect={() => toggleSelected(f.id)}
               onClick={() => setLightboxIndex(i)}
               onRemoveAppOnly={() => detachItemFile.mutate({ data: { id: f.id } })}
-              onRemoveEverywhere={() => {
-                if (confirm(`Remover "${f.name}" do Modo Criador e mover pra lixeira do Google Drive?`)) {
+              onRemoveEverywhere={async () => {
+                if (await requestConfirm(`Remover "${f.name}" do Modo Criador e mover pra lixeira do Google Drive?`, { danger: true })) {
                   deleteItemFileAndDrive.mutate({ data: { id: f.id } });
                 }
               }}
@@ -426,8 +427,8 @@ function MediaPreview({
             downloading={downloadingFirst}
             onDownload={handleDownloadFirst}
             onRemoveAppOnly={() => detachItemFile.mutate({ data: { id: first.id } })}
-            onRemoveEverywhere={() => {
-              if (confirm(`Remover "${first.name}" do Modo Criador e mover pra lixeira do Google Drive?`)) {
+            onRemoveEverywhere={async () => {
+              if (await requestConfirm(`Remover "${first.name}" do Modo Criador e mover pra lixeira do Google Drive?`, { danger: true })) {
                 deleteItemFileAndDrive.mutate({ data: { id: first.id } });
               }
             }}

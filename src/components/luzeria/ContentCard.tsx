@@ -293,14 +293,23 @@ function DueDateChip({ item, isOverdue, dueLabel, onSave }: {
 
   useEffect(() => {
     if (!open) return;
-    const rect = btnRef.current?.getBoundingClientRect();
-    if (rect) setPos({ top: rect.bottom + 4, left: Math.max(4, rect.right - 170) });
+    function place() {
+      const rect = btnRef.current?.getBoundingClientRect();
+      if (rect) setPos({ top: rect.bottom + 4, left: Math.max(4, rect.right - 170) });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
     const h = (e: MouseEvent) => {
       const t = e.target as Node;
       if (!btnRef.current?.contains(t) && !popRef.current?.contains(t)) setOpen(false);
     };
     document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+      document.removeEventListener("mousedown", h);
+    };
   }, [open]);
 
   if (!dueLabel) return null;

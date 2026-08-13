@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Plus, Trash2, ArrowRight, Megaphone } from "lucide-react";
 import { platformUpdatesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
 export function UpdatesTab() {
   const me = useMe().data;
@@ -58,7 +59,7 @@ export function UpdatesTab() {
               )}
               {me?.isPlatformAdmin && (
                 <button
-                  onClick={() => { if (confirm(`Excluir a atualização "${u.title}"?`)) api.deletePlatformUpdate.mutate({ data: { id: u.id } }); }}
+                  onClick={async () => { if (await requestConfirm(`Excluir a atualização "${u.title}"?`, { danger: true })) api.deletePlatformUpdate.mutate({ data: { id: u.id } }); }}
                   className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5 transition"
                 ><Trash2 size={13} /></button>
               )}

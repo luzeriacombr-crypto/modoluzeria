@@ -9,6 +9,7 @@ import { Avatar } from "./Avatar";
 import { Modal } from "./Modals";
 import { AvatarEditor, showAvatarError, uploadAvatar } from "./AvatarEditor";
 import { glassCardStyle } from "@/lib/luzeria/utils";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
 const ROLE_LABEL: Record<Role, string> = {
   master: "Adm Master",
@@ -81,8 +82,8 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
     });
   }
 
-  function handleResetPassword() {
-    if (!confirm(`Enviar link de redefinição de senha para ${profile.name} (${profile.email})?`)) return;
+  async function handleResetPassword() {
+    if (!(await requestConfirm(`Enviar link de redefinição de senha para ${profile.name} (${profile.email})?`))) return;
     adminSendPasswordReset.mutate({ data: { userId: profile.id } }, {
       onSuccess: (res: any) => toast.success(`Email enviado para ${res?.email ?? profile.email}.`),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao enviar email"),
@@ -101,8 +102,8 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
     });
   }
 
-  function handleRemove() {
-    if (!confirm(`Remover ${profile.name}? Esta ação é permanente.`)) return;
+  async function handleRemove() {
+    if (!(await requestConfirm(`Remover ${profile.name}? Esta ação é permanente.`, { danger: true }))) return;
     deleteUser.mutate({ data: { userId: profile.id } }, {
       onSuccess: () => { toast.success("Colaborador removido."); onClose(); },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),

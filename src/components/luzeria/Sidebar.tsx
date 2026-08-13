@@ -10,6 +10,7 @@ import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
+import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { toast } from "sonner";
@@ -341,10 +342,10 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
         <div ref={menuRef}
           style={{ position: "fixed", top: menuPos.top, left: menuPos.left, width: 220 }}
           className="z-[1000] rounded-md bg-[#1C1C1C] border border-white/10 shadow-2xl py-1 max-h-[80vh] overflow-y-auto">
-          <MenuItem onClick={() => {
-            const name = prompt("Novo nome", client.name)?.trim();
-            if (name) updateClient.mutate({ data: { id: client.id, patch: { name } } });
+          <MenuItem onClick={async () => {
             setMenuOpen(false);
+            const name = (await requestPrompt("Novo nome", client.name))?.trim();
+            if (name) updateClient.mutate({ data: { id: client.id, patch: { name } } });
           }}>Renomear</MenuItem>
           <div className="relative">
             <button
@@ -405,11 +406,11 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
             setMenuOpen(false);
           }}>{client.archived ? "Desarquivar" : "Arquivar"}</MenuItem>
           <div className="h-px bg-white/10 my-1" />
-          <MenuItem destructive onClick={() => {
-            if (confirm(`Excluir "${client.name}" e todo seu histórico?`)) {
+          <MenuItem destructive onClick={async () => {
+            setMenuOpen(false);
+            if (await requestConfirm(`Excluir "${client.name}" e todo seu histórico?`, { danger: true })) {
               deleteClient.mutate({ data: { id: client.id } });
             }
-            setMenuOpen(false);
           }}>Excluir</MenuItem>
         </div>,
         document.body

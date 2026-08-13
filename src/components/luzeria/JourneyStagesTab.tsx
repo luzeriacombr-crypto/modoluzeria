@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import { journeyStagesQO, useApi } from "@/lib/luzeria/queries";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import type { JourneyStage, JourneyTrack } from "@/lib/luzeria/journey-stages.functions";
 
 const TRACK_LABEL: Record<JourneyTrack, string> = {
@@ -87,7 +88,7 @@ function StageRow({ stage }: { stage: JourneyStage }) {
             <Pencil size={13} />
           </button>
           <button
-            onClick={() => { if (confirm(`Excluir a etapa "${stage.name}"?`)) api.deleteJourneyStage.mutate({ data: { id: stage.id } }); }}
+            onClick={async () => { if (await requestConfirm(`Excluir a etapa "${stage.name}"?`, { danger: true })) api.deleteJourneyStage.mutate({ data: { id: stage.id } }); }}
             className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5" title="Excluir"
           >
             <Trash2 size={13} />

@@ -24,8 +24,16 @@ export function AssigneePicker({
     const h = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
+    // anchorRect is measured once by the caller at open time (not tracked
+    // live) — closing on scroll avoids the picker floating disconnected
+    // from the button it was opened from.
+    const onScroll = () => onClose();
+    window.addEventListener("scroll", onScroll, true);
     document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    return () => {
+      document.removeEventListener("mousedown", h);
+      window.removeEventListener("scroll", onScroll, true);
+    };
   }, [onClose]);
 
   const term = q.trim().toLowerCase();

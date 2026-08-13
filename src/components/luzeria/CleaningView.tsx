@@ -6,6 +6,7 @@ import { cleaningQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { AssigneePicker, colorForLabel } from "./AssigneePicker";
 import { Avatar } from "./Avatar";
 import { toast } from "sonner";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
 export const CLEANING_DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -143,7 +144,7 @@ export function CleaningView() {
                             <button onClick={() => startEdit(task.id, task.name)} title="Editar tarefa"
                               className="p-1 rounded text-white/40 hover:text-white hover:bg-white/5"><Pencil size={12} /></button>
                             <button
-                              onClick={() => { if (confirm(`Excluir a tarefa "${task.name}"? Isso também remove as atribuições e o histórico dela.`)) deleteCleaningTask.mutate({ data: { id: task.id } }); }}
+                              onClick={async () => { if (await requestConfirm(`Excluir a tarefa "${task.name}"? Isso também remove as atribuições e o histórico dela.`, { danger: true })) deleteCleaningTask.mutate({ data: { id: task.id } }); }}
                               title="Excluir tarefa"
                               className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5"><Trash2 size={12} /></button>
                           </div>

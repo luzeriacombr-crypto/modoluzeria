@@ -6,6 +6,7 @@ import {
   Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil, Maximize2, Minimize2, Undo2, ImagePlus, GripVertical,
 } from "lucide-react";
 import { salesPageBlocksAdminQO, useApi } from "@/lib/luzeria/queries";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { BACKGROUND_SWATCHES, HeroSection, renderBlockNode, SalesPageBody, BG_BLUE, useDragReorder } from "./salesPageBlocks";
 import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
 import type { SalesPageBlock, SalesPageBlockType } from "@/lib/luzeria/sales-page.functions";
@@ -85,8 +86,8 @@ export function SalesPageEditorTab() {
     api.updateSalesPageBlock.mutate({ data: { id: b.id, type: b.type, content: drafts[b.id] ?? b.content, isVisible: !b.isVisible } as any });
   }
 
-  function remove(b: SalesPageBlock) {
-    if (!confirm(`Remover esta seção do site?`)) return;
+  async function remove(b: SalesPageBlock) {
+    if (!(await requestConfirm(`Remover esta seção do site?`, { danger: true }))) return;
     api.deleteSalesPageBlock.mutate({ data: { id: b.id } }, {
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
     });
@@ -113,18 +114,18 @@ export function SalesPageEditorTab() {
     });
   }
 
-  function publish() {
+  async function publish() {
     if (pendingCount === 0) return;
-    if (!confirm(`Publicar ${pendingCount} alteração${pendingCount > 1 ? "ões" : ""} pro site ao vivo?`)) return;
+    if (!(await requestConfirm(`Publicar ${pendingCount} alteração${pendingCount > 1 ? "ões" : ""} pro site ao vivo?`))) return;
     api.publishSalesPageBlocks.mutate(undefined as any, {
       onSuccess: (r: any) => toast.success(`${r?.count ?? pendingCount} alteração(ões) publicada(s)!`),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao publicar"),
     });
   }
 
-  function cancelEdit() {
+  async function cancelEdit() {
     if (pendingCount === 0) return;
-    if (!confirm(`Descartar ${pendingCount} alteração${pendingCount > 1 ? "ões" : ""} não publicada${pendingCount > 1 ? "s" : ""} e voltar pro que já está no ar?`)) return;
+    if (!(await requestConfirm(`Descartar ${pendingCount} alteração${pendingCount > 1 ? "ões" : ""} não publicada${pendingCount > 1 ? "s" : ""} e voltar pro que já está no ar?`, { danger: true }))) return;
     api.discardSalesPageDraft.mutate(undefined as any, {
       onSuccess: () => {
         // Volta os campos pro conteúdo publicado na hora, sem esperar o refetch —

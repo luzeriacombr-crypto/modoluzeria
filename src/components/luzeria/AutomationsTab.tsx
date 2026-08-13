@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Bell, Calendar, Plus, PlayCircle, Repeat, Sparkles, Timer, Trash2, Zap } from "lucide-react";
 import { cronJobsQO, automationRulesQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { STATUS_META, type Status } from "@/lib/luzeria/types";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
 const STATUS_OPTIONS = Object.keys(STATUS_META) as Status[];
 
@@ -178,7 +179,7 @@ function AutomationRulesSection() {
             </span>
             {isMaster && (
               <button
-                onClick={() => { if (confirm("Excluir essa automação?")) deleteAutomationRule.mutate({ data: { id: r.id } }); }}
+                onClick={async () => { if (await requestConfirm("Excluir essa automação?", { danger: true })) deleteAutomationRule.mutate({ data: { id: r.id } }); }}
                 className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-white/5 shrink-0"
               ><Trash2 size={13} /></button>
             )}

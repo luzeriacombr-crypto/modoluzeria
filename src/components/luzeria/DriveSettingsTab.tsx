@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { FolderTree, Loader2, RefreshCw, Save, HardDrive, ExternalLink, Video } from "lucide-react";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import {
   getDriveConfig,
   setDriveRootFolder,
@@ -65,7 +66,7 @@ export function DriveSettingsTab() {
   }
 
   async function runReorganize() {
-    if (!confirm("Reorganizar TODOS os arquivos do Drive para a estrutura Entregas - <Cliente> / <Mês>? Pode levar alguns minutos.")) return;
+    if (!(await requestConfirm("Reorganizar TODOS os arquivos do Drive para a estrutura Entregas - <Cliente> / <Mês>? Pode levar alguns minutos."))) return;
     setRunning(true);
     setReport(null);
     try {

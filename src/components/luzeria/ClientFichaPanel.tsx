@@ -8,6 +8,7 @@ import {
   MessageCircle, Milestone, Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, journeyStagesQO } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -201,8 +202,8 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
                   </div>
                   {isAdmin && (
                     <button
-                      onClick={() => {
-                        if (confirm(`Excluir o link "${l.label}"?`))
+                      onClick={async () => {
+                        if (await requestConfirm(`Excluir o link "${l.label}"?`, { danger: true }))
                           api.deleteClientLink.mutate({ data: { id: l.id } });
                       }}
                       className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5"
@@ -252,8 +253,8 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
                   </div>
                   {isAdmin && (
                     <button
-                      onClick={() => {
-                        if (confirm(`Excluir o contato "${c.name}"?`))
+                      onClick={async () => {
+                        if (await requestConfirm(`Excluir o contato "${c.name}"?`, { danger: true }))
                           api.deleteClientContact.mutate({ data: { id: c.id } });
                       }}
                       className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5"
@@ -672,7 +673,7 @@ function InstagramSection({ clientId }: { clientId: string }) {
   }
 
   async function handleDisconnect() {
-    if (!confirm("Desconectar o Instagram desse cliente? A publicação automática para de funcionar até reconectar.")) return;
+    if (!(await requestConfirm("Desconectar o Instagram desse cliente? A publicação automática para de funcionar até reconectar.", { danger: true }))) return;
     setDisconnecting(true);
     try {
       await disconnect({ data: { clientId } });
@@ -748,8 +749,8 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
     );
   }
 
-  function clear() {
-    if (!confirm("Remover pasta de entregas deste cliente?")) return;
+  async function clear() {
+    if (!(await requestConfirm("Remover pasta de entregas deste cliente?", { danger: true }))) return;
     clearClientDeliveriesFolder.mutate(
       { data: { clientId } },
       {
@@ -1027,7 +1028,7 @@ function RecurringBlock({ clientId }: { clientId: string }) {
             tpl={t}
             profiles={profiles}
             onUpdate={(patch) => api.upsertRecurring.mutate({ data: { id: t.id, clientId, type: t.type, title: t.title, cadence: t.cadence, dayOfWeek: t.dayOfWeek, dayOfMonth: t.dayOfMonth, defaultAssignees: t.defaultAssignees, active: t.active, ...patch } })}
-            onDelete={() => { if (confirm(`Excluir recorrência "${t.title}"?`)) api.deleteRecurring.mutate({ data: { id: t.id } }); }}
+            onDelete={async () => { if (await requestConfirm(`Excluir recorrência "${t.title}"?`, { danger: true })) api.deleteRecurring.mutate({ data: { id: t.id } }); }}
           />
         ))}
         {adding && (
@@ -1198,7 +1199,7 @@ function SecretRow({ secret, onDelete }: { secret: any; onDelete: () => void }) 
           className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5"
           title="Copiar valor"
         >{copied ? <Check size={13} /> : <Copy size={13} />}</button>
-        <button onClick={() => { if (confirm(`Excluir "${secret.label}"?`)) onDelete(); }} className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5">
+        <button onClick={async () => { if (await requestConfirm(`Excluir "${secret.label}"?`, { danger: true })) onDelete(); }} className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5">
           <Trash2 size={13} />
         </button>
       </div>
