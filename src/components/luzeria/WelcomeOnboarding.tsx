@@ -29,10 +29,16 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
     setAvatarPreview(null);
   }
 
+  // Importar clientes do ClickUp/Trello é uma ação de admin (o backend já
+  // rejeita pra quem não é master/setor) — membro comum nem deveria ver a
+  // tela, então pula direto pra finalizar o onboarding.
+  const canImportClients = me.role === "master" || me.role === "setor";
+
   function goToImportStep(saveCustomization: boolean) {
-    if (!saveCustomization) { setStep("import"); return; }
+    const next = canImportClients ? () => setStep("import") : completeOnboarding;
+    if (!saveCustomization) { next(); return; }
     updateMyProfile.mutate({ data: { color, avatarPath } }, {
-      onSuccess: () => { toast.success("Perfil personalizado."); setStep("import"); },
+      onSuccess: () => { toast.success("Perfil personalizado."); next(); },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar perfil"),
     });
   }
