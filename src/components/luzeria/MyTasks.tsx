@@ -33,9 +33,9 @@ function SectionHeader({ icon, iconBg, iconColor, label, count, open, onToggle }
   open: boolean; onToggle: () => void;
 }) {
   return (
-    <button onClick={onToggle} className="w-full flex items-center gap-2 mb-2 text-left">
-      <span className="rounded p-1" style={{ backgroundColor: iconBg, color: iconColor }}>{icon}</span>
-      <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">{label}</h2>
+    <button onClick={onToggle} className="w-full flex items-center gap-2 mb-2.5 text-left">
+      <span className="rounded-md p-1" style={{ backgroundColor: iconBg, color: iconColor }}>{icon}</span>
+      <h2 className="text-[11.5px] uppercase font-semibold tracking-wide text-white/60">{label}</h2>
       <span className="text-[11px] text-white/40">· {count}</span>
       <span className="ml-auto text-white/40">
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -113,8 +113,8 @@ export function MyTasks() {
 
   return (
     <div className="p-10 max-w-5xl mx-auto" data-tour="my-tasks">
-      <div className="mb-3">
-        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[15px] font-bold uppercase tracking-wider mb-1"
+      <div className="mb-4">
+        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[15px] font-semibold uppercase tracking-wide mb-1.5"
           style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
           Olá, {(() => {
             const raw = (me?.name ?? "você").trim().split(" ")[0];
@@ -126,16 +126,16 @@ export function MyTasks() {
             <p className="italic text-white/60 text-[13px] leading-relaxed text-balance">
               "{dailyVerse.text}"
             </p>
-            <p className="mt-1 text-[11px] font-bold uppercase tracking-wider" style={{ color: "rgba(var(--lz-brand-rgb), 0.7)" }}>
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "rgba(var(--lz-brand-rgb), 0.7)" }}>
               {dailyVerse.reference}
             </p>
           </div>
         )}
       </div>
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex items-end justify-between mb-9">
         <div>
-          <h1 className="text-[24px] sm:text-[32px] font-bold text-white leading-none tracking-tight whitespace-nowrap">Coisas para fazer</h1>
-          <p className="text-sm text-white/50 mt-2">
+          <h1 className="text-[24px] sm:text-[32px] font-semibold text-white leading-none tracking-tight whitespace-nowrap">Coisas para fazer</h1>
+          <p className="text-sm text-white/50 mt-2.5">
             {tasks.length} {tasks.length === 1 ? "tarefa atribuída" : "tarefas atribuídas"}
           </p>
         </div>
@@ -433,7 +433,7 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
         <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
           <List size={11} />
         </span>
-        <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Atividades registradas em {formatMonth(monthKey)}</h2>
+        <h2 className="text-[11.5px] uppercase font-semibold tracking-wide text-white/60">Atividades registradas em {formatMonth(monthKey)}</h2>
       </div>
       <div className="flex flex-wrap gap-2 px-4 pb-3.5">
         {entries.map(([type, n]) => (

@@ -173,7 +173,7 @@ export function MobileNav() {
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around bg-[#1C1C1C] border-t border-white/[0.08]" data-tour="mobile-bottom-nav">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around bg-[#1C1C1C]/85 backdrop-blur-xl border-t border-white/[0.08]" data-tour="mobile-bottom-nav">
         <NavBtn icon={<LayoutDashboard size={20} />} active={pathname === "/minhas-tarefas"}
           onClick={() => { navigate({ to: "/minhas-tarefas" }); closeAllSheets(); }} />
         <NavBtn icon={<BarChart2 size={20} />} active={pathname === "/admin"}
