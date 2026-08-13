@@ -9,7 +9,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { PRESET_COLORS, tintedCardStyle, hexAlpha } from "@/lib/luzeria/utils";
+import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { toast } from "sonner";
@@ -296,14 +296,11 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
   }, [menuOpen]);
 
   const monthKey = useUI((s) => s.selectedMonthKey);
-  const cc = client.color || "#5BA88A";
 
   return (
     <div ref={ref}
       className="group relative rounded-lg transition-[border-color] mx-1 overflow-hidden"
-      style={active
-        ? { ...tintedCardStyle(cc), borderColor: hexAlpha(cc, 0.45) }
-        : { background: hexAlpha(cc, 0.07), border: "1px solid transparent" }}
+      style={glassCardStyle(active)}
     >
       {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
       {/* Hover wash — a separate layer since the row background above is

@@ -8,7 +8,7 @@ import { Avatar } from "./Avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
-import { tintedCardStyle } from "@/lib/luzeria/utils";
+import { glassCardStyle } from "@/lib/luzeria/utils";
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
@@ -96,7 +96,7 @@ export function MobileNav() {
                           key={c.id}
                           onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: c.id } }); setShowClients(false); }}
                           className="relative w-full flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left transition-transform active:scale-[0.98] min-w-0"
-                          style={tintedCardStyle(cc)}
+                          style={glassCardStyle()}
                         >
                           <Avatar name={c.name} color={cc} avatarUrl={c.photoUrl} size={32} />
                           <span className="text-xs font-semibold text-white truncate flex-1 min-w-0">{c.name}</span>

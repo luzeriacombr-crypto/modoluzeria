@@ -8,7 +8,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { Modal } from "./Modals";
 import { AvatarEditor, showAvatarError, uploadAvatar } from "./AvatarEditor";
-import { tintedCardStyle } from "@/lib/luzeria/utils";
+import { glassCardStyle } from "@/lib/luzeria/utils";
 
 const ROLE_LABEL: Record<Role, string> = {
   master: "Adm Master",
@@ -25,7 +25,7 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
       <button
         onClick={() => setOpen(true)}
         className="flex flex-col items-center gap-2 p-4 rounded-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 text-center"
-        style={{ ...tintedCardStyle(profile.color), ...EASE }}
+        style={{ ...glassCardStyle(), ...EASE }}
       >
         <div className="relative">
           <Avatar profile={profile} size={56} />
