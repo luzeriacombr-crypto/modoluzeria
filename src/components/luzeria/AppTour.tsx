@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { X, ArrowLeft, ArrowRight, Check, Sparkles } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMe, useApi } from "@/lib/luzeria/queries";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Role = "master" | "setor" | "member";
 
@@ -10,9 +11,12 @@ type Step = {
   id: string;
   title: string;
   desc: string;
+  /** Overrides `desc` on mobile — use when the location/wording differs (e.g. "toque no menu" vs "clique aqui"). */
+  descMobile?: string;
   target?: string;
   view?: "my" | "admin" | "settings" | "profile";
   roles?: Role[];
+  /** Overrides `target` on mobile, when the feature lives in a different spot (bottom nav vs sidebar). */
   mobileTarget?: string;
   /** Skip this step when the org disabled this optional feature (OPTIONAL_FEATURE_KEYS). */
   hideIfDisabled?: string;
@@ -56,27 +60,35 @@ const STEPS: Step[] = [
     id: "calendario",
     title: "Calendário",
     desc: "Visão mensal em grade com todas as publicações da agência. Passe o mouse num dia pra ver a miniatura e o cliente.",
+    descMobile: "Visão mensal em grade com todas as publicações da agência. No celular, é só tocar no menu (☰) aqui embaixo e escolher Calendário.",
     target: '[data-tour="nav-calendario"]',
+    mobileTarget: '[data-tour="mobile-menu-btn"]',
     hideIfDisabled: "calendar",
   },
   {
     id: "rotina",
     title: "Rotina",
     desc: "Tarefas de limpeza e organização recorrentes, marcadas como feitas dia a dia.",
+    descMobile: "Tarefas de limpeza e organização recorrentes, marcadas como feitas dia a dia. No celular, é só tocar no menu (☰) aqui embaixo e escolher Rotina.",
     target: '[data-tour="nav-rotina"]',
+    mobileTarget: '[data-tour="mobile-menu-btn"]',
     hideIfDisabled: "rotina",
   },
   {
     id: "ajuda",
     title: "Ajuda",
     desc: "Tutoriais, perguntas frequentes e um botão pra reportar bugs — com acompanhamento do status direto por aqui.",
+    descMobile: "Tutoriais, perguntas frequentes e um botão pra reportar bugs. No celular, é só tocar no menu (☰) aqui embaixo e escolher Ajuda.",
     target: '[data-tour="nav-ajuda"]',
+    mobileTarget: '[data-tour="mobile-menu-btn"]',
   },
   {
     id: "sidebar",
     title: "Seus clientes",
     desc: "Aqui ficam os clientes da agência separados por categoria. Clique em um pra ver o board mensal de Posts e Reels.",
+    descMobile: "Aqui ficam os clientes da agência separados por categoria. Toque num pra ver o board mensal de Posts e Reels.",
     target: '[data-tour="sidebar"]',
+    mobileTarget: '[data-tour="mobile-clients-btn"]',
   },
   {
     id: "bell",
@@ -118,6 +130,7 @@ const CARD_W = 340;
 
 export function AppTour() {
   const me = useMe().data;
+  const isMobile = useIsMobile();
   const { updateMyProfile } = useApi();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -131,6 +144,8 @@ export function AppTour() {
     (!s.hideIfDisabled || !disabledFeatures.has(s.hideIfDisabled))
   );
   const step = visibleSteps[stepIdx];
+  const stepTarget = isMobile && step?.mobileTarget ? step.mobileTarget : step?.target;
+  const stepDesc = isMobile && step?.descMobile ? step.descMobile : step?.desc;
 
   // Auto-start once on first login (after onboarding completes).
   useEffect(() => {
@@ -159,14 +174,18 @@ export function AppTour() {
 
   // Track target rect.
   useLayoutEffect(() => {
-    if (!open || !step?.target) { setRect(null); return; }
+    if (!open || !stepTarget) { setRect(null); return; }
     let raf = 0;
     const update = () => {
-      const el = document.querySelector(step.target!);
-      if (el) {
-        setRect((el as HTMLElement).getBoundingClientRect());
+      const el = document.querySelector(stepTarget) as HTMLElement | null;
+      // Elements hidden via `display:none` (e.g. the desktop sidebar on a
+      // mobile viewport) still match the selector but report a zero-size
+      // rect — treat that the same as "not found" instead of drawing a
+      // highlight box around nothing.
+      if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
+        setRect(el.getBoundingClientRect());
         // ensure visible
-        try { (el as HTMLElement).scrollIntoView({ block: "center", behavior: "smooth" }); } catch {}
+        try { el.scrollIntoView({ block: "center", behavior: "smooth" }); } catch {}
       } else {
         setRect(null);
       }
@@ -183,7 +202,7 @@ export function AppTour() {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onResize, true);
     };
-  }, [open, step]);
+  }, [open, step, stepTarget]);
 
   if (!open || !step) return null;
 
@@ -272,7 +291,7 @@ export function AppTour() {
             <X size={16} />
           </button>
         </div>
-        <p className="text-white/70 text-[13px] leading-relaxed mb-4">{step.desc}</p>
+        <p className="text-white/70 text-[13px] leading-relaxed mb-4">{stepDesc}</p>
 
         {/* Progress bar */}
         <div className="h-1 w-full rounded-full bg-white/5 mb-3 overflow-hidden">
