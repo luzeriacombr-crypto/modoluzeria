@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, useMe, useApi } from "@/lib/luzeria/queries";
-import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
@@ -51,10 +51,13 @@ export function MyTasks() {
   const { setCleaningDone, markMentionRead, logClientStageUpdate } = useApi();
   const [viewAs, setViewAs] = useState<string>("");
   const targetId = isAdmin && viewAs ? viewAs : me?.id;
-  const { data: tasks = [] } = useQuery({
+  const { data: allTasks = [] } = useQuery({
     ...myTasksQO(targetId),
     enabled: !!targetId,
   });
+  // Já finalizado/entregue/pronto pra publicar some da lista principal —
+  // deixa a página focada no que ainda precisa de atenção.
+  const tasks = allTasks.filter((t: any) => !isDoneStatus(t.status as Status));
   const { selectMonth, openItem, flash, openFicha, openStageComposer } = useUI();
   const navigate = useNavigate();
   const isMeView = !isAdmin || !viewAs || viewAs === me?.id;
