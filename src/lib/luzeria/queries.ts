@@ -8,7 +8,7 @@ import {
   setUserActive, setUserRole, setExcludeFromRanking, deleteUser, updateClient, updateItem, updateMyProfile, adminUpdateMemberAvatar,
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   listCleaningTasks, addCleaningTask, renameCleaningTask, deleteCleaningTask,
-  adminCreateUser, createAgency, updateMyOrg, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getMemberFinalizations,
+  adminCreateUser, createAgency, updateMyOrg, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getMemberFinalizations,
   listOrgsBilling, getOrgNextInvoice,
   updateMyAccount,
   getReport, getMemberReportDetail, getMemberVelocity,
@@ -511,6 +511,7 @@ export function useApi() {
     adminCreateUser: useMutation({ mutationFn: useServerFn(adminCreateUser), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     createAgency: useMutation({ mutationFn: useServerFn(createAgency) }),
     updateMyOrg: useMutation({ mutationFn: useServerFn(updateMyOrg), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
+    updateSetorPermissions: useMutation({ mutationFn: useServerFn(updateSetorPermissions), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
     subscribeToPlan: useMutation({
       mutationFn: useServerFn(subscribeToPlan),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["org-plan-status"] }); qc.invalidateQueries({ queryKey: ["me"] }); },

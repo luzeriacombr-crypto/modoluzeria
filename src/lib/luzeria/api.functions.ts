@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status } from "./types";
-import { isActivityType, STATUS_META } from "./types";
+import { isActivityType, STATUS_META, SETOR_PERMISSION_KEYS } from "./types";
 
 /** Fixed id of the original Luzeria Estúdio org — also hardcoded in migrations
  * and in the admin-auth-operations edge function (they can't share a TS import). */
@@ -81,7 +81,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions").eq("id", orgId).maybeSingle()
       : { data: null };
     const logoPath = (org as any)?.logo_path as string | null | undefined;
     const feedPreviewImagePath = (org as any)?.feed_preview_image_path as string | null | undefined;
@@ -112,7 +112,23 @@ export const getMe = createServerFn({ method: "GET" })
       orgFaviconUrl,
       orgFaviconPath: faviconPath ?? null,
       disabledFeatures: ((org as any)?.disabled_features ?? []) as string[],
+      setorPermissions: ((org as any)?.setor_permissions ?? []) as string[],
     } satisfies Profile;
+  });
+
+/** Master-only: which capabilities beyond the fixed baseline the "setor"
+ * role has in this org. */
+export const updateSetorPermissions = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { permissions: string[] }) =>
+    z.object({ permissions: z.array(z.enum(SETOR_PERMISSION_KEYS)) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Apenas o Adm Master pode configurar permissões.");
+    const { error } = await context.supabase
+      .from("orgs").update({ setor_permissions: data.permissions }).eq("id", context.orgId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 /** Master-only: rename their own agency and/or set its in-app tagline. */
@@ -2055,7 +2071,10 @@ export const getReport = createServerFn({ method: "GET" })
   .inputValidator((d: any) => reportFiltersSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
-    if (!isMaster) throw new Error("Forbidden");
+    if (!isMaster) {
+      const { data: allowed } = await context.supabase.rpc("has_setor_permission", { _user_id: context.userId, _perm: "team_reports" });
+      if (!allowed) throw new Error("Forbidden");
+    }
 
     const fromISO = new Date(data.from).toISOString();
     const toISO = new Date(data.to).toISOString();
@@ -2396,7 +2415,10 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
     z.object({ userId: z.string().uuid(), from: z.string(), to: z.string() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
-    if (!isMaster) throw new Error("Forbidden");
+    if (!isMaster) {
+      const { data: allowed } = await context.supabase.rpc("has_setor_permission", { _user_id: context.userId, _perm: "team_reports" });
+      if (!allowed) throw new Error("Forbidden");
+    }
 
     const fromISO = new Date(data.from).toISOString();
     const toISO = new Date(data.to).toISOString();

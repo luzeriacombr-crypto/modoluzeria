@@ -10,7 +10,7 @@ import { getInstagramConnectionStatus } from "@/lib/luzeria/instagram.functions"
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
 import { downloadDriveFile, downloadDriveFiles } from "@/lib/luzeria/drive-download";
 import { FileActionsMenu } from "./FileActionsMenu";
-import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, ACTIVITY_QUANTITY_LABEL, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, ACTIVITY_QUANTITY_LABEL, hasSetorPermission, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS } from "./icons";
 import { MentionInput, renderMentions } from "./MentionInput";
@@ -455,6 +455,8 @@ export function DetailPanel() {
   const item = useMemo(() => (selectedItemId && month ? findItem(month, selectedItemId) : undefined), [month, selectedItemId]);
   const client = clients.find((c) => c.id === selectedClientId);
   const isAdmin = me?.role === "master" || me?.role === "setor";
+  const canApproveFinalize = hasSetorPermission(me, "approve_finalize");
+  const canPublishInstagram = hasSetorPermission(me, "instagram_publish");
   const isAvulso = client?.category === "Avulsos";
 
   const getInstagramStatus = useServerFn(getInstagramConnectionStatus);
@@ -855,7 +857,7 @@ export function DetailPanel() {
                 {statusOpen && (
                   <div className="absolute z-50 left-0 right-0 mt-1 rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto">
                     {statusOptionsFor(item.type)
-                      .filter((s) => isAdmin || (s !== "PRONTO_PARA_PUBLICAR" && s !== "FINALIZADO"))
+                      .filter((s) => (s === "PRONTO_PARA_PUBLICAR" ? canApproveFinalize : s === "FINALIZADO" ? isAdmin : true))
                       .map((s) => {
                       const m = STATUS_META[s]; const I = STATUS_ICONS[s];
                       const active = item.status === s;
@@ -1061,15 +1063,15 @@ export function DetailPanel() {
           </ModalSection>
         )}
 
-        {/* Publicar no Instagram (Posts, admin, só quando pronto pra publicar) */}
-        {item.type === "post" && isAdmin && item.status === "PRONTO_PARA_PUBLICAR" && (
+        {/* Publicar no Instagram (Posts, admin com permissão, só quando pronto pra publicar) */}
+        {item.type === "post" && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && (
           <ModalSection label="Publicar">
             {clientInstagramConnected ? (
               <>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
-                    onClick={() => {
-                      if (!confirm('Publicar esse post no Instagram do cliente agora? Isso é uma ação real e pública.')) return;
+                    onClick={async () => {
+                      if (!(await requestConfirm('Publicar esse post no Instagram do cliente agora? Isso é uma ação real e pública.'))) return;
                       publishToInstagram.mutate({ data: { itemId: item.id } }, {
                         onSuccess: () => toast.success("Publicado no Instagram!"),
                         onError: (e: any) => toast.error(e?.message ?? "Falha ao publicar no Instagram"),

@@ -5,7 +5,7 @@ import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
-import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL } from "@/lib/luzeria/types";
+import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
 import { toast } from "sonner";
 import { UserPlus, X, Settings as SettingsIcon, Star, Building2 } from "lucide-react";
 import { ReportsTab } from "./ReportsTab";
@@ -29,12 +29,19 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
   const { setUserActive, deleteUser, adminCreateUser, createAgency } = useApi();
   const [adding, setAdding] = useState(false);
   const [creatingAgency, setCreatingAgency] = useState(false);
-  const tab: SettingsTab = (VALID_TABS as string[]).includes(tabParam ?? "") ? (tabParam as SettingsTab) : "team";
-  const setTab = onTabChange;
 
-  if (me?.role !== "master") {
+  if (!me) return null;
+  const isMaster = me.role === "master";
+  const setorAllowedTabs: SettingsTab[] = [
+    ...(hasSetorPermission(me, "settings_journey") ? (["journey"] as SettingsTab[]) : []),
+    ...(hasSetorPermission(me, "team_reports") ? (["report"] as SettingsTab[]) : []),
+  ];
+  if (!isMaster && setorAllowedTabs.length === 0) {
     return <div className="p-10 text-white/60 text-sm">Acesso restrito ao Administrador Master.</div>;
   }
+  const allowedTabs: SettingsTab[] = isMaster ? VALID_TABS : setorAllowedTabs;
+  const tab: SettingsTab = (allowedTabs as string[]).includes(tabParam ?? "") ? (tabParam as SettingsTab) : allowedTabs[0];
+  const setTab = onTabChange;
 
   const pending = profiles.filter((p) => !p.active);
   const active = profiles.filter((p) => p.active);
@@ -75,7 +82,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
           ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }] : []),
-        ].map((t) => {
+        ].filter((t) => allowedTabs.includes(t.id as SettingsTab)).map((t) => {
           const active = tab === (t.id as any);
           return (
             <button key={t.id} onClick={() => setTab(t.id as any)}
@@ -195,29 +202,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--lz-brand-rgb))] mb-4">
           Diferença entre funções
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-[#1C1C1C] rounded-lg p-4">
-            <div className="text-xs font-semibold text-white mb-2">Adm Master</div>
-            <div className="text-[11px] text-white/60 leading-relaxed">
-              Acesso total. Gerencia equipe (aprovar, criar, remover), define metas, configura Drive,
-              vê relatórios, dashboard completo e demandas de qualquer colaborador.
-            </div>
-          </div>
-          <div className="bg-[#1C1C1C] rounded-lg p-4">
-            <div className="text-xs font-semibold text-white mb-2">Adm Setor</div>
-            <div className="text-[11px] text-white/60 leading-relaxed">
-              Gestão operacional. Cria e edita clientes, posts, reels e avulsos, atribui responsáveis
-              e acompanha o dashboard. Não gerencia equipe nem configurações sensíveis.
-            </div>
-          </div>
-          <div className="bg-[#1C1C1C] rounded-lg p-4">
-            <div className="text-xs font-semibold text-white mb-2">Membro</div>
-            <div className="text-[11px] text-white/60 leading-relaxed">
-              Executa as próprias demandas. Vê "Minhas Demandas", atualiza status, comenta, anexa
-              arquivos e acompanha sua meta pessoal. Não edita clientes nem outros colaboradores.
-            </div>
-          </div>
-        </div>
+        <TeamPermissionsPanel me={me} />
       </div>
         </>
       )}
@@ -472,6 +457,86 @@ function FeatureTogglesSection({ disabledFeatures }: { disabledFeatures: string[
           </div>
         );
       })}
+    </div>
+  );
+}
+
+type FixedCapabilityRow = { label: string; member: boolean; setor: boolean; master: boolean };
+
+const FIXED_CAPABILITIES: FixedCapabilityRow[] = [
+  { label: "Executar as próprias demandas, comentar, anexar arquivos", member: true, setor: true, master: true },
+  { label: "Criar e editar clientes, posts, reels e avulsos", member: false, setor: true, master: true },
+  { label: "Excluir clientes", member: false, setor: true, master: true },
+  { label: "Gerenciar equipe (aprovar, criar, remover, redefinir senha)", member: false, setor: false, master: true },
+  { label: "Configurações avançadas (Financeiro, Geral, Automações)", member: false, setor: false, master: true },
+];
+
+function CapabilityDot({ on }: { on: boolean }) {
+  return (
+    <div className="w-14 flex justify-center shrink-0">
+      <span className={`h-1.5 w-1.5 rounded-full ${on ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`} />
+    </div>
+  );
+}
+
+/** Master-only view of Configurações > Equipe: a comparison table of what
+ * each role does today, plus toggles for the handful of setor capabilities
+ * this org's Master can grant/revoke. Master itself is always fixed/full
+ * access — only setor is configurable, and only for the ~4 capabilities
+ * that are already safe to gate server-side (see SETOR_PERMISSION_KEYS). */
+function TeamPermissionsPanel({ me }: { me: Profile }) {
+  const { updateSetorPermissions } = useApi();
+  const granted = new Set(me.setorPermissions ?? []);
+
+  function toggle(key: SetorPermissionKey, on: boolean) {
+    const next = on ? [...granted, key] : [...granted].filter((k) => k !== key);
+    updateSetorPermissions.mutate({ data: { permissions: next } }, {
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+    });
+  }
+
+  return (
+    <div>
+      <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] text-[10px] font-bold uppercase tracking-wider text-white/40">
+          <div className="flex-1">Capacidade</div>
+          <div className="w-14 text-center shrink-0">Membro</div>
+          <div className="w-14 text-center shrink-0">Setor</div>
+          <div className="w-14 text-center shrink-0">Master</div>
+        </div>
+        {FIXED_CAPABILITIES.map((row) => (
+          <div key={row.label} className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] last:border-b-0">
+            <div className="flex-1 text-[12.5px] text-white/70">{row.label}</div>
+            <CapabilityDot on={row.member} />
+            <CapabilityDot on={row.setor} />
+            <CapabilityDot on={row.master} />
+          </div>
+        ))}
+        {SETOR_PERMISSION_KEYS.map((key) => {
+          const meta = SETOR_PERMISSION_LABEL[key];
+          const on = granted.has(key);
+          return (
+            <div key={key} className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] last:border-b-0">
+              <div className="flex-1">
+                <div className="text-[12.5px] text-white/70">{meta.label}</div>
+                <div className="text-[10.5px] text-white/35 mt-0.5">{meta.description}</div>
+              </div>
+              <CapabilityDot on={false} />
+              <div className="w-14 flex justify-center shrink-0">
+                <button onClick={() => toggle(key, !on)}
+                  className={`relative h-5 w-9 rounded-full transition-colors shrink-0 ${on ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`}>
+                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${on ? "left-[18px]" : "left-0.5"}`} />
+                </button>
+              </div>
+              <CapabilityDot on={true} />
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[11px] text-white/30 mt-3">
+        O Adm Master sempre tem acesso total e não pode ser restringido. As permissões configuráveis acima valem pra
+        todo mundo com a função Adm Setor nesta agência.
+      </p>
     </div>
   );
 }

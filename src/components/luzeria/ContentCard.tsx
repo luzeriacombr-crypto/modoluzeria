@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar, Image as ImageIcon, Trash2 } from "lucide-react";
-import { isDoneStatus, type ContentItem, type Profile } from "@/lib/luzeria/types";
+import { isDoneStatus, hasSetorPermission, type ContentItem, type Profile } from "@/lib/luzeria/types";
 import {
   statusOptionsFor, REEL_TYPE_LABEL, POST_FORMAT_LABEL,
   type ReelType, type PostFormat,
@@ -134,7 +134,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete }
 
         <div onClick={(e) => e.stopPropagation()}>
           <StatusBadge status={item.status}
-            options={statusOptionsFor(item.type).filter((s) => isAdmin || (s !== "PRONTO_PARA_PUBLICAR" && s !== "FINALIZADO"))}
+            options={statusOptionsFor(item.type).filter((s) => (s === "PRONTO_PARA_PUBLICAR" ? hasSetorPermission(me, "approve_finalize") : s === "FINALIZADO" ? isAdmin : true))}
             isAvulso={isAvulso}
             onChange={(s) => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }} />
         </div>
@@ -248,7 +248,7 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
 
       <div onClick={(e) => e.stopPropagation()} className="shrink-0">
         <StatusBadge status={item.status}
-          options={statusOptionsFor(item.type).filter((s) => isAdmin || (s !== "PRONTO_PARA_PUBLICAR" && s !== "FINALIZADO"))}
+          options={statusOptionsFor(item.type).filter((s) => (s === "PRONTO_PARA_PUBLICAR" ? hasSetorPermission(me, "approve_finalize") : s === "FINALIZADO" ? isAdmin : true))}
           isAvulso={isAvulso}
           onChange={(s) => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }} />
       </div>

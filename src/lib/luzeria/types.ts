@@ -242,6 +242,41 @@ export interface Profile {
    * — keys from OPTIONAL_FEATURE_KEYS. Hides the corresponding UI without
    * touching any underlying data. */
   disabledFeatures?: string[];
+  /** Capabilities this org's Master granted the "setor" role beyond its
+   * fixed baseline — keys from SETOR_PERMISSION_KEYS. Present for every
+   * profile (not just setor ones) so a Master viewing the Equipe tab can
+   * render the current toggle state. */
+  setorPermissions?: string[];
+}
+
+export const SETOR_PERMISSION_KEYS = [
+  "approve_finalize", "instagram_publish", "team_reports", "settings_journey",
+] as const;
+export type SetorPermissionKey = (typeof SETOR_PERMISSION_KEYS)[number];
+export const SETOR_PERMISSION_LABEL: Record<SetorPermissionKey, { label: string; description: string }> = {
+  approve_finalize: {
+    label: "Aprovar posts e reels",
+    description: "Marcar um conteúdo como \"Pronto para publicar\".",
+  },
+  instagram_publish: {
+    label: "Publicar no Instagram",
+    description: "Publicar ou programar posts diretamente no Instagram do cliente.",
+  },
+  team_reports: {
+    label: "Ver relatório completo da equipe",
+    description: "Acessar a aba Relatório em Configurações, com o desempenho de todos os colaboradores.",
+  },
+  settings_journey: {
+    label: "Configurar Jornada do cliente",
+    description: "Acessar a aba Jornada do cliente em Configurações.",
+  },
+};
+
+/** True for Master always; for setor, only when the org granted `key`. */
+export function hasSetorPermission(me: Pick<Profile, "role" | "setorPermissions"> | null | undefined, key: SetorPermissionKey): boolean {
+  if (!me) return false;
+  if (me.role === "master") return true;
+  return me.role === "setor" && (me.setorPermissions ?? []).includes(key);
 }
 
 export const OPTIONAL_FEATURE_KEYS = [

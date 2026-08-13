@@ -36,6 +36,16 @@ async function assertMaster(supabase: any, userId: string) {
   if (!isMaster) throw new Error("Apenas o Adm Master pode executar esta ação.");
 }
 
+/** Master, or setor with the org's "instagram_publish" permission granted —
+ * used only by the actual publish/schedule actions. Connecting/disconnecting
+ * a client's Instagram account stays master-only (assertMaster above). */
+async function assertCanPublish(supabase: any, userId: string) {
+  const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
+  if (isMaster) return;
+  const { data: allowed } = await supabase.rpc("has_setor_permission", { _user_id: userId, _perm: "instagram_publish" });
+  if (!allowed) throw new Error("Você não tem permissão pra publicar no Instagram.");
+}
+
 async function assertClientInOrg(supabase: any, clientId: string, orgId: string) {
   const { data } = await supabase.from("clients").select("id").eq("id", clientId).eq("org_id", orgId).maybeSingle();
   if (!data) throw new Error("Cliente não encontrado.");
@@ -302,7 +312,7 @@ export const publishToInstagram = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { itemId: string }) => z.object({ itemId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertMaster(context.supabase, context.userId);
+    await assertCanPublish(context.supabase, context.userId);
     return runInstagramPublish(data.itemId, context.orgId);
   });
 
@@ -314,7 +324,7 @@ export const setInstagramAutoPublish = createServerFn({ method: "POST" })
   .inputValidator((d: { itemId: string; enabled: boolean }) =>
     z.object({ itemId: z.string().uuid(), enabled: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertMaster(context.supabase, context.userId);
+    await assertCanPublish(context.supabase, context.userId);
     const { data: item } = await context.supabase
       .from("content_items")
       .select("id, type, status, scheduled_at, month_id, months(client_id, clients!months_client_id_fkey(org_id))")

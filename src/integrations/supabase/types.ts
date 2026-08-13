@@ -1650,6 +1650,7 @@ export type Database = {
           name: string
           plan_id: string
           promotion_code_id: string | null
+          setor_permissions: string[]
           slug: string
           subscription_status: string
           tagline: string | null
@@ -1672,6 +1673,7 @@ export type Database = {
           name: string
           plan_id?: string
           promotion_code_id?: string | null
+          setor_permissions?: string[]
           slug: string
           subscription_status?: string
           tagline?: string | null
@@ -1694,6 +1696,7 @@ export type Database = {
           name?: string
           plan_id?: string
           promotion_code_id?: string | null
+          setor_permissions?: string[]
           slug?: string
           subscription_status?: string
           tagline?: string | null
@@ -2237,6 +2240,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      has_setor_permission: {
+        Args: { _perm: string; _user_id: string }
         Returns: boolean
       }
       is_active_profile: { Args: { _user_id: string }; Returns: boolean }
