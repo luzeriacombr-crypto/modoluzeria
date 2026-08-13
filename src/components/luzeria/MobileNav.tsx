@@ -94,15 +94,15 @@ export function MobileNav() {
                         <button
                           key={c.id}
                           onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: c.id } }); setShowClients(false); }}
-                          className="relative aspect-square w-full flex flex-col items-center justify-center gap-2 rounded-2xl px-2 py-3 text-center transition-transform active:scale-[0.98] min-w-0"
+                          className="relative w-full flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left transition-transform active:scale-[0.98] min-w-0"
                           style={{
                             backgroundColor: `color-mix(in oklab, ${cc} 18%, transparent)`,
                             border: `1px solid color-mix(in oklab, ${cc} 35%, transparent)`,
                           }}
                         >
-                          <Avatar name={c.name} color={cc} avatarUrl={c.photoUrl} size={44} />
-                          <span className="text-xs font-semibold text-white line-clamp-2 leading-tight">{c.name}</span>
-                          {c.favorite && <Star size={11} className="text-[rgb(var(--lz-brand-rgb))] fill-[rgb(var(--lz-brand-rgb))] shrink-0 absolute top-2 right-2" />}
+                          <Avatar name={c.name} color={cc} avatarUrl={c.photoUrl} size={32} />
+                          <span className="text-xs font-semibold text-white truncate flex-1 min-w-0">{c.name}</span>
+                          {c.favorite && <Star size={11} className="text-[rgb(var(--lz-brand-rgb))] fill-[rgb(var(--lz-brand-rgb))] shrink-0 absolute top-1.5 right-1.5" />}
                         </button>
                       );
                     })}
