@@ -9,7 +9,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { PRESET_COLORS } from "@/lib/luzeria/utils";
+import { PRESET_COLORS, tintedCardStyle, hexAlpha } from "@/lib/luzeria/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { toast } from "sonner";
@@ -296,20 +296,24 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
   }, [menuOpen]);
 
   const monthKey = useUI((s) => s.selectedMonthKey);
+  const cc = client.color || "#5BA88A";
 
   return (
     <div ref={ref}
-      className="group relative rounded-md transition-colors mx-1"
-      style={{ backgroundColor: active ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent" }}
+      className="group relative rounded-lg transition-[border-color] mx-1 overflow-hidden"
+      style={active
+        ? { ...tintedCardStyle(cc), borderColor: hexAlpha(cc, 0.45) }
+        : { background: hexAlpha(cc, 0.07), border: "1px solid transparent" }}
     >
       {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
+      {/* Hover wash — a separate layer since the row background above is
+       * already a gradient (can't just toggle backgroundColor on hover). */}
+      <div className="absolute inset-0 bg-white/[0.045] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
       <Link
         to="/cliente/$clientId"
         params={{ clientId: client.id }}
         preload="intent"
-        className="w-full flex items-center gap-2.5 pl-3 pr-9 py-2 text-left transition-colors"
-        onMouseEnter={(e) => { if (!active) (e.currentTarget.parentElement as HTMLElement).style.backgroundColor = "rgba(255,255,255,0.05)"; }}
-        onMouseLeave={(e) => { if (!active) (e.currentTarget.parentElement as HTMLElement).style.backgroundColor = "transparent"; }}
+        className="relative w-full flex items-center gap-2.5 pl-3 pr-9 py-2 text-left"
       >
         <Avatar name={client.name} color={client.color} size={26} avatarUrl={client.photoUrl} />
         <span className="text-sm truncate text-white/90 flex-1">{client.name}</span>

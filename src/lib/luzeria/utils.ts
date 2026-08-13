@@ -124,3 +124,20 @@ export function hexToRgbChannels(hex: string): string | null {
   const n = parseInt(m[1], 16);
   return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
 }
+
+/** "#RRGGBB" + alpha -> "rgba(r, g, b, alpha)". Falls back to a mid-gray if
+ * the hex is malformed, so a bad client/member color never renders `NaN`. */
+export function hexAlpha(hex: string, alpha: number): string {
+  const channels = hexToRgbChannels(hex) ?? "160, 160, 160";
+  return `rgba(${channels}, ${alpha})`;
+}
+
+/** Shared "tinted card" background — a subtle top-left glow of `hex` fading
+ * into the app's dark surface, same formula as the dashboard's MetricCard.
+ * Used for client/member cards so entity-colored tiles feel consistent. */
+export function tintedCardStyle(hex: string): { background: string; border: string } {
+  return {
+    background: `linear-gradient(160deg, ${hexAlpha(hex, 0.18)} 0%, #161616 70%)`,
+    border: `1px solid ${hexAlpha(hex, 0.32)}`,
+  };
+}
