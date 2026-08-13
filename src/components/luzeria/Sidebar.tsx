@@ -300,11 +300,11 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
   return (
     <div ref={ref}
       className="group relative rounded-lg transition-[border-color] mx-1 overflow-hidden"
-      style={glassCardStyle(active)}
+      style={active ? glassCardStyle(true) : { background: "transparent", border: "1px solid transparent" }}
     >
       {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
-      {/* Hover wash — a separate layer since the row background above is
-       * already a gradient (can't just toggle backgroundColor on hover). */}
+      {/* Hover wash — a separate layer since an active row's background above
+       * is a gradient (can't just toggle backgroundColor on hover). */}
       <div className="absolute inset-0 bg-white/[0.045] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
       <Link
         to="/cliente/$clientId"
