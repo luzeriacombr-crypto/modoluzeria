@@ -134,7 +134,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete }
 
         <div onClick={(e) => e.stopPropagation()}>
           <StatusBadge status={item.status}
-            options={statusOptionsFor(item.type).filter((s) => (s === "PRONTO_PARA_PUBLICAR" ? hasSetorPermission(me, "approve_finalize") : s === "FINALIZADO" ? isAdmin : true))}
+            options={statusOptionsFor(item.type).filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? hasSetorPermission(me, "approve_finalize") : true))}
             isAvulso={isAvulso}
             onChange={(s) => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }} />
         </div>
@@ -248,7 +248,7 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
 
       <div onClick={(e) => e.stopPropagation()} className="shrink-0">
         <StatusBadge status={item.status}
-          options={statusOptionsFor(item.type).filter((s) => (s === "PRONTO_PARA_PUBLICAR" ? hasSetorPermission(me, "approve_finalize") : s === "FINALIZADO" ? isAdmin : true))}
+          options={statusOptionsFor(item.type).filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? hasSetorPermission(me, "approve_finalize") : true))}
           isAvulso={isAvulso}
           onChange={(s) => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }} />
       </div>

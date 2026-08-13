@@ -165,7 +165,8 @@ export function Sidebar({
             defaultOpen={cat !== "Ex-clientes"}
             forceOpen={search.trim().length > 0}
             count={list.length}
-            onAdd={isAdmin && cat === "Avulsos" ? () => onCreateClient("Avulsos") : undefined}
+            onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
+            addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
           >
             {list.map((c) => (
               <ClientRow
@@ -218,10 +219,10 @@ function NavButton({ icon, label, active, onClick, badge }: { icon: React.ReactN
 }
 
 function CategoryGroup({
-  name, color, children, defaultOpen, forceOpen, count, onAdd,
+  name, color, children, defaultOpen, forceOpen, count, onAdd, addTitle,
 }: {
   name: string; color: string; children: React.ReactNode;
-  defaultOpen?: boolean; forceOpen?: boolean; count?: number; onAdd?: () => void;
+  defaultOpen?: boolean; forceOpen?: boolean; count?: number; onAdd?: () => void; addTitle?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? true);
   const isOpen = forceOpen || open;
@@ -239,7 +240,7 @@ function CategoryGroup({
         </button>
         {onAdd && (
           <button onClick={(e) => { e.stopPropagation(); onAdd(); }}
-            title="Nova demanda avulsa"
+            title={addTitle ?? "Novo cliente"}
             className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5">
             <Plus size={13} />
           </button>
