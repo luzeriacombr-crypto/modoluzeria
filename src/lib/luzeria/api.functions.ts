@@ -1320,34 +1320,9 @@ export const setItemStatus = createServerFn({ method: "POST" })
       assignee_ids: assigneeIds,
     }).then(() => {});
 
-    // Push notification when item is approved — notify all assignees
-    if (data.status === "PRONTO_PARA_PUBLICAR" && assigneeIds.length > 0) {
-      try {
-        const { data: item } = await context.supabase
-          .from("content_items").select("title").eq("id", data.id).maybeSingle();
-        const appId = process.env.ONESIGNAL_APP_ID;
-        const restApiKey = process.env.ONESIGNAL_REST_API_KEY;
-        if (appId && restApiKey) {
-          await fetch("https://onesignal.com/api/v1/notifications", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Basic ${restApiKey}` },
-            body: JSON.stringify({
-              app_id: appId,
-              include_external_user_ids: assigneeIds,
-              channel_for_external_user_ids: "push",
-              headings: { en: "✅ Item aprovado!", pt: "✅ Item aprovado!" },
-              contents: {
-                en: `"${item?.title ?? "Item"}" foi aprovado`,
-                pt: `"${item?.title ?? "Item"}" foi aprovado`,
-              },
-              url: process.env.VITE_APP_URL ?? "https://www.modocriador.com.br",
-            }),
-          });
-        }
-      } catch (e) {
-        console.error("[OneSignal] setItemStatus notification failed:", e);
-      }
-    }
+    // Push (if any) is dispatched uniformly by the notification-preferences
+    // aware cron in push-dispatch.functions.ts, off the `status` row the
+    // on_status_change() DB trigger already inserts into `notifications`.
 
     return { ok: true };
   });
@@ -1366,36 +1341,9 @@ export const addAssignee = createServerFn({ method: "POST" })
       .insert({ item_id: data.itemId, user_id: data.userId });
     if (error && !error.message.includes("duplicate")) throw new Error(error.message);
 
-    // Push notification: notify the assigned user (skip if assigning themselves)
-    if (data.userId !== context.userId) {
-      try {
-        const [{ data: item }, { data: assigner }] = await Promise.all([
-          context.supabase.from("content_items").select("title").eq("id", data.itemId).maybeSingle(),
-          context.supabase.from("profiles").select("name").eq("id", context.userId).maybeSingle(),
-        ]);
-        const appId = process.env.ONESIGNAL_APP_ID;
-        const restApiKey = process.env.ONESIGNAL_REST_API_KEY;
-        if (appId && restApiKey) {
-          await fetch("https://onesignal.com/api/v1/notifications", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Basic ${restApiKey}` },
-            body: JSON.stringify({
-              app_id: appId,
-              include_external_user_ids: [data.userId],
-              channel_for_external_user_ids: "push",
-              headings: { en: "Nova tarefa atribuída", pt: "Nova tarefa atribuída" },
-              contents: {
-                en: `${assigner?.name ?? "Alguém"} te atribuiu: ${item?.title ?? "uma tarefa"}`,
-                pt: `${assigner?.name ?? "Alguém"} te atribuiu: ${item?.title ?? "uma tarefa"}`,
-              },
-              url: process.env.VITE_APP_URL ?? "https://www.modocriador.com.br",
-            }),
-          });
-        }
-      } catch (e) {
-        console.error("[OneSignal] addAssignee notification failed:", e);
-      }
-    }
+    // Push (if any) is dispatched uniformly by the notification-preferences
+    // aware cron in push-dispatch.functions.ts, off the `assigned` row the
+    // notify_on_assignment() DB trigger already inserts into `notifications`.
 
     return { ok: true };
   });

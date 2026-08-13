@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield } from "lucide-react";
+import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield, UserPlus, RefreshCw, MessageCircle, AtSign, Star, Bug } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useMe, useApi, notificationPrefsQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -153,6 +153,85 @@ export function ProfilePage() {
             { onSuccess: () => toast.success("Preferência salva."),
               onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
         />
+        <div className="h-px bg-white/[0.06] my-4" />
+        <div className="text-[10px] uppercase font-bold tracking-wider text-white/30 mb-4">
+          Avisos no celular (push)
+        </div>
+        <PrefRow
+          icon={<UserPlus size={16} />}
+          title="Atribuído a mim"
+          description="Quando alguém te atribui a um post, reel ou atividade."
+          value={prefs?.pushAssigned ?? true}
+          disabled={!prefs || setMyNotificationPreferences.isPending}
+          onChange={(v) => setMyNotificationPreferences.mutate(
+            { data: { pushAssigned: v } },
+            { onSuccess: () => toast.success("Preferência salva."),
+              onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+        />
+        <div className="h-px bg-white/[0.06] my-4" />
+        <PrefRow
+          icon={<RefreshCw size={16} />}
+          title="Mudança de status"
+          description="Quando o status de uma demanda sua muda."
+          value={prefs?.pushStatus ?? true}
+          disabled={!prefs || setMyNotificationPreferences.isPending}
+          onChange={(v) => setMyNotificationPreferences.mutate(
+            { data: { pushStatus: v } },
+            { onSuccess: () => toast.success("Preferência salva."),
+              onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+        />
+        <div className="h-px bg-white/[0.06] my-4" />
+        <PrefRow
+          icon={<MessageCircle size={16} />}
+          title="Comentário"
+          description="Quando comentam num post, reel ou atividade sua."
+          value={prefs?.pushComment ?? true}
+          disabled={!prefs || setMyNotificationPreferences.isPending}
+          onChange={(v) => setMyNotificationPreferences.mutate(
+            { data: { pushComment: v } },
+            { onSuccess: () => toast.success("Preferência salva."),
+              onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+        />
+        <div className="h-px bg-white/[0.06] my-4" />
+        <PrefRow
+          icon={<AtSign size={16} />}
+          title="Menção"
+          description="Quando alguém te menciona num comentário."
+          value={prefs?.pushMention ?? true}
+          disabled={!prefs || setMyNotificationPreferences.isPending}
+          onChange={(v) => setMyNotificationPreferences.mutate(
+            { data: { pushMention: v } },
+            { onSuccess: () => toast.success("Preferência salva."),
+              onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+        />
+        <div className="h-px bg-white/[0.06] my-4" />
+        <PrefRow
+          icon={<Star size={16} />}
+          title="Feedback de cliente"
+          description="Quando um cliente deixa feedback num post ou reel."
+          value={prefs?.pushClientFeedback ?? true}
+          disabled={!prefs || setMyNotificationPreferences.isPending}
+          onChange={(v) => setMyNotificationPreferences.mutate(
+            { data: { pushClientFeedback: v } },
+            { onSuccess: () => toast.success("Preferência salva."),
+              onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+        />
+        {me?.role === "master" && (
+          <>
+            <div className="h-px bg-white/[0.06] my-4" />
+            <PrefRow
+              icon={<Bug size={16} />}
+              title="Chamados técnicos"
+              description="Novos chamados de erro/dúvida da equipe, e atualizações dos que você reportou."
+              value={prefs?.pushBugReport ?? true}
+              disabled={!prefs || setMyNotificationPreferences.isPending}
+              onChange={(v) => setMyNotificationPreferences.mutate(
+                { data: { pushBugReport: v } },
+                { onSuccess: () => toast.success("Preferência salva."),
+                  onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+            />
+          </>
+        )}
       </div>
 
       <div className="mt-8 pt-6 border-t border-white/[0.06] flex items-center justify-between gap-4">

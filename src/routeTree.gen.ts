@@ -31,6 +31,7 @@ import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authen
 import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
 import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/ajuda'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as ApiCronSendPushNotificationsRouteImport } from './routes/api.cron.send-push-notifications'
 import { Route as ApiCronPublishInstagramRouteImport } from './routes/api.cron.publish-instagram'
 import { Route as AuthenticatedOauthInstagramCallbackRouteImport } from './routes/_authenticated/oauth.instagram-callback'
 import { Route as AuthenticatedOauthDriveCallbackRouteImport } from './routes/_authenticated/oauth.drive-callback'
@@ -149,6 +150,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiCronSendPushNotificationsRoute =
+  ApiCronSendPushNotificationsRouteImport.update({
+    id: '/api/cron/send-push-notifications',
+    path: '/api/cron/send-push-notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiCronPublishInstagramRoute = ApiCronPublishInstagramRouteImport.update({
   id: '/api/cron/publish-instagram',
   path: '/api/cron/publish-instagram',
@@ -206,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
+  '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -234,6 +242,7 @@ export interface FileRoutesByTo {
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
+  '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -264,6 +273,7 @@ export interface FileRoutesById {
   '/_authenticated/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
   '/_authenticated/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
+  '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -294,6 +304,7 @@ export interface FileRouteTypes {
     | '/oauth/drive-callback'
     | '/oauth/instagram-callback'
     | '/api/cron/publish-instagram'
+    | '/api/cron/send-push-notifications'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/oauth/drive-callback'
     | '/oauth/instagram-callback'
     | '/api/cron/publish-instagram'
+    | '/api/cron/send-push-notifications'
   id:
     | '__root__'
     | '/'
@@ -351,6 +363,7 @@ export interface FileRouteTypes {
     | '/_authenticated/oauth/drive-callback'
     | '/_authenticated/oauth/instagram-callback'
     | '/api/cron/publish-instagram'
+    | '/api/cron/send-push-notifications'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -367,6 +380,7 @@ export interface RootRouteChildren {
   PreviewTokenRoute: typeof PreviewTokenRoute
   PromoSlugRoute: typeof PromoSlugRoute
   ApiCronPublishInstagramRoute: typeof ApiCronPublishInstagramRoute
+  ApiCronSendPushNotificationsRoute: typeof ApiCronSendPushNotificationsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -525,6 +539,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/cron/send-push-notifications': {
+      id: '/api/cron/send-push-notifications'
+      path: '/api/cron/send-push-notifications'
+      fullPath: '/api/cron/send-push-notifications'
+      preLoaderRoute: typeof ApiCronSendPushNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/publish-instagram': {
       id: '/api/cron/publish-instagram'
       path: '/api/cron/publish-instagram'
@@ -624,6 +645,7 @@ const rootRouteChildren: RootRouteChildren = {
   PreviewTokenRoute: PreviewTokenRoute,
   PromoSlugRoute: PromoSlugRoute,
   ApiCronPublishInstagramRoute: ApiCronPublishInstagramRoute,
+  ApiCronSendPushNotificationsRoute: ApiCronSendPushNotificationsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

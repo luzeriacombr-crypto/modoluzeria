@@ -1487,6 +1487,12 @@ export type Database = {
           daily_digest: boolean
           deadline_alerts: boolean
           digest_hour: number
+          push_assigned: boolean
+          push_bug_report: boolean
+          push_client_feedback: boolean
+          push_comment: boolean
+          push_mention: boolean
+          push_status: boolean
           updated_at: string
           user_id: string
         }
@@ -1495,6 +1501,12 @@ export type Database = {
           daily_digest?: boolean
           deadline_alerts?: boolean
           digest_hour?: number
+          push_assigned?: boolean
+          push_bug_report?: boolean
+          push_client_feedback?: boolean
+          push_comment?: boolean
+          push_mention?: boolean
+          push_status?: boolean
           updated_at?: string
           user_id: string
         }
@@ -1503,6 +1515,12 @@ export type Database = {
           daily_digest?: boolean
           deadline_alerts?: boolean
           digest_hour?: number
+          push_assigned?: boolean
+          push_bug_report?: boolean
+          push_client_feedback?: boolean
+          push_comment?: boolean
+          push_mention?: boolean
+          push_status?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -1515,6 +1533,7 @@ export type Database = {
           id: string
           item_id: string | null
           message: string
+          push_sent_at: string | null
           read: boolean
           type: string
           user_id: string
@@ -1525,6 +1544,7 @@ export type Database = {
           id?: string
           item_id?: string | null
           message: string
+          push_sent_at?: string | null
           read?: boolean
           type: string
           user_id: string
@@ -1535,6 +1555,7 @@ export type Database = {
           id?: string
           item_id?: string | null
           message?: string
+          push_sent_at?: string | null
           read?: boolean
           type?: string
           user_id?: string

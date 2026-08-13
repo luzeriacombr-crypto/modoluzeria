@@ -4,32 +4,39 @@ import { requireActiveProfile } from "@/lib/luzeria/require-active";
 
 const ONESIGNAL_API = "https://onesignal.com/api/v1/notifications";
 
-async function sendOneSignalNotification(payload: {
+export async function sendOneSignalNotification(payload: {
   appId: string;
   restApiKey: string;
   userIds: string[];
   title: string;
   body: string;
   url?: string;
-}) {
-  const res = await fetch(ONESIGNAL_API, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Basic ${payload.restApiKey}`,
-    },
-    body: JSON.stringify({
-      app_id: payload.appId,
-      include_external_user_ids: payload.userIds,
-      channel_for_external_user_ids: "push",
-      headings: { en: payload.title, pt: payload.title },
-      contents: { en: payload.body, pt: payload.body },
-      url: payload.url,
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    console.error("[OneSignal] send failed:", err);
+}): Promise<boolean> {
+  try {
+    const res = await fetch(ONESIGNAL_API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${payload.restApiKey}`,
+      },
+      body: JSON.stringify({
+        app_id: payload.appId,
+        include_external_user_ids: payload.userIds,
+        channel_for_external_user_ids: "push",
+        headings: { en: payload.title, pt: payload.title },
+        contents: { en: payload.body, pt: payload.body },
+        url: payload.url,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("[OneSignal] send failed:", err);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("[OneSignal] send failed:", e);
+    return false;
   }
 }
 
