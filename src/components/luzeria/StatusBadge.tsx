@@ -58,6 +58,7 @@ export function StatusBadge({
           if (onChange) e.currentTarget.style.boxShadow = `0 0 0 0 ${meta.bg}`;
         }}
       >
+        <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
         <Icon size={12} />
         <span>{statusLabel(status, isAvulso)}</span>
         {onChange && (

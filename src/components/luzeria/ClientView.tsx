@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Copy, Info, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List } from "lucide-react";
 import { useState } from "react";
 import { clientsQO, monthKeysQO, monthQO, profilesQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { ContentItem } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
-import { ContentCard } from "./ContentCard";
+import { ContentCard, ContentListRow } from "./ContentCard";
 import { FeedPreview } from "./FeedPreview";
 import { ClientFichaContent } from "./ClientFichaPanel";
 import { formatMonth } from "@/lib/luzeria/utils";
@@ -14,8 +14,10 @@ import { MaisAtividadesTab } from "./MaisAtividadesTab";
 
 type OrderMode = "personalizada" | "cronologica";
 type OrderDirection = "asc" | "desc";
+type ViewMode = "grade" | "lista";
 const ORDER_MODE_KEY = "lz-content-order-mode";
 const ORDER_DIRECTION_KEY = "lz-content-order-direction";
+const VIEW_MODE_KEY = "lz-content-view-mode";
 
 function byScheduledAt(direction: OrderDirection) {
   return (a: ContentItem, b: ContentItem) => {
@@ -55,6 +57,13 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   function changeOrderDirection(direction: OrderDirection) {
     setOrderDirection(direction);
     localStorage.setItem(ORDER_DIRECTION_KEY, direction);
+  }
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    () => (typeof window !== "undefined" && (localStorage.getItem(VIEW_MODE_KEY) as ViewMode)) || "grade",
+  );
+  function changeViewMode(mode: ViewMode) {
+    setViewMode(mode);
+    localStorage.setItem(VIEW_MODE_KEY, mode);
   }
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
@@ -151,6 +160,26 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           return (
             <>
               <div className="flex items-center justify-end gap-1.5 mb-3">
+                <div className="inline-flex items-center gap-0.5 rounded-full bg-white/[0.05] p-0.5 mr-2">
+                  <button
+                    onClick={() => changeViewMode("grade")}
+                    title="Grade"
+                    className="h-6 w-6 rounded-full flex items-center justify-center transition-colors"
+                    style={{
+                      backgroundColor: viewMode === "grade" ? "rgb(var(--lz-brand-rgb))" : "transparent",
+                      color: viewMode === "grade" ? "#0D0D0D" : "rgba(255,255,255,0.5)",
+                    }}
+                  ><LayoutGrid size={12} /></button>
+                  <button
+                    onClick={() => changeViewMode("lista")}
+                    title="Lista"
+                    className="h-6 w-6 rounded-full flex items-center justify-center transition-colors"
+                    style={{
+                      backgroundColor: viewMode === "lista" ? "rgb(var(--lz-brand-rgb))" : "transparent",
+                      color: viewMode === "lista" ? "#0D0D0D" : "rgba(255,255,255,0.5)",
+                    }}
+                  ><List size={12} /></button>
+                </div>
                 <span className="text-[10px] uppercase font-semibold text-white/30 tracking-wider mr-1">Ordem</span>
                 {(["personalizada", "cronologica"] as const).map((m) => {
                   const active = orderMode === m;
@@ -179,30 +208,57 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   </select>
                 )}
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {items.map((item, i) => (
-                  <ContentCard
-                    key={item.id}
-                    item={item}
-                    profiles={profiles}
-                    idx={i + 1}
-                    isAvulso={isAvulso}
-                    isAdmin={isAdmin}
-                    onDelete={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}
-                  />
-                ))}
-                {isAdmin && (
-                  <button
-                    onClick={() => addContentItem.mutate({
-                      data: { clientId, key: selectedMonthKey, type: cfg.type },
-                    })}
-                    className="flex flex-col items-center justify-center gap-2 min-h-[200px] rounded-xl border border-dashed border-white/15 text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
-                    style={{ transitionTimingFunction: "var(--ease-premium)" }}>
-                    <Plus size={20} />
-                    <span className="text-xs font-semibold">Adicionar {cfg.label}</span>
-                  </button>
-                )}
-              </div>
+              {viewMode === "grade" ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {items.map((item, i) => (
+                    <ContentCard
+                      key={item.id}
+                      item={item}
+                      profiles={profiles}
+                      idx={i + 1}
+                      isAvulso={isAvulso}
+                      isAdmin={isAdmin}
+                      onDelete={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}
+                    />
+                  ))}
+                  {isAdmin && (
+                    <button
+                      onClick={() => addContentItem.mutate({
+                        data: { clientId, key: selectedMonthKey, type: cfg.type },
+                      })}
+                      className="flex flex-col items-center justify-center gap-2 min-h-[200px] rounded-xl border border-dashed border-white/15 text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
+                      style={{ transitionTimingFunction: "var(--ease-premium)" }}>
+                      <Plus size={20} />
+                      <span className="text-xs font-semibold">Adicionar {cfg.label}</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {items.map((item, i) => (
+                    <ContentListRow
+                      key={item.id}
+                      item={item}
+                      profiles={profiles}
+                      idx={i + 1}
+                      isAvulso={isAvulso}
+                      isAdmin={isAdmin}
+                      onDelete={() => { if (confirm(`Excluir "${item.title}"?`)) deleteItem.mutate({ data: { id: item.id } }); }}
+                    />
+                  ))}
+                  {isAdmin && (
+                    <button
+                      onClick={() => addContentItem.mutate({
+                        data: { clientId, key: selectedMonthKey, type: cfg.type },
+                      })}
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-white/15 text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] transition-colors"
+                    >
+                      <Plus size={14} />
+                      <span className="text-xs font-semibold">Adicionar {cfg.label}</span>
+                    </button>
+                  )}
+                </div>
+              )}
               {cfg.items.length === 0 && !isAdmin && (
                 <div className="px-4 py-10 text-center text-sm text-white/40">Sem itens nesta aba.</div>
               )}
