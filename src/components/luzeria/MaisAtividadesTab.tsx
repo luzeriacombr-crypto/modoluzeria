@@ -15,7 +15,12 @@ const ACTIVITY_CONFIG: Record<ActivityType, { label: string; hasLocation: boolea
   outros:   { label: "Outro",          hasLocation: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.outros },
 };
 
-const ACTIVITY_ORDER: ActivityType[] = ["gravacao", "roteiro", "sistema", "outros"];
+// Gravação continua com seção própria — entra na contagem do relatório de
+// atividades e tem campos específicos (local, data pra gravação). Roteiro,
+// Sistema e Outros viram uma única seção "Outras atividades": itens antigos
+// desses 3 tipos continuam aparecendo juntos ali, e todo registro novo feito
+// nessa seção passa a entrar como "outros".
+type GroupKey = "gravacao" | "outras";
 
 interface Props {
   clientId: string;
@@ -31,17 +36,15 @@ interface Props {
 export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sistemas, outros, profiles, isAdmin }: Props) {
   const { addContentItem, addAssignee, deleteItem } = useApi();
   const { openItem } = useUI();
-  const [openForm, setOpenForm] = useState<ActivityType | null>(null);
-  const [collapsed, setCollapsed] = useState<Record<ActivityType, boolean>>({
-    gravacao: false, roteiro: false, sistema: false, outros: false,
+  const [openForm, setOpenForm] = useState<GroupKey | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<GroupKey, boolean>>({
+    gravacao: false, outras: false,
   });
 
-  const itemsMap: Record<ActivityType, ContentItem[]> = {
-    gravacao: gravacoes,
-    roteiro: roteiros,
-    sistema: sistemas,
-    outros,
-  };
+  const groups: { key: GroupKey; label: string; cfg: typeof ACTIVITY_CONFIG[ActivityType]; items: ContentItem[]; registerType: ActivityType }[] = [
+    { key: "gravacao", label: ACTIVITY_CONFIG.gravacao.label, cfg: ACTIVITY_CONFIG.gravacao, items: gravacoes, registerType: "gravacao" },
+    { key: "outras", label: "Outras atividades", cfg: ACTIVITY_CONFIG.outros, items: [...roteiros, ...sistemas, ...outros], registerType: "outros" },
+  ];
 
   const totalItems = gravacoes.length + roteiros.length + sistemas.length + outros.length;
 
@@ -51,22 +54,22 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
         <div className="py-14 text-center text-sm text-white/40">Nenhuma atividade registrada neste mês.</div>
       )}
 
-      {ACTIVITY_ORDER.map((type) => {
-        const cfg = ACTIVITY_CONFIG[type];
-        const items = itemsMap[type];
-        const isCollapsed = collapsed[type];
-        const formOpen = openForm === type;
+      {groups.map((group) => {
+        const { key, label, cfg, items, registerType } = group;
+        const type = registerType;
+        const isCollapsed = collapsed[key];
+        const formOpen = openForm === key;
 
         return (
-          <section key={type}>
+          <section key={key}>
             {/* Section header */}
             <div className="flex items-center gap-2 mb-2">
               <button
-                onClick={() => setCollapsed((p) => ({ ...p, [type]: !p[type] }))}
+                onClick={() => setCollapsed((p) => ({ ...p, [key]: !p[key] }))}
                 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white/50 hover:text-white transition"
               >
                 {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                {cfg.label}
+                {label}
                 {items.length > 0 && (
                   <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
                     {items.length}
@@ -76,7 +79,7 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
               <div className="flex-1 h-px bg-white/[0.06]" />
               {isAdmin && !formOpen && (
                 <button
-                  onClick={() => setOpenForm(type)}
+                  onClick={() => setOpenForm(key)}
                   className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] transition"
                 >
                   <Plus size={13} /> Registrar
@@ -102,7 +105,7 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                     if (assigneeId && newId) {
                       await addAssignee.mutateAsync({ data: { itemId: newId, userId: assigneeId } });
                     }
-                    toast.success(`${cfg.label} registrada com sucesso`);
+                    toast.success(`${label} registrada com sucesso`);
                     setOpenForm(null);
                   } catch (e: any) {
                     toast.error(e?.message ?? "Erro ao registrar. Tente novamente.");
@@ -152,7 +155,7 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
             )}
 
             {!isCollapsed && items.length === 0 && !formOpen && isAdmin && (
-              <div className="text-[12px] text-white/30 px-2 py-1">Nenhum(a) {cfg.label.toLowerCase()} registrado(a). Use "+ Registrar" para adicionar.</div>
+              <div className="text-[12px] text-white/30 px-2 py-1">Nenhum(a) {label.toLowerCase()} registrado(a). Use "+ Registrar" para adicionar.</div>
             )}
           </section>
         );
