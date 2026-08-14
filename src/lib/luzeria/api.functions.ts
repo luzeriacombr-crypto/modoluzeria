@@ -1607,14 +1607,19 @@ export const getMyActivityCounts = createServerFn({ method: "GET" })
     const end = new Date(Date.UTC(y, m, 1)).toISOString();
     const { data: rows, error } = await context.supabase
       .from("finalizations")
-      .select("finalized_at, content_items!inner(type)")
+      .select("finalized_at, content_items!inner(type, activity_quantity)")
       .eq("user_id", targetUser)
       .gte("finalized_at", start).lt("finalized_at", end);
     if (error) throw new Error(error.message);
     const counts = { gravacao: 0, roteiro: 0, sistema: 0, outros: 0 };
     (rows ?? []).forEach((r: any) => {
       const t = r.content_items?.type;
-      if (t && t in counts) (counts as any)[t]++;
+      if (t && t in counts) {
+        // Gravação conta pela quantidade de vídeos gravados, não por item.
+        const qty = r.content_items?.activity_quantity;
+        const weight = t === "gravacao" && qty > 0 ? qty : 1;
+        (counts as any)[t] += weight;
+      }
     });
     return counts;
   });
@@ -1932,7 +1937,7 @@ export const getTopMembers = createServerFn({ method: "GET" })
     else start = new Date(Date.UTC(y, 0, 1));
 
     const { data: finals } = await context.supabase
-      .from("finalizations").select("user_id")
+      .from("finalizations").select("user_id, content_items(type, activity_quantity)")
       .gte("finalized_at", start.toISOString())
       .lt("finalized_at", end.toISOString())
       // item_id is set NULL (not row-deleted) when its content_item is
@@ -1940,7 +1945,12 @@ export const getTopMembers = createServerFn({ method: "GET" })
       // keeps deleted-item credit from lingering in the ranking forever.
       .not("item_id", "is", null);
     const counts = new Map<string, number>();
-    (finals ?? []).forEach((f: any) => counts.set(f.user_id, (counts.get(f.user_id) ?? 0) + 1));
+    (finals ?? []).forEach((f: any) => {
+      // Gravação pontua pela quantidade de vídeos gravados, não por item.
+      const it = f.content_items;
+      const weight = it?.type === "gravacao" && it.activity_quantity > 0 ? it.activity_quantity : 1;
+      counts.set(f.user_id, (counts.get(f.user_id) ?? 0) + weight);
+    });
 
     const { data: profiles } = await context.supabase
       .from("profiles").select("id, name, color, icon, avatar_url, exclude_from_ranking")
@@ -2043,7 +2053,7 @@ export const getReport = createServerFn({ method: "GET" })
     let fq = context.supabase
       .from("finalizations")
       .select(
-        "id, user_id, finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(client_id, key, clients!months_client_id_fkey!inner(id, name, color, category)))"
+        "id, user_id, finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, activity_quantity, months!inner(client_id, key, clients!months_client_id_fkey!inner(id, name, color, category)))"
       )
       .gte("finalized_at", fromISO)
       .lt("finalized_at", toISO);
@@ -2064,6 +2074,7 @@ export const getReport = createServerFn({ method: "GET" })
       reelType: string | null;
       editorId: string | null;
       lateDays: number;
+      activityQuantity: number | null;
     };
     const history: HistRow[] = [];
     (finRows ?? []).forEach((r: any) => {
@@ -2088,6 +2099,7 @@ export const getReport = createServerFn({ method: "GET" })
         reelType: it.reel_type ?? null,
         editorId: it.editor_id ?? null,
         lateDays,
+        activityQuantity: it.activity_quantity ?? null,
       });
     });
 
@@ -2111,7 +2123,7 @@ export const getReport = createServerFn({ method: "GET" })
           type: "stories",
           title: `Stories ${new Date(s.day + "T12:00:00Z").toLocaleDateString("pt-BR")}`,
           clientId: s.client_id ?? null, clientName: s.clients?.name ?? "STORIES", clientColor: s.clients?.color ?? "#7EFFD9", clientCategory: "Stories",
-          reelType: null, editorId: null, lateDays: 0,
+          reelType: null, editorId: null, lateDays: 0, activityQuantity: null,
         });
       });
     }
@@ -2133,7 +2145,7 @@ export const getReport = createServerFn({ method: "GET" })
           type: "cleaning",
           title: `Limpeza · ${c.cleaning_tasks?.name ?? "tarefa"} (dia ${c.weekday})`,
           clientId: null, clientName: "LIMPEZA", clientColor: "#4A9EFF", clientCategory: "Limpeza",
-          reelType: null, editorId: null, lateDays: 0,
+          reelType: null, editorId: null, lateDays: 0, activityQuantity: null,
         });
       });
     }
@@ -2298,9 +2310,12 @@ export const getReport = createServerFn({ method: "GET" })
     const byMemberWithPct = byMember.map((m) => ({ ...m, pct: teamTotal ? Math.round((m.total / teamTotal) * 100) : 0 }));
 
     // ---- activities (gravação/roteiro/sistema/outros) — separate from post/reel productivity ----
+    // Gravação pontua pela quantidade de vídeos gravados, não por item.
+    const activityWeight = (h: HistRow) =>
+      h.type === "gravacao" && h.activityQuantity && h.activityQuantity > 0 ? h.activityQuantity : 1;
     const activityHist = contentHist.filter((h) => h.type !== "post" && h.type !== "reel");
     const activitySummary = {
-      gravacao: activityHist.filter((h) => h.type === "gravacao").length,
+      gravacao: activityHist.filter((h) => h.type === "gravacao").reduce((a, h) => a + activityWeight(h), 0),
       roteiro: activityHist.filter((h) => h.type === "roteiro").length,
       sistema: activityHist.filter((h) => h.type === "sistema").length,
       outros: activityHist.filter((h) => h.type === "outros").length,
@@ -2308,7 +2323,7 @@ export const getReport = createServerFn({ method: "GET" })
     const activityAgg = new Map<string, { gravacao: number; roteiro: number; sistema: number; outros: number }>();
     activityHist.forEach((h) => {
       const row = activityAgg.get(h.userId) ?? { gravacao: 0, roteiro: 0, sistema: 0, outros: 0 };
-      (row as any)[h.type]++;
+      (row as any)[h.type] += activityWeight(h);
       activityAgg.set(h.userId, row);
     });
     const activityByMember = [...activityAgg.entries()].map(([userId, v]) => {

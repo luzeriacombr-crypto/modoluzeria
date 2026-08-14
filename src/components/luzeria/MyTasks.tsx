@@ -419,7 +419,7 @@ function DeadlinePill({ dueDate, status }: { dueDate?: string | null; status: st
 }
 
 const ACTIVITY_LABELS: Record<string, string> = {
-  gravacao: "gravações", roteiro: "roteiros", sistema: "sistemas", outros: "outras atividades",
+  gravacao: "vídeos gravados", roteiro: "roteiros", sistema: "sistemas", outros: "outras atividades",
 };
 
 function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: string }) {

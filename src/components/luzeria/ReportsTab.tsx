@@ -277,7 +277,7 @@ export function ReportsTab() {
           {/* Seção 3b - Atividades registradas (gravação/roteiro/sistema/outros) */}
           <Section title="Atividades registradas">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3">
-              <MetricCard label="Gravações" value={report.activitySummary?.gravacao ?? 0} />
+              <MetricCard label="Vídeos gravados" value={report.activitySummary?.gravacao ?? 0} />
               <MetricCard label="Roteiros" value={report.activitySummary?.roteiro ?? 0} />
               <MetricCard label="Sistema" value={report.activitySummary?.sistema ?? 0} />
               <MetricCard label="Outros" value={report.activitySummary?.outros ?? 0} />
@@ -286,7 +286,7 @@ export function ReportsTab() {
               <thead>
                 <tr className="text-[10px] uppercase tracking-wider text-white/50">
                   <th className="text-left px-3 py-2">Membro</th>
-                  <th className="text-right px-2 py-2">Gravações</th>
+                  <th className="text-right px-2 py-2">Vídeos gravados</th>
                   <th className="text-right px-2 py-2">Roteiros</th>
                   <th className="text-right px-2 py-2">Sistema</th>
                   <th className="text-right px-2 py-2">Outros</th>
