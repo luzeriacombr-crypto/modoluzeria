@@ -118,7 +118,7 @@ export function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D]" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+    <div className="flex h-screen overflow-hidden bg-[#0D0D0D]" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       <Toaster theme="dark" position="bottom-right" />
       <div
         className="hidden md:flex overflow-hidden self-start"

@@ -68,7 +68,7 @@ export function Sidebar({
   const disabled = new Set(me?.disabledFeatures ?? []);
 
   return (
-    <aside data-tour="sidebar" className="sidebar-gradient w-[240px] h-screen sticky top-0 flex flex-col text-white shrink-0 overflow-hidden">
+    <aside data-tour="sidebar" className="sidebar-gradient w-[240px] h-screen flex flex-col text-white shrink-0 overflow-hidden">
       {/* Logo */}
       <div className="px-5 pt-5 pb-4">
         {me?.orgLogoUrl ? (
