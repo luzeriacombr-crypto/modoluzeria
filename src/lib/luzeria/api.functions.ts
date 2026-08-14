@@ -2005,7 +2005,6 @@ export const getTopMembers = createServerFn({ method: "GET" })
         avatarUrl: p.avatar_url ? (avatarMap.get(p.avatar_url) ?? null) : null,
         count: counts.get(p.id) ?? 0,
       }))
-      .filter((r) => r.count > 0)
       .sort((a, b) => b.count - a.count);
     return { period: data.period, ranking };
   });
