@@ -12,6 +12,7 @@ import { ClientFichaContent } from "./ClientFichaPanel";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { useMe } from "@/lib/luzeria/queries";
 import { MaisAtividadesTab } from "./MaisAtividadesTab";
+import { ClientDocsTab } from "./ClientDocsTab";
 
 type OrderMode = "personalizada" | "cronologica";
 type OrderDirection = "asc" | "desc";
@@ -31,8 +32,8 @@ function byScheduledAt(direction: OrderDirection) {
   };
 }
 
-type ClientTab = "posts" | "reels" | "stories" | "mais" | "feed" | "ficha";
-const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "mais", "feed", "ficha"];
+type ClientTab = "posts" | "reels" | "stories" | "mais" | "docs" | "feed" | "ficha";
+const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "mais", "docs", "feed", "ficha"];
 
 export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   clientId: string; tab?: string; onTabChange: (tab: ClientTab) => void;
@@ -84,8 +85,9 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   } as const;
 
   const disabledFeatures = new Set(me?.disabledFeatures ?? []);
-  const tabs = (["posts", "reels", "stories", "mais", "feed", "ficha"] as const)
-    .filter((t) => t !== "stories" || !disabledFeatures.has("stories"));
+  const tabs = (["posts", "reels", "stories", "mais", "docs", "feed", "ficha"] as const)
+    .filter((t) => t !== "stories" || !disabledFeatures.has("stories"))
+    .filter((t) => t !== "docs" || isAdmin);
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
   const idx = sortedKeys.indexOf(selectedMonthKey);
@@ -148,7 +150,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           <button key={t} onClick={() => setTab(t as any)}
             className="relative py-3 text-sm font-semibold transition-colors"
             style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
-            {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais atividades" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
+            {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais atividades" : t === "docs" ? "Roteiros & Planejamento" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
             {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
           </button>
         ))}
@@ -277,6 +279,11 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             profiles={profiles}
             isAdmin={isAdmin}
           />
+        )}
+        {tab === "docs" && isAdmin && (
+          <div className="mt-2">
+            <ClientDocsTab clientId={client.id} />
+          </div>
         )}
         {tab === "ficha" && (
           <div className="mt-2 -mx-4 sm:-mx-6 md:mx-0 md:rounded-lg md:overflow-hidden md:border md:border-white/[0.06]">

@@ -521,6 +521,57 @@ export type Database = {
           },
         ]
       }
+      client_docs: {
+        Row: {
+          client_id: string
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          org_id: string
+          title: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id: string
+          title?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id?: string
+          title?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_docs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_docs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_drive_map: {
         Row: {
           client_id: string
@@ -2253,6 +2304,7 @@ export type Database = {
         Args: { _month_key?: string }
         Returns: number
       }
+      get_client_id_for_token: { Args: { _token: string }; Returns: string }
       get_my_email: { Args: never; Returns: string }
       get_org_id_for_token: { Args: { _token: string }; Returns: string }
       get_public_feed: { Args: { _token: string }; Returns: Json }

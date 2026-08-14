@@ -60,6 +60,7 @@ import {
   setClientStage, logClientStageUpdate, getClientStageHistory, getWeeklyClientReminders,
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
+import { listClientDocs, upsertClientDoc, deleteClientDoc } from "./client-docs.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const instagramActivityQO = () =>
   queryOptions({ queryKey: ["instagram-activity"], queryFn: () => getInstagramActivity() });
@@ -176,6 +177,13 @@ export const clientFichaQO = (clientId: string | null) =>
 
 export const journeyStagesQO = () =>
   queryOptions({ queryKey: ["journey-stages"], queryFn: () => listJourneyStages() });
+
+export const clientDocsQO = (clientId: string) =>
+  queryOptions({
+    queryKey: ["client-docs", clientId],
+    queryFn: () => listClientDocs({ data: { clientId } }),
+    enabled: !!clientId,
+  });
 
 export const clientStageHistoryQO = (clientId: string | null) =>
   queryOptions({
@@ -591,6 +599,16 @@ export function useApi() {
       mutationFn: useServerFn(deleteJourneyStage),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["journey-stages"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover etapa."),
+    }),
+    upsertClientDoc: useMutation({
+      mutationFn: useServerFn(upsertClientDoc),
+      onSuccess: (_r, vars: any) => qc.invalidateQueries({ queryKey: ["client-docs", vars.data.clientId] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar documento."),
+    }),
+    deleteClientDoc: useMutation({
+      mutationFn: useServerFn(deleteClientDoc),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover documento."),
     }),
     setClientStage: useMutation({
       mutationFn: useServerFn(setClientStage),

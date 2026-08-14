@@ -9,6 +9,8 @@ import { Hammer, ClipboardCheck, Rocket, CheckCheck } from "lucide-react";
 import { InstagramPostModal, type IGModalItem } from "@/components/luzeria/InstagramPostModal";
 import { PublicProgressBar } from "@/components/luzeria/PublicProgressBar";
 import { CLIENT_STAGE_META, type ClientStage } from "@/lib/luzeria/client-stage";
+import { RoteirosView, PlanejamentoView } from "@/components/luzeria/MarkdownLiteView";
+import { parseMarkdownLite } from "@/lib/luzeria/markdown-lite";
 
 const STAGE_ICONS: Record<string, LucideIcon> = { Hammer, AlertTriangle, ClipboardCheck, Rocket, CheckCheck };
 
@@ -57,6 +59,7 @@ function PublicPreviewPage() {
   const { token } = Route.useParams();
   const q = useQuery(publicFeedQO(token));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"feed" | "roteiro" | "planejamento">("feed");
   const [savedName, setSavedName] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem("lz_public_author") ?? "";
@@ -83,12 +86,17 @@ function PublicPreviewPage() {
     );
   }
 
-  const { client, items, orgName, orgLogoUrl, stageCounts } = q.data;
+  const { client, items, orgName, orgLogoUrl, stageCounts, docs } = q.data;
   const initial = client.name.charAt(0).toUpperCase();
   const activeItem = items.find((i) => i.id === activeId) ?? null;
   const blockedCount = items.filter((it) => it.stage === "blocked").length;
   const producingCount = stageCounts.find((s) => s.stage === "producing")?.count ?? 0;
   const canApproveMonth = producingCount === 0;
+
+  const roteiroDocs = docs.filter((d) => d.type === "roteiro");
+  const planejamentoDocs = docs.filter((d) => d.type === "planejamento");
+  const roteiroBlocks = roteiroDocs.length > 0 ? parseMarkdownLite(roteiroDocs.map((d) => d.content).join("\n\n")) : [];
+  const hasExtraTabs = roteiroDocs.length > 0 || planejamentoDocs.length > 0;
 
   const igModalItem: IGModalItem | null = activeItem ? {
     id: activeItem.id,
@@ -131,6 +139,20 @@ function PublicPreviewPage() {
 
       {/* Grid */}
       <div className="max-w-[640px] mx-auto px-4 pb-16">
+        {hasExtraTabs && (
+          <div className="flex items-center gap-2 mb-5">
+            <PreviewTabPill active={activeTab === "feed"} onClick={() => setActiveTab("feed")}>Feed</PreviewTabPill>
+            {roteiroDocs.length > 0 && (
+              <PreviewTabPill active={activeTab === "roteiro"} onClick={() => setActiveTab("roteiro")}>Roteiros</PreviewTabPill>
+            )}
+            {planejamentoDocs.length > 0 && (
+              <PreviewTabPill active={activeTab === "planejamento"} onClick={() => setActiveTab("planejamento")}>Planejamento</PreviewTabPill>
+            )}
+          </div>
+        )}
+
+        {activeTab === "feed" && (
+        <>
         {items.length === 0 ? (
           <div className="rounded-xl py-14 text-center text-white/40 text-sm" style={{ background: "#1C1C1C" }}>
             Nenhuma publicação foi planejada para este mês ainda.
@@ -180,6 +202,16 @@ function PublicPreviewPage() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+        </>
+        )}
+
+        {activeTab === "roteiro" && <RoteirosView blocks={roteiroBlocks} />}
+
+        {activeTab === "planejamento" && (
+          <div className="space-y-4">
+            {planejamentoDocs.map((d) => <PlanejamentoView key={d.id} blocks={parseMarkdownLite(d.content)} />)}
           </div>
         )}
 
@@ -272,6 +304,21 @@ function PublicGridCell({ item, onClick }: {
         </span>
       </div>
       {clickable && <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />}
+    </button>
+  );
+}
+
+function PreviewTabPill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors"
+      style={{
+        backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
+        color: active ? "#0D0D0D" : "rgba(255,255,255,0.6)",
+      }}
+    >
+      {children}
     </button>
   );
 }

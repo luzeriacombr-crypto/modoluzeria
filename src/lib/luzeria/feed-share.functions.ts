@@ -230,6 +230,13 @@ export type PublicFeedItem = {
   stageLabel: string;
   blockedReason: string | null;
 };
+export type PublicClientDoc = {
+  id: string;
+  type: "roteiro" | "planejamento";
+  title: string | null;
+  content: string;
+};
+
 export type PublicFeedPayload = {
   client: { name: string; color: string; description: string | null; photoUrl: string | null };
   month: { key: string };
@@ -238,6 +245,7 @@ export type PublicFeedPayload = {
   orgName: string | null;
   feedPreviewImageUrl: string | null;
   orgLogoUrl: string | null;
+  docs: PublicClientDoc[];
 };
 
 export const getPublicFeed = createServerFn({ method: "GET" })
@@ -265,6 +273,19 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       orgName = org?.name ?? null;
       feedPreviewImagePath = (org as any)?.feed_preview_image_path ?? null;
       orgLogoPath = (org as any)?.logo_path ?? null;
+    }
+
+    // Roteiros/planejamento — mesma lógica de resolver o dono do token sem
+    // profile logado (ver get_org_id_for_token acima).
+    const { data: docClientId } = await supabase.rpc("get_client_id_for_token", { _token: data.token });
+    let docs: PublicClientDoc[] = [];
+    if (docClientId) {
+      const { data: docRows } = await supabaseAdmin
+        .from("client_docs")
+        .select("id, type, title, content")
+        .eq("client_id", docClientId as string)
+        .order("created_at", { ascending: true });
+      docs = (docRows ?? []).map((d: any) => ({ id: d.id, type: d.type, title: d.title, content: d.content }));
     }
 
     const r = result as any;
@@ -449,6 +470,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       orgName,
       feedPreviewImageUrl,
       orgLogoUrl,
+      docs,
     };
   });
 
