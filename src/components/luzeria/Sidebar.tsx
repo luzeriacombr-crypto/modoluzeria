@@ -68,7 +68,7 @@ export function Sidebar({
   const disabled = new Set(me?.disabledFeatures ?? []);
 
   return (
-    <aside data-tour="sidebar" className="sidebar-gradient w-[240px] flex flex-col text-white shrink-0">
+    <aside data-tour="sidebar" className="sidebar-gradient w-[240px] h-screen sticky top-0 flex flex-col text-white shrink-0 overflow-hidden">
       {/* Logo */}
       <div className="px-5 pt-5 pb-4">
         {me?.orgLogoUrl ? (
@@ -156,7 +156,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="pt-2 pb-3 px-2">
+      <div className="pt-2 pb-3 px-2 flex-1 overflow-y-auto">
         {grouped.map(([cat, list]) => (
           <CategoryGroup
             key={cat}
