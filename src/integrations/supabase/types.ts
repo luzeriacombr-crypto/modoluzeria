@@ -1901,6 +1901,7 @@ export type Database = {
       }
       platform_updates: {
         Row: {
+          category: string
           created_at: string
           created_by: string | null
           description: string
@@ -1911,6 +1912,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          category?: string
           created_at?: string
           created_by?: string | null
           description: string
@@ -1921,6 +1923,7 @@ export type Database = {
           title: string
         }
         Update: {
+          category?: string
           created_at?: string
           created_by?: string | null
           description?: string
