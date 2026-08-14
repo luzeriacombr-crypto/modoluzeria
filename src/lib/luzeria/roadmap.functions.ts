@@ -328,7 +328,7 @@ export const generateRecurring = createServerFn({ method: "POST" })
         .from("months").select("id").eq("client_id", data.clientId).eq("key", monthKey).maybeSingle();
       if (existing) { months.set(monthKey, existing.id); return existing.id; }
       const { data: m, error } = await context.supabase
-        .from("months").insert({ client_id: data.clientId, key: monthKey }).select("id").single();
+        .from("months").insert({ client_id: data.clientId, key: monthKey, org_id: context.orgId }).select("id").single();
       if (error) throw new Error(error.message);
       months.set(monthKey, m.id); return m.id;
     }
@@ -712,11 +712,12 @@ export const addCommentWithMentions = createServerFn({ method: "POST" })
     const mentions = (data.mentionedUserIds ?? []).filter((u) => u !== context.userId);
     if (mentions.length) {
       const db: any = context.supabase;
-      await db.from("mentions").insert(
+      const { error: mentionsError } = await db.from("mentions").insert(
         mentions.map((uid) => ({
           comment_id: inserted.id, mentioned_user_id: uid, item_id: data.itemId,
         }))
       );
+      if (mentionsError) throw new Error(mentionsError.message);
     }
     return { ok: true };
   });
