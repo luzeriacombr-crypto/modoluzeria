@@ -544,7 +544,7 @@ export function DetailPanel() {
 
   const assignees = item.assigneeIds.map((id) => profiles.find((p) => p.id === id)).filter(Boolean) as Profile[];
   const editor = item.editorId ? profiles.find((p) => p.id === item.editorId) : null;
-  const canSetEditor = isAdmin || (me && me.membersCanSetEditorFormat ? item.assigneeIds.includes(me.id) : false);
+  const canSetEditor = isAdmin || !!me?.membersCanSetEditorFormat;
   const canEditFiles = isAdmin || (me ? item.assigneeIds.includes(me.id) : false);
   const activeProfiles = profiles.filter((p) => p.active);
   const isActivity = isActivityType(item.type);
@@ -982,7 +982,7 @@ export function DetailPanel() {
               )}
             </div>
             {!canSetEditor && (
-              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores ou responsáveis pela tarefa podem definir o editor.</p>
+              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores podem definir o editor.</p>
             )}
           </ModalSection>
         )}
@@ -1024,7 +1024,7 @@ export function DetailPanel() {
               })}
             </div>
             {!canSetEditor && (
-              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores ou responsáveis pela tarefa podem definir o formato.</p>
+              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores podem definir o formato.</p>
             )}
           </ModalSection>
         )}
@@ -1066,7 +1066,7 @@ export function DetailPanel() {
               })}
             </div>
             {!canSetEditor && (
-              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores ou responsáveis pela tarefa podem definir o formato.</p>
+              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores podem definir o formato.</p>
             )}
           </ModalSection>
         )}
