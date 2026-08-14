@@ -7,7 +7,7 @@ import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
 import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
 import { toast } from "sonner";
-import { UserPlus, X, Settings as SettingsIcon, Star, Building2 } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, Building2, UserCog } from "lucide-react";
 import { ReportsTab } from "./ReportsTab";
 import { DriveSettingsTab } from "./DriveSettingsTab";
 import { MemberGoalsTab } from "./MemberGoalsTab";
@@ -348,12 +348,18 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function GeneralSettings() {
   const { data: settings } = useQuery(appSettingsQO());
-  const { updateAppSettings } = useApi();
+  const { updateAppSettings, updateMyOrg } = useApi();
   const me = useMe().data;
   if (!settings) return <div className="text-white/40 text-sm">Carregando…</div>;
 
   const toggle = (next: boolean) =>
     updateAppSettings.mutate({ data: { requireRatingOnFinalize: next } }, {
+      onSuccess: () => toast.success("Configuração salva."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+    });
+
+  const toggleMembersEditorFormat = (next: boolean) =>
+    updateMyOrg.mutate({ data: { membersCanSetEditorFormat: next } }, {
       onSuccess: () => toast.success("Configuração salva."),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
     });
@@ -394,6 +400,26 @@ function GeneralSettings() {
             settings.requireRatingOnFinalize ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`}>
           <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
             settings.requireRatingOnFinalize ? "left-[22px]" : "left-0.5"}`} />
+        </button>
+      </div>
+
+      <div className="bg-[#1C1C1C] rounded-lg p-5 flex items-start gap-4 mt-2">
+        <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+          <UserCog size={16} />
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-white">Membros escolhem editor e formato</div>
+          <div className="text-[11px] text-white/50 mt-1">
+            Deixa quem está atribuído a um post ou reel se colocar como editor e escolher o formato
+            (tipo de vídeo no reel, formato no post) — sem precisar de um admin.
+          </div>
+        </div>
+        <button onClick={() => toggleMembersEditorFormat(!(me?.membersCanSetEditorFormat ?? false))}
+          className={`relative h-6 w-11 rounded-full transition-colors shrink-0 ${
+            me?.membersCanSetEditorFormat ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`}>
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
+            me?.membersCanSetEditorFormat ? "left-[22px]" : "left-0.5"}`} />
         </button>
       </div>
 

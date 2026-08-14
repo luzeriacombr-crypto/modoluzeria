@@ -449,7 +449,7 @@ export function DetailPanel() {
   const { data: profiles = [] } = useQuery(profilesQO());
   const { data: clients = [] } = useQuery(clientsQO());
   const me = useMe().data;
-  const { setItemStatus, updateItem, addAssignee, removeAssignee, addCommentWithMentions, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish } = useApi();
+  const { setItemStatus, updateItem, setItemEditor, setItemReelType, setItemPostFormat, addAssignee, removeAssignee, addCommentWithMentions, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish } = useApi();
   const { data: appSettings } = useQuery(appSettingsQO());
 
   const item = useMemo(() => (selectedItemId && month ? findItem(month, selectedItemId) : undefined), [month, selectedItemId]);
@@ -544,7 +544,7 @@ export function DetailPanel() {
 
   const assignees = item.assigneeIds.map((id) => profiles.find((p) => p.id === id)).filter(Boolean) as Profile[];
   const editor = item.editorId ? profiles.find((p) => p.id === item.editorId) : null;
-  const canSetEditor = isAdmin || (me ? item.assigneeIds.includes(me.id) : false);
+  const canSetEditor = isAdmin || (me && me.membersCanSetEditorFormat ? item.assigneeIds.includes(me.id) : false);
   const canEditFiles = isAdmin || (me ? item.assigneeIds.includes(me.id) : false);
   const activeProfiles = profiles.filter((p) => p.active);
   const isActivity = isActivityType(item.type);
@@ -954,7 +954,7 @@ export function DetailPanel() {
                   {editor && (
                     <button
                       onClick={() => {
-                        updateItem.mutate({ data: { id: item.id, patch: { editor_id: null } } });
+                        setItemEditor.mutate({ data: { itemId: item.id, editorId: null } });
                         setEditorOpen(false);
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 text-left text-red-400"
@@ -967,7 +967,7 @@ export function DetailPanel() {
                     return (
                       <button key={p.id}
                         onClick={() => {
-                          updateItem.mutate({ data: { id: item.id, patch: { editor_id: p.id } } });
+                          setItemEditor.mutate({ data: { itemId: item.id, editorId: p.id } });
                           setEditorOpen(false);
                         }}
                         className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 text-left"
@@ -995,10 +995,11 @@ export function DetailPanel() {
                 const active = item.reelType === rt;
                 return (
                   <button key={rt}
-                    onClick={() => updateItem.mutate({
-                      data: { id: item.id, patch: { reel_type: active ? null : rt } },
+                    disabled={!canSetEditor}
+                    onClick={() => setItemReelType.mutate({
+                      data: { itemId: item.id, reelType: active ? null : rt },
                     })}
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-[1.05] hover:brightness-110"
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-[1.05] hover:brightness-110 disabled:opacity-40 disabled:hover:scale-100 disabled:cursor-not-allowed"
                     style={{
                       backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.08)",
                       color: active ? "#0D0D0D" : "#FFFFFF",
@@ -1022,6 +1023,9 @@ export function DetailPanel() {
                 );
               })}
             </div>
+            {!canSetEditor && (
+              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores ou responsáveis pela tarefa podem definir o formato.</p>
+            )}
           </ModalSection>
         )}
 
@@ -1033,10 +1037,11 @@ export function DetailPanel() {
                 const active = item.postFormat === pf;
                 return (
                   <button key={pf}
-                    onClick={() => updateItem.mutate({
-                      data: { id: item.id, patch: { post_format: active ? null : pf } },
+                    disabled={!canSetEditor}
+                    onClick={() => setItemPostFormat.mutate({
+                      data: { itemId: item.id, postFormat: active ? null : pf },
                     })}
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-[1.05] hover:brightness-110"
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-[1.05] hover:brightness-110 disabled:opacity-40 disabled:hover:scale-100 disabled:cursor-not-allowed"
                     style={{
                       backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.08)",
                       color: active ? "#0D0D0D" : "#FFFFFF",
@@ -1060,6 +1065,9 @@ export function DetailPanel() {
                 );
               })}
             </div>
+            {!canSetEditor && (
+              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores ou responsáveis pela tarefa podem definir o formato.</p>
+            )}
           </ModalSection>
         )}
 

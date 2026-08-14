@@ -1780,6 +1780,7 @@ export type Database = {
           feed_preview_image_path: string | null
           id: string
           logo_path: string | null
+          members_can_set_editor_format: boolean
           name: string
           plan_id: string
           promotion_code_id: string | null
@@ -1803,6 +1804,7 @@ export type Database = {
           feed_preview_image_path?: string | null
           id?: string
           logo_path?: string | null
+          members_can_set_editor_format?: boolean
           name: string
           plan_id?: string
           promotion_code_id?: string | null
@@ -1826,6 +1828,7 @@ export type Database = {
           feed_preview_image_path?: string | null
           id?: string
           logo_path?: string | null
+          members_can_set_editor_format?: boolean
           name?: string
           plan_id?: string
           promotion_code_id?: string | null
@@ -2393,6 +2396,7 @@ export type Database = {
           schedule: string
         }[]
       }
+      member_can_edit_item: { Args: { _item_id: string }; Returns: boolean }
       notify_stale_client_updates: { Args: never; Returns: number }
       platform_list_bug_reports: {
         Args: never
@@ -2410,6 +2414,18 @@ export type Database = {
       }
       send_daily_digest: { Args: never; Returns: number }
       send_deadline_reminders: { Args: never; Returns: number }
+      set_item_editor: {
+        Args: { _editor_id: string | null; _item_id: string }
+        Returns: undefined
+      }
+      set_item_post_format: {
+        Args: { _item_id: string; _post_format: string | null }
+        Returns: undefined
+      }
+      set_item_reel_type: {
+        Args: { _item_id: string; _reel_type: string | null }
+        Returns: undefined
+      }
       set_item_status: {
         Args: { p_item_id: string; p_status: string }
         Returns: undefined

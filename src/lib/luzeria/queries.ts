@@ -6,6 +6,7 @@ import {
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, setExcludeFromRanking, deleteUser, updateClient, updateItem, updateMyProfile, adminUpdateMemberAvatar,
+  setItemEditor, setItemReelType, setItemPostFormat,
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   listCleaningTasks, addCleaningTask, renameCleaningTask, deleteCleaningTask,
   adminCreateUser, createAgency, updateMyOrg, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getMemberFinalizations,
@@ -454,6 +455,21 @@ export function useApi() {
       },
     }),
     updateItem: useMutation({ mutationFn: useServerFn(updateItem), onSuccess: invalidateAll }),
+    setItemEditor: useMutation({
+      mutationFn: useServerFn(setItemEditor),
+      onSuccess: invalidateAll,
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao definir o editor."),
+    }),
+    setItemReelType: useMutation({
+      mutationFn: useServerFn(setItemReelType),
+      onSuccess: invalidateAll,
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao definir o formato."),
+    }),
+    setItemPostFormat: useMutation({
+      mutationFn: useServerFn(setItemPostFormat),
+      onSuccess: invalidateAll,
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao definir o formato."),
+    }),
     setItemStatus: useMutation({
       mutationFn: useServerFn(setItemStatus),
       onMutate: async (vars: any) => {

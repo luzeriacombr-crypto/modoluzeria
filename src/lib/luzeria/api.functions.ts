@@ -81,7 +81,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format").eq("id", orgId).maybeSingle()
       : { data: null };
     const logoPath = (org as any)?.logo_path as string | null | undefined;
     const feedPreviewImagePath = (org as any)?.feed_preview_image_path as string | null | undefined;
@@ -113,6 +113,7 @@ export const getMe = createServerFn({ method: "GET" })
       orgFaviconPath: faviconPath ?? null,
       disabledFeatures: ((org as any)?.disabled_features ?? []) as string[],
       setorPermissions: ((org as any)?.setor_permissions ?? []) as string[],
+      membersCanSetEditorFormat: ((org as any)?.members_can_set_editor_format ?? false) as boolean,
     } satisfies Profile;
   });
 
@@ -139,6 +140,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     colorPrimary?: string | null; colorPrimaryLight?: string | null; colorSidebar?: string | null;
     taxId?: string | null; feedPreviewImagePath?: string | null; faviconPath?: string | null;
     disabledFeatures?: string[];
+    membersCanSetEditorFormat?: boolean;
   }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
@@ -151,6 +153,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       feedPreviewImagePath: z.string().max(300).nullable().optional(),
       faviconPath: z.string().max(300).nullable().optional(),
       disabledFeatures: z.array(z.string().max(40)).max(20).optional(),
+      membersCanSetEditorFormat: z.boolean().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -166,6 +169,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.feedPreviewImagePath !== undefined) patch.feed_preview_image_path = data.feedPreviewImagePath;
     if (data.faviconPath !== undefined) patch.favicon_path = data.faviconPath;
     if (data.disabledFeatures !== undefined) patch.disabled_features = data.disabledFeatures;
+    if (data.membersCanSetEditorFormat !== undefined) patch.members_can_set_editor_format = data.membersCanSetEditorFormat;
     if (Object.keys(patch).length === 0) return { ok: true };
     const { data: updated, error } = await context.supabase
       .from("orgs").update(patch).eq("id", context.orgId).select("id").maybeSingle();
@@ -954,6 +958,45 @@ export const updateItem = createServerFn({ method: "POST" })
   }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("content_items").update(data.patch).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Editor/reel_type/post_format writes go through these RPCs instead of
+ * `updateItem` because `content_items` UPDATE is admin-only via RLS — the
+ * RPCs are the narrow, explicit escape hatch that also lets an assignee
+ * write them when the org has `members_can_set_editor_format` on (see
+ * migration 20260814030000). Admins still pass through the same RPC; the
+ * function itself checks is_admin first. */
+export const setItemEditor = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; editorId: string | null }) =>
+    z.object({ itemId: z.string().uuid(), editorId: z.string().uuid().nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .rpc("set_item_editor", { _item_id: data.itemId, _editor_id: data.editorId });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setItemReelType = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; reelType: string | null }) =>
+    z.object({ itemId: z.string().uuid(), reelType: z.enum(["lofi", "facil", "basico", "avancado"]).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .rpc("set_item_reel_type", { _item_id: data.itemId, _reel_type: data.reelType });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setItemPostFormat = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; postFormat: string | null }) =>
+    z.object({ itemId: z.string().uuid(), postFormat: z.enum(["estatico", "carrossel"]).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .rpc("set_item_post_format", { _item_id: data.itemId, _post_format: data.postFormat });
     if (error) throw new Error(error.message);
     return { ok: true };
   });

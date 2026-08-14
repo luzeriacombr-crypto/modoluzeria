@@ -247,6 +247,10 @@ export interface Profile {
    * profile (not just setor ones) so a Master viewing the Equipe tab can
    * render the current toggle state. */
   setorPermissions?: string[];
+  /** Org-wide toggle: when true, a member who's an assignee on an item can
+   * set its editor and pick its video format (reel_type/post_format),
+   * not just admins. Present for every profile, same reasoning as above. */
+  membersCanSetEditorFormat?: boolean;
 }
 
 export const SETOR_PERMISSION_KEYS = [
