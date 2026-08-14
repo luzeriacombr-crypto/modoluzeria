@@ -491,6 +491,13 @@ export function DetailPanel() {
     el.style.height = `${el.scrollHeight}px`;
   }, [editingCopy, copy]);
   const [editingCaption, setEditingCaption] = useState(false);
+  const captionTextareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = captionTextareaRef.current;
+    if (!editingCaption || !el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [editingCaption, caption]);
   const [location, setLocation] = useState("");
   const [quantity, setQuantity] = useState("");
   const [comment, setComment] = useState("");
@@ -695,16 +702,16 @@ export function DetailPanel() {
                 {editingCaption ? (
                   <div className="relative">
                     <textarea
+                      ref={captionTextareaRef}
                       autoFocus
                       value={caption}
                       onChange={(e) => setCaption(e.target.value)}
-                      rows={5}
                       onBlur={() => {
                         setEditingCaption(false);
                         if (caption !== (item.caption ?? "")) updateItem.mutate({ data: { id: item.id, patch: { caption } } });
                       }}
                       placeholder="Digite a legenda que será publicada..."
-                      className="w-full bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 pb-6 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 resize-none transition-colors"
+                      className="w-full min-h-[110px] bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 pb-6 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 resize-none transition-colors"
                     />
                     <div className="absolute bottom-2 right-3 text-[10px] text-white/40 pointer-events-none">
                       {caption.length} caracteres
