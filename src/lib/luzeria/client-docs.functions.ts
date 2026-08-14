@@ -83,11 +83,15 @@ export type RoteiroStatus = {
   adjustNote: string | null;
   gravado: boolean;
   contentItemId: string | null;
+  clientStatus: RoteiroStatusValue;
+  clientNote: string | null;
 };
 
 /** One row per "## Roteiro N: título" section of a roteiro doc — the
  * per-item approve/ajustar/gravado/enviado-pro-Reels workflow state the
- * team uses, kept out of the pasted content itself. */
+ * team uses, kept out of the pasted content itself. Also carries the
+ * client's own aprovado/ajustar decision (set from the public preview
+ * page via set_roteiro_client_status) so the team sees both side by side. */
 export const listRoteiroStatuses = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { docId: string }) => z.object({ docId: z.string().uuid() }).parse(d))
@@ -95,7 +99,7 @@ export const listRoteiroStatuses = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { data: rows, error } = await context.supabase
       .from("client_doc_roteiro_status")
-      .select("roteiro_title, status, adjust_note, gravado, content_item_id")
+      .select("roteiro_title, status, adjust_note, gravado, content_item_id, client_status, client_note")
       .eq("doc_id", data.docId);
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
@@ -104,6 +108,8 @@ export const listRoteiroStatuses = createServerFn({ method: "GET" })
       adjustNote: r.adjust_note,
       gravado: r.gravado,
       contentItemId: r.content_item_id,
+      clientStatus: r.client_status as RoteiroStatusValue,
+      clientNote: r.client_note,
     }));
   });
 

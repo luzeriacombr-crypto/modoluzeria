@@ -10,6 +10,7 @@ import { InstagramPostModal, type IGModalItem } from "@/components/luzeria/Insta
 import { PublicProgressBar } from "@/components/luzeria/PublicProgressBar";
 import { CLIENT_STAGE_META, type ClientStage } from "@/lib/luzeria/client-stage";
 import { RoteirosView, PlanejamentoView } from "@/components/luzeria/MarkdownLiteView";
+import { ClientRoteiroApproval } from "@/components/luzeria/ClientRoteiroApproval";
 import { parseMarkdownLite } from "@/lib/luzeria/markdown-lite";
 
 const STAGE_ICONS: Record<string, LucideIcon> = { Hammer, AlertTriangle, ClipboardCheck, Rocket, CheckCheck };
@@ -86,7 +87,7 @@ function PublicPreviewPage() {
     );
   }
 
-  const { client, items, orgName, orgLogoUrl, stageCounts, docs } = q.data;
+  const { client, items, orgName, orgLogoUrl, stageCounts, docs, roteiroClientStatuses } = q.data;
   const initial = client.name.charAt(0).toUpperCase();
   const activeItem = items.find((i) => i.id === activeId) ?? null;
   const blockedCount = items.filter((it) => it.stage === "blocked").length;
@@ -97,6 +98,11 @@ function PublicPreviewPage() {
   const planejamentoDocs = docs.filter((d) => d.type === "planejamento");
   const roteiroBlocks = roteiroDocs.length > 0 ? parseMarkdownLite(roteiroDocs.map((d) => d.content).join("\n\n")) : [];
   const hasExtraTabs = roteiroDocs.length > 0 || planejamentoDocs.length > 0;
+  // Multiple roteiro docs get merged into one block stream above, so their
+  // groups can't be traced back to a specific doc — approval targets the
+  // first roteiro doc's id, which covers the common case of one doc per client.
+  const roteiroDocId = roteiroDocs[0]?.id ?? null;
+  const roteiroStatusByTitle = new Map((roteiroClientStatuses ?? []).map((s) => [s.roteiroTitle, s]));
 
   const igModalItem: IGModalItem | null = activeItem ? {
     id: activeItem.id,
@@ -207,7 +213,20 @@ function PublicPreviewPage() {
         </>
         )}
 
-        {activeTab === "roteiro" && <RoteirosView blocks={roteiroBlocks} />}
+        {activeTab === "roteiro" && (
+          <RoteirosView
+            blocks={roteiroBlocks}
+            renderFooter={(g) => roteiroDocId ? (
+              <ClientRoteiroApproval
+                token={token}
+                docId={roteiroDocId}
+                title={g.title}
+                current={roteiroStatusByTitle.get(g.title)}
+                onDone={() => q.refetch()}
+              />
+            ) : null}
+          />
+        )}
 
         {activeTab === "planejamento" && (
           <div className="space-y-4">

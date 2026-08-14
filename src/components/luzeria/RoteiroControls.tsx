@@ -63,8 +63,27 @@ export function RoteiroControls({
     );
   }
 
+  const clientStatus = status?.clientStatus ?? "pending";
+
   return (
     <div className="mt-3 pt-3 border-t border-white/[0.06]">
+      {clientStatus !== "pending" && (
+        <div
+          className="mb-2.5 flex items-start gap-2 rounded-lg px-2.5 py-2"
+          style={{
+            background: clientStatus === "aprovado" ? "rgba(var(--lz-brand-light-rgb),0.08)" : "rgba(248,113,113,0.08)",
+            border: `1px solid ${clientStatus === "aprovado" ? "rgba(var(--lz-brand-light-rgb),0.2)" : "rgba(248,113,113,0.2)"}`,
+          }}
+        >
+          {clientStatus === "aprovado"
+            ? <CheckCircle2 size={13} className="mt-0.5 shrink-0" style={{ color: "rgb(var(--lz-brand-rgb))" }} />
+            : <PencilLine size={13} className="mt-0.5 shrink-0 text-red-400" />}
+          <div className="text-[11.5px] leading-relaxed" style={{ color: clientStatus === "aprovado" ? "rgb(var(--lz-brand-rgb))" : "#f87171" }}>
+            <span className="font-semibold">{clientStatus === "aprovado" ? "Cliente aprovou" : "Cliente pediu ajuste"}</span>
+            {status?.clientNote && <span className="text-white/70"> — {status.clientNote}</span>}
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"

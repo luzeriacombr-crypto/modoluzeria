@@ -575,6 +575,9 @@ export type Database = {
       client_doc_roteiro_status: {
         Row: {
           adjust_note: string | null
+          client_note: string | null
+          client_responded_at: string | null
+          client_status: string
           content_item_id: string | null
           doc_id: string
           gravado: boolean
@@ -587,6 +590,9 @@ export type Database = {
         }
         Insert: {
           adjust_note?: string | null
+          client_note?: string | null
+          client_responded_at?: string | null
+          client_status?: string
           content_item_id?: string | null
           doc_id: string
           gravado?: boolean
@@ -599,6 +605,9 @@ export type Database = {
         }
         Update: {
           adjust_note?: string | null
+          client_note?: string | null
+          client_responded_at?: string | null
+          client_status?: string
           content_item_id?: string | null
           doc_id?: string
           gravado?: boolean
@@ -2433,6 +2442,10 @@ export type Database = {
       set_onboarding_defaults: {
         Args: { _labels: string[] }
         Returns: undefined
+      }
+      set_roteiro_client_status: {
+        Args: { _client_note: string | null; _client_status: string; _doc_id: string; _roteiro_title: string; _token: string }
+        Returns: Json
       }
       update_feed_order: { Args: { p_updates: Json }; Returns: undefined }
       verify_public_token_file: {

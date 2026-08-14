@@ -108,6 +108,8 @@ export function NotificationsBell() {
                   } else if (n.type === "client_stale_update" && n.clientId) {
                     openFicha(n.clientId);
                     openStageComposer(n.clientId);
+                  } else if (n.type === "roteiro_client_status" && n.clientId) {
+                    navigate({ to: "/cliente/$clientId", params: { clientId: n.clientId }, search: { tab: "docs" } });
                   }
                 }}
                 className="w-full text-left px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors block"
