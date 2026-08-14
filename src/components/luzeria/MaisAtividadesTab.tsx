@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -34,7 +34,7 @@ interface Props {
 }
 
 export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sistemas, outros, profiles, isAdmin }: Props) {
-  const { addContentItem, addAssignee, deleteItem } = useApi();
+  const { addContentItem, addAssignee, deleteItem, setItemStatus } = useApi();
   const { openItem } = useUI();
   const [openForm, setOpenForm] = useState<GroupKey | null>(null);
   const [collapsed, setCollapsed] = useState<Record<GroupKey, boolean>>({
@@ -97,13 +97,20 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                 profiles={profiles}
                 onSubmit={async (vals) => {
                   try {
-                    const { assigneeId, ...itemVals } = vals;
+                    const { assigneeId, status, ...itemVals } = vals;
                     const result = await addContentItem.mutateAsync({
                       data: { clientId, key: monthKey, type, ...itemVals },
                     });
                     const newId = (result as any)?.id;
                     if (assigneeId && newId) {
                       await addAssignee.mutateAsync({ data: { itemId: newId, userId: assigneeId } });
+                    }
+                    // Criado sempre como PENDENTE (padrão do backend); se a
+                    // pessoa já marcou como Concluído no formulário, aplica a
+                    // transição em seguida — precisa ser um UPDATE separado
+                    // pra disparar o trigger que credita a finalização.
+                    if (status === "CONCLUIDO" && newId) {
+                      await setItemStatus.mutateAsync({ data: { id: newId, status: "CONCLUIDO" } });
                     }
                     toast.success(`${label} registrada com sucesso`);
                     setOpenForm(null);
@@ -112,7 +119,7 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                   }
                 }}
                 onCancel={() => setOpenForm(null)}
-                loading={addContentItem.isPending || addAssignee.isPending}
+                loading={addContentItem.isPending || addAssignee.isPending || setItemStatus.isPending}
               />
             )}
 
@@ -172,7 +179,7 @@ function ActivityForm({
   clientId: string;
   monthKey: string;
   profiles: Profile[];
-  onSubmit: (vals: { title: string; dueDate?: string; location?: string; quantity?: number; notes?: string; assigneeId?: string }) => Promise<void>;
+  onSubmit: (vals: { title: string; dueDate?: string; location?: string; quantity?: number; notes?: string; assigneeId?: string; status: "PENDENTE" | "CONCLUIDO" }) => Promise<void>;
   onCancel: () => void;
   loading: boolean;
 }) {
@@ -182,6 +189,7 @@ function ActivityForm({
   const [quantity, setQuantity] = useState("");
   const [notes, setNotes] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
+  const [status, setStatus] = useState<"PENDENTE" | "CONCLUIDO">("PENDENTE");
 
   const inp = "w-full bg-[#1A1A1A] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition-colors placeholder:text-white/30";
 
@@ -195,6 +203,7 @@ function ActivityForm({
       quantity: cfg.quantityLabel && qty !== undefined && !Number.isNaN(qty) ? qty : undefined,
       notes: notes.trim() || undefined,
       assigneeId: assigneeId || undefined,
+      status,
     });
   }
 
@@ -244,6 +253,36 @@ function ActivityForm({
             />
           </div>
         )}
+      </div>
+
+      <div>
+        <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/40 mb-1">
+          Status
+        </label>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setStatus("PENDENTE")}
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+            style={{
+              backgroundColor: status === "PENDENTE" ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)",
+              color: status === "PENDENTE" ? "#FFFFFF" : "rgba(255,255,255,0.5)",
+            }}
+          >
+            <Clock size={12} /> Pendente
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatus("CONCLUIDO")}
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+            style={{
+              backgroundColor: status === "CONCLUIDO" ? "rgba(var(--lz-brand-light-rgb),0.18)" : "rgba(255,255,255,0.05)",
+              color: status === "CONCLUIDO" ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.5)",
+            }}
+          >
+            <Check size={12} /> Concluído
+          </button>
+        </div>
       </div>
 
       <div>
