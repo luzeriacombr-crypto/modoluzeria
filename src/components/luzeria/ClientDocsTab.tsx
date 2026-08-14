@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { clientDocsQO, roteiroStatusesQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { CLIENT_DOC_TYPE_LABEL, CLIENT_DOC_PROMPT, type ClientDocType } from "@/lib/luzeria/client-doc-templates";
-import { parseMarkdownLite } from "@/lib/luzeria/markdown-lite";
+import { parseMarkdownLite, groupByH2 } from "@/lib/luzeria/markdown-lite";
 import type { ClientDoc } from "@/lib/luzeria/client-docs.functions";
 import { RoteirosView, PlanejamentoView } from "./MarkdownLiteView";
 import { RoteiroControls } from "./RoteiroControls";
@@ -158,6 +158,8 @@ function DocRow({
   const isRoteiro = doc.type === "roteiro";
   const { data: statuses = [] } = useQuery({ ...roteiroStatusesQO(doc.id), enabled: isOpen && isRoteiro });
   const statusByTitle = new Map(statuses.map((s) => [s.roteiroTitle, s]));
+  const [addingRoteiro, setAddingRoteiro] = useState(false);
+  const roteiroCount = isRoteiro ? groupByH2(blocks).length : 0;
 
   return (
     <div className="rounded-lg overflow-hidden" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -183,17 +185,89 @@ function DocRow({
       {isOpen && (
         <div className="px-4 pb-4 pt-1">
           {isRoteiro ? (
-            <RoteirosView
-              blocks={blocks}
-              renderFooter={(g) => (
-                <RoteiroControls docId={doc.id} clientId={clientId} title={g.title} status={statusByTitle.get(g.title)} />
+            <>
+              <RoteirosView
+                blocks={blocks}
+                onAddNew={() => setAddingRoteiro(true)}
+                renderFooter={(g) => (
+                  <RoteiroControls docId={doc.id} clientId={clientId} title={g.title} status={statusByTitle.get(g.title)} />
+                )}
+              />
+              {addingRoteiro && (
+                <AddRoteiroForm
+                  doc={doc}
+                  clientId={clientId}
+                  nextNumber={roteiroCount + 1}
+                  onDone={() => setAddingRoteiro(false)}
+                  onCancel={() => setAddingRoteiro(false)}
+                />
               )}
-            />
+            </>
           ) : (
             <PlanejamentoView blocks={blocks} />
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function AddRoteiroForm({
+  doc, clientId, nextNumber, onDone, onCancel,
+}: {
+  doc: ClientDoc;
+  clientId: string;
+  nextNumber: number;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const { upsertClientDoc } = useApi();
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+
+  function submit() {
+    if (!title.trim() || !content.trim()) return;
+    const block = `## Roteiro ${nextNumber}: ${title.trim()}\n${content.trim()}`;
+    const newContent = doc.content.trim() ? `${doc.content.trim()}\n\n${block}` : block;
+    upsertClientDoc.mutate(
+      { data: { id: doc.id, clientId, type: "roteiro", title: doc.title, content: newContent } },
+      {
+        onSuccess: () => {
+          toast.success("Roteiro adicionado.");
+          setTitle(""); setContent("");
+          onDone();
+        },
+      },
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-lg p-3.5 space-y-2.5" style={{ background: "#161616", border: "1px solid rgba(255,255,255,0.08)" }}>
+      <div className="text-[11px] font-bold uppercase tracking-wider text-white/50">Novo roteiro {nextNumber}</div>
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Título curto e chamativo do roteiro"
+        autoFocus
+        className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+      />
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="Cenas, falas, indicações de gravação…"
+        rows={5}
+        className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2.5 text-[13px] text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-y"
+      />
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={onCancel} className="text-xs text-white/50 hover:text-white px-3 py-2">Cancelar</button>
+        <button
+          onClick={submit}
+          disabled={!title.trim() || !content.trim() || upsertClientDoc.isPending}
+          className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50"
+        >
+          {upsertClientDoc.isPending ? "Adicionando…" : "Adicionar roteiro"}
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Layers, Target, Compass, Lightbulb, TrendingUp, ListChecks, Users, Calendar, Sparkles, Check } from "lucide-react";
+import { Layers, Target, Compass, Lightbulb, TrendingUp, ListChecks, Users, Calendar, Sparkles, Check, Plus } from "lucide-react";
 import { type MdBlock, groupByH2, leadingTitle } from "@/lib/luzeria/markdown-lite";
 
 function MdInline({ text }: { text: string }) {
@@ -199,12 +199,14 @@ export function PlanejamentoView({ blocks }: { blocks: MdBlock[] }) {
 export function RoteirosView({
   blocks,
   renderFooter,
+  onAddNew,
 }: {
   blocks: MdBlock[];
   renderFooter?: (group: { title: string; blocks: MdBlock[] }, index: number) => ReactNode;
+  onAddNew?: () => void;
 }) {
   const groups = groupByH2(blocks);
-  if (groups.length === 0) return null;
+  if (groups.length === 0 && !onAddNew) return null;
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
@@ -212,7 +214,17 @@ export function RoteirosView({
         <span className="text-white/60 text-[12px] font-semibold uppercase tracking-wide">
           {groups.length} {groups.length === 1 ? "roteiro" : "roteiros"}
         </span>
+        {onAddNew && (
+          <button
+            type="button"
+            onClick={onAddNew}
+            className="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] transition"
+          >
+            <Plus size={13} /> Adicionar roteiro
+          </button>
+        )}
       </div>
+      {groups.length > 0 && (
       <div className="space-y-3">
         {groups.map((g, i) => (
           <div key={i} className="rounded-xl p-5" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -230,6 +242,7 @@ export function RoteirosView({
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }
