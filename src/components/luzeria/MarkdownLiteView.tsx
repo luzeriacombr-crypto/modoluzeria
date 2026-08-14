@@ -1,4 +1,5 @@
-import { Layers, Target, Compass, Lightbulb, TrendingUp, ListChecks, Users, Calendar, Sparkles } from "lucide-react";
+import type { ReactNode } from "react";
+import { Layers, Target, Compass, Lightbulb, TrendingUp, ListChecks, Users, Calendar, Sparkles, Check } from "lucide-react";
 import { type MdBlock, groupByH2, leadingTitle } from "@/lib/luzeria/markdown-lite";
 
 function MdInline({ text }: { text: string }) {
@@ -51,6 +52,90 @@ function sectionIcon(title: string) {
   return Sparkles;
 }
 
+type StatItem = { label: string; value: string; suffix: string };
+
+/** Matches bullets shaped like "Alcance total: **38.420 contas**" or
+ * "Conteúdo educativo: **40%**" — a label, a colon, and a bold span that
+ * starts with a number (the rest of the bold span, if any, becomes the
+ * unit/suffix). Used to promote number-heavy lists into a stat grid
+ * instead of a plain bullet list. */
+function parseStatItem(raw: string): StatItem | null {
+  const m = raw.match(/^(.+?):\s*\*\*(.+?)\*\*\s*(.*)$/);
+  if (!m) return null;
+  const numMatch = m[2].trim().match(/^([\d.,]+%?)\s*(.*)$/);
+  if (!numMatch) return null;
+  const suffix = [numMatch[2], m[3].trim()].filter(Boolean).join(" ").trim();
+  return { label: m[1].trim(), value: numMatch[1], suffix };
+}
+
+function StatGrid({ items }: { items: StatItem[] }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-3">
+      {items.map((s, i) => (
+        <div key={i} className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="font-extrabold text-xl leading-none tabular-nums" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{s.value}</div>
+          {s.suffix && <div className="text-white/45 text-[10.5px] font-semibold mt-1 leading-snug">{s.suffix}</div>}
+          <div className="text-white/50 text-[11px] mt-1.5 leading-snug">{s.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ChecklistItems({ items }: { items: string[] }) {
+  return (
+    <div className="space-y-1.5 mb-3">
+      {items.map((item, i) => (
+        <div key={i} className="flex items-start gap-2.5 rounded-lg px-3 py-2.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+          <span className="shrink-0 mt-[3px] h-4 w-4 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)" }}>
+            <Check size={10} strokeWidth={3} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
+          </span>
+          <span className="text-white/75 text-[13.5px] leading-relaxed"><MdInline text={item} /></span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Renders a section's blocks with extra visual promotion: the first short
+ * paragraph reads as a bigger lead line, bullet lists that are all
+ * "label: **number**" become a stat grid, other lists become boxed
+ * checklist rows, and a divider separates prose from the first list. */
+function SectionBody({ blocks }: { blocks: MdBlock[] }) {
+  const nodes: ReactNode[] = [];
+  let dividerAdded = false;
+  let sawText = false;
+  let firstP = true;
+  blocks.forEach((b, i) => {
+    if (b.kind === "ul") {
+      const stats = b.items.map(parseStatItem);
+      const allStats = stats.length >= 2 && stats.every((s): s is StatItem => s !== null);
+      if (sawText && !dividerAdded) {
+        nodes.push(<div key={`div-${i}`} className="h-px my-3.5" style={{ background: "rgba(255,255,255,0.06)" }} />);
+        dividerAdded = true;
+      }
+      nodes.push(allStats ? <StatGrid key={i} items={stats as StatItem[]} /> : <ChecklistItems key={i} items={b.items} />);
+      return;
+    }
+    if (b.kind === "p") {
+      sawText = true;
+      const isLead = firstP && b.text.length <= 140;
+      firstP = false;
+      nodes.push(
+        <p
+          key={i}
+          className={isLead ? "text-white/85 text-[15px] leading-relaxed mb-3 font-medium" : "text-white/70 text-[13.5px] leading-relaxed mb-3"}
+        >
+          <MdInline text={b.text} />
+        </p>,
+      );
+      return;
+    }
+    nodes.push(<BlockRenderer key={i} block={b} />);
+  });
+  return <>{nodes}</>;
+}
+
 /** Flowing document view — planejamento/relatório. H1 becomes a highlighted
  * title card, every H2 its own section card with a keyword-matched icon. */
 export function PlanejamentoView({ blocks }: { blocks: MdBlock[] }) {
@@ -76,7 +161,7 @@ export function PlanejamentoView({ blocks }: { blocks: MdBlock[] }) {
           )}
           {lead.length > 0 && (
             <div className={title ? "mt-3" : undefined}>
-              {lead.map((b, i) => <BlockRenderer key={i} block={b} />)}
+              <SectionBody blocks={lead} />
             </div>
           )}
         </div>
@@ -95,7 +180,7 @@ export function PlanejamentoView({ blocks }: { blocks: MdBlock[] }) {
               <h3 className="text-white font-bold text-[15px]">{s.title}</h3>
             </div>
             <div className="pl-[42px] -mt-1">
-              {s.blocks.map((b, j) => <BlockRenderer key={j} block={b} />)}
+              <SectionBody blocks={s.blocks} />
             </div>
           </div>
         );
