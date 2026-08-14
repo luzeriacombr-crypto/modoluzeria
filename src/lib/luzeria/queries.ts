@@ -60,7 +60,7 @@ import {
   setClientStage, logClientStageUpdate, getClientStageHistory, getWeeklyClientReminders,
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
-import { listClientDocs, upsertClientDoc, deleteClientDoc } from "./client-docs.functions";
+import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const instagramActivityQO = () =>
   queryOptions({ queryKey: ["instagram-activity"], queryFn: () => getInstagramActivity() });
@@ -183,6 +183,13 @@ export const clientDocsQO = (clientId: string) =>
     queryKey: ["client-docs", clientId],
     queryFn: () => listClientDocs({ data: { clientId } }),
     enabled: !!clientId,
+  });
+
+export const roteiroStatusesQO = (docId: string | null) =>
+  queryOptions({
+    queryKey: ["roteiro-statuses", docId],
+    queryFn: () => listRoteiroStatuses({ data: { docId: docId! } }),
+    enabled: !!docId,
   });
 
 export const clientStageHistoryQO = (clientId: string | null) =>
@@ -609,6 +616,11 @@ export function useApi() {
       mutationFn: useServerFn(deleteClientDoc),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover documento."),
+    }),
+    upsertRoteiroStatus: useMutation({
+      mutationFn: useServerFn(upsertRoteiroStatus),
+      onSuccess: (_r, vars: any) => qc.invalidateQueries({ queryKey: ["roteiro-statuses", vars.data.docId] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar status do roteiro."),
     }),
     setClientStage: useMutation({
       mutationFn: useServerFn(setClientStage),

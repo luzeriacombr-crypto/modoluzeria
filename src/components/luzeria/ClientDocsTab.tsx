@@ -2,11 +2,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { clientDocsQO, useApi } from "@/lib/luzeria/queries";
+import { clientDocsQO, roteiroStatusesQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { CLIENT_DOC_TYPE_LABEL, CLIENT_DOC_PROMPT, type ClientDocType } from "@/lib/luzeria/client-doc-templates";
 import { parseMarkdownLite } from "@/lib/luzeria/markdown-lite";
+import type { ClientDoc } from "@/lib/luzeria/client-docs.functions";
 import { RoteirosView, PlanejamentoView } from "./MarkdownLiteView";
+import { RoteiroControls } from "./RoteiroControls";
 
 const DOC_TYPES: ClientDocType[] = ["roteiro", "planejamento"];
 
@@ -125,38 +127,71 @@ export function ClientDocsTab({ clientId }: { clientId: string }) {
         </div>
       ) : (
         <div className="space-y-2">
-          {docs.map((doc) => {
-            const isOpen = expandedId === doc.id;
-            const blocks = isOpen ? parseMarkdownLite(doc.content) : [];
-            return (
-              <div key={doc.id} className="rounded-lg overflow-hidden" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <button
-                  onClick={() => setExpandedId(isOpen ? null : doc.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
-                >
-                  {doc.type === "roteiro" ? <Layers size={14} className="text-white/40 shrink-0" /> : <FileText size={14} className="text-white/40 shrink-0" />}
-                  <span className="flex-1 min-w-0 text-sm text-white truncate">{doc.title || "(sem título)"}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-white/30 shrink-0">
-                    {CLIENT_DOC_TYPE_LABEL[doc.type].label}
-                  </span>
-                  <span onClick={(e) => { e.stopPropagation(); startEdit(doc); }}
-                    className="p-1.5 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5 transition shrink-0">
-                    <Pencil size={13} />
-                  </span>
-                  <span onClick={(e) => { e.stopPropagation(); remove(doc.id); }}
-                    className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-white/5 transition shrink-0">
-                    <Trash2 size={13} />
-                  </span>
-                  {isOpen ? <ChevronDown size={14} className="text-white/40 shrink-0" /> : <ChevronRight size={14} className="text-white/40 shrink-0" />}
-                </button>
-                {isOpen && (
-                  <div className="px-4 pb-4 pt-1">
-                    {doc.type === "roteiro" ? <RoteirosView blocks={blocks} /> : <PlanejamentoView blocks={blocks} />}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {docs.map((doc) => (
+            <DocRow
+              key={doc.id}
+              doc={doc}
+              clientId={clientId}
+              isOpen={expandedId === doc.id}
+              onToggle={() => setExpandedId(expandedId === doc.id ? null : doc.id)}
+              onEdit={() => startEdit(doc)}
+              onRemove={() => remove(doc.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DocRow({
+  doc, clientId, isOpen, onToggle, onEdit, onRemove,
+}: {
+  doc: ClientDoc;
+  clientId: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  onEdit: () => void;
+  onRemove: () => void;
+}) {
+  const blocks = isOpen ? parseMarkdownLite(doc.content) : [];
+  const isRoteiro = doc.type === "roteiro";
+  const { data: statuses = [] } = useQuery({ ...roteiroStatusesQO(doc.id), enabled: isOpen && isRoteiro });
+  const statusByTitle = new Map(statuses.map((s) => [s.roteiroTitle, s]));
+
+  return (
+    <div className="rounded-lg overflow-hidden" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}>
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
+      >
+        {isRoteiro ? <Layers size={14} className="text-white/40 shrink-0" /> : <FileText size={14} className="text-white/40 shrink-0" />}
+        <span className="flex-1 min-w-0 text-sm text-white truncate">{doc.title || "(sem título)"}</span>
+        <span className="text-[10px] font-bold uppercase tracking-wide text-white/30 shrink-0">
+          {CLIENT_DOC_TYPE_LABEL[doc.type].label}
+        </span>
+        <span onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          className="p-1.5 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5 transition shrink-0">
+          <Pencil size={13} />
+        </span>
+        <span onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-white/5 transition shrink-0">
+          <Trash2 size={13} />
+        </span>
+        {isOpen ? <ChevronDown size={14} className="text-white/40 shrink-0" /> : <ChevronRight size={14} className="text-white/40 shrink-0" />}
+      </button>
+      {isOpen && (
+        <div className="px-4 pb-4 pt-1">
+          {isRoteiro ? (
+            <RoteirosView
+              blocks={blocks}
+              renderFooter={(g) => (
+                <RoteiroControls docId={doc.id} clientId={clientId} title={g.title} status={statusByTitle.get(g.title)} />
+              )}
+            />
+          ) : (
+            <PlanejamentoView blocks={blocks} />
+          )}
         </div>
       )}
     </div>

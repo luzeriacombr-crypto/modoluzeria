@@ -572,6 +572,67 @@ export type Database = {
           },
         ]
       }
+      client_doc_roteiro_status: {
+        Row: {
+          adjust_note: string | null
+          content_item_id: string | null
+          doc_id: string
+          gravado: boolean
+          id: string
+          org_id: string
+          roteiro_title: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          adjust_note?: string | null
+          content_item_id?: string | null
+          doc_id: string
+          gravado?: boolean
+          id?: string
+          org_id: string
+          roteiro_title: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          adjust_note?: string | null
+          content_item_id?: string | null
+          doc_id?: string
+          gravado?: boolean
+          id?: string
+          org_id?: string
+          roteiro_title?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_doc_roteiro_status_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_doc_roteiro_status_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "client_docs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_doc_roteiro_status_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_drive_map: {
         Row: {
           client_id: string

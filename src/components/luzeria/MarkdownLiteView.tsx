@@ -191,8 +191,18 @@ export function PlanejamentoView({ blocks }: { blocks: MdBlock[] }) {
 
 /** Card-per-roteiro view — each "## Roteiro N: Título" section becomes a
  * numbered card, with a count header so the client sees at a glance how
- * many roteiros there are. */
-export function RoteirosView({ blocks }: { blocks: MdBlock[] }) {
+ * many roteiros there are. `renderFooter` is an optional per-card slot
+ * (title + its blocks in, a node out) used by the admin editor to inject
+ * workflow controls (aprovar/ajustar/gravado/enviar pro Reels) without this
+ * shared component — also rendered on the public client page — knowing
+ * anything about that behavior. */
+export function RoteirosView({
+  blocks,
+  renderFooter,
+}: {
+  blocks: MdBlock[];
+  renderFooter?: (group: { title: string; blocks: MdBlock[] }, index: number) => ReactNode;
+}) {
   const groups = groupByH2(blocks);
   if (groups.length === 0) return null;
   return (
@@ -214,6 +224,7 @@ export function RoteirosView({ blocks }: { blocks: MdBlock[] }) {
               <div className="flex-1 min-w-0 pt-0.5">
                 <h3 className="text-white font-bold text-[14.5px] mb-2">{g.title}</h3>
                 {g.blocks.map((b, j) => <BlockRenderer key={j} block={b} />)}
+                {renderFooter?.(g, i)}
               </div>
             </div>
           </div>

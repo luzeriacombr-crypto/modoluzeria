@@ -74,3 +74,69 @@ export const deleteClientDoc = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export type RoteiroStatusValue = "pending" | "aprovado" | "ajustar";
+
+export type RoteiroStatus = {
+  roteiroTitle: string;
+  status: RoteiroStatusValue;
+  adjustNote: string | null;
+  gravado: boolean;
+  contentItemId: string | null;
+};
+
+/** One row per "## Roteiro N: título" section of a roteiro doc — the
+ * per-item approve/ajustar/gravado/enviado-pro-Reels workflow state the
+ * team uses, kept out of the pasted content itself. */
+export const listRoteiroStatuses = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { docId: string }) => z.object({ docId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<RoteiroStatus[]> => {
+    await assertAdmin(context);
+    const { data: rows, error } = await context.supabase
+      .from("client_doc_roteiro_status")
+      .select("roteiro_title, status, adjust_note, gravado, content_item_id")
+      .eq("doc_id", data.docId);
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r: any) => ({
+      roteiroTitle: r.roteiro_title,
+      status: r.status as RoteiroStatusValue,
+      adjustNote: r.adjust_note,
+      gravado: r.gravado,
+      contentItemId: r.content_item_id,
+    }));
+  });
+
+export const upsertRoteiroStatus = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: {
+    docId: string;
+    roteiroTitle: string;
+    status?: RoteiroStatusValue;
+    adjustNote?: string | null;
+    gravado?: boolean;
+    contentItemId?: string;
+  }) =>
+    z.object({
+      docId: z.string().uuid(),
+      roteiroTitle: z.string().trim().min(1).max(300),
+      status: z.enum(["pending", "aprovado", "ajustar"]).optional(),
+      adjustNote: z.string().trim().max(2000).nullable().optional(),
+      gravado: z.boolean().optional(),
+      contentItemId: z.string().uuid().optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const row: Record<string, any> = {
+      doc_id: data.docId, org_id: context.orgId, roteiro_title: data.roteiroTitle, updated_by: context.userId,
+    };
+    if (data.status !== undefined) row.status = data.status;
+    if (data.adjustNote !== undefined) row.adjust_note = data.adjustNote;
+    if (data.gravado !== undefined) row.gravado = data.gravado;
+    if (data.contentItemId !== undefined) row.content_item_id = data.contentItemId;
+    const { error } = await context.supabase
+      .from("client_doc_roteiro_status")
+      .upsert(row, { onConflict: "doc_id,roteiro_title" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
