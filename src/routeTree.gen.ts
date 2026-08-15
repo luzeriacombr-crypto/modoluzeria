@@ -25,7 +25,6 @@ import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar
 import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated/rotina'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
-import { Route as AuthenticatedInvestigacaoRouteImport } from './routes/_authenticated/investigacao'
 import { Route as AuthenticatedInstagramRouteImport } from './routes/_authenticated/instagram'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
@@ -118,12 +117,6 @@ const AuthenticatedMinhasTarefasRoute =
     path: '/minhas-tarefas',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedInvestigacaoRoute =
-  AuthenticatedInvestigacaoRouteImport.update({
-    id: '/investigacao',
-    path: '/investigacao',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedInstagramRoute = AuthenticatedInstagramRouteImport.update({
   id: '/instagram',
   path: '/instagram',
@@ -201,7 +194,6 @@ export interface FileRoutesByFullPath {
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/instagram': typeof AuthenticatedInstagramRoute
-  '/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
@@ -230,7 +222,6 @@ export interface FileRoutesByTo {
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/instagram': typeof AuthenticatedInstagramRoute
-  '/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
@@ -261,7 +252,6 @@ export interface FileRoutesById {
   '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/instagram': typeof AuthenticatedInstagramRoute
-  '/_authenticated/investigacao': typeof AuthenticatedInvestigacaoRoute
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/rotina': typeof AuthenticatedRotinaRoute
@@ -292,7 +282,6 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/configuracoes'
     | '/instagram'
-    | '/investigacao'
     | '/minhas-tarefas'
     | '/perfil'
     | '/rotina'
@@ -321,7 +310,6 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/configuracoes'
     | '/instagram'
-    | '/investigacao'
     | '/minhas-tarefas'
     | '/perfil'
     | '/rotina'
@@ -351,7 +339,6 @@ export interface FileRouteTypes {
     | '/_authenticated/calendario'
     | '/_authenticated/configuracoes'
     | '/_authenticated/instagram'
-    | '/_authenticated/investigacao'
     | '/_authenticated/minhas-tarefas'
     | '/_authenticated/perfil'
     | '/_authenticated/rotina'
@@ -497,13 +484,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMinhasTarefasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/investigacao': {
-      id: '/_authenticated/investigacao'
-      path: '/investigacao'
-      fullPath: '/investigacao'
-      preLoaderRoute: typeof AuthenticatedInvestigacaoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/instagram': {
       id: '/_authenticated/instagram'
       path: '/instagram'
@@ -590,7 +570,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedInstagramRoute: typeof AuthenticatedInstagramRoute
-  AuthenticatedInvestigacaoRoute: typeof AuthenticatedInvestigacaoRoute
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedRotinaRoute: typeof AuthenticatedRotinaRoute
@@ -606,7 +585,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedInstagramRoute: AuthenticatedInstagramRoute,
-  AuthenticatedInvestigacaoRoute: AuthenticatedInvestigacaoRoute,
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedRotinaRoute: AuthenticatedRotinaRoute,
