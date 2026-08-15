@@ -2540,8 +2540,11 @@ export const getMemberVelocity = createServerFn({ method: "GET" })
   .inputValidator((d: { from: string; to: string }) =>
     z.object({ from: z.string(), to: z.string() }).parse(d))
   .handler(async ({ data, context }): Promise<MemberVelocityRow[]> => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) {
+      const { data: allowed } = await context.supabase.rpc("has_setor_permission", { _user_id: context.userId, _perm: "team_reports" });
+      if (!allowed) throw new Error("Forbidden");
+    }
 
     const { data: profiles } = await context.supabase
       .from("profiles").select("id, name, color, icon, avatar_url").eq("active", true);

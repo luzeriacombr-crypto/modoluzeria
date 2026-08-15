@@ -415,7 +415,10 @@ export const getReportExtras = createServerFn({ method: "GET" })
     reportRangeSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
-    if (!isMaster) throw new Error("Forbidden");
+    if (!isMaster) {
+      const { data: allowed } = await context.supabase.rpc("has_setor_permission", { _user_id: context.userId, _perm: "team_reports" });
+      if (!allowed) throw new Error("Forbidden");
+    }
 
     const fromIso = new Date(data.from).toISOString();
     const toIso = new Date(data.to).toISOString();
