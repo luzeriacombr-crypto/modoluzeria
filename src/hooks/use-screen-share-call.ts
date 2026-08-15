@@ -215,7 +215,7 @@ export function useScreenShareCall() {
     }
   }
 
-  function subscribeSessionChannel(orgId: string, cId: string, onReady: () => void) {
+  function subscribeSessionChannel(orgId: string, cId: string, onReady: () => void, onSubscribed?: () => void) {
     const topic = `call:${orgId}:session:${cId}`;
     const ch = supabase.channel(topic, { config: { presence: { key: me?.id ?? "" } } });
     ch.on("broadcast", { event: "ready" }, () => { if (!readyReceivedRef.current) { readyReceivedRef.current = true; onReady(); } });
@@ -249,7 +249,12 @@ export function useScreenShareCall() {
       }
     });
     ch.subscribe((subStatus) => {
-      if (subStatus === "SUBSCRIBED") ch.track({ userId: me?.id ?? "" });
+      // eslint-disable-next-line no-console
+      console.debug("[call] session channel subscribe ->", subStatus);
+      if (subStatus === "SUBSCRIBED") {
+        ch.track({ userId: me?.id ?? "" });
+        onSubscribed?.();
+      }
     });
     sessionChannelRef.current = ch;
     return ch;
@@ -287,10 +292,11 @@ export function useScreenShareCall() {
     if (s.status !== "ringing-incoming" || !s.callId || !s.peer || !me?.orgId || !s.canCall) return;
     if (incomingTimerRef.current) { clearTimeout(incomingTimerRef.current); incomingTimerRef.current = null; }
     useCallStore.getState()._setStatus("connecting", s.callId, s.peer);
-    const ch = subscribeSessionChannel(me.orgId, s.callId, () => { /* callee doesn't wait for 'ready' — it sends it */ });
-    ch.subscribe((subStatus) => {
-      if (subStatus === "SUBSCRIBED") ch.send({ type: "broadcast", event: "ready", payload: {} });
-    });
+    subscribeSessionChannel(
+      me.orgId, s.callId,
+      () => { /* callee doesn't wait for 'ready' — it sends it */ },
+      () => { sessionChannelRef.current?.send({ type: "broadcast", event: "ready", payload: {} }); },
+    );
   }
 
   function declineCall() {
