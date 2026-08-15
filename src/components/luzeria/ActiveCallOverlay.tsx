@@ -40,10 +40,20 @@ export function ActiveCallOverlay({ call }: { call: ReturnType<typeof useScreenS
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (localVideoRef.current) localVideoRef.current.srcObject = call.localStream;
+    const el = localVideoRef.current;
+    // eslint-disable-next-line no-console
+    console.debug("[call] binding localStream", { hasNode: !!el, hasStream: !!call.localStream });
+    if (!el) return;
+    el.srcObject = call.localStream;
+    if (call.localStream) el.play().catch((e) => console.error("[call] local video play() failed", e));
   }, [call.localStream]);
   useEffect(() => {
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = call.remoteStream;
+    const el = remoteVideoRef.current;
+    // eslint-disable-next-line no-console
+    console.debug("[call] binding remoteStream", { hasNode: !!el, hasStream: !!call.remoteStream });
+    if (!el) return;
+    el.srcObject = call.remoteStream;
+    if (call.remoteStream) el.play().catch((e) => console.error("[call] remote video play() failed", e));
   }, [call.remoteStream]);
 
   const visible = call.status === "ringing-outgoing" || call.status === "connecting" || call.status === "active";

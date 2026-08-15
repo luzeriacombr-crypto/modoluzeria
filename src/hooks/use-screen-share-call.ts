@@ -174,7 +174,18 @@ export function useScreenShareCall() {
 
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     pcRef.current = pc;
-    pc.ontrack = (e) => setRemoteStream(e.streams[0] ?? null);
+    pc.ontrack = (e) => {
+      const stream = e.streams[0] ?? null;
+      // eslint-disable-next-line no-console
+      console.debug("[call] ontrack", {
+        kind: e.track.kind,
+        readyState: e.track.readyState,
+        muted: e.track.muted,
+        streamId: stream?.id,
+        streamTracks: stream?.getTracks().map((t) => t.kind),
+      });
+      setRemoteStream(stream);
+    };
     stream.getTracks().forEach((t) => {
       const sender = pc.addTrack(t, stream);
       if (t.kind === "video") videoSenderRef.current = sender;
