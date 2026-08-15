@@ -3,23 +3,16 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { sendCallInviteNotification } from "@/lib/luzeria/screen-share.functions";
+import { getTurnCredentials } from "@/lib/luzeria/turn-credentials.functions";
 import { useCallStore, type CallPeer } from "@/lib/luzeria/call-store";
 import { useMe } from "@/lib/luzeria/queries";
 import { startRingtone, stopRingtone } from "@/lib/luzeria/ringtone";
 
 // STUN alone only works when both sides' networks allow direct P2P (UDP hole
-// punching) — plenty of home/corporate networks don't. Open Relay Project's
-// free public TURN servers (openrelay.metered.ca) are added as a fallback
-// relay path for when a direct connection can't be established; publicly
-// documented static credentials, no signup — fine for this volume of use,
-// worth swapping for a dedicated/paid TURN provider if usage grows.
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:openrelay.metered.ca:80" },
-  { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
-  { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
-  { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" },
-];
+// punching) — plenty of home/corporate networks don't; a TURN relay is
+// needed as a fallback path. Used as a last-resort default if fetching
+// short-lived credentials from getTurnCredentials() fails.
+const STUN_ONLY_FALLBACK: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
 const OUTGOING_RING_MS = 45_000;
 const INCOMING_RING_MS = 60_000;
 const ICE_FAIL_GRACE_MS = 8_000;
@@ -62,8 +55,10 @@ export function useScreenShareCall() {
   const [camOn, setCamOn] = useState(true);
 
   const sendInviteNotification = useServerFn(sendCallInviteNotification);
+  const fetchTurnCredentials = useServerFn(getTurnCredentials);
 
   const inboxChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const iceServersPromiseRef = useRef<Promise<RTCIceServer[]> | null>(null);
   const sessionChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -164,6 +159,19 @@ export function useScreenShareCall() {
     }
   }
 
+  /** Fetches short-lived TURN credentials from the server once per hook
+   * lifetime and caches the in-flight/resolved promise, so repeated calls
+   * (and both peers of the same call) don't refetch unnecessarily. Falls
+   * back to STUN-only on any failure — see turn-credentials.functions.ts. */
+  function getIceServers(): Promise<RTCIceServer[]> {
+    if (!iceServersPromiseRef.current) {
+      iceServersPromiseRef.current = fetchTurnCredentials()
+        .then((servers) => (servers.length > 0 ? servers : STUN_ONLY_FALLBACK))
+        .catch(() => STUN_ONLY_FALLBACK);
+    }
+    return iceServersPromiseRef.current;
+  }
+
   /** Grabs camera+mic and wires up a fresh RTCPeerConnection with our own
    * tracks already attached — shared by both the caller (before creating
    * the offer) and the callee (before creating the answer), which is what
@@ -180,7 +188,10 @@ export function useScreenShareCall() {
     localStreamRef.current = stream;
     setLocalStream(stream);
 
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const iceServers = await getIceServers();
+    // eslint-disable-next-line no-console
+    console.debug("[call] using ICE servers", iceServers.map((s) => s.urls));
+    const pc = new RTCPeerConnection({ iceServers });
     pcRef.current = pc;
     pc.ontrack = (e) => {
       const stream = e.streams[0] ?? null;
@@ -284,6 +295,7 @@ export function useScreenShareCall() {
     const cId = crypto.randomUUID();
     const targetPeer: CallPeer = { userId, name, avatarUrl };
     useCallStore.getState()._setStatus("ringing-outgoing", cId, targetPeer);
+    getIceServers(); // kick off early so it's ready by the time beginCall() needs it
 
     const ch = subscribeSessionChannel(me.orgId, cId, () => {
       if (outgoingTimerRef.current) { clearTimeout(outgoingTimerRef.current); outgoingTimerRef.current = null; }
@@ -409,6 +421,7 @@ export function useScreenShareCall() {
       }
       const incomingPeer: CallPeer = { userId: payload.fromUserId, name: payload.fromName, avatarUrl: payload.fromAvatarUrl };
       useCallStore.getState()._setStatus("ringing-incoming", payload.callId, incomingPeer);
+      getIceServers(); // kick off early so it's ready by the time acceptCall() needs it
       incomingTimerRef.current = setTimeout(() => {
         const now = useCallStore.getState();
         if (now.status === "ringing-incoming" && now.callId === payload.callId) {
