@@ -111,8 +111,10 @@ export function useScreenShareCall() {
   }
 
   function attachIceHandling(pc: RTCPeerConnection, sessionCh: ReturnType<typeof supabase.channel>) {
+    let sawRelayCandidate = false;
     pc.onicecandidate = (e) => {
       if (e.candidate) {
+        if (e.candidate.type === "relay") sawRelayCandidate = true;
         // eslint-disable-next-line no-console
         console.debug("[call] local ICE candidate", e.candidate.type, e.candidate.protocol, e.candidate.address);
         sessionCh.send({ type: "broadcast", event: "ice-candidate", payload: { candidate: e.candidate.toJSON() } });
@@ -121,6 +123,10 @@ export function useScreenShareCall() {
     pc.onicegatheringstatechange = () => {
       // eslint-disable-next-line no-console
       console.debug("[call] iceGatheringState ->", pc.iceGatheringState);
+      if (pc.iceGatheringState === "complete" && !sawRelayCandidate) {
+        // eslint-disable-next-line no-console
+        console.warn("[call] no TURN/relay candidate was gathered — the free TURN relay may be unreachable, calls will fail on restrictive networks");
+      }
     };
     pc.oniceconnectionstatechange = () => {
       const s = pc.iceConnectionState;
@@ -141,6 +147,8 @@ export function useScreenShareCall() {
   }
 
   async function addRemoteIce(candidate: RTCIceCandidateInit) {
+    // eslint-disable-next-line no-console
+    console.debug("[call] remote ICE candidate", candidate.candidate);
     const pc = pcRef.current;
     if (!pc) return;
     if (!pc.remoteDescription) { iceQueueRef.current.push(candidate); return; }
