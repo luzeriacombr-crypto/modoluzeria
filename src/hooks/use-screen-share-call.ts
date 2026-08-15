@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { sendCallInviteNotification } from "@/lib/luzeria/screen-share.functions";
 import { useCallStore, type CallPeer } from "@/lib/luzeria/call-store";
 import { useMe } from "@/lib/luzeria/queries";
+import { startRingtone, stopRingtone } from "@/lib/luzeria/ringtone";
 
 const ICE_SERVERS: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
 const OUTGOING_RING_MS = 45_000;
@@ -367,6 +368,17 @@ export function useScreenShareCall() {
     useCallStore.getState()._setCanCall(typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia);
     useCallStore.getState()._setCanShareScreen(typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia);
   }, []);
+
+  // Rings for as long as (and only while) there's an incoming call waiting
+  // for an answer — covers every way out (accept, decline, cancel from the
+  // caller, the 60s self-timeout) in one place instead of stopping it
+  // separately in each handler.
+  useEffect(() => {
+    if (status === "ringing-incoming") {
+      startRingtone();
+      return () => stopRingtone();
+    }
+  }, [status]);
 
   // Register this hook's actions so distant components (Sidebar, pickers)
   // can trigger calls without prop drilling.
