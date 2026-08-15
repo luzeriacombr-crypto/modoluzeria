@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield, UserPlus, RefreshCw, MessageCircle, AtSign, Star, Bug } from "lucide-react";
+import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield, UserPlus, RefreshCw, MessageCircle, AtSign, Star, Bug, LogOut } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useMe, useApi, notificationPrefsQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { AvatarEditor, ColorPicker, showAvatarError, uploadAvatar } from "./AvatarEditor";
 import { roleLabel } from "./Sidebar";
 import { supabase } from "@/integrations/supabase/client";
+import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 
 export function ProfilePage() {
   const me = useMe().data;
@@ -245,6 +246,23 @@ export function ProfilePage() {
           style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
         >
           Refazer tour
+        </button>
+      </div>
+
+      <div className="mt-6 pt-6 border-t border-white/[0.06] flex items-center justify-between gap-4">
+        <div>
+          <div className="text-sm font-semibold text-white">Sair da conta</div>
+          <div className="text-[11px] text-white/50 mt-1">Encerra sua sessão neste dispositivo.</div>
+        </div>
+        <button
+          onClick={async () => {
+            await clearOneSignalUserId();
+            await supabase.auth.signOut();
+            location.href = "/auth";
+          }}
+          className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+        >
+          <LogOut size={13} /> Sair
         </button>
       </div>
     </div>

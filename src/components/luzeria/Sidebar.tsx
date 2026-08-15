@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  LogOut, Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram,
+  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -11,8 +11,6 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
 import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
-import { supabase } from "@/integrations/supabase/client";
-import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { toast } from "sonner";
 import type { Client } from "@/lib/luzeria/types";
 
@@ -137,63 +135,60 @@ export function Sidebar({
       </div>
 
       {/* Clients */}
-      <div className="px-5 pt-4 pb-2 flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Clientes</span>
-        {isAdmin && (
-          <button onClick={() => onCreateClient()} className="text-white/40 hover:text-white transition-colors" title="Novo cliente">
-            <Plus size={14} />
-          </button>
-        )}
-      </div>
-      <div className="px-3">
-        <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/5">
-          <Search size={13} className="text-white/40" />
-          <input
-            value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar..."
-            className="bg-transparent text-xs flex-1 outline-none placeholder:text-white/30 text-white"
-          />
-        </div>
-      </div>
-
       <div className="pt-2 pb-3 px-2 flex-1 overflow-y-auto">
-        {grouped.map(([cat, list]) => (
-          <CategoryGroup
-            key={cat}
-            name={cat}
-            color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
-            defaultOpen={cat !== "Ex-clientes"}
-            forceOpen={search.trim().length > 0}
-            count={list.length}
-            onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
-            addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
-          >
-            {list.map((c) => (
-              <ClientRow
-                key={c.id}
-                client={c}
-                active={pathname === `/cliente/${c.id}`}
-                onOpenCustomFields={() => onOpenCustomFields(c)}
-                canManage={isAdmin}
-                categories={allCategories}
+        <CategoryGroup
+          name="Clientes"
+          color="rgb(var(--lz-brand-rgb))"
+          defaultOpen
+          count={filtered.length}
+          onAdd={isAdmin ? () => onCreateClient() : undefined}
+          addTitle="Novo cliente"
+        >
+          <div className="px-1 pb-2">
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/5">
+              <Search size={13} className="text-white/40" />
+              <input
+                value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar..."
+                className="bg-transparent text-xs flex-1 outline-none placeholder:text-white/30 text-white"
               />
-            ))}
-            {cat === "Avulsos" && list.length === 0 && (
-              <div className="px-3 py-2 text-[11px] text-white/30">
-                {isAdmin ? "Nenhuma demanda avulsa. Use o + para criar." : "Sem demandas avulsas."}
-              </div>
-            )}
-          </CategoryGroup>
-        ))}
-        {filtered.length === 0 && (
-          <div className="text-xs text-white/30 text-center mt-6 px-3">
-            {search ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
+            </div>
           </div>
-        )}
+          {grouped.map(([cat, list]) => (
+            <CategoryGroup
+              key={cat}
+              name={cat}
+              color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
+              defaultOpen={cat !== "Ex-clientes"}
+              forceOpen={search.trim().length > 0}
+              count={list.length}
+              onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
+              addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
+            >
+              {list.map((c) => (
+                <ClientRow
+                  key={c.id}
+                  client={c}
+                  active={pathname === `/cliente/${c.id}`}
+                  onOpenCustomFields={() => onOpenCustomFields(c)}
+                  canManage={isAdmin}
+                  categories={allCategories}
+                />
+              ))}
+              {cat === "Avulsos" && list.length === 0 && (
+                <div className="px-3 py-2 text-[11px] text-white/30">
+                  {isAdmin ? "Nenhuma demanda avulsa. Use o + para criar." : "Sem demandas avulsas."}
+                </div>
+              )}
+            </CategoryGroup>
+          ))}
+          {filtered.length === 0 && (
+            <div className="text-xs text-white/30 text-center mt-6 px-3">
+              {search ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
+            </div>
+          )}
+        </CategoryGroup>
       </div>
-
-      {/* Footer user */}
-      <UserFooter onProfile={() => navigate({ to: "/perfil" })} />
     </aside>
   );
 }
@@ -426,42 +421,6 @@ function MenuItem({ children, onClick, destructive }: { children: React.ReactNod
       className={`w-full text-left px-3 py-2 text-xs transition-colors ${destructive ? "text-red-400 hover:bg-red-500/10" : "text-white/80 hover:bg-white/5"}`}>
       {children}
     </button>
-  );
-}
-
-function UserFooter({ onProfile }: { onProfile: () => void }) {
-  const me = useMe().data;
-  async function logout() {
-    await clearOneSignalUserId();
-    await supabase.auth.signOut();
-    location.href = "/auth";
-  }
-  if (!me) return null;
-  return (
-    <div className="px-3 py-3 border-t border-white/10">
-      <div className="flex items-center gap-2.5 px-2 py-1.5">
-        <button
-          onClick={onProfile}
-          className="flex items-center gap-2.5 min-w-0 flex-1 text-left rounded-md p-1 -m-1 hover:bg-white/[0.04] transition-colors"
-          title="Meu perfil"
-        >
-          <Avatar profile={me} size={30} />
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-semibold truncate text-white">{me.name}</div>
-            <span className="inline-block text-[9px] uppercase font-bold mt-0.5 px-1.5 py-0.5 rounded"
-              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
-              {roleLabel(me.role)}
-            </span>
-          </div>
-        </button>
-        <div className="flex items-center gap-0.5">
-          <button onClick={logout} title="Sair"
-            className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white transition">
-            <LogOut size={14} />
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 
