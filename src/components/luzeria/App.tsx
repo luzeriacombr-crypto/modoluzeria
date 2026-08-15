@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon, Video } from "lucide-react";
 import { Outlet, useNavigate } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
@@ -222,8 +223,9 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
           >
             <Video size={18} />
           </button>
-          {callPickerOpen && callAnchor && (
-            <CallInvitePicker anchorRect={callAnchor} onClose={() => setCallPickerOpen(false)} />
+          {callPickerOpen && callAnchor && createPortal(
+            <CallInvitePicker anchorRect={callAnchor} onClose={() => setCallPickerOpen(false)} />,
+            document.body,
           )}
         </div>
       )}
