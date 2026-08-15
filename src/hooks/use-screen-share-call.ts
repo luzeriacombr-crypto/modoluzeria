@@ -112,10 +112,20 @@ export function useScreenShareCall() {
 
   function attachIceHandling(pc: RTCPeerConnection, sessionCh: ReturnType<typeof supabase.channel>) {
     pc.onicecandidate = (e) => {
-      if (e.candidate) sessionCh.send({ type: "broadcast", event: "ice-candidate", payload: { candidate: e.candidate.toJSON() } });
+      if (e.candidate) {
+        // eslint-disable-next-line no-console
+        console.debug("[call] local ICE candidate", e.candidate.type, e.candidate.protocol, e.candidate.address);
+        sessionCh.send({ type: "broadcast", event: "ice-candidate", payload: { candidate: e.candidate.toJSON() } });
+      }
+    };
+    pc.onicegatheringstatechange = () => {
+      // eslint-disable-next-line no-console
+      console.debug("[call] iceGatheringState ->", pc.iceGatheringState);
     };
     pc.oniceconnectionstatechange = () => {
       const s = pc.iceConnectionState;
+      // eslint-disable-next-line no-console
+      console.debug("[call] iceConnectionState ->", s);
       if (s === "connected" || s === "completed") {
         if (iceFailTimerRef.current) { clearTimeout(iceFailTimerRef.current); iceFailTimerRef.current = null; }
         useCallStore.getState()._setStatus("active", useCallStore.getState().callId, useCallStore.getState().peer);
@@ -174,33 +184,60 @@ export function useScreenShareCall() {
   }
 
   async function beginCall(sessionCh: ReturnType<typeof supabase.channel>) {
-    const pc = await setupLocalMediaAndPeer(sessionCh);
-    if (!pc) return;
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    sessionCh.send({ type: "broadcast", event: "offer", payload: { sdp: offer } });
+    try {
+      const pc = await setupLocalMediaAndPeer(sessionCh);
+      if (!pc) return;
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      sessionCh.send({ type: "broadcast", event: "offer", payload: { sdp: offer } });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[call] beginCall failed", err);
+      toast.error("Não consegui iniciar a chamada.");
+      endCall(true);
+    }
   }
 
   async function handleOffer(sdp: RTCSessionDescriptionInit, sessionCh: ReturnType<typeof supabase.channel>) {
-    const pc = await setupLocalMediaAndPeer(sessionCh);
-    if (!pc) return;
-    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-    await flushIceQueue();
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    sessionCh.send({ type: "broadcast", event: "answer", payload: { sdp: answer } });
+    try {
+      const pc = await setupLocalMediaAndPeer(sessionCh);
+      if (!pc) return;
+      await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+      await flushIceQueue();
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      sessionCh.send({ type: "broadcast", event: "answer", payload: { sdp: answer } });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[call] handleOffer failed", err);
+      toast.error("Não consegui atender a chamada.");
+      endCall(true);
+    }
   }
 
   function subscribeSessionChannel(orgId: string, cId: string, onReady: () => void) {
     const topic = `call:${orgId}:session:${cId}`;
     const ch = supabase.channel(topic, { config: { presence: { key: me?.id ?? "" } } });
     ch.on("broadcast", { event: "ready" }, () => { if (!readyReceivedRef.current) { readyReceivedRef.current = true; onReady(); } });
-    ch.on("broadcast", { event: "offer" }, ({ payload }: any) => { handleOffer(payload.sdp, ch); });
+    ch.on("broadcast", { event: "offer" }, ({ payload }: any) => {
+      // eslint-disable-next-line no-console
+      console.debug("[call] offer received");
+      handleOffer(payload.sdp, ch);
+    });
     ch.on("broadcast", { event: "answer" }, async ({ payload }: any) => {
+      // eslint-disable-next-line no-console
+      console.debug("[call] answer received");
       const pc = pcRef.current;
       if (!pc) return;
-      await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-      await flushIceQueue();
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+        await flushIceQueue();
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[call] applying answer failed", err);
+        toast.error("Falha ao conectar a chamada.");
+        endCall(true);
+      }
     });
     ch.on("broadcast", { event: "ice-candidate" }, ({ payload }: any) => addRemoteIce(payload.candidate));
     ch.on("broadcast", { event: "screen-share-state" }, ({ payload }: any) => setRemoteSharingScreen(!!payload.sharing));
