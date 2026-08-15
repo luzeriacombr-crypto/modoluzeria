@@ -9,6 +9,17 @@
   font-style: italic;
 }
 
+/* Scrollable strip with no visible scrollbar — for horizontally-overflowing
+ * tab rows on mobile, where the touch-swipe should work but the scrollbar
+ * chrome itself shouldn't show. */
+@utility lz-no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Themed scrollbars */
 * {
   scrollbar-color: #2D4A3E transparent;

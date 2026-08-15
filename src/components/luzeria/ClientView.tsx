@@ -151,11 +151,13 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-6 mt-8 border-b border-white/[0.06]">
+      {/* Tabs — horizontally scrollable on its own (touch swipe), scrollbar
+       * hidden, so the rest of the page never shifts sideways on mobile
+       * when there are more tabs than fit the viewport width. */}
+      <div className="flex items-center gap-6 mt-8 border-b border-white/[0.06] overflow-x-auto lz-no-scrollbar">
         {tabs.map((t) => (
           <button key={t} onClick={() => setTab(t as any)}
-            className="relative py-3 text-sm font-semibold transition-colors"
+            className="relative py-3 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap"
             style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
             {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais atividades" : t === "docs" ? "Roteiros & Planejamento" : t === "finalizados" ? "Finalizados" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
             {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
