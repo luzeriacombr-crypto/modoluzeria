@@ -22,7 +22,7 @@ export function StatusBadge({
   const [pulse, setPulse] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const prev = useRef(status);
 
   useEffect(() => {
@@ -42,7 +42,18 @@ export function StatusBadge({
     // soon as the board/grid underneath scrolls.
     function place() {
       const rect = btnRef.current?.getBoundingClientRect();
-      if (rect) setPos({ top: rect.bottom + 4, left: rect.left });
+      if (!rect) return;
+      // Flip upward when there's more room above than below and not much
+      // room below — otherwise the popover (up to 60vh tall) runs off the
+      // bottom of the screen instead of adapting, especially on cards near
+      // the end of the page.
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      if (spaceBelow < 240 && spaceAbove > spaceBelow) {
+        setPos({ bottom: window.innerHeight - rect.top + 4, left: rect.left });
+      } else {
+        setPos({ top: rect.bottom + 4, left: rect.left });
+      }
     }
     place();
     window.addEventListener("resize", place);
@@ -93,7 +104,7 @@ export function StatusBadge({
         <div
           ref={popRef}
           className="fixed z-[200] min-w-[180px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto"
-          style={{ top: pos.top, left: pos.left }}
+          style={{ top: pos.top, bottom: pos.bottom, left: pos.left }}
         >
           {groups.map((g, gi) => (
             <div key={g.label ?? gi}>

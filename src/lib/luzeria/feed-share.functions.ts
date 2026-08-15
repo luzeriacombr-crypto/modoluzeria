@@ -365,7 +365,9 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       }
     });
 
-    const sorted = (rawItems ?? []).slice().sort((a: any, b: any) => {
+    // Travado items don't show to the client at all — no "blocked" badge,
+    // no confusing internal jargon, just absent until the team unblocks it.
+    const sorted = (rawItems ?? []).filter((it: any) => it.status !== "TRAVADO").sort((a: any, b: any) => {
       const ao = a.feed_order ?? Number.POSITIVE_INFINITY;
       const bo = b.feed_order ?? Number.POSITIVE_INFINITY;
       if (ao !== bo) return ao - bo;

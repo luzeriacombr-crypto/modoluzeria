@@ -32,8 +32,8 @@ function byScheduledAt(direction: OrderDirection) {
   };
 }
 
-type ClientTab = "posts" | "reels" | "stories" | "mais" | "docs" | "feed" | "ficha";
-const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "mais", "docs", "feed", "ficha"];
+type ClientTab = "posts" | "reels" | "stories" | "finalizados" | "mais" | "docs" | "feed" | "ficha";
+const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizados", "mais", "docs", "feed", "ficha"];
 
 export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   clientId: string; tab?: string; onTabChange: (tab: ClientTab) => void;
@@ -75,17 +75,24 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   const isAvulso = client.category === "Avulsos";
 
   // Itens "Finalizado" saem da grade de trabalho (fica limpa pro time), mas
-  // continuam existindo e visíveis no Preview de Feed — ver FeedPreview.tsx.
+  // continuam existindo e visíveis no Preview de Feed — ver FeedPreview.tsx —
+  // e reaparecem aqui, só pra consulta, na aba "Finalizados".
   const notFinalized = (items: ContentItem[]) => items.filter((i) => i.status !== "FINALIZADO");
+  const onlyFinalized = (items: ContentItem[]) => items.filter((i) => i.status === "FINALIZADO");
 
   const TAB_CONFIG = {
     posts: { label: "Posts", type: "post" as const, items: notFinalized(month?.posts ?? []) },
     reels: { label: "Reels", type: "reel" as const, items: notFinalized(month?.reels ?? []) },
     stories: { label: "Stories", type: "story" as const, items: month?.stories ?? [] },
+    finalizados: {
+      label: "Finalizados",
+      type: "post" as const,
+      items: [...onlyFinalized(month?.posts ?? []), ...onlyFinalized(month?.reels ?? [])],
+    },
   } as const;
 
   const disabledFeatures = new Set(me?.disabledFeatures ?? []);
-  const tabs = (["posts", "reels", "stories", "mais", "docs", "feed", "ficha"] as const)
+  const tabs = (["posts", "reels", "stories", "finalizados", "mais", "docs", "feed", "ficha"] as const)
     .filter((t) => t !== "stories" || !disabledFeatures.has("stories"))
     .filter((t) => t !== "docs" || isAdmin);
 
@@ -150,7 +157,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           <button key={t} onClick={() => setTab(t as any)}
             className="relative py-3 text-sm font-semibold transition-colors"
             style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
-            {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais atividades" : t === "docs" ? "Roteiros & Planejamento" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
+            {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais atividades" : t === "docs" ? "Roteiros & Planejamento" : t === "finalizados" ? "Finalizados" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
             {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
           </button>
         ))}
@@ -224,7 +231,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
                     />
                   ))}
-                  {isAdmin && (
+                  {isAdmin && tab !== "finalizados" && (
                     <button
                       onClick={() => addContentItem.mutate({
                         data: { clientId, key: selectedMonthKey, type: cfg.type },
@@ -249,7 +256,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
                     />
                   ))}
-                  {isAdmin && (
+                  {isAdmin && tab !== "finalizados" && (
                     <button
                       onClick={() => addContentItem.mutate({
                         data: { clientId, key: selectedMonthKey, type: cfg.type },
@@ -262,7 +269,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   )}
                 </div>
               )}
-              {cfg.items.length === 0 && !isAdmin && (
+              {cfg.items.length === 0 && (!isAdmin || tab === "finalizados") && (
                 <div className="px-4 py-10 text-center text-sm text-white/40">Sem itens nesta aba.</div>
               )}
             </>
