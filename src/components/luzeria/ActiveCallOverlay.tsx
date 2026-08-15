@@ -54,34 +54,39 @@ export function ActiveCallOverlay({ call }: { call: ReturnType<typeof useScreenS
   return createPortal(
     <div className="fixed bottom-4 right-4 z-[350] w-[min(340px,calc(100vw-2rem))]">
       <div className="bg-[#1C1C1C] rounded-xl border border-white/10 shadow-2xl overflow-hidden lz-modal-in">
-        {isActive ? (
-          <div className="relative aspect-video bg-black">
-            <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-            {call.remoteSharingScreen && (
-              <div className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-black/60 text-white">
-                <ScreenShare size={11} /> {call.peer.name} compartilhando
+        {/* The <video> elements stay mounted for the whole ringing→active
+         * lifetime instead of being swapped in via a ternary — if they only
+         * mounted once status hit "active", a remote track that arrived
+         * slightly earlier (common — ontrack often fires just before ICE
+         * settles) would never get (re-)attached, since the effect below is
+         * keyed on the stream object, not on mount. The ringing/connecting
+         * state is an overlay on top instead of a replacement. */}
+        <div className="relative aspect-video bg-black">
+          <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+          {!isActive && (
+            <div className="absolute inset-0 flex items-center gap-3 px-4 bg-[#1C1C1C]">
+              <Avatar name={call.peer.name} avatarUrl={call.peer.avatarUrl} size={36} />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-white truncate">{call.peer.name}</div>
+                <div className="text-[11px] text-white/50">{statusLabel(call.status)}</div>
+              </div>
+              <Loader2 size={16} className="text-white/40 animate-spin shrink-0" />
+            </div>
+          )}
+          {isActive && call.remoteSharingScreen && (
+            <div className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-black/60 text-white">
+              <ScreenShare size={11} /> {call.peer.name} compartilhando
+            </div>
+          )}
+          <div className={`absolute bottom-2 right-2 h-16 w-24 rounded-md overflow-hidden bg-[#0D0D0D] border border-white/20 ${isActive ? "" : "hidden"}`}>
+            <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${call.camOn ? "" : "hidden"}`} style={{ transform: "scaleX(-1)" }} />
+            {!call.camOn && (
+              <div className="w-full h-full flex items-center justify-center">
+                <Avatar name="Você" size={20} />
               </div>
             )}
-            <div className="absolute bottom-2 right-2 h-16 w-24 rounded-md overflow-hidden bg-[#0D0D0D] border border-white/20">
-              {call.camOn ? (
-                <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Avatar name="Você" size={20} />
-                </div>
-              )}
-            </div>
           </div>
-        ) : (
-          <div className="flex items-center gap-3 px-4 pt-4 pb-2">
-            <Avatar name={call.peer.name} avatarUrl={call.peer.avatarUrl} size={36} />
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-white truncate">{call.peer.name}</div>
-              <div className="text-[11px] text-white/50">{statusLabel(call.status)}</div>
-            </div>
-            <Loader2 size={16} className="text-white/40 animate-spin shrink-0" />
-          </div>
-        )}
+        </div>
 
         <div className="flex items-center justify-between px-3 py-2.5">
           {isActive ? (
