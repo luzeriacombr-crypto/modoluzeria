@@ -287,7 +287,11 @@ export function useScreenShareCall() {
       try {
         stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       } catch {
-        return; // user cancelled the native picker — no-op
+        // Covers both "user cancelled the native picker" and "blocked by the
+        // browser" — can't tell them apart from the exception alone, so this
+        // stays a quiet no-op rather than an alarming error toast for what's
+        // usually just a cancelled picker.
+        return;
       }
       screenStreamRef.current = stream;
       const screenTrack = stream.getVideoTracks()[0];
