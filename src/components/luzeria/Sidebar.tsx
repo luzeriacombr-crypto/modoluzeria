@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram,
+  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram, Users,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -29,6 +29,7 @@ export function Sidebar({
   const me = useMe().data;
   const { data: clients = [] } = useQuery(clientsQO());
   const [search, setSearch] = useState("");
+  const [clientsOpen, setClientsOpen] = useState(true);
   const { selectedClientId } = useUI();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -136,58 +137,70 @@ export function Sidebar({
 
       {/* Clients */}
       <div className="pt-2 pb-3 px-2 flex-1 overflow-y-auto">
-        <CategoryGroup
-          name="Clientes"
-          color="rgb(var(--lz-brand-rgb))"
-          defaultOpen
-          count={filtered.length}
-          onAdd={isAdmin ? () => onCreateClient() : undefined}
-          addTitle="Novo cliente"
-        >
-          <div className="px-1 pb-2">
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/5">
-              <Search size={13} className="text-white/40" />
-              <input
-                value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar..."
-                className="bg-transparent text-xs flex-1 outline-none placeholder:text-white/30 text-white"
-              />
-            </div>
+        <div className="w-full flex items-center gap-2 pl-3 pr-2 py-2 rounded-md text-white/70 hover:bg-white/5 transition-colors">
+          <button onClick={() => setClientsOpen((o) => !o)} className="flex items-center gap-2.5 flex-1 min-w-0 text-left text-sm">
+            <Users size={15} className="text-white/60 shrink-0" />
+            <span className="truncate">Clientes</span>
+          </button>
+          <div className="flex items-center gap-0.5">
+            {isAdmin && (
+              <button onClick={() => onCreateClient()} title="Novo cliente"
+                className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5">
+                <Plus size={13} />
+              </button>
+            )}
+            <button onClick={() => setClientsOpen((o) => !o)} className="p-1 rounded text-white/40 hover:text-white hover:bg-white/5">
+              {clientsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
           </div>
-          {grouped.map(([cat, list]) => (
-            <CategoryGroup
-              key={cat}
-              name={cat}
-              color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
-              defaultOpen={cat !== "Ex-clientes"}
-              forceOpen={search.trim().length > 0}
-              count={list.length}
-              onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
-              addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
-            >
-              {list.map((c) => (
-                <ClientRow
-                  key={c.id}
-                  client={c}
-                  active={pathname === `/cliente/${c.id}`}
-                  onOpenCustomFields={() => onOpenCustomFields(c)}
-                  canManage={isAdmin}
-                  categories={allCategories}
+        </div>
+        {clientsOpen && (
+          <div className="mt-1">
+            <div className="px-1 pb-2">
+              <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/5">
+                <Search size={13} className="text-white/40" />
+                <input
+                  value={search} onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar..."
+                  className="bg-transparent text-xs flex-1 outline-none placeholder:text-white/30 text-white"
                 />
-              ))}
-              {cat === "Avulsos" && list.length === 0 && (
-                <div className="px-3 py-2 text-[11px] text-white/30">
-                  {isAdmin ? "Nenhuma demanda avulsa. Use o + para criar." : "Sem demandas avulsas."}
-                </div>
-              )}
-            </CategoryGroup>
-          ))}
-          {filtered.length === 0 && (
-            <div className="text-xs text-white/30 text-center mt-6 px-3">
-              {search ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
+              </div>
             </div>
-          )}
-        </CategoryGroup>
+            {grouped.map(([cat, list]) => (
+              <CategoryGroup
+                key={cat}
+                name={cat}
+                color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
+                defaultOpen={cat !== "Ex-clientes"}
+                forceOpen={search.trim().length > 0}
+                count={list.length}
+                onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
+                addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
+              >
+                {list.map((c) => (
+                  <ClientRow
+                    key={c.id}
+                    client={c}
+                    active={pathname === `/cliente/${c.id}`}
+                    onOpenCustomFields={() => onOpenCustomFields(c)}
+                    canManage={isAdmin}
+                    categories={allCategories}
+                  />
+                ))}
+                {cat === "Avulsos" && list.length === 0 && (
+                  <div className="px-3 py-2 text-[11px] text-white/30">
+                    {isAdmin ? "Nenhuma demanda avulsa. Use o + para criar." : "Sem demandas avulsas."}
+                  </div>
+                )}
+              </CategoryGroup>
+            ))}
+            {filtered.length === 0 && (
+              <div className="text-xs text-white/30 text-center mt-6 px-3">
+                {search ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </aside>
   );
