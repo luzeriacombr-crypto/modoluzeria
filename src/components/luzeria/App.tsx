@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon } from "lucide-react";
+import { useRef, useState } from "react";
+import { PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon, Video } from "lucide-react";
 import { Outlet, useNavigate } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
+import { useCallStore } from "@/lib/luzeria/call-store";
 import type { Client } from "@/lib/luzeria/types";
 import { Sidebar } from "./Sidebar";
 import { DetailPanel } from "./DetailPanel";
@@ -22,6 +23,7 @@ import { TrialEndingBanner } from "./TrialEndingBanner";
 import { GlobalConfirmDialog } from "./GlobalConfirmDialog";
 import { IncomingCallModal } from "./IncomingCallModal";
 import { ActiveCallOverlay } from "./ActiveCallOverlay";
+import { CallInvitePicker } from "./CallInvitePicker";
 import { useScreenShareCall } from "@/hooks/use-screen-share-call";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -174,6 +176,12 @@ export function App() {
 function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; onToggleSidebar: () => void }) {
   const me = useMe().data;
   const navigate = useNavigate();
+  const disabled = new Set(me?.disabledFeatures ?? []);
+  const canCall = useCallStore((s) => s.canCall);
+  const callStatus = useCallStore((s) => s.status);
+  const [callPickerOpen, setCallPickerOpen] = useState(false);
+  const [callAnchor, setCallAnchor] = useState<DOMRect | null>(null);
+  const callBtnRef = useRef<HTMLButtonElement>(null);
   return (
     <header className="lz-app-header sticky top-0 z-30 px-4 md:px-6 flex items-center gap-2 h-14">
       <button
@@ -199,6 +207,25 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
         >
           <SettingsIcon size={18} />
         </button>
+      )}
+      {!disabled.has("video_call") && (
+        <div className="relative">
+          <button
+            ref={callBtnRef}
+            onClick={() => {
+              const rect = callBtnRef.current?.getBoundingClientRect();
+              if (rect) { setCallAnchor(rect); setCallPickerOpen(true); }
+            }}
+            disabled={!canCall || callStatus !== "idle"}
+            title={!canCall ? "Câmera indisponível neste navegador" : callStatus !== "idle" ? "Você já está em uma chamada" : "Vídeo chamada"}
+            className="flex items-center justify-center h-8 w-8 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <Video size={18} />
+          </button>
+          {callPickerOpen && callAnchor && (
+            <CallInvitePicker anchorRect={callAnchor} onClose={() => setCallPickerOpen(false)} />
+          )}
+        </div>
       )}
       <HelpButton />
       <NotificationsBell />

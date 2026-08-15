@@ -3,14 +3,12 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram, Users, Video,
+  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram, Users,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { useCallStore } from "@/lib/luzeria/call-store";
 import { Avatar } from "./Avatar";
-import { CallInvitePicker } from "./CallInvitePicker";
 import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
 import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { toast } from "sonner";
@@ -32,11 +30,6 @@ export function Sidebar({
   const { data: clients = [] } = useQuery(clientsQO());
   const [search, setSearch] = useState("");
   const [clientsOpen, setClientsOpen] = useState(true);
-  const [callPickerOpen, setCallPickerOpen] = useState(false);
-  const [callAnchor, setCallAnchor] = useState<DOMRect | null>(null);
-  const callBtnRef = useRef<HTMLDivElement>(null);
-  const canCall = useCallStore((s) => s.canCall);
-  const callStatus = useCallStore((s) => s.status);
   const { selectedClientId } = useUI();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -140,24 +133,6 @@ export function Sidebar({
             onClick={() => navigate({ to: "/ajuda" })}
           />
         </div>
-        {!disabled.has("video_call") && (
-          <div ref={callBtnRef} className="relative">
-            <NavButton
-              icon={<Video size={15} />}
-              label="Vídeo chamada"
-              active={false}
-              disabled={!canCall || callStatus !== "idle"}
-              title={!canCall ? "Câmera indisponível neste navegador" : callStatus !== "idle" ? "Você já está em uma chamada" : undefined}
-              onClick={() => {
-                const rect = callBtnRef.current?.getBoundingClientRect();
-                if (rect) { setCallAnchor(rect); setCallPickerOpen(true); }
-              }}
-            />
-            {callPickerOpen && callAnchor && (
-              <CallInvitePicker anchorRect={callAnchor} onClose={() => setCallPickerOpen(false)} />
-            )}
-          </div>
-        )}
       </div>
 
       {/* Clients */}
