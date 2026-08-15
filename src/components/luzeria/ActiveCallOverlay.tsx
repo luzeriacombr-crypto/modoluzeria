@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
-import { useEffect, useRef } from "react";
-import { Mic, MicOff, Video, VideoOff, ScreenShare, ScreenShareOff, PhoneOff, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Mic, MicOff, Video, VideoOff, ScreenShare, ScreenShareOff, PhoneOff, Loader2, Maximize2, Minimize2, Eye, EyeOff } from "lucide-react";
 import { Avatar } from "./Avatar";
 import type { useScreenShareCall } from "@/hooks/use-screen-share-call";
 
@@ -38,6 +38,23 @@ function CallButton({ onClick, active, danger, disabled, title, children }: {
 export function ActiveCallOverlay({ call }: { call: ReturnType<typeof useScreenShareCall> }) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hideOwnCamera, setHideOwnCamera] = useState(false);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(document.fullscreenElement === panelRef.current);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      panelRef.current?.requestFullscreen().catch(() => {});
+    }
+  }
 
   useEffect(() => {
     const el = localVideoRef.current;
@@ -62,8 +79,21 @@ export function ActiveCallOverlay({ call }: { call: ReturnType<typeof useScreenS
   const isActive = call.status === "active";
 
   return createPortal(
-    <div className="fixed bottom-4 right-4 z-[350] w-[min(340px,calc(100vw-2rem))]">
-      <div className="bg-[#1C1C1C] rounded-xl border border-white/10 shadow-2xl overflow-hidden lz-modal-in">
+    <div
+      ref={panelRef}
+      className={
+        isFullscreen
+          ? "fixed inset-0 z-[350] bg-[#1C1C1C] flex flex-col"
+          : "fixed bottom-4 right-4 z-[350] w-[min(340px,calc(100vw-2rem))]"
+      }
+    >
+      <div
+        className={
+          isFullscreen
+            ? "flex flex-col h-full w-full"
+            : "bg-[#1C1C1C] rounded-xl border border-white/10 shadow-2xl overflow-hidden lz-modal-in"
+        }
+      >
         {/* The <video> elements stay mounted for the whole ringing→active
          * lifetime instead of being swapped in via a ternary — if they only
          * mounted once status hit "active", a remote track that arrived
@@ -71,7 +101,7 @@ export function ActiveCallOverlay({ call }: { call: ReturnType<typeof useScreenS
          * settles) would never get (re-)attached, since the effect below is
          * keyed on the stream object, not on mount. The ringing/connecting
          * state is an overlay on top instead of a replacement. */}
-        <div className="relative aspect-video bg-black">
+        <div className={isFullscreen ? "relative flex-1 min-h-0 bg-black" : "relative aspect-video bg-black"}>
           <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
           {!isActive && (
             <div className="absolute inset-0 flex items-center gap-3 px-4 bg-[#1C1C1C]">
@@ -88,7 +118,11 @@ export function ActiveCallOverlay({ call }: { call: ReturnType<typeof useScreenS
               <ScreenShare size={11} /> {call.peer.name} compartilhando
             </div>
           )}
-          <div className={`absolute bottom-2 right-2 h-16 w-24 rounded-md overflow-hidden bg-[#0D0D0D] border border-white/20 ${isActive ? "" : "hidden"}`}>
+          <div
+            className={`absolute bottom-2 right-2 h-16 w-24 rounded-md overflow-hidden bg-[#0D0D0D] border border-white/20 ${
+              isActive && !hideOwnCamera ? "" : "hidden"
+            }`}
+          >
             <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${call.camOn ? "" : "hidden"}`} style={{ transform: "scaleX(-1)" }} />
             {!call.camOn && (
               <div className="w-full h-full flex items-center justify-center">
@@ -98,7 +132,7 @@ export function ActiveCallOverlay({ call }: { call: ReturnType<typeof useScreenS
           </div>
         </div>
 
-        <div className="flex items-center justify-between px-3 py-2.5">
+        <div className="flex items-center justify-between px-3 py-2.5 shrink-0">
           {isActive ? (
             <div className="flex items-center gap-1.5">
               <CallButton onClick={call.actions.toggleMic} active={call.micOn} title={call.micOn ? "Mudo" : "Ativar áudio"}>
@@ -114,6 +148,16 @@ export function ActiveCallOverlay({ call }: { call: ReturnType<typeof useScreenS
                 title={!call.canShareScreen ? "Disponível apenas no computador" : call.isSharingScreen ? "Parar de compartilhar tela" : "Compartilhar tela"}
               >
                 {call.isSharingScreen ? <ScreenShareOff size={15} /> : <ScreenShare size={15} />}
+              </CallButton>
+              <CallButton
+                onClick={() => setHideOwnCamera((v) => !v)}
+                active={hideOwnCamera}
+                title={hideOwnCamera ? "Mostrar minha câmera" : "Esconder minha câmera"}
+              >
+                {hideOwnCamera ? <EyeOff size={15} /> : <Eye size={15} />}
+              </CallButton>
+              <CallButton onClick={toggleFullscreen} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>
+                {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
               </CallButton>
             </div>
           ) : (
