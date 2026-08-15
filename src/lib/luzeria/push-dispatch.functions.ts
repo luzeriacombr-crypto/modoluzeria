@@ -23,6 +23,7 @@ const TYPE_TITLE: Record<string, string> = {
   client_stale_update: "Cliente sem atualização",
   platform_update: "Novidade no Modo Criador",
   roteiro_client_status: "Cliente respondeu um roteiro",
+  call_invite: "Chamada de tela",
 };
 
 // Maps a notification type to the notification_preferences column that

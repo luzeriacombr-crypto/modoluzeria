@@ -3,12 +3,14 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram, Users,
+  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram, Users, ScreenShare,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
+import { useCallStore } from "@/lib/luzeria/call-store";
 import { Avatar } from "./Avatar";
+import { CallInvitePicker } from "./CallInvitePicker";
 import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
 import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { toast } from "sonner";
@@ -30,6 +32,11 @@ export function Sidebar({
   const { data: clients = [] } = useQuery(clientsQO());
   const [search, setSearch] = useState("");
   const [clientsOpen, setClientsOpen] = useState(true);
+  const [callPickerOpen, setCallPickerOpen] = useState(false);
+  const [callAnchor, setCallAnchor] = useState<DOMRect | null>(null);
+  const callBtnRef = useRef<HTMLDivElement>(null);
+  const canShare = useCallStore((s) => s.canShare);
+  const callStatus = useCallStore((s) => s.status);
   const { selectedClientId } = useUI();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -133,6 +140,24 @@ export function Sidebar({
             onClick={() => navigate({ to: "/ajuda" })}
           />
         </div>
+        {!disabled.has("screen_share") && (
+          <div ref={callBtnRef} className="relative">
+            <NavButton
+              icon={<ScreenShare size={15} />}
+              label="Compartilhar tela"
+              active={false}
+              disabled={!canShare || callStatus !== "idle"}
+              title={!canShare ? "Disponível apenas no computador" : callStatus !== "idle" ? "Você já está em uma chamada" : undefined}
+              onClick={() => {
+                const rect = callBtnRef.current?.getBoundingClientRect();
+                if (rect) { setCallAnchor(rect); setCallPickerOpen(true); }
+              }}
+            />
+            {callPickerOpen && callAnchor && (
+              <CallInvitePicker anchorRect={callAnchor} onClose={() => setCallPickerOpen(false)} />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Clients */}
@@ -206,10 +231,13 @@ export function Sidebar({
   );
 }
 
-function NavButton({ icon, label, active, onClick, badge }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void; badge?: number }) {
+function NavButton({ icon, label, active, onClick, badge, disabled, title }: {
+  icon: React.ReactNode; label: string; active: boolean; onClick: () => void; badge?: number;
+  disabled?: boolean; title?: string;
+}) {
   return (
-    <button onClick={onClick}
-      className="w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative"
+    <button onClick={disabled ? undefined : onClick} disabled={disabled} title={title}
+      className="w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative disabled:opacity-40 disabled:cursor-not-allowed"
       style={{
         backgroundColor: active ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent",
         color: active ? "#FFFFFF" : "rgba(255,255,255,0.7)",

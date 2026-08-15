@@ -20,6 +20,9 @@ import { AppTour } from "./AppTour";
 import { LuzeriaLoader } from "./LuzeriaLoader";
 import { TrialEndingBanner } from "./TrialEndingBanner";
 import { GlobalConfirmDialog } from "./GlobalConfirmDialog";
+import { IncomingCallModal } from "./IncomingCallModal";
+import { ActiveCallOverlay } from "./ActiveCallOverlay";
+import { useScreenShareCall } from "@/hooks/use-screen-share-call";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { hexToRgbChannels } from "@/lib/luzeria/utils";
@@ -30,6 +33,7 @@ export function App() {
   const { sidebarHidden, toggleSidebar } = useUI();
   const [creating, setCreating] = useState<{ category?: string } | null>(null);
   const [customFor, setCustomFor] = useState<Client | null>(null);
+  const call = useScreenShareCall();
 
   // Supabase Realtime — invalidate month cache when team edits content items
   useEffect(() => {
@@ -159,6 +163,8 @@ export function App() {
       <MobileNav />
       <AppTour />
       <GlobalConfirmDialog />
+      <IncomingCallModal call={call} />
+      <ActiveCallOverlay call={call} />
       <NewClientModal open={!!creating} category={creating?.category} onClose={() => setCreating(null)} />
       <CustomFieldsModal client={customFor} onClose={() => setCustomFor(null)} />
     </div>
