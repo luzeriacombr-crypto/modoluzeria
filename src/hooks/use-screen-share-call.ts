@@ -11,8 +11,6 @@ const OUTGOING_RING_MS = 45_000;
 const INCOMING_RING_MS = 60_000;
 const ICE_FAIL_GRACE_MS = 8_000;
 
-type Role = "sharer" | "viewer" | null;
-
 /** Sends one broadcast event to a channel, tearing the channel down right
  * after — used for the low-frequency inbox pings (invite/cancel/decline)
  * where we don't want a long-lived subscription just to send one message. */
@@ -26,21 +24,28 @@ function sendOnce(topic: string, event: string, payload: unknown) {
   });
 }
 
-/** Owns the whole WebRTC + signaling lifecycle for the 1:1 screen-share call
- * feature. Mounted exactly once, in App.tsx, so a call survives navigation
- * across the app. Non-serializable objects (RTCPeerConnection, MediaStream,
+/** Owns the whole WebRTC + signaling lifecycle for the 1:1 video call
+ * feature (camera+mic both ways, plus an in-call screen-share toggle).
+ * Mounted exactly once, in App.tsx, so a call survives navigation across
+ * the app. Non-serializable objects (RTCPeerConnection, MediaStream,
  * Realtime channels, timers) live in refs here and are never put in the
- * Zustand call-store — only status/callId/peer/canShare are, so distant
- * components (Sidebar's call button, CallInvitePicker) can read/trigger
- * without prop drilling, mirroring confirm-store.ts's bridge pattern. */
+ * Zustand call-store — only status/callId/peer/canCall/canShareScreen are,
+ * so distant components (Sidebar's call button, CallInvitePicker) can
+ * read/trigger without prop drilling, mirroring confirm-store.ts's bridge
+ * pattern. */
 export function useScreenShareCall() {
   const me = useMe().data;
   const status = useCallStore((s) => s.status);
   const callId = useCallStore((s) => s.callId);
   const peer = useCallStore((s) => s.peer);
-  const canShare = useCallStore((s) => s.canShare);
+  const canCall = useCallStore((s) => s.canCall);
+  const canShareScreen = useCallStore((s) => s.canShareScreen);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [role, setRole] = useState<Role>(null);
+  const [isSharingScreen, setIsSharingScreen] = useState(false);
+  const [remoteSharingScreen, setRemoteSharingScreen] = useState(false);
+  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(true);
 
   const sendInviteNotification = useServerFn(sendCallInviteNotification);
 
@@ -48,6 +53,8 @@ export function useScreenShareCall() {
   const sessionChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const videoSenderRef = useRef<RTCRtpSender | null>(null);
   const iceQueueRef = useRef<RTCIceCandidateInit[]>([]);
   const readyReceivedRef = useRef(false);
   const outgoingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -67,16 +74,23 @@ export function useScreenShareCall() {
     }
     pcRef.current?.close();
     pcRef.current = null;
+    videoSenderRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
+    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+    screenStreamRef.current = null;
     if (sessionChannelRef.current) {
       supabase.removeChannel(sessionChannelRef.current);
       sessionChannelRef.current = null;
     }
     iceQueueRef.current = [];
     readyReceivedRef.current = false;
+    setLocalStream(null);
     setRemoteStream(null);
-    setRole(null);
+    setIsSharingScreen(false);
+    setRemoteSharingScreen(false);
+    setMicOn(true);
+    setCamOn(true);
     useCallStore.getState()._setStatus("idle", null, null);
   }
 
@@ -116,36 +130,44 @@ export function useScreenShareCall() {
     }
   }
 
-  async function beginSharing(sessionCh: ReturnType<typeof supabase.channel>) {
+  /** Grabs camera+mic and wires up a fresh RTCPeerConnection with our own
+   * tracks already attached — shared by both the caller (before creating
+   * the offer) and the callee (before creating the answer), which is what
+   * makes the call two-way media without a second offer/answer round. */
+  async function setupLocalMediaAndPeer(sessionCh: ReturnType<typeof supabase.channel>): Promise<RTCPeerConnection | null> {
     let stream: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     } catch {
-      toast.message("Compartilhamento cancelado.");
+      toast.error("Não consegui acessar câmera/microfone. Verifique as permissões do navegador.");
       endCall(true);
-      return;
+      return null;
     }
     localStreamRef.current = stream;
-    setRole("sharer");
-    stream.getVideoTracks()[0]?.addEventListener("ended", () => endCall(true));
+    setLocalStream(stream);
 
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     pcRef.current = pc;
-    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+    pc.ontrack = (e) => setRemoteStream(e.streams[0] ?? null);
+    stream.getTracks().forEach((t) => {
+      const sender = pc.addTrack(t, stream);
+      if (t.kind === "video") videoSenderRef.current = sender;
+    });
     attachIceHandling(pc, sessionCh);
+    return pc;
+  }
 
+  async function beginCall(sessionCh: ReturnType<typeof supabase.channel>) {
+    const pc = await setupLocalMediaAndPeer(sessionCh);
+    if (!pc) return;
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     sessionCh.send({ type: "broadcast", event: "offer", payload: { sdp: offer } });
   }
 
   async function handleOffer(sdp: RTCSessionDescriptionInit, sessionCh: ReturnType<typeof supabase.channel>) {
-    setRole("viewer");
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-    pcRef.current = pc;
-    pc.ontrack = (e) => setRemoteStream(e.streams[0] ?? null);
-    attachIceHandling(pc, sessionCh);
-
+    const pc = await setupLocalMediaAndPeer(sessionCh);
+    if (!pc) return;
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
     await flushIceQueue();
     const answer = await pc.createAnswer();
@@ -165,6 +187,7 @@ export function useScreenShareCall() {
       await flushIceQueue();
     });
     ch.on("broadcast", { event: "ice-candidate" }, ({ payload }: any) => addRemoteIce(payload.candidate));
+    ch.on("broadcast", { event: "screen-share-state" }, ({ payload }: any) => setRemoteSharingScreen(!!payload.sharing));
     ch.on("broadcast", { event: "hangup" }, () => { toast.message("A chamada foi encerrada."); endCall(false); });
     ch.on("presence", { event: "leave" }, () => {
       if (useCallStore.getState().status === "active" || useCallStore.getState().status === "connecting") {
@@ -180,7 +203,7 @@ export function useScreenShareCall() {
   }
 
   function startCall(userId: string, name: string, avatarUrl: string | null) {
-    if (!me?.orgId || useCallStore.getState().status !== "idle") return;
+    if (!me?.orgId || !useCallStore.getState().canCall || useCallStore.getState().status !== "idle") return;
     const cId = crypto.randomUUID();
     const targetPeer: CallPeer = { userId, name, avatarUrl };
     useCallStore.getState()._setStatus("ringing-outgoing", cId, targetPeer);
@@ -188,7 +211,7 @@ export function useScreenShareCall() {
     const ch = subscribeSessionChannel(me.orgId, cId, () => {
       if (outgoingTimerRef.current) { clearTimeout(outgoingTimerRef.current); outgoingTimerRef.current = null; }
       useCallStore.getState()._setStatus("connecting", cId, targetPeer);
-      beginSharing(ch);
+      beginCall(ch);
     });
 
     sendOnce(`call-inbox:${me.orgId}:${userId}`, "invite", {
@@ -208,7 +231,7 @@ export function useScreenShareCall() {
 
   function acceptCall() {
     const s = useCallStore.getState();
-    if (s.status !== "ringing-incoming" || !s.callId || !s.peer || !me?.orgId) return;
+    if (s.status !== "ringing-incoming" || !s.callId || !s.peer || !me?.orgId || !s.canCall) return;
     if (incomingTimerRef.current) { clearTimeout(incomingTimerRef.current); incomingTimerRef.current = null; }
     useCallStore.getState()._setStatus("connecting", s.callId, s.peer);
     const ch = subscribeSessionChannel(me.orgId, s.callId, () => { /* callee doesn't wait for 'ready' — it sends it */ });
@@ -234,6 +257,61 @@ export function useScreenShareCall() {
 
   function hangup() {
     endCall(true);
+  }
+
+  function toggleMic() {
+    const t = localStreamRef.current?.getAudioTracks()[0];
+    if (!t) return;
+    t.enabled = !t.enabled;
+    setMicOn(t.enabled);
+  }
+
+  function toggleCamera() {
+    const t = localStreamRef.current?.getVideoTracks()[0];
+    if (!t) return;
+    t.enabled = !t.enabled;
+    setCamOn(t.enabled);
+  }
+
+  /** Swaps the outgoing video track between camera and screen via
+   * RTCRtpSender.replaceTrack — no renegotiation needed, since the sender
+   * (and therefore the SDP) never changes, only the media source feeding it.
+   * v1 simplification: screen replaces camera rather than sending both at
+   * once (that would need a second track + a real renegotiation round). */
+  async function toggleScreenShare() {
+    const sender = videoSenderRef.current;
+    if (!sender) return;
+    if (!isSharingScreen) {
+      if (!useCallStore.getState().canShareScreen) return;
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      } catch {
+        return; // user cancelled the native picker — no-op
+      }
+      screenStreamRef.current = stream;
+      const screenTrack = stream.getVideoTracks()[0];
+      await sender.replaceTrack(screenTrack);
+      screenTrack.addEventListener("ended", stopScreenShare);
+      setIsSharingScreen(true);
+      sessionChannelRef.current?.send({ type: "broadcast", event: "screen-share-state", payload: { sharing: true } });
+    } else {
+      stopScreenShare();
+    }
+  }
+
+  /** Idempotent — also runs as the native "stop sharing" button's 'ended'
+   * listener, which fires even when WE call it ourselves (track.stop()
+   * dispatches 'ended' too), so a stray second call must be a safe no-op. */
+  function stopScreenShare() {
+    if (!screenStreamRef.current) return;
+    const sender = videoSenderRef.current;
+    const camTrack = localStreamRef.current?.getVideoTracks()[0] ?? null;
+    sender?.replaceTrack(camTrack).catch(() => {});
+    screenStreamRef.current.getTracks().forEach((t) => t.stop());
+    screenStreamRef.current = null;
+    setIsSharingScreen(false);
+    sessionChannelRef.current?.send({ type: "broadcast", event: "screen-share-state", payload: { sharing: false } });
   }
 
   // Personal inbox — subscribed once per session, carries only the low-frequency
@@ -282,8 +360,8 @@ export function useScreenShareCall() {
 
   // Feature-detect once — capability doesn't change mid-session.
   useEffect(() => {
-    const can = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
-    useCallStore.getState()._setCanShare(can);
+    useCallStore.getState()._setCanCall(typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia);
+    useCallStore.getState()._setCanShareScreen(typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia);
   }, []);
 
   // Register this hook's actions so distant components (Sidebar, pickers)
@@ -294,5 +372,9 @@ export function useScreenShareCall() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me?.id, me?.orgId, me?.name, me?.avatarUrl]);
 
-  return { status, callId, peer, canShare, remoteStream, role, actions: { acceptCall, declineCall, hangup, cancelOutgoing } };
+  return {
+    status, callId, peer, canCall, canShareScreen,
+    localStream, remoteStream, isSharingScreen, remoteSharingScreen, micOn, camOn,
+    actions: { acceptCall, declineCall, hangup, cancelOutgoing, toggleMic, toggleCamera, toggleScreenShare },
+  };
 }

@@ -20,7 +20,7 @@ export function IncomingCallModal({ call }: { call: ReturnType<typeof useScreenS
           <Avatar name={peer.name} avatarUrl={peer.avatarUrl} size={56} />
         </div>
         <p className="text-white font-bold text-base">{peer.name}</p>
-        <p className="text-white/50 text-xs mt-1">quer compartilhar a tela com você</p>
+        <p className="text-white/50 text-xs mt-1">quer iniciar uma vídeo chamada com você</p>
         <div className="flex items-center justify-center gap-3 mt-6">
           <button
             onClick={actions.declineCall}

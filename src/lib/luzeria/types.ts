@@ -284,7 +284,7 @@ export function hasSetorPermission(me: Pick<Profile, "role" | "setorPermissions"
 }
 
 export const OPTIONAL_FEATURE_KEYS = [
-  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "screen_share",
+  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call",
 ] as const;
 export type OptionalFeatureKey = (typeof OPTIONAL_FEATURE_KEYS)[number];
 export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string; description: string }> = {
@@ -320,9 +320,9 @@ export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string;
     label: "Versículo do dia",
     description: "Frase e referência bíblica no topo de Minhas Demandas.",
   },
-  screen_share: {
-    label: "Compartilhar tela",
-    description: "Botão na barra lateral pra chamar um membro pra ver sua tela ao vivo (só no computador).",
+  video_call: {
+    label: "Vídeo chamada",
+    description: "Botão na barra lateral pra fazer uma vídeo chamada com câmera entre membros, com compartilhamento de tela opcional (esse último só no computador).",
   },
 };
 

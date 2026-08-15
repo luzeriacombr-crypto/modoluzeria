@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram, Users, ScreenShare,
+  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram, Users, Video,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -35,7 +35,7 @@ export function Sidebar({
   const [callPickerOpen, setCallPickerOpen] = useState(false);
   const [callAnchor, setCallAnchor] = useState<DOMRect | null>(null);
   const callBtnRef = useRef<HTMLDivElement>(null);
-  const canShare = useCallStore((s) => s.canShare);
+  const canCall = useCallStore((s) => s.canCall);
   const callStatus = useCallStore((s) => s.status);
   const { selectedClientId } = useUI();
   const navigate = useNavigate();
@@ -140,14 +140,14 @@ export function Sidebar({
             onClick={() => navigate({ to: "/ajuda" })}
           />
         </div>
-        {!disabled.has("screen_share") && (
+        {!disabled.has("video_call") && (
           <div ref={callBtnRef} className="relative">
             <NavButton
-              icon={<ScreenShare size={15} />}
-              label="Compartilhar tela"
+              icon={<Video size={15} />}
+              label="Vídeo chamada"
               active={false}
-              disabled={!canShare || callStatus !== "idle"}
-              title={!canShare ? "Disponível apenas no computador" : callStatus !== "idle" ? "Você já está em uma chamada" : undefined}
+              disabled={!canCall || callStatus !== "idle"}
+              title={!canCall ? "Câmera indisponível neste navegador" : callStatus !== "idle" ? "Você já está em uma chamada" : undefined}
               onClick={() => {
                 const rect = callBtnRef.current?.getBoundingClientRect();
                 if (rect) { setCallAnchor(rect); setCallPickerOpen(true); }

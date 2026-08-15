@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
 
-/** Fallback notification for a screen-share call invite — the real, instant
+/** Fallback notification for a video call invite — the real, instant
  * invite goes over a Realtime broadcast (see use-screen-share-call.ts); this
  * just makes sure the callee has a record/awareness even if they weren't
  * looking at the app when it was sent. Not the answer path — by the time a
@@ -30,7 +30,7 @@ export const sendCallInviteNotification = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("notifications").insert({
       user_id: data.toUserId,
       type: "call_invite",
-      message: `${callerName} está te chamando para compartilhar a tela`,
+      message: `${callerName} está te chamando para uma vídeo chamada`,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
