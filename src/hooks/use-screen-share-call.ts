@@ -7,10 +7,23 @@ import { useCallStore, type CallPeer } from "@/lib/luzeria/call-store";
 import { useMe } from "@/lib/luzeria/queries";
 import { startRingtone, stopRingtone } from "@/lib/luzeria/ringtone";
 
-const ICE_SERVERS: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
+// STUN alone only works when both sides' networks allow direct P2P (UDP hole
+// punching) — plenty of home/corporate networks don't. Open Relay Project's
+// free public TURN servers (openrelay.metered.ca) are added as a fallback
+// relay path for when a direct connection can't be established; publicly
+// documented static credentials, no signup — fine for this volume of use,
+// worth swapping for a dedicated/paid TURN provider if usage grows.
+const ICE_SERVERS: RTCIceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:openrelay.metered.ca:80" },
+  { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+  { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+  { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" },
+];
 const OUTGOING_RING_MS = 45_000;
 const INCOMING_RING_MS = 60_000;
 const ICE_FAIL_GRACE_MS = 8_000;
+const CONNECTING_TIMEOUT_MS = 20_000;
 
 /** Sends one broadcast event to a channel, tearing the channel down right
  * after — used for the low-frequency inbox pings (invite/cancel/decline)
@@ -61,11 +74,13 @@ export function useScreenShareCall() {
   const outgoingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const incomingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const iceFailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function clearTimers() {
     if (outgoingTimerRef.current) { clearTimeout(outgoingTimerRef.current); outgoingTimerRef.current = null; }
     if (incomingTimerRef.current) { clearTimeout(incomingTimerRef.current); incomingTimerRef.current = null; }
     if (iceFailTimerRef.current) { clearTimeout(iceFailTimerRef.current); iceFailTimerRef.current = null; }
+    if (connectingTimerRef.current) { clearTimeout(connectingTimerRef.current); connectingTimerRef.current = null; }
   }
 
   function endCall(notifyPeer: boolean) {
@@ -368,6 +383,24 @@ export function useScreenShareCall() {
     useCallStore.getState()._setCanCall(typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia);
     useCallStore.getState()._setCanShareScreen(typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia);
   }, []);
+
+  // If ICE never reaches "connected" at all (as opposed to reaching it and
+  // later failing, which oniceconnectionstatechange already handles), it can
+  // sit in "connecting" indefinitely with no feedback — typically because
+  // neither the direct P2P path nor the TURN relay could be established.
+  // Give up after a while instead of hanging forever.
+  useEffect(() => {
+    if (status === "connecting") {
+      connectingTimerRef.current = setTimeout(() => {
+        if (useCallStore.getState().status === "connecting") {
+          toast.error("Não foi possível conectar a chamada. Verifique sua internet e tente de novo.");
+          endCall(true);
+        }
+      }, CONNECTING_TIMEOUT_MS);
+      return () => { if (connectingTimerRef.current) { clearTimeout(connectingTimerRef.current); connectingTimerRef.current = null; } };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   // Rings for as long as (and only while) there's an incoming call waiting
   // for an answer — covers every way out (accept, decline, cancel from the
