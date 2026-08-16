@@ -437,14 +437,21 @@ function TodayCalendarWidget() {
         <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Hoje na agenda</h2>
       </div>
       <div className="divide-y divide-white/[0.05]">
-        {data.events.map((ev: any) => (
-          <div key={ev.id} className="flex items-center gap-3 px-4 py-2.5">
-            <span className="text-[11px] text-white/40 tabular-nums shrink-0">
-              {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-            </span>
-            <span className="text-sm text-white/90 truncate flex-1">{ev.title}</span>
-          </div>
-        ))}
+        {data.events.map((ev: any) => {
+          const Row = ev.link ? "a" : "div";
+          return (
+            <Row
+              key={ev.id}
+              {...(ev.link ? { href: ev.link, target: "_blank", rel: "noopener noreferrer" } : {})}
+              className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.03] transition-colors"
+            >
+              <span className="text-[11px] text-white/40 tabular-nums shrink-0">
+                {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+              <span className="text-sm text-white/90 truncate flex-1">{ev.title}</span>
+            </Row>
+          );
+        })}
       </div>
     </div>
   );

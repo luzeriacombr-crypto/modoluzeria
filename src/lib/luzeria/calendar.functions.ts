@@ -216,6 +216,7 @@ export const getTodayCalendarEvents = createServerFn({ method: "GET" })
         start: e.start?.dateTime ?? e.start?.date ?? null,
         allDay: !e.start?.dateTime,
         location: e.location ?? null,
+        link: e.htmlLink ?? null,
       }));
     return { connected: true, events };
   });
