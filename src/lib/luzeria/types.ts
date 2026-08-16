@@ -332,7 +332,7 @@ export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string;
   },
   client_overview: {
     label: "Visão Geral",
-    description: "Item de menu com uma tabela de todos os clientes ativos mostrando etapa atual da jornada, última gravação, próxima gravação prevista e última análise do mês anterior.",
+    description: "Item de menu com uma tabela de todos os clientes ativos mostrando etapa atual da jornada, última gravação, próxima gravação prevista e última análise do mês anterior, além do painel de margem por cliente.",
   },
 };
 

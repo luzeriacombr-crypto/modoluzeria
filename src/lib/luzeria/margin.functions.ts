@@ -9,15 +9,15 @@ import { requireActiveProfile } from "./require-active";
  * pra gravação) multiplicada por uma média de horas por tipo de conteúdo e
  * pelo custo-hora da agência, ambos configuráveis. */
 
-async function assertMaster(supabase: any, userId: string) {
-  const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
-  if (!isMaster) throw new Error("Apenas o Adm Master pode acessar o painel de margem.");
+async function assertAdmin(supabase: any, userId: string) {
+  const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: userId });
+  if (!isAdmin) throw new Error("Apenas master ou setor podem acessar o painel de margem.");
 }
 
 export const getOrgCostSettings = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
-    await assertMaster(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const { data, error } = await context.supabase
       .from("orgs").select("hourly_cost, avg_hours_by_type").eq("id", context.orgId).single();
     if (error) throw new Error(error.message);
@@ -35,7 +35,7 @@ export const setOrgCostSettings = createServerFn({ method: "POST" })
       avgHoursByType: z.record(z.string(), z.number().min(0)),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertMaster(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const { error } = await context.supabase
       .from("orgs")
       .update({ hourly_cost: data.hourlyCost, avg_hours_by_type: data.avgHoursByType })
@@ -49,7 +49,7 @@ export const getClientMargins = createServerFn({ method: "GET" })
   .inputValidator((d: { days: 30 | 90 | 180 }) =>
     z.object({ days: z.union([z.literal(30), z.literal(90), z.literal(180)]) }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertMaster(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
 
     const { data: org, error: orgErr } = await context.supabase
       .from("orgs").select("hourly_cost, avg_hours_by_type").eq("id", context.orgId).single();
