@@ -1,9 +1,38 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, LayoutGrid } from "lucide-react";
+import { Loader2, LayoutGrid, Info } from "lucide-react";
 import { clientOperationsOverviewQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { ClientOperationsRow } from "@/lib/luzeria/journey-stages.functions";
+
+/** "i" que mostra a explicação no hover (desktop) ou no toque/clique (mobile) —
+ * pensado pra cabeçalhos de coluna cujo significado não é óbvio de bater o olho. */
+function InfoTip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span
+      className="relative inline-flex"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        className="inline-flex items-center justify-center text-white/30 hover:text-[rgb(var(--lz-brand-rgb))] transition-colors"
+      >
+        <Info size={11} />
+      </button>
+      {open && (
+        <div
+          className="absolute z-50 top-full mt-1.5 right-0 w-56 rounded-md border border-white/10 bg-[#1C1C1C] px-3 py-2 text-[11px] font-normal leading-relaxed text-white/70 shadow-xl normal-case tracking-normal"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {text}
+        </div>
+      )}
+    </span>
+  );
+}
 
 function daysAgoLabel(iso: string | null): string {
   if (!iso) return "nunca";
@@ -45,6 +74,15 @@ function ClientOperationsOverviewContent() {
         <span className="text-white/40 text-sm">— {rows.length} clientes</span>
       </div>
 
+      <div className="text-xs text-white/60 leading-relaxed bg-white/[0.03] border border-white/10 rounded-lg px-4 py-3">
+        Essa tela junta, num só lugar, o ciclo operacional de cada cliente ativo: quando foi a última gravação, quando é a
+        próxima esperada, e quando foi feita a análise do mês anterior. Os dados vêm da <span className="text-white/80 font-medium">Jornada do cliente</span> —
+        pra funcionar direito, marque em <span className="text-white/80 font-medium">Configurações → Jornada do cliente</span> quais
+        etapas representam "Gravação" e "Análise do mês" (passe o mouse ou toque no <Info size={10} className="inline -mt-0.5" /> de
+        cada coluna abaixo pra entender o que ela mostra). Se não for útil pra sua agência, dá pra desligar em <span className="text-white/80 font-medium">Configurações → Geral</span>,
+        na seção de recursos opcionais.
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-white/40" size={32} /></div>
       ) : rows.length === 0 ? (
@@ -56,12 +94,42 @@ function ClientOperationsOverviewContent() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/[0.07]">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">Cliente</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">Etapa atual</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">Última gravação</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">Próxima prevista</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">Cadência</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">Última análise</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1">
+                    Cliente
+                    <InfoTip text="Nome do cliente. Clique pra abrir a ficha completa dele, com todos os detalhes." />
+                  </span>
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1">
+                    Etapa atual
+                    <InfoTip text="Em qual etapa da Jornada do Cliente esse cliente está agora — a mesma configurada em Configurações → Jornada do cliente." />
+                  </span>
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    <InfoTip text="Há quantos dias o cliente esteve, pela última vez, na etapa marcada como 'Gravação' na Jornada. Mostra 'nunca' se ele ainda não passou por essa etapa desde que essa tela foi criada." />
+                    Última gravação
+                  </span>
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    <InfoTip text="Data calculada somando a Cadência (coluna ao lado) à última gravação. Fica vermelho quando já passou do prazo. Só aparece se a cadência estiver definida." />
+                    Próxima prevista
+                  </span>
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    <InfoTip text="De quantos em quantos dias esse cliente costuma gravar (ex.: 30 ou 60 dias). Clique no valor pra editar — sem isso definido, não dá pra calcular a próxima gravação prevista." />
+                    Cadência
+                  </span>
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    <InfoTip text="Há quantos dias o cliente esteve, pela última vez, na etapa marcada como 'Análise do mês' na Jornada." />
+                    Última análise
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>

@@ -107,7 +107,7 @@ export function Sidebar({
             />
           </div>
         )}
-        {isAdmin && (
+        {isAdmin && !disabled.has("client_overview") && (
           <NavButton
             icon={<LayoutGrid size={15} />}
             label="Visão Geral"
