@@ -51,7 +51,10 @@ import {
 } from "./feed-share.functions";
 import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from "./platform-updates.functions";
 import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications } from "./instagram.functions";
-import { getCalendarItems } from "./calendar.functions";
+import {
+  getCalendarItems, getGoogleCalendarAuthUrl, disconnectGoogleCalendar,
+  getMyCalendarConnection, getTodayCalendarEvents,
+} from "./calendar.functions";
 import {
   getSalesPageBlocks, listSalesPageBlocksAdmin, createSalesPageBlock, updateSalesPageBlock,
   deleteSalesPageBlock, reorderSalesPageBlocks, publishSalesPageBlocks, discardSalesPageDraft,
@@ -374,6 +377,20 @@ export const notificationPrefsQO = () =>
   queryOptions({
     queryKey: ["notification-prefs"],
     queryFn: () => getMyNotificationPreferences(),
+    staleTime: 60_000,
+  });
+
+export const myCalendarConnectionQO = () =>
+  queryOptions({
+    queryKey: ["my-calendar-connection"],
+    queryFn: () => getMyCalendarConnection(),
+    staleTime: 60_000,
+  });
+
+export const todayCalendarEventsQO = (userId?: string) =>
+  queryOptions({
+    queryKey: ["today-calendar-events", userId ?? "self"],
+    queryFn: () => getTodayCalendarEvents({ data: { userId } }),
     staleTime: 60_000,
   });
 
@@ -837,6 +854,14 @@ export function useApi() {
       },
     }),
     /* ===== GOOGLE AGENDA ===== */
+    getGoogleCalendarAuthUrl: useMutation({ mutationFn: useServerFn(getGoogleCalendarAuthUrl) }),
+    disconnectGoogleCalendar: useMutation({
+      mutationFn: useServerFn(disconnectGoogleCalendar),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["my-calendar-connection"] });
+        qc.invalidateQueries({ queryKey: ["today-calendar-events"] });
+      },
+    }),
     /* ===== FEED SHARE ===== */
     getOrCreateShareToken: useMutation({ mutationFn: useServerFn(getOrCreateShareToken) }),
     rotateShareToken: useMutation({ mutationFn: useServerFn(rotateShareToken) }),

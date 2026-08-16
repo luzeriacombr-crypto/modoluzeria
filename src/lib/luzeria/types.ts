@@ -284,7 +284,7 @@ export function hasSetorPermission(me: Pick<Profile, "role" | "setorPermissions"
 }
 
 export const OPTIONAL_FEATURE_KEYS = [
-  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call",
+  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call", "google_calendar",
 ] as const;
 export type OptionalFeatureKey = (typeof OPTIONAL_FEATURE_KEYS)[number];
 export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string; description: string }> = {
@@ -323,6 +323,10 @@ export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string;
   video_call: {
     label: "Vídeo chamada",
     description: "Botão na barra lateral pra fazer uma vídeo chamada com câmera entre membros, com compartilhamento de tela opcional (esse último só no computador).",
+  },
+  google_calendar: {
+    label: "Google Agenda",
+    description: "Cada membro pode conectar sua própria Google Agenda no Perfil e ver os compromissos de hoje em Minhas Demandas.",
   },
 };
 

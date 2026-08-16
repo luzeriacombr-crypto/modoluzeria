@@ -33,6 +33,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as ApiCronSendPushNotificationsRouteImport } from './routes/api.cron.send-push-notifications'
 import { Route as ApiCronPublishInstagramRouteImport } from './routes/api.cron.publish-instagram'
 import { Route as AuthenticatedOauthInstagramCallbackRouteImport } from './routes/_authenticated/oauth.instagram-callback'
+import { Route as AuthenticatedOauthGoogleCalendarCallbackRouteImport } from './routes/_authenticated/oauth.google-calendar-callback'
 import { Route as AuthenticatedOauthDriveCallbackRouteImport } from './routes/_authenticated/oauth.drive-callback'
 import { Route as AuthenticatedClienteClientIdRouteImport } from './routes/_authenticated/cliente.$clientId'
 import { Route as AuthenticatedAfiliadoDashboardRouteImport } from './routes/_authenticated/afiliado/dashboard'
@@ -160,6 +161,12 @@ const AuthenticatedOauthInstagramCallbackRoute =
     path: '/oauth/instagram-callback',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedOauthGoogleCalendarCallbackRoute =
+  AuthenticatedOauthGoogleCalendarCallbackRouteImport.update({
+    id: '/oauth/google-calendar-callback',
+    path: '/oauth/google-calendar-callback',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedOauthDriveCallbackRoute =
   AuthenticatedOauthDriveCallbackRouteImport.update({
     id: '/oauth/drive-callback',
@@ -203,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/afiliado/dashboard': typeof AuthenticatedAfiliadoDashboardRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
+  '/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
@@ -231,6 +239,7 @@ export interface FileRoutesByTo {
   '/afiliado/dashboard': typeof AuthenticatedAfiliadoDashboardRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
+  '/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
@@ -261,6 +270,7 @@ export interface FileRoutesById {
   '/_authenticated/afiliado/dashboard': typeof AuthenticatedAfiliadoDashboardRoute
   '/_authenticated/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/_authenticated/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
+  '/_authenticated/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/_authenticated/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
@@ -291,6 +301,7 @@ export interface FileRouteTypes {
     | '/afiliado/dashboard'
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
+    | '/oauth/google-calendar-callback'
     | '/oauth/instagram-callback'
     | '/api/cron/publish-instagram'
     | '/api/cron/send-push-notifications'
@@ -319,6 +330,7 @@ export interface FileRouteTypes {
     | '/afiliado/dashboard'
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
+    | '/oauth/google-calendar-callback'
     | '/oauth/instagram-callback'
     | '/api/cron/publish-instagram'
     | '/api/cron/send-push-notifications'
@@ -348,6 +360,7 @@ export interface FileRouteTypes {
     | '/_authenticated/afiliado/dashboard'
     | '/_authenticated/cliente/$clientId'
     | '/_authenticated/oauth/drive-callback'
+    | '/_authenticated/oauth/google-calendar-callback'
     | '/_authenticated/oauth/instagram-callback'
     | '/api/cron/publish-instagram'
     | '/api/cron/send-push-notifications'
@@ -540,6 +553,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOauthInstagramCallbackRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/oauth/google-calendar-callback': {
+      id: '/_authenticated/oauth/google-calendar-callback'
+      path: '/oauth/google-calendar-callback'
+      fullPath: '/oauth/google-calendar-callback'
+      preLoaderRoute: typeof AuthenticatedOauthGoogleCalendarCallbackRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/oauth/drive-callback': {
       id: '/_authenticated/oauth/drive-callback'
       path: '/oauth/drive-callback'
@@ -576,6 +596,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAfiliadoDashboardRoute: typeof AuthenticatedAfiliadoDashboardRoute
   AuthenticatedClienteClientIdRoute: typeof AuthenticatedClienteClientIdRoute
   AuthenticatedOauthDriveCallbackRoute: typeof AuthenticatedOauthDriveCallbackRoute
+  AuthenticatedOauthGoogleCalendarCallbackRoute: typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   AuthenticatedOauthInstagramCallbackRoute: typeof AuthenticatedOauthInstagramCallbackRoute
 }
 
@@ -591,6 +612,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAfiliadoDashboardRoute: AuthenticatedAfiliadoDashboardRoute,
   AuthenticatedClienteClientIdRoute: AuthenticatedClienteClientIdRoute,
   AuthenticatedOauthDriveCallbackRoute: AuthenticatedOauthDriveCallbackRoute,
+  AuthenticatedOauthGoogleCalendarCallbackRoute:
+    AuthenticatedOauthGoogleCalendarCallbackRoute,
   AuthenticatedOauthInstagramCallbackRoute:
     AuthenticatedOauthInstagramCallbackRoute,
 }

@@ -1,16 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, todayCalendarEventsQO, myCalendarConnectionQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { useState, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronRight } from "lucide-react";
+import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronRight } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
+import { GoogleCalendarPromptModal } from "./GoogleCalendarPromptModal";
 import { getDailyVerse } from "@/lib/luzeria/daily-verse";
+
+const GCAL_PROMPT_DISMISSED_KEY = "lz_gcal_prompt_dismissed";
 
 const ProductivityBlock = lazy(() =>
   import("./ProductivityChart").then((m) => ({ default: m.ProductivityBlock })),
@@ -65,6 +68,18 @@ export function MyTasks() {
   const whatsappRemindersEnabled = !disabledFeatures.has("whatsapp_reminders");
   const { data: mentions = [] } = useQuery({ ...myMentionsQO(), enabled: isMeView });
   const { data: weeklyReminders = [] } = useQuery({ ...weeklyClientRemindersQO(), enabled: isAdmin && isMeView && whatsappRemindersEnabled });
+  const googleCalendarEnabled = !disabledFeatures.has("google_calendar");
+  const { data: calendarConn } = useQuery({ ...myCalendarConnectionQO(), enabled: isMeView && googleCalendarEnabled });
+  const [showCalendarPrompt, setShowCalendarPrompt] = useState(false);
+  useEffect(() => {
+    if (!isMeView || !googleCalendarEnabled || !calendarConn || calendarConn.connected) return;
+    if (localStorage.getItem(GCAL_PROMPT_DISMISSED_KEY)) return;
+    setShowCalendarPrompt(true);
+  }, [isMeView, googleCalendarEnabled, calendarConn]);
+  function dismissCalendarPrompt() {
+    localStorage.setItem(GCAL_PROMPT_DISMISSED_KEY, "1");
+    setShowCalendarPrompt(false);
+  }
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(readOpenSections);
   const isSectionOpen = (id: string) => openSections[id] ?? true;
   const toggleSection = (id: string) => {
@@ -116,6 +131,7 @@ export function MyTasks() {
 
   return (
     <div className="p-10 max-w-5xl mx-auto" data-tour="my-tasks">
+      {showCalendarPrompt && <GoogleCalendarPromptModal onClose={dismissCalendarPrompt} />}
       {!isMeView && targetProfile && (
         <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg text-[12.5px]"
           style={{ backgroundColor: "rgba(74,158,255,0.12)", color: "#7EB3FF" }}>
@@ -174,6 +190,8 @@ export function MyTasks() {
       {targetId && <div data-tour="goals"><GoalsWidget monthKey={monthKey} userId={targetId} /></div>}
 
       {targetId && <ActivityCountsWidget monthKey={monthKey} userId={targetId} />}
+
+      {isMeView && googleCalendarEnabled && <TodayCalendarWidget />}
 
       {isMeView && todayPublications.length > 0 && (
         <div className="mb-6">
@@ -421,6 +439,31 @@ function DeadlinePill({ dueDate, status }: { dueDate?: string | null; status: st
 const ACTIVITY_LABELS: Record<string, string> = {
   gravacao: "vídeos gravados", roteiro: "roteiros", sistema: "sistemas", outros: "outras atividades",
 };
+
+function TodayCalendarWidget() {
+  const { data } = useQuery(todayCalendarEventsQO());
+  if (!data?.connected || !data.events?.length) return null;
+  return (
+    <div className="mb-6 bg-[#1C1C1C] rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+        <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
+          <CalendarClock size={11} />
+        </span>
+        <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Hoje na agenda</h2>
+      </div>
+      <div className="divide-y divide-white/[0.05]">
+        {data.events.map((ev: any) => (
+          <div key={ev.id} className="flex items-center gap-3 px-4 py-2.5">
+            <span className="text-[11px] text-white/40 tabular-nums shrink-0">
+              {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+            <span className="text-sm text-white/90 truncate flex-1">{ev.title}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: string }) {
   const { data: counts } = useQuery(myActivityCountsQO(monthKey, userId));

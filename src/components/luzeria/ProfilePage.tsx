@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield, UserPlus, RefreshCw, MessageCircle, AtSign, Star, Bug, LogOut } from "lucide-react";
+import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield, UserPlus, RefreshCw, MessageCircle, AtSign, Star, Bug, LogOut, CalendarClock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useMe, useApi, notificationPrefsQO } from "@/lib/luzeria/queries";
+import { useMe, useApi, notificationPrefsQO, myCalendarConnectionQO } from "@/lib/luzeria/queries";
+import { withOAuthState } from "@/lib/luzeria/google-calendar-connect";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { AvatarEditor, ColorPicker, showAvatarError, uploadAvatar } from "./AvatarEditor";
 import { roleLabel } from "./Sidebar";
@@ -126,6 +127,15 @@ export function ProfilePage() {
       />
 
       <TwoFactorSection />
+
+      {!(me.disabledFeatures ?? []).includes("google_calendar") && (
+        <div className="mt-6 bg-[#1C1C1C] rounded-lg p-6 md:p-8">
+          <div className="text-[10px] uppercase font-bold tracking-wider text-white/50 mb-5">
+            Google Agenda
+          </div>
+          <GoogleCalendarSection />
+        </div>
+      )}
 
       <div className="mt-8 bg-[#1C1C1C] rounded-lg p-6 md:p-8">
         <div className="text-[10px] uppercase font-bold tracking-wider text-white/50 mb-5">
@@ -298,6 +308,59 @@ function PrefRow({ icon, title, description, value, disabled, onChange }: {
           value ? "left-[22px]" : "left-0.5"
         }`} />
       </button>
+    </div>
+  );
+}
+
+function GoogleCalendarSection() {
+  const { data: conn, isLoading } = useQuery(myCalendarConnectionQO());
+  const { getGoogleCalendarAuthUrl, disconnectGoogleCalendar } = useApi();
+
+  async function connect() {
+    try {
+      const { url } = await getGoogleCalendarAuthUrl.mutateAsync({ data: { redirectOrigin: window.location.origin } });
+      window.location.href = withOAuthState(url);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao iniciar conexão com o Google.");
+    }
+  }
+
+  function disconnect() {
+    disconnectGoogleCalendar.mutate({} as any, {
+      onSuccess: () => toast.success("Google Agenda desconectada."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao desconectar."),
+    });
+  }
+
+  return (
+    <div className="flex items-start gap-4">
+      <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
+        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+        <CalendarClock size={16} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-white">
+          {conn?.connected ? "Conectado" : "Não conectado"}
+        </div>
+        <div className="text-[11px] text-white/50 mt-1">
+          {conn?.connected
+            ? `Conectado como ${conn.email}. Seus compromissos de hoje aparecem em Minhas Demandas.`
+            : "Conecte sua Google Agenda pra ver seus compromissos de hoje em Minhas Demandas."}
+        </div>
+      </div>
+      {!isLoading && (
+        <button
+          type="button"
+          onClick={conn?.connected ? disconnect : connect}
+          disabled={getGoogleCalendarAuthUrl.isPending || disconnectGoogleCalendar.isPending}
+          className={`shrink-0 text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md disabled:opacity-50 ${
+            conn?.connected ? "border border-white/15 text-white/80 hover:text-white hover:border-white/30" : "text-black"
+          }`}
+          style={conn?.connected ? undefined : { backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+        >
+          {conn?.connected ? "Desconectar" : "Conectar"}
+        </button>
+      )}
     </div>
   );
 }
