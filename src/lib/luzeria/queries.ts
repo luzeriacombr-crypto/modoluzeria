@@ -65,6 +65,7 @@ import {
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
+import { getOrgCostSettings, setOrgCostSettings, getClientMargins } from "./margin.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const instagramActivityQO = () =>
   queryOptions({ queryKey: ["instagram-activity"], queryFn: () => getInstagramActivity() });
@@ -283,6 +284,12 @@ export const orgPlanStatusQO = () =>
   queryOptions({ queryKey: ["org-plan-status"], queryFn: () => getOrgPlanStatus() });
 export const orgsBillingQO = () =>
   queryOptions({ queryKey: ["orgs-billing"], queryFn: () => listOrgsBilling() });
+
+export const orgCostSettingsQO = () =>
+  queryOptions({ queryKey: ["org-cost-settings"], queryFn: () => getOrgCostSettings() });
+
+export const clientMarginsQO = (days: 30 | 90 | 180) =>
+  queryOptions({ queryKey: ["client-margins", days], queryFn: () => getClientMargins({ data: { days } }) });
 
 export const setupChecklistQO = () =>
   queryOptions({ queryKey: ["setup-checklist"], queryFn: () => getSetupChecklist() });
@@ -865,6 +872,14 @@ export function useApi() {
     createCalendarEvent: useMutation({
       mutationFn: useServerFn(createCalendarEvent),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["today-calendar-events"] }),
+    }),
+    /* ===== MARGEM / LUCRATIVIDADE ===== */
+    setOrgCostSettings: useMutation({
+      mutationFn: useServerFn(setOrgCostSettings),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["org-cost-settings"] });
+        qc.invalidateQueries({ queryKey: ["client-margins"] });
+      },
     }),
     /* ===== FEED SHARE ===== */
     getOrCreateShareToken: useMutation({ mutationFn: useServerFn(getOrCreateShareToken) }),

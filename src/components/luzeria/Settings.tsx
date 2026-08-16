@@ -17,6 +17,7 @@ import { UpdatesTab } from "./UpdatesTab";
 import { PromotionCodesPanel } from "./PromotionCodesPanel";
 import { AffiliateProgramPanel } from "./AffiliateProgramPanel";
 import { AgenciesBillingPanel } from "./AgenciesBillingPanel";
+import { ClientMarginPanel } from "./ClientMarginPanel";
 import { SalesPageEditorTab } from "./SalesPageEditorTab";
 import { JourneyStagesTab } from "./JourneyStagesTab";
 
@@ -116,6 +117,9 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "subscription" ? (
         <div className="space-y-10">
           <SubscriptionSettings />
+          <div className="pt-2 border-t border-white/10">
+            <ClientMarginPanel />
+          </div>
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-white/10">
               <AgenciesBillingPanel />

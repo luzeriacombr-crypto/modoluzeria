@@ -692,11 +692,14 @@ export const listClients = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.from("clients")
-      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks")
+      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value")
       .order("name");
     if (error) throw new Error(error.message);
     const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
     const signedPhotos = await signAvatarPaths(context.supabase, photoPaths);
+    // contract_value é dado financeiro sensível — só volta pro Adm Master, mesmo que a
+    // RLS de admin manage clients já libere leitura/escrita pra setor também.
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
     return (data ?? []).map<Client>((c: any) => ({
       id: c.id, name: c.name, color: c.color, icon: c.icon,
       favorite: c.favorite, archived: c.archived,
@@ -714,6 +717,7 @@ export const listClients = createServerFn({ method: "GET" })
       photoPath: c.photo_url ?? null,
       photoUrl: c.photo_url ? (signedPhotos.get(c.photo_url) ?? null) : null,
       notifyStoriesInTasks: c.notify_stories_in_tasks ?? false,
+      contractValue: isMaster ? (c.contract_value ?? null) : undefined,
     }));
   });
 
@@ -796,7 +800,15 @@ export const updateClient = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string; patch: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("clients").update(data.patch as any).eq("id", data.id);
+    let patch = data.patch;
+    if (Object.prototype.hasOwnProperty.call(patch, "contract_value")) {
+      const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+      if (!isMaster) {
+        const { contract_value, ...rest } = patch;
+        patch = rest;
+      }
+    }
+    const { error } = await context.supabase.from("clients").update(patch as any).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

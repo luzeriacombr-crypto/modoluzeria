@@ -200,6 +200,8 @@ export interface Client {
    * "Minhas Demandas" — off by default so high-frequency Stories work
    * doesn't clutter the task list unless the agency opts in per client. */
   notifyStoriesInTasks?: boolean;
+  /** Valor mensal do contrato — master-only, usado pelo painel de margem/lucratividade. */
+  contractValue?: number | null;
 }
 
 export type Role = "master" | "setor" | "member";

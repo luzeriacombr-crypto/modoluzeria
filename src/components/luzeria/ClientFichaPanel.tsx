@@ -349,6 +349,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
   const [responsible, setResponsible] = useState<string>(client.customFields.fixedResponsibleId ?? "");
   const [reviewDay, setReviewDay] = useState<string>(client.customFields.reviewDay ?? "");
   const [notes, setNotes] = useState<string>(client.customFields.notes ?? "");
+  const [contractValue, setContractValue] = useState<string | number>(client.contractValue ?? "");
   const [photoPreview, setPhotoPreview] = useState<string | null>(client.photoUrl ?? null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
@@ -361,6 +362,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     setResponsible(client.customFields.fixedResponsibleId ?? "");
     setReviewDay(client.customFields.reviewDay ?? "");
     setNotes(client.customFields.notes ?? "");
+    setContractValue(client.contractValue ?? "");
     setPhotoPreview(client.photoUrl ?? null);
   }, [client.id]);
 
@@ -400,6 +402,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       reels_per_week: Number(reelsPerWeek) || 0,
       fixed_responsible_id: responsible || null,
       review_day: reviewDay, notes,
+      ...(isMaster ? { contract_value: contractValue === "" ? null : Number(contractValue) } : {}),
     });
     toast.success("Configuração salva");
   }
@@ -474,6 +477,17 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
           {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </ConfigField>
+      {isMaster && (
+        <ConfigField label="Valor mensal do contrato (R$)">
+          <input
+            type="number" min="0" step="0.01"
+            value={contractValue} disabled={!canEdit}
+            onChange={(e) => setContractValue(e.target.value)}
+            placeholder="Não informado"
+            className={inp}
+          />
+        </ConfigField>
+      )}
       <div className="sm:col-span-2">
         <ConfigField label="Observações">
           <textarea value={notes} disabled={!canEdit} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} />

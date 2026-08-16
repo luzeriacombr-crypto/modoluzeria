@@ -1780,6 +1780,7 @@ export type Database = {
         Row: {
           asaas_customer_id: string | null
           asaas_subscription_id: string | null
+          avg_hours_by_type: Json
           color_primary: string | null
           color_primary_light: string | null
           color_sidebar: string | null
@@ -1787,6 +1788,7 @@ export type Database = {
           disabled_features: string[]
           favicon_path: string | null
           feed_preview_image_path: string | null
+          hourly_cost: number | null
           id: string
           logo_path: string | null
           members_can_set_editor_format: boolean
@@ -1804,6 +1806,7 @@ export type Database = {
         Insert: {
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
+          avg_hours_by_type?: Json
           color_primary?: string | null
           color_primary_light?: string | null
           color_sidebar?: string | null
@@ -1811,6 +1814,7 @@ export type Database = {
           disabled_features?: string[]
           favicon_path?: string | null
           feed_preview_image_path?: string | null
+          hourly_cost?: number | null
           id?: string
           logo_path?: string | null
           members_can_set_editor_format?: boolean
@@ -1828,6 +1832,7 @@ export type Database = {
         Update: {
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
+          avg_hours_by_type?: Json
           color_primary?: string | null
           color_primary_light?: string | null
           color_sidebar?: string | null
@@ -1835,6 +1840,7 @@ export type Database = {
           disabled_features?: string[]
           favicon_path?: string | null
           feed_preview_image_path?: string | null
+          hourly_cost?: number | null
           id?: string
           logo_path?: string | null
           members_can_set_editor_format?: boolean
