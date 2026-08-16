@@ -239,17 +239,15 @@ export type ClientOperationsRow = {
   stageTrack: JourneyTrack | null;
   lastGravacaoAt: string | null;
   gravacaoVideoCount: number | null;
+  gravacaoMonthlyTarget: number;
   nextGravacaoDue: string | null;
   lastAnaliseAt: string | null;
 };
 
-/** Menos de 6 vídeos: grava de novo em 30 dias. 6 a 11: 45 dias. 12 ou
- * mais: 60 dias (2 meses) — regra combinada com o Junior. */
-function gravacaoIntervalDays(videoCount: number): number {
-  if (videoCount < 6) return 30;
-  if (videoCount < 12) return 45;
-  return 60;
-}
+/** Usado quando o cliente não tem "Reels / mês" configurado na ficha —
+ * mantém o comportamento antigo (~1 mês pra 6 vídeos) pra quem nunca
+ * preencheu esse campo. */
+const DEFAULT_GRAVACAO_MONTHLY_TARGET = 6;
 
 export const getClientOperationsOverview = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
@@ -261,7 +259,7 @@ export const getClientOperationsOverview = createServerFn({ method: "GET" })
     // gravação/análise pra acompanhar aqui.
     const { data: clients, error } = await context.supabase
       .from("clients")
-      .select("id, name, color, current_stage_id")
+      .select("id, name, color, current_stage_id, reels_per_week")
       .eq("archived", false)
       .neq("category", "Ex-clientes")
       .neq("category", "Avulsos")
@@ -318,18 +316,24 @@ export const getClientOperationsOverview = createServerFn({ method: "GET" })
     return list.map((c: any) => {
       const stage = c.current_stage_id ? stageMap.get(c.current_stage_id) : null;
       const lastGravacaoAt = latestDueDateByClient.get(c.id) ?? null;
+      const gravacaoMonthlyTarget = c.reels_per_week > 0 ? c.reels_per_week : DEFAULT_GRAVACAO_MONTHLY_TARGET;
       let gravacaoVideoCount: number | null = null;
       let nextGravacaoDue: string | null = null;
       if (lastGravacaoAt) {
         const monthKey = lastGravacaoAt.slice(0, 7);
         gravacaoVideoCount = videoCountByClientMonth.get(`${c.id}|${monthKey}`) ?? 0;
-        const days = gravacaoIntervalDays(gravacaoVideoCount);
+        // Quantos meses de entrega os vídeos gravados cobrem, dado o quanto
+        // esse cliente precisa por mês (campo "Reels / mês" da ficha) —
+        // grava menos que a meta e a próxima gravação chega mais cedo do que
+        // 30 dias; grava mais (banco de vídeos) e o prazo estica.
+        const monthsCovered = gravacaoVideoCount / gravacaoMonthlyTarget;
+        const days = Math.max(1, Math.round(monthsCovered * 30));
         nextGravacaoDue = new Date(new Date(`${lastGravacaoAt}T00:00:00Z`).getTime() + days * 86400000).toISOString();
       }
       return {
         clientId: c.id, clientName: c.name, clientColor: c.color,
         stageId: stage?.id ?? null, stageName: stage?.name ?? null, stageTrack: stage?.track ?? null,
-        lastGravacaoAt, gravacaoVideoCount, nextGravacaoDue,
+        lastGravacaoAt, gravacaoVideoCount, gravacaoMonthlyTarget, nextGravacaoDue,
         lastAnaliseAt: lastAnaliseByClient.get(c.id) ?? null,
       };
     }) as ClientOperationsRow[];

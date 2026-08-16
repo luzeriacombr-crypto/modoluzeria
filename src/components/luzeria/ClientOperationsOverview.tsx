@@ -106,8 +106,9 @@ function ClientOperationsOverviewContent() {
         <span className="text-white/80 font-medium">vídeos gravados</span> são puxadas automaticamente da atividade de Gravação
         mais recente registrada em <span className="text-white/80 font-medium">Mais Atividades</span> de cada cliente — se um
         cliente aparece em branco, é só cadastrar a gravação dele por lá que a informação aparece aqui sozinha. A{" "}
-        <span className="text-white/80 font-medium">próxima gravação prevista</span> é calculada sozinha a partir disso: menos
-        de 6 vídeos volta a gravar em 30 dias, de 6 a 11 em 45 dias, 12 ou mais em 60 dias. Já a{" "}
+        <span className="text-white/80 font-medium">próxima gravação prevista</span> é calculada sozinha comparando isso com a
+        meta mensal de vídeos do cliente (campo "Reels / mês" na Configuração do cliente, dentro da Ficha) — quem grava exatamente
+        a meta volta em 30 dias; quem grava mais fica com mais folga, quem grava menos volta mais cedo. Já a{" "}
         <span className="text-white/80 font-medium">última análise do mês</span> vem da <span className="text-white/80 font-medium">Jornada do cliente</span> —
         pra isso funcionar, marque em <span className="text-white/80 font-medium">Configurações → Jornada do cliente</span> qual
         etapa representa "Análise do mês" (passe o mouse ou toque no <Info size={10} className="inline -mt-0.5" /> de cada coluna
@@ -146,13 +147,13 @@ function ClientOperationsOverviewContent() {
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    <InfoTip text="Soma da quantidade de vídeos registrados em Mais Atividades (seção Gravação) no mês da última gravação. Puxado automaticamente." />
+                    <InfoTip text="Soma da quantidade de vídeos registrados em Mais Atividades (seção Gravação) no mês da última gravação, sobre a meta mensal do cliente (campo 'Reels / mês' na ficha, ou 6 se não estiver configurado). Puxado automaticamente." />
                     Vídeos gravados
                   </span>
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    <InfoTip text="Calculada automaticamente a partir da última gravação e da quantidade de vídeos: menos de 6 vídeos = 30 dias, de 6 a 11 = 45 dias, 12 ou mais = 60 dias. Fica vermelho quando já passou do prazo." />
+                    <InfoTip text="Calculada a partir de quantos meses de meta os vídeos gravados cobrem: gravou exatamente a meta = 30 dias; gravou mais = prazo maior (banco de vídeos); gravou menos = prazo menor. Fica vermelho quando já passou do prazo." />
                     Próxima prevista
                   </span>
                 </th>
@@ -187,7 +188,7 @@ function ClientOperationsOverviewContent() {
                       {r.lastGravacaoAt ? `${formatDateBR(r.lastGravacaoAt)} (${daysAgoLabel(r.lastGravacaoAt)})` : "—"}
                     </td>
                     <td className="px-4 py-3 text-sm text-white/70 text-right">
-                      {r.lastGravacaoAt ? (r.gravacaoVideoCount ?? 0) : "—"}
+                      {r.lastGravacaoAt ? `${r.gravacaoVideoCount ?? 0} / ${r.gravacaoMonthlyTarget}` : "—"}
                     </td>
                     <td className="px-4 py-3 text-sm text-right font-semibold" style={{ color: due.overdue ? "#FF6B6B" : "rgba(255,255,255,0.7)" }}>
                       {due.text}
