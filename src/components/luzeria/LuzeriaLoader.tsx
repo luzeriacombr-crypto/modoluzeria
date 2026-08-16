@@ -1,6 +1,20 @@
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 
+/** Reads the org logo cached by App.tsx on a previous successful load —
+ * this component renders before the profile fetch resolves, so it has no
+ * other way to know which org is logged in yet. */
+function readCachedBranding(): { logoUrl: string; name: string | null } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("lz_org_branding");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function LuzeriaLoader({ fullScreen = true }: { fullScreen?: boolean }) {
+  const cached = readCachedBranding();
   return (
     <div
       className={fullScreen ? "fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-6" : "flex flex-col items-center justify-center w-full h-full min-h-40 gap-6"}
@@ -19,7 +33,16 @@ export function LuzeriaLoader({ fullScreen = true }: { fullScreen?: boolean }) {
         .lz-logo { animation: lz-fade 0.4s ease-out both; }
       `}</style>
 
-      <ModoCriadorLogo variant="white" className="lz-logo" style={{ height: 32, width: "auto" }} />
+      {cached?.logoUrl ? (
+        <img
+          src={cached.logoUrl}
+          alt={cached.name ?? "Logo"}
+          className="lz-logo"
+          style={{ height: 32, maxWidth: 200, width: "auto", objectFit: "contain" }}
+        />
+      ) : (
+        <ModoCriadorLogo variant="white" className="lz-logo" style={{ height: 32, width: "auto" }} />
+      )}
 
       <div style={{ width: 128, height: 2, borderRadius: 9999, overflow: "hidden", background: "rgba(var(--lz-brand-light-rgb),0.15)" }}>
         <div className="lz-bar" style={{ height: "100%", borderRadius: 9999, background: "rgb(var(--lz-brand-rgb))" }} />

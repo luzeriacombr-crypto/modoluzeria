@@ -96,6 +96,20 @@ export function App() {
     };
   }, [me.data?.orgFaviconUrl]);
 
+  // Cache the org's logo locally so the loading screen (which renders
+  // before we know who's logged in) can show it immediately on a repeat
+  // visit instead of the generic Modo Criador mark — see LuzeriaLoader.tsx.
+  // Clears the cache when the org has no custom logo, so a shared device
+  // switching between orgs doesn't briefly flash a stale one.
+  useEffect(() => {
+    if (!me.data) return;
+    if (me.data.orgLogoUrl) {
+      localStorage.setItem("lz_org_branding", JSON.stringify({ logoUrl: me.data.orgLogoUrl, name: me.data.orgName ?? null }));
+    } else {
+      localStorage.removeItem("lz_org_branding");
+    }
+  }, [me.data?.orgLogoUrl, me.data?.orgName]);
+
   if (me.isLoading) {
     return <LuzeriaLoader />;
   }
