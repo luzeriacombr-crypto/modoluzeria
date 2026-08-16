@@ -95,6 +95,67 @@ export const fetchClickUpLists = createServerFn({ method: "POST" })
     return lists;
   });
 
+/* ============== NOTION ==============
+ * Notion integrations only see pages/databases the user explicitly connects
+ * them to inside Notion — a valid token alone isn't enough, unlike Trello/
+ * ClickUp's personal tokens. The frontend copy has to spell that out. */
+
+const NOTION_VERSION = "2022-06-28";
+
+async function notionFetch(path: string, token: string, body: Record<string, unknown>) {
+  const res = await fetch(`https://api.notion.com/v1${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Notion-Version": NOTION_VERSION,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error("Não foi possível acessar sua conta do Notion. Confira o token e se a database foi conectada à integração.");
+  return res.json() as Promise<any>;
+}
+
+function notionPlainText(richText: any[] | undefined): string {
+  return ((richText ?? []) as any[]).map((t) => t.plain_text ?? "").join("").trim();
+}
+
+export const fetchNotionDatabases = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { token: string }) => z.object({ token: z.string().min(10) }).parse(d))
+  .handler(async ({ data }) => {
+    const json = await notionFetch("/search", data.token, {
+      filter: { property: "object", value: "database" },
+      page_size: 100,
+    });
+    return ((json.results ?? []) as any[]).map((db) => ({
+      id: db.id as string,
+      name: notionPlainText(db.title) || "(sem título)",
+    }));
+  });
+
+export const fetchNotionDatabaseRows = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { token: string; databaseId: string }) =>
+    z.object({ token: z.string().min(10), databaseId: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const names: { id: string; name: string }[] = [];
+    let cursor: string | undefined;
+    do {
+      const json: any = await notionFetch(`/databases/${data.databaseId}/query`, data.token, {
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+      });
+      for (const row of (json.results ?? []) as any[]) {
+        const titleProp = (Object.values(row.properties ?? {}) as any[]).find((p) => p?.type === "title");
+        const name = notionPlainText(titleProp?.title);
+        if (name) names.push({ id: row.id as string, name });
+      }
+      cursor = json.has_more ? json.next_cursor : undefined;
+    } while (cursor);
+    return names;
+  });
+
 /* ============== IMPORT ============== */
 
 async function seedMonth(supabase: any, clientId: string, key: string) {
@@ -110,10 +171,10 @@ async function seedMonth(supabase: any, clientId: string, key: string) {
 
 export const importClients = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { names: string[]; source: "trello" | "clickup" }) =>
+  .inputValidator((d: { names: string[]; source: "trello" | "clickup" | "notion" }) =>
     z.object({
       names: z.array(z.string().trim().min(1).max(80)).min(1).max(200),
-      source: z.enum(["trello", "clickup"]),
+      source: z.enum(["trello", "clickup", "notion"]),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
@@ -130,7 +191,7 @@ export const importClients = createServerFn({ method: "POST" })
     const toImport = data.names.slice(0, slotsLeft);
     const skipped = data.names.length - toImport.length;
 
-    const sourceLabel = data.source === "trello" ? "Trello" : "ClickUp";
+    const sourceLabel = data.source === "trello" ? "Trello" : data.source === "clickup" ? "ClickUp" : "Notion";
     const key = monthKey(new Date());
     let imported = 0;
     for (const name of toImport) {

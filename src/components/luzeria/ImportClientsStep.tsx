@@ -4,11 +4,12 @@ import { toast } from "sonner";
 import {
   getTrelloAuthUrl, fetchTrelloBoards, fetchTrelloLists,
   fetchClickUpTeams, fetchClickUpSpaces, fetchClickUpLists,
+  fetchNotionDatabases, fetchNotionDatabaseRows,
   importClients,
 } from "@/lib/luzeria/import.functions";
 
 type Item = { id: string; name: string };
-type Provider = "trello" | "clickup";
+type Provider = "trello" | "clickup" | "notion";
 
 export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSkip: () => void }) {
   const [provider, setProvider] = useState<Provider | null>(null);
@@ -29,9 +30,11 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
   const clickupTeams = useServerFn(fetchClickUpTeams);
   const clickupSpaces = useServerFn(fetchClickUpSpaces);
   const clickupLists = useServerFn(fetchClickUpLists);
+  const notionDatabases = useServerFn(fetchNotionDatabases);
+  const notionRows = useServerFn(fetchNotionDatabaseRows);
   const doImport = useServerFn(importClients);
 
-  const topLabel = provider === "trello" ? "quadro" : "space";
+  const topLabel = provider === "trello" ? "quadro" : provider === "clickup" ? "space" : "database";
 
   async function connectTrello() {
     const { url } = await authUrl();
@@ -45,7 +48,7 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
       if (provider === "trello") {
         const boards = await trelloBoards({ data: { token: token.trim() } });
         setTopItems(boards);
-      } else {
+      } else if (provider === "clickup") {
         const teams = await clickupTeams({ data: { token: token.trim() } });
         if (teams.length === 1) {
           setTeamId(teams[0].id);
@@ -54,6 +57,9 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
         } else {
           setTopItems(teams); // reuse topItems as "pick your team" list first
         }
+      } else {
+        const databases = await notionDatabases({ data: { token: token.trim() } });
+        setTopItems(databases);
       }
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao conectar.");
@@ -81,7 +87,9 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
     try {
       const lists = provider === "trello"
         ? await trelloLists({ data: { token: token.trim(), boardId: id } })
-        : await clickupLists({ data: { token: token.trim(), spaceId: id } });
+        : provider === "clickup"
+        ? await clickupLists({ data: { token: token.trim(), spaceId: id } })
+        : await notionRows({ data: { token: token.trim(), databaseId: id } });
       setNestedItems(lists);
       setSelected(Object.fromEntries(lists.map((l) => [l.id, true])));
     } catch (e: any) {
@@ -147,10 +155,11 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
   if (!provider) {
     return (
       <div>
-        <p className="text-white/60 text-sm mb-5">Já tem seus clientes organizados no Trello ou ClickUp? Importa de lá pra não digitar tudo de novo.</p>
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <p className="text-white/60 text-sm mb-5">Já tem seus clientes organizados no Trello, ClickUp ou Notion? Importa de lá pra não digitar tudo de novo.</p>
+        <div className="grid grid-cols-3 gap-3 mb-3">
           <button onClick={() => setProvider("trello")} className="bg-white/5 border border-white/10 rounded-lg py-4 text-sm font-semibold hover:bg-white/10 transition">Trello</button>
           <button onClick={() => setProvider("clickup")} className="bg-white/5 border border-white/10 rounded-lg py-4 text-sm font-semibold hover:bg-white/10 transition">ClickUp</button>
+          <button onClick={() => setProvider("notion")} className="bg-white/5 border border-white/10 rounded-lg py-4 text-sm font-semibold hover:bg-white/10 transition">Notion</button>
         </div>
         <button onClick={onSkip} className="text-white/40 text-xs hover:text-white/70 transition w-full text-center mt-2">Pular por agora →</button>
       </div>
@@ -168,9 +177,15 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
             </p>
             <button onClick={connectTrello} className="lz-btn-ghost text-xs px-4 py-2 rounded-md mb-3">Conectar com Trello →</button>
           </>
-        ) : (
+        ) : provider === "clickup" ? (
           <p className="text-white/60 text-xs mb-3">
             No ClickUp, vai em Configurações → Apps → "Personal API Token" → Gerar, copia e cola aqui embaixo.
+          </p>
+        ) : (
+          <p className="text-white/60 text-xs mb-3">
+            1. Vai em <b>notion.so/my-integrations</b>, cria uma integração interna e copia o "Internal Integration Secret".<br />
+            2. Abre a página/database com sua lista de clientes no Notion, clica em "•••" → "Conectar a" → escolhe a integração que você criou (sem esse passo, o Notion não deixa a integração ver nada, mesmo com o token certo).<br />
+            3. Cola o secret aqui embaixo.
           </p>
         )}
         <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="Cola o token aqui" className="lz-input text-sm mb-3" />
@@ -202,16 +217,18 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
 
   return (
     <div>
-      <div className="flex gap-2 mb-4 text-xs">
-        <button onClick={() => setMode("nested")} className={`px-3 py-1.5 rounded-full ${mode === "nested" ? "bg-white text-black" : "bg-white/10 text-white/60"}`}>
-          Cada lista é um cliente
-        </button>
-        <button onClick={() => setMode("top")} className={`px-3 py-1.5 rounded-full ${mode === "top" ? "bg-white text-black" : "bg-white/10 text-white/60"}`}>
-          Cada {topLabel} é um cliente
-        </button>
-      </div>
+      {provider !== "notion" && (
+        <div className="flex gap-2 mb-4 text-xs">
+          <button onClick={() => setMode("nested")} className={`px-3 py-1.5 rounded-full ${mode === "nested" ? "bg-white text-black" : "bg-white/10 text-white/60"}`}>
+            Cada lista é um cliente
+          </button>
+          <button onClick={() => setMode("top")} className={`px-3 py-1.5 rounded-full ${mode === "top" ? "bg-white text-black" : "bg-white/10 text-white/60"}`}>
+            Cada {topLabel} é um cliente
+          </button>
+        </div>
+      )}
 
-      {mode === "top" ? (
+      {mode === "top" && provider !== "notion" ? (
         <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
           {topItems.map((item) => (
             <label key={item.id} className="flex items-center gap-2 text-sm bg-white/5 rounded-md px-3 py-2 cursor-pointer">
