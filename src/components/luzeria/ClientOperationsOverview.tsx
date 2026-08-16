@@ -63,6 +63,11 @@ function daysAgoLabel(iso: string | null): string {
   return `há ${days} dias`;
 }
 
+function formatDateBR(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-");
+  return `${d}/${m}/${y}`;
+}
+
 function dueLabel(iso: string | null): { text: string; overdue: boolean } {
   if (!iso) return { text: "—", overdue: false };
   const days = Math.floor((new Date(iso).getTime() - Date.now()) / 86400000);
@@ -85,7 +90,7 @@ function ClientOperationsOverviewContent() {
   const { data: rows = [], isLoading } = useQuery(clientOperationsOverviewQO());
   const api = useApi();
   const { openFicha } = useUI();
-  const [editingCadence, setEditingCadence] = useState<string | null>(null);
+  const [editingGravacao, setEditingGravacao] = useState<string | null>(null);
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-4">
@@ -96,11 +101,15 @@ function ClientOperationsOverviewContent() {
       </div>
 
       <div className="text-xs text-white/60 leading-relaxed bg-white/[0.03] border border-white/10 rounded-lg px-4 py-3">
-        Essa tela junta, num só lugar, o ciclo operacional de cada cliente ativo: quando foi a última gravação, quando é a
-        próxima esperada, e quando foi feita a análise do mês anterior. Os dados vêm da <span className="text-white/80 font-medium">Jornada do cliente</span> —
-        pra funcionar direito, marque em <span className="text-white/80 font-medium">Configurações → Jornada do cliente</span> quais
-        etapas representam "Gravação" e "Análise do mês" (passe o mouse ou toque no <Info size={10} className="inline -mt-0.5" /> de
-        cada coluna abaixo pra entender o que ela mostra). Se não for útil pra sua agência, dá pra desligar em <span className="text-white/80 font-medium">Configurações → Geral</span>,
+        Essa tela junta, num só lugar, o ciclo operacional de cada cliente ativo. Você mesmo define a data da{" "}
+        <span className="text-white/80 font-medium">última gravação</span> de cada cliente (clique na coluna pra editar) — a
+        quantidade de vídeos gravados naquele mês é puxada automaticamente de <span className="text-white/80 font-medium">Mais Atividades</span>,
+        e a <span className="text-white/80 font-medium">próxima gravação prevista</span> é calculada sozinha: menos de 6 vídeos
+        volta a gravar em 30 dias, de 6 a 11 em 45 dias, 12 ou mais em 60 dias. Já a{" "}
+        <span className="text-white/80 font-medium">última análise do mês</span> vem da <span className="text-white/80 font-medium">Jornada do cliente</span> —
+        pra isso funcionar, marque em <span className="text-white/80 font-medium">Configurações → Jornada do cliente</span> qual
+        etapa representa "Análise do mês" (passe o mouse ou toque no <Info size={10} className="inline -mt-0.5" /> de cada coluna
+        abaixo pra entender o que ela mostra). Se não for útil pra sua agência, dá pra desligar em <span className="text-white/80 font-medium">Configurações → Geral</span>,
         na seção de recursos opcionais.
       </div>
 
@@ -129,20 +138,20 @@ function ClientOperationsOverviewContent() {
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    <InfoTip text="Há quantos dias o cliente esteve, pela última vez, na etapa marcada como 'Gravação' na Jornada. Mostra 'nunca' se ele ainda não passou por essa etapa desde que essa tela foi criada." />
+                    <InfoTip text="Data da última gravação, digitada por você — clique no valor pra editar. Não é puxada automaticamente, porque o dia em que você atualiza a etapa nem sempre é o dia real da gravação." />
                     Última gravação
                   </span>
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    <InfoTip text="Data calculada somando a Cadência (coluna ao lado) à última gravação. Fica vermelho quando já passou do prazo. Só aparece se a cadência estiver definida." />
-                    Próxima prevista
+                    <InfoTip text="Soma da quantidade de vídeos registrados em Mais Atividades (seção Gravação) no mês da última gravação. Puxado automaticamente, não dá pra editar aqui." />
+                    Vídeos gravados
                   </span>
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    <InfoTip text="De quantos em quantos dias esse cliente costuma gravar (ex.: 30 ou 60 dias). Clique no valor pra editar — sem isso definido, não dá pra calcular a próxima gravação prevista." />
-                    Cadência
+                    <InfoTip text="Calculada automaticamente a partir da última gravação e da quantidade de vídeos: menos de 6 vídeos = 30 dias, de 6 a 11 = 45 dias, 12 ou mais = 60 dias. Fica vermelho quando já passou do prazo." />
+                    Próxima prevista
                   </span>
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
@@ -172,27 +181,29 @@ function ClientOperationsOverviewContent() {
                         </span>
                       ) : <span className="text-white/30">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-sm text-white/70 text-right">{daysAgoLabel(r.lastGravacaoAt)}</td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold" style={{ color: due.overdue ? "#FF6B6B" : "rgba(255,255,255,0.7)" }}>
-                      {due.text}
-                    </td>
                     <td className="px-4 py-3 text-sm text-right">
-                      {editingCadence === r.clientId ? (
+                      {editingGravacao === r.clientId ? (
                         <input
-                          type="number" min="1" autoFocus defaultValue={r.gravacaoCadenceDays ?? ""}
+                          type="date" autoFocus defaultValue={r.lastGravacaoAt ?? ""}
                           onBlur={(e) => {
                             const val = e.target.value.trim();
-                            api.setClientGravacaoCadence.mutate({ data: { clientId: r.clientId, days: val === "" ? null : Number(val) } });
-                            setEditingCadence(null);
+                            api.setClientLastGravacao.mutate({ data: { clientId: r.clientId, date: val === "" ? null : val } });
+                            setEditingGravacao(null);
                           }}
                           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                          className="w-16 bg-[#1C1C1C] border border-white/10 rounded px-2 py-1 text-xs text-white text-right outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                          className="bg-[#1C1C1C] border border-white/10 rounded px-2 py-1 text-xs text-white text-right outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
                         />
                       ) : (
-                        <button onClick={() => setEditingCadence(r.clientId)} className="text-white/70 hover:text-white hover:underline">
-                          {r.gravacaoCadenceDays ? `${r.gravacaoCadenceDays}d` : "definir"}
+                        <button onClick={() => setEditingGravacao(r.clientId)} className="text-white/70 hover:text-white hover:underline">
+                          {r.lastGravacaoAt ? `${formatDateBR(r.lastGravacaoAt)} (${daysAgoLabel(r.lastGravacaoAt)})` : "definir"}
                         </button>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-white/70 text-right">
+                      {r.lastGravacaoAt ? (r.gravacaoVideoCount ?? 0) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold" style={{ color: due.overdue ? "#FF6B6B" : "rgba(255,255,255,0.7)" }}>
+                      {due.text}
                     </td>
                     <td className="px-4 py-3 text-sm text-white/70 text-right">{daysAgoLabel(r.lastAnaliseAt)}</td>
                   </tr>

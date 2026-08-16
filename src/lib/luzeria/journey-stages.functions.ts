@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export type JourneyTrack = "onboarding" | "operational";
 export type StageUpdateTrigger = "stage_change" | "weekly_nudge" | "manual";
-export type StageMilestoneType = "gravacao" | "analise";
+export type StageMilestoneType = "analise";
 
 export type JourneyStage = {
   id: string;
@@ -50,7 +50,7 @@ export const DEFAULT_JOURNEY_STAGES: { track: JourneyTrack; name: string; descri
 export async function seedJourneyStagesForOrg(supabase: any, orgId: string): Promise<void> {
   const rows = DEFAULT_JOURNEY_STAGES.map((s) => ({
     org_id: orgId, track: s.track, name: s.name, description: s.description, sort_order: s.sortOrder,
-    milestone_type: s.name === "Gravação de conteúdo" ? "gravacao" : s.name === "Análise do mês anterior" ? "analise" : null,
+    milestone_type: s.name === "Análise do mês anterior" ? "analise" : null,
   }));
   const { error } = await supabase.from("client_journey_stages").insert(rows);
   if (error) console.error("[seedJourneyStagesForOrg] failed:", error.message);
@@ -80,7 +80,7 @@ export const upsertJourneyStage = createServerFn({ method: "POST" })
       track: z.enum(["onboarding", "operational"]),
       name: z.string().trim().min(1).max(160),
       description: z.string().trim().max(2000).optional(),
-      milestoneType: z.enum(["gravacao", "analise"]).nullable().optional(),
+      milestoneType: z.enum(["analise"]).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
@@ -237,11 +237,19 @@ export type ClientOperationsRow = {
   stageId: string | null;
   stageName: string | null;
   stageTrack: JourneyTrack | null;
-  gravacaoCadenceDays: number | null;
   lastGravacaoAt: string | null;
+  gravacaoVideoCount: number | null;
   nextGravacaoDue: string | null;
   lastAnaliseAt: string | null;
 };
+
+/** Menos de 6 vídeos: grava de novo em 30 dias. 6 a 11: 45 dias. 12 ou
+ * mais: 60 dias (2 meses) — regra combinada com o Junior. */
+function gravacaoIntervalDays(videoCount: number): number {
+  if (videoCount < 6) return 30;
+  if (videoCount < 12) return 45;
+  return 60;
+}
 
 export const getClientOperationsOverview = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
@@ -251,7 +259,7 @@ export const getClientOperationsOverview = createServerFn({ method: "GET" })
 
     const { data: clients, error } = await context.supabase
       .from("clients")
-      .select("id, name, color, current_stage_id, gravacao_cadence_days")
+      .select("id, name, color, current_stage_id, last_gravacao_at")
       .eq("archived", false)
       .neq("category", "Ex-clientes")
       .order("name");
@@ -265,53 +273,71 @@ export const getClientOperationsOverview = createServerFn({ method: "GET" })
       .select("id, name, track, milestone_type")
       .eq("org_id", context.orgId);
     const stageMap = new Map((stages ?? []).map((s: any) => [s.id, s]));
-    const gravacaoStageIds = (stages ?? []).filter((s: any) => s.milestone_type === "gravacao").map((s: any) => s.id);
     const analiseStageIds = (stages ?? []).filter((s: any) => s.milestone_type === "analise").map((s: any) => s.id);
 
-    const milestoneStageIds = [...gravacaoStageIds, ...analiseStageIds];
-    const { data: history } = milestoneStageIds.length
+    const { data: history } = analiseStageIds.length
       ? await context.supabase
           .from("client_stage_history")
-          .select("client_id, stage_id, entered_at")
+          .select("client_id, entered_at")
           .in("client_id", clientIds)
-          .in("stage_id", milestoneStageIds)
+          .in("stage_id", analiseStageIds)
           .order("entered_at", { ascending: false })
       : { data: [] as any[] };
-
-    const lastGravacaoByClient = new Map<string, string>();
     const lastAnaliseByClient = new Map<string, string>();
     (history ?? []).forEach((h: any) => {
-      const isGravacao = gravacaoStageIds.includes(h.stage_id);
-      const target = isGravacao ? lastGravacaoByClient : lastAnaliseByClient;
-      if (!target.has(h.client_id)) target.set(h.client_id, h.entered_at);
+      if (!lastAnaliseByClient.has(h.client_id)) lastAnaliseByClient.set(h.client_id, h.entered_at);
+    });
+
+    // Quantidade de vídeos gravados no mês da "última gravação" de cada
+    // cliente — soma o activity_quantity de todo item tipo "gravacao"
+    // registrado em Mais Atividades cujo "Data para gravação" caia nesse mês.
+    const { data: gravacaoItems } = await context.supabase
+      .from("content_items")
+      .select("activity_quantity, due_date, months!inner(client_id)")
+      .eq("type", "gravacao")
+      .not("due_date", "is", null);
+    const videoCountByClientMonth = new Map<string, number>();
+    (gravacaoItems ?? []).forEach((it: any) => {
+      const clientId = it.months?.client_id;
+      if (!clientId) return;
+      const monthKey = String(it.due_date).slice(0, 7);
+      const key = `${clientId}|${monthKey}`;
+      const qty = it.activity_quantity > 0 ? it.activity_quantity : 1;
+      videoCountByClientMonth.set(key, (videoCountByClientMonth.get(key) ?? 0) + qty);
     });
 
     return list.map((c: any) => {
       const stage = c.current_stage_id ? stageMap.get(c.current_stage_id) : null;
-      const lastGravacaoAt = lastGravacaoByClient.get(c.id) ?? null;
-      const cadence = c.gravacao_cadence_days as number | null;
-      const nextGravacaoDue = lastGravacaoAt && cadence
-        ? new Date(new Date(lastGravacaoAt).getTime() + cadence * 86400000).toISOString()
-        : null;
+      const lastGravacaoAt = c.last_gravacao_at as string | null;
+      let gravacaoVideoCount: number | null = null;
+      let nextGravacaoDue: string | null = null;
+      if (lastGravacaoAt) {
+        const monthKey = lastGravacaoAt.slice(0, 7);
+        gravacaoVideoCount = videoCountByClientMonth.get(`${c.id}|${monthKey}`) ?? 0;
+        const days = gravacaoIntervalDays(gravacaoVideoCount);
+        nextGravacaoDue = new Date(new Date(`${lastGravacaoAt}T00:00:00Z`).getTime() + days * 86400000).toISOString();
+      }
       return {
         clientId: c.id, clientName: c.name, clientColor: c.color,
         stageId: stage?.id ?? null, stageName: stage?.name ?? null, stageTrack: stage?.track ?? null,
-        gravacaoCadenceDays: cadence,
-        lastGravacaoAt, nextGravacaoDue,
+        lastGravacaoAt, gravacaoVideoCount, nextGravacaoDue,
         lastAnaliseAt: lastAnaliseByClient.get(c.id) ?? null,
       };
     }) as ClientOperationsRow[];
   });
 
-export const setClientGravacaoCadence = createServerFn({ method: "POST" })
+export const setClientLastGravacao = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; days: number | null }) =>
-    z.object({ clientId: z.string().uuid(), days: z.number().int().min(1).max(365).nullable() }).parse(d))
+  .inputValidator((d: { clientId: string; date: string | null }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+    }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
     const { error } = await context.supabase
-      .from("clients").update({ gravacao_cadence_days: data.days }).eq("id", data.clientId);
+      .from("clients").update({ last_gravacao_at: data.date }).eq("id", data.clientId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

@@ -11,7 +11,6 @@ const TRACK_LABEL: Record<JourneyTrack, string> = {
 };
 
 const MILESTONE_LABEL: Record<StageMilestoneType, string> = {
-  gravacao: "Gravação",
   analise: "Análise do mês",
 };
 
@@ -141,7 +140,6 @@ function StageEditForm({ initial, onCancel, onSave }: {
           className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
         >
           <option value="">— Nenhuma</option>
-          <option value="gravacao">Gravação</option>
           <option value="analise">Análise do mês</option>
         </select>
       </label>

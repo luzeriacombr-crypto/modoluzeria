@@ -62,7 +62,7 @@ import {
 import {
   listJourneyStages, upsertJourneyStage, deleteJourneyStage,
   setClientStage, logClientStageUpdate, getClientStageHistory, getWeeklyClientReminders,
-  getClientOperationsOverview, setClientGravacaoCadence,
+  getClientOperationsOverview, setClientLastGravacao,
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
@@ -649,10 +649,10 @@ export function useApi() {
       },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar etapa."),
     }),
-    setClientGravacaoCadence: useMutation({
-      mutationFn: useServerFn(setClientGravacaoCadence),
+    setClientLastGravacao: useMutation({
+      mutationFn: useServerFn(setClientLastGravacao),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-operations-overview"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar cadência."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar data da gravação."),
     }),
     deleteJourneyStage: useMutation({
       mutationFn: useServerFn(deleteJourneyStage),

@@ -1023,9 +1023,9 @@ export type Database = {
           description: string
           favorite: boolean
           fixed_responsible_id: string | null
-          gravacao_cadence_days: number | null
           icon: string | null
           id: string
+          last_gravacao_at: string | null
           name: string
           niche: string | null
           notes: string | null
@@ -1048,9 +1048,9 @@ export type Database = {
           description?: string
           favorite?: boolean
           fixed_responsible_id?: string | null
-          gravacao_cadence_days?: number | null
           icon?: string | null
           id?: string
+          last_gravacao_at?: string | null
           name: string
           niche?: string | null
           notes?: string | null
@@ -1073,9 +1073,9 @@ export type Database = {
           description?: string
           favorite?: boolean
           fixed_responsible_id?: string | null
-          gravacao_cadence_days?: number | null
           icon?: string | null
           id?: string
+          last_gravacao_at?: string | null
           name?: string
           niche?: string | null
           notes?: string | null
