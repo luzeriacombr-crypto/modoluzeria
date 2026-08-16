@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, TrendingDown, Info } from "lucide-react";
 import { orgCostSettingsQO, clientMarginsQO, useApi } from "@/lib/luzeria/queries";
+import { useUI } from "@/lib/luzeria/ui-store";
 import { CONTENT_TYPE_LABEL, type ContentType } from "@/lib/luzeria/types";
+import { InfoTip } from "./InfoTip";
 
 const EFFORT_TYPES: ContentType[] = ["post", "reel", "story", "gravacao", "outros"];
 const DAYS_OPTIONS = [30, 90, 180] as const;
@@ -44,13 +46,19 @@ function CostSettingsForm() {
       <h3 className="text-sm font-semibold text-white">Custo-hora da equipe</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="text-xs text-white/50 block mb-1">Custo-hora (R$)</label>
+          <label className="text-xs text-white/50 mb-1 inline-flex items-center gap-1">
+            Custo-hora (R$)
+            <InfoTip text="Quanto custa, em média, uma hora de trabalho da sua equipe. Usado pra calcular o custo estimado de cada cliente (horas × esse valor)." />
+          </label>
           <input type="number" min="0" step="0.01" value={hourlyCost}
             onChange={(e) => setHourlyCost(e.target.value)} placeholder="Não definido" className={inp} />
         </div>
       </div>
       <div>
-        <label className="text-xs text-white/50 block mb-2">Média de horas por tipo de conteúdo</label>
+        <label className="text-xs text-white/50 mb-2 inline-flex items-center gap-1">
+          Média de horas por tipo de conteúdo
+          <InfoTip text="Quantas horas, em média, sua equipe leva pra produzir cada tipo de item. Usado junto com os itens finalizados pra estimar quantas horas cada cliente consumiu." />
+        </label>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {EFFORT_TYPES.map((t) => (
             <div key={t}>
@@ -74,6 +82,7 @@ function CostSettingsForm() {
 export function ClientMarginPanel() {
   const [days, setDays] = useState<30 | 90 | 180>(30);
   const { data, isLoading } = useQuery(clientMarginsQO(days));
+  const { openFicha } = useUI();
 
   return (
     <div className="space-y-4">
@@ -110,20 +119,52 @@ export function ClientMarginPanel() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/[0.07]">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">Cliente</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">Contrato</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">Entregues</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">Horas est.</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">Custo est.</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">Margem</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1">
+                    Cliente
+                    <InfoTip text="Nome do cliente. Clique pra abrir a ficha completa e preencher o valor do contrato, por exemplo." />
+                  </span>
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    <InfoTip text="Valor mensal do contrato, cadastrado na ficha do cliente. Aparece '—' quando ainda não foi preenchido." />
+                    Contrato
+                  </span>
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    <InfoTip text="Quantidade de itens finalizados desse cliente no período escolhido (30/90/180 dias) — mesma contagem usada no ranking da equipe." />
+                    Entregues
+                  </span>
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    <InfoTip text="Horas estimadas gastas com esse cliente no período: itens entregues × média de horas por tipo de conteúdo (configurada acima)." />
+                    Horas est.
+                  </span>
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    <InfoTip text="Horas estimadas × custo-hora da equipe. É uma estimativa, não um apontamento real." />
+                    Custo est.
+                  </span>
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    <InfoTip text="Valor do contrato menos o custo estimado. Vermelho quando negativo, verde quando positivo. Aparece '—' quando o contrato não está preenchido." />
+                    Margem
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {data.rows.map((r) => (
                 <tr key={r.clientId} className="border-b border-white/[0.04] last:border-0">
-                  <td className="px-4 py-3 text-sm text-white flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: r.clientColor }} />
-                    {r.clientName}
+                  <td className="px-4 py-3 text-sm text-white">
+                    <button onClick={() => openFicha(r.clientId)} className="flex items-center gap-2 hover:underline">
+                      <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: r.clientColor }} />
+                      {r.clientName}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-sm text-white/70 text-right">{money(r.contractValue)}</td>
                   <td className="px-4 py-3 text-sm text-white/70 text-right">{r.deliveredCount}</td>
