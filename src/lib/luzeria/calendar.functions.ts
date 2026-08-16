@@ -214,8 +214,10 @@ export const getTodayCalendarEvents = createServerFn({ method: "GET" })
         id: e.id,
         title: e.summary ?? "(sem título)",
         start: e.start?.dateTime ?? e.start?.date ?? null,
+        end: e.end?.dateTime ?? e.end?.date ?? null,
         allDay: !e.start?.dateTime,
         location: e.location ?? null,
+        description: e.description ?? null,
         link: e.htmlLink ?? null,
       }));
     return { connected: true, events };

@@ -427,6 +427,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
 
 function TodayCalendarWidget() {
   const { data } = useQuery(todayCalendarEventsQO());
+  const [openEvent, setOpenEvent] = useState<any | null>(null);
   if (!data?.connected || !data.events?.length) return null;
   return (
     <div className="mb-6 bg-[#1C1C1C] rounded-lg overflow-hidden">
@@ -437,21 +438,54 @@ function TodayCalendarWidget() {
         <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Hoje na agenda</h2>
       </div>
       <div className="divide-y divide-white/[0.05]">
-        {data.events.map((ev: any) => {
-          const Row = ev.link ? "a" : "div";
-          return (
-            <Row
-              key={ev.id}
-              {...(ev.link ? { href: ev.link, target: "_blank", rel: "noopener noreferrer" } : {})}
-              className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.03] transition-colors"
-            >
-              <span className="text-[11px] text-white/40 tabular-nums shrink-0">
-                {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-              </span>
-              <span className="text-sm text-white/90 truncate flex-1">{ev.title}</span>
-            </Row>
-          );
-        })}
+        {data.events.map((ev: any) => (
+          <button
+            key={ev.id}
+            onClick={() => setOpenEvent(ev)}
+            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.03] transition-colors text-left"
+          >
+            <span className="text-[11px] text-white/40 tabular-nums shrink-0">
+              {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+            <span className="text-sm text-white/90 truncate flex-1">{ev.title}</span>
+          </button>
+        ))}
+      </div>
+      {openEvent && <CalendarEventModal event={openEvent} onClose={() => setOpenEvent(null)} />}
+    </div>
+  );
+}
+
+function CalendarEventModal({ event, onClose }: { event: any; onClose: () => void }) {
+  const timeRange = event.allDay
+    ? "Dia todo"
+    : `${new Date(event.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}${
+        event.end ? ` – ${new Date(event.end).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""
+      }`;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-sm bg-[#1C1C1C] border border-white/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <h3 className="text-base font-semibold text-white">{event.title}</h3>
+          <button onClick={onClose} className="text-white/40 hover:text-white shrink-0"><X size={16} /></button>
+        </div>
+        <p className="text-[13px] text-white/60">{timeRange}</p>
+        {event.location && (
+          <p className="text-[13px] text-white/50 mt-2">📍 {event.location}</p>
+        )}
+        {event.description && (
+          <p className="text-[13px] text-white/70 mt-4 leading-relaxed whitespace-pre-wrap">{event.description}</p>
+        )}
+        {event.link && (
+          <a
+            href={event.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md border border-white/15 text-white/80 hover:text-white hover:border-white/30"
+          >
+            <CalendarClock size={12} /> Abrir no Google Agenda
+          </a>
+        )}
       </div>
     </div>
   );
