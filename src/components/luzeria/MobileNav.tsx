@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, User, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -6,8 +6,6 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { useMe, clientsQO } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "@/integrations/supabase/client";
-import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { glassCardStyle } from "@/lib/luzeria/utils";
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
@@ -25,7 +23,6 @@ export function MobileNav() {
   const me = useMe().data;
   const { data: clients = [] } = useQuery(clientsQO());
   const [showClients, setShowClients] = useState(false);
-  const [showMe, setShowMe] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -33,11 +30,10 @@ export function MobileNav() {
   const disabledFeatures = new Set(me?.disabledFeatures ?? []);
 
   const isClientPath = pathname.startsWith("/cliente/");
-  const tab = showClients ? "clients" : showMe ? "me" : showMenu ? "menu" : "home";
+  const tab = showClients ? "clients" : showMenu ? "menu" : "home";
 
   function closeAllSheets() {
     setShowClients(false);
-    setShowMe(false);
     setShowMenu(false);
   }
 
@@ -154,23 +150,6 @@ export function MobileNav() {
         </div>
       )}
 
-      {showMe && pathname !== "/perfil" && (
-        <div className="fixed inset-0 z-40 bg-[#0D0D0D] pt-14 pb-20" onClick={() => setShowMe(false)}>
-          <div className="px-5 py-6 flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
-            {me && <Avatar profile={me} size={72} />}
-            <div className="text-white font-bold text-base">{me?.name}</div>
-            <div className="text-white/50 text-xs">{me?.email}</div>
-            <button
-              onClick={() => { navigate({ to: "/perfil" }); setShowMe(false); }}
-              className="mt-6 px-5 py-2 rounded-md text-xs font-bold"
-              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-            >Editar perfil</button>
-            <button onClick={() => clearOneSignalUserId().then(() => supabase.auth.signOut()).then(() => (location.href = "/auth"))}
-              className="mt-3 text-xs text-red-400 hover:underline">Sair</button>
-          </div>
-        </div>
-      )}
-
       <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around bg-[#1C1C1C]/85 backdrop-blur-xl border-t border-white/[0.08]" data-tour="mobile-bottom-nav">
         <NavBtn icon={<LayoutDashboard size={20} />} active={pathname === "/minhas-tarefas"}
           onClick={() => { navigate({ to: "/minhas-tarefas" }); closeAllSheets(); }} />
@@ -178,13 +157,10 @@ export function MobileNav() {
           onClick={() => { navigate({ to: "/admin" }); closeAllSheets(); }} />
         <NavBtn icon={<Users size={20} />} active={tab === "clients" || isClientPath}
           dataTour="mobile-clients-btn"
-          onClick={() => { setShowClients((v) => !v); setShowMe(false); setShowMenu(false); }} />
+          onClick={() => { setShowClients((v) => !v); setShowMenu(false); }} />
         <NavBtn icon={<Menu size={20} />} active={tab === "menu"}
           dataTour="mobile-menu-btn"
-          onClick={() => { setShowMenu((v) => !v); setShowClients(false); setShowMe(false); }} />
-        <NavBtn icon={me ? <Avatar profile={me} size={22} /> : <User size={20} />}
-          active={tab === "me" || pathname === "/perfil"}
-          onClick={() => { setShowMe((v) => !v); setShowClients(false); setShowMenu(false); }} />
+          onClick={() => { setShowMenu((v) => !v); setShowClients(false); }} />
       </nav>
     </>
   );
