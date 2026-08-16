@@ -1,19 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, todayCalendarEventsQO, myCalendarConnectionQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, todayCalendarEventsQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronRight } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
-import { GoogleCalendarPromptModal } from "./GoogleCalendarPromptModal";
 import { getDailyVerse } from "@/lib/luzeria/daily-verse";
-
-const GCAL_PROMPT_DISMISSED_KEY = "lz_gcal_prompt_dismissed";
 
 const ProductivityBlock = lazy(() =>
   import("./ProductivityChart").then((m) => ({ default: m.ProductivityBlock })),
@@ -69,17 +66,6 @@ export function MyTasks() {
   const { data: mentions = [] } = useQuery({ ...myMentionsQO(), enabled: isMeView });
   const { data: weeklyReminders = [] } = useQuery({ ...weeklyClientRemindersQO(), enabled: isAdmin && isMeView && whatsappRemindersEnabled });
   const googleCalendarEnabled = !disabledFeatures.has("google_calendar");
-  const { data: calendarConn } = useQuery({ ...myCalendarConnectionQO(), enabled: isMeView && googleCalendarEnabled });
-  const [showCalendarPrompt, setShowCalendarPrompt] = useState(false);
-  useEffect(() => {
-    if (!isMeView || !googleCalendarEnabled || !calendarConn || calendarConn.connected) return;
-    if (localStorage.getItem(GCAL_PROMPT_DISMISSED_KEY)) return;
-    setShowCalendarPrompt(true);
-  }, [isMeView, googleCalendarEnabled, calendarConn]);
-  function dismissCalendarPrompt() {
-    localStorage.setItem(GCAL_PROMPT_DISMISSED_KEY, "1");
-    setShowCalendarPrompt(false);
-  }
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(readOpenSections);
   const isSectionOpen = (id: string) => openSections[id] ?? true;
   const toggleSection = (id: string) => {
@@ -131,7 +117,6 @@ export function MyTasks() {
 
   return (
     <div className="p-10 max-w-5xl mx-auto" data-tour="my-tasks">
-      {showCalendarPrompt && <GoogleCalendarPromptModal onClose={dismissCalendarPrompt} />}
       {!isMeView && targetProfile && (
         <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg text-[12.5px]"
           style={{ backgroundColor: "rgba(74,158,255,0.12)", color: "#7EB3FF" }}>

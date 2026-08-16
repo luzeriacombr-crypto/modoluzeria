@@ -314,7 +314,11 @@ function PrefRow({ icon, title, description, value, disabled, onChange }: {
 
 function GoogleCalendarSection() {
   const { data: conn, isLoading } = useQuery(myCalendarConnectionQO());
-  const { getGoogleCalendarAuthUrl, disconnectGoogleCalendar } = useApi();
+  const { getGoogleCalendarAuthUrl, disconnectGoogleCalendar, createCalendarEvent } = useApi();
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
 
   async function connect() {
     try {
@@ -332,34 +336,88 @@ function GoogleCalendarSection() {
     });
   }
 
+  function submitEvent(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim() || !date || !time) return;
+    createCalendarEvent.mutate(
+      { data: { title: title.trim(), date, time } },
+      {
+        onSuccess: () => {
+          toast.success("Compromisso criado na sua Google Agenda.");
+          setTitle(""); setDate(""); setTime(""); setShowForm(false);
+        },
+        onError: (err: any) => toast.error(err?.message ?? "Erro ao criar compromisso."),
+      },
+    );
+  }
+
   return (
-    <div className="flex items-start gap-4">
-      <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
-        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
-        <CalendarClock size={16} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-white">
-          {conn?.connected ? "Conectado" : "Não conectado"}
+    <div>
+      <div className="flex items-start gap-4">
+        <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+          <CalendarClock size={16} />
         </div>
-        <div className="text-[11px] text-white/50 mt-1">
-          {conn?.connected
-            ? `Conectado como ${conn.email}. Seus compromissos de hoje aparecem em Minhas Demandas.`
-            : "Conecte sua Google Agenda pra ver seus compromissos de hoje em Minhas Demandas."}
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-white">
+            {conn?.connected ? "Conectado" : "Não conectado"}
+          </div>
+          <div className="text-[11px] text-white/50 mt-1">
+            {conn?.connected
+              ? `Conectado como ${conn.email}. Seus compromissos de hoje aparecem em Minhas Demandas.`
+              : "Conecte sua Google Agenda pra ver seus compromissos de hoje em Minhas Demandas."}
+          </div>
         </div>
+        {!isLoading && (
+          <div className="flex items-center gap-2 shrink-0">
+            {conn?.connected && (
+              <button
+                type="button"
+                onClick={() => setShowForm((v) => !v)}
+                className="text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-black"
+                style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+              >
+                Novo compromisso
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={conn?.connected ? disconnect : connect}
+              disabled={getGoogleCalendarAuthUrl.isPending || disconnectGoogleCalendar.isPending}
+              className={`text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md disabled:opacity-50 ${
+                conn?.connected ? "border border-white/15 text-white/80 hover:text-white hover:border-white/30" : "text-black"
+              }`}
+              style={conn?.connected ? undefined : { backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+            >
+              {conn?.connected ? "Desconectar" : "Conectar"}
+            </button>
+          </div>
+        )}
       </div>
-      {!isLoading && (
-        <button
-          type="button"
-          onClick={conn?.connected ? disconnect : connect}
-          disabled={getGoogleCalendarAuthUrl.isPending || disconnectGoogleCalendar.isPending}
-          className={`shrink-0 text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md disabled:opacity-50 ${
-            conn?.connected ? "border border-white/15 text-white/80 hover:text-white hover:border-white/30" : "text-black"
-          }`}
-          style={conn?.connected ? undefined : { backgroundColor: "rgb(var(--lz-brand-rgb))" }}
-        >
-          {conn?.connected ? "Desconectar" : "Conectar"}
-        </button>
+
+      {showForm && conn?.connected && (
+        <form onSubmit={submitEvent} className="mt-5 pt-5 border-t border-white/[0.06] flex flex-wrap items-end gap-3">
+          <label className="flex-1 min-w-[160px]">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">Título</span>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200}
+              placeholder="Reunião com cliente" className="lz-input mt-1.5" required />
+          </label>
+          <label>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">Data</span>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              className="lz-input mt-1.5" required />
+          </label>
+          <label>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">Horário</span>
+            <input type="time" value={time} onChange={(e) => setTime(e.target.value)}
+              className="lz-input mt-1.5" required />
+          </label>
+          <button type="submit" disabled={createCalendarEvent.isPending}
+            className="text-sm font-bold px-5 py-2.5 rounded-md disabled:opacity-40"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+            {createCalendarEvent.isPending ? "Salvando…" : "Salvar"}
+          </button>
+        </form>
       )}
     </div>
   );

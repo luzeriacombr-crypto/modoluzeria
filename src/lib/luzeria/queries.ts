@@ -53,7 +53,7 @@ import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from 
 import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications } from "./instagram.functions";
 import {
   getCalendarItems, getGoogleCalendarAuthUrl, disconnectGoogleCalendar,
-  getMyCalendarConnection, getTodayCalendarEvents,
+  getMyCalendarConnection, getTodayCalendarEvents, createCalendarEvent,
 } from "./calendar.functions";
 import {
   getSalesPageBlocks, listSalesPageBlocksAdmin, createSalesPageBlock, updateSalesPageBlock,
@@ -861,6 +861,10 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["my-calendar-connection"] });
         qc.invalidateQueries({ queryKey: ["today-calendar-events"] });
       },
+    }),
+    createCalendarEvent: useMutation({
+      mutationFn: useServerFn(createCalendarEvent),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["today-calendar-events"] }),
     }),
     /* ===== FEED SHARE ===== */
     getOrCreateShareToken: useMutation({ mutationFn: useServerFn(getOrCreateShareToken) }),

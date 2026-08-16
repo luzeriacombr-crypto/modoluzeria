@@ -47,7 +47,10 @@ export const getCalendarItems = createServerFn({ method: "GET" })
 
 const GCAL_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GCAL_EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
-const GCAL_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
+// calendar.events covers read+write on events (enough for "today's events"
+// and creating new compromissos) without the broader calendar-management
+// access full "calendar" scope would grant.
+const GCAL_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 
 function googleCredentials() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -200,4 +203,53 @@ export const getTodayCalendarEvents = createServerFn({ method: "GET" })
         location: e.location ?? null,
       }));
     return { connected: true, events };
+  });
+
+// Pure wall-clock arithmetic (no timezone conversion) — used to derive an
+// end time from a start time without pulling in a date library. Treating
+// the input as UTC for the addition is safe here since we only ever add a
+// fixed duration and re-read it back as a wall-clock value.
+function shiftLocalDateTime(date: string, time: string, minutesToAdd: number) {
+  const [y, mo, d] = date.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  const shifted = new Date(Date.UTC(y, mo - 1, d, h, mi) + minutesToAdd * 60_000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    date: `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`,
+    time: `${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}`,
+  };
+}
+
+export const createCalendarEvent = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { title: string; date: string; time: string }) =>
+    z.object({
+      title: z.string().trim().min(1).max(200),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      time: z.string().regex(/^\d{2}:\d{2}$/),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const accessToken = await getValidCalendarAccessToken(context.supabase, context.userId);
+    if (!accessToken) throw new Error("Conecte sua Google Agenda antes de criar um compromisso.");
+
+    // 1h default duration — good enough for v1 (reuniões/gravações), no UI for a custom length yet.
+    const end = shiftLocalDateTime(data.date, data.time, 60);
+    const res = await fetch(GCAL_EVENTS_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        summary: data.title,
+        start: { dateTime: `${data.date}T${data.time}:00-03:00` },
+        end: { dateTime: `${end.date}T${end.time}:00-03:00` },
+      }),
+    });
+    if (!res.ok) {
+      const errJson: any = await res.json().catch(() => null);
+      const msg = errJson?.error?.message ?? "";
+      if (res.status === 403 || /insufficient/i.test(msg)) {
+        throw new Error("Sua conexão com a Google Agenda não tem permissão pra criar compromissos. Desconecte e conecte de novo.");
+      }
+      throw new Error(msg || "Falha ao criar o compromisso na Google Agenda.");
+    }
+    return { ok: true };
   });
