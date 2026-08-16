@@ -198,7 +198,7 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
   const [callAnchor, setCallAnchor] = useState<DOMRect | null>(null);
   const callBtnRef = useRef<HTMLButtonElement>(null);
   return (
-    <header className="lz-app-header sticky top-0 z-30 px-4 md:px-6 flex items-center gap-2 h-14">
+    <header className="lz-app-header sticky top-0 z-50 px-4 md:px-6 flex items-center gap-2 h-14">
       <button
         onClick={onToggleSidebar}
         aria-label={sidebarHidden ? "Mostrar sidebar" : "Ocultar sidebar"}
