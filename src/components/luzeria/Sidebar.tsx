@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram, Users,
+  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram, Users, LayoutGrid,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -106,6 +106,14 @@ export function Sidebar({
               onClick={() => navigate({ to: "/calendario" })}
             />
           </div>
+        )}
+        {isAdmin && (
+          <NavButton
+            icon={<LayoutGrid size={15} />}
+            label="Visão Geral"
+            active={pathname === "/visao-geral"}
+            onClick={() => navigate({ to: "/visao-geral" })}
+          />
         )}
         {isAdmin && !disabled.has("instagram") && (
           <NavButton

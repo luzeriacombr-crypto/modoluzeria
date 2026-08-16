@@ -62,6 +62,7 @@ import {
 import {
   listJourneyStages, upsertJourneyStage, deleteJourneyStage,
   setClientStage, logClientStageUpdate, getClientStageHistory, getWeeklyClientReminders,
+  getClientOperationsOverview, setClientGravacaoCadence,
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
@@ -182,6 +183,9 @@ export const clientFichaQO = (clientId: string | null) =>
 
 export const journeyStagesQO = () =>
   queryOptions({ queryKey: ["journey-stages"], queryFn: () => listJourneyStages() });
+
+export const clientOperationsOverviewQO = () =>
+  queryOptions({ queryKey: ["client-operations-overview"], queryFn: () => getClientOperationsOverview() });
 
 export const clientDocsQO = (clientId: string) =>
   queryOptions({
@@ -639,8 +643,16 @@ export function useApi() {
     }),
     upsertJourneyStage: useMutation({
       mutationFn: useServerFn(upsertJourneyStage),
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["journey-stages"] }),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["journey-stages"] });
+        qc.invalidateQueries({ queryKey: ["client-operations-overview"] });
+      },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar etapa."),
+    }),
+    setClientGravacaoCadence: useMutation({
+      mutationFn: useServerFn(setClientGravacaoCadence),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-operations-overview"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar cadência."),
     }),
     deleteJourneyStage: useMutation({
       mutationFn: useServerFn(deleteJourneyStage),
@@ -667,6 +679,7 @@ export function useApi() {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["client-ficha"] });
         qc.invalidateQueries({ queryKey: ["clients"] });
+        qc.invalidateQueries({ queryKey: ["client-operations-overview"] });
       },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao mudar etapa."),
     }),

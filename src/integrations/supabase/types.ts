@@ -759,6 +759,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          milestone_type: string | null
           name: string
           org_id: string
           sort_order: number
@@ -768,6 +769,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          milestone_type?: string | null
           name: string
           org_id: string
           sort_order?: number
@@ -777,6 +779,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          milestone_type?: string | null
           name?: string
           org_id?: string
           sort_order?: number
@@ -900,6 +903,52 @@ export type Database = {
           },
         ]
       }
+      client_stage_history: {
+        Row: {
+          client_id: string
+          entered_at: string
+          id: string
+          org_id: string
+          stage_id: string
+        }
+        Insert: {
+          client_id: string
+          entered_at?: string
+          id?: string
+          org_id: string
+          stage_id: string
+        }
+        Update: {
+          client_id?: string
+          entered_at?: string
+          id?: string
+          org_id?: string
+          stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_stage_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_stage_history_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_stage_history_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_stage_updates: {
         Row: {
           client_id: string
@@ -974,6 +1023,7 @@ export type Database = {
           description: string
           favorite: boolean
           fixed_responsible_id: string | null
+          gravacao_cadence_days: number | null
           icon: string | null
           id: string
           name: string
@@ -998,6 +1048,7 @@ export type Database = {
           description?: string
           favorite?: boolean
           fixed_responsible_id?: string | null
+          gravacao_cadence_days?: number | null
           icon?: string | null
           id?: string
           name: string
@@ -1022,6 +1073,7 @@ export type Database = {
           description?: string
           favorite?: boolean
           fixed_responsible_id?: string | null
+          gravacao_cadence_days?: number | null
           icon?: string | null
           id?: string
           name?: string

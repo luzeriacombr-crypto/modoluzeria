@@ -4,6 +4,7 @@ import { z } from "zod";
 
 export type JourneyTrack = "onboarding" | "operational";
 export type StageUpdateTrigger = "stage_change" | "weekly_nudge" | "manual";
+export type StageMilestoneType = "gravacao" | "analise";
 
 export type JourneyStage = {
   id: string;
@@ -11,6 +12,7 @@ export type JourneyStage = {
   name: string;
   description: string;
   sortOrder: number;
+  milestoneType: StageMilestoneType | null;
 };
 
 /** Mesmas 13 (onboarding) + 10 (operational) etapas semeadas pra toda
@@ -48,6 +50,7 @@ export const DEFAULT_JOURNEY_STAGES: { track: JourneyTrack; name: string; descri
 export async function seedJourneyStagesForOrg(supabase: any, orgId: string): Promise<void> {
   const rows = DEFAULT_JOURNEY_STAGES.map((s) => ({
     org_id: orgId, track: s.track, name: s.name, description: s.description, sort_order: s.sortOrder,
+    milestone_type: s.name === "Gravação de conteúdo" ? "gravacao" : s.name === "Análise do mês anterior" ? "analise" : null,
   }));
   const { error } = await supabase.from("client_journey_stages").insert(rows);
   if (error) console.error("[seedJourneyStagesForOrg] failed:", error.message);
@@ -58,24 +61,26 @@ export const listJourneyStages = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("client_journey_stages")
-      .select("id, track, name, description, sort_order")
+      .select("id, track, name, description, sort_order, milestone_type")
       .eq("org_id", context.orgId)
       .order("track").order("sort_order");
     if (error) throw new Error(error.message);
     return (data ?? []).map((s: any) => ({
       id: s.id, track: s.track, name: s.name,
       description: s.description, sortOrder: s.sort_order,
+      milestoneType: s.milestone_type ?? null,
     })) as JourneyStage[];
   });
 
 export const upsertJourneyStage = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { id?: string; track: JourneyTrack; name: string; description?: string }) =>
+  .inputValidator((d: { id?: string; track: JourneyTrack; name: string; description?: string; milestoneType?: StageMilestoneType | null }) =>
     z.object({
       id: z.string().uuid().optional(),
       track: z.enum(["onboarding", "operational"]),
       name: z.string().trim().min(1).max(160),
       description: z.string().trim().max(2000).optional(),
+      milestoneType: z.enum(["gravacao", "analise"]).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
@@ -83,7 +88,7 @@ export const upsertJourneyStage = createServerFn({ method: "POST" })
     const db: any = context.supabase;
     if (data.id) {
       const { error } = await db.from("client_journey_stages")
-        .update({ track: data.track, name: data.name, description: data.description ?? "" })
+        .update({ track: data.track, name: data.name, description: data.description ?? "", milestone_type: data.milestoneType ?? null })
         .eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
@@ -94,6 +99,7 @@ export const upsertJourneyStage = createServerFn({ method: "POST" })
       const { error } = await db.from("client_journey_stages").insert({
         org_id: context.orgId, track: data.track, name: data.name,
         description: data.description ?? "", sort_order: nextOrder,
+        milestone_type: data.milestoneType ?? null,
       });
       if (error) throw new Error(error.message);
     }
@@ -220,4 +226,92 @@ export const getWeeklyClientReminders = createServerFn({ method: "GET" })
       .filter((c: any) => c._lastMs < cutoffMs)
       .sort((a: any, b: any) => a._lastMs - b._lastMs)
       .map(({ _lastMs, ...rest }: any) => rest) as WeeklyClientReminder[];
+  });
+
+/* ===== VISÃO GERAL OPERACIONAL ===== */
+
+export type ClientOperationsRow = {
+  clientId: string;
+  clientName: string;
+  clientColor: string;
+  stageId: string | null;
+  stageName: string | null;
+  stageTrack: JourneyTrack | null;
+  gravacaoCadenceDays: number | null;
+  lastGravacaoAt: string | null;
+  nextGravacaoDue: string | null;
+  lastAnaliseAt: string | null;
+};
+
+export const getClientOperationsOverview = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { data: clients, error } = await context.supabase
+      .from("clients")
+      .select("id, name, color, current_stage_id, gravacao_cadence_days")
+      .eq("archived", false)
+      .neq("category", "Ex-clientes")
+      .order("name");
+    if (error) throw new Error(error.message);
+    const list = clients ?? [];
+    if (list.length === 0) return [] as ClientOperationsRow[];
+    const clientIds = list.map((c: any) => c.id);
+
+    const { data: stages } = await context.supabase
+      .from("client_journey_stages")
+      .select("id, name, track, milestone_type")
+      .eq("org_id", context.orgId);
+    const stageMap = new Map((stages ?? []).map((s: any) => [s.id, s]));
+    const gravacaoStageIds = (stages ?? []).filter((s: any) => s.milestone_type === "gravacao").map((s: any) => s.id);
+    const analiseStageIds = (stages ?? []).filter((s: any) => s.milestone_type === "analise").map((s: any) => s.id);
+
+    const milestoneStageIds = [...gravacaoStageIds, ...analiseStageIds];
+    const { data: history } = milestoneStageIds.length
+      ? await context.supabase
+          .from("client_stage_history")
+          .select("client_id, stage_id, entered_at")
+          .in("client_id", clientIds)
+          .in("stage_id", milestoneStageIds)
+          .order("entered_at", { ascending: false })
+      : { data: [] as any[] };
+
+    const lastGravacaoByClient = new Map<string, string>();
+    const lastAnaliseByClient = new Map<string, string>();
+    (history ?? []).forEach((h: any) => {
+      const isGravacao = gravacaoStageIds.includes(h.stage_id);
+      const target = isGravacao ? lastGravacaoByClient : lastAnaliseByClient;
+      if (!target.has(h.client_id)) target.set(h.client_id, h.entered_at);
+    });
+
+    return list.map((c: any) => {
+      const stage = c.current_stage_id ? stageMap.get(c.current_stage_id) : null;
+      const lastGravacaoAt = lastGravacaoByClient.get(c.id) ?? null;
+      const cadence = c.gravacao_cadence_days as number | null;
+      const nextGravacaoDue = lastGravacaoAt && cadence
+        ? new Date(new Date(lastGravacaoAt).getTime() + cadence * 86400000).toISOString()
+        : null;
+      return {
+        clientId: c.id, clientName: c.name, clientColor: c.color,
+        stageId: stage?.id ?? null, stageName: stage?.name ?? null, stageTrack: stage?.track ?? null,
+        gravacaoCadenceDays: cadence,
+        lastGravacaoAt, nextGravacaoDue,
+        lastAnaliseAt: lastAnaliseByClient.get(c.id) ?? null,
+      };
+    }) as ClientOperationsRow[];
+  });
+
+export const setClientGravacaoCadence = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; days: number | null }) =>
+    z.object({ clientId: z.string().uuid(), days: z.number().int().min(1).max(365).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await context.supabase
+      .from("clients").update({ gravacao_cadence_days: data.days }).eq("id", data.clientId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
