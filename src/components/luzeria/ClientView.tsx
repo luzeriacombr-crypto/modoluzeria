@@ -154,7 +154,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
       {/* Tabs — horizontally scrollable on its own (touch swipe), scrollbar
        * hidden, so the rest of the page never shifts sideways on mobile
        * when there are more tabs than fit the viewport width. */}
-      <div className="flex items-center gap-6 mt-8 border-b border-white/[0.06] overflow-x-auto lz-no-scrollbar">
+      <div className="flex items-center gap-6 mt-8 border-b border-white/[0.06] overflow-x-auto overflow-y-hidden lz-no-scrollbar">
         {tabs.map((t) => (
           <button key={t} onClick={() => setTab(t as any)}
             className="relative py-3 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap"
