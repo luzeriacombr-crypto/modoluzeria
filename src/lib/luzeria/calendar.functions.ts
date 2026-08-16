@@ -140,11 +140,15 @@ async function getValidCalendarAccessToken(supabase: any, userId: string): Promi
 
   const expiresAt = row.access_token_expires_at ? new Date(row.access_token_expires_at).getTime() : 0;
   if (row.access_token && expiresAt > Date.now() + 300_000) {
+    // eslint-disable-next-line no-console
+    console.debug("[gcal] reusing cached access token, expires", row.access_token_expires_at);
     return row.access_token;
   }
 
   const { clientId, clientSecret } = googleCredentials();
   try {
+    // eslint-disable-next-line no-console
+    console.debug("[gcal] refreshing access token for user", userId);
     const { accessToken, expiresIn } = await refreshGoogleAccessToken({
       clientId, clientSecret, refreshToken: row.refresh_token,
     });
@@ -156,7 +160,9 @@ async function getValidCalendarAccessToken(supabase: any, userId: string): Promi
       })
       .eq("user_id", userId);
     return accessToken;
-  } catch {
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[gcal] refresh token failed, dropping connection", err);
     // Refresh token revoked/expired — drop the broken connection so the UI prompts reconnect.
     await supabase.from("user_calendar_tokens").delete().eq("user_id", userId);
     return null;
@@ -188,11 +194,20 @@ export const getTodayCalendarEvents = createServerFn({ method: "GET" })
       orderBy: "startTime",
       maxResults: "20",
     });
+    // eslint-disable-next-line no-console
+    console.debug("[gcal] fetching today's events", { timeMin: startOfDay.toISOString(), timeMax: endOfDay.toISOString() });
     const res = await fetch(`${GCAL_EVENTS_URL}?${params.toString()}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!res.ok) return { connected: true, events: [] as any[] };
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      // eslint-disable-next-line no-console
+      console.error("[gcal] events fetch failed", res.status, body.slice(0, 500));
+      return { connected: true, events: [] as any[] };
+    }
     const json: any = await res.json();
+    // eslint-disable-next-line no-console
+    console.debug("[gcal] raw items from Google:", json.items?.length ?? 0);
     const events = (json.items ?? [])
       .filter((e: any) => e.status !== "cancelled")
       .map((e: any) => ({
