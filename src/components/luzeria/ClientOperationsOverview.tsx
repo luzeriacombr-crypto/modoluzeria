@@ -99,7 +99,9 @@ function ClientOperationsOverviewContent() {
       </div>
 
       <div className="text-xs text-white/60 leading-relaxed bg-white/[0.03] border border-white/10 rounded-lg px-4 py-3">
-        Essa tela junta, num só lugar, o ciclo operacional de cada cliente ativo. A{" "}
+        Essa tela junta, num só lugar, o ciclo operacional de cada cliente ativo com operação recorrente — clientes{" "}
+        <span className="text-white/80 font-medium">Avulsos</span> não entram aqui, já que são trabalhos pontuais sem ciclo
+        mensal de gravação. A{" "}
         <span className="text-white/80 font-medium">última gravação</span> e a quantidade de{" "}
         <span className="text-white/80 font-medium">vídeos gravados</span> são puxadas automaticamente da atividade de Gravação
         mais recente registrada em <span className="text-white/80 font-medium">Mais Atividades</span> de cada cliente — se um

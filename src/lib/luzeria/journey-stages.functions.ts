@@ -257,11 +257,14 @@ export const getClientOperationsOverview = createServerFn({ method: "GET" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
 
+    // Avulsos não entram: são trabalhos pontuais, sem ciclo mensal de
+    // gravação/análise pra acompanhar aqui.
     const { data: clients, error } = await context.supabase
       .from("clients")
       .select("id, name, color, current_stage_id")
       .eq("archived", false)
       .neq("category", "Ex-clientes")
+      .neq("category", "Avulsos")
       .order("name");
     if (error) throw new Error(error.message);
     const list = clients ?? [];
