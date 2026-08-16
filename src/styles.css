@@ -9,17 +9,6 @@
   font-style: italic;
 }
 
-/* Scrollable strip with no visible scrollbar — for horizontally-overflowing
- * tab rows on mobile, where the touch-swipe should work but the scrollbar
- * chrome itself shouldn't show. */
-@utility lz-no-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
 /* Themed scrollbars */
 * {
   scrollbar-color: #2D4A3E transparent;
@@ -43,6 +32,20 @@
 }
 *::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Scrollable strip with no visible scrollbar — for horizontally-overflowing
+ * tab rows on mobile, where the touch-swipe should work but the scrollbar
+ * chrome itself shouldn't show. Declared as plain (unlayered) CSS, same as
+ * the themed-scrollbar rules above it, so it can actually win against them
+ * — a Tailwind @utility gets compiled into @layer utilities, and unlayered
+ * CSS always beats layered CSS regardless of selector specificity. */
+.lz-no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.lz-no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @custom-variant dark (&:is(.dark *));
