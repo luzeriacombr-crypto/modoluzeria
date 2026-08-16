@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, LayoutGrid, Info } from "lucide-react";
-import { clientOperationsOverviewQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { clientOperationsOverviewQO, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { ClientOperationsRow } from "@/lib/luzeria/journey-stages.functions";
 
@@ -88,9 +88,7 @@ export function ClientOperationsOverview() {
 
 function ClientOperationsOverviewContent() {
   const { data: rows = [], isLoading } = useQuery(clientOperationsOverviewQO());
-  const api = useApi();
   const { openFicha } = useUI();
-  const [editingGravacao, setEditingGravacao] = useState<string | null>(null);
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-4">
@@ -101,11 +99,13 @@ function ClientOperationsOverviewContent() {
       </div>
 
       <div className="text-xs text-white/60 leading-relaxed bg-white/[0.03] border border-white/10 rounded-lg px-4 py-3">
-        Essa tela junta, num só lugar, o ciclo operacional de cada cliente ativo. Você mesmo define a data da{" "}
-        <span className="text-white/80 font-medium">última gravação</span> de cada cliente (clique na coluna pra editar) — a
-        quantidade de vídeos gravados naquele mês é puxada automaticamente de <span className="text-white/80 font-medium">Mais Atividades</span>,
-        e a <span className="text-white/80 font-medium">próxima gravação prevista</span> é calculada sozinha: menos de 6 vídeos
-        volta a gravar em 30 dias, de 6 a 11 em 45 dias, 12 ou mais em 60 dias. Já a{" "}
+        Essa tela junta, num só lugar, o ciclo operacional de cada cliente ativo. A{" "}
+        <span className="text-white/80 font-medium">última gravação</span> e a quantidade de{" "}
+        <span className="text-white/80 font-medium">vídeos gravados</span> são puxadas automaticamente da atividade de Gravação
+        mais recente registrada em <span className="text-white/80 font-medium">Mais Atividades</span> de cada cliente — se um
+        cliente aparece em branco, é só cadastrar a gravação dele por lá que a informação aparece aqui sozinha. A{" "}
+        <span className="text-white/80 font-medium">próxima gravação prevista</span> é calculada sozinha a partir disso: menos
+        de 6 vídeos volta a gravar em 30 dias, de 6 a 11 em 45 dias, 12 ou mais em 60 dias. Já a{" "}
         <span className="text-white/80 font-medium">última análise do mês</span> vem da <span className="text-white/80 font-medium">Jornada do cliente</span> —
         pra isso funcionar, marque em <span className="text-white/80 font-medium">Configurações → Jornada do cliente</span> qual
         etapa representa "Análise do mês" (passe o mouse ou toque no <Info size={10} className="inline -mt-0.5" /> de cada coluna
@@ -138,13 +138,13 @@ function ClientOperationsOverviewContent() {
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    <InfoTip text="Data da última gravação, digitada por você — clique no valor pra editar. Não é puxada automaticamente, porque o dia em que você atualiza a etapa nem sempre é o dia real da gravação." />
+                    <InfoTip text="Data da atividade de Gravação mais recente registrada em Mais Atividades pra esse cliente. Puxada automaticamente — se estiver em branco, cadastre a gravação em Mais Atividades." />
                     Última gravação
                   </span>
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    <InfoTip text="Soma da quantidade de vídeos registrados em Mais Atividades (seção Gravação) no mês da última gravação. Puxado automaticamente, não dá pra editar aqui." />
+                    <InfoTip text="Soma da quantidade de vídeos registrados em Mais Atividades (seção Gravação) no mês da última gravação. Puxado automaticamente." />
                     Vídeos gravados
                   </span>
                 </th>
@@ -181,23 +181,8 @@ function ClientOperationsOverviewContent() {
                         </span>
                       ) : <span className="text-white/30">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      {editingGravacao === r.clientId ? (
-                        <input
-                          type="date" autoFocus defaultValue={r.lastGravacaoAt ?? ""}
-                          onBlur={(e) => {
-                            const val = e.target.value.trim();
-                            api.setClientLastGravacao.mutate({ data: { clientId: r.clientId, date: val === "" ? null : val } });
-                            setEditingGravacao(null);
-                          }}
-                          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                          className="bg-[#1C1C1C] border border-white/10 rounded px-2 py-1 text-xs text-white text-right outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
-                        />
-                      ) : (
-                        <button onClick={() => setEditingGravacao(r.clientId)} className="text-white/70 hover:text-white hover:underline">
-                          {r.lastGravacaoAt ? `${formatDateBR(r.lastGravacaoAt)} (${daysAgoLabel(r.lastGravacaoAt)})` : "definir"}
-                        </button>
-                      )}
+                    <td className="px-4 py-3 text-sm text-white/70 text-right">
+                      {r.lastGravacaoAt ? `${formatDateBR(r.lastGravacaoAt)} (${daysAgoLabel(r.lastGravacaoAt)})` : "—"}
                     </td>
                     <td className="px-4 py-3 text-sm text-white/70 text-right">
                       {r.lastGravacaoAt ? (r.gravacaoVideoCount ?? 0) : "—"}

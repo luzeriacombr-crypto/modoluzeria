@@ -1025,7 +1025,6 @@ export type Database = {
           fixed_responsible_id: string | null
           icon: string | null
           id: string
-          last_gravacao_at: string | null
           name: string
           niche: string | null
           notes: string | null
@@ -1050,7 +1049,6 @@ export type Database = {
           fixed_responsible_id?: string | null
           icon?: string | null
           id?: string
-          last_gravacao_at?: string | null
           name: string
           niche?: string | null
           notes?: string | null
@@ -1075,7 +1073,6 @@ export type Database = {
           fixed_responsible_id?: string | null
           icon?: string | null
           id?: string
-          last_gravacao_at?: string | null
           name?: string
           niche?: string | null
           notes?: string | null

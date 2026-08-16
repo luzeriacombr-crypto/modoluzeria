@@ -62,7 +62,7 @@ import {
 import {
   listJourneyStages, upsertJourneyStage, deleteJourneyStage,
   setClientStage, logClientStageUpdate, getClientStageHistory, getWeeklyClientReminders,
-  getClientOperationsOverview, setClientLastGravacao,
+  getClientOperationsOverview,
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
@@ -648,11 +648,6 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["client-operations-overview"] });
       },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar etapa."),
-    }),
-    setClientLastGravacao: useMutation({
-      mutationFn: useServerFn(setClientLastGravacao),
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-operations-overview"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar data da gravação."),
     }),
     deleteJourneyStage: useMutation({
       mutationFn: useServerFn(deleteJourneyStage),

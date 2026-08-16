@@ -259,7 +259,7 @@ export const getClientOperationsOverview = createServerFn({ method: "GET" })
 
     const { data: clients, error } = await context.supabase
       .from("clients")
-      .select("id, name, color, current_stage_id, last_gravacao_at")
+      .select("id, name, color, current_stage_id")
       .eq("archived", false)
       .neq("category", "Ex-clientes")
       .order("name");
@@ -288,19 +288,25 @@ export const getClientOperationsOverview = createServerFn({ method: "GET" })
       if (!lastAnaliseByClient.has(h.client_id)) lastAnaliseByClient.set(h.client_id, h.entered_at);
     });
 
-    // Quantidade de vídeos gravados no mês da "última gravação" de cada
-    // cliente — soma o activity_quantity de todo item tipo "gravacao"
-    // registrado em Mais Atividades cujo "Data para gravação" caia nesse mês.
+    // "Última gravação" e "vídeos gravados" vêm direto de Mais Atividades —
+    // não precisa de campo manual: cada atividade tipo "gravacao" já tem sua
+    // própria "Data para gravação" e quantidade. Pega a data mais recente por
+    // cliente, e soma a quantidade de todas as gravações registradas naquele
+    // mesmo mês (cobre o caso de mais de uma sessão de gravação no mês).
     const { data: gravacaoItems } = await context.supabase
       .from("content_items")
       .select("activity_quantity, due_date, months!inner(client_id)")
       .eq("type", "gravacao")
       .not("due_date", "is", null);
+    const latestDueDateByClient = new Map<string, string>();
     const videoCountByClientMonth = new Map<string, number>();
     (gravacaoItems ?? []).forEach((it: any) => {
       const clientId = it.months?.client_id;
       if (!clientId) return;
-      const monthKey = String(it.due_date).slice(0, 7);
+      const dueDate = String(it.due_date);
+      const current = latestDueDateByClient.get(clientId);
+      if (!current || dueDate > current) latestDueDateByClient.set(clientId, dueDate);
+      const monthKey = dueDate.slice(0, 7);
       const key = `${clientId}|${monthKey}`;
       const qty = it.activity_quantity > 0 ? it.activity_quantity : 1;
       videoCountByClientMonth.set(key, (videoCountByClientMonth.get(key) ?? 0) + qty);
@@ -308,7 +314,7 @@ export const getClientOperationsOverview = createServerFn({ method: "GET" })
 
     return list.map((c: any) => {
       const stage = c.current_stage_id ? stageMap.get(c.current_stage_id) : null;
-      const lastGravacaoAt = c.last_gravacao_at as string | null;
+      const lastGravacaoAt = latestDueDateByClient.get(c.id) ?? null;
       let gravacaoVideoCount: number | null = null;
       let nextGravacaoDue: string | null = null;
       if (lastGravacaoAt) {
@@ -324,20 +330,4 @@ export const getClientOperationsOverview = createServerFn({ method: "GET" })
         lastAnaliseAt: lastAnaliseByClient.get(c.id) ?? null,
       };
     }) as ClientOperationsRow[];
-  });
-
-export const setClientLastGravacao = createServerFn({ method: "POST" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; date: string | null }) =>
-    z.object({
-      clientId: z.string().uuid(),
-      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
-    }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-    const { error } = await context.supabase
-      .from("clients").update({ last_gravacao_at: data.date }).eq("id", data.clientId);
-    if (error) throw new Error(error.message);
-    return { ok: true };
   });
