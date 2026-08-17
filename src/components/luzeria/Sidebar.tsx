@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram, Users, LayoutGrid, Wallet, UserCog, Cog,
+  Plus, Info, CircleHelp, CalendarDays, Instagram, Users, LayoutGrid, Wallet, UserCog,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -72,7 +72,7 @@ export function Sidebar({
   const canReport = isMaster || hasSetorPermission(me, "team_reports");
   const canJourney = isMaster || hasSetorPermission(me, "settings_journey");
   const canFinanceiro = isMaster;
-  const canAutomations = isMaster;
+  const rotinaEnabled = !disabled.has("rotina");
   const configTabActive = (tabId: string) => pathname === "/configuracoes" && routerSearch?.tab === tabId;
   const goToConfigTab = (tabId: string) => navigate({ to: "/configuracoes", search: { tab: tabId } });
 
@@ -222,12 +222,17 @@ export function Sidebar({
             onClick={() => goToConfigTab("subscription")}
           />
         )}
-        {(canTeam || canReport || canJourney) && (
+        {(canTeam || canReport || canJourney || rotinaEnabled) && (
           <NavGroup
             icon={<UserCog size={15} />}
             label="Equipe"
-            active={configTabActive("team") || configTabActive("report") || configTabActive("journey")}
+            active={configTabActive("team") || configTabActive("report") || configTabActive("journey") || pathname === "/rotina"}
           >
+            {rotinaEnabled && (
+              <div data-tour="nav-rotina">
+                <NavSubButton label="Rotina" active={pathname === "/rotina"} onClick={() => navigate({ to: "/rotina" })} />
+              </div>
+            )}
             {canTeam && (
               <NavSubButton label="Membros" active={configTabActive("team")} onClick={() => goToConfigTab("team")} />
             )}
@@ -238,24 +243,6 @@ export function Sidebar({
               <NavSubButton label="Jornada do cliente" active={configTabActive("journey")} onClick={() => goToConfigTab("journey")} />
             )}
           </NavGroup>
-        )}
-        {canAutomations && (
-          <NavButton
-            icon={<Cog size={15} />}
-            label="Automações"
-            active={configTabActive("automations")}
-            onClick={() => goToConfigTab("automations")}
-          />
-        )}
-        {!disabled.has("rotina") && (
-          <div data-tour="nav-rotina">
-            <NavButton
-              icon={<Sparkles size={15} />}
-              label="Rotina"
-              active={pathname === "/rotina"}
-              onClick={() => navigate({ to: "/rotina" })}
-            />
-          </div>
         )}
         <div data-tour="nav-ajuda">
           <NavButton
