@@ -6,6 +6,7 @@ import {
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, setExcludeFromRanking, deleteUser, updateClient, updateItem, updateMyProfile, adminUpdateMemberAvatar,
+  listMemberPay, setMemberPay,
   setItemEditor, setItemReelType, setItemPostFormat,
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   listCleaningTasks, addCleaningTask, renameCleaningTask, deleteCleaningTask,
@@ -89,6 +90,7 @@ export const platformUpdatesQO = () => queryOptions({ queryKey: ["platform-updat
 export const salesPageBlocksQO = () => queryOptions({ queryKey: ["sales-page-blocks"], queryFn: () => getSalesPageBlocks() });
 export const salesPageBlocksAdminQO = () => queryOptions({ queryKey: ["sales-page-blocks-admin"], queryFn: () => listSalesPageBlocksAdmin() });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
+export const memberPayQO = () => queryOptions({ queryKey: ["member-pay"], queryFn: () => listMemberPay() });
 export const clientsQO = () => queryOptions({ queryKey: ["clients"], queryFn: () => listClients() });
 export const monthQO = (clientId: string, key: string) =>
   queryOptions({
@@ -581,6 +583,13 @@ export function useApi() {
     setUserRole: useMutation({ mutationFn: useServerFn(setUserRole), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     setUserActive: useMutation({ mutationFn: useServerFn(setUserActive), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     setExcludeFromRanking: useMutation({ mutationFn: useServerFn(setExcludeFromRanking), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
+    setMemberPay: useMutation({
+      mutationFn: useServerFn(setMemberPay),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["member-pay"] });
+        qc.invalidateQueries({ queryKey: ["client-margins"] });
+      },
+    }),
     adminUpdateMemberAvatar: useMutation({ mutationFn: useServerFn(adminUpdateMemberAvatar), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     updateBugReportStatus: useMutation({ mutationFn: useServerFn(updateBugReportStatus), onSuccess: () => qc.invalidateQueries({ queryKey: ["bug-reports"] }) }),
     sendBugReportMessage: useMutation({ mutationFn: useServerFn(sendBugReportMessage) }),

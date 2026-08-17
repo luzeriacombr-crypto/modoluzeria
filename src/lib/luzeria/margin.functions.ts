@@ -7,8 +7,11 @@ import { isDoneStatus } from "./types";
  * O custo aqui é uma ESTIMATIVA, não apontamento real de horas — não existe
  * controle de tempo trabalhado no sistema. A estimativa usa a mesma base de
  * dados do ranking da equipe (finalizations, com o peso de activity_quantity
- * pra gravação) multiplicada por uma média de horas por tipo de conteúdo e
- * pelo custo-hora da agência, ambos configuráveis. */
+ * pra gravação) multiplicada por uma média de horas por tipo de conteúdo.
+ * O custo-hora agora é POR COLABORADOR (salário mensal ÷ horas mensais da
+ * escala dele, calculado em admin_list_member_hourly_cost — nunca expõe o
+ * salário/escala em si, só o valor final) — quem não tem remuneração
+ * cadastrada em Equipe usa o custo-hora padrão da agência como reserva. */
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: userId });
@@ -58,6 +61,11 @@ export const getClientMargins = createServerFn({ method: "GET" })
     const hourlyCost = org.hourly_cost as number | null;
     const avgHoursByType = (org.avg_hours_by_type ?? {}) as Record<string, number>;
 
+    const { data: rateRows, error: rateErr } = await context.supabase.rpc("admin_list_member_hourly_cost");
+    if (rateErr) throw new Error(rateErr.message);
+    const hourlyCostByUser = new Map<string, number>();
+    (rateRows ?? []).forEach((r: any) => { if (r.hourly_cost != null) hourlyCostByUser.set(r.id, r.hourly_cost); });
+
     const { data: clients, error: clientsErr } = await context.supabase
       .from("clients")
       .select("id, name, color, icon, category, archived, contract_value")
@@ -68,21 +76,29 @@ export const getClientMargins = createServerFn({ method: "GET" })
     const start = new Date(Date.now() - data.days * 86400000);
     const { data: finals, error: finalsErr } = await context.supabase
       .from("finalizations")
-      .select("content_items!inner(type, activity_quantity, months!inner(client_id))")
+      .select("user_id, content_items!inner(type, activity_quantity, months!inner(client_id))")
       .gte("finalized_at", start.toISOString())
       .not("item_id", "is", null);
     if (finalsErr) throw new Error(finalsErr.message);
 
     const hoursByClient = new Map<string, number>();
+    const costByClient = new Map<string, number>();
     const deliveredByClient = new Map<string, number>();
+    let anyRateAvailable = hourlyCost != null;
     (finals ?? []).forEach((f: any) => {
       const it = f.content_items;
       const clientId = it?.months?.client_id;
       if (!clientId) return;
       const weight = it.type === "gravacao" && it.activity_quantity > 0 ? it.activity_quantity : 1;
       const hoursPerUnit = avgHoursByType[it.type] ?? 1;
-      hoursByClient.set(clientId, (hoursByClient.get(clientId) ?? 0) + weight * hoursPerUnit);
+      const hours = weight * hoursPerUnit;
+      hoursByClient.set(clientId, (hoursByClient.get(clientId) ?? 0) + hours);
       deliveredByClient.set(clientId, (deliveredByClient.get(clientId) ?? 0) + weight);
+      const rate = hourlyCostByUser.get(f.user_id) ?? hourlyCost;
+      if (rate != null) {
+        anyRateAvailable = true;
+        costByClient.set(clientId, (costByClient.get(clientId) ?? 0) + hours * rate);
+      }
     });
 
     // Avulsos são trabalhos pontuais — depois que todos os posts/reels dele
@@ -111,7 +127,7 @@ export const getClientMargins = createServerFn({ method: "GET" })
 
     const rows = visibleClients.map((c: any) => {
       const estimatedHours = hoursByClient.get(c.id) ?? 0;
-      const estimatedCost = hourlyCost != null ? estimatedHours * hourlyCost : null;
+      const estimatedCost = anyRateAvailable ? (costByClient.get(c.id) ?? 0) : null;
       const contractValue = c.contract_value as number | null;
       const margin = contractValue != null && estimatedCost != null ? contractValue - estimatedCost : null;
       return {

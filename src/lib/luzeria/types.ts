@@ -255,6 +255,26 @@ export interface Profile {
   membersCanSetEditorFormat?: boolean;
 }
 
+/** Escala semanal usada pro custo-hora por colaborador (Equipe > remuneração).
+ * 0 = não trabalha nesse dia, 1 = meio período (4h), 2 = período integral (8h) —
+ * varia por dia pra dar conta de casos como "sábado só de manhã". */
+export type WorkSchedule = Record<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun", 0 | 1 | 2>;
+export const WEEK_DAYS: (keyof WorkSchedule)[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+export const WEEK_DAY_LABEL: Record<keyof WorkSchedule, string> = {
+  mon: "Seg", tue: "Ter", wed: "Qua", thu: "Qui", fri: "Sex", sat: "Sáb", sun: "Dom",
+};
+export function defaultWorkSchedule(): WorkSchedule {
+  return { mon: 2, tue: 2, wed: 2, thu: 2, fri: 2, sat: 0, sun: 0 };
+}
+/** Mesma fórmula usada no banco (admin_list_member_hourly_cost) — só pra
+ * mostrar uma prévia ao vivo enquanto o master edita, antes de salvar. */
+export function computeMonthlyHourlyCost(monthlySalary: number | null, schedule: WorkSchedule | null): number | null {
+  if (!monthlySalary || monthlySalary <= 0 || !schedule) return null;
+  const periodsPerWeek = WEEK_DAYS.reduce((sum, d) => sum + (schedule[d] ?? 0), 0);
+  const hoursPerMonth = periodsPerWeek * 4 * (52 / 12);
+  return hoursPerMonth > 0 ? monthlySalary / hoursPerMonth : null;
+}
+
 export const SETOR_PERMISSION_KEYS = [
   "approve_finalize", "instagram_publish", "team_reports", "settings_journey",
 ] as const;

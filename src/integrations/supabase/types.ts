@@ -2437,6 +2437,45 @@ export type Database = {
         }
         Relationships: []
       }
+      member_pay: {
+        Row: {
+          monthly_salary: number | null
+          org_id: string
+          updated_at: string
+          user_id: string
+          work_schedule: Json | null
+        }
+        Insert: {
+          monthly_salary?: number | null
+          org_id: string
+          updated_at?: string
+          user_id: string
+          work_schedule?: Json | null
+        }
+        Update: {
+          monthly_salary?: number | null
+          org_id?: string
+          updated_at?: string
+          user_id?: string
+          work_schedule?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_pay_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_pay_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forum_categories: {
         Row: {
           color: string
@@ -2639,6 +2678,13 @@ export type Database = {
           screenshot_path: string
           status: string
           whatsapp: string
+        }[]
+      }
+      admin_list_member_hourly_cost: {
+        Args: never
+        Returns: {
+          id: string
+          hourly_cost: number | null
         }[]
       }
       list_forum_posts: {

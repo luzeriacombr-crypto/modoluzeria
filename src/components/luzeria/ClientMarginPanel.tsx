@@ -43,12 +43,12 @@ function CostSettingsForm() {
 
   return (
     <div className="bg-[#161616] border border-white/[0.07] rounded-xl p-4 space-y-4">
-      <h3 className="text-sm font-semibold text-white">Custo-hora da equipe</h3>
+      <h3 className="text-sm font-semibold text-white">Custo-hora padrão</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="text-xs text-white/50 mb-1 inline-flex items-center gap-1">
             Custo-hora (R$)
-            <InfoTip text="Quanto custa, em média, uma hora de trabalho da sua equipe. Usado pra calcular o custo estimado de cada cliente (horas × esse valor)." />
+            <InfoTip text="Cada colaborador pode ter seu próprio custo-hora, calculado a partir do salário e da escala cadastrados em Configurações → Equipe (clique no card da pessoa). Esse valor aqui é só a reserva: usado quando alguém ainda não tem remuneração cadastrada." />
           </label>
           <input type="number" min="0" step="0.01" value={hourlyCost}
             onChange={(e) => setHourlyCost(e.target.value)} placeholder="Não definido" className={inp} />
@@ -95,7 +95,7 @@ export function ClientMarginPanel() {
 
       <div className="flex items-center gap-2 text-white/60 text-xs bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2">
         <Info size={14} className="shrink-0" />
-        Custo é uma estimativa (itens finalizados × horas médias × custo-hora), não é apontamento real de horas nem contabilidade oficial.
+        Custo é uma estimativa (itens finalizados × horas médias × custo-hora de quem finalizou, ou o padrão acima quando a pessoa não tem remuneração cadastrada) — não é apontamento real de horas nem contabilidade oficial.
       </div>
 
       <div className="flex items-center gap-1.5">

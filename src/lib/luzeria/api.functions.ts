@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
-import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status } from "./types";
+import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status, WorkSchedule } from "./types";
 import { isActivityType, STATUS_META, SETOR_PERMISSION_KEYS } from "./types";
 
 /** Fixed id of the original Luzeria Estúdio org — also hardcoded in migrations
@@ -537,6 +537,56 @@ export const adminUpdateMemberAvatar = createServerFn({ method: "POST" })
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
     if (!isMaster) throw new Error("Forbidden");
     const { error } = await context.supabase.from("profiles").update({ avatar_url: data.avatarPath }).eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Salário + escala são dados sensíveis: vivem numa tabela própria
+ * (member_pay) protegida por RLS master-only — não em `profiles`, porque
+ * column-level REVOKE não se mostrou confiável nesse projeto (a coluna
+ * "email" já tinha esse mesmo problema). O cálculo de custo-hora usado na
+ * Margem por cliente usa uma função SEPARADA (admin_list_member_hourly_cost,
+ * master OU setor) que nunca expõe o salário/escala bruto, só o valor já
+ * calculado — ver supabase/migrations/20260817170000_member_pay_table.sql. */
+export type MemberPay = { userId: string; monthlySalary: number | null; workSchedule: WorkSchedule | null };
+
+export const listMemberPay = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }): Promise<MemberPay[]> => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { data, error } = await context.supabase.from("member_pay").select("user_id, monthly_salary, work_schedule");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r: any) => ({
+      userId: r.user_id, monthlySalary: r.monthly_salary ?? null, workSchedule: r.work_schedule ?? null,
+    }));
+  });
+
+export const setMemberPay = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId: string; monthlySalary: number | null; workSchedule: WorkSchedule | null }) =>
+    z.object({
+      userId: z.string().uuid(),
+      monthlySalary: z.number().min(0).nullable(),
+      workSchedule: z.object({
+        mon: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+        tue: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+        wed: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+        thu: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+        fri: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+        sat: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+        sun: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+      }).nullable(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("member_pay")
+      .upsert({
+        user_id: data.userId, org_id: context.orgId,
+        monthly_salary: data.monthlySalary, work_schedule: data.workSchedule,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
