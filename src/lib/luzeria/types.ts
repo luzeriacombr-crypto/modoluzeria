@@ -286,7 +286,7 @@ export function hasSetorPermission(me: Pick<Profile, "role" | "setorPermissions"
 }
 
 export const OPTIONAL_FEATURE_KEYS = [
-  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call", "google_calendar", "client_overview",
+  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call", "google_calendar", "client_overview", "forum",
 ] as const;
 export type OptionalFeatureKey = (typeof OPTIONAL_FEATURE_KEYS)[number];
 export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string; description: string }> = {
@@ -333,6 +333,10 @@ export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string;
   client_overview: {
     label: "Visão Geral",
     description: "Item de menu com uma tabela de todos os clientes ativos mostrando etapa atual da jornada, última gravação, próxima gravação prevista e última análise do mês anterior, além do painel de margem por cliente.",
+  },
+  forum: {
+    label: "Fórum entre agências",
+    description: "Aba dentro de Ajuda com um fórum entre agências do Modo Criador — só masters participam, moderação é do platform admin.",
   },
 };
 

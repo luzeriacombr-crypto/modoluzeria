@@ -67,6 +67,10 @@ import {
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 import { getOrgCostSettings, setOrgCostSettings, getClientMargins } from "./margin.functions";
+import {
+  getForumCategories, getForumPosts, getForumPostDetail,
+  createForumPost, createForumReply, moderateForumPost, moderateForumReply,
+} from "./forum.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const instagramActivityQO = () =>
   queryOptions({ queryKey: ["instagram-activity"], queryFn: () => getInstagramActivity() });
@@ -294,6 +298,19 @@ export const orgCostSettingsQO = () =>
 
 export const clientMarginsQO = (days: 30 | 90 | 180) =>
   queryOptions({ queryKey: ["client-margins", days], queryFn: () => getClientMargins({ data: { days } }) });
+
+export const forumCategoriesQO = () =>
+  queryOptions({ queryKey: ["forum-categories"], queryFn: () => getForumCategories() });
+
+export const forumPostsQO = (categoryId: string | null) =>
+  queryOptions({ queryKey: ["forum-posts", categoryId], queryFn: () => getForumPosts({ data: { categoryId } }) });
+
+export const forumPostDetailQO = (postId: string | null) =>
+  queryOptions({
+    queryKey: ["forum-post-detail", postId],
+    queryFn: () => getForumPostDetail({ data: { postId: postId! } }),
+    enabled: !!postId,
+  });
 
 export const setupChecklistQO = () =>
   queryOptions({ queryKey: ["setup-checklist"], queryFn: () => getSetupChecklist() });
@@ -899,6 +916,29 @@ export function useApi() {
     addPublicFeedback: useMutation({
       mutationFn: useServerFn(addPublicFeedback),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["public-feed"] }),
+    }),
+    /* ===== FÓRUM ===== */
+    createForumPost: useMutation({
+      mutationFn: useServerFn(createForumPost),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["forum-posts"] }),
+    }),
+    createForumReply: useMutation({
+      mutationFn: useServerFn(createForumReply),
+      onSuccess: (_d, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["forum-post-detail", vars?.data?.postId] });
+        qc.invalidateQueries({ queryKey: ["forum-posts"] });
+      },
+    }),
+    moderateForumPost: useMutation({
+      mutationFn: useServerFn(moderateForumPost),
+      onSuccess: (_d, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["forum-posts"] });
+        qc.invalidateQueries({ queryKey: ["forum-post-detail", vars?.data?.postId] });
+      },
+    }),
+    moderateForumReply: useMutation({
+      mutationFn: useServerFn(moderateForumReply),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["forum-post-detail"] }),
     }),
   };
 }

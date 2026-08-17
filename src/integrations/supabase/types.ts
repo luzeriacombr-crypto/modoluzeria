@@ -2437,6 +2437,138 @@ export type Database = {
         }
         Relationships: []
       }
+      forum_categories: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          icon: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      forum_posts: {
+        Row: {
+          author_id: string
+          body: string
+          category_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          link_url: string | null
+          org_id: string
+          pinned: boolean
+          reply_count: number
+          title: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          category_id: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          link_url?: string | null
+          org_id: string
+          pinned?: boolean
+          reply_count?: number
+          title: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          category_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          link_url?: string | null
+          org_id?: string
+          pinned?: boolean
+          reply_count?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_posts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "forum_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_posts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_replies: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          org_id: string
+          post_id: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          org_id: string
+          post_id: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          org_id?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_replies_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_replies_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2507,6 +2639,52 @@ export type Database = {
           screenshot_path: string
           status: string
           whatsapp: string
+        }[]
+      }
+      list_forum_posts: {
+        Args: { _category_id?: string | null }
+        Returns: {
+          author_id: string
+          author_name: string
+          body: string
+          category_id: string
+          created_at: string
+          id: string
+          link_url: string | null
+          org_id: string
+          org_name: string
+          pinned: boolean
+          reply_count: number
+          title: string
+        }[]
+      }
+      get_forum_post: {
+        Args: { _post_id: string }
+        Returns: {
+          author_id: string
+          author_name: string
+          body: string
+          category_id: string
+          created_at: string
+          id: string
+          link_url: string | null
+          org_id: string
+          org_name: string
+          pinned: boolean
+          reply_count: number
+          title: string
+        }[]
+      }
+      list_forum_replies: {
+        Args: { _post_id: string }
+        Returns: {
+          author_id: string
+          author_name: string
+          body: string
+          created_at: string
+          id: string
+          org_id: string
+          org_name: string
         }[]
       }
       send_daily_digest: { Args: never; Returns: number }

@@ -110,6 +110,8 @@ export function NotificationsBell() {
                     openStageComposer(n.clientId);
                   } else if (n.type === "roteiro_client_status" && n.clientId) {
                     navigate({ to: "/cliente/$clientId", params: { clientId: n.clientId }, search: { tab: "docs" } });
+                  } else if (n.type === "forum_reply") {
+                    navigate({ to: "/ajuda", search: { tab: "forum" } });
                   }
                 }}
                 className="w-full text-left px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors block"

@@ -4,13 +4,14 @@ import { toast } from "sonner";
 import { ChevronDown, ExternalLink, Image as ImageIcon, MessageCircle, Video, Send } from "lucide-react";
 import { useMe, useApi, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/queries";
 import type { MyBugReport, AllBugReport, BugReportStatus } from "@/lib/luzeria/bug-reports.functions";
+import { ForumTab } from "./ForumTab";
 import tutorialAddPost from "@/assets/tutorials/tutorial-add-post.png";
 import tutorialFormato from "@/assets/tutorials/tutorial-formato.png";
 import tutorialNovaAutomacao from "@/assets/tutorials/tutorial-nova-automacao.png";
 import tutorialEquipeCard from "@/assets/tutorials/tutorial-equipe-card.png";
 import tutorialEnviarFoto from "@/assets/tutorials/tutorial-enviar-foto.png";
 
-type Tab = "faq" | "tutoriais" | "minhas" | "todas";
+type Tab = "faq" | "tutoriais" | "minhas" | "todas" | "forum";
 
 const FAQ: { category: string; items: { q: string; a: string }[] }[] = [
   {
@@ -99,19 +100,23 @@ const TUTORIALS: { title: string; steps: string[]; images?: { src: string; alt: 
 
 export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
   const me = useMe().data;
-  const [tab, setTab] = useState<Tab>((["faq", "tutoriais", "minhas", "todas"] as string[]).includes(initialTab ?? "") ? (initialTab as Tab) : "faq");
+  const disabled = new Set(me?.disabledFeatures ?? []);
+  const forumEnabled = me?.role === "master" && !disabled.has("forum");
+  const validTabs = ["faq", "tutoriais", "minhas", "todas", ...(forumEnabled ? ["forum"] : [])];
+  const [tab, setTab] = useState<Tab>(validTabs.includes(initialTab ?? "") ? (initialTab as Tab) : "faq");
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "faq", label: "Perguntas frequentes" },
     { id: "tutoriais", label: "Tutoriais" },
     { id: "minhas", label: "Minhas solicitações" },
     ...(me?.isPlatformAdmin ? [{ id: "todas" as Tab, label: "Todas as solicitações" }] : []),
+    ...(forumEnabled ? [{ id: "forum" as Tab, label: "Fórum" }] : []),
   ];
 
   return (
-    <div className="p-10 max-w-4xl mx-auto">
+    <div className={`p-10 mx-auto ${tab === "forum" ? "max-w-6xl" : "max-w-4xl"}`}>
       <h1 className="text-[32px] font-bold text-white tracking-tight">Central de ajuda</h1>
-      <p className="text-sm text-white/50 mt-2">Dúvidas frequentes, tutoriais e o histórico do que você já reportou.</p>
+      <p className="text-sm text-white/50 mt-2">Dúvidas frequentes, tutoriais, o histórico do que você já reportou e o fórum entre agências.</p>
 
       <div className="flex items-center gap-1 border-b border-white/10 mt-6 mb-6 flex-wrap">
         {tabs.map((t) => {
@@ -176,6 +181,7 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
 
       {tab === "minhas" && <MinhasSolicitacoes />}
       {tab === "todas" && me?.isPlatformAdmin && <TodasSolicitacoes />}
+      {tab === "forum" && forumEnabled && <ForumTab />}
     </div>
   );
 }
