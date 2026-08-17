@@ -38,6 +38,59 @@ export function ClientOperationsOverview() {
   return <ClientOperationsOverviewContent />;
 }
 
+function IntroBanner() {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="text-xs text-white/60 leading-relaxed bg-white/[0.03] border border-white/10 rounded-lg px-4 py-3">
+      {expanded ? (
+        <div className="space-y-2">
+          <p>
+            Essa tela junta, num só lugar, o ciclo operacional de cada cliente ativo com operação recorrente — clientes{" "}
+            <span className="text-white/80 font-medium">Avulsos</span> não entram aqui, já que são trabalhos pontuais sem
+            ciclo mensal de gravação.
+          </p>
+          <p>
+            A <span className="text-white/80 font-medium">última gravação</span> e a quantidade de{" "}
+            <span className="text-white/80 font-medium">vídeos gravados</span> são puxadas automaticamente da atividade de
+            Gravação mais recente registrada em <span className="text-white/80 font-medium">Mais Atividades</span> de cada
+            cliente — se um cliente aparece em branco, é só cadastrar a gravação dele por lá que a informação aparece aqui
+            sozinha. A <span className="text-white/80 font-medium">próxima gravação prevista</span> é calculada sozinha
+            comparando isso com a meta mensal de vídeos do cliente (campo "Reels / mês" na Configuração do cliente, dentro da
+            Ficha) — quem grava exatamente a meta volta em 30 dias; quem grava mais fica com mais folga, quem grava menos volta
+            mais cedo.
+          </p>
+          <p>
+            Já a <span className="text-white/80 font-medium">última análise do mês</span> vem da{" "}
+            <span className="text-white/80 font-medium">Jornada do cliente</span> — pra isso funcionar, marque em{" "}
+            <span className="text-white/80 font-medium">Configurações → Jornada do cliente</span> qual etapa representa
+            "Análise do mês" (passe o mouse ou toque no <Info size={10} className="inline -mt-0.5" /> de cada coluna abaixo
+            pra entender o que ela mostra). Se não for útil pra sua agência, dá pra desligar em{" "}
+            <span className="text-white/80 font-medium">Configurações → Geral</span>, na seção de recursos opcionais.
+          </p>
+          <button
+            onClick={() => setExpanded(false)}
+            className="text-[rgb(var(--lz-brand-rgb))] font-semibold hover:underline"
+          >
+            Ver menos
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <p className="truncate flex-1 min-w-0">
+            Ciclo operacional de cada cliente ativo — última gravação, próxima prevista e última análise do mês, tudo automático.
+          </p>
+          <button
+            onClick={() => setExpanded(true)}
+            className="shrink-0 text-[rgb(var(--lz-brand-rgb))] font-semibold hover:underline"
+          >
+            Ver mais
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ClientOperationsOverviewContent() {
   const { data: rows = [], isLoading } = useQuery(clientOperationsOverviewQO());
   const { openFicha } = useUI();
@@ -50,23 +103,7 @@ function ClientOperationsOverviewContent() {
         <span className="text-white/40 text-sm">— {rows.length} clientes</span>
       </div>
 
-      <div className="text-xs text-white/60 leading-relaxed bg-white/[0.03] border border-white/10 rounded-lg px-4 py-3">
-        Essa tela junta, num só lugar, o ciclo operacional de cada cliente ativo com operação recorrente — clientes{" "}
-        <span className="text-white/80 font-medium">Avulsos</span> não entram aqui, já que são trabalhos pontuais sem ciclo
-        mensal de gravação. A{" "}
-        <span className="text-white/80 font-medium">última gravação</span> e a quantidade de{" "}
-        <span className="text-white/80 font-medium">vídeos gravados</span> são puxadas automaticamente da atividade de Gravação
-        mais recente registrada em <span className="text-white/80 font-medium">Mais Atividades</span> de cada cliente — se um
-        cliente aparece em branco, é só cadastrar a gravação dele por lá que a informação aparece aqui sozinha. A{" "}
-        <span className="text-white/80 font-medium">próxima gravação prevista</span> é calculada sozinha comparando isso com a
-        meta mensal de vídeos do cliente (campo "Reels / mês" na Configuração do cliente, dentro da Ficha) — quem grava exatamente
-        a meta volta em 30 dias; quem grava mais fica com mais folga, quem grava menos volta mais cedo. Já a{" "}
-        <span className="text-white/80 font-medium">última análise do mês</span> vem da <span className="text-white/80 font-medium">Jornada do cliente</span> —
-        pra isso funcionar, marque em <span className="text-white/80 font-medium">Configurações → Jornada do cliente</span> qual
-        etapa representa "Análise do mês" (passe o mouse ou toque no <Info size={10} className="inline -mt-0.5" /> de cada coluna
-        abaixo pra entender o que ela mostra). Se não for útil pra sua agência, dá pra desligar em <span className="text-white/80 font-medium">Configurações → Geral</span>,
-        na seção de recursos opcionais.
-      </div>
+      <IntroBanner />
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-white/40" size={32} /></div>
