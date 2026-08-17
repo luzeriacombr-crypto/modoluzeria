@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram, Users, LayoutGrid,
+  Plus, Sparkles, Info, CircleHelp, CalendarDays, Instagram, Users, LayoutGrid, Wallet, UserCog, Cog,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -12,7 +12,7 @@ import { Avatar } from "./Avatar";
 import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
 import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { toast } from "sonner";
-import type { Client } from "@/lib/luzeria/types";
+import { hasSetorPermission, type Client } from "@/lib/luzeria/types";
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
@@ -33,6 +33,7 @@ export function Sidebar({
   const { selectedClientId } = useUI();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const routerSearch = useRouterState({ select: (s) => s.location.search as { tab?: string } });
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -65,6 +66,15 @@ export function Sidebar({
 
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const disabled = new Set(me?.disabledFeatures ?? []);
+  const clientsActive = pathname.startsWith("/cliente/");
+  const isMaster = me?.role === "master";
+  const canTeam = isMaster;
+  const canReport = isMaster || hasSetorPermission(me, "team_reports");
+  const canJourney = isMaster || hasSetorPermission(me, "settings_journey");
+  const canFinanceiro = isMaster;
+  const canAutomations = isMaster;
+  const configTabActive = (tabId: string) => pathname === "/configuracoes" && routerSearch?.tab === tabId;
+  const goToConfigTab = (tabId: string) => navigate({ to: "/configuracoes", search: { tab: tabId } });
 
   return (
     <aside data-tour="sidebar" className="sidebar-gradient w-[240px] h-screen flex flex-col text-white shrink-0 overflow-hidden">
@@ -123,6 +133,39 @@ export function Sidebar({
             onClick={() => navigate({ to: "/instagram" })}
           />
         )}
+        {canFinanceiro && (
+          <NavButton
+            icon={<Wallet size={15} />}
+            label="Financeiro"
+            active={configTabActive("subscription")}
+            onClick={() => goToConfigTab("subscription")}
+          />
+        )}
+        {(canTeam || canReport || canJourney) && (
+          <NavGroup
+            icon={<UserCog size={15} />}
+            label="Equipe"
+            active={configTabActive("team") || configTabActive("report") || configTabActive("journey")}
+          >
+            {canTeam && (
+              <NavSubButton label="Membros" active={configTabActive("team")} onClick={() => goToConfigTab("team")} />
+            )}
+            {canReport && (
+              <NavSubButton label="Relatório" active={configTabActive("report")} onClick={() => goToConfigTab("report")} />
+            )}
+            {canJourney && (
+              <NavSubButton label="Jornada do cliente" active={configTabActive("journey")} onClick={() => goToConfigTab("journey")} />
+            )}
+          </NavGroup>
+        )}
+        {canAutomations && (
+          <NavButton
+            icon={<Cog size={15} />}
+            label="Automações"
+            active={configTabActive("automations")}
+            onClick={() => goToConfigTab("automations")}
+          />
+        )}
         {!disabled.has("rotina") && (
           <div data-tour="nav-rotina">
             <NavButton
@@ -144,24 +187,36 @@ export function Sidebar({
       </div>
 
       {/* Clients */}
-      <div className="pt-2 pb-3 px-2 flex-1 overflow-y-auto">
-        <div className="w-full flex items-center gap-2 pl-3 pr-2 py-2 rounded-md text-white/70 hover:bg-white/5 transition-colors">
-          <button onClick={() => setClientsOpen((o) => !o)} className="flex items-center gap-2.5 flex-1 min-w-0 text-left text-sm">
-            <Users size={15} className="text-white/60 shrink-0" />
+      <div className="pt-2 pb-3 px-3 flex-1 overflow-y-auto">
+        <button
+          onClick={() => setClientsOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative"
+          style={{
+            backgroundColor: clientsActive ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent",
+            color: clientsActive ? "#FFFFFF" : "rgba(255,255,255,0.7)",
+          }}
+        >
+          {clientsActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
+          <span className="flex items-center gap-2.5 min-w-0">
+            <Users size={15} className={clientsActive ? "text-[rgb(var(--lz-brand-rgb))] shrink-0" : "text-white/60 shrink-0"} />
             <span className="truncate">Clientes</span>
-          </button>
-          <div className="flex items-center gap-0.5">
+          </span>
+          <span className="flex items-center gap-0.5 shrink-0">
             {isAdmin && (
-              <button onClick={() => onCreateClient()} title="Novo cliente"
-                className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5">
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); onCreateClient(); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); onCreateClient(); } }}
+                title="Novo cliente"
+                className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5"
+              >
                 <Plus size={13} />
-              </button>
+              </span>
             )}
-            <button onClick={() => setClientsOpen((o) => !o)} className="p-1 rounded text-white/40 hover:text-white hover:bg-white/5">
-              {clientsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-          </div>
-        </div>
+            {clientsOpen ? <ChevronDown size={14} className="text-white/40" /> : <ChevronRight size={14} className="text-white/40" />}
+          </span>
+        </button>
         {clientsOpen && (
           <div className="mt-1">
             <div className="px-1 pb-2">
@@ -233,6 +288,40 @@ function NavButton({ icon, label, active, onClick, badge, disabled, title }: {
       {badge !== undefined && badge > 0 && (
         <span className="text-[10px] font-bold px-1.5 rounded" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>{badge}</span>
       )}
+    </button>
+  );
+}
+
+function NavGroup({ icon, label, active, children }: {
+  icon: React.ReactNode; label: string; active: boolean; children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(active);
+  return (
+    <div>
+      <button onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative"
+        style={{
+          backgroundColor: active ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent",
+          color: active ? "#FFFFFF" : "rgba(255,255,255,0.7)",
+        }}>
+        {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
+        <span className="flex items-center gap-2.5">
+          <span className={active ? "text-[rgb(var(--lz-brand-rgb))]" : "text-white/60"}>{icon}</span>
+          {label}
+        </span>
+        {open ? <ChevronDown size={14} className="text-white/40" /> : <ChevronRight size={14} className="text-white/40" />}
+      </button>
+      {open && <div className="mt-0.5 ml-[26px] pl-2 border-l border-white/10 space-y-0.5">{children}</div>}
+    </div>
+  );
+}
+
+function NavSubButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick}
+      className="w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors truncate"
+      style={{ color: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.6)" }}>
+      {label}
     </button>
   );
 }
