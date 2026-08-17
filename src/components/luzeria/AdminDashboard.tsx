@@ -11,6 +11,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { Avatar } from "./Avatar";
 import { SetupChecklist } from "./SetupChecklist";
+import { InfoTip } from "./InfoTip";
 
 type Period = "month" | "3m" | "6m" | "year";
 const PERIOD_LABEL: Record<Period, string> = {
@@ -189,10 +190,13 @@ export function AdminDashboard() {
 
       {/* Metric strip — 4 cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <MetricCard tone={PALETTE.lime}      icon={<Users size={16} />}          label="Clientes ativos" value={t?.clients ?? 0} />
-        <MetricCard tone={PALETTE.blue}      icon={<Target size={16} />}         label="Meta do mês"     value={t?.planned ?? 0} />
+        <MetricCard tone={PALETTE.lime}      icon={<Users size={16} />}          label="Clientes ativos" value={t?.clients ?? 0}
+          info="Quantidade de clientes ativos (não arquivados) na agência." />
+        <MetricCard tone={PALETTE.blue}      icon={<Target size={16} />}         label="Meta do mês"     value={t?.planned ?? 0}
+          info="Total de itens planejados pra esse mês, somando todos os clientes ativos — é a meta de entregas do período selecionado." />
         <MetricCard tone={"rgb(var(--lz-sidebar-rgb))"}          icon={<Package size={16} />}        label="Entregues"       value={t?.done ?? 0}
-          onClick={() => { setFilterMode("metric"); setSelectedFilter("done"); }} />
+          onClick={() => { setFilterMode("metric"); setSelectedFilter("done"); }}
+          info="Itens já finalizados (prontos pra publicar, finalizados ou concluídos) dentro do período selecionado. Clique pra ver a lista." />
         <MetricCard
           tone={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
           icon={<Clock size={16} />}
@@ -200,6 +204,7 @@ export function AdminDashboard() {
           value={((t?.planned ?? 0) - (t?.done ?? 0))}
           valueColor={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
           onClick={() => { setFilterMode("metric"); setSelectedFilter("pending"); }}
+          info="Meta do mês menos Entregues — quantos itens ainda faltam pra bater a meta do período. Clique pra ver a lista."
         />
       </div>
 
@@ -555,8 +560,8 @@ function formatFinalized(iso: string) {
 }
 
 function MetricCard({
-  icon, label, value, tone, valueColor, onClick,
-}: { icon: React.ReactNode; label: string; value: number | string; tone: string; valueColor?: string; onClick?: () => void }) {
+  icon, label, value, tone, valueColor, onClick, info,
+}: { icon: React.ReactNode; label: string; value: number | string; tone: string; valueColor?: string; onClick?: () => void; info?: string }) {
   return (
     <div onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
       className={`relative overflow-hidden rounded-xl p-4 transition-transform hover:-translate-y-0.5 text-center md:text-left ${onClick ? "cursor-pointer hover:border-white/[0.3]" : ""}`}
@@ -570,6 +575,7 @@ function MetricCard({
           style={{ background: hexA(tone, 0.18), color: tone }}>
           {icon}
         </div>
+        {info && <InfoTip text={info} />}
       </div>
       <div className="relative text-[34px] font-extrabold leading-none mb-1.5 tabular-nums"
         style={{ color: valueColor ?? "#ffffff" }}>
@@ -743,29 +749,37 @@ function OperationHealth({ data, onOpenBlocked, onOpenRework }: {
         <span className="text-[10px] text-white/30 ml-1">— mês atual</span>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <HealthCard icon={<Clock size={14} />} tone="#4A9EFF" label="Lead time médio" value={formatHours(leadAvg)} sub={`${data?.leadTime.count ?? 0} entregas`} />
-        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} label="Travados" value={blocked} sub={blocked > 0 ? "precisam de ação" : "tudo fluindo"} valueColor={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} onClick={blocked > 0 ? onOpenBlocked : undefined} />
-        <HealthCard icon={<RotateCcw size={14} />} tone={reworkRate > 15 ? "#FF8C42" : "rgb(var(--lz-brand-rgb))"} label="Taxa de retrabalho" value={`${reworkRate}%`} sub={`${data?.rework.total ?? 0} itens`} onClick={onOpenRework} />
-        <HealthCard icon={<Trophy size={14} />} tone="rgb(var(--lz-brand-rgb))" label="Qualidade média" value={quality > 0 ? `${quality}/5` : "—"} sub={`${data?.quality.count ?? 0} avaliados`} />
+        <HealthCard icon={<Clock size={14} />} tone="#4A9EFF" label="Lead time médio" value={formatHours(leadAvg)} sub={`${data?.leadTime.count ?? 0} entregas`}
+          info="Tempo médio entre o item ser criado e ser finalizado, considerando as entregas do mês atual — mede a velocidade de entrega da equipe." />
+        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} label="Travados" value={blocked} sub={blocked > 0 ? "precisam de ação" : "tudo fluindo"} valueColor={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} onClick={blocked > 0 ? onOpenBlocked : undefined}
+          info="Itens marcados como travados agora, precisando de ação da equipe pra destravar. Clique pra ver a lista." />
+        <HealthCard icon={<RotateCcw size={14} />} tone={reworkRate > 15 ? "#FF8C42" : "rgb(var(--lz-brand-rgb))"} label="Taxa de retrabalho" value={`${reworkRate}%`} sub={`${data?.rework.total ?? 0} itens`} onClick={onOpenRework}
+          info="Percentual de itens finalizados no mês que voltaram pra revisão pelo menos uma vez. Clique pra ver a lista." />
+        <HealthCard icon={<Trophy size={14} />} tone="rgb(var(--lz-brand-rgb))" label="Qualidade média" value={quality > 0 ? `${quality}/5` : "—"} sub={`${data?.quality.count ?? 0} avaliados`}
+          info="Nota média (1 a 5) dada aos itens finalizados que receberam avaliação de qualidade no mês." />
       </div>
     </div>
   );
 }
 
-function HealthCard({ icon, tone, label, value, sub, valueColor, onClick }: {
-  icon: React.ReactNode; tone: string; label: string; value: number | string; sub: string; valueColor?: string; onClick?: () => void;
+function HealthCard({ icon, tone, label, value, sub, valueColor, onClick, info }: {
+  icon: React.ReactNode; tone: string; label: string; value: number | string; sub: string; valueColor?: string; onClick?: () => void; info?: string;
 }) {
   return (
-    <button onClick={onClick} disabled={!onClick}
+    <div onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
       className={`relative overflow-hidden rounded-lg bg-[#1C1C1C] border border-white/[0.06] p-4 text-left w-full transition-all ${onClick ? "hover:border-white/[0.12] hover:bg-[#232323] cursor-pointer" : ""}`}>
       <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: tone }} />
       <div className="relative">
-        <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider" style={{ color: tone }}>
-          {icon} {label}
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider" style={{ color: tone }}>
+            {icon} {label}
+          </div>
+          {info && <InfoTip text={info} />}
         </div>
         <div className="text-2xl font-bold tabular-nums mt-1.5" style={{ color: valueColor ?? "#FFFFFF" }}>{value}</div>
         <div className="text-[10px] text-white/40 mt-0.5">{sub}</div>
       </div>
-    </button>
+    </div>
   );
 }
