@@ -353,14 +353,14 @@ export function ReportsTab() {
                   <span className="text-white/80 w-28 truncate">{h.userName}</span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold shrink-0"
                     style={{ backgroundColor: (h.clientColor ?? "#444") + "33", color: h.clientColor ?? "#FFF" }}>
-                    {h.clientName ?? "—"}
+                    {h.clientName ?? "Removido"}
                   </span>
                   <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
                     style={{ backgroundColor: km.bg, color: km.color }}>
                     {km.label}
                   </span>
                   <span className="text-white flex-1 truncate">
-                    <span className="font-semibold">{h.itemTitle ?? "—"}</span>
+                    <span className="font-semibold">{h.itemTitle ?? "Item removido"}</span>
                     <span className="text-white/50"> · {h.description}</span>
                   </span>
                 </div>

@@ -2368,7 +2368,7 @@ export const getReport = createServerFn({ method: "GET" })
     const enrichedActivity = activityFeed
       .map((a) => ({
         ...a,
-        userName: profileById.get(a.userId)?.name ?? "—",
+        userName: profileById.get(a.userId)?.name ?? "Membro removido",
         userColor: profileById.get(a.userId)?.color ?? "#888",
       }))
       .sort((a, b) => b.at.localeCompare(a.at));
