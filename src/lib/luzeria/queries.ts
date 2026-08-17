@@ -475,6 +475,7 @@ export function useApi() {
     qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
     qc.invalidateQueries({ queryKey: ["top-members"] });
     qc.invalidateQueries({ queryKey: ["member-finalizations"] });
+    qc.invalidateQueries({ queryKey: ["report"] });
   };
   return {
     createClient: useMutation({ mutationFn: useServerFn(createClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) }),

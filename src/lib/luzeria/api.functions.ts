@@ -2129,6 +2129,7 @@ export const getReport = createServerFn({ method: "GET" })
       editorId: string | null;
       lateDays: number;
       activityQuantity: number | null;
+      itemId: string | null;
     };
     const history: HistRow[] = [];
     (finRows ?? []).forEach((r: any) => {
@@ -2154,6 +2155,7 @@ export const getReport = createServerFn({ method: "GET" })
         editorId: it.editor_id ?? null,
         lateDays,
         activityQuantity: it.activity_quantity ?? null,
+        itemId: it.id ?? null,
       });
     });
 
@@ -2177,7 +2179,7 @@ export const getReport = createServerFn({ method: "GET" })
           type: "stories",
           title: `Stories ${new Date(s.day + "T12:00:00Z").toLocaleDateString("pt-BR")}`,
           clientId: s.client_id ?? null, clientName: s.clients?.name ?? "STORIES", clientColor: s.clients?.color ?? "#7EFFD9", clientCategory: "Stories",
-          reelType: null, editorId: null, lateDays: 0, activityQuantity: null,
+          reelType: null, editorId: null, lateDays: 0, activityQuantity: null, itemId: null,
         });
       });
     }
@@ -2199,7 +2201,7 @@ export const getReport = createServerFn({ method: "GET" })
           type: "cleaning",
           title: `Limpeza · ${c.cleaning_tasks?.name ?? "tarefa"} (dia ${c.weekday})`,
           clientId: null, clientName: "LIMPEZA", clientColor: "#4A9EFF", clientCategory: "Limpeza",
-          reelType: null, editorId: null, lateDays: 0, activityQuantity: null,
+          reelType: null, editorId: null, lateDays: 0, activityQuantity: null, itemId: null,
         });
       });
     }
@@ -2390,6 +2392,7 @@ export const getReport = createServerFn({ method: "GET" })
 
     // ---- by editor / format ----
     const fmtAgg = new Map<string, { lofi: number; facil: number; basico: number; avancado: number }>();
+    const itemsByEditor = new Map<string, { itemId: string; title: string; clientName: string | null; clientColor: string | null }[]>();
     contentHist.forEach((h) => {
       if (h.type !== "reel") return;
       const eid = h.editorId ?? "__none__";
@@ -2397,6 +2400,11 @@ export const getReport = createServerFn({ method: "GET" })
       const rt = (h.reelType as any) as "lofi" | "facil" | "basico" | "avancado" | null;
       if (rt && row[rt] !== undefined) row[rt]++;
       fmtAgg.set(eid, row);
+      if (h.itemId) {
+        const list = itemsByEditor.get(eid) ?? [];
+        list.push({ itemId: h.itemId, title: h.title, clientName: h.clientName, clientColor: h.clientColor });
+        itemsByEditor.set(eid, list);
+      }
     });
     const byEditorFormat = [...fmtAgg.entries()].map(([editorId, v]) => {
       const p = editorId === "__none__" ? null : profileById.get(editorId);
@@ -2408,6 +2416,7 @@ export const getReport = createServerFn({ method: "GET" })
         icon: p?.icon ?? null,
         ...v,
         total,
+        items: itemsByEditor.get(editorId) ?? [],
       };
     }).sort((a, b) => b.total - a.total);
     const formatTotals = byEditorFormat.reduce(

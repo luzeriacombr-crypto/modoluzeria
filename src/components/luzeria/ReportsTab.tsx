@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Download, Filter, ChevronDown, Clock, AlertOctagon, RotateCcw, Star,
   BarChart3, Activity, Layers, Zap,
 } from "lucide-react";
-import { profilesQO, clientsQO, reportQO, reportExtrasQO, memberVelocityQO, type ReportFilters } from "@/lib/luzeria/queries";
+import { profilesQO, clientsQO, reportQO, reportExtrasQO, memberVelocityQO, useApi, type ReportFilters } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
 import { STATUS_META, type Status } from "@/lib/luzeria/types";
 import { exportReportXlsx } from "@/lib/luzeria/report-export";
@@ -69,6 +69,7 @@ export function ReportsTab() {
   const { data: extras } = useQuery(reportExtrasQO(filters));
 
   const [openMember, setOpenMember] = useState<any | null>(null);
+  const [expandedEditor, setExpandedEditor] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const PER = 50;
 
@@ -254,16 +255,41 @@ export function ReportsTab() {
                 {report.byEditorFormat.length === 0 && (
                   <tr><td colSpan={6} className="px-3 py-4 text-white/40 text-center">Nenhum reel com editor no período.</td></tr>
                 )}
-                {report.byEditorFormat.map((r: any) => (
-                  <tr key={r.editorId ?? "none"} className="border-t border-white/[0.05]">
-                    <td className="px-3 py-2.5 text-white/80">{r.name}</td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{r.lofi}</td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{r.facil}</td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{r.basico}</td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{r.avancado}</td>
-                    <td className="text-right px-3 py-2.5 font-bold text-white tabular-nums">{r.total}</td>
-                  </tr>
-                ))}
+                {report.byEditorFormat.map((r: any) => {
+                  const key = r.editorId ?? "none";
+                  const expanded = expandedEditor === key;
+                  const hasItems = (r.items?.length ?? 0) > 0;
+                  return (
+                    <Fragment key={key}>
+                      <tr className="border-t border-white/[0.05]">
+                        <td className="px-3 py-2.5 text-white/80">
+                          <button
+                            onClick={() => hasItems && setExpandedEditor(expanded ? null : key)}
+                            disabled={!hasItems}
+                            className="flex items-center gap-1.5 disabled:cursor-default"
+                          >
+                            {hasItems && (
+                              <ChevronDown size={12} className="text-white/40 transition-transform shrink-0" style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }} />
+                            )}
+                            {r.name}
+                          </button>
+                        </td>
+                        <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{r.lofi}</td>
+                        <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{r.facil}</td>
+                        <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{r.basico}</td>
+                        <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{r.avancado}</td>
+                        <td className="text-right px-3 py-2.5 font-bold text-white tabular-nums">{r.total}</td>
+                      </tr>
+                      {expanded && (
+                        <tr className="border-t border-white/[0.05] bg-white/[0.02]">
+                          <td colSpan={6} className="px-3 py-2">
+                            <EditorItemsList items={r.items} profiles={profiles} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
@@ -539,6 +565,36 @@ function BlockedView({ data }: { data: any[] }) {
         </div>
       ))}
     </Section>
+  );
+}
+
+function EditorItemsList({ items, profiles }: {
+  items: { itemId: string; title: string; clientName: string | null; clientColor: string | null }[];
+  profiles: { id: string; name: string }[];
+}) {
+  const api = useApi();
+  return (
+    <ul className="space-y-1 py-1">
+      {items.map((it) => (
+        <li key={it.itemId} className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-white/[0.03]">
+          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: it.clientColor ?? "#888" }} />
+          <span className="text-xs text-white/50 shrink-0">{it.clientName ?? "—"}</span>
+          <span className="text-xs text-white/80 truncate flex-1">{it.title}</span>
+          <select
+            defaultValue=""
+            disabled={api.setItemEditor.isPending}
+            onChange={(e) => {
+              const editorId = e.target.value || null;
+              api.setItemEditor.mutate({ data: { itemId: it.itemId, editorId } });
+            }}
+            className="shrink-0 bg-[#0D0D0D] border border-white/10 rounded-md px-2 py-1 text-[11px] text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+          >
+            <option value="" disabled>Atribuir editor...</option>
+            {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </li>
+      ))}
+    </ul>
   );
 }
 
