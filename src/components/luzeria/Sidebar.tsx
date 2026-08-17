@@ -93,8 +93,8 @@ export function Sidebar({
       </div>
       <div className="mx-5 h-px" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)" }} />
 
-      {/* My tasks + dashboard nav */}
-      <div className="px-3 pt-4 pb-2 space-y-0.5">
+      {/* Nav — single scrollable list so Clientes sits inline with everything else */}
+      <div className="px-3 pt-4 pb-3 flex-1 overflow-y-auto space-y-0.5">
         <NavButton
           icon={<LayoutDashboard size={15} />}
           label="Minhas demandas"
@@ -107,6 +107,87 @@ export function Sidebar({
           active={pathname === "/admin"}
           onClick={() => navigate({ to: "/admin" })}
         />
+
+        {/* Clientes */}
+        <div>
+          <button
+            onClick={() => setClientsOpen((o) => !o)}
+            className="w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative"
+            style={{
+              backgroundColor: clientsActive ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent",
+              color: clientsActive ? "#FFFFFF" : "rgba(255,255,255,0.7)",
+            }}
+          >
+            {clientsActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
+            <span className="flex items-center gap-2.5 min-w-0">
+              <Users size={15} className={clientsActive ? "text-[rgb(var(--lz-brand-rgb))] shrink-0" : "text-white/60 shrink-0"} />
+              <span className="truncate">Clientes</span>
+            </span>
+            <span className="flex items-center gap-0.5 shrink-0">
+              {isAdmin && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); onCreateClient(); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); onCreateClient(); } }}
+                  title="Novo cliente"
+                  className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5"
+                >
+                  <Plus size={13} />
+                </span>
+              )}
+              {clientsOpen ? <ChevronDown size={14} className="text-white/40" /> : <ChevronRight size={14} className="text-white/40" />}
+            </span>
+          </button>
+          {clientsOpen && (
+            <div className="mt-1 ml-[26px] pl-2 border-l border-white/10">
+              <div className="px-1 pb-2">
+                <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/5">
+                  <Search size={13} className="text-white/40" />
+                  <input
+                    value={search} onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Buscar..."
+                    className="bg-transparent text-xs flex-1 outline-none placeholder:text-white/30 text-white"
+                  />
+                </div>
+              </div>
+              {grouped.map(([cat, list]) => (
+                <CategoryGroup
+                  key={cat}
+                  name={cat}
+                  color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
+                  defaultOpen={cat !== "Ex-clientes"}
+                  forceOpen={search.trim().length > 0}
+                  count={list.length}
+                  onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
+                  addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
+                >
+                  {list.map((c) => (
+                    <ClientRow
+                      key={c.id}
+                      client={c}
+                      active={pathname === `/cliente/${c.id}`}
+                      onOpenCustomFields={() => onOpenCustomFields(c)}
+                      canManage={isAdmin}
+                      categories={allCategories}
+                    />
+                  ))}
+                  {cat === "Avulsos" && list.length === 0 && (
+                    <div className="px-3 py-2 text-[11px] text-white/30">
+                      {isAdmin ? "Nenhuma demanda avulsa. Use o + para criar." : "Sem demandas avulsas."}
+                    </div>
+                  )}
+                </CategoryGroup>
+              ))}
+              {filtered.length === 0 && (
+                <div className="text-xs text-white/30 text-center mt-6 px-3">
+                  {search ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {!disabled.has("calendar") && (
           <div data-tour="nav-calendario">
             <NavButton
@@ -184,86 +265,6 @@ export function Sidebar({
             onClick={() => navigate({ to: "/ajuda" })}
           />
         </div>
-      </div>
-
-      {/* Clients */}
-      <div className="pt-2 pb-3 px-3 flex-1 overflow-y-auto">
-        <button
-          onClick={() => setClientsOpen((o) => !o)}
-          className="w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative"
-          style={{
-            backgroundColor: clientsActive ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent",
-            color: clientsActive ? "#FFFFFF" : "rgba(255,255,255,0.7)",
-          }}
-        >
-          {clientsActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
-          <span className="flex items-center gap-2.5 min-w-0">
-            <Users size={15} className={clientsActive ? "text-[rgb(var(--lz-brand-rgb))] shrink-0" : "text-white/60 shrink-0"} />
-            <span className="truncate">Clientes</span>
-          </span>
-          <span className="flex items-center gap-0.5 shrink-0">
-            {isAdmin && (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => { e.stopPropagation(); onCreateClient(); }}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); onCreateClient(); } }}
-                title="Novo cliente"
-                className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5"
-              >
-                <Plus size={13} />
-              </span>
-            )}
-            {clientsOpen ? <ChevronDown size={14} className="text-white/40" /> : <ChevronRight size={14} className="text-white/40" />}
-          </span>
-        </button>
-        {clientsOpen && (
-          <div className="mt-1">
-            <div className="px-1 pb-2">
-              <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/5">
-                <Search size={13} className="text-white/40" />
-                <input
-                  value={search} onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar..."
-                  className="bg-transparent text-xs flex-1 outline-none placeholder:text-white/30 text-white"
-                />
-              </div>
-            </div>
-            {grouped.map(([cat, list]) => (
-              <CategoryGroup
-                key={cat}
-                name={cat}
-                color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
-                defaultOpen={cat !== "Ex-clientes"}
-                forceOpen={search.trim().length > 0}
-                count={list.length}
-                onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
-                addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
-              >
-                {list.map((c) => (
-                  <ClientRow
-                    key={c.id}
-                    client={c}
-                    active={pathname === `/cliente/${c.id}`}
-                    onOpenCustomFields={() => onOpenCustomFields(c)}
-                    canManage={isAdmin}
-                    categories={allCategories}
-                  />
-                ))}
-                {cat === "Avulsos" && list.length === 0 && (
-                  <div className="px-3 py-2 text-[11px] text-white/30">
-                    {isAdmin ? "Nenhuma demanda avulsa. Use o + para criar." : "Sem demandas avulsas."}
-                  </div>
-                )}
-              </CategoryGroup>
-            ))}
-            {filtered.length === 0 && (
-              <div className="text-xs text-white/30 text-center mt-6 px-3">
-                {search ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </aside>
   );
