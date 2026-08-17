@@ -14,13 +14,14 @@ import { useUI } from "@/lib/luzeria/ui-store";
 
 const EASE = { transitionTimingFunction: "var(--ease-premium)" as const };
 
-export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete }: {
+export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, navList }: {
   item: ContentItem;
   profiles: Profile[];
   idx: number;
   isAvulso?: boolean;
   isAdmin: boolean;
   onDelete?: () => void;
+  navList?: string[];
 }) {
   const { setItemStatus, updateItem, addAssignee } = useApi();
   const me = useMe().data;
@@ -61,7 +62,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete }
     <div
       className={`group relative flex flex-col rounded-xl overflow-hidden border border-white/[0.06] bg-[#161616] hover:border-white/15 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 cursor-pointer ${flashed ? "lz-flash" : ""}`}
       style={EASE}
-      onClick={() => openItem(item.id)}
+      onClick={() => openItem(item.id, navList)}
     >
       <div className="relative w-full aspect-[4/5] shrink-0">
         <CardThumb itemId={item.id} coverUrl={item.coverUrl ?? null} />
@@ -174,13 +175,14 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete }
 /** Linha compacta — mesma informação e edição inline do ContentCard (título,
  * status, prazo), só que numa lista em vez de grade de cards. Pensada pra
  * escanear/editar um board grande rapidamente, sem depender de miniatura. */
-export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelete }: {
+export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelete, navList }: {
   item: ContentItem;
   profiles: Profile[];
   idx: number;
   isAvulso?: boolean;
   isAdmin: boolean;
   onDelete?: () => void;
+  navList?: string[];
 }) {
   const { setItemStatus, updateItem, addAssignee } = useApi();
   const me = useMe().data;
@@ -217,7 +219,7 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
   return (
     <div
       className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg border border-white/[0.06] bg-[#161616] hover:border-white/15 hover:bg-[#1A1A1A] transition-colors cursor-pointer ${flashed ? "lz-flash" : ""}`}
-      onClick={() => openItem(item.id)}
+      onClick={() => openItem(item.id, navList)}
     >
       <span className="text-[11px] font-bold tabular-nums text-white/30 w-5 shrink-0">{String(idx).padStart(2, "0")}</span>
 

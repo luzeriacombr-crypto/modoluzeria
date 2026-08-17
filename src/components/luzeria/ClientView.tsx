@@ -169,6 +169,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         {(tab in TAB_CONFIG) && (() => {
           const cfg = TAB_CONFIG[tab as keyof typeof TAB_CONFIG];
           const items = orderMode === "cronologica" ? [...cfg.items].sort(byScheduledAt(orderDirection)) : cfg.items;
+          const navList = items.map((it) => it.id);
           return (
             <>
               <div className="flex items-center justify-end gap-1.5 mb-3">
@@ -230,6 +231,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       idx={i + 1}
                       isAvulso={isAvulso}
                       isAdmin={isAdmin}
+                      navList={navList}
                       onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
                     />
                   ))}
@@ -255,6 +257,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       idx={i + 1}
                       isAvulso={isAvulso}
                       isAdmin={isAdmin}
+                      navList={navList}
                       onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
                     />
                   ))}

@@ -14,6 +14,7 @@ interface UI {
   selectedClientId: string | null;
   selectedMonthKey: string;
   selectedItemId: string | null;
+  itemNavList: string[] | null;
   recentlyUpdated: string | null;
   view: "client" | "my" | "settings" | "cleaning" | "admin" | "profile";
   viewAsUserId: string | null;
@@ -22,7 +23,7 @@ interface UI {
   stageComposerClientId: string | null;
   selectClient: (id: string | null) => void;
   selectMonth: (key: string) => void;
-  openItem: (id: string | null) => void;
+  openItem: (id: string | null, navList?: string[] | null) => void;
   flash: (id: string | null) => void;
   setView: (v: UI["view"]) => void;
   setViewAs: (id: string | null) => void;
@@ -41,6 +42,7 @@ export const useUI = create<UI>((set) => ({
   selectedClientId: null,
   selectedMonthKey: currentMonthKey(),
   selectedItemId: null,
+  itemNavList: null,
   recentlyUpdated: null,
   view: "my",
   viewAsUserId: null,
@@ -48,11 +50,11 @@ export const useUI = create<UI>((set) => ({
   fichaClientId: null,
   stageComposerClientId: null,
   selectClient: (id) =>
-    set({ selectedClientId: id, selectedItemId: null, view: id ? "client" : "my" }),
+    set({ selectedClientId: id, selectedItemId: null, itemNavList: null, view: id ? "client" : "my" }),
   selectMonth: (key) => set({ selectedMonthKey: key }),
-  openItem: (id) => set({ selectedItemId: id }),
+  openItem: (id, navList) => set({ selectedItemId: id, itemNavList: navList ?? null }),
   flash: (id) => set({ recentlyUpdated: id }),
-  setView: (v) => set({ view: v, selectedClientId: v === "client" ? undefined as any : null, selectedItemId: null }),
+  setView: (v) => set({ view: v, selectedClientId: v === "client" ? undefined as any : null, selectedItemId: null, itemNavList: null }),
   setViewAs: (id) => set({ viewAsUserId: id }),
   toggleSidebar: () => set((s) => { const next = !s.sidebarHidden; writeSidebarHidden(next); return { sidebarHidden: next }; }),
   setSidebarHidden: (v) => { writeSidebarHidden(v); set({ sidebarHidden: v }); },

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square } from "lucide-react";
 import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -444,7 +444,7 @@ function MediaPreview({
 }
 
 export function DetailPanel() {
-  const { selectedItemId, openItem, selectedClientId, selectedMonthKey, flash } = useUI();
+  const { selectedItemId, itemNavList, openItem, selectedClientId, selectedMonthKey, flash } = useUI();
   const { data: month } = useQuery({ ...monthQO(selectedClientId ?? "", selectedMonthKey), enabled: !!selectedClientId && !!selectedItemId });
   const { data: profiles = [] } = useQuery(profilesQO());
   const { data: clients = [] } = useQuery(clientsQO());
@@ -453,6 +453,9 @@ export function DetailPanel() {
   const { data: appSettings } = useQuery(appSettingsQO());
 
   const item = useMemo(() => (selectedItemId && month ? findItem(month, selectedItemId) : undefined), [month, selectedItemId]);
+  const navIndex = itemNavList && selectedItemId ? itemNavList.indexOf(selectedItemId) : -1;
+  const prevItemId = navIndex > 0 ? itemNavList![navIndex - 1] : null;
+  const nextItemId = navIndex >= 0 && itemNavList && navIndex < itemNavList.length - 1 ? itemNavList[navIndex + 1] : null;
   const client = clients.find((c) => c.id === selectedClientId);
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const canApproveFinalize = hasSetorPermission(me, "approve_finalize");
@@ -469,7 +472,14 @@ export function DetailPanel() {
 
   useEffect(() => {
     if (!selectedItemId) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") openItem(null); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { openItem(null); return; }
+      const target = e.target as HTMLElement | null;
+      const typing = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (typing) return;
+      if (e.key === "ArrowLeft" && prevItemId) openItem(prevItemId, itemNavList);
+      else if (e.key === "ArrowRight" && nextItemId) openItem(nextItemId, itemNavList);
+    };
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -477,7 +487,7 @@ export function DetailPanel() {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [selectedItemId, openItem]);
+  }, [selectedItemId, openItem, prevItemId, nextItemId, itemNavList]);
 
   const [title, setTitle] = useState("");
   const [copy, setCopy] = useState("");
@@ -631,6 +641,28 @@ export function DetailPanel() {
                 className="mt-1.5 w-full bg-transparent text-[22px] font-bold text-white outline-none placeholder:text-white/30 border-b border-transparent focus:border-[rgb(var(--lz-brand-rgb))] transition-colors pb-0.5"
               />
             </div>
+            {itemNavList && (
+              <div className="shrink-0 flex items-center gap-1">
+                <button
+                  onClick={() => prevItemId && openItem(prevItemId, itemNavList)}
+                  disabled={!prevItemId}
+                  aria-label="Item anterior"
+                  title="Item anterior"
+                  className="text-white/50 hover:text-white p-1.5 rounded-md hover:bg-white/5 transition disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-white/50"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  onClick={() => nextItemId && openItem(nextItemId, itemNavList)}
+                  disabled={!nextItemId}
+                  aria-label="Próximo item"
+                  title="Próximo item"
+                  className="text-white/50 hover:text-white p-1.5 rounded-md hover:bg-white/5 transition disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-white/50"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
             <button
               onClick={() => openItem(null)}
               aria-label="Fechar"
