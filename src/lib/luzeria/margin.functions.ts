@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
+import { isDoneStatus } from "./types";
 
 /* ===== PAINEL DE MARGEM / LUCRATIVIDADE POR CLIENTE =====
  * O custo aqui é uma ESTIMATIVA, não apontamento real de horas — não existe
@@ -84,7 +85,31 @@ export const getClientMargins = createServerFn({ method: "GET" })
       deliveredByClient.set(clientId, (deliveredByClient.get(clientId) ?? 0) + weight);
     });
 
-    const rows = (clients ?? []).map((c: any) => {
+    // Avulsos são trabalhos pontuais — depois que todos os posts/reels dele
+    // são finalizados, o cliente some do painel (não tem mais margem em
+    // aberto pra acompanhar). Clientes recorrentes nunca somem por isso.
+    const avulsoIds = (clients ?? []).filter((c: any) => c.category === "Avulsos").map((c: any) => c.id);
+    const avulsoClientHasOpenItem = new Map<string, boolean>();
+    if (avulsoIds.length > 0) {
+      const { data: avulsoItems, error: avulsoErr } = await context.supabase
+        .from("content_items")
+        .select("status, months!inner(client_id)")
+        .in("months.client_id", avulsoIds);
+      if (avulsoErr) throw new Error(avulsoErr.message);
+      (avulsoItems ?? []).forEach((it: any) => {
+        const clientId = it.months?.client_id;
+        if (!clientId) return;
+        if (!avulsoClientHasOpenItem.has(clientId)) avulsoClientHasOpenItem.set(clientId, false);
+        if (!isDoneStatus(it.status)) avulsoClientHasOpenItem.set(clientId, true);
+      });
+    }
+    const visibleClients = (clients ?? []).filter((c: any) => {
+      if (c.category !== "Avulsos") return true;
+      // Some só quando já tem pelo menos um item e todos estão finalizados.
+      return avulsoClientHasOpenItem.get(c.id) ?? true;
+    });
+
+    const rows = visibleClients.map((c: any) => {
       const estimatedHours = hoursByClient.get(c.id) ?? 0;
       const estimatedCost = hourlyCost != null ? estimatedHours * hourlyCost : null;
       const contractValue = c.contract_value as number | null;
