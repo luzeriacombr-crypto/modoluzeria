@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /minhas-tarefas
+Disallow: /dashboard
+Disallow: /cliente/
+Disallow: /configuracoes
+Disallow: /calendario
+Disallow: /admin
+Disallow: /visao-geral
+Disallow: /instagram
+Disallow: /financeiro
+Disallow: /ajuda
+Disallow: /mfa
+Disallow: /redefinir-senha
+Disallow: /promo/
+
+Sitemap: https://www.modocriador.com.br/sitemap.xml
