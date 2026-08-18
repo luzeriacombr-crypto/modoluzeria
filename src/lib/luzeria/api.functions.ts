@@ -2025,6 +2025,19 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     };
   });
 
+/** Shared by getTopMembers/getTopMembersByGoal: derives the [start, end) UTC
+ * date range for a period ending at monthKey's month. */
+function periodRange(period: "month" | "3m" | "6m" | "year", monthKey: string): { start: Date; end: Date } {
+  const [y, m] = monthKey.split("-").map(Number);
+  const end = new Date(Date.UTC(y, m, 1)); // exclusive end = first day of next month
+  let start: Date;
+  if (period === "month") start = new Date(Date.UTC(y, m - 1, 1));
+  else if (period === "3m") start = new Date(Date.UTC(y, m - 3, 1));
+  else if (period === "6m") start = new Date(Date.UTC(y, m - 6, 1));
+  else start = new Date(Date.UTC(y, 0, 1));
+  return { start, end };
+}
+
 export const getTopMembers = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { period: "month" | "3m" | "6m" | "year"; monthKey: string }) =>
@@ -2033,13 +2046,7 @@ export const getTopMembers = createServerFn({ method: "GET" })
       monthKey: z.string().regex(/^\d{4}-\d{2}$/),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    const [y, m] = data.monthKey.split("-").map(Number);
-    const end = new Date(Date.UTC(y, m, 1)); // exclusive end = first day of next month
-    let start: Date;
-    if (data.period === "month") start = new Date(Date.UTC(y, m - 1, 1));
-    else if (data.period === "3m") start = new Date(Date.UTC(y, m - 3, 1));
-    else if (data.period === "6m") start = new Date(Date.UTC(y, m - 6, 1));
-    else start = new Date(Date.UTC(y, 0, 1));
+    const { start, end } = periodRange(data.period, data.monthKey);
 
     const { data: finals } = await context.supabase
       .from("finalizations").select("user_id, content_items(type, activity_quantity)")
@@ -2069,6 +2076,106 @@ export const getTopMembers = createServerFn({ method: "GET" })
       }))
       .sort((a, b) => b.count - a.count);
     return { period: data.period, ranking };
+  });
+
+/** Ranking oficial: quem bateu (ou superou) a própria meta fica em cima,
+ * independente do volume bruto. `member_goals` tem RLS restrita a
+ * dono-da-meta-ou-admin (propositalmente — número de meta é privado), então
+ * essa consulta em lote precisa do client de service role pra enxergar a
+ * meta de todo mundo; por bypassar RLS, escopa manualmente pela lista de
+ * membros ativos da org (já filtrada via context.supabase acima). */
+export const getTopMembersByGoal = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { period: "month" | "3m" | "6m" | "year"; monthKey: string }) =>
+    z.object({
+      period: z.enum(["month", "3m", "6m", "year"]),
+      monthKey: z.string().regex(/^\d{4}-\d{2}$/),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { start, end } = periodRange(data.period, data.monthKey);
+    const monthKeys: string[] = [];
+    for (let k = monthKey(start); k < monthKey(end); k = nextMonthKey(k)) monthKeys.push(k);
+
+    const { data: profiles } = await context.supabase
+      .from("profiles").select("id, name, color, icon, avatar_url, exclude_from_ranking")
+      .eq("org_id", context.orgId).eq("exclude_from_ranking", false);
+    const userIds = (profiles ?? []).map((p: any) => p.id);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const goalByUser = new Map<string, { posts: number; reels: number; stories: number }>();
+    const doneByUser = new Map<string, { posts: number; reels: number; stories: number }>();
+
+    if (userIds.length > 0 && monthKeys.length > 0) {
+      const { data: goalRows } = await supabaseAdmin
+        .from("member_goals")
+        .select("user_id, month_key, posts_goal, reels_goal, stories_goal")
+        .in("user_id", userIds).in("month_key", monthKeys);
+      (goalRows ?? []).forEach((r: any) => {
+        const g = goalByUser.get(r.user_id) ?? { posts: 0, reels: 0, stories: 0 };
+        g.posts += r.posts_goal ?? 0; g.reels += r.reels_goal ?? 0; g.stories += r.stories_goal ?? 0;
+        goalByUser.set(r.user_id, g);
+      });
+    }
+
+    if (userIds.length > 0) {
+      const { data: assigns } = await supabaseAdmin
+        .from("item_assignees").select("item_id, user_id").in("user_id", userIds);
+      const itemUsers = new Map<string, string[]>();
+      (assigns ?? []).forEach((a: any) => {
+        const arr = itemUsers.get(a.item_id) ?? [];
+        arr.push(a.user_id);
+        itemUsers.set(a.item_id, arr);
+      });
+      const itemIds = [...itemUsers.keys()];
+      if (itemIds.length > 0) {
+        const { data: doneItems } = await supabaseAdmin
+          .from("content_items").select("id, type")
+          .in("id", itemIds).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
+          .gte("updated_at", start.toISOString()).lt("updated_at", end.toISOString());
+        (doneItems ?? []).forEach((it: any) => {
+          if (it.type !== "post" && it.type !== "reel") return;
+          (itemUsers.get(it.id) ?? []).forEach((uid) => {
+            const d = doneByUser.get(uid) ?? { posts: 0, reels: 0, stories: 0 };
+            if (it.type === "post") d.posts++; else d.reels++;
+            doneByUser.set(uid, d);
+          });
+        });
+      }
+
+      const { data: storyRows } = await supabaseAdmin
+        .from("stories_schedule").select("user_id, day")
+        .eq("org_id", context.orgId).in("user_id", userIds)
+        .gte("day", start.toISOString().slice(0, 10)).lt("day", end.toISOString().slice(0, 10));
+      (storyRows ?? []).forEach((r: any) => {
+        const d = doneByUser.get(r.user_id) ?? { posts: 0, reels: 0, stories: 0 };
+        d.stories++;
+        doneByUser.set(r.user_id, d);
+      });
+    }
+
+    const avatarMap = await signAvatarPaths(context.supabase, (profiles ?? []).map((p: any) => p.avatar_url));
+    const ranking: any[] = [];
+    const noGoal: any[] = [];
+    (profiles ?? []).forEach((p: any) => {
+      const goal = goalByUser.get(p.id) ?? { posts: 0, reels: 0, stories: 0 };
+      const done = doneByUser.get(p.id) ?? { posts: 0, reels: 0, stories: 0 };
+      const totalGoal = goal.posts + goal.reels + goal.stories;
+      const base = {
+        id: p.id, name: p.name, color: p.color, icon: p.icon,
+        avatarUrl: p.avatar_url ? (avatarMap.get(p.avatar_url) ?? null) : null,
+      };
+      if (totalGoal === 0) { noGoal.push(base); return; }
+      // Só credita o "feito" de uma categoria se ela tinha meta > 0 — sem
+      // isso, entregas fora da meta configurada inflariam a % à toa.
+      const totalDone =
+        (goal.posts > 0 ? done.posts : 0) +
+        (goal.reels > 0 ? done.reels : 0) +
+        (goal.stories > 0 ? done.stories : 0);
+      ranking.push({ ...base, pct: (totalDone / totalGoal) * 100, totalDone, totalGoal });
+    });
+    ranking.sort((a, b) => b.pct - a.pct || b.totalDone - a.totalDone);
+
+    return { period: data.period, ranking, noGoal };
   });
 
 /* ============== MEMBER FINALIZATIONS ============== */

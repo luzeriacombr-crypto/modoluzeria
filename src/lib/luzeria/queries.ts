@@ -10,7 +10,7 @@ import {
   setItemEditor, setItemReelType, setItemPostFormat,
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   listCleaningTasks, addCleaningTask, renameCleaningTask, deleteCleaningTask,
-  adminCreateUser, createAgency, updateMyOrg, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getMemberFinalizations,
+  adminCreateUser, createAgency, updateMyOrg, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations,
   listOrgsBilling, getOrgNextInvoice,
   updateMyAccount,
   getReport, getMemberReportDetail, getMemberVelocity, getFileUploadsReport,
@@ -144,6 +144,13 @@ export const topMembersQO = (period: "month" | "3m" | "6m" | "year", monthKey: s
   queryOptions({
     queryKey: ["top-members", period, monthKey],
     queryFn: () => getTopMembers({ data: { period, monthKey } }),
+    enabled: !!monthKey,
+  });
+
+export const topMembersByGoalQO = (period: "month" | "3m" | "6m" | "year", monthKey: string) =>
+  queryOptions({
+    queryKey: ["top-members-goal", period, monthKey],
+    queryFn: () => getTopMembersByGoal({ data: { period, monthKey } }),
     enabled: !!monthKey,
   });
 

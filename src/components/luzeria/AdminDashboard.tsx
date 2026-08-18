@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, Trophy, Sparkles, Flame, Crown, Medal,
   X, CheckCircle2, Inbox, Tag, Activity, AlertOctagon, RotateCcw,
 } from "lucide-react";
-import { adminDashboardQO, memberFinalizationsQO, topMembersQO, useMe, reportExtrasQO } from "@/lib/luzeria/queries";
+import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoalQO, useMe, reportExtrasQO } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
@@ -60,11 +60,13 @@ export function AdminDashboard() {
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { selectedMonthKey, selectMonth } = useUI();
   const [period, setPeriod] = useState<Period>("month");
+  const [rankingMode, setRankingMode] = useState<"meta" | "geral">("meta");
   const [filterMode, setFilterMode] = useState<null | "category" | "health" | "metric">(null);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
 
   const dashboard = useQuery(adminDashboardQO(selectedMonthKey));
-  const top = useQuery(topMembersQO(period, selectedMonthKey));
+  const top = useQuery({ ...topMembersQO(period, selectedMonthKey), enabled: rankingMode === "geral" && !!selectedMonthKey });
+  const topGoal = useQuery({ ...topMembersByGoalQO(period, selectedMonthKey), enabled: rankingMode === "meta" && !!selectedMonthKey });
   const { from: healthFrom, to: healthTo } = monthRange(selectedMonthKey);
   const health = useQuery({
     ...reportExtrasQO({ from: healthFrom, to: healthTo }),
@@ -80,6 +82,7 @@ export function AdminDashboard() {
     const id = window.setInterval(() => {
       qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
       qc.invalidateQueries({ queryKey: ["top-members"] });
+      qc.invalidateQueries({ queryKey: ["top-members-goal"] });
     }, 5 * 60 * 1000);
     return () => window.clearInterval(id);
   }, [sidebarHidden, qc]);
@@ -94,6 +97,18 @@ export function AdminDashboard() {
   }, [t?.percent]);
 
   const maxCount = top.data?.ranking[0]?.count ?? 0;
+  const rankingRows = rankingMode === "geral"
+    ? (top.data?.ranking ?? []).map((r) => ({
+        id: r.id, name: r.name, color: r.color, avatarUrl: r.avatarUrl,
+        barPct: maxCount ? (r.count / maxCount) * 100 : 0,
+        rightLabel: String(r.count),
+      }))
+    : (topGoal.data?.ranking ?? []).map((r) => ({
+        id: r.id, name: r.name, color: r.color, avatarUrl: r.avatarUrl,
+        barPct: Math.min(100, r.pct),
+        rightLabel: `${Math.round(r.pct)}%`,
+      }));
+  const noGoalRows = topGoal.data?.noGoal ?? [];
 
   // Ordena por status de meta: superada > batida > em dia > abaixo > sem itens;
   // dentro do mesmo status, quem tem % maior aparece primeiro.
@@ -225,19 +240,28 @@ export function AdminDashboard() {
             <Trophy size={16} className="text-[rgb(var(--lz-brand-rgb))]" />
             Top Membros <span className="text-white/40 font-normal">— {PERIOD_LABEL[period]}</span>
           </h2>
-          <div className="flex items-center gap-1 bg-[#0D0D0D] rounded-md p-1 text-xs">
-            {(Object.keys(PERIOD_LABEL) as Period[]).map((p) => (
-              <button key={p} onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 rounded transition ${period === p ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] font-semibold" : "text-white/60 hover:text-white"}`}>
-                {PERIOD_LABEL[p]}
-              </button>
-            ))}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1 bg-[#0D0D0D] rounded-md p-1 text-xs">
+              {(["meta", "geral"] as const).map((m) => (
+                <button key={m} onClick={() => setRankingMode(m)}
+                  className={`px-3 py-1.5 rounded transition ${rankingMode === m ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] font-semibold" : "text-white/60 hover:text-white"}`}>
+                  {m === "meta" ? "Por meta" : "Geral"}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1 bg-[#0D0D0D] rounded-md p-1 text-xs">
+              {(Object.keys(PERIOD_LABEL) as Period[]).map((p) => (
+                <button key={p} onClick={() => setPeriod(p)}
+                  className={`px-3 py-1.5 rounded transition ${period === p ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] font-semibold" : "text-white/60 hover:text-white"}`}>
+                  {PERIOD_LABEL[p]}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         <div className="space-y-2 relative">
-          {(top.data?.ranking ?? []).map((r, i) => {
-            const pct = maxCount ? (r.count / maxCount) * 100 : 0;
+          {rankingRows.map((r, i) => {
             const rankColor =
               i === 0 ? PALETTE.lime :
               i === 1 ? PALETTE.blue :
@@ -270,15 +294,42 @@ export function AdminDashboard() {
                   </div>
                   <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px]">
                     <div className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${rankColor}, ${PALETTE.lime})` }} />
+                      style={{ width: `${r.barPct}%`, background: `linear-gradient(90deg, ${rankColor}, ${PALETTE.lime})` }} />
                   </div>
                 </div>
-                <div className="text-white font-bold tabular-nums w-10 text-right">{r.count}</div>
+                <div className="text-white font-bold tabular-nums w-12 text-right">{r.rightLabel}</div>
               </button>
             );
           })}
-          {(top.data?.ranking ?? []).length === 0 && (
-            <div className="text-white/40 text-sm text-center py-8">Sem finalizações no período.</div>
+          {rankingRows.length === 0 && noGoalRows.length === 0 && (
+            <div className="text-white/40 text-sm text-center py-8">
+              {rankingMode === "meta" ? "Nenhuma meta definida para o período." : "Sem finalizações no período."}
+            </div>
+          )}
+          {rankingMode === "meta" && noGoalRows.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-white/[0.06]">
+              <div className="flex items-center gap-1.5 mb-2 text-[10px] uppercase font-bold tracking-wider text-white/40">
+                <Target size={11} /> Sem meta definida
+              </div>
+              <div className="space-y-1">
+                {noGoalRows.map((r) => {
+                  const canOpen = isAdmin || r.id === me?.id;
+                  return (
+                    <button
+                      key={r.id}
+                      disabled={!canOpen}
+                      onClick={() => canOpen && setOpenMember({ id: r.id, name: r.name, color: r.color, avatarUrl: r.avatarUrl })}
+                      className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-lg transition-colors text-left ${canOpen ? "hover:bg-white/[0.05] cursor-pointer" : "cursor-default"}`}
+                    >
+                      <div className="w-8" />
+                      <Avatar name={r.name} color={r.color} avatarUrl={r.avatarUrl} size={24} />
+                      <span className="text-white/50 text-sm truncate flex-1">{r.name}</span>
+                      <span className="text-white/25 text-xs">—</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
       </div>
