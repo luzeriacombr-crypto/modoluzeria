@@ -663,12 +663,14 @@ export const getItemTimeline = createServerFn({ method: "GET" })
     z.object({ itemId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<TimelineEntry[]> => {
     const db: any = context.supabase;
-    const [{ data: acts }, { data: txs }] = await Promise.all([
+    const [{ data: acts }, { data: txs }, { data: files }] = await Promise.all([
       db.from("activity_log").select("id, actor_id, action, meta, at")
         .eq("entity_type", "content_item").eq("entity_id", data.itemId)
         .order("at", { ascending: false }).limit(200),
       db.from("status_transitions").select("id, from_status, to_status, actor_id, at")
         .eq("item_id", data.itemId).order("at", { ascending: false }).limit(200),
+      db.from("item_files").select("id, name, added_by, created_at, kind, drive_file_id")
+        .eq("item_id", data.itemId).order("created_at", { ascending: false }).limit(200),
     ]);
     const entries: TimelineEntry[] = [];
     ((acts ?? []) as any[]).forEach((a) => {
@@ -690,6 +692,14 @@ export const getItemTimeline = createServerFn({ method: "GET" })
         kind: "status",
         text: `mudou status: ${t.from_status ?? "—"} → ${t.to_status}`,
       });
+    });
+    ((files ?? []) as any[]).forEach((f) => {
+      const text = f.kind === "briefing"
+        ? `anexou imagem de referência "${f.name}"`
+        : f.drive_file_id
+        ? `vinculou do Drive "${f.name}"`
+        : `fez upload de "${f.name}"`;
+      entries.push({ id: f.id, at: f.created_at, actorId: f.added_by, kind: "file", text });
     });
     entries.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
     return entries.slice(0, 80);

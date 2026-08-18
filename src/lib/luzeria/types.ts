@@ -612,7 +612,7 @@ export interface TimelineEntry {
   id: string;
   at: string;
   actorId: string | null;
-  kind: "created" | "status" | "due" | "rated" | "rework" | "comment" | "system";
+  kind: "created" | "status" | "due" | "rated" | "rework" | "comment" | "system" | "file";
   text: string;
   meta?: Record<string, any>;
 }

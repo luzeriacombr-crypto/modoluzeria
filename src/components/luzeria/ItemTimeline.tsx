@@ -12,6 +12,7 @@ const KIND_DOT: Record<string, string> = {
   rework: "#FF4444",
   comment: "rgba(255,255,255,0.4)",
   system: "rgba(255,255,255,0.3)",
+  file: "#4A9EFF",
 };
 
 export function ItemTimeline({ itemId }: { itemId: string }) {
