@@ -4,8 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { SalesPage } from "@/components/luzeria/SalesPage";
 import { hasSignedInBefore } from "@/lib/luzeria/device-flag";
 
+const TITLE = "Modo Criador — Gestão de Conteúdo para Agências de Social Media";
+const DESCRIPTION =
+  "Centralize calendário de posts, aprovação de cliente por link e backup automático no Drive. Chega de planilha e WhatsApp bagunçado. Teste grátis por 7 dias.";
+
 export const Route = createFileRoute("/")({
   component: IndexRoute,
+  head: () => ({
+    meta: [
+      { title: TITLE },
+      { name: "description", content: DESCRIPTION },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESCRIPTION },
+    ],
+    links: [{ rel: "canonical", href: "https://www.modocriador.com.br/" }],
+  }),
   beforeLoad: async () => {
     // Only ever true for a client-side navigation into "/" (e.g. clicking
     // "Home" from within the already-hydrated app) — SSR/a fresh load has
