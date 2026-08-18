@@ -2,11 +2,11 @@ import { Fragment, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Download, Filter, ChevronDown, Clock, AlertOctagon, RotateCcw, Star,
-  BarChart3, Activity, Layers, Zap,
+  BarChart3, Activity, Layers, Zap, Upload,
 } from "lucide-react";
-import { profilesQO, clientsQO, reportQO, reportExtrasQO, memberVelocityQO, useApi, type ReportFilters } from "@/lib/luzeria/queries";
+import { profilesQO, clientsQO, reportQO, reportExtrasQO, memberVelocityQO, fileUploadsReportQO, useApi, type ReportFilters } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
-import { STATUS_META, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
 import { exportReportXlsx } from "@/lib/luzeria/report-export";
 import { MemberReportPanel } from "./MemberReportPanel";
 
@@ -73,7 +73,7 @@ export function ReportsTab() {
   const [page, setPage] = useState(0);
   const PER = 50;
 
-  type Tab = "produtividade" | "lead" | "status" | "retrabalho" | "qualidade" | "bloqueios" | "velocidade";
+  type Tab = "produtividade" | "lead" | "status" | "retrabalho" | "qualidade" | "bloqueios" | "velocidade" | "uploads";
   const [tab, setTab] = useState<Tab>("produtividade");
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "produtividade", label: "Produtividade", icon: <BarChart3 size={13} /> },
@@ -83,6 +83,7 @@ export function ReportsTab() {
     { id: "retrabalho", label: "Retrabalho", icon: <RotateCcw size={13} /> },
     { id: "qualidade", label: "Qualidade", icon: <Star size={13} /> },
     { id: "bloqueios", label: "Travados", icon: <AlertOctagon size={13} /> },
+    { id: "uploads", label: "Uploads", icon: <Upload size={13} /> },
   ];
 
   function apply() {
@@ -390,6 +391,7 @@ export function ReportsTab() {
       {extras && tab === "retrabalho" && <ReworkView data={extras.rework} />}
       {extras && tab === "qualidade" && <QualityView data={extras.quality} />}
       {extras && tab === "bloqueios" && <BlockedView data={extras.blocked} />}
+      {tab === "uploads" && <UploadsView />}
 
       {openMember && (
         <MemberReportPanel
@@ -696,6 +698,96 @@ function VelocityView({ from, to }: { from: string; to: string }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ===== UPLOADS VIEW — quem anexou arquivo em cada item, num período curto ===== */
+
+const UPLOAD_DAYS_OPTIONS = [7, 15, 30] as const;
+const UPLOAD_TYPE_OPTIONS = ["reel", "post", "story", "outros", "all"] as const;
+
+function UploadsView() {
+  const [days, setDays] = useState<7 | 15 | 30>(7);
+  const [type, setType] = useState<(typeof UPLOAD_TYPE_OPTIONS)[number]>("reel");
+  const { data, isLoading } = useQuery(fileUploadsReportQO(days, type));
+
+  return (
+    <div className="py-2">
+      <div className="text-[11px] text-white/40 mb-4 px-1">
+        Quem anexou arquivo (upload direto ou vindo do Drive) em cada item — útil pra conferir quem realmente mexeu num reel quando o editor esquece de se atribuir.
+      </div>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex items-center gap-1.5">
+          {UPLOAD_DAYS_OPTIONS.map((d) => (
+            <button key={d} onClick={() => setDays(d)}
+              className="rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide transition-colors"
+              style={{
+                backgroundColor: days === d ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
+                color: days === d ? "#0D0D0D" : "rgba(255,255,255,0.5)",
+              }}>
+              Últimos {d} dias
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1.5">
+          {UPLOAD_TYPE_OPTIONS.map((t) => (
+            <button key={t} onClick={() => setType(t)}
+              className="rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide transition-colors"
+              style={{
+                backgroundColor: type === t ? "rgba(var(--lz-brand-light-rgb),0.15)" : "rgba(255,255,255,0.06)",
+                color: type === t ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.5)",
+              }}>
+              {t === "all" ? "Todos" : CONTENT_TYPE_LABEL[t as keyof typeof CONTENT_TYPE_LABEL] ?? t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="text-white/40 text-sm py-6 px-2">Carregando…</div>
+      ) : !data || data.rows.length === 0 ? (
+        <div className="text-white/30 text-sm py-6 px-2">Nenhum arquivo anexado nesse período.</div>
+      ) : (
+        <>
+          {data.byMember.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {data.byMember.map((m) => (
+                <div key={m.userId} className="flex items-center gap-1.5 bg-[#1C1C1C] border border-white/[0.06] rounded-full pl-1.5 pr-3 py-1">
+                  <div className="h-5 w-5 rounded-full grid place-items-center text-[9px] font-bold text-white shrink-0" style={{ background: m.userColor }}>
+                    {m.userName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-xs text-white/80">{m.userName}</span>
+                  <span className="text-xs font-bold text-[rgb(var(--lz-brand-rgb))] tabular-nums">{m.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="rounded-xl bg-[#1C1C1C] border border-white/[0.06] overflow-hidden">
+            {data.rows.map((r, i) => (
+              <div key={r.id} className={`flex items-center gap-3 px-3 py-2.5 text-xs ${i > 0 ? "border-t border-white/[0.05]" : ""}`}>
+                <span className="text-white/40 tabular-nums w-32 shrink-0">{new Date(r.createdAt).toLocaleString("pt-BR")}</span>
+                <div className="h-5 w-5 rounded-full grid place-items-center text-[9px] font-bold text-white shrink-0" style={{ background: r.userColor }}>
+                  {r.userName.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-white/80 w-28 truncate shrink-0">{r.userName}</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold shrink-0"
+                  style={{ backgroundColor: (r.clientColor ?? "#444") + "33", color: r.clientColor ?? "#FFF" }}>
+                  {r.clientName ?? "Removido"}
+                </span>
+                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
+                  style={{ backgroundColor: r.fileKind === "briefing" ? "rgba(184,132,252,0.15)" : "rgba(74,158,255,0.15)", color: r.fileKind === "briefing" ? "#B884FC" : "#4A9EFF" }}>
+                  {r.fileKind === "briefing" ? "REFERÊNCIA" : "ARQUIVO"}
+                </span>
+                <span className="text-white flex-1 truncate">
+                  <span className="font-semibold">{r.itemTitle ?? "Item removido"}</span>
+                  <span className="text-white/50"> · {r.fileName}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

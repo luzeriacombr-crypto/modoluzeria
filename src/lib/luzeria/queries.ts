@@ -13,7 +13,7 @@ import {
   adminCreateUser, createAgency, updateMyOrg, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getMemberFinalizations,
   listOrgsBilling, getOrgNextInvoice,
   updateMyAccount,
-  getReport, getMemberReportDetail, getMemberVelocity,
+  getReport, getMemberReportDetail, getMemberVelocity, getFileUploadsReport,
   updateFeedOrder,
   setFeedOrderMode,
   setFeedOrderDirection,
@@ -171,6 +171,12 @@ export const reportQO = (filters: ReportFilters) =>
     queryKey: ["report", filters],
     queryFn: () => getReport({ data: filters as any }),
     enabled: !!filters.from && !!filters.to,
+  });
+
+export const fileUploadsReportQO = (days: 7 | 15 | 30, type: string) =>
+  queryOptions({
+    queryKey: ["file-uploads-report", days, type],
+    queryFn: () => getFileUploadsReport({ data: { days, type } }),
   });
 
 export const memberReportDetailQO = (userId: string, from: string, to: string) =>

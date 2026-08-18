@@ -2128,6 +2128,90 @@ const reportFiltersSchema = z.object({
   clientId: z.string().uuid().optional().nullable(),
 });
 
+/** Quem anexou cada arquivo (upload direto ou vindo do Drive) num período
+ * curto — pensado pra conferir rápido, por exemplo, quem realmente mexeu
+ * num reel quando o editor esquece de se atribuir. Cobre `item_files.kind`
+ * "media" (arquivo principal) e "briefing" (imagem de referência). */
+export type FileUploadRow = {
+  id: string;
+  createdAt: string;
+  fileName: string;
+  mimeType: string | null;
+  fileKind: "media" | "briefing";
+  userId: string;
+  userName: string;
+  userColor: string;
+  itemId: string | null;
+  itemTitle: string | null;
+  itemIdx: number | null;
+  itemType: string | null;
+  clientId: string | null;
+  clientName: string | null;
+  clientColor: string | null;
+};
+
+export const getFileUploadsReport = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { days: 7 | 15 | 30; type?: string }) =>
+    z.object({
+      days: z.union([z.literal(7), z.literal(15), z.literal(30)]),
+      type: z.enum(["all", "post", "reel", "story", "outros", "gravacao", "roteiro", "sistema"]).optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) {
+      const { data: allowed } = await context.supabase.rpc("has_setor_permission", { _user_id: context.userId, _perm: "team_reports" });
+      if (!allowed) throw new Error("Forbidden");
+    }
+
+    const type = data.type ?? "reel";
+    const start = new Date(Date.now() - data.days * 86400000).toISOString();
+    let q = context.supabase
+      .from("item_files")
+      .select("id, name, mime_type, added_by, created_at, kind, content_items!inner(id, type, title, idx, months!inner(client_id, clients!months_client_id_fkey!inner(id, name, color)))")
+      .gte("created_at", start)
+      .order("created_at", { ascending: false });
+    if (type !== "all") q = q.eq("content_items.type", type);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+
+    const { data: profiles } = await context.supabase.from("profiles").select("id, name, color");
+    const profileById = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+
+    const items: FileUploadRow[] = (rows ?? []).map((r: any) => {
+      const it = r.content_items;
+      const c = it?.months?.clients;
+      const p = r.added_by ? profileById.get(r.added_by) : null;
+      return {
+        id: r.id,
+        createdAt: r.created_at,
+        fileName: r.name,
+        mimeType: r.mime_type,
+        fileKind: (r.kind ?? "media") as "media" | "briefing",
+        userId: r.added_by,
+        userName: p?.name ?? "Membro removido",
+        userColor: p?.color ?? "#888",
+        itemId: it?.id ?? null,
+        itemTitle: it?.title ?? null,
+        itemIdx: it?.idx ?? null,
+        itemType: it?.type ?? null,
+        clientId: c?.id ?? null,
+        clientName: c?.name ?? null,
+        clientColor: c?.color ?? null,
+      };
+    });
+
+    const byMemberMap = new Map<string, { userId: string; userName: string; userColor: string; count: number }>();
+    items.forEach((r) => {
+      const cur = byMemberMap.get(r.userId) ?? { userId: r.userId, userName: r.userName, userColor: r.userColor, count: 0 };
+      cur.count++;
+      byMemberMap.set(r.userId, cur);
+    });
+    const byMember = [...byMemberMap.values()].sort((a, b) => b.count - a.count);
+
+    return { days: data.days, type, rows: items, byMember };
+  });
+
 export const getReport = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: any) => reportFiltersSchema.parse(d))
