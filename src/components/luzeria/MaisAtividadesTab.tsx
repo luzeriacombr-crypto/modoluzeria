@@ -97,13 +97,19 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                 profiles={profiles}
                 onSubmit={async (vals) => {
                   try {
-                    const { assigneeId, status, ...itemVals } = vals;
+                    const { assigneeIds, status, ...itemVals } = vals;
                     const result = await addContentItem.mutateAsync({
                       data: { clientId, key: monthKey, type, ...itemVals },
                     });
                     const newId = (result as any)?.id;
-                    if (assigneeId && newId) {
-                      await addAssignee.mutateAsync({ data: { itemId: newId, userId: assigneeId } });
+                    // Precisa terminar de atribuir todo mundo ANTES de marcar
+                    // como Concluído — o gatilho que credita a finalização
+                    // (e, no fim, as horas de cada um na margem por cliente)
+                    // lê os responsáveis no momento da transição de status.
+                    if (assigneeIds?.length && newId) {
+                      await Promise.all(assigneeIds.map((uid) =>
+                        addAssignee.mutateAsync({ data: { itemId: newId, userId: uid } })
+                      ));
                     }
                     // Criado sempre como PENDENTE (padrão do backend); se a
                     // pessoa já marcou como Concluído no formulário, aplica a
@@ -179,7 +185,7 @@ function ActivityForm({
   clientId: string;
   monthKey: string;
   profiles: Profile[];
-  onSubmit: (vals: { title: string; dueDate?: string; location?: string; quantity?: number; notes?: string; assigneeId?: string; status: "PENDENTE" | "CONCLUIDO" }) => Promise<void>;
+  onSubmit: (vals: { title: string; dueDate?: string; location?: string; quantity?: number; notes?: string; assigneeIds?: string[]; status: "PENDENTE" | "CONCLUIDO" }) => Promise<void>;
   onCancel: () => void;
   loading: boolean;
 }) {
@@ -188,7 +194,7 @@ function ActivityForm({
   const [location, setLocation] = useState("");
   const [quantity, setQuantity] = useState("");
   const [notes, setNotes] = useState("");
-  const [assigneeId, setAssigneeId] = useState("");
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [status, setStatus] = useState<"PENDENTE" | "CONCLUIDO">("PENDENTE");
 
   const inp = "w-full bg-[#1A1A1A] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition-colors placeholder:text-white/30";
@@ -202,7 +208,7 @@ function ActivityForm({
       location: cfg.hasLocation && location.trim() ? location.trim() : undefined,
       quantity: cfg.quantityLabel && qty !== undefined && !Number.isNaN(qty) ? qty : undefined,
       notes: notes.trim() || undefined,
-      assigneeId: assigneeId || undefined,
+      assigneeIds: assigneeIds.length ? assigneeIds : undefined,
       status,
     });
   }
@@ -287,14 +293,28 @@ function ActivityForm({
 
       <div>
         <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/40 mb-1">
-          <User size={11} /> Responsável
+          <User size={11} /> Responsáveis {assigneeIds.length > 1 && <span className="text-white/30 normal-case">(quando mais de uma pessoa participa, a hora de todas conta na margem do cliente)</span>}
         </label>
-        <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className={inp}>
-          <option value="">— Sem responsável</option>
-          {profiles.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+        <div className="flex flex-wrap gap-1.5">
+          {profiles.map((p) => {
+            const checked = assigneeIds.includes(p.id);
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setAssigneeIds((ids) => checked ? ids.filter((id) => id !== p.id) : [...ids, p.id])}
+                className="inline-flex items-center gap-1.5 rounded-full pl-1 pr-2.5 py-1 text-xs font-semibold transition-colors border"
+                style={{
+                  backgroundColor: checked ? "rgba(var(--lz-brand-light-rgb),0.15)" : "rgba(255,255,255,0.05)",
+                  borderColor: checked ? "rgb(var(--lz-brand-rgb))" : "transparent",
+                  color: checked ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.6)",
+                }}
+              >
+                {checked ? <Check size={12} /> : <span className="w-3" />} {p.name}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div>
