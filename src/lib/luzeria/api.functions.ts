@@ -309,6 +309,30 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
     });
   });
 
+/** Platform-admin only: gives an agency another 7-day trial window — for
+ * when someone signs up but doesn't actually try the product in time, and
+ * Junior wants to give them a second shot. Also revives a trial that had
+ * already lapsed into "past_due"/"canceled" back to "trialing", since the
+ * whole point is letting them properly try it. Doesn't touch orgs already
+ * on a paying "active" subscription — resetting a trial makes no sense
+ * there (gated client-side too, but enforced here as the source of truth). */
+export const resetOrgTrial = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { orgId: string }) => z.object({ orgId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { data: org } = await context.supabase
+      .from("orgs").select("subscription_status").eq("id", data.orgId).maybeSingle();
+    if ((org as any)?.subscription_status === "active") {
+      throw new Error("Essa agência já é assinante ativa — não dá pra resetar teste.");
+    }
+    const trialEndsAt = new Date(Date.now() + 7 * 86_400_000).toISOString();
+    const { error } = await context.supabase
+      .from("orgs").update({ subscription_status: "trialing", trial_ends_at: trialEndsAt }).eq("id", data.orgId);
+    if (error) throw new Error(error.message);
+    return { trialEndsAt };
+  });
+
 /** Platform-admin only: sets the WhatsApp number recorded for an agency —
  * not collected at signup, so it's filled in manually as Junior gets it. */
 export const updateOrgWhatsapp = createServerFn({ method: "POST" })

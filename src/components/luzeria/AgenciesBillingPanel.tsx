@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check } from "lucide-react";
+import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw } from "lucide-react";
 import { orgsBillingQO } from "@/lib/luzeria/queries";
-import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp } from "@/lib/luzeria/api.functions";
+import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial } from "@/lib/luzeria/api.functions";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   trialing: { label: "Em teste", color: "#4A9EFF" },
@@ -19,14 +20,32 @@ function daysUntil(iso: string) {
 }
 
 export function AgenciesBillingPanel() {
+  const queryClient = useQueryClient();
   const { data: orgs = [], isLoading } = useQuery(orgsBillingQO());
   const [invoiceForId, setInvoiceForId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; hasAsaasSubscription: boolean } | null>(null);
   const [infoTarget, setInfoTarget] = useState<any>(null);
+  const [resettingId, setResettingId] = useState<string | null>(null);
 
   const fetchInvoice = useMutation({
     mutationFn: useServerFn(getOrgNextInvoice),
   });
+
+  const resetTrial = useMutation({
+    mutationFn: useServerFn(resetOrgTrial),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orgs-billing"] });
+      toast.success("Mais 7 dias de teste liberados.");
+      setResettingId(null);
+    },
+    onError: (e: any) => { toast.error(e?.message ?? "Erro ao resetar teste."); setResettingId(null); },
+  });
+
+  async function handleResetTrial(o: { id: string; name: string }) {
+    if (!(await requestConfirm(`Dar mais 7 dias de teste pra ${o.name}?`))) return;
+    setResettingId(o.id);
+    resetTrial.mutate({ data: { orgId: o.id } });
+  }
 
   if (isLoading) {
     return (
@@ -132,14 +151,26 @@ export function AgenciesBillingPanel() {
                           : <span className="text-white/30">—</span>}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-white/70">{o.clientsUsed}</td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => setDeleteTarget({ id: o.id, name: o.name, hasAsaasSubscription: o.hasAsaasSubscription })}
-                        title="Remover agência"
-                        className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        {o.subscriptionStatus !== "active" && (
+                          <button
+                            onClick={() => handleResetTrial(o)}
+                            disabled={resettingId === o.id}
+                            title="Dar mais 7 dias de teste"
+                            className="p-1.5 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5 transition disabled:opacity-40"
+                          >
+                            {resettingId === o.id ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setDeleteTarget({ id: o.id, name: o.name, hasAsaasSubscription: o.hasAsaasSubscription })}
+                          title="Remover agência"
+                          className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
