@@ -2547,7 +2547,10 @@ export const getReport = createServerFn({ method: "GET" })
       fmtAgg.set(eid, row);
       if (h.itemId) {
         const list = itemsByEditor.get(eid) ?? [];
-        list.push({ itemId: h.itemId, title: h.title, clientName: h.clientName, clientColor: h.clientColor });
+        // um item pode ter várias finalizações (retrabalho) — não repetir na lista
+        if (!list.some((it) => it.itemId === h.itemId)) {
+          list.push({ itemId: h.itemId, title: h.title, clientName: h.clientName, clientColor: h.clientColor });
+        }
         itemsByEditor.set(eid, list);
       }
     });
