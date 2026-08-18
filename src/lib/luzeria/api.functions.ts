@@ -2399,11 +2399,22 @@ export const getReport = createServerFn({ method: "GET" })
 
     const itemInfoById = new Map<string, any>();
     if (touchedItemIds.size > 0) {
-      const { data: itemsInfo } = await context.supabase
-        .from("content_items")
-        .select("id, type, title, months!inner(client_id, key, clients!months_client_id_fkey!inner(id, name, color, category))")
-        .in("id", [...touchedItemIds]);
-      (itemsInfo ?? []).forEach((it: any) => itemInfoById.set(it.id, it));
+      // .in() com centenas/milhares de ids vira uma URL longa demais e a
+      // query falha silenciosamente (o erro nunca era checado) — batela em
+      // grupos menores pra não estourar o limite.
+      const idBatches: string[][] = [];
+      const idList = [...touchedItemIds];
+      for (let i = 0; i < idList.length; i += 150) idBatches.push(idList.slice(i, i + 150));
+      const batchResults = await Promise.all(idBatches.map((batch) =>
+        context.supabase
+          .from("content_items")
+          .select("id, type, title, months!inner(client_id, key, clients!months_client_id_fkey!inner(id, name, color, category))")
+          .in("id", batch)
+      ));
+      batchResults.forEach(({ data: itemsInfo, error }: any) => {
+        if (error) console.error("getReport itemsInfo batch error", error);
+        (itemsInfo ?? []).forEach((it: any) => itemInfoById.set(it.id, it));
+      });
     }
 
     function pushActivity(kind: ActivityEntry["kind"], itemId: string | null, userId: string | null, at: string, description: string) {
