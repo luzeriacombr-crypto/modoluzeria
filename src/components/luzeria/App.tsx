@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon, Video } from "lucide-react";
-import { Outlet, useNavigate } from "@tanstack/react-router";
+import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -34,6 +34,11 @@ export function App() {
   const me = useMe();
   const qc = useQueryClient();
   const { sidebarHidden, toggleSidebar } = useUI();
+  // Matched route's static id (not the resolved path) — switching between
+  // clients/months stays the same id, so it doesn't remount/reset that
+  // page; jumping to a genuinely different section does, which is what
+  // gets the subtle entrance animation below.
+  const routeId = useRouterState({ select: (s) => s.matches.at(-1)?.routeId ?? "" });
   const [creating, setCreating] = useState<{ category?: string } | null>(null);
   const [customFor, setCustomFor] = useState<Client | null>(null);
   const call = useScreenShareCall();
@@ -161,7 +166,9 @@ export function App() {
         <Header sidebarHidden={sidebarHidden} onToggleSidebar={toggleSidebar} />
         <TrialEndingBanner isMaster={me.data?.role === "master"} />
         <main className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0">
-          <Outlet />
+          <div key={routeId} className="lz-page-in">
+            <Outlet />
+          </div>
         </main>
       </div>
       {/* Always-visible floating toggle when sidebar is hidden — never gets stuck */}
