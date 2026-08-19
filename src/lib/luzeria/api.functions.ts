@@ -20,23 +20,35 @@ export const MODO_CRIADOR_OWNER_ID = "93f0cbec-e009-48fb-ac88-6bf1fd8120de";
 
 /* ============== PROFILES & ROLES ============== */
 
-/** Generate signed read URLs for avatar storage paths (1 year), resized to
- * 128×128 via Supabase's image transform — every avatar/client-photo in the
- * app renders at 56px CSS or smaller (checked across the codebase), so the
- * originals (up to ~500×500 out of ImageCropModal) were being downloaded in
- * full just to be shrunk visually. 128px covers the biggest render (64px
- * CSS in ClientFichaPanel) at 2x for retina. createSignedUrls (batch) has
- * no transform option, so this signs individually, in parallel — signing
+type AvatarTransform = { width: number; height: number; resize: "cover" | "contain" } | null;
+
+/** Square photos (profile avatars, client photos) — always 1:1 out of
+ * ImageCropModal, so "cover" at 128×128 never crops content, just shrinks
+ * it. Nothing in the app renders one bigger than 56-64px CSS. Deliberately
+ * NOT applied to agency branding assets (logo, favicon, feed-preview image)
+ * — those aren't square (a wide "cover" transform once shipped a cropped,
+ * broken logo), they're one-off uploads (not repeated per row in a list),
+ * and testing against a real logo showed "contain" can even make an
+ * already-small file bigger (re-encoding overhead) — no actual problem to
+ * fix there, so they're served as uploaded. */
+const SQUARE_THUMB: AvatarTransform = { width: 128, height: 128, resize: "cover" };
+
+/** Generate signed read URLs for avatar storage paths (1 year), optionally
+ * resized via Supabase's image transform. createSignedUrls (batch) has no
+ * transform option, so this signs individually, in parallel — signing
  * itself is cheap (no image processing happens until the URL is actually
- * fetched, and Supabase's edge caches the transformed result after that). */
-async function signAvatarPaths(supabase: any, paths: (string | null | undefined)[]): Promise<Map<string, string>> {
+ * fetched, and Supabase's edge caches the transformed result after that).
+ * Pass `transform: null` to skip resizing (e.g. the org's feed-preview
+ * image, meant to stay closer to its recommended 1200×630 for sharing). */
+async function signAvatarPaths(
+  supabase: any, paths: (string | null | undefined)[], transform: AvatarTransform = SQUARE_THUMB,
+): Promise<Map<string, string>> {
   const unique = Array.from(new Set(paths.filter((p): p is string => !!p)));
   const result = new Map<string, string>();
   if (unique.length === 0) return result;
   const signed = await Promise.all(unique.map(async (path) => {
-    const { data } = await supabase.storage.from("avatars").createSignedUrl(path, 60 * 60 * 24 * 365, {
-      transform: { width: 128, height: 128, resize: "cover" },
-    });
+    const { data } = await supabase.storage.from("avatars").createSignedUrl(path, 60 * 60 * 24 * 365,
+      transform ? { transform } : undefined);
     return { path, url: data?.signedUrl as string | undefined };
   }));
   signed.forEach(({ path, url }) => { if (url) result.set(path, url); });
@@ -106,10 +118,13 @@ export const getMe = createServerFn({ method: "GET" })
     const logoPath = (org as any)?.logo_path as string | null | undefined;
     const feedPreviewImagePath = (org as any)?.feed_preview_image_path as string | null | undefined;
     const faviconPath = (org as any)?.favicon_path as string | null | undefined;
-    const signed = await signAvatarPaths(context.supabase, [profile.avatar_url, logoPath, feedPreviewImagePath, faviconPath]);
-    const orgLogoUrl = logoPath ? signed.get(logoPath) ?? null : null;
-    const orgFeedPreviewImageUrl = feedPreviewImagePath ? signed.get(feedPreviewImagePath) ?? null : null;
-    const orgFaviconUrl = faviconPath ? signed.get(faviconPath) ?? null : null;
+    const [signed, brandSigned] = await Promise.all([
+      signAvatarPaths(context.supabase, [profile.avatar_url]),
+      signAvatarPaths(context.supabase, [logoPath, feedPreviewImagePath, faviconPath], null),
+    ]);
+    const orgLogoUrl = logoPath ? brandSigned.get(logoPath) ?? null : null;
+    const orgFeedPreviewImageUrl = feedPreviewImagePath ? brandSigned.get(feedPreviewImagePath) ?? null : null;
+    const orgFaviconUrl = faviconPath ? brandSigned.get(faviconPath) ?? null : null;
     return {
       id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
