@@ -81,15 +81,13 @@ export function ReferenceLibraryPage() {
           <BookMarked size={18} className="text-[rgb(var(--lz-brand-rgb))]" />
           Biblioteca de Referências
         </h1>
-        {selectedFolder && (
-          <button
-            onClick={() => setEditing("new")}
-            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide px-3 py-2 rounded-md text-black"
-            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
-          >
-            <Plus size={14} /> Nova referência
-          </button>
-        )}
+        <button
+          onClick={() => setEditing("new")}
+          className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide px-3 py-2 rounded-md text-black"
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+        >
+          <Plus size={14} /> Nova referência
+        </button>
       </div>
 
       {isLoading ? (
@@ -98,6 +96,12 @@ export function ReferenceLibraryPage() {
         folders.length === 0 ? (
           <EmptyState onCreate={() => setEditing("new")} />
         ) : (
+          <>
+          <p className="text-white/40 text-xs leading-relaxed mb-5 max-w-xl">
+            Guarde links de referência (Reels, TikTok, YouTube…) por cliente ou geral, pra puxar
+            na hora de escrever um roteiro novo. Clique numa pasta pra ver o que já foi salvo, ou
+            use "Nova referência" acima pra criar uma direto, escolhendo o cliente no formulário.
+          </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {folders.map((f) => (
               <button
@@ -119,6 +123,7 @@ export function ReferenceLibraryPage() {
               </button>
             ))}
           </div>
+          </>
         )
       ) : (
         <>
