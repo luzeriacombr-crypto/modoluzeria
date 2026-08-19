@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Plus, Info, CircleHelp, CalendarDays, Instagram, Users, LayoutGrid, Wallet, UserCog,
+  Plus, Info, CircleHelp, CalendarDays, Instagram, Users, LayoutGrid, Wallet, UserCog, BookMarked,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -197,6 +197,14 @@ export function Sidebar({
               onClick={() => navigate({ to: "/calendario" })}
             />
           </div>
+        )}
+        {!disabled.has("reference_library") && (
+          <NavButton
+            icon={<BookMarked size={15} />}
+            label="Biblioteca"
+            active={pathname === "/biblioteca"}
+            onClick={() => navigate({ to: "/biblioteca" })}
+          />
         )}
         {isAdmin && !disabled.has("client_overview") && (
           <NavButton

@@ -67,6 +67,7 @@ import {
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
+import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
 import { getOrgCostSettings, setOrgCostSettings, getClientMargins } from "./margin.functions";
 import {
   getForumCategories, getForumPosts, getForumPostDetail,
@@ -211,6 +212,12 @@ export const clientDocsQO = (clientId: string) =>
     queryKey: ["client-docs", clientId],
     queryFn: () => listClientDocs({ data: { clientId } }),
     enabled: !!clientId,
+  });
+
+export const referenceLibraryQO = (clientId?: string | null) =>
+  queryOptions({
+    queryKey: ["reference-library", clientId ?? "all"],
+    queryFn: () => listReferenceLibrary({ data: { clientId } }),
   });
 
 export const roteiroStatusesQO = (docId: string | null) =>
@@ -703,6 +710,16 @@ export function useApi() {
       mutationFn: useServerFn(deleteClientDoc),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover documento."),
+    }),
+    upsertReferenceLibraryItem: useMutation({
+      mutationFn: useServerFn(upsertReferenceLibraryItem),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["reference-library"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar referência."),
+    }),
+    deleteReferenceLibraryItem: useMutation({
+      mutationFn: useServerFn(deleteReferenceLibraryItem),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["reference-library"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover referência."),
     }),
     upsertRoteiroStatus: useMutation({
       mutationFn: useServerFn(upsertRoteiroStatus),
