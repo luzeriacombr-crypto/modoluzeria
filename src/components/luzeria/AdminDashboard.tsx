@@ -637,9 +637,29 @@ function MetricCard({
   );
 }
 
+/** Eases from 0 up to `target` over `duration`ms — used so the donut
+ * ring and its % both "load up" instead of snapping straight to value. */
+function useCountUp(target: number, duration = 1400) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    let raf: number;
+    const start = performance.now();
+    function tick(now: number) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      setValue(target * eased);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return value;
+}
+
 function BigDonut({ percent, done, total }: { percent: number; done: number; total: number }) {
   const size = 168, stroke = 14, r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
+  const animatedPercent = useCountUp(percent);
   return (
     <div className="relative shrink-0 mx-auto md:mx-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
@@ -652,10 +672,10 @@ function BigDonut({ percent, done, total }: { percent: number; done: number; tot
         </defs>
         <circle cx={size/2} cy={size/2} r={r} stroke="rgba(255,255,255,0.06)" strokeWidth={stroke} fill="none" />
         <circle cx={size/2} cy={size/2} r={r} stroke="url(#bigdonut)" strokeWidth={stroke} fill="none"
-          strokeDasharray={c} strokeDashoffset={c * (1 - percent/100)} strokeLinecap="round" />
+          strokeDasharray={c} strokeDashoffset={c * (1 - animatedPercent/100)} strokeLinecap="round" />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-[44px] font-extrabold tabular-nums leading-none text-white">{percent}%</div>
+        <div className="text-[44px] font-extrabold tabular-nums leading-none text-white">{Math.round(animatedPercent)}%</div>
         <div className="text-[10px] uppercase tracking-wider text-white/50 font-bold mt-1">Entregue</div>
         <div className="text-[11px] text-white/70 mt-0.5"><span className="font-bold text-[rgb(var(--lz-brand-rgb))]">{done}</span> / {total}</div>
       </div>
