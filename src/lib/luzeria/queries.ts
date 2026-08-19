@@ -491,6 +491,8 @@ export const publicDriveThumbQO = (token: string, fileId: string | null) =>
 
 export function useMe() { return useQuery(meQO()); }
 
+const MONTH_ITEM_CATEGORIES = ["posts", "reels", "outros", "gravacoes", "roteiros", "sistemas"];
+
 export function useApi() {
   const qc = useQueryClient();
   const invalidateAll = () => {
@@ -502,6 +504,29 @@ export function useApi() {
     qc.invalidateQueries({ queryKey: ["member-finalizations"] });
     qc.invalidateQueries({ queryKey: ["report"] });
   };
+  // Compartilhado por toda ação rápida (atribuir, avaliar, marcar checklist)
+  // que só muda um campo de um item já carregado — mesmo padrão que
+  // setItemStatus já usava, generalizado. Atualiza a tela na hora e some
+  // com a espera de rede; se der erro, onError devolve o snapshot de antes.
+  async function optimisticPatchMonthItem(id: string, patch: (item: any) => any) {
+    await qc.cancelQueries({ queryKey: ["month"] });
+    const snapshots: Array<{ key: unknown[]; data: unknown }> = [];
+    qc.getQueriesData<any>({ queryKey: ["month"] }).forEach(([key, data]) => {
+      if (!data) return;
+      snapshots.push({ key: key as unknown[], data });
+      const updated = { ...data };
+      MONTH_ITEM_CATEGORIES.forEach((cat) => {
+        if (Array.isArray(data[cat])) {
+          updated[cat] = data[cat].map((item: any) => (item.id === id ? patch(item) : item));
+        }
+      });
+      qc.setQueryData(key as unknown[], updated);
+    });
+    return { snapshots };
+  }
+  function rollbackMonthSnapshots(ctx: any) {
+    ctx?.snapshots?.forEach(({ key, data }: any) => qc.setQueryData(key, data));
+  }
   return {
     createClient: useMutation({ mutationFn: useServerFn(createClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) }),
     updateClient: useMutation({ mutationFn: useServerFn(updateClient), onSuccess: () => {
@@ -570,8 +595,30 @@ export function useApi() {
       },
       onSuccess: invalidateAll,
     }),
-    addAssignee: useMutation({ mutationFn: useServerFn(addAssignee), onSuccess: invalidateAll }),
-    removeAssignee: useMutation({ mutationFn: useServerFn(removeAssignee), onSuccess: invalidateAll }),
+    addAssignee: useMutation({
+      mutationFn: useServerFn(addAssignee),
+      onMutate: async (vars: any) => {
+        const { itemId, userId } = vars?.data ?? {};
+        if (!itemId || !userId) return;
+        return optimisticPatchMonthItem(itemId, (item) =>
+          (item.assigneeIds ?? []).includes(userId) ? item : { ...item, assigneeIds: [...(item.assigneeIds ?? []), userId] }
+        );
+      },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao atribuir responsável."); },
+      onSuccess: invalidateAll,
+    }),
+    removeAssignee: useMutation({
+      mutationFn: useServerFn(removeAssignee),
+      onMutate: async (vars: any) => {
+        const { itemId, userId } = vars?.data ?? {};
+        if (!itemId || !userId) return;
+        return optimisticPatchMonthItem(itemId, (item) =>
+          ({ ...item, assigneeIds: (item.assigneeIds ?? []).filter((id: string) => id !== userId) })
+        );
+      },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao remover responsável."); },
+      onSuccess: invalidateAll,
+    }),
     addComment: useMutation({ mutationFn: useServerFn(addComment), onSuccess: invalidateAll }),
     addContentItem: useMutation({ mutationFn: useServerFn(addContentItem), onSuccess: invalidateAll }),
     deleteItem: useMutation({ mutationFn: useServerFn(deleteItem), onSuccess: invalidateAll }),
@@ -643,6 +690,26 @@ export function useApi() {
     }),
     setCleaningDone: useMutation({
       mutationFn: useServerFn(setCleaningDone),
+      onMutate: async (vars: any) => {
+        const { taskId, weekday, occurrenceDate, done } = vars?.data ?? {};
+        if (!taskId) return;
+        await qc.cancelQueries({ queryKey: ["cleaning"] });
+        const previous = qc.getQueryData<any>(["cleaning"]);
+        if (previous) {
+          const others = (previous.weekLog ?? []).filter((r: any) =>
+            !(r.taskId === taskId && r.weekday === weekday && r.occurrenceDate === occurrenceDate)
+          );
+          const weekLog = done
+            ? [...others, { taskId, weekday, occurrenceDate, status: "done", doneAt: new Date().toISOString(), doneBy: null }]
+            : others;
+          qc.setQueryData(["cleaning"], { ...previous, weekLog });
+        }
+        return { previous };
+      },
+      onError: (e: any, _v: unknown, ctx: any) => {
+        if (ctx?.previous) qc.setQueryData(["cleaning"], ctx.previous);
+        toast.error(e?.message ?? "Erro ao marcar tarefa.");
+      },
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
     }),
     addCleaningTask: useMutation({
@@ -749,10 +816,22 @@ export function useApi() {
     /* ===== ROADMAP MUTATIONS ===== */
     updateChecklist: useMutation({
       mutationFn: useServerFn(updateChecklist),
+      onMutate: async (vars: any) => {
+        const { itemId, checklist } = vars?.data ?? {};
+        if (!itemId) return;
+        return optimisticPatchMonthItem(itemId, (item) => ({ ...item, checklist }));
+      },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao salvar checklist."); },
       onSuccess: invalidateAll,
     }),
     rateItem: useMutation({
       mutationFn: useServerFn(rateItem),
+      onMutate: async (vars: any) => {
+        const { itemId, rating } = vars?.data ?? {};
+        if (!itemId) return;
+        return optimisticPatchMonthItem(itemId, (item) => ({ ...item, qualityRating: rating }));
+      },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao avaliar."); },
       onSuccess: invalidateAll,
     }),
     setGoals: useMutation({
