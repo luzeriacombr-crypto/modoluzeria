@@ -68,6 +68,7 @@ import {
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
+import { listDemoRequests } from "./demo-request.functions";
 import { getOrgCostSettings, setOrgCostSettings, getClientMargins } from "./margin.functions";
 import {
   getForumCategories, getForumPosts, getForumPostDetail,
@@ -314,6 +315,8 @@ export const orgPlanStatusQO = () =>
   queryOptions({ queryKey: ["org-plan-status"], queryFn: () => getOrgPlanStatus() });
 export const orgsBillingQO = () =>
   queryOptions({ queryKey: ["orgs-billing"], queryFn: () => listOrgsBilling() });
+export const demoRequestsQO = () =>
+  queryOptions({ queryKey: ["demo-requests"], queryFn: () => listDemoRequests() });
 
 export const orgCostSettingsQO = () =>
   queryOptions({ queryKey: ["org-cost-settings"], queryFn: () => getOrgCostSettings() });

@@ -9,6 +9,15 @@ import { isActivityType, STATUS_META, SETOR_PERMISSION_KEYS } from "./types";
  * and in the admin-auth-operations edge function (they can't share a TS import). */
 export const LUZERIA_ORG_ID = "00000000-0000-0000-0000-000000000001";
 
+/** Junior's own profile id (master of LUZERIA_ORG_ID) — for notifications
+ * that must reach him specifically, not every Luzeria master. Hardcoded
+ * like LUZERIA_ORG_ID since there's no other stable identifier: his login
+ * email (junior.reis@live.com) differs from the address used for platform
+ * emails (junioreisfoto2@gmail.com, see PLATFORM_SUPPORT_EMAIL in
+ * bug-reports.functions.ts / demo-request.functions.ts), so neither email
+ * can be used to look this profile up reliably. */
+export const MODO_CRIADOR_OWNER_ID = "93f0cbec-e009-48fb-ac88-6bf1fd8120de";
+
 /* ============== PROFILES & ROLES ============== */
 
 /** Generate signed read URLs for avatar storage paths (1 year). */

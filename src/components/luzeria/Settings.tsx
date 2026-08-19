@@ -17,6 +17,7 @@ import { UpdatesTab } from "./UpdatesTab";
 import { PromotionCodesPanel } from "./PromotionCodesPanel";
 import { AffiliateProgramPanel } from "./AffiliateProgramPanel";
 import { AgenciesBillingPanel } from "./AgenciesBillingPanel";
+import { DemoRequestsPanel } from "./DemoRequestsPanel";
 import { SalesPageEditorTab } from "./SalesPageEditorTab";
 import { JourneyStagesTab } from "./JourneyStagesTab";
 
@@ -119,6 +120,11 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-white/10">
               <AgenciesBillingPanel />
+            </div>
+          )}
+          {me.isPlatformAdmin && (
+            <div className="pt-2 border-t border-white/10">
+              <DemoRequestsPanel />
             </div>
           )}
           <div className="pt-2 border-t border-white/10">
