@@ -502,6 +502,7 @@ const MONTH_ITEM_CATEGORIES = ["posts", "reels", "outros", "gravacoes", "roteiro
 
 export function useApi() {
   const qc = useQueryClient();
+  const me = useMe().data;
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["month"] });
     qc.invalidateQueries({ queryKey: ["clients"] });
@@ -966,6 +967,17 @@ export function useApi() {
     }),
     addCommentWithMentions: useMutation({
       mutationFn: useServerFn(addCommentWithMentions),
+      onMutate: async (vars: any) => {
+        const { itemId, text } = vars?.data ?? {};
+        if (!itemId || !text || !me) return;
+        const tempComment = {
+          id: `temp-${crypto.randomUUID()}`,
+          authorId: me.id, text, createdAt: new Date().toISOString(),
+          editedAt: null, system: false,
+        };
+        return optimisticPatchMonthItem(itemId, (item) => ({ ...item, comments: [...(item.comments ?? []), tempComment] }));
+      },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao comentar."); },
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["month"] });
         qc.invalidateQueries({ queryKey: ["notifications"] });
