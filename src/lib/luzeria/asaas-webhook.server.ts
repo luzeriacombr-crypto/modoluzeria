@@ -46,10 +46,15 @@ export async function handleAsaasWebhook(request: Request): Promise<Response> {
   const newStatus = STATUS_BY_EVENT[payload.event as string];
   const subscriptionId = payload.payment?.subscription ?? payload.subscription?.id;
   if (newStatus && subscriptionId) {
+    const { LUZERIA_ORG_ID } = await import("./api.functions");
+    // Luzeria is the platform owner, not a paying customer — never let a
+    // real (or lapsed) Asaas subscription flip its own status to past_due/
+    // canceled/etc. Junior's explicit call: special case, not a bug.
     const { error: updateError } = await supabaseAdmin
       .from("orgs")
       .update({ subscription_status: newStatus })
-      .eq("asaas_subscription_id", subscriptionId);
+      .eq("asaas_subscription_id", subscriptionId)
+      .neq("id", LUZERIA_ORG_ID);
     if (updateError) console.error("[asaas-webhook] failed to update org status", updateError);
   }
 
