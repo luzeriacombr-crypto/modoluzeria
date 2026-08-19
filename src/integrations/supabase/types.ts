@@ -2260,6 +2260,33 @@ export type Database = {
         }
         Relationships: []
       }
+      demo_requests: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          ip: string | null
+          name: string
+          phone: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          ip?: string | null
+          name: string
+          phone: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          ip?: string | null
+          name?: string
+          phone?: string
+        }
+        Relationships: []
+      }
       signup_attempts: {
         Row: {
           created_at: string

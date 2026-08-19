@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link, useLocation } from "@tanstack/react-router";
@@ -7,9 +7,11 @@ import { getPublicPlans, publicSignup } from "@/lib/luzeria/signup.functions";
 import { salesPageBlocksQO } from "@/lib/luzeria/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
+import { DemoRequestModal } from "./DemoRequestModal";
 import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, LIFT, Reveal, SalesPageBody } from "./salesPageBlocks";
 
 const PENDING_GOOGLE_SIGNUP_KEY = "modocriador:pending-google-signup";
+const DEMO_POPUP_SHOWN_KEY = "modocriador:demo-popup-shown";
 
 function GoogleMark({ size = 16 }: { size?: number }) {
   return (
@@ -45,6 +47,7 @@ export function SalesPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [invoiceUrl, setInvoiceUrl] = useState<string | null | undefined>(undefined);
+  const [showDemoModal, setShowDemoModal] = useState(false);
 
   const selectablePlans = (plans.data ?? []).filter((p) => p.priceCents != null);
   const hero = blocks.find((b) => b.type === "hero");
@@ -105,6 +108,53 @@ export function SalesPage() {
       setGoogleLoading(false);
     }
   }
+
+  // Popup de demo — só interrompe quem já demonstrou interesse (chegou a
+  // ver o formulário) e está claramente saindo dele, não quem só entrou na
+  // página. Desktop detecta pelo mouse saindo pelo topo (exit-intent
+  // clássico); mobile não tem esse evento, então usa "rolou de volta pra
+  // cima um bom trecho depois de ter visto o formulário" como proxy.
+  const formEngagedRef = useRef(false);
+  const maxScrollYRef = useRef(0);
+  useEffect(() => {
+    const formEl = document.getElementById("assinar-form");
+    if (!formEl) return;
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) formEngagedRef.current = true;
+    }, { threshold: 0.3 });
+    io.observe(formEl);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (sessionStorage.getItem(DEMO_POPUP_SHOWN_KEY)) return;
+
+    function trigger() {
+      if (sessionStorage.getItem(DEMO_POPUP_SHOWN_KEY)) return;
+      if (!formEngagedRef.current) return;
+      if (invoiceUrl !== undefined) return; // já cadastrou — não interrompe
+      sessionStorage.setItem(DEMO_POPUP_SHOWN_KEY, "1");
+      setShowDemoModal(true);
+    }
+
+    function onMouseLeave(e: MouseEvent) {
+      if (e.clientY <= 0) trigger();
+    }
+
+    function onScroll() {
+      const y = window.scrollY;
+      if (y > maxScrollYRef.current) maxScrollYRef.current = y;
+      else if (formEngagedRef.current && maxScrollYRef.current - y > 150) trigger();
+    }
+
+    document.addEventListener("mouseleave", onMouseLeave);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      document.removeEventListener("mouseleave", onMouseLeave);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [invoiceUrl]);
 
   const scrolled = useScrolled();
 
@@ -374,6 +424,8 @@ export function SalesPage() {
         </svg>
         <span className="text-sm font-bold">Falar no WhatsApp</span>
       </a>
+
+      {showDemoModal && <DemoRequestModal onClose={() => setShowDemoModal(false)} />}
     </div>
   );
 }
