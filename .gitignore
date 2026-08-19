@@ -37,3 +37,4 @@ preview.sh
 .vercel
 supabase/.temp/
 .env*
+bundle-analysis.*.html
