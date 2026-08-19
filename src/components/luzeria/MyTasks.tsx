@@ -187,7 +187,7 @@ export function MyTasks() {
             open={isSectionOpen("today-publications")} onToggle={() => toggleSection("today-publications")}
           />
           {isSectionOpen("today-publications") && (
-          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
+          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden lz-stagger">
             {todayPublications.map((p) => (
               <button
                 key={p.id}
@@ -228,7 +228,7 @@ export function MyTasks() {
             open={isSectionOpen("weekly-reminders")} onToggle={() => toggleSection("weekly-reminders")}
           />
           {isSectionOpen("weekly-reminders") && (
-          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
+          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden lz-stagger">
             {weeklyReminders.map((r) => (
               <div key={r.clientId} className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.05] last:border-b-0">
                 <button
@@ -269,7 +269,7 @@ export function MyTasks() {
             open={isSectionOpen("mentions")} onToggle={() => toggleSection("mentions")}
           />
           {isSectionOpen("mentions") && (
-          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
+          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden lz-stagger">
             {mentions.map((m: any) => (
               <button
                 key={m.mentionId}
@@ -320,7 +320,7 @@ export function MyTasks() {
       </div>
 
       {((today?.cleaningTasks?.length ?? 0) > 0) && (
-        <div className="space-y-3 mb-8">
+        <div className="space-y-3 mb-8 lz-stagger">
           {(() => {
             const isMe = !isAdmin || !viewAs || viewAs === me?.id;
             return (
@@ -353,7 +353,7 @@ export function MyTasks() {
           <p className="text-white/50 text-sm">Sem tarefas no momento.</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6 lz-stagger">
           {STATUS_ORDER.map((s) => {
             if (!grouped[s].length) return null;
             const m = STATUS_META[s]; const I = STATUS_ICONS[s];
@@ -368,7 +368,7 @@ export function MyTasks() {
                   open={open} onToggle={() => toggleSection(sectionId)}
                 />
                 {open && (
-                <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
+                <div className="bg-[#1C1C1C] rounded-lg overflow-hidden lz-stagger">
                   {grouped[s].map((t) => (
                     <button key={t.id}
                       onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId } }); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
@@ -437,7 +437,7 @@ function TodayCalendarWidget() {
         </span>
         <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Hoje na agenda</h2>
       </div>
-      <div className="divide-y divide-white/[0.05]">
+      <div className="divide-y divide-white/[0.05] lz-stagger">
         {data.events.map((ev: any) => (
           <button
             key={ev.id}

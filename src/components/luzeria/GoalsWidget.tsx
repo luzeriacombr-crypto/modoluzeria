@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { goalProgressQO, useMe } from "@/lib/luzeria/queries";
 import { Target } from "lucide-react";
+import { useGrowIn } from "@/lib/luzeria/animation-hooks";
 
 export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: string }) {
   const { data } = useQuery(goalProgressQO(monthKey, userId));
@@ -68,6 +69,7 @@ function Bar({ label, done, goal }: { label: string; done: number; goal: number 
   const expected = Math.round((dayOfMonth / daysInMonth) * goal);
   const behind = done < expected * 0.7;
   const color = done >= goal ? "rgb(var(--lz-brand-rgb))" : behind ? "#FF8C42" : "#7EB3FF";
+  const grown = useGrowIn(pct);
 
   return (
     <div>
@@ -78,7 +80,7 @@ function Bar({ label, done, goal }: { label: string; done: number; goal: number 
         </span>
       </div>
       <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
+        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${grown}%`, background: color }} />
       </div>
     </div>
   );

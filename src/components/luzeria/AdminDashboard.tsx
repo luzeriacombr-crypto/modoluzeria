@@ -9,6 +9,7 @@ import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoal
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
+import { useCountUp, useGrowIn } from "@/lib/luzeria/animation-hooks";
 import { Avatar } from "./Avatar";
 import { SetupChecklist } from "./SetupChecklist";
 import { InfoTip } from "./InfoTip";
@@ -204,7 +205,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Metric strip — 4 cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 lz-stagger">
         <MetricCard tone={PALETTE.lime}      icon={<Users size={16} />}          label="Clientes ativos" value={t?.clients ?? 0}
           info="Quantidade de clientes ativos (não arquivados) na agência." />
         <MetricCard tone={PALETTE.blue}      icon={<Target size={16} />}         label="Meta do mês"     value={t?.planned ?? 0}
@@ -260,7 +261,7 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        <div className="space-y-2 relative">
+        <div className="space-y-2 relative lz-stagger">
           {rankingRows.map((r, i) => {
             const rankColor =
               i === 0 ? PALETTE.lime :
@@ -292,10 +293,7 @@ export function AdminDashboard() {
                         style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>Você</span>
                     )}
                   </div>
-                  <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px]">
-                    <div className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${r.barPct}%`, background: `linear-gradient(90deg, ${rankColor}, ${PALETTE.lime})` }} />
-                  </div>
+                  <GrowBar pct={r.barPct} gradient={`linear-gradient(90deg, ${rankColor}, ${PALETTE.lime})`} />
                 </div>
                 <div className="text-white font-bold tabular-nums w-12 text-right">{r.rightLabel}</div>
               </button>
@@ -362,7 +360,7 @@ export function AdminDashboard() {
                 <th className="text-left px-3 py-2 font-semibold">Status</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="lz-stagger">
               {sortedClients.map((c) => {
                 const inactive = c.archived;
                 const statusLabel =
@@ -424,7 +422,7 @@ export function AdminDashboard() {
 
       {/* Category breakdown */}
       {byCategory.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 lz-stagger">
           {byCategory.map((c) => {
             const color = CAT_COLOR[c.name] ?? PALETTE.green;
             return (
@@ -438,9 +436,8 @@ export function AdminDashboard() {
                 <div className="mt-2 text-white/60 text-xs">
                   <span className="text-white font-semibold">{c.done}</span> de {c.total} entregues
                 </div>
-                <div className="mt-3 h-1.5 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px]">
-                  <div className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${c.percent}%`, background: `linear-gradient(90deg, ${color}, ${PALETTE.lime})` }} />
+                <div className="mt-3">
+                  <GrowBar pct={c.percent} gradient={`linear-gradient(90deg, ${color}, ${PALETTE.lime})`} />
                 </div>
               </button>
             );
@@ -613,6 +610,8 @@ function formatFinalized(iso: string) {
 function MetricCard({
   icon, label, value, tone, valueColor, onClick, info,
 }: { icon: React.ReactNode; label: string; value: number | string; tone: string; valueColor?: string; onClick?: () => void; info?: string }) {
+  const animated = useCountUp(typeof value === "number" ? value : 0);
+  const display = typeof value === "number" ? Math.round(animated) : value;
   return (
     <div onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
       className={`relative overflow-hidden rounded-xl p-4 transition-transform hover:-translate-y-0.5 text-center md:text-left ${onClick ? "cursor-pointer hover:border-white/[0.3]" : ""}`}
@@ -630,30 +629,20 @@ function MetricCard({
       </div>
       <div className="relative text-[34px] font-extrabold leading-none mb-1.5 tabular-nums"
         style={{ color: valueColor ?? "#ffffff" }}>
-        {value}
+        {display}
       </div>
       <div className="relative text-[10.5px] uppercase tracking-wider font-bold" style={{ color: hexA(tone, 0.9) }}>{label}</div>
     </div>
   );
 }
 
-/** Eases from 0 up to `target` over `duration`ms — used so the donut
- * ring and its % both "load up" instead of snapping straight to value. */
-function useCountUp(target: number, duration = 1400) {
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    let raf: number;
-    const start = performance.now();
-    function tick(now: number) {
-      const t = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
-      setValue(target * eased);
-      if (t < 1) raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-  return value;
+function GrowBar({ pct, gradient }: { pct: number; gradient: string }) {
+  const grown = useGrowIn(pct);
+  return (
+    <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px]">
+      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${grown}%`, background: gradient }} />
+    </div>
+  );
 }
 
 function BigDonut({ percent, done, total }: { percent: number; done: number; total: number }) {

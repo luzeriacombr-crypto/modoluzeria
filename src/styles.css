@@ -332,6 +332,34 @@
 .lz-stagger > *:nth-child(14) { animation-delay: 455ms; }
 .lz-stagger > *:nth-child(15) { animation-delay: 490ms; }
 .lz-stagger > *:nth-child(n+16) { animation-delay: 525ms; }
+
+/* Same idea as .lz-stagger, but for card grids — a touch of scale on top
+ * of the fade/rise reads nicer for a card "materializing" than a plain
+ * list row does. */
+@keyframes lz-card-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.lz-stagger-cards > * {
+  opacity: 0;
+  animation: lz-card-in 550ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.lz-stagger-cards > *:nth-child(1) { animation-delay: 0ms; }
+.lz-stagger-cards > *:nth-child(2) { animation-delay: 35ms; }
+.lz-stagger-cards > *:nth-child(3) { animation-delay: 70ms; }
+.lz-stagger-cards > *:nth-child(4) { animation-delay: 105ms; }
+.lz-stagger-cards > *:nth-child(5) { animation-delay: 140ms; }
+.lz-stagger-cards > *:nth-child(6) { animation-delay: 175ms; }
+.lz-stagger-cards > *:nth-child(7) { animation-delay: 210ms; }
+.lz-stagger-cards > *:nth-child(8) { animation-delay: 245ms; }
+.lz-stagger-cards > *:nth-child(9) { animation-delay: 280ms; }
+.lz-stagger-cards > *:nth-child(10) { animation-delay: 315ms; }
+.lz-stagger-cards > *:nth-child(11) { animation-delay: 350ms; }
+.lz-stagger-cards > *:nth-child(12) { animation-delay: 385ms; }
+.lz-stagger-cards > *:nth-child(13) { animation-delay: 420ms; }
+.lz-stagger-cards > *:nth-child(14) { animation-delay: 455ms; }
+.lz-stagger-cards > *:nth-child(15) { animation-delay: 490ms; }
+.lz-stagger-cards > *:nth-child(n+16) { animation-delay: 525ms; }
 /* Canonical modal/overlay scrim — replaces the one-off bg-black/NN
  * backdrop-blur-NN combos each modal used to invent for itself. */
 @utility lz-overlay {

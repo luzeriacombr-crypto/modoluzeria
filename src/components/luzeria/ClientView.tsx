@@ -222,7 +222,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                 )}
               </div>
               {viewMode === "grade" ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lz-stagger-cards">
                   {items.map((item, i) => (
                     <ContentCard
                       key={item.id}
@@ -248,7 +248,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   )}
                 </div>
               ) : (
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1.5 lz-stagger">
                   {items.map((item, i) => (
                     <ContentListRow
                       key={item.id}
