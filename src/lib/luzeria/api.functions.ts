@@ -2378,6 +2378,29 @@ export const getFileUploadsReport = createServerFn({ method: "GET" })
     return { days: data.days, type, rows: items, byMember };
   });
 
+/** PostgREST caps unbounded selects at 1000 rows by default, silently (no
+ * error) — getReport's date-range queries (finalizations, status_transitions,
+ * activity_log, etc.) now regularly exceed that as the org's history grows,
+ * which was quietly dropping rows with no ordering guarantee on which ones
+ * survived (this is what caused real, active items/members to show as
+ * "removido" in Histórico — not actually removed, just never fetched).
+ * Pages through with .range() until a page comes back short. `buildQuery`
+ * must return a FRESH query each call — a supabase-js builder can't be
+ * re-awaited for a second page. */
+async function fetchAllPaginated<T>(buildQuery: () => any, pageSize = 1000): Promise<T[]> {
+  const rows: T[] = [];
+  let offset = 0;
+  while (true) {
+    const { data, error } = await buildQuery().range(offset, offset + pageSize - 1);
+    if (error) { console.error("fetchAllPaginated error:", error.message); break; }
+    const batch = (data ?? []) as T[];
+    rows.push(...batch);
+    if (batch.length < pageSize) break;
+    offset += pageSize;
+  }
+  return rows;
+}
+
 export const getReport = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: any) => reportFiltersSchema.parse(d))
@@ -2404,16 +2427,17 @@ export const getReport = createServerFn({ method: "GET" })
     (roleRows ?? []).forEach((r: any) => roleByUser.set(r.user_id, r.role));
 
     // ---- content finalizations (posts/reels/outros) ----
-    let fq = context.supabase
-      .from("finalizations")
-      .select(
-        "id, user_id, finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, activity_quantity, months!inner(client_id, key, clients!months_client_id_fkey!inner(id, name, color, category)))"
-      )
-      .gte("finalized_at", fromISO)
-      .lt("finalized_at", toISO);
-    if (filterUser) fq = fq.eq("user_id", filterUser);
-    const { data: finRows, error: finErr } = await fq;
-    if (finErr) throw new Error(finErr.message);
+    const finRows = await fetchAllPaginated(() => {
+      let fq = context.supabase
+        .from("finalizations")
+        .select(
+          "id, user_id, finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, activity_quantity, months!inner(client_id, key, clients!months_client_id_fkey!inner(id, name, color, category)))"
+        )
+        .gte("finalized_at", fromISO)
+        .lt("finalized_at", toISO);
+      if (filterUser) fq = fq.eq("user_id", filterUser);
+      return fq;
+    });
 
     type HistRow = {
       kind: "content" | "stories" | "cleaning";
@@ -2526,36 +2550,44 @@ export const getReport = createServerFn({ method: "GET" })
     };
     const activityFeed: ActivityEntry[] = [];
 
-    let stq = context.supabase
-      .from("status_transitions")
-      .select("item_id, from_status, to_status, actor_id, at")
-      .gte("at", fromISO).lt("at", toISO);
-    if (filterUser) stq = stq.eq("actor_id", filterUser);
-    const { data: statusRows } = await stq;
+    const statusRows = await fetchAllPaginated(() => {
+      let stq = context.supabase
+        .from("status_transitions")
+        .select("item_id, from_status, to_status, actor_id, at")
+        .gte("at", fromISO).lt("at", toISO);
+      if (filterUser) stq = stq.eq("actor_id", filterUser);
+      return stq;
+    });
 
-    let cmq = context.supabase
-      .from("comments")
-      .select("item_id, author_id, text, created_at")
-      .eq("is_system", false)
-      .gte("created_at", fromISO).lt("created_at", toISO);
-    if (filterUser) cmq = cmq.eq("author_id", filterUser);
-    const { data: commentRows } = await cmq;
+    const commentRows = await fetchAllPaginated(() => {
+      let cmq = context.supabase
+        .from("comments")
+        .select("item_id, author_id, text, created_at")
+        .eq("is_system", false)
+        .gte("created_at", fromISO).lt("created_at", toISO);
+      if (filterUser) cmq = cmq.eq("author_id", filterUser);
+      return cmq;
+    });
 
-    let ifq = context.supabase
-      .from("item_files")
-      .select("item_id, name, mime_type, added_by, created_at")
-      .gte("created_at", fromISO).lt("created_at", toISO);
-    if (filterUser) ifq = ifq.eq("added_by", filterUser);
-    const { data: fileRows } = await ifq;
+    const fileRows = await fetchAllPaginated(() => {
+      let ifq = context.supabase
+        .from("item_files")
+        .select("item_id, name, mime_type, added_by, created_at")
+        .gte("created_at", fromISO).lt("created_at", toISO);
+      if (filterUser) ifq = ifq.eq("added_by", filterUser);
+      return ifq;
+    });
 
-    let alq = context.supabase
-      .from("activity_log")
-      .select("entity_id, actor_id, action, meta, at")
-      .eq("entity_type", "content_item")
-      .in("action", ["created", "due_date_changed", "rated"])
-      .gte("at", fromISO).lt("at", toISO);
-    if (filterUser) alq = alq.eq("actor_id", filterUser);
-    const { data: logRows } = await alq;
+    const logRows = await fetchAllPaginated(() => {
+      let alq = context.supabase
+        .from("activity_log")
+        .select("entity_id, actor_id, action, meta, at")
+        .eq("entity_type", "content_item")
+        .in("action", ["created", "due_date_changed", "rated"])
+        .gte("at", fromISO).lt("at", toISO);
+      if (filterUser) alq = alq.eq("actor_id", filterUser);
+      return alq;
+    });
 
     const touchedItemIds = new Set<string>();
     (statusRows ?? []).forEach((r: any) => touchedItemIds.add(r.item_id));
