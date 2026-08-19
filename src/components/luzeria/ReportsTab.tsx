@@ -613,7 +613,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div className="mb-8">
       <h2 className="text-xs uppercase font-bold tracking-wider text-white/50 mb-3">{title}</h2>
-      <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">{children}</div>
+      <div className="bg-[#1C1C1C] rounded-lg overflow-hidden lz-stagger">{children}</div>
     </div>
   );
 }
@@ -763,7 +763,7 @@ function UploadsView() {
               ))}
             </div>
           )}
-          <div className="rounded-xl bg-[#1C1C1C] border border-white/[0.06] overflow-hidden">
+          <div className="rounded-xl bg-[#1C1C1C] border border-white/[0.06] overflow-hidden lz-stagger">
             {data.rows.map((r, i) => (
               <div key={r.id} className={`flex items-center gap-3 px-3 py-2.5 text-xs ${i > 0 ? "border-t border-white/[0.05]" : ""}`}>
                 <span className="text-white/40 tabular-nums w-32 shrink-0">{new Date(r.createdAt).toLocaleString("pt-BR")}</span>

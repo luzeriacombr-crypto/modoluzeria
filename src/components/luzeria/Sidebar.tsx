@@ -350,7 +350,7 @@ function CategoryGroup({
           </button>
         )}
       </div>
-      {isOpen && <div className="mt-0.5">{children}</div>}
+      {isOpen && <div className="mt-0.5 lz-stagger">{children}</div>}
     </div>
   );
 }

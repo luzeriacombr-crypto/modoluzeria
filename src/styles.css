@@ -275,7 +275,7 @@
   to { transform: translateY(0); }
 }
 @keyframes lz-page-in {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @utility lz-pulse {
@@ -303,8 +303,35 @@
   animation: lz-sheet-in 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 @utility lz-page-in {
-  animation: lz-page-in 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: lz-page-in 550ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* Wrap a list container in .lz-stagger and its direct children fade/rise
+ * in one after another instead of all at once — used for the Sidebar
+ * client list, team grid, and Histórico rows. Delays are hand-written
+ * (not a CSS counter) since nth-child delay math isn't expressible with
+ * plain calc(); 16 steps then a flat cap keeps a long list's tail from
+ * dragging the whole thing out. */
+.lz-stagger > * {
+  opacity: 0;
+  animation: lz-page-in 550ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.lz-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.lz-stagger > *:nth-child(2) { animation-delay: 35ms; }
+.lz-stagger > *:nth-child(3) { animation-delay: 70ms; }
+.lz-stagger > *:nth-child(4) { animation-delay: 105ms; }
+.lz-stagger > *:nth-child(5) { animation-delay: 140ms; }
+.lz-stagger > *:nth-child(6) { animation-delay: 175ms; }
+.lz-stagger > *:nth-child(7) { animation-delay: 210ms; }
+.lz-stagger > *:nth-child(8) { animation-delay: 245ms; }
+.lz-stagger > *:nth-child(9) { animation-delay: 280ms; }
+.lz-stagger > *:nth-child(10) { animation-delay: 315ms; }
+.lz-stagger > *:nth-child(11) { animation-delay: 350ms; }
+.lz-stagger > *:nth-child(12) { animation-delay: 385ms; }
+.lz-stagger > *:nth-child(13) { animation-delay: 420ms; }
+.lz-stagger > *:nth-child(14) { animation-delay: 455ms; }
+.lz-stagger > *:nth-child(15) { animation-delay: 490ms; }
+.lz-stagger > *:nth-child(n+16) { animation-delay: 525ms; }
 /* Canonical modal/overlay scrim — replaces the one-off bg-black/NN
  * backdrop-blur-NN combos each modal used to invent for itself. */
 @utility lz-overlay {
