@@ -30,16 +30,23 @@ type AvatarTransform = { width: number; height: number; resize: "cover" | "conta
  * broken logo), they're one-off uploads (not repeated per row in a list),
  * and testing against a real logo showed "contain" can even make an
  * already-small file bigger (re-encoding overhead) — no actual problem to
- * fix there, so they're served as uploaded. */
+ * fix there, so it's served as uploaded. Favicon and feed-preview image
+ * DO benefit though (tested against real org data: favicon 66KB→18KB,
+ * feed-preview 356KB→67KB) since people upload them at whatever resolution
+ * without resizing first — "contain" so neither ever gets cropped, capped
+ * at generous boxes (feed-preview's box matches its own recommended
+ * 1200×630, so sharing quality isn't affected, just re-compressed). */
 const SQUARE_THUMB: AvatarTransform = { width: 128, height: 128, resize: "cover" };
+const FAVICON_THUMB: AvatarTransform = { width: 128, height: 128, resize: "contain" };
+const FEED_PREVIEW_THUMB: AvatarTransform = { width: 1200, height: 630, resize: "contain" };
 
 /** Generate signed read URLs for avatar storage paths (1 year), optionally
  * resized via Supabase's image transform. createSignedUrls (batch) has no
  * transform option, so this signs individually, in parallel — signing
  * itself is cheap (no image processing happens until the URL is actually
  * fetched, and Supabase's edge caches the transformed result after that).
- * Pass `transform: null` to skip resizing (e.g. the org's feed-preview
- * image, meant to stay closer to its recommended 1200×630 for sharing). */
+ * Pass `transform: null` to skip resizing (e.g. the org's logo — see
+ * comment above SQUARE_THUMB). */
 async function signAvatarPaths(
   supabase: any, paths: (string | null | undefined)[], transform: AvatarTransform = SQUARE_THUMB,
 ): Promise<Map<string, string>> {
@@ -118,13 +125,15 @@ export const getMe = createServerFn({ method: "GET" })
     const logoPath = (org as any)?.logo_path as string | null | undefined;
     const feedPreviewImagePath = (org as any)?.feed_preview_image_path as string | null | undefined;
     const faviconPath = (org as any)?.favicon_path as string | null | undefined;
-    const [signed, brandSigned] = await Promise.all([
+    const [signed, logoSigned, feedPreviewSigned, faviconSigned] = await Promise.all([
       signAvatarPaths(context.supabase, [profile.avatar_url]),
-      signAvatarPaths(context.supabase, [logoPath, feedPreviewImagePath, faviconPath], null),
+      signAvatarPaths(context.supabase, [logoPath], null),
+      signAvatarPaths(context.supabase, [feedPreviewImagePath], FEED_PREVIEW_THUMB),
+      signAvatarPaths(context.supabase, [faviconPath], FAVICON_THUMB),
     ]);
-    const orgLogoUrl = logoPath ? brandSigned.get(logoPath) ?? null : null;
-    const orgFeedPreviewImageUrl = feedPreviewImagePath ? brandSigned.get(feedPreviewImagePath) ?? null : null;
-    const orgFaviconUrl = faviconPath ? brandSigned.get(faviconPath) ?? null : null;
+    const orgLogoUrl = logoPath ? logoSigned.get(logoPath) ?? null : null;
+    const orgFeedPreviewImageUrl = feedPreviewImagePath ? feedPreviewSigned.get(feedPreviewImagePath) ?? null : null;
+    const orgFaviconUrl = faviconPath ? faviconSigned.get(faviconPath) ?? null : null;
     return {
       id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
