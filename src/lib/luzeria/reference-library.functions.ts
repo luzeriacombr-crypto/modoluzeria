@@ -2,6 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 
+const linkSchema = z.object({
+  label: z.string().trim().max(120).nullable().optional(),
+  url: z.string().trim().min(1).max(500),
+});
+
 export const listReferenceLibrary = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId?: string | null }) =>
@@ -9,7 +14,7 @@ export const listReferenceLibrary = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("reference_library_items")
-      .select("id, client_id, title, url, notes, tags, created_by, created_at, clients(name, color)")
+      .select("id, client_id, title, links, notes, tags, created_by, created_at, clients(name, color)")
       .order("created_at", { ascending: false });
     if (data.clientId !== undefined) {
       q = data.clientId === null ? q.is("client_id", null) : q.or(`client_id.eq.${data.clientId},client_id.is.null`);
@@ -22,7 +27,7 @@ export const listReferenceLibrary = createServerFn({ method: "GET" })
       clientName: r.clients?.name ?? null,
       clientColor: r.clients?.color ?? null,
       title: r.title,
-      url: r.url,
+      links: (r.links ?? []) as { label: string | null; url: string }[],
       notes: r.notes,
       tags: r.tags ?? [],
       createdBy: r.created_by,
@@ -33,12 +38,13 @@ export const listReferenceLibrary = createServerFn({ method: "GET" })
 export const upsertReferenceLibraryItem = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: {
-    id?: string; clientId: string | null; title: string; url?: string; notes?: string; tags?: string[];
+    id?: string; clientId: string | null; title: string;
+    links?: { label?: string | null; url: string }[]; notes?: string; tags?: string[];
   }) => z.object({
     id: z.string().uuid().optional(),
     clientId: z.string().uuid().nullable(),
     title: z.string().trim().min(1).max(160),
-    url: z.string().trim().max(500).optional(),
+    links: z.array(linkSchema).max(50).optional(),
     notes: z.string().trim().max(2000).optional(),
     tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
   }).parse(d))
@@ -47,7 +53,7 @@ export const upsertReferenceLibraryItem = createServerFn({ method: "POST" })
       org_id: context.orgId,
       client_id: data.clientId,
       title: data.title,
-      url: data.url?.trim() || null,
+      links: (data.links ?? []).map((l) => ({ label: l.label?.trim() || null, url: l.url.trim() })),
       notes: data.notes?.trim() || null,
       tags: data.tags ?? [],
       updated_at: new Date().toISOString(),

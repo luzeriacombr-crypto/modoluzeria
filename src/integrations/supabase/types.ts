@@ -2293,6 +2293,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          links: Json
           notes: string | null
           org_id: string
           tags: string[]
@@ -2305,6 +2306,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          links?: Json
           notes?: string | null
           org_id: string
           tags?: string[]
@@ -2317,6 +2319,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          links?: Json
           notes?: string | null
           org_id?: string
           tags?: string[]
