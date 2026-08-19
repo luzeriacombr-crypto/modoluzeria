@@ -553,18 +553,33 @@ export function useApi() {
     updateItem: useMutation({ mutationFn: useServerFn(updateItem), onSuccess: invalidateAll }),
     setItemEditor: useMutation({
       mutationFn: useServerFn(setItemEditor),
+      onMutate: async (vars: any) => {
+        const { itemId, editorId } = vars?.data ?? {};
+        if (!itemId) return;
+        return optimisticPatchMonthItem(itemId, (item) => ({ ...item, editorId }));
+      },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao definir o editor."); },
       onSuccess: invalidateAll,
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao definir o editor."),
     }),
     setItemReelType: useMutation({
       mutationFn: useServerFn(setItemReelType),
+      onMutate: async (vars: any) => {
+        const { itemId, reelType } = vars?.data ?? {};
+        if (!itemId) return;
+        return optimisticPatchMonthItem(itemId, (item) => ({ ...item, reelType }));
+      },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao definir o formato."); },
       onSuccess: invalidateAll,
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao definir o formato."),
     }),
     setItemPostFormat: useMutation({
       mutationFn: useServerFn(setItemPostFormat),
+      onMutate: async (vars: any) => {
+        const { itemId, postFormat } = vars?.data ?? {};
+        if (!itemId) return;
+        return optimisticPatchMonthItem(itemId, (item) => ({ ...item, postFormat }));
+      },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao definir o formato."); },
       onSuccess: invalidateAll,
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao definir o formato."),
     }),
     setItemStatus: useMutation({
       mutationFn: useServerFn(setItemStatus),
@@ -676,9 +691,34 @@ export function useApi() {
     adminSetUserPassword: useMutation({ mutationFn: useServerFn(adminSetUserPassword) }),
     updateMyProfile: useMutation({ mutationFn: useServerFn(updateMyProfile), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
     updateMyAccount: useMutation({ mutationFn: useServerFn(updateMyAccount), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
-    markNotificationRead: useMutation({ mutationFn: useServerFn(markNotificationRead), onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }) }),
+    markNotificationRead: useMutation({
+      mutationFn: useServerFn(markNotificationRead),
+      onMutate: async (vars: any) => {
+        const { id, all } = vars?.data ?? {};
+        await qc.cancelQueries({ queryKey: ["notifications"] });
+        const previous = qc.getQueryData<any[]>(["notifications"]);
+        if (previous) {
+          qc.setQueryData(["notifications"], previous.map((n) => (all || n.id === id ? { ...n, read: true } : n)));
+        }
+        return { previous };
+      },
+      onError: (_e: any, _v: unknown, ctx: any) => { if (ctx?.previous) qc.setQueryData(["notifications"], ctx.previous); },
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+    }),
     markMentionRead: useMutation({
       mutationFn: useServerFn(markMentionRead),
+      onMutate: async (vars: any) => {
+        const { mentionId, itemId, all } = vars?.data ?? {};
+        await qc.cancelQueries({ queryKey: ["my-mentions"] });
+        const previous = qc.getQueryData<any[]>(["my-mentions"]);
+        if (previous) {
+          qc.setQueryData(["my-mentions"], previous.filter((m) =>
+            !(all || m.mentionId === mentionId || m.itemId === itemId)
+          ));
+        }
+        return { previous };
+      },
+      onError: (_e: any, _v: unknown, ctx: any) => { if (ctx?.previous) qc.setQueryData(["my-mentions"], ctx.previous); },
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["my-mentions"] });
         qc.invalidateQueries({ queryKey: ["notifications"] });
