@@ -20,15 +20,26 @@ export const MODO_CRIADOR_OWNER_ID = "93f0cbec-e009-48fb-ac88-6bf1fd8120de";
 
 /* ============== PROFILES & ROLES ============== */
 
-/** Generate signed read URLs for avatar storage paths (1 year). */
+/** Generate signed read URLs for avatar storage paths (1 year), resized to
+ * 128×128 via Supabase's image transform — every avatar/client-photo in the
+ * app renders at 56px CSS or smaller (checked across the codebase), so the
+ * originals (up to ~500×500 out of ImageCropModal) were being downloaded in
+ * full just to be shrunk visually. 128px covers the biggest render (64px
+ * CSS in ClientFichaPanel) at 2x for retina. createSignedUrls (batch) has
+ * no transform option, so this signs individually, in parallel — signing
+ * itself is cheap (no image processing happens until the URL is actually
+ * fetched, and Supabase's edge caches the transformed result after that). */
 async function signAvatarPaths(supabase: any, paths: (string | null | undefined)[]): Promise<Map<string, string>> {
   const unique = Array.from(new Set(paths.filter((p): p is string => !!p)));
   const result = new Map<string, string>();
   if (unique.length === 0) return result;
-  const { data } = await supabase.storage.from("avatars").createSignedUrls(unique, 60 * 60 * 24 * 365);
-  (data ?? []).forEach((r: any) => {
-    if (r?.path && r?.signedUrl) result.set(r.path, r.signedUrl);
-  });
+  const signed = await Promise.all(unique.map(async (path) => {
+    const { data } = await supabase.storage.from("avatars").createSignedUrl(path, 60 * 60 * 24 * 365, {
+      transform: { width: 128, height: 128, resize: "cover" },
+    });
+    return { path, url: data?.signedUrl as string | undefined };
+  }));
+  signed.forEach(({ path, url }) => { if (url) result.set(path, url); });
   return result;
 }
 
