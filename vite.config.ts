@@ -36,6 +36,17 @@ export default defineConfig(async ({ command, mode }) => {
     plugins.push(nitro({ preset: "vercel", vercel: { functions: { regions: ["gru1"] } } }));
   }
 
+  // Opt-in bundle analysis: `ANALYZE=1 bun run build` emits
+  // dist/bundle-analysis.html (client-side chunks only, treemap by gzip
+  // size). Off by default — zero effect on normal builds.
+  if (command === "build" && process.env.ANALYZE === "1") {
+    const { visualizer } = await import("rollup-plugin-visualizer");
+    plugins.push(visualizer({
+      filename: resolve(process.cwd(), `bundle-analysis.${mode}-${Date.now()}.html`),
+      gzipSize: true, brotliSize: true, template: "treemap",
+    }) as import("vite").PluginOption);
+  }
+
   plugins.push(viteReact());
 
   // Lovable's dist-check runs after Vite builds and expects a `dist/index.html`.

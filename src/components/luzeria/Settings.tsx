@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,19 +7,31 @@ import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
 import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
 import { toast } from "sonner";
-import { UserPlus, X, Settings as SettingsIcon, Star, Building2 } from "lucide-react";
-import { ReportsTab } from "./ReportsTab";
-import { DriveSettingsTab } from "./DriveSettingsTab";
-import { MemberGoalsTab } from "./MemberGoalsTab";
-import { AutomationsTab } from "./AutomationsTab";
+import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2 } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
-import { UpdatesTab } from "./UpdatesTab";
-import { PromotionCodesPanel } from "./PromotionCodesPanel";
-import { AffiliateProgramPanel } from "./AffiliateProgramPanel";
-import { AgenciesBillingPanel } from "./AgenciesBillingPanel";
-import { DemoRequestsPanel } from "./DemoRequestsPanel";
-import { SalesPageEditorTab } from "./SalesPageEditorTab";
-import { JourneyStagesTab } from "./JourneyStagesTab";
+
+// Cada uma dessas só renderiza dentro de uma aba específica (nunca mais de
+// uma por vez) — lazy pra quem abre Configurações não pagar o download/parse
+// de todas as abas só pra ver "Equipe", que é a aba padrão.
+const ReportsTab = lazy(() => import("./ReportsTab").then((m) => ({ default: m.ReportsTab })));
+const DriveSettingsTab = lazy(() => import("./DriveSettingsTab").then((m) => ({ default: m.DriveSettingsTab })));
+const MemberGoalsTab = lazy(() => import("./MemberGoalsTab").then((m) => ({ default: m.MemberGoalsTab })));
+const AutomationsTab = lazy(() => import("./AutomationsTab").then((m) => ({ default: m.AutomationsTab })));
+const UpdatesTab = lazy(() => import("./UpdatesTab").then((m) => ({ default: m.UpdatesTab })));
+const PromotionCodesPanel = lazy(() => import("./PromotionCodesPanel").then((m) => ({ default: m.PromotionCodesPanel })));
+const AffiliateProgramPanel = lazy(() => import("./AffiliateProgramPanel").then((m) => ({ default: m.AffiliateProgramPanel })));
+const AgenciesBillingPanel = lazy(() => import("./AgenciesBillingPanel").then((m) => ({ default: m.AgenciesBillingPanel })));
+const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => ({ default: m.DemoRequestsPanel })));
+const SalesPageEditorTab = lazy(() => import("./SalesPageEditorTab").then((m) => ({ default: m.SalesPageEditorTab })));
+const JourneyStagesTab = lazy(() => import("./JourneyStagesTab").then((m) => ({ default: m.JourneyStagesTab })));
+
+function TabLoadingFallback() {
+  return (
+    <div className="flex items-center justify-center py-16">
+      <Loader2 className="animate-spin text-white/30" size={22} />
+    </div>
+  );
+}
 
 type SettingsTab = "team" | "report" | "automations" | "general" | "subscription" | "updates" | "site" | "journey";
 const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "subscription", "updates", "site", "journey"];
@@ -113,6 +125,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         </div>
       )}
 
+      <Suspense fallback={<TabLoadingFallback />}>
       {tab === "general" ? <GeneralSettings /> :
        tab === "subscription" ? (
         <div className="space-y-10">
@@ -212,6 +225,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
       </div>
         </>
       )}
+      </Suspense>
 
       {adding && (
         <AddMemberModal
