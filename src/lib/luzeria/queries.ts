@@ -887,6 +887,7 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["goals"] });
         qc.invalidateQueries({ queryKey: ["goal-progress"] });
         qc.invalidateQueries({ queryKey: ["goal-progress-org"] });
+        qc.invalidateQueries({ queryKey: ["top-members-goal"] });
       },
     }),
     updateClientOnboarding: useMutation({
