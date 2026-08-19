@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { goalsQO, profilesQO, useApi } from "@/lib/luzeria/queries";
+import { goalsQO, goalProgressForOrgQO, profilesQO, useApi } from "@/lib/luzeria/queries";
 import { listGoals } from "@/lib/luzeria/roadmap.functions";
 import { Avatar } from "./Avatar";
 import { toast } from "sonner";
-import { Target, Copy, Save } from "lucide-react";
+import { Target, Copy, Save, Sparkles } from "lucide-react";
 
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -27,13 +27,27 @@ function labelFor(monthKey: string) {
   return `${MONTH_NAMES[m - 1]} ${y}`;
 }
 
-type Row = { posts: number; reels: number; stories: number };
+type Row = { posts: number; reels: number; stories: number; gravacao: number; outros: number };
+
+const GOAL_FIELDS: { key: keyof Row; label: string }[] = [
+  { key: "posts", label: "Posts" },
+  { key: "reels", label: "Reels" },
+  { key: "stories", label: "Stories" },
+  { key: "gravacao", label: "Gravação" },
+  { key: "outros", label: "Outros" },
+];
 
 export function MemberGoalsTab() {
   const [monthKey, setMonthKey] = useState(currentMonthKey());
   const { data: profiles = [] } = useQuery(profilesQO());
   const { data: goals = [] } = useQuery(goalsQO(monthKey));
+  const { data: progress = [] } = useQuery(goalProgressForOrgQO(monthKey));
   const { setGoals } = useApi();
+
+  const progressByUser = useMemo(
+    () => new Map(progress.map((p: any) => [p.userId, p])),
+    [progress],
+  );
 
   const activeMembers = useMemo(
     () => profiles.filter((p) => p.active).sort((a, b) => a.name.localeCompare(b.name)),
@@ -45,11 +59,13 @@ export function MemberGoalsTab() {
   useEffect(() => {
     const next: Record<string, Row> = {};
     activeMembers.forEach((p) => {
-      const g = goals.find((x: any) => x.userId === p.id);
+      const g: any = goals.find((x: any) => x.userId === p.id);
       next[p.id] = {
         posts: g?.postsGoal ?? 0,
         reels: g?.reelsGoal ?? 0,
         stories: g?.storiesGoal ?? 0,
+        gravacao: g?.gravacaoGoal ?? 0,
+        outros: g?.outrosGoal ?? 0,
       };
     });
     setDraft(next);
@@ -58,15 +74,30 @@ export function MemberGoalsTab() {
   const update = (uid: string, field: keyof Row, value: number) =>
     setDraft((d) => ({ ...d, [uid]: { ...d[uid], [field]: Math.max(0, Math.min(9999, value || 0)) } }));
 
+  const rowPayload = (uid: string, row: Row) => ({
+    userId: uid, monthKey,
+    postsGoal: row.posts, reelsGoal: row.reels, storiesGoal: row.stories,
+    gravacaoGoal: row.gravacao, outrosGoal: row.outros,
+  });
+
   const save = (uid: string) => {
     const row = draft[uid];
     if (!row) return;
     setGoals.mutate(
-      { data: { userId: uid, monthKey, postsGoal: row.posts, reelsGoal: row.reels, storiesGoal: row.stories } },
+      { data: rowPayload(uid, row) },
       {
         onSuccess: () => toast.success("Meta salva."),
         onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
       },
+    );
+  };
+
+  const isDirty = (uid: string, row: Row) => {
+    const g: any = goals.find((x: any) => x.userId === uid);
+    if (!g) return row.posts || row.reels || row.stories || row.gravacao || row.outros;
+    return (
+      g.postsGoal !== row.posts || g.reelsGoal !== row.reels || g.storiesGoal !== row.stories ||
+      g.gravacaoGoal !== row.gravacao || g.outrosGoal !== row.outros
     );
   };
 
@@ -82,7 +113,10 @@ export function MemberGoalsTab() {
       let count = 0;
       prevGoals.forEach((g: any) => {
         if (next[g.userId]) {
-          next[g.userId] = { posts: g.postsGoal, reels: g.reelsGoal, stories: g.storiesGoal };
+          next[g.userId] = {
+            posts: g.postsGoal, reels: g.reelsGoal, stories: g.storiesGoal,
+            gravacao: g.gravacaoGoal ?? 0, outros: g.outrosGoal ?? 0,
+          };
           count++;
         }
       });
@@ -97,14 +131,9 @@ export function MemberGoalsTab() {
     let n = 0;
     activeMembers.forEach((p) => {
       const row = draft[p.id];
-      if (!row) return;
-      const g = goals.find((x: any) => x.userId === p.id);
-      const changed = !g || g.postsGoal !== row.posts || g.reelsGoal !== row.reels || g.storiesGoal !== row.stories;
-      if (!changed) return;
+      if (!row || !isDirty(p.id, row)) return;
       n++;
-      setGoals.mutate({
-        data: { userId: p.id, monthKey, postsGoal: row.posts, reelsGoal: row.reels, storiesGoal: row.stories },
-      });
+      setGoals.mutate({ data: rowPayload(p.id, row) });
     });
     if (n === 0) toast.info("Nada para salvar.");
     else toast.success(`Salvando ${n} meta(s)…`);
@@ -156,50 +185,59 @@ export function MemberGoalsTab() {
       </div>
 
       <p className="text-[11px] text-white/40 mb-3">
-        Defina quantos posts, reels e dias de stories cada membro precisa entregar neste mês.
-        Use <span className="text-white/60">0</span> para não definir meta naquela categoria.
+        Defina quantos posts, reels, dias de stories, gravações e outros conteúdos cada membro
+        precisa entregar neste mês. Use <span className="text-white/60">0</span> para não definir
+        meta naquela categoria. Rotina não tem meta — só mostra quantas tarefas do dia a dia a
+        pessoa já concluiu.
       </p>
 
-      <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
-        <div className="hidden md:grid grid-cols-[1fr_90px_90px_90px_70px] gap-3 px-5 py-3 border-b border-white/[0.06] text-[10px] uppercase font-bold tracking-wider text-white/40">
-          <div>Membro</div>
-          <div className="text-center">Posts</div>
-          <div className="text-center">Reels</div>
-          <div className="text-center">Stories</div>
-          <div></div>
-        </div>
+      <div className="space-y-3">
         {activeMembers.length === 0 && (
-          <div className="px-5 py-6 text-sm text-white/40">Sem membros ativos.</div>
+          <div className="px-5 py-6 text-sm text-white/40 bg-[#1C1C1C] rounded-lg">Sem membros ativos.</div>
         )}
         {activeMembers.map((p) => {
-          const row = draft[p.id] ?? { posts: 0, reels: 0, stories: 0 };
-          const g = goals.find((x: any) => x.userId === p.id);
-          const dirty = !g
-            ? row.posts || row.reels || row.stories
-            : g.postsGoal !== row.posts || g.reelsGoal !== row.reels || g.storiesGoal !== row.stories;
+          const row = draft[p.id] ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0 };
+          const prog: any = progressByUser.get(p.id);
+          const dirty = isDirty(p.id, row);
           return (
-            <div
-              key={p.id}
-              className="grid grid-cols-[1fr_90px_90px_90px_70px] gap-3 items-center px-5 py-3 border-b border-white/[0.05] last:border-b-0"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <Avatar profile={p} size={32} />
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-white truncate">{p.name}</div>
-                  <div className="text-[10px] text-white/40 truncate">{p.email}</div>
+            <div key={p.id} className="bg-[#1C1C1C] rounded-lg p-4">
+              <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar profile={p} size={32} />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white truncate">{p.name}</div>
+                    <div className="text-[10px] text-white/40 truncate">{p.email}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => save(p.id)}
+                  disabled={!dirty}
+                  className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md text-black transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                  style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+                >
+                  Salvar
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {GOAL_FIELDS.map((f) => (
+                  <GoalField
+                    key={f.key}
+                    label={f.label}
+                    value={row[f.key]}
+                    done={prog?.[`${f.key}Done`] ?? 0}
+                    onChange={(v) => update(p.id, f.key, v)}
+                  />
+                ))}
+                <div className="flex flex-col items-center gap-1 w-[76px]">
+                  <span className="text-[9px] uppercase font-bold tracking-wider text-white/40 inline-flex items-center gap-1">
+                    <Sparkles size={9} /> Rotina
+                  </span>
+                  <div className="w-full h-[34px] rounded-md border border-white/[0.06] bg-[#0D0D0D]/40 flex items-center justify-center text-sm font-bold text-white/70 tabular-nums">
+                    {prog?.rotinaDone ?? 0}
+                  </div>
+                  <span className="text-[9px] text-white/30">concluídas</span>
                 </div>
               </div>
-              <GoalInput value={row.posts} onChange={(v) => update(p.id, "posts", v)} />
-              <GoalInput value={row.reels} onChange={(v) => update(p.id, "reels", v)} />
-              <GoalInput value={row.stories} onChange={(v) => update(p.id, "stories", v)} />
-              <button
-                onClick={() => save(p.id)}
-                disabled={!dirty}
-                className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md text-black transition disabled:opacity-30 disabled:cursor-not-allowed"
-                style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
-              >
-                Salvar
-              </button>
             </div>
           );
         })}
@@ -208,15 +246,23 @@ export function MemberGoalsTab() {
   );
 }
 
-function GoalInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+function GoalField({
+  label, value, done, onChange,
+}: { label: string; value: number; done: number; onChange: (v: number) => void }) {
   return (
-    <input
-      type="number"
-      min={0}
-      max={9999}
-      value={value}
-      onChange={(e) => onChange(parseInt(e.target.value, 10) || 0)}
-      className="w-full bg-[#0D0D0D] border border-white/10 text-sm text-white rounded-md px-2 py-1.5 text-center outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
-    />
+    <div className="flex flex-col items-center gap-1 w-[76px]">
+      <span className="text-[9px] uppercase font-bold tracking-wider text-white/40">{label}</span>
+      <input
+        type="number"
+        min={0}
+        max={9999}
+        value={value}
+        onChange={(e) => onChange(parseInt(e.target.value, 10) || 0)}
+        className="w-full bg-[#0D0D0D] border border-white/10 text-sm text-white rounded-md px-2 py-1.5 text-center outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+      />
+      <span className="text-[9px] text-white/30 tabular-nums">
+        {value > 0 ? `${done}/${value} feito` : "sem meta"}
+      </span>
+    </div>
   );
 }

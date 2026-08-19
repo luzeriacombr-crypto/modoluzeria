@@ -9,7 +9,7 @@ export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: s
   const navigate = useNavigate();
   if (!data) return null;
 
-  const hasGoals = data.postsGoal || data.reelsGoal || data.storiesGoal;
+  const hasGoals = data.postsGoal || data.reelsGoal || data.storiesGoal || data.gravacaoGoal || data.outrosGoal;
   if (!hasGoals) {
     const isSelf = !userId || userId === me?.id;
     if (!isSelf) return null;
@@ -44,6 +44,8 @@ export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: s
     { label: "Posts", done: data.postsDone, goal: data.postsGoal },
     { label: "Reels", done: data.reelsDone, goal: data.reelsGoal },
     { label: "Stories", done: data.storiesDone, goal: data.storiesGoal },
+    { label: "Gravação", done: data.gravacaoDone, goal: data.gravacaoGoal },
+    { label: "Outros", done: data.outrosDone, goal: data.outrosGoal },
   ].filter((i) => i.goal > 0);
 
   return (

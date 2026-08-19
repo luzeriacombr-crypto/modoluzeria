@@ -27,7 +27,7 @@ import {
 } from "./api.functions";
 import {
   updateChecklist, rateItem,
-  listGoals, setGoals, getGoalProgress,
+  listGoals, setGoals, getGoalProgress, getGoalProgressForOrg,
   getClientOnboarding, updateClientOnboarding, setOnboardingDefaults,
   listRecurring, upsertRecurring, deleteRecurring, generateRecurring,
   listActivity, getReportExtras, getMemberStatusDuration,
@@ -258,6 +258,13 @@ export const goalProgressQO = (monthKey: string, userId?: string) =>
   queryOptions({
     queryKey: ["goal-progress", userId ?? "self", monthKey],
     queryFn: () => getGoalProgress({ data: { monthKey, userId } }),
+    enabled: !!monthKey,
+  });
+
+export const goalProgressForOrgQO = (monthKey: string) =>
+  queryOptions({
+    queryKey: ["goal-progress-org", monthKey],
+    queryFn: () => getGoalProgressForOrg({ data: { monthKey } }),
     enabled: !!monthKey,
   });
 
@@ -879,6 +886,7 @@ export function useApi() {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["goals"] });
         qc.invalidateQueries({ queryKey: ["goal-progress"] });
+        qc.invalidateQueries({ queryKey: ["goal-progress-org"] });
       },
     }),
     updateClientOnboarding: useMutation({

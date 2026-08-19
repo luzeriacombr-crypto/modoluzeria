@@ -61,11 +61,12 @@ export const listGoals = createServerFn({ method: "GET" })
     const db: any = context.supabase;
     const { data: rows } = await db
       .from("member_goals")
-      .select("user_id, month_key, posts_goal, reels_goal, stories_goal")
+      .select("user_id, month_key, posts_goal, reels_goal, stories_goal, gravacao_goal, outros_goal")
       .eq("month_key", data.monthKey);
     return (rows ?? []).map((r: any) => ({
       userId: r.user_id, monthKey: r.month_key,
       postsGoal: r.posts_goal, reelsGoal: r.reels_goal, storiesGoal: r.stories_goal,
+      gravacaoGoal: r.gravacao_goal, outrosGoal: r.outros_goal,
     }));
   });
 
@@ -74,12 +75,15 @@ export const setGoals = createServerFn({ method: "POST" })
   .inputValidator((d: {
     userId: string; monthKey: string;
     postsGoal: number; reelsGoal: number; storiesGoal: number;
+    gravacaoGoal: number; outrosGoal: number;
   }) => z.object({
     userId: z.string().uuid(),
     monthKey: z.string().regex(/^\d{4}-\d{2}$/),
     postsGoal: z.number().int().min(0).max(9999),
     reelsGoal: z.number().int().min(0).max(9999),
     storiesGoal: z.number().int().min(0).max(9999),
+    gravacaoGoal: z.number().int().min(0).max(9999),
+    outrosGoal: z.number().int().min(0).max(9999),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -88,6 +92,7 @@ export const setGoals = createServerFn({ method: "POST" })
     const { error } = await db.from("member_goals").upsert({
       user_id: data.userId, month_key: data.monthKey,
       posts_goal: data.postsGoal, reels_goal: data.reelsGoal, stories_goal: data.storiesGoal,
+      gravacao_goal: data.gravacaoGoal, outros_goal: data.outrosGoal,
     }, { onConflict: "user_id,month_key" });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -110,7 +115,7 @@ export const getGoalProgress = createServerFn({ method: "GET" })
     const db: any = context.supabase;
     const { data: goalRow } = await db
       .from("member_goals")
-      .select("posts_goal, reels_goal, stories_goal")
+      .select("posts_goal, reels_goal, stories_goal, gravacao_goal, outros_goal")
       .eq("user_id", targetUser).eq("month_key", data.monthKey).maybeSingle();
 
     const [y, m] = data.monthKey.split("-").map(Number);
@@ -121,7 +126,7 @@ export const getGoalProgress = createServerFn({ method: "GET" })
     const { data: assigns } = await context.supabase
       .from("item_assignees").select("item_id").eq("user_id", targetUser);
     const ids = (assigns ?? []).map((a) => a.item_id);
-    let postsDone = 0, reelsDone = 0;
+    let postsDone = 0, reelsDone = 0, gravacaoDone = 0, outrosDone = 0;
     if (ids.length) {
       const { data: done } = await context.supabase
         .from("content_items").select("type")
@@ -130,6 +135,8 @@ export const getGoalProgress = createServerFn({ method: "GET" })
       (done ?? []).forEach((it: any) => {
         if (it.type === "post") postsDone++;
         if (it.type === "reel") reelsDone++;
+        if (it.type === "gravacao") gravacaoDone++;
+        if (it.type === "outros") outrosDone++;
       });
     }
 
@@ -143,13 +150,105 @@ export const getGoalProgress = createServerFn({ method: "GET" })
       .lt("day", `${data.monthKey}-31T23:59:59`);
     storiesDone = (storyRows ?? []).length;
 
+    // rotina: tarefas de limpeza/dia-a-dia concluídas pelo usuário no mês (sem meta)
+    const { count: rotinaDone } = await context.supabase
+      .from("cleaning_log")
+      .select("id", { count: "exact", head: true })
+      .eq("done_by", targetUser).eq("status", "done")
+      .gte("occurrence_date", `${data.monthKey}-01`)
+      .lt("occurrence_date", `${data.monthKey}-31T23:59:59`);
+
     return {
       userId: targetUser, monthKey: data.monthKey,
       postsGoal: goalRow?.posts_goal ?? 0,
       reelsGoal: goalRow?.reels_goal ?? 0,
       storiesGoal: goalRow?.stories_goal ?? 0,
-      postsDone, reelsDone, storiesDone,
+      gravacaoGoal: goalRow?.gravacao_goal ?? 0,
+      outrosGoal: goalRow?.outros_goal ?? 0,
+      postsDone, reelsDone, storiesDone, gravacaoDone, outrosDone,
+      rotinaDone: rotinaDone ?? 0,
     };
+  });
+
+/** Admin: metas + progresso de TODOS os membros ativos da org de uma vez,
+ * pra tela de "Metas da equipe" não precisar de N chamadas (uma por
+ * membro). member_goals tem RLS restrita a dono-ou-admin, então usa
+ * supabaseAdmin pra ler todo mundo, escopado manualmente à lista de
+ * membros da org (já filtrada via context.supabase, RLS-safe). */
+export const getGoalProgressForOrg = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { monthKey: string }) =>
+    z.object({ monthKey: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { data: members } = await context.supabase
+      .from("profiles").select("id").eq("active", true);
+    const userIds = (members ?? []).map((m: any) => m.id);
+    if (userIds.length === 0) return [];
+
+    const [y, m] = data.monthKey.split("-").map(Number);
+    const start = new Date(Date.UTC(y, m - 1, 1)).toISOString();
+    const end = new Date(Date.UTC(y, m, 1)).toISOString();
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const [{ data: goalRows }, { data: assignRows }, { data: storyRows }, { data: logRows }] = await Promise.all([
+      supabaseAdmin.from("member_goals")
+        .select("user_id, posts_goal, reels_goal, stories_goal, gravacao_goal, outros_goal")
+        .eq("month_key", data.monthKey).in("user_id", userIds),
+      context.supabase.from("item_assignees").select("item_id, user_id").in("user_id", userIds),
+      context.supabase.from("stories_schedule").select("user_id, day")
+        .in("user_id", userIds)
+        .gte("day", `${data.monthKey}-01`).lt("day", `${data.monthKey}-31T23:59:59`),
+      context.supabase.from("cleaning_log").select("done_by")
+        .in("done_by", userIds).eq("status", "done")
+        .gte("occurrence_date", `${data.monthKey}-01`).lt("occurrence_date", `${data.monthKey}-31T23:59:59`),
+    ]);
+
+    const itemIds = [...new Set((assignRows ?? []).map((a: any) => a.item_id))];
+    const doneByItem = new Map<string, string>(); // itemId -> type, só dos que bateram o critério de "feito"
+    if (itemIds.length) {
+      const chunks: string[][] = [];
+      for (let i = 0; i < itemIds.length; i += 150) chunks.push(itemIds.slice(i, i + 150));
+      const results = await Promise.all(chunks.map((chunk) =>
+        context.supabase.from("content_items").select("id, type")
+          .in("id", chunk).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
+          .gte("updated_at", start).lt("updated_at", end)
+      ));
+      results.forEach(({ data: rows, error }) => {
+        if (error) { console.error("getGoalProgressForOrg content_items batch:", error.message); return; }
+        (rows ?? []).forEach((it: any) => doneByItem.set(it.id, it.type));
+      });
+    }
+
+    const done: Record<string, { posts: number; reels: number; gravacao: number; outros: number; stories: number; rotina: number }> = {};
+    userIds.forEach((uid: string) => { done[uid] = { posts: 0, reels: 0, gravacao: 0, outros: 0, stories: 0, rotina: 0 }; });
+    (assignRows ?? []).forEach((a: any) => {
+      const type = doneByItem.get(a.item_id);
+      if (!type || !done[a.user_id]) return;
+      if (type === "post") done[a.user_id].posts++;
+      if (type === "reel") done[a.user_id].reels++;
+      if (type === "gravacao") done[a.user_id].gravacao++;
+      if (type === "outros") done[a.user_id].outros++;
+    });
+    (storyRows ?? []).forEach((s: any) => { if (done[s.user_id]) done[s.user_id].stories++; });
+    (logRows ?? []).forEach((l: any) => { if (done[l.done_by]) done[l.done_by].rotina++; });
+
+    const goalByUser = new Map((goalRows ?? []).map((g: any) => [g.user_id, g]));
+
+    return userIds.map((uid: string) => {
+      const g: any = goalByUser.get(uid);
+      const d = done[uid];
+      return {
+        userId: uid, monthKey: data.monthKey,
+        postsGoal: g?.posts_goal ?? 0, reelsGoal: g?.reels_goal ?? 0, storiesGoal: g?.stories_goal ?? 0,
+        gravacaoGoal: g?.gravacao_goal ?? 0, outrosGoal: g?.outros_goal ?? 0,
+        postsDone: d.posts, reelsDone: d.reels, storiesDone: d.stories,
+        gravacaoDone: d.gravacao, outrosDone: d.outros, rotinaDone: d.rotina,
+      };
+    });
   });
 
 /* =========================================================

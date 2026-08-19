@@ -1531,8 +1531,10 @@ export type Database = {
       member_goals: {
         Row: {
           created_at: string
+          gravacao_goal: number
           id: string
           month_key: string
+          outros_goal: number
           posts_goal: number
           reels_goal: number
           stories_goal: number
@@ -1541,8 +1543,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          gravacao_goal?: number
           id?: string
           month_key: string
+          outros_goal?: number
           posts_goal?: number
           reels_goal?: number
           stories_goal?: number
@@ -1551,8 +1555,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          gravacao_goal?: number
           id?: string
           month_key?: string
+          outros_goal?: number
           posts_goal?: number
           reels_goal?: number
           stories_goal?: number

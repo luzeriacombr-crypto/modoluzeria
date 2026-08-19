@@ -540,12 +540,17 @@ export interface MemberGoal {
   postsGoal: number;
   reelsGoal: number;
   storiesGoal: number;
+  gravacaoGoal: number;
+  outrosGoal: number;
 }
 
 export interface MemberGoalProgress extends MemberGoal {
   postsDone: number;
   reelsDone: number;
   storiesDone: number;
+  gravacaoDone: number;
+  outrosDone: number;
+  rotinaDone: number;
 }
 
 export interface ClientOnboarding {
