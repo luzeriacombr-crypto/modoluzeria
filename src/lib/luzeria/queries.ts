@@ -2,7 +2,7 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/r
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, duplicateMonth, setNotifyStoriesInTasks, setWhatsappGroupLink,
+  addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, deleteContentItems, duplicateMonth, setNotifyStoriesInTasks, setWhatsappGroupLink,
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, setExcludeFromRanking, deleteUser, updateClient, updateItem, updateMyProfile, adminUpdateMemberAvatar,
@@ -651,6 +651,7 @@ export function useApi() {
     addComment: useMutation({ mutationFn: useServerFn(addComment), onSuccess: invalidateAll }),
     addContentItem: useMutation({ mutationFn: useServerFn(addContentItem), onSuccess: invalidateAll }),
     deleteItem: useMutation({ mutationFn: useServerFn(deleteItem), onSuccess: invalidateAll }),
+    deleteContentItems: useMutation({ mutationFn: useServerFn(deleteContentItems), onSuccess: invalidateAll }),
     updateFeedOrder: useMutation({
       mutationFn: useServerFn(updateFeedOrder),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),

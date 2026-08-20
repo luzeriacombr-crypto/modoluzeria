@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List, CheckSquare, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { clientsQO, monthKeysQO, monthQO, profilesQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -70,7 +70,27 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   }
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
-  const { duplicateMonth, addContentItem, deleteItem } = useApi();
+  const { duplicateMonth, addContentItem, deleteItem, deleteContentItems } = useApi();
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+  async function bulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!(await requestConfirm(`Excluir ${selectedIds.size} ${selectedIds.size === 1 ? "item" : "itens"} selecionado${selectedIds.size === 1 ? "" : "s"}?`, { danger: true }))) return;
+    deleteContentItems.mutate({ data: { ids: [...selectedIds] } }, { onSuccess: exitSelectMode });
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { exitSelectMode(); }, [tab, selectedMonthKey]);
 
   if (!client) return null;
   const isAvulso = client.category === "Avulsos";
@@ -174,7 +194,33 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           const navList = items.map((it) => it.id);
           return (
             <>
+              {selectMode ? (
+                <div className="flex items-center justify-between gap-2 mb-3 rounded-lg px-3 py-2" style={{ background: "rgba(var(--lz-brand-rgb),0.1)", border: "1px solid rgba(var(--lz-brand-rgb),0.3)" }}>
+                  <span className="text-xs font-semibold text-white">
+                    {selectedIds.size === 0 ? "Selecione os itens" : `${selectedIds.size} selecionado${selectedIds.size === 1 ? "" : "s"}`}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={bulkDelete}
+                      disabled={selectedIds.size === 0 || deleteContentItems.isPending}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-red-400 hover:bg-red-500/10 disabled:opacity-30 transition"
+                    >
+                      <Trash2 size={13} /> Excluir selecionados
+                    </button>
+                    <button onClick={exitSelectMode} className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition">
+                      <X size={13} /> Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
               <div className="flex items-center justify-end gap-1.5 mb-3">
+                {isAdmin && tab !== "finalizados" && items.length > 0 && (
+                  <button
+                    onClick={() => setSelectMode(true)}
+                    title="Selecionar vários"
+                    className="h-6 w-6 rounded-full flex items-center justify-center transition-colors text-white/50 hover:text-white hover:bg-white/[0.08] mr-1"
+                  ><CheckSquare size={13} /></button>
+                )}
                 <div className="inline-flex items-center gap-0.5 rounded-full bg-white/[0.05] p-0.5 mr-2">
                   <button
                     onClick={() => changeViewMode("grade")}
@@ -223,6 +269,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   </select>
                 )}
               </div>
+              )}
               {viewMode === "grade" ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lz-stagger-cards">
                   {items.map((item, i) => (
@@ -235,9 +282,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       isAdmin={isAdmin}
                       navList={navList}
                       onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
+                      selectMode={selectMode}
+                      selected={selectedIds.has(item.id)}
+                      onToggleSelect={() => toggleSelected(item.id)}
                     />
                   ))}
-                  {isAdmin && tab !== "finalizados" && (
+                  {!selectMode && isAdmin && tab !== "finalizados" && (
                     <button
                       onClick={() => addContentItem.mutate({
                         data: { clientId, key: selectedMonthKey, type: cfg.type },
@@ -261,9 +311,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       isAdmin={isAdmin}
                       navList={navList}
                       onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
+                      selectMode={selectMode}
+                      selected={selectedIds.has(item.id)}
+                      onToggleSelect={() => toggleSelected(item.id)}
                     />
                   ))}
-                  {isAdmin && tab !== "finalizados" && (
+                  {!selectMode && isAdmin && tab !== "finalizados" && (
                     <button
                       onClick={() => addContentItem.mutate({
                         data: { clientId, key: selectedMonthKey, type: cfg.type },

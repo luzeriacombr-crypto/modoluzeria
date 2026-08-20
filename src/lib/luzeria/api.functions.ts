@@ -1578,6 +1578,18 @@ export const deleteItem = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const deleteContentItems = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { ids: string[] }) =>
+    z.object({ ids: z.array(z.string().uuid()).min(1).max(200) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("content_items").delete().in("id", data.ids);
+    if (error) throw new Error(error.message);
+    return { ok: true, count: data.ids.length };
+  });
+
 export const removeAssignee = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { itemId: string; userId: string }) => d)
