@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Palette, Boxes, Wallet, MessageCircle, ArrowRight, ChevronDown, Infinity as InfinityIcon, TrendingUp } from "lucide-react";
+import {
+  Palette, Boxes, Wallet, MessageCircle, ArrowRight, ChevronDown, Infinity as InfinityIcon,
+  TrendingUp, Check, X, Image as ImageIcon, SwatchBook, Users2,
+} from "lucide-react";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
-import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, LIFT, Reveal, AppCard, BUILTIN_ILLUSTRATIONS } from "@/components/luzeria/salesPageBlocks";
+import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, LIFT, Reveal, BUILTIN_ILLUSTRATIONS } from "@/components/luzeria/salesPageBlocks";
 
 const WHATSAPP_HREF =
   "https://wa.me/5599991135486?text=" +
@@ -51,16 +54,50 @@ const STEPS = [
   { title: "Uma fatura só, por mês", text: "A gente cobra só de você, uma vez por mês, a soma do valor de atacado de todas as instâncias ativas." },
 ];
 
-const FAQ: [string, string][] = [
-  ["O cliente final sabe que é o Modo Criador por trás?", "Não precisa saber. Cada instância nasce com o nome, a logo e as cores da sua agência — o produto é o mesmo, a marca é sua."],
-  ["Tem contrato de fidelidade ou número mínimo?", "Não. Você cria a primeira instância quando quiser e cresce no seu ritmo — sem mínimo, sem multa."],
-  ["Como funciona a cobrança?", "Você recebe uma fatura mensal única, com o valor de atacado somado de todas as instâncias ativas. O que você cobra do cliente final é combinado direto entre vocês, fora do Modo Criador."],
-  ["Cada instância vem completa, com todas as funções?", "Sim — Drive, branding, calendário, aprovação por link, relatórios: o mesmo produto que sua agência já usa."],
+const FIT_YES = [
+  "Já tem uma agência com clientes ativos de social media ou conteúdo",
+  "Quer uma segunda fonte de receita recorrente, sem construir um produto do zero",
+  "Confia no Modo Criador porque já usa (ou testou) a ferramenta no dia a dia",
+  "Quer entregar white label de verdade — marca própria, não uma ferramenta de terceiro com sua logo colada",
+];
+const FIT_NO = [
+  "Ainda não tem nenhum cliente pra colocar numa instância",
+  "Só quer revender por revender, sem nunca ter usado o produto",
+  "Precisa de domínio próprio dedicado por cliente (hoje todas as instâncias entram por modocriador.com.br)",
+  "Decide só pelo preço mais baixo, não pelo encaixe com a operação",
+];
+
+const INCLUDED = [
+  "Instância completa do Modo Criador — calendário, aprovação por link, relatórios, backup automático no Drive",
+  "Marca própria em cada instância: logo, nome e cores da sua agência",
+  "Painel de revenda seu, pra criar e acompanhar instâncias quando quiser",
+  "Preço de atacado fixo, sem taxa de implantação nem contrato de fidelidade",
+  "Suporte técnico direto com a Luzeria pelo WhatsApp",
+];
+
+const FAQ_GROUPS: { category: string; items: [string, string][] }[] = [
+  {
+    category: "O modelo",
+    items: [
+      ["O que exatamente eu passo a revender?", "Instâncias completas do Modo Criador, com a marca da sua agência. Pro seu cliente final, o produto é seu — a Luzeria fica nos bastidores."],
+      ["Como minha agência ganha dinheiro?", "Você paga o valor de atacado fixo por instância e cobra do seu cliente final o que quiser — a diferença é a sua margem recorrente, todo mês."],
+      ["Tem contrato de fidelidade ou número mínimo?", "Não. Você cria a primeira instância quando quiser e cresce no seu ritmo, sem mínimo e sem multa."],
+    ],
+  },
+  {
+    category: "Marca e suporte",
+    items: [
+      ["O sistema aparece com a minha marca?", "Sim — logo, nome e cores são da sua agência em cada instância. O que não muda é o endereço: todo mundo entra por modocriador.com.br, não existe domínio próprio dedicado."],
+      ["Vocês falam com os meus clientes?", "Não. Você é o único ponto de contato com o cliente final. O suporte da Luzeria é com você, direto no WhatsApp."],
+      ["Cada instância vem completa, com todas as funções?", "Sim — o mesmo produto que a sua agência já usa: Drive, branding, calendário, aprovação por link, relatórios de equipe."],
+      ["Existe taxa de implantação?", "Não. Assim que sua conta é aprovada como revendedora, você mesma cria a primeira instância na hora, direto do seu painel — sem esperar nada."],
+    ],
+  },
 ];
 
 export function ResellerLandingPage() {
   const scrolled = useScrolled();
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [openFaq, setOpenFaq] = useState<string | null>("0-0");
 
   return (
     <div className="min-h-screen text-white" style={{ background: BG_BLUE, fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
@@ -114,6 +151,20 @@ export function ResellerLandingPage() {
             </div>
           </Reveal>
         </div>
+        <Reveal className="relative px-5 sm:px-10 max-w-[1100px] mx-auto pb-16 sm:pb-20" style={{ transitionDelay: "80ms" }}>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
+            <span className="text-[11px] font-black uppercase tracking-wide text-white/40">Sua marca aqui</span>
+            {[
+              { icon: ImageIcon, label: "Sua logo" },
+              { icon: SwatchBook, label: "Suas cores" },
+              { icon: Users2, label: "Seus clientes" },
+            ].map((it) => (
+              <span key={it.label} className="inline-flex items-center gap-2 text-sm font-semibold text-white/70">
+                <it.icon size={15} style={{ color: LIME }} /> {it.label}
+              </span>
+            ))}
+          </div>
+        </Reveal>
       </section>
 
       {/* BENEFITS */}
@@ -152,6 +203,68 @@ export function ResellerLandingPage() {
               </div>
             ))}
           </div>
+          <div className="mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-6 flex flex-wrap items-center justify-center gap-3 text-center">
+            <span className="text-sm sm:text-base font-semibold text-white/70">Preço que você cobra</span>
+            <span className="text-white/30 text-xl font-black">−</span>
+            <span className="text-sm sm:text-base font-semibold text-white/70">custo de atacado</span>
+            <span className="text-white/30 text-xl font-black">=</span>
+            <span className="text-sm sm:text-base font-black px-3 py-1 rounded-full" style={{ background: "rgba(215,255,63,0.14)", color: LIME }}>sua margem recorrente</span>
+          </div>
+        </Reveal>
+      </section>
+
+      {/* PRA QUEM FAZ SENTIDO */}
+      <section style={{ background: BG_BLUE_2 }} className="border-t border-white/10">
+        <Reveal className="px-5 sm:px-10 max-w-[1000px] mx-auto py-16">
+          <h2 className="font-black uppercase text-2xl sm:text-3xl mb-2 text-center">Pra quem faz sentido</h2>
+          <p className="text-white/50 text-sm text-center mb-10 max-w-lg mx-auto">Antes de chamar no WhatsApp, vale conferir se o encaixe é esse.</p>
+          <div className="grid sm:grid-cols-2 gap-5">
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+              <h3 className="font-bold text-white mb-4 inline-flex items-center gap-2">
+                <span className="h-6 w-6 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(215,255,63,0.18)" }}>
+                  <Check size={13} style={{ color: LIME }} />
+                </span>
+                É pra você se
+              </h3>
+              <ul className="space-y-3">
+                {FIT_YES.map((t) => (
+                  <li key={t} className="flex items-start gap-2 text-sm text-white/65 leading-relaxed">
+                    <Check size={14} className="shrink-0 mt-0.5" style={{ color: LIME }} /> {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+              <h3 className="font-bold text-white mb-4 inline-flex items-center gap-2">
+                <span className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 bg-white/10">
+                  <X size={13} className="text-white/50" />
+                </span>
+                Não é pra você se
+              </h3>
+              <ul className="space-y-3">
+                {FIT_NO.map((t) => (
+                  <li key={t} className="flex items-start gap-2 text-sm text-white/50 leading-relaxed">
+                    <X size={14} className="shrink-0 mt-0.5 text-white/30" /> {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </Reveal>
+      </section>
+
+      {/* O QUE ESTÁ INCLUSO */}
+      <section style={{ background: BG_BLUE }} className="border-t border-white/10">
+        <Reveal className="px-5 sm:px-10 max-w-[720px] mx-auto py-16">
+          <h2 className="font-black uppercase text-2xl sm:text-3xl mb-10 text-center">O que está incluso</h2>
+          <div className="space-y-3">
+            {INCLUDED.map((t) => (
+              <div key={t} className="flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3.5">
+                <Check size={16} className="shrink-0 mt-0.5" style={{ color: LIME }} />
+                <span className="text-sm text-white/70 leading-relaxed">{t}</span>
+              </div>
+            ))}
+          </div>
         </Reveal>
       </section>
 
@@ -159,20 +272,28 @@ export function ResellerLandingPage() {
       <section style={{ background: BG_GRAY }} className="border-t border-white/10">
         <div className="px-5 sm:px-10 max-w-[720px] mx-auto py-16">
           <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">Dúvidas frequentes</h2>
-          <div className="space-y-3">
-            {FAQ.map(([q, a], i) => (
-              <div key={q} className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
-                <button
-                  onClick={() => setOpenFaq((v) => (v === i ? null : i))}
-                  className="w-full flex items-center justify-between gap-3 text-left px-4 py-4"
-                >
-                  <span className="font-semibold text-sm">{q}</span>
-                  <ChevronDown size={16} className="shrink-0 text-white/50 transition-transform" style={{ transform: openFaq === i ? "rotate(180deg)" : "rotate(0deg)" }} />
-                </button>
-                {openFaq === i && <p className="text-white/50 text-sm leading-relaxed px-4 pb-4">{a}</p>}
+          {FAQ_GROUPS.map((group, gi) => (
+            <div key={group.category} className="mb-8 last:mb-0">
+              <h3 className="text-[11px] font-black uppercase tracking-wider text-white/40 mb-3">{group.category}</h3>
+              <div className="space-y-3">
+                {group.items.map(([q, a], i) => {
+                  const key = `${gi}-${i}`;
+                  return (
+                    <div key={q} className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+                      <button
+                        onClick={() => setOpenFaq((v) => (v === key ? null : key))}
+                        className="w-full flex items-center justify-between gap-3 text-left px-4 py-4"
+                      >
+                        <span className="font-semibold text-sm">{q}</span>
+                        <ChevronDown size={16} className="shrink-0 text-white/50 transition-transform" style={{ transform: openFaq === key ? "rotate(180deg)" : "rotate(0deg)" }} />
+                      </button>
+                      {openFaq === key && <p className="text-white/50 text-sm leading-relaxed px-4 pb-4">{a}</p>}
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </section>
 
