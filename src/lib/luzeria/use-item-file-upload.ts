@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useApi } from "./queries";
 
-// 4MB — comfortably under any serverless request-body limit even after
-// base64 inflation (~33%, so ~5.3MB on the wire), while still keeping the
-// number of round trips reasonable for a big video (a 300MB reel is ~75
-// chunks). Google's resumable upload protocol wants chunk sizes that are a
-// multiple of 256KB; 4MB already is.
-const CHUNK_SIZE = 4 * 1024 * 1024;
+// 2.5MB raw -> ~3.4MB base64 on the wire, safely under Vercel's 4.5MB
+// serverless request-body ceiling (confirmed the hard way: 4MB raw ->
+// ~5.3MB base64 tripped it — chunk uploads were failing outright, not
+// just slow). Also a clean multiple of 256KB, which Google's resumable
+// upload protocol requires for every non-final chunk.
+const CHUNK_SIZE = 2.5 * 1024 * 1024;
 const MAX_CHUNK_ATTEMPTS = 3;
 
 export function parseDriveError(msg: string | undefined): { kind: "missing"; clientId: string } | { kind: "other"; msg: string } {
@@ -73,7 +73,10 @@ async function uploadOneFile(
         if (attempt < MAX_CHUNK_ATTEMPTS) await new Promise((r) => setTimeout(r, 800 * attempt));
       }
     }
-    if (!result) throw lastErr instanceof Error ? lastErr : new Error("Falha ao enviar um pedaço do arquivo.");
+    if (!result) {
+      const detail = lastErr instanceof Error ? lastErr.message : lastErr ? String(lastErr) : "motivo desconhecido";
+      throw new Error(`Falha ao enviar um pedaço do arquivo (${detail}).`);
+    }
 
     onProgress(Math.round((end / total) * 100));
     if (result.done) { finalMeta = result.meta; break; }
