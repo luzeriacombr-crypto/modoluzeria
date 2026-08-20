@@ -7,8 +7,10 @@ import type { useScreenShareCall } from "@/hooks/use-screen-share-call";
  * and MobileNav, so it interrupts wherever the person currently is in the
  * app (or on any device, since accepting is just receiving a video stream). */
 export function IncomingCallModal({ call }: { call: ReturnType<typeof useScreenShareCall> }) {
-  if (call.status !== "ringing-incoming" || !call.peer) return null;
-  const { peer, actions } = call;
+  if (call.status !== "ringing-incoming" || call.peers.length === 0) return null;
+  const { actions } = call;
+  const caller = call.peers[0];
+  const othersCount = call.peers.length - 1;
 
   return createPortal(
     <div className="lz-overlay z-[400] flex items-center justify-center p-4">
@@ -17,10 +19,14 @@ export function IncomingCallModal({ call }: { call: ReturnType<typeof useScreenS
           className="mx-auto mb-4 h-16 w-16 rounded-full flex items-center justify-center animate-pulse"
           style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)" }}
         >
-          <Avatar name={peer.name} avatarUrl={peer.avatarUrl} size={56} />
+          <Avatar name={caller.name} avatarUrl={caller.avatarUrl} size={56} />
         </div>
-        <p className="text-white font-bold text-base">{peer.name}</p>
-        <p className="text-white/50 text-xs mt-1">quer iniciar uma vídeo chamada com você</p>
+        <p className="text-white font-bold text-base">{caller.name}</p>
+        <p className="text-white/50 text-xs mt-1">
+          {othersCount === 0
+            ? "quer iniciar uma vídeo chamada com você"
+            : `te chamou pra uma chamada em grupo, com mais ${othersCount} pessoa${othersCount === 1 ? "" : "s"}`}
+        </p>
         <div className="flex items-center justify-center gap-3 mt-6">
           <button
             onClick={actions.declineCall}

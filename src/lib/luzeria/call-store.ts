@@ -10,7 +10,7 @@ export type CallStatus =
 export type CallPeer = { userId: string; name: string; avatarUrl: string | null };
 
 type CallBridge = {
-  startCall: (userId: string, name: string, avatarUrl: string | null) => void;
+  startCall: (invitees: CallPeer[]) => void;
   acceptCall: () => void;
   declineCall: () => void;
   cancelOutgoing: () => void;
@@ -20,7 +20,11 @@ type CallBridge = {
 interface CallState {
   status: CallStatus;
   callId: string | null;
-  peer: CallPeer | null;
+  /** Everyone else expected/invited to the call — for a 1:1 call this is a
+   * single-item array, same shape as before; a group call just has more
+   * than one. Who has actually joined the shared media session is tracked
+   * separately (as `remoteStreams` keys) by useScreenShareCall(). */
+  peers: CallPeer[];
   /** getUserMedia-based — gates starting/accepting a call at all. True on
    * virtually any modern browser, mobile included. */
   canCall: boolean;
@@ -32,7 +36,7 @@ interface CallState {
    * button, CallInvitePicker) trigger real WebRTC actions without prop
    * drilling, same shape as confirm-store.ts's requestConfirm() bridge. */
   _bridge: CallBridge | null;
-  _setStatus: (status: CallStatus, callId?: string | null, peer?: CallPeer | null) => void;
+  _setStatus: (status: CallStatus, callId?: string | null, peers?: CallPeer[]) => void;
   _setCanCall: (v: boolean) => void;
   _setCanShareScreen: (v: boolean) => void;
   _registerBridge: (bridge: CallBridge | null) => void;
@@ -41,20 +45,21 @@ interface CallState {
 export const useCallStore = create<CallState>((set) => ({
   status: "idle",
   callId: null,
-  peer: null,
+  peers: [],
   canCall: false,
   canShareScreen: false,
   _bridge: null,
-  _setStatus: (status, callId = null, peer = null) => set({ status, callId, peer }),
+  _setStatus: (status, callId = null, peers = []) => set({ status, callId, peers }),
   _setCanCall: (v) => set({ canCall: v }),
   _setCanShareScreen: (v) => set({ canShareScreen: v }),
   _registerBridge: (bridge) => set({ _bridge: bridge }),
 }));
 
-/** Only meaningful while idle — starts a new outgoing call. No-op (silently
- * ignored by the hook) if a call is already in progress. */
-export function startScreenShareCall(userId: string, name: string, avatarUrl: string | null) {
-  useCallStore.getState()._bridge?.startCall(userId, name, avatarUrl);
+/** Only meaningful while idle — starts a new outgoing call, to one person or
+ * several at once. No-op (silently ignored by the hook) if a call is
+ * already in progress. */
+export function startScreenShareCall(invitees: CallPeer[]) {
+  useCallStore.getState()._bridge?.startCall(invitees);
 }
 export function acceptIncomingCall() {
   useCallStore.getState()._bridge?.acceptCall();
