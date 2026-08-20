@@ -28,7 +28,7 @@ import { CallInvitePicker } from "./CallInvitePicker";
 import { useScreenShareCall } from "@/hooks/use-screen-share-call";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { hexToRgbChannels } from "@/lib/luzeria/utils";
+import { hexToRgbChannels, readableAccentRgbChannels } from "@/lib/luzeria/utils";
 
 export function App() {
   const me = useMe();
@@ -75,13 +75,20 @@ export function App() {
     const primary = me.data?.orgColorPrimary ? hexToRgbChannels(me.data.orgColorPrimary) : null;
     const light = me.data?.orgColorPrimaryLight ? hexToRgbChannels(me.data.orgColorPrimaryLight) : null;
     const sidebar = me.data?.orgColorSidebar ? hexToRgbChannels(me.data.orgColorSidebar) : null;
+    // A color naturally dark even at full brightness (navy, deep purple...)
+    // reads as low-contrast when shown directly as accent text on this
+    // app's near-black UI — --lz-brand-text-rgb is the same color when it's
+    // light enough to read, or white as a safe fallback otherwise.
+    const text = me.data?.orgColorPrimary ? readableAccentRgbChannels(me.data.orgColorPrimary) : null;
     if (primary) root.setProperty("--lz-brand-rgb", primary);
     if (light) root.setProperty("--lz-brand-light-rgb", light);
     if (sidebar) root.setProperty("--lz-sidebar-rgb", sidebar);
+    if (text) root.setProperty("--lz-brand-text-rgb", text);
     return () => {
       root.removeProperty("--lz-brand-rgb");
       root.removeProperty("--lz-brand-light-rgb");
       root.removeProperty("--lz-sidebar-rgb");
+      root.removeProperty("--lz-brand-text-rgb");
     };
   }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight, me.data?.orgColorSidebar]);
 

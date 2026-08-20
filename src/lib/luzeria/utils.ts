@@ -132,6 +132,22 @@ export function hexAlpha(hex: string, alpha: number): string {
   return `rgba(${channels}, ${alpha})`;
 }
 
+/** For an accent color shown directly as text/icon color on this app's
+ * near-black UI: most brand colors (lime, orange, yellow…) read fine, but a
+ * color that's naturally dark even at full saturation (navy, deep purple,
+ * dark red) can look low-contrast no matter how "bright" the org considers
+ * it. Returns the color's own "R, G, B" channels when it's light enough to
+ * read on a dark background, or white channels as a safe fallback
+ * otherwise — same format as hexToRgbChannels, for a CSS custom property. */
+export function readableAccentRgbChannels(hex: string): string | null {
+  const channels = hexToRgbChannels(hex);
+  if (!channels) return null;
+  const [r, g, b] = channels.split(",").map((s) => parseInt(s.trim(), 10));
+  // YIQ perceived brightness (0-255) — standard lightweight contrast heuristic.
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 130 ? channels : "255, 255, 255";
+}
+
 /** Shared "tinted card" background — a subtle top-left glow of `hex` fading
  * into the app's dark surface, same formula as the dashboard's MetricCard.
  * Best for a handful of cards with distinct meanings (metric tiles); a long

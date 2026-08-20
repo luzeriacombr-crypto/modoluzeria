@@ -171,7 +171,7 @@ export function AdminDashboard() {
         <div className="relative grid md:grid-cols-[1fr_auto] gap-8 p-6 md:p-8 items-center">
           <div className="text-center md:text-left flex flex-col items-center md:items-start">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: PALETTE.lime }}>
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-text-rgb))" }}>
               <Sparkles size={11} /> Dashboard
             </div>
             <h1

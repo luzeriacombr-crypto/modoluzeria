@@ -140,6 +140,10 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   --lz-brand-rgb: 200, 212, 78;
   --lz-brand-light-rgb: 200, 212, 78;
   --lz-sidebar-rgb: 17, 31, 92;
+  /* Same as --lz-brand-rgb by default (lime already reads fine as text on
+   * dark) — App.tsx swaps this to white for orgs whose brand color is too
+   * dark to read as accent text, see readableAccentRgbChannels(). */
+  --lz-brand-text-rgb: 200, 212, 78;
   /* Luzeria palette */
   --background: #0D0D0D;
   --foreground: #FFFFFF;
