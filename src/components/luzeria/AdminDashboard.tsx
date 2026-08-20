@@ -3,9 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Users, Target, Package, Clock, AlertTriangle,
   ChevronLeft, ChevronRight, Trophy, Sparkles, Flame, Crown, Medal,
-  X, CheckCircle2, Inbox, Tag, Activity, AlertOctagon, RotateCcw,
+  X, CheckCircle2, Inbox, Tag, Activity, AlertOctagon, RotateCcw, LayoutGrid, Check,
 } from "lucide-react";
-import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoalQO, useMe, reportExtrasQO, orgCostSettingsQO } from "@/lib/luzeria/queries";
+import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoalQO, useMe, reportExtrasQO, orgCostSettingsQO, useApi } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
@@ -13,6 +13,14 @@ import { useCountUp, useGrowIn } from "@/lib/luzeria/animation-hooks";
 import { Avatar } from "./Avatar";
 import { SetupChecklist } from "./SetupChecklist";
 import { InfoTip } from "./InfoTip";
+import { DashboardGrid, type CellRect } from "./DashboardGrid";
+
+const METRIC_DEFAULT_LAYOUT: Record<string, CellRect> = {
+  "metric-clients": { x: 0, y: 0, w: 3, h: 1 },
+  "metric-goal": { x: 3, y: 0, w: 3, h: 1 },
+  "metric-done": { x: 6, y: 0, w: 3, h: 1 },
+  "metric-missing": { x: 9, y: 0, w: 3, h: 1 },
+};
 
 type Period = "month" | "3m" | "6m" | "year";
 const PERIOD_LABEL: Record<Period, string> = {
@@ -64,6 +72,9 @@ export function AdminDashboard() {
   const [rankingMode, setRankingMode] = useState<"meta" | "geral">("meta");
   const [filterMode, setFilterMode] = useState<null | "category" | "health" | "metric">(null);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const [customizingLayout, setCustomizingLayout] = useState(false);
+  const { updateMyOrg } = useApi();
+  const metricLayout = { ...METRIC_DEFAULT_LAYOUT, ...(me?.dashboardLayout ?? {}) };
 
   const dashboard = useQuery(adminDashboardQO(selectedMonthKey));
   const top = useQuery({ ...topMembersQO(period, selectedMonthKey), enabled: rankingMode === "geral" && !!selectedMonthKey });
@@ -204,25 +215,64 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      {/* Metric strip — 4 cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 lz-stagger">
-        <MetricCard tone={PALETTE.lime}      icon={<Users size={16} />}          label="Clientes ativos" value={t?.clients ?? 0}
-          info="Quantidade de clientes ativos (não arquivados) na agência." />
-        <MetricCard tone={PALETTE.blue}      icon={<Target size={16} />}         label="Meta do mês"     value={t?.planned ?? 0}
-          info="Total de itens planejados pra esse mês, somando todos os clientes ativos — é a meta de entregas do período selecionado." />
-        <MetricCard tone={"rgb(var(--lz-sidebar-rgb))"}          icon={<Package size={16} />}        label="Entregues"       value={t?.done ?? 0}
+      {/* Metric strip — 4 cards. Arrastar/redimensionar só faz sentido em
+          telas largas (md+); no celular continua a grade fixa 2x2 de sempre. */}
+      {(() => {
+        const cardClients = <MetricCard tone={PALETTE.lime} icon={<Users size={16} />} label="Clientes ativos" value={t?.clients ?? 0}
+          info="Quantidade de clientes ativos (não arquivados) na agência." />;
+        const cardGoal = <MetricCard tone={PALETTE.blue} icon={<Target size={16} />} label="Meta do mês" value={t?.planned ?? 0}
+          info="Total de itens planejados pra esse mês, somando todos os clientes ativos — é a meta de entregas do período selecionado." />;
+        const cardDone = <MetricCard tone={"rgb(var(--lz-sidebar-rgb))"} icon={<Package size={16} />} label="Entregues" value={t?.done ?? 0}
           onClick={() => { setFilterMode("metric"); setSelectedFilter("done"); }}
-          info="Itens já finalizados (prontos pra publicar, finalizados ou concluídos) dentro do período selecionado. Clique pra ver a lista." />
-        <MetricCard
-          tone={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
+          info="Itens já finalizados (prontos pra publicar, finalizados ou concluídos) dentro do período selecionado. Clique pra ver a lista." />;
+        const missing = (t?.planned ?? 0) - (t?.done ?? 0);
+        const cardMissing = <MetricCard
+          tone={missing > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
           icon={<Clock size={16} />}
           label="Falta"
-          value={((t?.planned ?? 0) - (t?.done ?? 0))}
-          valueColor={((t?.planned ?? 0) - (t?.done ?? 0)) > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
+          value={missing}
+          valueColor={missing > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
           onClick={() => { setFilterMode("metric"); setSelectedFilter("pending"); }}
           info="Meta do mês menos Entregues — quantos itens ainda faltam pra bater a meta do período. Clique pra ver a lista."
-        />
-      </div>
+        />;
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-3 mb-6 lz-stagger md:hidden">
+              {cardClients}{cardGoal}{cardDone}{cardMissing}
+            </div>
+            <div className="hidden md:block">
+              {isAdmin && (
+                <div className="flex justify-end mb-2">
+                  <button
+                    onClick={() => setCustomizingLayout((v) => !v)}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border transition"
+                    style={customizingLayout
+                      ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D", borderColor: "rgb(var(--lz-brand-rgb))" }
+                      : { color: "rgba(255,255,255,0.5)", borderColor: "rgba(255,255,255,0.15)" }}
+                  >
+                    {customizingLayout ? <Check size={12} /> : <LayoutGrid size={12} />}
+                    {customizingLayout ? "Concluir" : "Personalizar quadros"}
+                  </button>
+                </div>
+              )}
+              <div className="mb-6 lz-stagger">
+                <DashboardGrid
+                  editing={customizingLayout}
+                  layout={metricLayout}
+                  onLayoutChange={(next) => updateMyOrg.mutate({ data: { dashboardLayout: next } })}
+                  rowHeight={140}
+                  widgets={[
+                    { id: "metric-clients", default: METRIC_DEFAULT_LAYOUT["metric-clients"], node: cardClients },
+                    { id: "metric-goal", default: METRIC_DEFAULT_LAYOUT["metric-goal"], node: cardGoal },
+                    { id: "metric-done", default: METRIC_DEFAULT_LAYOUT["metric-done"], node: cardDone },
+                    { id: "metric-missing", default: METRIC_DEFAULT_LAYOUT["metric-missing"], node: cardMissing },
+                  ]}
+                />
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Saúde da Operação — admin master only */}
       {me?.role === "master" && (
