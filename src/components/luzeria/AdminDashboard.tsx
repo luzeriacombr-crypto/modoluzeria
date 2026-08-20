@@ -156,8 +156,8 @@ export function AdminDashboard() {
       <div data-tour="dashboard-hero" className="relative overflow-hidden rounded-2xl mb-6"
         style={{
           background:
-            "radial-gradient(120% 140% at 0% 0%, rgba(var(--lz-brand-light-rgb),0.18) 0%, rgba(91,168,138,0.10) 35%, rgba(28,28,28,0) 70%), " +
-            "radial-gradient(80% 120% at 100% 100%, rgba(26,58,46,0.55) 0%, rgba(28,28,28,0) 65%), " +
+            "radial-gradient(120% 140% at 0% 0%, rgba(var(--lz-brand-light-rgb),0.18) 0%, color-mix(in srgb, rgb(var(--lz-brand-rgb)) 10%, transparent) 35%, rgba(28,28,28,0) 70%), " +
+            "radial-gradient(80% 120% at 100% 100%, color-mix(in srgb, color-mix(in srgb, rgb(var(--lz-brand-rgb)) 40%, #0D0D0D) 55%, transparent) 0%, rgba(28,28,28,0) 65%), " +
             "linear-gradient(180deg, #161616 0%, #111111 100%)",
           border: "1px solid rgba(var(--lz-brand-light-rgb),0.18)",
         }}>
