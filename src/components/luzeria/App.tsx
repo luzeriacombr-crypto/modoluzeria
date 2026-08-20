@@ -214,7 +214,9 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
         {sidebarHidden ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
       </button>
       {me?.orgLogoUrl ? (
-        <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="md:hidden max-h-7 max-w-[140px]" />
+        <div className="md:hidden h-10 max-w-[140px]">
+          <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="h-full max-w-full object-contain object-left" />
+        </div>
       ) : (
         <span className="md:hidden text-white font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px]">
           {me?.orgName ?? "Modo Criador"}
