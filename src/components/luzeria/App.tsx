@@ -28,7 +28,7 @@ import { CallInvitePicker } from "./CallInvitePicker";
 import { useScreenShareCall } from "@/hooks/use-screen-share-call";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { hexToRgbChannels, readableAccentRgbChannels } from "@/lib/luzeria/utils";
+import { hexToRgbChannels, readableAccentRgbChannels, deriveSecondaryHex } from "@/lib/luzeria/utils";
 
 export function App() {
   const me = useMe();
@@ -73,7 +73,13 @@ export function App() {
   useEffect(() => {
     const root = document.documentElement.style;
     const primary = me.data?.orgColorPrimary ? hexToRgbChannels(me.data.orgColorPrimary) : null;
-    const light = me.data?.orgColorPrimaryLight ? hexToRgbChannels(me.data.orgColorPrimaryLight) : null;
+    // If the org set a primary color but never touched "light" (still the
+    // default lime), derive one from the primary instead of mixing the
+    // org's own color with Luzeria's leftover green in every gradient.
+    const lightHex = me.data?.orgColorPrimaryLight && me.data.orgColorPrimaryLight !== "#C8D44E"
+      ? me.data.orgColorPrimaryLight
+      : me.data?.orgColorPrimary ? deriveSecondaryHex(me.data.orgColorPrimary) : null;
+    const light = lightHex ? hexToRgbChannels(lightHex) : null;
     const sidebar = me.data?.orgColorSidebar ? hexToRgbChannels(me.data.orgColorSidebar) : null;
     // A color naturally dark even at full brightness (navy, deep purple...)
     // reads as low-contrast when shown directly as accent text on this
@@ -84,13 +90,15 @@ export function App() {
     if (light) root.setProperty("--lz-brand-light-rgb", light);
     if (sidebar) root.setProperty("--lz-sidebar-rgb", sidebar);
     if (text) root.setProperty("--lz-brand-text-rgb", text);
+    if (me.data?.borderRadius != null) root.setProperty("--lz-radius", `${me.data.borderRadius}px`);
     return () => {
       root.removeProperty("--lz-brand-rgb");
       root.removeProperty("--lz-brand-light-rgb");
       root.removeProperty("--lz-sidebar-rgb");
       root.removeProperty("--lz-brand-text-rgb");
+      root.removeProperty("--lz-radius");
     };
-  }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight, me.data?.orgColorSidebar]);
+  }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight, me.data?.orgColorSidebar, me.data?.borderRadius]);
 
   // Same idea for the tab icon: swap the favicon + apple-touch-icon (used
   // when the client adds the app to their iOS home screen) whenever the org

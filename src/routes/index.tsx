@@ -4,6 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { SalesPage } from "@/components/luzeria/SalesPage";
 import { hasSignedInBefore } from "@/lib/luzeria/device-flag";
 import { getPublicPlans } from "@/lib/luzeria/signup.functions";
+import { getMyDefaultLanding } from "@/lib/luzeria/api.functions";
+
+function landingRoute(defaultLanding: { view: string; clientId?: string } | null): { to: string; params?: any } {
+  if (!defaultLanding) return { to: "/minhas-tarefas" };
+  if (defaultLanding.view === "admin") return { to: "/admin" };
+  if (defaultLanding.view === "calendario") return { to: "/calendario" };
+  if (defaultLanding.view === "cliente" && defaultLanding.clientId) return { to: "/cliente/$clientId", params: { clientId: defaultLanding.clientId } };
+  return { to: "/minhas-tarefas" };
+}
 
 const SITE_URL = "https://www.modocriador.com.br";
 const TITLE = "Modo Criador — Gestão de Conteúdo para Agências de Social Media";
@@ -72,7 +81,10 @@ export const Route = createFileRoute("/")({
     // no access to the browser's session, so this is a fast path, not the
     // only path. See the effect below for the case this can't cover.
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/minhas-tarefas" });
+    if (data.session) {
+      const defaultLanding = await getMyDefaultLanding().catch(() => null);
+      throw redirect(landingRoute(defaultLanding) as any);
+    }
   },
 });
 
@@ -89,7 +101,12 @@ function IndexRoute() {
     (async () => {
       const { data } = await supabase.auth.getSession();
       if (cancelled) return;
-      if (data.session) { nav({ to: "/minhas-tarefas" }); return; }
+      if (data.session) {
+        const defaultLanding = await getMyDefaultLanding().catch(() => null);
+        if (cancelled) return;
+        nav(landingRoute(defaultLanding) as any);
+        return;
+      }
       if (hasSignedInBefore()) nav({ to: "/auth" });
     })();
     return () => { cancelled = true; };

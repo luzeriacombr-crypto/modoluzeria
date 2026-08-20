@@ -256,6 +256,20 @@ export interface Profile {
    * set its editor and pick its video format (reel_type/post_format),
    * not just admins. Present for every profile, same reasoning as above. */
   membersCanSetEditorFormat?: boolean;
+  /** Org-wide custom labels for fixed sidebar nav items, keyed by item id
+   * (e.g. "dashboard", "cobranca") — falls back to the built-in label when
+   * an id has no entry here. */
+  navLabels?: Record<string, string>;
+  /** Org-wide custom ordering for fixed sidebar nav items, keyed by section
+   * ("main", "financeiro", "equipe") — each value is an ordered list of item
+   * ids; any visible item missing from the list renders after the ordered
+   * ones, in its built-in position. */
+  navOrder?: Record<string, string[]>;
+  /** Org-wide corner radius (px) applied to cards/buttons/inputs app-wide. */
+  borderRadius?: number;
+  /** Personal (not org-wide) — which screen this member lands on right
+   * after login. null = today's default (Minhas Demandas). */
+  defaultLanding?: { view: string; clientId?: string } | null;
 }
 
 /** Escala semanal usada pro custo-hora por colaborador (Equipe > remuneração).

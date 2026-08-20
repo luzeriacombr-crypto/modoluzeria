@@ -52,6 +52,19 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   background: transparent;
 }
 
+/* Raio de borda personalizável (org.border_radius, padrão 12px = o próprio
+ * padrão do Tailwind pra rounded-xl) — só nos dois tamanhos de card/painel
+ * grandes (xl e 2xl), preservando a proporção entre eles. Não mexe em
+ * rounded-md/lg/sm (botões, inputs, badges) nem em rounded-full (avatares,
+ * pills) — uma varredura completa arriscava um resultado mecânico/estranho
+ * em elementos pequenos que dependem do formato exato de hoje. */
+.rounded-xl {
+  border-radius: var(--lz-radius, 12px) !important;
+}
+.rounded-2xl {
+  border-radius: calc(var(--lz-radius, 12px) * 1.333) !important;
+}
+
 /* Scrollable strip with no visible scrollbar — for horizontally-overflowing
  * tab rows on mobile, where the touch-swipe should work but the scrollbar
  * chrome itself shouldn't show. Declared as plain (unlayered) CSS, same as

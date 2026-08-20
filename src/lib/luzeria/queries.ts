@@ -10,10 +10,10 @@ import {
   setItemEditor, setItemReelType, setItemPostFormat,
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   listCleaningTasks, addCleaningTask, renameCleaningTask, deleteCleaningTask,
-  adminCreateUser, createAgency, updateMyOrg, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations,
+  adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations,
   listOrgsBilling, getOrgNextInvoice,
   updateMyAccount,
-  getReport, getMemberReportDetail, getMemberVelocity, getFileUploadsReport,
+  getReport, getDeliveryTrend, getMemberReportDetail, getMemberVelocity, getFileUploadsReport,
   updateFeedOrder,
   setFeedOrderMode,
   setFeedOrderDirection,
@@ -181,6 +181,9 @@ export const reportQO = (filters: ReportFilters) =>
     queryFn: () => getReport({ data: filters as any }),
     enabled: !!filters.from && !!filters.to,
   });
+
+export const deliveryTrendQO = () =>
+  queryOptions({ queryKey: ["delivery-trend"], queryFn: () => getDeliveryTrend() });
 
 export const fileUploadsReportQO = (days: 7 | 15 | 30, type: string) =>
   queryOptions({
@@ -697,6 +700,7 @@ export function useApi() {
     adminCreateUser: useMutation({ mutationFn: useServerFn(adminCreateUser), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     createAgency: useMutation({ mutationFn: useServerFn(createAgency) }),
     updateMyOrg: useMutation({ mutationFn: useServerFn(updateMyOrg), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
+    updateMyDefaultLanding: useMutation({ mutationFn: useServerFn(updateMyDefaultLanding), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
     updateSetorPermissions: useMutation({ mutationFn: useServerFn(updateSetorPermissions), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
     subscribeToPlan: useMutation({
       mutationFn: useServerFn(subscribeToPlan),

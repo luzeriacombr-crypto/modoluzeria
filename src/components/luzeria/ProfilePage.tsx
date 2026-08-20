@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield, UserPlus, RefreshCw, MessageCircle, AtSign, Star, Bug, LogOut, CalendarClock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useMe, useApi, notificationPrefsQO, myCalendarConnectionQO } from "@/lib/luzeria/queries";
+import { useMe, useApi, notificationPrefsQO, myCalendarConnectionQO, clientsQO } from "@/lib/luzeria/queries";
 import { withOAuthState } from "@/lib/luzeria/google-calendar-connect";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { AvatarEditor, ColorPicker, showAvatarError, uploadAvatar } from "./AvatarEditor";
@@ -12,8 +12,11 @@ import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 
 export function ProfilePage() {
   const me = useMe().data;
-  const { updateMyProfile, setMyNotificationPreferences, updateMyAccount } = useApi();
+  const { updateMyProfile, setMyNotificationPreferences, updateMyAccount, updateMyDefaultLanding } = useApi();
   const { data: prefs } = useQuery(notificationPrefsQO());
+  const { data: clients = [] } = useQuery(clientsQO());
+  const defaultLandingView = me?.defaultLanding?.view ?? "minhas-tarefas";
+  const defaultLandingClientId = me?.defaultLanding?.clientId ?? "";
   const [color, setColor] = useState<string>(me?.color ?? "rgb(var(--lz-brand-rgb))");
   const [avatarPath, setAvatarPath] = useState<string | null>(me?.avatarPath ?? null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(me?.avatarUrl ?? null);
@@ -245,7 +248,42 @@ export function ProfilePage() {
         )}
       </div>
 
-      <div className="mt-8 pt-6 border-t border-white/[0.06] flex items-center justify-between gap-4">
+      <div className="mt-8 pt-6 border-t border-white/[0.06]">
+        <div className="text-sm font-semibold text-white">Ao entrar, abrir em</div>
+        <div className="text-[11px] text-white/50 mt-1 mb-3">Só pra você — não muda o que os outros da equipe veem.</div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={defaultLandingView}
+            onChange={(e) => {
+              const view = e.target.value;
+              updateMyDefaultLanding.mutate(
+                { data: { defaultLanding: view === "minhas-tarefas" ? null : { view, clientId: view === "cliente" ? (defaultLandingClientId || clients[0]?.id) : undefined } } },
+                { onSuccess: () => toast.success("Preferência salva."), onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") },
+              );
+            }}
+            className="bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+          >
+            <option value="minhas-tarefas">Minhas Demandas</option>
+            <option value="admin">Dashboard</option>
+            <option value="calendario">Calendário</option>
+            <option value="cliente">Um cliente específico</option>
+          </select>
+          {defaultLandingView === "cliente" && (
+            <select
+              value={defaultLandingClientId}
+              onChange={(e) => updateMyDefaultLanding.mutate(
+                { data: { defaultLanding: { view: "cliente", clientId: e.target.value } } },
+                { onSuccess: () => toast.success("Preferência salva."), onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") },
+              )}
+              className="bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+            >
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-6 pt-6 border-t border-white/[0.06] flex items-center justify-between gap-4">
         <div>
           <div className="text-sm font-semibold text-white">Tour guiado do app</div>
           <div className="text-[11px] text-white/50 mt-1">Refaça o passo a passo de boas-vindas quando quiser.</div>

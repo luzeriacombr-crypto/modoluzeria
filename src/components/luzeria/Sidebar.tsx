@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Plus, Info, CircleHelp, CalendarDays, Instagram, Users, LayoutGrid, Wallet, UserCog, BookMarked,
+  Settings2, X, ArrowUp, ArrowDown, RotateCcw,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -13,6 +14,14 @@ import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
 import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { toast } from "sonner";
 import { hasSetorPermission, type Client } from "@/lib/luzeria/types";
+
+const DEFAULT_NAV_LABELS: Record<string, string> = {
+  "minhas-demandas": "Minhas demandas", dashboard: "Dashboard", clientes: "Clientes",
+  calendario: "Calendário", biblioteca: "Biblioteca", "visao-geral": "Visão Geral",
+  instagram: "Instagram", financeiro: "Financeiro", equipe: "Equipe", ajuda: "Ajuda",
+  cobranca: "Plano e Cobrança", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda",
+  rotina: "Rotina", membros: "Membros", relatorio: "Relatório", jornada: "Jornada do cliente",
+};
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
@@ -75,6 +84,18 @@ export function Sidebar({
   const rotinaEnabled = !disabled.has("rotina");
   const configTabActive = (tabId: string) => pathname === "/configuracoes" && routerSearch?.tab === tabId;
   const goToConfigTab = (tabId: string) => navigate({ to: "/configuracoes", search: { tab: tabId } });
+  const [customizingNav, setCustomizingNav] = useState(false);
+  const navLabels = me?.navLabels ?? {};
+  const navOrder = me?.navOrder ?? {};
+  const navLabel = (id: string, fallback: string) => navLabels[id] || fallback;
+  function orderSection(sectionKey: string, items: { id: string; label: string; node: React.ReactNode }[]) {
+    const order = navOrder[sectionKey];
+    if (!order || order.length === 0) return items;
+    const byId = new Map(items.map((it) => [it.id, it]));
+    const ordered = order.map((id) => byId.get(id)).filter((it): it is typeof items[number] => !!it);
+    items.forEach((it) => { if (!order.includes(it.id)) ordered.push(it); });
+    return ordered;
+  }
 
   return (
     <aside data-tour="sidebar" className="sidebar-gradient w-[240px] h-screen flex flex-col text-white shrink-0 overflow-hidden">
@@ -97,175 +118,167 @@ export function Sidebar({
 
       {/* Nav — single scrollable list so Clientes sits inline with everything else */}
       <div className="px-3 pt-4 pb-3 flex-1 overflow-y-auto space-y-0.5">
-        <NavButton
-          icon={<LayoutDashboard size={15} />}
-          label="Minhas demandas"
-          active={pathname === "/minhas-tarefas"}
-          onClick={() => navigate({ to: "/minhas-tarefas" })}
-        />
-        <NavButton
-          icon={<BarChart2 size={15} />}
-          label="Dashboard"
-          active={pathname === "/admin"}
-          onClick={() => navigate({ to: "/admin" })}
-        />
+        {(() => {
+          const financeiroItems = canFinanceiro ? orderSection("financeiro", [
+            { id: "cobranca", label: navLabel("cobranca", "Plano e Cobrança"), node: <NavSubButton key="cobranca" label={navLabel("cobranca", "Plano e Cobrança")} active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} /> },
+            { id: "margem", label: navLabel("margem", "Margem por cliente"), node: <NavSubButton key="margem" label={navLabel("margem", "Margem por cliente")} active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} /> },
+            { id: "afiliados", label: navLabel("afiliados", "Afiliados"), node: <NavSubButton key="afiliados" label={navLabel("afiliados", "Afiliados")} active={configTabActive("afiliados")} onClick={() => goToConfigTab("afiliados")} /> },
+            { id: "revenda", label: navLabel("revenda", "Revenda"), node: <NavSubButton key="revenda" label={navLabel("revenda", "Revenda")} active={configTabActive("revenda")} onClick={() => goToConfigTab("revenda")} /> },
+          ]) : [];
 
-        {/* Clientes */}
-        <div>
-          <button
-            onClick={() => setClientsOpen((o) => !o)}
-            className="w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative"
-            style={{
-              backgroundColor: clientsActive ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent",
-              color: clientsActive ? "#FFFFFF" : "rgba(255,255,255,0.7)",
-            }}
-          >
-            {clientsActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
-            <span className="flex items-center gap-2.5 min-w-0">
-              <Users size={15} className={clientsActive ? "text-[rgb(var(--lz-brand-rgb))] shrink-0" : "text-white/60 shrink-0"} />
-              <span className="truncate">Clientes</span>
-            </span>
-            <span className="flex items-center gap-0.5 shrink-0">
-              {isAdmin && (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); onCreateClient(); }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); onCreateClient(); } }}
-                  title="Novo cliente"
-                  className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5"
+          const equipeItems = orderSection("equipe", [
+            ...(rotinaEnabled ? [{ id: "rotina", label: navLabel("rotina", "Rotina"), node: <div key="rotina" data-tour="nav-rotina"><NavSubButton label={navLabel("rotina", "Rotina")} active={pathname === "/rotina"} onClick={() => navigate({ to: "/rotina" })} /></div> }] : []),
+            ...(canTeam ? [{ id: "membros", label: navLabel("membros", "Membros"), node: <NavSubButton key="membros" label={navLabel("membros", "Membros")} active={configTabActive("team")} onClick={() => goToConfigTab("team")} /> }] : []),
+            ...(canReport ? [{ id: "relatorio", label: navLabel("relatorio", "Relatório"), node: <NavSubButton key="relatorio" label={navLabel("relatorio", "Relatório")} active={configTabActive("report")} onClick={() => goToConfigTab("report")} /> }] : []),
+            ...(canJourney ? [{ id: "jornada", label: navLabel("jornada", "Jornada do cliente"), node: <NavSubButton key="jornada" label={navLabel("jornada", "Jornada do cliente")} active={configTabActive("journey")} onClick={() => goToConfigTab("journey")} /> }] : []),
+          ]);
+
+          const mainItems = orderSection("main", [
+            { id: "minhas-demandas", label: navLabel("minhas-demandas", "Minhas demandas"), node: (
+              <NavButton key="minhas-demandas" icon={<LayoutDashboard size={15} />} label={navLabel("minhas-demandas", "Minhas demandas")}
+                active={pathname === "/minhas-tarefas"} onClick={() => navigate({ to: "/minhas-tarefas" })} />
+            ) },
+            { id: "dashboard", label: navLabel("dashboard", "Dashboard"), node: (
+              <NavButton key="dashboard" icon={<BarChart2 size={15} />} label={navLabel("dashboard", "Dashboard")}
+                active={pathname === "/admin"} onClick={() => navigate({ to: "/admin" })} />
+            ) },
+            { id: "clientes", label: navLabel("clientes", "Clientes"), node: (
+              <div key="clientes">
+                <button
+                  onClick={() => setClientsOpen((o) => !o)}
+                  className="w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative"
+                  style={{
+                    backgroundColor: clientsActive ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent",
+                    color: clientsActive ? "#FFFFFF" : "rgba(255,255,255,0.7)",
+                  }}
                 >
-                  <Plus size={13} />
-                </span>
-              )}
-              {clientsOpen ? <ChevronDown size={14} className="text-white/40" /> : <ChevronRight size={14} className="text-white/40" />}
-            </span>
-          </button>
-          {clientsOpen && (
-            <div className="mt-1">
-              <div className="px-1 pb-2">
-                <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/5">
-                  <Search size={13} className="text-white/40" />
-                  <input
-                    value={search} onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Buscar..."
-                    className="bg-transparent text-xs flex-1 outline-none placeholder:text-white/30 text-white"
-                  />
-                </div>
-              </div>
-              {grouped.map(([cat, list]) => (
-                <CategoryGroup
-                  key={cat}
-                  name={cat}
-                  color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
-                  defaultOpen={cat !== "Ex-clientes"}
-                  forceOpen={search.trim().length > 0}
-                  count={list.length}
-                  onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
-                  addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
-                >
-                  {list.map((c) => (
-                    <ClientRow
-                      key={c.id}
-                      client={c}
-                      active={pathname === `/cliente/${c.id}`}
-                      onOpenCustomFields={() => onOpenCustomFields(c)}
-                      canManage={isAdmin}
-                      categories={allCategories}
-                    />
-                  ))}
-                  {cat === "Avulsos" && list.length === 0 && (
-                    <div className="px-3 py-2 text-[11px] text-white/30">
-                      {isAdmin ? "Nenhuma demanda avulsa. Use o + para criar." : "Sem demandas avulsas."}
+                  {clientsActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <Users size={15} className={clientsActive ? "text-[rgb(var(--lz-brand-rgb))] shrink-0" : "text-white/60 shrink-0"} />
+                    <span className="truncate">{navLabel("clientes", "Clientes")}</span>
+                  </span>
+                  <span className="flex items-center gap-0.5 shrink-0">
+                    {isAdmin && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => { e.stopPropagation(); onCreateClient(); }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); onCreateClient(); } }}
+                        title="Novo cliente"
+                        className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5"
+                      >
+                        <Plus size={13} />
+                      </span>
+                    )}
+                    {clientsOpen ? <ChevronDown size={14} className="text-white/40" /> : <ChevronRight size={14} className="text-white/40" />}
+                  </span>
+                </button>
+                {clientsOpen && (
+                  <div className="mt-1">
+                    <div className="px-1 pb-2">
+                      <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/5">
+                        <Search size={13} className="text-white/40" />
+                        <input
+                          value={search} onChange={(e) => setSearch(e.target.value)}
+                          placeholder="Buscar..."
+                          className="bg-transparent text-xs flex-1 outline-none placeholder:text-white/30 text-white"
+                        />
+                      </div>
                     </div>
-                  )}
-                </CategoryGroup>
-              ))}
-              {filtered.length === 0 && (
-                <div className="text-xs text-white/30 text-center mt-6 px-3">
-                  {search ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {!disabled.has("calendar") && (
-          <div data-tour="nav-calendario">
-            <NavButton
-              icon={<CalendarDays size={15} />}
-              label="Calendário"
-              active={pathname === "/calendario"}
-              onClick={() => navigate({ to: "/calendario" })}
-            />
-          </div>
-        )}
-        {!disabled.has("reference_library") && (
-          <NavButton
-            icon={<BookMarked size={15} />}
-            label="Biblioteca"
-            active={pathname === "/biblioteca"}
-            onClick={() => navigate({ to: "/biblioteca" })}
-          />
-        )}
-        {isAdmin && !disabled.has("client_overview") && (
-          <NavButton
-            icon={<LayoutGrid size={15} />}
-            label="Visão Geral"
-            active={pathname === "/visao-geral"}
-            onClick={() => navigate({ to: "/visao-geral" })}
-          />
-        )}
-        {isAdmin && !disabled.has("instagram") && (
-          <NavButton
-            icon={<Instagram size={15} />}
-            label="Instagram"
-            active={pathname === "/instagram"}
-            onClick={() => navigate({ to: "/instagram" })}
-          />
-        )}
-        {canFinanceiro && (
-          <NavGroup
-            icon={<Wallet size={15} />}
-            label="Financeiro"
-            active={configTabActive("cobranca") || configTabActive("margem") || configTabActive("afiliados") || configTabActive("revenda")}
-          >
-            <NavSubButton label="Plano e Cobrança" active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} />
-            <NavSubButton label="Margem por cliente" active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} />
-            <NavSubButton label="Afiliados" active={configTabActive("afiliados")} onClick={() => goToConfigTab("afiliados")} />
-            <NavSubButton label="Revenda" active={configTabActive("revenda")} onClick={() => goToConfigTab("revenda")} />
-          </NavGroup>
-        )}
-        {(canTeam || canReport || canJourney || rotinaEnabled) && (
-          <NavGroup
-            icon={<UserCog size={15} />}
-            label="Equipe"
-            active={configTabActive("team") || configTabActive("report") || configTabActive("journey") || pathname === "/rotina"}
-          >
-            {rotinaEnabled && (
-              <div data-tour="nav-rotina">
-                <NavSubButton label="Rotina" active={pathname === "/rotina"} onClick={() => navigate({ to: "/rotina" })} />
+                    {grouped.map(([cat, list]) => (
+                      <CategoryGroup
+                        key={cat}
+                        name={cat}
+                        color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
+                        defaultOpen={cat !== "Ex-clientes"}
+                        forceOpen={search.trim().length > 0}
+                        count={list.length}
+                        onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
+                        addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
+                      >
+                        {list.map((c) => (
+                          <ClientRow
+                            key={c.id}
+                            client={c}
+                            active={pathname === `/cliente/${c.id}`}
+                            onOpenCustomFields={() => onOpenCustomFields(c)}
+                            canManage={isAdmin}
+                            categories={allCategories}
+                          />
+                        ))}
+                        {cat === "Avulsos" && list.length === 0 && (
+                          <div className="px-3 py-2 text-[11px] text-white/30">
+                            {isAdmin ? "Nenhuma demanda avulsa. Use o + para criar." : "Sem demandas avulsas."}
+                          </div>
+                        )}
+                      </CategoryGroup>
+                    ))}
+                    {filtered.length === 0 && (
+                      <div className="text-xs text-white/30 text-center mt-6 px-3">
+                        {search ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
-            {canTeam && (
-              <NavSubButton label="Membros" active={configTabActive("team")} onClick={() => goToConfigTab("team")} />
-            )}
-            {canReport && (
-              <NavSubButton label="Relatório" active={configTabActive("report")} onClick={() => goToConfigTab("report")} />
-            )}
-            {canJourney && (
-              <NavSubButton label="Jornada do cliente" active={configTabActive("journey")} onClick={() => goToConfigTab("journey")} />
-            )}
-          </NavGroup>
-        )}
-        <div data-tour="nav-ajuda">
-          <NavButton
-            icon={<CircleHelp size={15} />}
-            label="Ajuda"
-            active={pathname === "/ajuda"}
-            onClick={() => navigate({ to: "/ajuda" })}
-          />
-        </div>
+            ) },
+            ...(!disabled.has("calendar") ? [{ id: "calendario", label: navLabel("calendario", "Calendário"), node: (
+              <div key="calendario" data-tour="nav-calendario">
+                <NavButton icon={<CalendarDays size={15} />} label={navLabel("calendario", "Calendário")} active={pathname === "/calendario"} onClick={() => navigate({ to: "/calendario" })} />
+              </div>
+            ) }] : []),
+            ...(!disabled.has("reference_library") ? [{ id: "biblioteca", label: navLabel("biblioteca", "Biblioteca"), node: (
+              <NavButton key="biblioteca" icon={<BookMarked size={15} />} label={navLabel("biblioteca", "Biblioteca")} active={pathname === "/biblioteca"} onClick={() => navigate({ to: "/biblioteca" })} />
+            ) }] : []),
+            ...(isAdmin && !disabled.has("client_overview") ? [{ id: "visao-geral", label: navLabel("visao-geral", "Visão Geral"), node: (
+              <NavButton key="visao-geral" icon={<LayoutGrid size={15} />} label={navLabel("visao-geral", "Visão Geral")} active={pathname === "/visao-geral"} onClick={() => navigate({ to: "/visao-geral" })} />
+            ) }] : []),
+            ...(isAdmin && !disabled.has("instagram") ? [{ id: "instagram", label: navLabel("instagram", "Instagram"), node: (
+              <NavButton key="instagram" icon={<Instagram size={15} />} label={navLabel("instagram", "Instagram")} active={pathname === "/instagram"} onClick={() => navigate({ to: "/instagram" })} />
+            ) }] : []),
+            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Financeiro"), node: (
+              <NavGroup key="financeiro" icon={<Wallet size={15} />} label={navLabel("financeiro", "Financeiro")}
+                active={configTabActive("cobranca") || configTabActive("margem") || configTabActive("afiliados") || configTabActive("revenda")}>
+                {financeiroItems.map((it) => it.node)}
+              </NavGroup>
+            ) }] : []),
+            ...((canTeam || canReport || canJourney || rotinaEnabled) ? [{ id: "equipe", label: navLabel("equipe", "Equipe"), node: (
+              <NavGroup key="equipe" icon={<UserCog size={15} />} label={navLabel("equipe", "Equipe")}
+                active={configTabActive("team") || configTabActive("report") || configTabActive("journey") || pathname === "/rotina"}>
+                {equipeItems.map((it) => it.node)}
+              </NavGroup>
+            ) }] : []),
+            { id: "ajuda", label: navLabel("ajuda", "Ajuda"), node: (
+              <div key="ajuda" data-tour="nav-ajuda">
+                <NavButton icon={<CircleHelp size={15} />} label={navLabel("ajuda", "Ajuda")} active={pathname === "/ajuda"} onClick={() => navigate({ to: "/ajuda" })} />
+              </div>
+            ) },
+          ]);
+
+          return (
+            <>
+              {mainItems.map((it) => it.node)}
+              {isMaster && (
+                <button
+                  onClick={() => setCustomizingNav(true)}
+                  className="w-full flex items-center gap-2.5 pl-3 pr-2 py-2 rounded-md text-xs text-white/35 hover:text-white/70 hover:bg-white/5 transition-colors mt-1"
+                >
+                  <Settings2 size={13} /> Personalizar menu
+                </button>
+              )}
+              {customizingNav && (
+                <NavCustomizeModal
+                  onClose={() => setCustomizingNav(false)}
+                  mainItems={mainItems}
+                  financeiroItems={financeiroItems}
+                  equipeItems={equipeItems}
+                  navLabels={navLabels}
+                  navOrder={navOrder}
+                />
+              )}
+            </>
+          );
+        })()}
       </div>
     </aside>
   );
@@ -325,6 +338,108 @@ function NavSubButton({ label, active, onClick }: { label: string; active: boole
       style={{ color: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.6)" }}>
       {label}
     </button>
+  );
+}
+
+/** Renomear/reordenar os itens fixos do menu lateral — uma lista só, com
+ * seção "Principal" e as duas seções internas (Financeiro/Equipe), cada
+ * item com um campo de texto (renomear) e setas pra mover. Guarda em
+ * orgs.nav_labels/nav_order via updateMyOrg (vale pra agência toda). */
+function NavCustomizeModal({ onClose, mainItems, financeiroItems, equipeItems, navLabels, navOrder }: {
+  onClose: () => void;
+  mainItems: { id: string; label: string }[];
+  financeiroItems: { id: string; label: string }[];
+  equipeItems: { id: string; label: string }[];
+  navLabels: Record<string, string>;
+  navOrder: Record<string, string[]>;
+}) {
+  const { updateMyOrg } = useApi();
+  const [labels, setLabels] = useState<Record<string, string>>(navLabels);
+  const [order, setOrder] = useState<Record<string, string[]>>({
+    main: navOrder.main?.length ? navOrder.main : mainItems.map((it) => it.id),
+    financeiro: navOrder.financeiro?.length ? navOrder.financeiro : financeiroItems.map((it) => it.id),
+    equipe: navOrder.equipe?.length ? navOrder.equipe : equipeItems.map((it) => it.id),
+  });
+
+  function orderedIds(section: string, fallbackItems: { id: string }[]) {
+    const ids = order[section] ?? fallbackItems.map((it) => it.id);
+    const known = new Set(fallbackItems.map((it) => it.id));
+    const clean = ids.filter((id) => known.has(id));
+    fallbackItems.forEach((it) => { if (!clean.includes(it.id)) clean.push(it.id); });
+    return clean;
+  }
+
+  function move(section: string, fallbackItems: { id: string }[], id: string, dir: -1 | 1) {
+    const ids = orderedIds(section, fallbackItems);
+    const idx = ids.indexOf(id);
+    const target = idx + dir;
+    if (target < 0 || target >= ids.length) return;
+    [ids[idx], ids[target]] = [ids[target], ids[idx]];
+    setOrder((prev) => ({ ...prev, [section]: ids }));
+  }
+
+  function save() {
+    const cleanLabels = Object.fromEntries(Object.entries(labels).filter(([, v]) => v && v.trim()));
+    updateMyOrg.mutate(
+      { data: { navLabels: cleanLabels, navOrder: order } },
+      { onSuccess: () => { toast.success("Menu atualizado."); onClose(); } },
+    );
+  }
+
+  function renderSection(title: string, section: string, fallbackItems: { id: string; label: string }[]) {
+    if (fallbackItems.length === 0) return null;
+    const labelById = new Map(fallbackItems.map((it) => [it.id, it.label]));
+    const ids = orderedIds(section, fallbackItems);
+    return (
+      <div className="mb-4">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-white/30 mb-1.5">{title}</p>
+        <div className="space-y-1.5">
+          {ids.map((id, i) => (
+            <div key={id} className="flex items-center gap-1.5">
+              <input
+                value={labels[id] ?? labelById.get(id) ?? ""}
+                onChange={(e) => setLabels((prev) => ({ ...prev, [id]: e.target.value }))}
+                className="flex-1 min-w-0 bg-[#0D0D0D] border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+              />
+              {DEFAULT_NAV_LABELS[id] && labels[id] && labels[id] !== DEFAULT_NAV_LABELS[id] && (
+                <button
+                  onClick={() => setLabels((prev) => { const next = { ...prev }; delete next[id]; return next; })}
+                  title="Restaurar nome padrão"
+                  className="p-1.5 rounded text-white/30 hover:text-white shrink-0"
+                ><RotateCcw size={12} /></button>
+              )}
+              <button onClick={() => move(section, fallbackItems, id, -1)} disabled={i === 0}
+                className="p-1.5 rounded text-white/40 hover:text-white disabled:opacity-20 shrink-0"><ArrowUp size={12} /></button>
+              <button onClick={() => move(section, fallbackItems, id, 1)} disabled={i === ids.length - 1}
+                className="p-1.5 rounded text-white/40 hover:text-white disabled:opacity-20 shrink-0"><ArrowDown size={12} /></button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[300] p-4" onClick={onClose}>
+      <div className="w-full max-w-sm bg-[#1C1C1C] border border-white/10 rounded-2xl p-5 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-sm font-bold text-white">Personalizar menu</span>
+          <button onClick={onClose} className="text-white/40 hover:text-white"><X size={16} /></button>
+        </div>
+        <p className="text-[11px] text-white/40 mb-4">Renomeie ou reordene qualquer item — vale pra toda a agência.</p>
+        {renderSection("Principal", "main", mainItems)}
+        {renderSection("Financeiro", "financeiro", financeiroItems)}
+        {renderSection("Equipe", "equipe", equipeItems)}
+        <button
+          onClick={save}
+          disabled={updateMyOrg.isPending}
+          className="w-full mt-2 font-bold uppercase text-sm px-5 py-3 rounded-md transition disabled:opacity-40"
+          style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >
+          {updateMyOrg.isPending ? "Salvando..." : "Salvar"}
+        </button>
+      </div>
+    </div>
   );
 }
 

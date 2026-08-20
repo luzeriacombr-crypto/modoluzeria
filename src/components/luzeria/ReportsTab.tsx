@@ -9,6 +9,7 @@ import { Avatar } from "./Avatar";
 import { STATUS_META, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
 import { exportReportXlsx } from "@/lib/luzeria/report-export";
 import { MemberReportPanel } from "./MemberReportPanel";
+import { DeliveryTrendChart } from "./DeliveryTrendChart";
 
 type Preset = "month" | "last" | "3m" | "6m" | "year" | "custom";
 
@@ -105,6 +106,8 @@ export function ReportsTab() {
 
   return (
     <div>
+      <DeliveryTrendChart />
+
       {/* Filtros */}
       <div className="bg-[#1C1C1C] rounded-lg p-5 mb-6">
         <div className="flex items-center gap-2 mb-4">

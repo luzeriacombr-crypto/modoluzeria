@@ -132,6 +132,53 @@ export function hexAlpha(hex: string, alpha: number): string {
   return `rgba(${channels}, ${alpha})`;
 }
 
+function hexToHSL(hex: string): { h: number; s: number; l: number } {
+  const channels = hexToRgbChannels(hex) ?? "200, 212, 78";
+  const [r, g, b] = channels.split(",").map((s) => parseInt(s.trim(), 10) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d !== 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return { h, s: s * 100, l: l * 100 };
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100; l /= 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let [r, g, b] = [0, 0, 0];
+  if (h < 60) [r, g, b] = [c, x, 0];
+  else if (h < 120) [r, g, b] = [x, c, 0];
+  else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c];
+  else if (h < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  const toHex = (v: number) => Math.round((v + m) * 255).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+/** A lighter, hue-shifted companion for a brand color — used when the org
+ * only set a primary color and left the "light"/secondary one at the
+ * default, so gradients and accents don't end up mixing the org's color
+ * with Luzeria's leftover lime. Same technique as hue-rotating a color
+ * wheel by a fixed amount, then pushing lightness up. */
+export function deriveSecondaryHex(primaryHex: string): string {
+  const hsl = hexToHSL(primaryHex);
+  const h = (hsl.h + 18) % 360;
+  const s = Math.min(95, Math.max(55, hsl.s));
+  const l = Math.min(78, Math.max(hsl.l + 15, 60));
+  return hslToHex(h, s, l);
+}
+
 /** For an accent color shown directly as text/icon color on this app's
  * near-black UI: most brand colors (lime, orange, yellow…) read fine, but a
  * color that's naturally dark even at full saturation (navy, deep purple,

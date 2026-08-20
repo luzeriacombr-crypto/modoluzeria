@@ -1836,6 +1836,7 @@ export type Database = {
           asaas_customer_id: string | null
           asaas_subscription_id: string | null
           avg_hours_by_type: Json
+          border_radius: number
           color_primary: string | null
           color_primary_light: string | null
           color_sidebar: string | null
@@ -1850,6 +1851,8 @@ export type Database = {
           logo_path: string | null
           members_can_set_editor_format: boolean
           name: string
+          nav_labels: Json
+          nav_order: Json
           plan_id: string
           promotion_code_id: string | null
           reseller_org_id: string | null
@@ -1865,6 +1868,7 @@ export type Database = {
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
           avg_hours_by_type?: Json
+          border_radius?: number
           color_primary?: string | null
           color_primary_light?: string | null
           color_sidebar?: string | null
@@ -1879,6 +1883,8 @@ export type Database = {
           logo_path?: string | null
           members_can_set_editor_format?: boolean
           name: string
+          nav_labels?: Json
+          nav_order?: Json
           plan_id?: string
           promotion_code_id?: string | null
           reseller_org_id?: string | null
@@ -1894,6 +1900,7 @@ export type Database = {
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
           avg_hours_by_type?: Json
+          border_radius?: number
           color_primary?: string | null
           color_primary_light?: string | null
           color_sidebar?: string | null
@@ -1908,6 +1915,8 @@ export type Database = {
           logo_path?: string | null
           members_can_set_editor_format?: boolean
           name?: string
+          nav_labels?: Json
+          nav_order?: Json
           plan_id?: string
           promotion_code_id?: string | null
           reseller_org_id?: string | null
@@ -2057,6 +2066,7 @@ export type Database = {
           avatar_url: string | null
           color: string
           created_at: string
+          default_landing: Json | null
           email: string
           exclude_from_ranking: boolean
           icon: string | null
@@ -2071,6 +2081,7 @@ export type Database = {
           avatar_url?: string | null
           color?: string
           created_at?: string
+          default_landing?: Json | null
           email: string
           exclude_from_ranking?: boolean
           icon?: string | null
@@ -2085,6 +2096,7 @@ export type Database = {
           avatar_url?: string | null
           color?: string
           created_at?: string
+          default_landing?: Json | null
           email?: string
           exclude_from_ranking?: boolean
           icon?: string | null

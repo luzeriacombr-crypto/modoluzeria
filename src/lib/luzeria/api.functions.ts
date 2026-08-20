@@ -106,12 +106,23 @@ export const listProfiles = createServerFn({ method: "GET" })
     }));
   });
 
+/** Cheap lookup for the "/" route's post-login redirect — just the one
+ * field, so it doesn't pay getMe()'s avatar/org-branding signing cost on
+ * every login just to decide where to send someone. */
+export const getMyDefaultLanding = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: profile } = await context.supabase
+      .from("profiles").select("default_landing").eq("id", context.userId).maybeSingle();
+    return (profile as any)?.default_landing ?? null;
+  });
+
 export const getMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: profile } = await context.supabase
       .from("profiles")
-      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, org_id, exclude_from_ranking")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, org_id, exclude_from_ranking, default_landing")
       .eq("id", context.userId).maybeSingle();
     const { data: roleRow } = await context.supabase
       .from("user_roles").select("role").eq("user_id", context.userId).maybeSingle();
@@ -120,7 +131,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -164,6 +175,10 @@ export const getMe = createServerFn({ method: "GET" })
       disabledFeatures: ((org as any)?.disabled_features ?? []) as string[],
       setorPermissions: ((org as any)?.setor_permissions ?? []) as string[],
       membersCanSetEditorFormat: ((org as any)?.members_can_set_editor_format ?? false) as boolean,
+      navLabels: ((org as any)?.nav_labels ?? {}) as Record<string, string>,
+      navOrder: ((org as any)?.nav_order ?? {}) as Record<string, string[]>,
+      borderRadius: ((org as any)?.border_radius ?? 12) as number,
+      defaultLanding: ((profile as any)?.default_landing ?? null) as { view: string; clientId?: string } | null,
     } satisfies Profile;
   });
 
@@ -191,6 +206,9 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     taxId?: string | null; feedPreviewImagePath?: string | null; faviconPath?: string | null;
     disabledFeatures?: string[];
     membersCanSetEditorFormat?: boolean;
+    borderRadius?: number;
+    navLabels?: Record<string, string>;
+    navOrder?: Record<string, string[]>;
   }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
@@ -204,6 +222,9 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       faviconPath: z.string().max(300).nullable().optional(),
       disabledFeatures: z.array(z.string().max(40)).max(20).optional(),
       membersCanSetEditorFormat: z.boolean().optional(),
+      borderRadius: z.number().int().min(0).max(28).optional(),
+      navLabels: z.record(z.string(), z.string().trim().min(1).max(40)).optional(),
+      navOrder: z.record(z.string(), z.array(z.string().max(40)).max(40)).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -220,6 +241,9 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.faviconPath !== undefined) patch.favicon_path = data.faviconPath;
     if (data.disabledFeatures !== undefined) patch.disabled_features = data.disabledFeatures;
     if (data.membersCanSetEditorFormat !== undefined) patch.members_can_set_editor_format = data.membersCanSetEditorFormat;
+    if (data.borderRadius !== undefined) patch.border_radius = data.borderRadius;
+    if (data.navLabels !== undefined) patch.nav_labels = data.navLabels;
+    if (data.navOrder !== undefined) patch.nav_order = data.navOrder;
     if (Object.keys(patch).length === 0) return { ok: true };
     const { data: updated, error } = await context.supabase
       .from("orgs").update(patch).eq("id", context.orgId).select("id").maybeSingle();
@@ -227,6 +251,25 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     // A blocked-by-RLS update returns no error and zero rows — surface that
     // as a real failure instead of a false "saved" toast.
     if (!updated) throw new Error("Não foi possível salvar (permissão negada).");
+    return { ok: true };
+  });
+
+/** Personal, not org-wide — which screen a member lands on right after
+ * login. Any active profile can set their own; there's no "set for
+ * someone else" here, unlike updateMyOrg's admin-only branding fields. */
+export const updateMyDefaultLanding = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { defaultLanding: { view: string; clientId?: string } | null }) =>
+    z.object({
+      defaultLanding: z.object({
+        view: z.enum(["minhas-tarefas", "admin", "calendario", "cliente"]),
+        clientId: z.string().uuid().optional(),
+      }).nullable(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("profiles").update({ default_landing: data.defaultLanding }).eq("id", context.userId);
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
@@ -2433,6 +2476,44 @@ async function fetchAllPaginated<T>(buildQuery: () => any, pageSize = 1000): Pro
   }
   return rows;
 }
+
+/** Entregas finalizadas por mês, últimos 6 meses (fixo — não segue os
+ * filtros do relatório) — alimenta o gráfico de tendência em Relatórios. */
+export const getDeliveryTrend = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) {
+      const { data: allowed } = await context.supabase.rpc("has_setor_permission", { _user_id: context.userId, _perm: "team_reports" });
+      if (!allowed) throw new Error("Forbidden");
+    }
+    const now = new Date();
+    const months: { key: string; label: string; start: Date; end: Date }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      months.push({
+        key: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}`,
+        label: start.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
+        start, end,
+      });
+    }
+    const rangeStart = months[0].start.toISOString();
+    const rangeEnd = months[months.length - 1].end.toISOString();
+    const rows = await fetchAllPaginated(() => context.supabase
+      .from("finalizations")
+      .select("finalized_at")
+      .gte("finalized_at", rangeStart)
+      .lt("finalized_at", rangeEnd)
+      .not("item_id", "is", null));
+    const counts = new Map(months.map((m) => [m.key, 0]));
+    (rows ?? []).forEach((r: any) => {
+      const d = new Date(r.finalized_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (counts.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return months.map((m) => ({ key: m.key, label: m.label, count: counts.get(m.key) ?? 0 }));
+  });
 
 export const getReport = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])

@@ -402,6 +402,7 @@ function GeneralSettings() {
           orgColorSidebar={me.orgColorSidebar ?? "#1A3A2E"}
           orgFeedPreviewImageUrl={me.orgFeedPreviewImageUrl ?? null}
           orgFaviconUrl={me.orgFaviconUrl ?? null}
+          borderRadius={me.borderRadius ?? 12}
         />
       )}
 
@@ -780,11 +781,11 @@ function BillingSection() {
 
 function OrgBrandingSection({
   orgId, orgName, orgTagline, orgLogoUrl, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar,
-  orgFeedPreviewImageUrl, orgFaviconUrl,
+  orgFeedPreviewImageUrl, orgFaviconUrl, borderRadius,
 }: {
   orgId: string; orgName: string; orgTagline: string; orgLogoUrl: string | null;
   orgColorPrimary: string; orgColorPrimaryLight: string; orgColorSidebar: string;
-  orgFeedPreviewImageUrl: string | null; orgFaviconUrl: string | null;
+  orgFeedPreviewImageUrl: string | null; orgFaviconUrl: string | null; borderRadius: number;
 }) {
   const { updateMyOrg } = useApi();
   const [name, setName] = useState(orgName);
@@ -792,6 +793,7 @@ function OrgBrandingSection({
   const [colorPrimary, setColorPrimary] = useState(orgColorPrimary);
   const [colorPrimaryLight, setColorPrimaryLight] = useState(orgColorPrimaryLight);
   const [colorSidebar, setColorSidebar] = useState(orgColorSidebar);
+  const [radius, setRadius] = useState(borderRadius);
   const [uploading, setUploading] = useState(false);
   const [uploadingPreview, setUploadingPreview] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
@@ -801,6 +803,7 @@ function OrgBrandingSection({
   useEffect(() => { setColorPrimary(orgColorPrimary); }, [orgColorPrimary]);
   useEffect(() => { setColorPrimaryLight(orgColorPrimaryLight); }, [orgColorPrimaryLight]);
   useEffect(() => { setColorSidebar(orgColorSidebar); }, [orgColorSidebar]);
+  useEffect(() => { setRadius(borderRadius); }, [borderRadius]);
 
   function save() {
     updateMyOrg.mutate({
@@ -810,6 +813,7 @@ function OrgBrandingSection({
         colorPrimary: colorPrimary || null,
         colorPrimaryLight: colorPrimaryLight || null,
         colorSidebar: colorSidebar || null,
+        borderRadius: radius,
       },
     }, {
       onSuccess: () => toast.success("Marca da agência atualizada."),
@@ -952,6 +956,22 @@ function OrgBrandingSection({
           <ColorPickerField label="Cor principal" value={colorPrimary} onChange={setColorPrimary} presets={BRAND_PRESETS} />
           <ColorPickerField label="Cor clara (fundos suaves)" value={colorPrimaryLight} onChange={setColorPrimaryLight} presets={BRAND_LIGHT_PRESETS} />
           <ColorPickerField label="Cor da barra lateral" value={colorSidebar} onChange={setColorSidebar} presets={SIDEBAR_PRESETS} />
+        </div>
+
+        <div className="pt-2 border-t border-white/[0.06]">
+          <label className="block text-[11px] uppercase tracking-wide text-white/40 mb-2">
+            Cantos dos cards e painéis — {radius}px
+          </label>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-white/30 shrink-0">Retos</span>
+            <input
+              type="range" min={0} max={24} step={2} value={radius}
+              onChange={(e) => setRadius(Number(e.target.value))}
+              className="flex-1 accent-[rgb(var(--lz-brand-rgb))]"
+            />
+            <span className="text-[10px] text-white/30 shrink-0">Arredondados</span>
+          </div>
+          <div className="mt-3 h-12 w-full max-w-[180px]" style={{ background: "rgba(255,255,255,0.06)", borderRadius: `${radius}px` }} />
         </div>
 
         <button onClick={save} disabled={updateMyOrg.isPending || !name.trim()}
