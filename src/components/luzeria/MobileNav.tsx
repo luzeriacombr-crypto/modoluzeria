@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, LayoutGrid, Wallet, UserCog } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -7,6 +7,8 @@ import { useMe, clientsQO } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { glassCardStyle } from "@/lib/luzeria/utils";
+import { hasSetorPermission } from "@/lib/luzeria/types";
+import { DEFAULT_NAV_LABELS } from "./Sidebar";
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
@@ -27,7 +29,17 @@ export function MobileNav() {
   const sheetRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = me?.role === "master" || me?.role === "setor";
+  const isMaster = me?.role === "master";
+  const canTeam = isMaster;
+  const canReport = isMaster || hasSetorPermission(me, "team_reports");
+  const canJourney = isMaster || hasSetorPermission(me, "settings_journey");
+  const canFinanceiro = isMaster;
   const disabledFeatures = new Set(me?.disabledFeatures ?? []);
+  const navLabel = (id: string, fallback: string) => me?.navLabels?.[id] || fallback;
+  function goToConfigTab(tabId: string) {
+    navigate({ to: "/configuracoes", search: { tab: tabId } });
+    closeAllSheets();
+  }
 
   const isClientPath = pathname.startsWith("/cliente/");
   const tab = showClients ? "clients" : showMenu ? "menu" : "home";
@@ -120,29 +132,63 @@ export function MobileNav() {
             {!disabledFeatures.has("calendar") && (
               <MenuLink
                 icon={<CalendarDays size={17} />}
-                label="Calendário"
+                label={navLabel("calendario", "Calendário")}
                 dataTour="nav-calendario-mobile"
                 onClick={() => { navigate({ to: "/calendario" }); closeAllSheets(); }}
+              />
+            )}
+            {!disabledFeatures.has("reference_library") && (
+              <MenuLink
+                icon={<BookMarked size={17} />}
+                label={navLabel("biblioteca", "Biblioteca")}
+                onClick={() => { navigate({ to: "/biblioteca" }); closeAllSheets(); }}
+              />
+            )}
+            {isAdmin && !disabledFeatures.has("client_overview") && (
+              <MenuLink
+                icon={<LayoutGrid size={17} />}
+                label={navLabel("visao-geral", "Visão Geral")}
+                onClick={() => { navigate({ to: "/visao-geral" }); closeAllSheets(); }}
               />
             )}
             {isAdmin && !disabledFeatures.has("instagram") && (
               <MenuLink
                 icon={<Instagram size={17} />}
-                label="Instagram"
+                label={navLabel("instagram", "Instagram")}
                 onClick={() => { navigate({ to: "/instagram" }); closeAllSheets(); }}
               />
             )}
             {!disabledFeatures.has("rotina") && (
               <MenuLink
                 icon={<Sparkles size={17} />}
-                label="Rotina"
+                label={navLabel("rotina", "Rotina")}
                 dataTour="nav-rotina-mobile"
                 onClick={() => { navigate({ to: "/rotina" }); closeAllSheets(); }}
               />
             )}
+
+            {canFinanceiro && (
+              <>
+                <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-white/30">{navLabel("financeiro", DEFAULT_NAV_LABELS.financeiro)}</p>
+                <MenuLink icon={<Wallet size={17} />} label={navLabel("cobranca", DEFAULT_NAV_LABELS.cobranca)} onClick={() => goToConfigTab("cobranca")} />
+                <MenuLink icon={<Wallet size={17} />} label={navLabel("margem", DEFAULT_NAV_LABELS.margem)} onClick={() => goToConfigTab("margem")} />
+                <MenuLink icon={<Wallet size={17} />} label={navLabel("afiliados", DEFAULT_NAV_LABELS.afiliados)} onClick={() => goToConfigTab("afiliados")} />
+                <MenuLink icon={<Wallet size={17} />} label={navLabel("revenda", DEFAULT_NAV_LABELS.revenda)} onClick={() => goToConfigTab("revenda")} />
+              </>
+            )}
+
+            {(canTeam || canReport || canJourney) && (
+              <>
+                <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-white/30">{navLabel("equipe", DEFAULT_NAV_LABELS.equipe)}</p>
+                {canTeam && <MenuLink icon={<UserCog size={17} />} label={navLabel("membros", DEFAULT_NAV_LABELS.membros)} onClick={() => goToConfigTab("team")} />}
+                {canReport && <MenuLink icon={<UserCog size={17} />} label={navLabel("relatorio", DEFAULT_NAV_LABELS.relatorio)} onClick={() => goToConfigTab("report")} />}
+                {canJourney && <MenuLink icon={<UserCog size={17} />} label={navLabel("jornada", DEFAULT_NAV_LABELS.jornada)} onClick={() => goToConfigTab("journey")} />}
+              </>
+            )}
+
             <MenuLink
               icon={<CircleHelp size={17} />}
-              label="Ajuda"
+              label={navLabel("ajuda", "Ajuda")}
               dataTour="nav-ajuda-mobile"
               onClick={() => { navigate({ to: "/ajuda" }); closeAllSheets(); }}
             />
@@ -150,7 +196,7 @@ export function MobileNav() {
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around bg-[#1C1C1C]/85 backdrop-blur-xl border-t border-white/[0.08]" data-tour="mobile-bottom-nav">
+      <nav className="sidebar-gradient fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around backdrop-blur-xl border-t border-white/[0.08]" data-tour="mobile-bottom-nav">
         <NavBtn icon={<LayoutDashboard size={20} />} active={pathname === "/minhas-tarefas"}
           onClick={() => { navigate({ to: "/minhas-tarefas" }); closeAllSheets(); }} />
         <NavBtn icon={<BarChart2 size={20} />} active={pathname === "/admin"}

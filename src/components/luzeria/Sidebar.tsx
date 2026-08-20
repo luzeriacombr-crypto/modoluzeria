@@ -15,7 +15,7 @@ import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { toast } from "sonner";
 import { hasSetorPermission, type Client } from "@/lib/luzeria/types";
 
-const DEFAULT_NAV_LABELS: Record<string, string> = {
+export const DEFAULT_NAV_LABELS: Record<string, string> = {
   "minhas-demandas": "Minhas demandas", dashboard: "Dashboard", clientes: "Clientes",
   calendario: "Calendário", biblioteca: "Biblioteca", "visao-geral": "Visão Geral",
   instagram: "Instagram", financeiro: "Financeiro", equipe: "Equipe", ajuda: "Ajuda",
