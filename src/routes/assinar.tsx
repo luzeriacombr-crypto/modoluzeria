@@ -9,7 +9,7 @@ export const Route = createFileRoute("/assinar")({
   // Google veja como página duplicada competindo pelo mesmo termo.
   head: () => ({
     meta: [
-      { title: "Teste Grátis por 7 Dias — Modo Criador" },
+      { title: "Teste Grátis por 30 Dias — Modo Criador" },
       {
         name: "description",
         content: "Comece seu teste grátis de 30 dias no Modo Criador: calendário de conteúdo, aprovação de cliente por link e relatórios de equipe pra sua agência de social media.",
