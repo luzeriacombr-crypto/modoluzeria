@@ -62,11 +62,28 @@ export function ClientDocsTab({ clientId }: { clientId: string }) {
 
   return (
     <div className="max-w-2xl">
-      <p className="text-[13px] text-white/50 mb-6 leading-relaxed">
-        Cole aqui roteiros ou planejamento/relatório já formatados por uma IA — o Modo Criador transforma isso
-        numa apresentação organizada que o cliente vê no link de preview. Não escreve nem reformata nada sozinho:
-        copie o modelo abaixo, use na IA que preferir junto com o material bruto do cliente, e cole o resultado aqui.
-      </p>
+      {/* Tutorial */}
+      <div className="rounded-xl p-4 mb-5" style={{ background: "#161616", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="text-[11px] font-bold uppercase tracking-wide text-white/35 mb-3">Como funciona</div>
+        <div className="flex flex-col gap-3">
+          {[
+            <>Clique em <span className="text-white font-medium">Copiar modelo</span> — copia um roteiro pronto pra IA seguir.</>,
+            <>Cole numa IA (ChatGPT, Claude, Gemini…) <span className="text-white font-medium">junto com o material bruto do cliente</span>.</>,
+            <>Cole a resposta da IA aqui embaixo e clique em <span className="text-white font-medium">Salvar</span>.</>,
+            <>Pronto — o cliente já vê organizado no link de preview dele.</>,
+          ].map((text, i) => (
+            <div key={i} className="flex gap-3 items-start">
+              <div
+                className="shrink-0 w-[22px] h-[22px] rounded-full text-[11px] font-bold flex items-center justify-center"
+                style={{ background: "rgba(var(--lz-brand-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+              >
+                {i + 1}
+              </div>
+              <div className="text-[13px] text-white/75 leading-relaxed pt-0.5">{text}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Composer */}
       <div className="rounded-xl p-5 mb-8" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}>
