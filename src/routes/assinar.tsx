@@ -12,7 +12,7 @@ export const Route = createFileRoute("/assinar")({
       { title: "Teste Grátis por 7 Dias — Modo Criador" },
       {
         name: "description",
-        content: "Comece seu teste grátis de 7 dias no Modo Criador: calendário de conteúdo, aprovação de cliente por link e relatórios de equipe pra sua agência de social media.",
+        content: "Comece seu teste grátis de 30 dias no Modo Criador: calendário de conteúdo, aprovação de cliente por link e relatórios de equipe pra sua agência de social media.",
       },
     ],
     links: [{ rel: "canonical", href: "https://www.modocriador.com.br/" }],

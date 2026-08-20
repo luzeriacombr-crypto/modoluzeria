@@ -22,7 +22,7 @@ export const getPublicPlans = createServerFn({ method: "GET" })
     }));
   });
 
-const TRIAL_DAYS = 7;
+export const TRIAL_DAYS = 30;
 
 export const publicSignup = createServerFn({ method: "POST" })
   .inputValidator((d: {

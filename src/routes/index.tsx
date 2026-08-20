@@ -6,7 +6,7 @@ import { hasSignedInBefore } from "@/lib/luzeria/device-flag";
 
 const TITLE = "Modo Criador — Gestão de Conteúdo para Agências de Social Media";
 const DESCRIPTION =
-  "Centralize calendário de posts, aprovação de cliente por link e backup automático no Drive. Chega de planilha e WhatsApp bagunçado. Teste grátis por 7 dias.";
+  "Centralize calendário de posts, aprovação de cliente por link e backup automático no Drive. Chega de planilha e WhatsApp bagunçado. Teste grátis por 30 dias.";
 
 export const Route = createFileRoute("/")({
   component: IndexRoute,

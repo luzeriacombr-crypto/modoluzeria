@@ -255,7 +255,7 @@ export function SalesPage() {
       {/* Formulário */}
       <section id="assinar-form" style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10">
         <div className="px-5 sm:px-10 max-w-[560px] mx-auto py-14">
-        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-2 text-center">Comece seu teste de 7 dias</h2>
+        <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-2 text-center">Comece seu teste de 30 dias</h2>
         <p className="text-[#0A0E23]/60 text-sm text-center mb-8">Sem compromisso. Cancele quando quiser antes da cobrança.</p>
 
         {invoiceUrl !== undefined ? (
@@ -270,8 +270,8 @@ export function SalesPage() {
               <>
                 <p className="text-[#0A0E23]/70 text-sm mb-4">
                   {billingType === "UNDEFINED"
-                    ? "Abrimos numa nova aba o link seguro com sua primeira fatura, onde dá pra escolher PIX, boleto ou cartão (sem cobrança agora — só depois dos 7 dias de teste)."
-                    : "Abrimos numa nova aba o link seguro pra você cadastrar o cartão (sem cobrança agora — só depois dos 7 dias de teste)."}
+                    ? "Abrimos numa nova aba o link seguro com sua primeira fatura, onde dá pra escolher PIX, boleto ou cartão (sem cobrança agora — só depois dos 30 dias de teste)."
+                    : "Abrimos numa nova aba o link seguro pra você cadastrar o cartão (sem cobrança agora — só depois dos 30 dias de teste)."}
                 </p>
                 <a href={invoiceUrl} target="_blank" rel="noreferrer" className="font-bold uppercase text-sm px-5 py-3 rounded-full inline-block" style={{ background: LIME, color: "#0A0E23" }}>
                   Abrir cadastro de pagamento
@@ -282,7 +282,7 @@ export function SalesPage() {
                 <p className="text-[#0A0E23]/70 text-sm">Enviamos um e-mail de confirmação — clique no link pra ativar sua conta.</p>
                 {billingType === "TRIAL_ONLY" && (
                   <p className="text-[#0A0E23]/50 text-xs mt-2">
-                    Você já pode usar o Modo Criador por 7 dias sem cadastrar pagamento. Quando quiser, é só adicionar a forma de pagamento em Configurações.
+                    Você já pode usar o Modo Criador por 30 dias sem cadastrar pagamento. Quando quiser, é só adicionar a forma de pagamento em Configurações.
                   </p>
                 )}
               </>
@@ -397,7 +397,7 @@ export function SalesPage() {
             ["Meu cliente precisa criar conta pra aprovar o conteúdo?", "Não. Ele recebe um link público, com a sua marca, e aprova direto, sem cadastro."],
             ["Funciona pra qualquer tipo de agência?", "Sim, foi feito pra qualquer agência ou social media que gerencia múltiplos clientes."],
             ["Posso trocar de plano depois?", "Sim, a qualquer momento nas configurações da sua conta."],
-            ["O que acontece se eu não cancelar antes do teste acabar?", "A cobrança do plano escolhido começa automaticamente no cartão cadastrado, depois dos 7 dias."],
+            ["O que acontece se eu não cancelar antes do teste acabar?", "A cobrança do plano escolhido começa automaticamente no cartão cadastrado, depois dos 30 dias."],
             ["Meus dados ficam seguros?", "Sim. Seus dados e os dos seus clientes ficam isolados dos de outras agências, com infraestrutura segura."],
           ].map(([q, a]) => (
             <FaqItem key={q} question={q} answer={a} />

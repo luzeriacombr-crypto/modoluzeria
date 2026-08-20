@@ -84,8 +84,8 @@ function CompleteGoogleSignupPage() {
               <>
                 <p className="text-[#0A0E23]/70 text-sm mb-4">
                   {billingType === "UNDEFINED"
-                    ? "Abrimos numa nova aba o link seguro com sua primeira fatura, onde dá pra escolher PIX, boleto ou cartão (sem cobrança agora — só depois dos 7 dias de teste)."
-                    : "Abrimos numa nova aba o link seguro pra você cadastrar o cartão (sem cobrança agora — só depois dos 7 dias de teste)."}
+                    ? "Abrimos numa nova aba o link seguro com sua primeira fatura, onde dá pra escolher PIX, boleto ou cartão (sem cobrança agora — só depois dos 30 dias de teste)."
+                    : "Abrimos numa nova aba o link seguro pra você cadastrar o cartão (sem cobrança agora — só depois dos 30 dias de teste)."}
                 </p>
                 <a href={invoiceUrl} target="_blank" rel="noreferrer" className="font-bold uppercase text-sm px-5 py-3 rounded-full inline-block mb-4" style={{ background: LIME, color: "#0A0E23" }}>
                   Abrir cadastro de pagamento

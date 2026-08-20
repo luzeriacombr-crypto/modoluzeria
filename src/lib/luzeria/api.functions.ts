@@ -353,7 +353,7 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
     });
   });
 
-/** Platform-admin only: gives an agency another 7-day trial window — for
+/** Platform-admin only: gives an agency another trial window (TRIAL_DAYS) — for
  * when someone signs up but doesn't actually try the product in time, and
  * Junior wants to give them a second shot. Also revives a trial that had
  * already lapsed into "past_due"/"canceled" back to "trialing", since the
@@ -370,7 +370,8 @@ export const resetOrgTrial = createServerFn({ method: "POST" })
     if ((org as any)?.subscription_status === "active") {
       throw new Error("Essa agência já é assinante ativa — não dá pra resetar teste.");
     }
-    const trialEndsAt = new Date(Date.now() + 7 * 86_400_000).toISOString();
+    const { TRIAL_DAYS } = await import("./signup.functions");
+    const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 86_400_000).toISOString();
     const { error } = await context.supabase
       .from("orgs").update({ subscription_status: "trialing", trial_ends_at: trialEndsAt }).eq("id", data.orgId);
     if (error) throw new Error(error.message);
