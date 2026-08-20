@@ -683,8 +683,7 @@ function BigDonut({ percent, done, total }: { percent: number; done: number; tot
         <defs>
           <linearGradient id="bigdonut" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="rgb(var(--lz-brand-rgb))" />
-            <stop offset="55%" stopColor="#8FA832" />
-            <stop offset="100%" stopColor="#5BA88A" />
+            <stop offset="100%" stopColor="rgb(var(--lz-brand-light-rgb))" />
           </linearGradient>
         </defs>
         <circle cx={size/2} cy={size/2} r={r} stroke="rgba(255,255,255,0.06)" strokeWidth={stroke} fill="none" />
