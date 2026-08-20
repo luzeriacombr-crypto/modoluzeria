@@ -154,3 +154,55 @@ export const getClientMargins = createServerFn({ method: "GET" })
 
     return { days: data.days, hourlyCost, avgHoursByType, rows };
   });
+
+/** Detalhe por trás dos números "Entregues"/"Horas est." de um cliente no
+ * painel de margem — item por item, quem finalizou e quantas horas foram
+ * estimadas pra ele (mesma conta de getClientMargins, só que sem agregar). */
+export const getClientMarginBreakdown = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; days: 30 | 90 | 180 }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      days: z.union([z.literal(30), z.literal(90), z.literal(180)]),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+
+    const { data: org, error: orgErr } = await context.supabase
+      .from("orgs").select("avg_hours_by_type").eq("id", context.orgId).single();
+    if (orgErr) throw new Error(orgErr.message);
+    const avgHoursByType = (org.avg_hours_by_type ?? {}) as Record<string, number>;
+
+    const start = new Date(Date.now() - data.days * 86400000);
+    const { data: rows, error } = await context.supabase
+      .from("finalizations")
+      .select("user_id, finalized_at, content_items!inner(id, idx, type, title, activity_quantity, months!inner(client_id))")
+      .gte("finalized_at", start.toISOString())
+      .eq("content_items.months.client_id", data.clientId)
+      .not("item_id", "is", null)
+      .order("finalized_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const userIds = [...new Set((rows ?? []).map((r: any) => r.user_id))];
+    const nameByUser = new Map<string, string>();
+    if (userIds.length > 0) {
+      const { data: profiles } = await context.supabase.from("profiles").select("id, name").in("id", userIds);
+      (profiles ?? []).forEach((p: any) => nameByUser.set(p.id, p.name));
+    }
+
+    return (rows ?? []).map((r: any) => {
+      const it = r.content_items;
+      const weight = it.type === "gravacao" && it.activity_quantity > 0 ? it.activity_quantity : 1;
+      const hours = weight * (avgHoursByType[it.type] ?? 1);
+      return {
+        itemId: it.id as string,
+        itemIdx: it.idx as number,
+        itemTitle: it.title as string,
+        itemType: it.type as string,
+        userId: r.user_id as string,
+        userName: nameByUser.get(r.user_id) ?? "—",
+        hours: Math.round(hours * 10) / 10,
+        finalizedAt: r.finalized_at as string,
+      };
+    });
+  });

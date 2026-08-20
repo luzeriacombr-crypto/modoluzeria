@@ -2274,7 +2274,7 @@ export const getMemberFinalizations = createServerFn({ method: "GET" })
     const { data: rows, error } = await context.supabase
       .from("finalizations")
       .select(
-        "finalized_at, content_items!inner(id, type, idx, title, months!inner(key, clients!months_client_id_fkey!inner(id, name, color, category)))"
+        "finalized_at, content_items!inner(id, type, idx, title, activity_quantity, months!inner(key, clients!months_client_id_fkey!inner(id, name, color, category)))"
       )
       .eq("user_id", data.userId)
       .gte("finalized_at", start.toISOString())
@@ -2286,6 +2286,7 @@ export const getMemberFinalizations = createServerFn({ method: "GET" })
       itemId: r.content_items.id as string,
       type: r.content_items.type as ContentType,
       title: r.content_items.title as string,
+      activityQuantity: (r.content_items.activity_quantity ?? null) as number | null,
       finalizedAt: r.finalized_at as string,
       clientId: r.content_items.months.clients.id as string,
       clientName: r.content_items.months.clients.name as string,

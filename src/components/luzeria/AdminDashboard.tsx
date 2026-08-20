@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, Trophy, Sparkles, Flame, Crown, Medal,
   X, CheckCircle2, Inbox, Tag, Activity, AlertOctagon, RotateCcw,
 } from "lucide-react";
-import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoalQO, useMe, reportExtrasQO } from "@/lib/luzeria/queries";
+import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoalQO, useMe, reportExtrasQO, orgCostSettingsQO } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
@@ -477,6 +477,28 @@ function MemberDetailPanel({
     outros: list.filter((t) => t.type === "outros").length,
   }), [list]);
 
+  const costSettings = useQuery(orgCostSettingsQO()).data;
+  const estimatedHours = useMemo(() => {
+    if (!costSettings) return null;
+    const avgHoursByType = costSettings.avgHoursByType ?? {};
+    return list.reduce((sum, t) => {
+      const weight = t.type === "gravacao" && (t.activityQuantity ?? 0) > 0 ? (t.activityQuantity as number) : 1;
+      return sum + weight * (avgHoursByType[t.type] ?? 1);
+    }, 0);
+  }, [list, costSettings]);
+  const estimatedTimeLabel = useMemo(() => {
+    if (estimatedHours == null) return null;
+    const totalMinutes = Math.round(estimatedHours * 60);
+    const days = Math.floor(totalMinutes / (8 * 60));
+    const hours = Math.floor((totalMinutes % (8 * 60)) / 60);
+    const minutes = totalMinutes % 60;
+    const parts: string[] = [];
+    if (days > 0) parts.push(`${days} dia${days === 1 ? "" : "s"}`);
+    if (hours > 0) parts.push(`${hours} hora${hours === 1 ? "" : "s"}`);
+    if (minutes > 0 || parts.length === 0) parts.push(`${minutes} minuto${minutes === 1 ? "" : "s"}`);
+    return parts.join(", ");
+  }, [estimatedHours]);
+
   const panelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const h = (e: MouseEvent) => { if (!panelRef.current?.contains(e.target as Node)) onClose(); };
@@ -511,6 +533,12 @@ function MemberDetailPanel({
           <p className="text-[12px] text-white/60 mt-3">
             <span className="text-white font-semibold">{list.length}</span> tarefa{list.length === 1 ? "" : "s"} finalizada{list.length === 1 ? "" : "s"} em <span className="text-white/80">{formatMonth(monthKey)}</span>
           </p>
+          {estimatedTimeLabel && (
+            <p className="text-[12px] text-white/60 mt-1 flex items-center gap-1">
+              ~<span className="text-white font-semibold">{estimatedTimeLabel}</span> trabalhados (estimado)
+              <InfoTip text="Estimativa com base no tempo médio configurado por tipo de conteúdo — não é apontamento real de horas." />
+            </p>
+          )}
         </div>
 
         {/* Filter chips */}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, TrendingDown, Info } from "lucide-react";
-import { orgCostSettingsQO, clientMarginsQO, useApi } from "@/lib/luzeria/queries";
+import { Loader2, TrendingDown, Info, X } from "lucide-react";
+import { orgCostSettingsQO, clientMarginsQO, clientMarginBreakdownQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { CONTENT_TYPE_LABEL, type ContentType } from "@/lib/luzeria/types";
 import { InfoTip } from "./InfoTip";
@@ -83,6 +83,7 @@ export function ClientMarginPanel() {
   const [days, setDays] = useState<30 | 90 | 180>(30);
   const { data, isLoading } = useQuery(clientMarginsQO(days));
   const { openFicha } = useUI();
+  const [breakdownFor, setBreakdownFor] = useState<{ clientId: string; clientName: string } | null>(null);
 
   return (
     <div className="space-y-4">
@@ -167,8 +168,18 @@ export function ClientMarginPanel() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-sm text-white/70 text-right">{money(r.contractValue)}</td>
-                  <td className="px-4 py-3 text-sm text-white/70 text-right">{r.deliveredCount}</td>
-                  <td className="px-4 py-3 text-sm text-white/70 text-right">{r.estimatedHours}h</td>
+                  <td className="px-4 py-3 text-sm text-right">
+                    <button onClick={() => setBreakdownFor({ clientId: r.clientId, clientName: r.clientName })}
+                      className="text-white/70 hover:text-[rgb(var(--lz-brand-rgb))] hover:underline transition">
+                      {r.deliveredCount}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-right">
+                    <button onClick={() => setBreakdownFor({ clientId: r.clientId, clientName: r.clientName })}
+                      className="text-white/70 hover:text-[rgb(var(--lz-brand-rgb))] hover:underline transition">
+                      {r.estimatedHours}h
+                    </button>
+                  </td>
                   <td className="px-4 py-3 text-sm text-white/70 text-right">{money(r.estimatedCost)}</td>
                   <td className="px-4 py-3 text-sm text-right font-semibold"
                     style={{ color: r.margin == null ? "rgba(255,255,255,0.4)" : r.margin < 0 ? "#FF6B6B" : "#4ADE80" }}>
@@ -180,6 +191,56 @@ export function ClientMarginPanel() {
           </table>
         </div>
       )}
+
+      {breakdownFor && (
+        <MarginBreakdownModal
+          clientId={breakdownFor.clientId}
+          clientName={breakdownFor.clientName}
+          days={days}
+          onClose={() => setBreakdownFor(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function MarginBreakdownModal({ clientId, clientName, days, onClose }: {
+  clientId: string; clientName: string; days: 30 | 90 | 180; onClose: () => void;
+}) {
+  const { data, isLoading } = useQuery(clientMarginBreakdownQO(clientId, days));
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg max-h-[80vh] flex flex-col bg-[#1C1C1C] border border-white/10 rounded-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08] shrink-0">
+          <div>
+            <h3 className="text-base font-semibold text-white">{clientName}</h3>
+            <p className="text-[11px] text-white/40">Detalhe dos últimos {days} dias</p>
+          </div>
+          <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition shrink-0">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-white/40" size={24} /></div>
+          ) : !data || data.length === 0 ? (
+            <div className="text-center py-10 px-6 text-white/40 text-sm">Nada finalizado nesse período.</div>
+          ) : (
+            <div className="divide-y divide-white/[0.05]">
+              {data.map((row) => (
+                <div key={row.itemId} className="flex items-center gap-3 px-5 py-2.5">
+                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 bg-white/5 text-white/50">
+                    {CONTENT_TYPE_LABEL[row.itemType as ContentType] ?? row.itemType}
+                  </span>
+                  <span className="text-sm text-white truncate flex-1">{row.itemTitle}</span>
+                  <span className="text-xs text-white/60 shrink-0">{row.userName}</span>
+                  <span className="text-xs font-semibold text-white/80 tabular-nums shrink-0 w-10 text-right">{row.hours}h</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

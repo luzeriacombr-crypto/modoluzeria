@@ -21,6 +21,30 @@ export type LibraryItem = {
   createdAt: string;
 };
 
+/** Miniatura do link, só com base na URL — sem buscar nada no servidor.
+ * YouTube tem thumbnail real (a própria plataforma expõe por convenção de
+ * URL); pro resto (Instagram, TikTok etc.) cai pro favicon do site, que já
+ * dá uma pista visual de qual plataforma é, sem precisar de scraping. */
+function getLinkThumbnail(url: string): { kind: "video" | "icon"; src: string } | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    let videoId: string | null = null;
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      videoId = u.searchParams.get("v")
+        ?? u.pathname.match(/^\/shorts\/([^/?]+)/)?.[1]
+        ?? u.pathname.match(/^\/embed\/([^/?]+)/)?.[1]
+        ?? null;
+    } else if (host === "youtu.be") {
+      videoId = u.pathname.slice(1).split(/[?/]/)[0] || null;
+    }
+    if (videoId) return { kind: "video", src: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` };
+    return { kind: "icon", src: `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(u.origin)}` };
+  } catch {
+    return null;
+  }
+}
+
 export function ReferenceLibraryPage() {
   const { data: clients = [] } = useQuery(clientsQO());
   const { data: items = [], isLoading } = useQuery(referenceLibraryQO());
@@ -216,16 +240,27 @@ export function ReferenceBlockCards({
             </div>
             {it.notes && <p className="text-white/50 text-xs leading-relaxed line-clamp-3">{it.notes}</p>}
             {it.links.length > 0 && (
-              <div className="flex flex-col gap-1">
-                {it.links.map((l, i) => (
-                  <a
-                    key={i} href={l.url} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs text-[rgb(var(--lz-brand-rgb))] hover:underline"
-                  >
-                    <Link2 size={11} className="shrink-0" />
-                    <span className="truncate">{l.label || l.url}</span>
-                  </a>
-                ))}
+              <div className="flex flex-col gap-1.5">
+                {it.links.map((l, i) => {
+                  const thumb = getLinkThumbnail(l.url);
+                  return (
+                    <a
+                      key={i} href={l.url} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-xs text-[rgb(var(--lz-brand-rgb))] hover:underline"
+                    >
+                      {thumb ? (
+                        thumb.kind === "video" ? (
+                          <img src={thumb.src} alt="" className="w-12 h-8 rounded object-cover shrink-0 bg-white/5" loading="lazy" />
+                        ) : (
+                          <img src={thumb.src} alt="" className="w-4 h-4 rounded-sm shrink-0" loading="lazy" />
+                        )
+                      ) : (
+                        <Link2 size={11} className="shrink-0" />
+                      )}
+                      <span className="truncate">{l.label || l.url}</span>
+                    </a>
+                  );
+                })}
               </div>
             )}
             {it.tags.length > 0 && (
@@ -329,12 +364,23 @@ export function ReferenceEditorModal({
             <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">Links (Reels, TikTok, YouTube…)</label>
             {links.length > 0 && (
               <div className="space-y-1.5 mb-2">
-                {links.map((l, i) => (
+                {links.map((l, i) => {
+                  const thumb = getLinkThumbnail(l.url);
+                  return (
                   <div key={i} className="flex items-center gap-1.5">
+                    {thumb ? (
+                      thumb.kind === "video" ? (
+                        <img src={thumb.src} alt="" className="w-9 h-6 rounded object-cover shrink-0 bg-white/5" loading="lazy" />
+                      ) : (
+                        <img src={thumb.src} alt="" className="w-4 h-4 rounded-sm shrink-0" loading="lazy" />
+                      )
+                    ) : (
+                      <Link2 size={12} className="shrink-0 text-white/30" />
+                    )}
                     <input
                       value={l.label ?? ""} onChange={(e) => updateLabel(i, e.target.value)}
                       placeholder="Nome (opcional)"
-                      className="w-28 shrink-0 bg-[#1A1A1A] border border-white/[0.08] rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                      className="w-24 shrink-0 bg-[#1A1A1A] border border-white/[0.08] rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
                     />
                     <a href={l.url} target="_blank" rel="noopener noreferrer"
                       className="flex-1 min-w-0 truncate text-xs text-[rgb(var(--lz-brand-rgb))] hover:underline">
@@ -344,7 +390,8 @@ export function ReferenceEditorModal({
                       <X size={12} />
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             <textarea

@@ -69,7 +69,7 @@ import { getClientBlockedItems } from "./blocked-items.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
 import { listDemoRequests } from "./demo-request.functions";
-import { getOrgCostSettings, setOrgCostSettings, getClientMargins } from "./margin.functions";
+import { getOrgCostSettings, setOrgCostSettings, getClientMargins, getClientMarginBreakdown } from "./margin.functions";
 import {
   getForumCategories, getForumPosts, getForumPostDetail,
   createForumPost, createForumReply, moderateForumPost, moderateForumReply,
@@ -330,6 +330,12 @@ export const orgCostSettingsQO = () =>
 
 export const clientMarginsQO = (days: 30 | 90 | 180) =>
   queryOptions({ queryKey: ["client-margins", days], queryFn: () => getClientMargins({ data: { days } }) });
+
+export const clientMarginBreakdownQO = (clientId: string, days: 30 | 90 | 180) =>
+  queryOptions({
+    queryKey: ["client-margin-breakdown", clientId, days],
+    queryFn: () => getClientMarginBreakdown({ data: { clientId, days } }),
+  });
 
 export const forumCategoriesQO = () =>
   queryOptions({ queryKey: ["forum-categories"], queryFn: () => getForumCategories() });
