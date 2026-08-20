@@ -267,6 +267,14 @@ export interface Profile {
   navOrder?: Record<string, string[]>;
   /** Org-wide corner radius (px) applied to cards/buttons/inputs app-wide. */
   borderRadius?: number;
+  /** Org-wide saved position/size of the movable Dashboard cards, keyed by
+   * widget id — grid units, not pixels. Empty/missing id falls back to the
+   * widget's built-in default slot. */
+  dashboardLayout?: Record<string, { x: number; y: number; w: number; h: number }>;
+  /** Org-wide override for the two colors in the Dashboard hero gradient.
+   * null = auto (derived from the brand's light/sidebar colors). */
+  heroGradientFrom?: string | null;
+  heroGradientTo?: string | null;
   /** Personal (not org-wide) — which screen this member lands on right
    * after login. null = today's default (Minhas Demandas). */
   defaultLanding?: { view: string; clientId?: string } | null;

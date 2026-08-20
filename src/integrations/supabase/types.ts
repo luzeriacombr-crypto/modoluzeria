@@ -1841,10 +1841,13 @@ export type Database = {
           color_primary_light: string | null
           color_sidebar: string | null
           created_at: string
+          dashboard_layout: Json
           disabled_features: string[]
           favicon_path: string | null
           feed_preview_image_path: string | null
           fixed_monthly_cost: number | null
+          hero_gradient_from: string | null
+          hero_gradient_to: string | null
           hourly_cost: number | null
           id: string
           is_reseller: boolean
@@ -1873,10 +1876,13 @@ export type Database = {
           color_primary_light?: string | null
           color_sidebar?: string | null
           created_at?: string
+          dashboard_layout?: Json
           disabled_features?: string[]
           favicon_path?: string | null
           feed_preview_image_path?: string | null
           fixed_monthly_cost?: number | null
+          hero_gradient_from?: string | null
+          hero_gradient_to?: string | null
           hourly_cost?: number | null
           id?: string
           is_reseller?: boolean
@@ -1905,10 +1911,13 @@ export type Database = {
           color_primary_light?: string | null
           color_sidebar?: string | null
           created_at?: string
+          dashboard_layout?: Json
           disabled_features?: string[]
           favicon_path?: string | null
           feed_preview_image_path?: string | null
           fixed_monthly_cost?: number | null
+          hero_gradient_from?: string | null
+          hero_gradient_to?: string | null
           hourly_cost?: number | null
           id?: string
           is_reseller?: boolean

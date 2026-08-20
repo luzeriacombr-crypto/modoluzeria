@@ -86,19 +86,28 @@ export function App() {
     // app's near-black UI — --lz-brand-text-rgb is the same color when it's
     // light enough to read, or white as a safe fallback otherwise.
     const text = me.data?.orgColorPrimary ? readableAccentRgbChannels(me.data.orgColorPrimary) : null;
+    // Degradê do cabeçalho do Dashboard: usa as cores escolhidas em
+    // Configurações se a agência definiu alguma, senão cai pro par que já
+    // era usado antes (cor clara da marca + cor da barra lateral).
+    const heroA = me.data?.heroGradientFrom ? hexToRgbChannels(me.data.heroGradientFrom) : light;
+    const heroB = me.data?.heroGradientTo ? hexToRgbChannels(me.data.heroGradientTo) : sidebar;
     if (primary) root.setProperty("--lz-brand-rgb", primary);
     if (light) root.setProperty("--lz-brand-light-rgb", light);
     if (sidebar) root.setProperty("--lz-sidebar-rgb", sidebar);
     if (text) root.setProperty("--lz-brand-text-rgb", text);
+    if (heroA) root.setProperty("--lz-hero-a-rgb", heroA);
+    if (heroB) root.setProperty("--lz-hero-b-rgb", heroB);
     if (me.data?.borderRadius != null) root.setProperty("--lz-radius", `${me.data.borderRadius}px`);
     return () => {
       root.removeProperty("--lz-brand-rgb");
       root.removeProperty("--lz-brand-light-rgb");
       root.removeProperty("--lz-sidebar-rgb");
       root.removeProperty("--lz-brand-text-rgb");
+      root.removeProperty("--lz-hero-a-rgb");
+      root.removeProperty("--lz-hero-b-rgb");
       root.removeProperty("--lz-radius");
     };
-  }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight, me.data?.orgColorSidebar, me.data?.borderRadius]);
+  }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight, me.data?.orgColorSidebar, me.data?.borderRadius, me.data?.heroGradientFrom, me.data?.heroGradientTo]);
 
   // Same idea for the tab icon: swap the favicon + apple-touch-icon (used
   // when the client adds the app to their iOS home screen) whenever the org

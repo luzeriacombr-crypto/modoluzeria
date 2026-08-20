@@ -156,16 +156,16 @@ export function AdminDashboard() {
       <div data-tour="dashboard-hero" className="relative overflow-hidden rounded-2xl mb-6"
         style={{
           background:
-            "radial-gradient(120% 140% at 0% 0%, rgba(var(--lz-brand-light-rgb),0.18) 0%, color-mix(in srgb, rgb(var(--lz-brand-rgb)) 10%, transparent) 35%, rgba(28,28,28,0) 70%), " +
-            "radial-gradient(80% 120% at 100% 100%, color-mix(in srgb, color-mix(in srgb, rgb(var(--lz-brand-rgb)) 40%, #0D0D0D) 55%, transparent) 0%, rgba(28,28,28,0) 65%), " +
+            "radial-gradient(120% 140% at 0% 0%, rgba(var(--lz-hero-a-rgb),0.18) 0%, color-mix(in srgb, rgb(var(--lz-hero-a-rgb)) 10%, transparent) 35%, rgba(28,28,28,0) 70%), " +
+            "radial-gradient(80% 120% at 100% 100%, color-mix(in srgb, color-mix(in srgb, rgb(var(--lz-hero-b-rgb)) 40%, #0D0D0D) 55%, transparent) 0%, rgba(28,28,28,0) 65%), " +
             "linear-gradient(180deg, #161616 0%, #111111 100%)",
-          border: "1px solid rgba(var(--lz-brand-light-rgb),0.18)",
+          border: "1px solid rgba(var(--lz-hero-a-rgb),0.18)",
         }}>
         {/* Glow blobs */}
         <div className="pointer-events-none absolute -top-20 -left-20 h-64 w-64 rounded-full opacity-30 blur-3xl"
-          style={{ background: PALETTE.lime }} />
+          style={{ background: "rgb(var(--lz-hero-a-rgb))" }} />
         <div className="pointer-events-none absolute -bottom-24 right-10 h-72 w-72 rounded-full opacity-25 blur-3xl"
-          style={{ background: "rgb(var(--lz-sidebar-rgb))" }} />
+          style={{ background: "rgb(var(--lz-hero-b-rgb))" }} />
 
 
         <div className="relative grid md:grid-cols-[1fr_auto] gap-8 p-6 md:p-8 items-center">

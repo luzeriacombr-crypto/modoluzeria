@@ -157,6 +157,10 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
    * dark) — App.tsx swaps this to white for orgs whose brand color is too
    * dark to read as accent text, see readableAccentRgbChannels(). */
   --lz-brand-text-rgb: 200, 212, 78;
+  /* Degradê do cabeçalho do Dashboard — mesmo par padrão (clara + barra
+   * lateral) que já era usado antes de virar escolhível. */
+  --lz-hero-a-rgb: 200, 212, 78;
+  --lz-hero-b-rgb: 17, 31, 92;
   /* Luzeria palette */
   --background: #0D0D0D;
   --foreground: #FFFFFF;

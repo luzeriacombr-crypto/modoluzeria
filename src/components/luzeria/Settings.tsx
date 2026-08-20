@@ -403,6 +403,8 @@ function GeneralSettings() {
           orgFeedPreviewImageUrl={me.orgFeedPreviewImageUrl ?? null}
           orgFaviconUrl={me.orgFaviconUrl ?? null}
           borderRadius={me.borderRadius ?? 12}
+          heroGradientFrom={me.heroGradientFrom ?? null}
+          heroGradientTo={me.heroGradientTo ?? null}
         />
       )}
 
@@ -636,6 +638,31 @@ function ColorPickerField({ label, value, onChange, presets }: {
   );
 }
 
+function HeroColorField({ label, value, fallback, onChange }: {
+  label: string; value: string | null; fallback: string; onChange: (hex: string | null) => void;
+}) {
+  const effective = value ?? fallback;
+  const [hexInput, setHexInput] = useState(effective);
+  useEffect(() => { setHexInput(effective); }, [effective]);
+
+  return (
+    <Field label={label}>
+      <div className="flex items-center gap-2">
+        <span className="h-8 w-8 rounded-md border border-white/10 shrink-0" style={{ backgroundColor: isValidHex(hexInput) ? hexInput : "transparent" }} />
+        <input value={hexInput} onChange={(e) => setHexInput(e.target.value)}
+          onBlur={() => { if (isValidHex(hexInput)) onChange(hexInput.trim()); else setHexInput(effective); }}
+          maxLength={7} className="lz-input font-mono" placeholder={fallback} />
+        {value != null && (
+          <button type="button" onClick={() => onChange(null)}
+            className="text-[10px] text-white/40 hover:text-white transition shrink-0 whitespace-nowrap">
+            Automático
+          </button>
+        )}
+      </div>
+    </Field>
+  );
+}
+
 function UsageBar({ label, used, max, pct }: { label: string; used: number; max: number | null; pct: number }) {
   return (
     <div>
@@ -781,11 +808,12 @@ function BillingSection() {
 
 function OrgBrandingSection({
   orgId, orgName, orgTagline, orgLogoUrl, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar,
-  orgFeedPreviewImageUrl, orgFaviconUrl, borderRadius,
+  orgFeedPreviewImageUrl, orgFaviconUrl, borderRadius, heroGradientFrom, heroGradientTo,
 }: {
   orgId: string; orgName: string; orgTagline: string; orgLogoUrl: string | null;
   orgColorPrimary: string; orgColorPrimaryLight: string; orgColorSidebar: string;
   orgFeedPreviewImageUrl: string | null; orgFaviconUrl: string | null; borderRadius: number;
+  heroGradientFrom: string | null; heroGradientTo: string | null;
 }) {
   const { updateMyOrg } = useApi();
   const [name, setName] = useState(orgName);
@@ -794,6 +822,8 @@ function OrgBrandingSection({
   const [colorPrimaryLight, setColorPrimaryLight] = useState(orgColorPrimaryLight);
   const [colorSidebar, setColorSidebar] = useState(orgColorSidebar);
   const [radius, setRadius] = useState(borderRadius);
+  const [heroFrom, setHeroFrom] = useState(heroGradientFrom);
+  const [heroTo, setHeroTo] = useState(heroGradientTo);
   const [uploading, setUploading] = useState(false);
   const [uploadingPreview, setUploadingPreview] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
@@ -804,6 +834,8 @@ function OrgBrandingSection({
   useEffect(() => { setColorPrimaryLight(orgColorPrimaryLight); }, [orgColorPrimaryLight]);
   useEffect(() => { setColorSidebar(orgColorSidebar); }, [orgColorSidebar]);
   useEffect(() => { setRadius(borderRadius); }, [borderRadius]);
+  useEffect(() => { setHeroFrom(heroGradientFrom); }, [heroGradientFrom]);
+  useEffect(() => { setHeroTo(heroGradientTo); }, [heroGradientTo]);
 
   function save() {
     updateMyOrg.mutate({
@@ -814,6 +846,8 @@ function OrgBrandingSection({
         colorPrimaryLight: colorPrimaryLight || null,
         colorSidebar: colorSidebar || null,
         borderRadius: radius,
+        heroGradientFrom: heroFrom || null,
+        heroGradientTo: heroTo || null,
       },
     }, {
       onSuccess: () => toast.success("Marca da agência atualizada."),
@@ -972,6 +1006,21 @@ function OrgBrandingSection({
             <span className="text-[10px] text-white/30 shrink-0">Arredondados</span>
           </div>
           <div className="mt-3 h-12 w-full max-w-[180px]" style={{ background: "rgba(255,255,255,0.06)", borderRadius: `${radius}px` }} />
+        </div>
+
+        <div className="pt-2 border-t border-white/[0.06]">
+          <label className="block text-[11px] uppercase tracking-wide text-white/40 mb-2">
+            Degradê do cabeçalho do Dashboard
+          </label>
+          <p className="text-[11px] text-white/40 mb-3">
+            Por padrão usa a cor clara e a cor da barra lateral. Escolha as suas se quiser outra combinação.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <HeroColorField label="Cor 1" value={heroFrom} fallback={colorPrimaryLight} onChange={setHeroFrom} />
+            <HeroColorField label="Cor 2" value={heroTo} fallback={colorSidebar} onChange={setHeroTo} />
+          </div>
+          <div className="mt-3 h-16 w-full max-w-[280px] rounded-lg"
+            style={{ background: `linear-gradient(135deg, ${heroFrom || colorPrimaryLight} 0%, ${heroTo || colorSidebar} 100%)` }} />
         </div>
 
         <button onClick={save} disabled={updateMyOrg.isPending || !name.trim()}

@@ -131,7 +131,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -178,6 +178,9 @@ export const getMe = createServerFn({ method: "GET" })
       navLabels: ((org as any)?.nav_labels ?? {}) as Record<string, string>,
       navOrder: ((org as any)?.nav_order ?? {}) as Record<string, string[]>,
       borderRadius: ((org as any)?.border_radius ?? 12) as number,
+      dashboardLayout: ((org as any)?.dashboard_layout ?? {}) as Record<string, { x: number; y: number; w: number; h: number }>,
+      heroGradientFrom: ((org as any)?.hero_gradient_from ?? null) as string | null,
+      heroGradientTo: ((org as any)?.hero_gradient_to ?? null) as string | null,
       defaultLanding: ((profile as any)?.default_landing ?? null) as { view: string; clientId?: string } | null,
     } satisfies Profile;
   });
@@ -209,6 +212,9 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     borderRadius?: number;
     navLabels?: Record<string, string>;
     navOrder?: Record<string, string[]>;
+    dashboardLayout?: Record<string, { x: number; y: number; w: number; h: number }>;
+    heroGradientFrom?: string | null;
+    heroGradientTo?: string | null;
   }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
@@ -225,6 +231,14 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       borderRadius: z.number().int().min(0).max(28).optional(),
       navLabels: z.record(z.string(), z.string().trim().min(1).max(40)).optional(),
       navOrder: z.record(z.string(), z.array(z.string().max(40)).max(40)).optional(),
+      dashboardLayout: z.record(z.string().max(40), z.object({
+        x: z.number().int().min(0).max(24),
+        y: z.number().int().min(0).max(200),
+        w: z.number().int().min(1).max(24),
+        h: z.number().int().min(1).max(20),
+      })).optional(),
+      heroGradientFrom: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+      heroGradientTo: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -244,6 +258,9 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.borderRadius !== undefined) patch.border_radius = data.borderRadius;
     if (data.navLabels !== undefined) patch.nav_labels = data.navLabels;
     if (data.navOrder !== undefined) patch.nav_order = data.navOrder;
+    if (data.dashboardLayout !== undefined) patch.dashboard_layout = data.dashboardLayout;
+    if (data.heroGradientFrom !== undefined) patch.hero_gradient_from = data.heroGradientFrom;
+    if (data.heroGradientTo !== undefined) patch.hero_gradient_to = data.heroGradientTo;
     if (Object.keys(patch).length === 0) return { ok: true };
     const { data: updated, error } = await context.supabase
       .from("orgs").update(patch).eq("id", context.orgId).select("id").maybeSingle();
