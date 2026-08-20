@@ -226,10 +226,9 @@ export function Sidebar({
           <NavGroup
             icon={<Wallet size={15} />}
             label="Financeiro"
-            active={configTabActive("plano") || configTabActive("cobranca") || configTabActive("margem") || configTabActive("afiliados")}
+            active={configTabActive("cobranca") || configTabActive("margem") || configTabActive("afiliados")}
           >
-            <NavSubButton label="Seu plano" active={configTabActive("plano")} onClick={() => goToConfigTab("plano")} />
-            <NavSubButton label="Cobrança" active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} />
+            <NavSubButton label="Plano e Cobrança" active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} />
             <NavSubButton label="Margem por cliente" active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} />
             <NavSubButton label="Afiliados" active={configTabActive("afiliados")} onClick={() => goToConfigTab("afiliados")} />
           </NavGroup>

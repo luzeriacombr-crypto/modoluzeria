@@ -34,8 +34,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "automations" | "general" | "plano" | "cobranca" | "margem" | "afiliados" | "updates" | "site" | "journey";
-const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "plano", "cobranca", "margem", "afiliados", "updates", "site", "journey"];
+type SettingsTab = "team" | "report" | "automations" | "general" | "cobranca" | "margem" | "afiliados" | "updates" | "site" | "journey";
+const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "cobranca", "margem", "afiliados", "updates", "site", "journey"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -77,8 +77,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             {tab === "team"   ? "Gerencie acessos, funções e metas da equipe." :
              tab === "report" ? "Relatório consolidado de entregas." :
              tab === "automations" ? "Google Drive, lembretes automáticos e jobs do sistema." :
-             tab === "plano" ? "Seu plano atual e uso." :
-             tab === "cobranca" ? "CNPJ/CPF, upgrade de plano e cupons." :
+             tab === "cobranca" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
              tab === "margem" ? "Lucratividade estimada por cliente." :
              tab === "afiliados" ? "Programa de indicação e comissões." :
              tab === "updates" ? "O que mudou no Modo Criador." :
@@ -95,8 +94,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "report", label: "Relatório" },
           { id: "automations", label: "Automações" },
           { id: "journey", label: "Jornada do cliente" },
-          { id: "plano", label: "Seu plano" },
-          { id: "cobranca", label: "Cobrança" },
+          { id: "cobranca", label: "Plano e Cobrança" },
           { id: "margem", label: "Margem por cliente" },
           { id: "afiliados", label: "Afiliados" },
           { id: "updates", label: "Atualizações" },
@@ -134,10 +132,12 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
 
       <Suspense fallback={<TabLoadingFallback />}>
       {tab === "general" ? <GeneralSettings /> :
-       tab === "plano" ? <PlanCardSection /> :
        tab === "cobranca" ? (
         <div className="space-y-10">
-          <BillingSection />
+          <PlanCardSection />
+          <div className="pt-2 border-t border-white/10">
+            <BillingSection />
+          </div>
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-white/10">
               <AgenciesBillingPanel />
