@@ -49,7 +49,7 @@ export function ForumTab() {
       <aside className="space-y-0.5">
         <CategoryButton
           active={categoryId === null}
-          color="#C8D44E"
+          color="rgb(var(--lz-brand-rgb))"
           name="Todos"
           count={posts.length}
           onClick={() => setCategoryId(null)}

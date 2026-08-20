@@ -9,9 +9,11 @@
   font-style: italic;
 }
 
-/* Themed scrollbars */
+/* Themed scrollbars — derived from the org's own brand color (--lz-brand-rgb,
+ * overridden per org in App.tsx) instead of a fixed green, so an agency that
+ * picked blue/red/whatever sees its own color here too, not Luzeria's. */
 * {
-  scrollbar-color: #2D4A3E transparent;
+  scrollbar-color: color-mix(in srgb, rgb(var(--lz-brand-rgb)) 35%, #0D0D0D) transparent;
   scrollbar-width: thin;
 }
 
@@ -38,7 +40,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background-color: #2D4A3E;
+  background-color: color-mix(in srgb, rgb(var(--lz-brand-rgb)) 35%, #0D0D0D);
   border-radius: 8px;
   border: 2px solid transparent;
   background-clip: padding-box;
