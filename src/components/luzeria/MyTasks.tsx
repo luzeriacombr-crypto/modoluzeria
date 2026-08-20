@@ -421,7 +421,6 @@ function NovaDemandaModal({ onClose }: { onClose: () => void }) {
   const { addContentItem } = useApi();
   const { selectClient, openItem } = useUI();
   const monthKey = useUI((s) => s.selectedMonthKey);
-  const navigate = useNavigate();
   const [pickedClient, setPickedClient] = useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = useState("");
 
@@ -435,9 +434,11 @@ function NovaDemandaModal({ onClose }: { onClose: () => void }) {
     addContentItem.mutate(
       { data: { clientId: pickedClient.id, key: monthKey, type } },
       {
+        // Não navega — o DetailPanel é global (renderizado no App.tsx), então
+        // só de setar cliente + item selecionados ele já abre em popup, sem
+        // sair da tela de Minhas Demandas.
         onSuccess: (res: any) => {
           selectClient(pickedClient.id);
-          navigate({ to: "/cliente/$clientId", params: { clientId: pickedClient.id }, search: { tab: type === "post" ? "posts" : "reels" } });
           openItem(res.id, null);
           onClose();
         },
@@ -473,7 +474,7 @@ function NovaDemandaModal({ onClose }: { onClose: () => void }) {
                   onClick={() => setPickedClient({ id: c.id, name: c.name })}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/5 transition text-left"
                 >
-                  <Avatar profile={{ name: c.name, color: c.color, icon: c.icon }} size={28} />
+                  <Avatar profile={{ name: c.name, color: c.color, icon: c.icon, avatarUrl: c.photoUrl }} size={28} />
                   <span className="text-sm text-white truncate">{c.name}</span>
                 </button>
               ))}
