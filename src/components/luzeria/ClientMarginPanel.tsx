@@ -19,13 +19,11 @@ function CostSettingsForm() {
   const api = useApi();
   const [hourlyCost, setHourlyCost] = useState<string | number>("");
   const [avgHours, setAvgHours] = useState<Record<string, string | number>>({});
-  const [fixedMonthlyCost, setFixedMonthlyCost] = useState<string | number>("");
 
   useEffect(() => {
     if (!settings) return;
     setHourlyCost(settings.hourlyCost ?? "");
     setAvgHours(settings.avgHoursByType ?? {});
-    setFixedMonthlyCost(settings.fixedMonthlyCost ?? "");
   }, [settings]);
 
   if (isLoading || !settings) {
@@ -39,7 +37,6 @@ function CostSettingsForm() {
         avgHoursByType: Object.fromEntries(
           EFFORT_TYPES.map((t) => [t, Number(avgHours[t]) || 0]),
         ),
-        fixedMonthlyCost: fixedMonthlyCost === "" ? null : Number(fixedMonthlyCost),
       },
     });
   }
@@ -73,15 +70,6 @@ function CostSettingsForm() {
           ))}
         </div>
       </div>
-      <div>
-        <label className="text-xs text-white/50 mb-1 inline-flex items-center gap-1">
-          Custo fixo médio mensal (R$)
-          <InfoTip text="Aluguel, pró-labore, tarifas, folha administrativa, etc. — os custos da agência que não são mão de obra de produção (essa já é contada acima). Esse valor é rateado entre os clientes ativos, proporcional ao valor de contrato de cada um: quem paga mais absorve uma fatia maior." />
-        </label>
-        <input type="number" min="0" step="0.01" value={fixedMonthlyCost}
-          onChange={(e) => setFixedMonthlyCost(e.target.value)} placeholder="Não definido"
-          className={`${inp} max-w-xs`} />
-      </div>
       <button onClick={save} disabled={api.setOrgCostSettings.isPending}
         className="rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
         style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
@@ -107,7 +95,7 @@ export function ClientMarginPanel() {
 
       <div className="flex items-center gap-2 text-white/60 text-xs bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2">
         <Info size={14} className="shrink-0" />
-Custo estimado é itens finalizados × horas médias × custo-hora de quem finalizou (ou o padrão acima quando a pessoa não tem remuneração cadastrada) — não é apontamento real de horas nem contabilidade oficial. O custo fixo é rateado à parte, proporcional ao valor de contrato de cada cliente.
+        Custo é uma estimativa (itens finalizados × horas médias × custo-hora de quem finalizou, ou o padrão acima quando a pessoa não tem remuneração cadastrada) — não é apontamento real de horas nem contabilidade oficial.
       </div>
 
       <div className="flex items-center gap-1.5">
@@ -163,13 +151,7 @@ Custo estimado é itens finalizados × horas médias × custo-hora de quem final
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    <InfoTip text="Fatia do custo fixo médio mensal da agência (configurado acima) que esse cliente carrega, proporcional ao valor de contrato dele. Aparece '—' quando o custo fixo ou o contrato não estão preenchidos." />
-                    Custo fixo
-                  </span>
-                </th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
-                  <span className="inline-flex items-center gap-1 justify-end">
-                    <InfoTip text="Valor do contrato menos o custo estimado de produção e a fatia do custo fixo. Vermelho quando negativo, verde quando positivo. Aparece '—' quando o contrato não está preenchido." />
+                    <InfoTip text="Valor do contrato menos o custo estimado. Vermelho quando negativo, verde quando positivo. Aparece '—' quando o contrato não está preenchido." />
                     Margem
                   </span>
                 </th>
@@ -188,7 +170,6 @@ Custo estimado é itens finalizados × horas médias × custo-hora de quem final
                   <td className="px-4 py-3 text-sm text-white/70 text-right">{r.deliveredCount}</td>
                   <td className="px-4 py-3 text-sm text-white/70 text-right">{r.estimatedHours}h</td>
                   <td className="px-4 py-3 text-sm text-white/70 text-right">{money(r.estimatedCost)}</td>
-                  <td className="px-4 py-3 text-sm text-white/70 text-right">{money(r.overheadShare)}</td>
                   <td className="px-4 py-3 text-sm text-right font-semibold"
                     style={{ color: r.margin == null ? "rgba(255,255,255,0.4)" : r.margin < 0 ? "#FF6B6B" : "#4ADE80" }}>
                     {money(r.margin)}
