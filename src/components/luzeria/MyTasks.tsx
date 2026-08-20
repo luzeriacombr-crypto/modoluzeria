@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, todayCalendarEventsQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, todayCalendarEventsQO, clientsQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronRight } from "lucide-react";
+import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
@@ -113,6 +113,7 @@ export function MyTasks() {
 
   const targetProfile = profiles.find((p) => p.id === targetId);
   const [view, setView] = useState<"list" | "week">("list");
+  const [showNovaDemanda, setShowNovaDemanda] = useState(false);
   const dailyVerse = getDailyVerse();
 
   return (
@@ -159,6 +160,12 @@ export function MyTasks() {
         </div>
         {isAdmin && (
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowNovaDemanda(true)}
+              className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-1.5 shrink-0"
+            >
+              <Plus size={14} /> Nova demanda
+            </button>
             <span className="text-xs text-white/40">Ver como:</span>
             <select value={viewAs} onChange={(e) => setViewAs(e.target.value)}
               className="bg-[#1C1C1C] border border-white/10 text-sm text-white rounded-md px-3 py-1.5 outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
@@ -171,6 +178,8 @@ export function MyTasks() {
           </div>
         )}
       </div>
+
+      {showNovaDemanda && <NovaDemandaModal onClose={() => setShowNovaDemanda(false)} />}
 
       {targetId && <div data-tour="goals"><GoalsWidget monthKey={monthKey} userId={targetId} /></div>}
 
@@ -403,6 +412,104 @@ export function MyTasks() {
           <ProductivityBlock prod={prod} monthKey={monthKey} />
         </Suspense>
       )}
+    </div>
+  );
+}
+
+function NovaDemandaModal({ onClose }: { onClose: () => void }) {
+  const { data: clients = [] } = useQuery(clientsQO());
+  const { addContentItem } = useApi();
+  const { selectClient, openItem } = useUI();
+  const monthKey = useUI((s) => s.selectedMonthKey);
+  const navigate = useNavigate();
+  const [pickedClient, setPickedClient] = useState<{ id: string; name: string } | null>(null);
+  const [search, setSearch] = useState("");
+
+  const activeClients = clients
+    .filter((c) => !c.archived && c.category !== "Ex-clientes")
+    .filter((c) => c.name.toLowerCase().includes(search.trim().toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  function create(type: "post" | "reel") {
+    if (!pickedClient || addContentItem.isPending) return;
+    addContentItem.mutate(
+      { data: { clientId: pickedClient.id, key: monthKey, type } },
+      {
+        onSuccess: (res: any) => {
+          selectClient(pickedClient.id);
+          navigate({ to: "/cliente/$clientId", params: { clientId: pickedClient.id }, search: { tab: type === "post" ? "posts" : "reels" } });
+          openItem(res.id, null);
+          onClose();
+        },
+      },
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-md bg-[#1C1C1C] border border-white/10 rounded-2xl p-6 max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {!pickedClient ? (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm font-bold text-white">Pra qual cliente?</span>
+              <button onClick={onClose} className="text-white/40 hover:text-white"><X size={16} /></button>
+            </div>
+            <input
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar cliente..."
+              className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-3 shrink-0"
+            />
+            <div className="overflow-y-auto flex-1 -mx-2 px-2 space-y-1">
+              {activeClients.length === 0 ? (
+                <div className="text-center text-white/30 text-sm py-8">Nenhum cliente encontrado.</div>
+              ) : activeClients.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setPickedClient({ id: c.id, name: c.name })}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/5 transition text-left"
+                >
+                  <Avatar profile={{ name: c.name, color: c.color, icon: c.icon }} size={28} />
+                  <span className="text-sm text-white truncate">{c.name}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 mb-5">
+              <button onClick={() => setPickedClient(null)} className="text-white/40 hover:text-white p-1 -ml-1 rounded shrink-0">
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-sm font-bold text-white flex-1 truncate">{pickedClient.name}</span>
+              <button onClick={onClose} className="text-white/40 hover:text-white shrink-0"><X size={16} /></button>
+            </div>
+            <p className="text-xs text-white/40 mb-4">O que você quer criar?</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => create("post")}
+                disabled={addContentItem.isPending}
+                className="flex flex-col items-center justify-center gap-2 py-8 rounded-xl border border-dashed border-white/15 text-white/60 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
+              >
+                <ImageIcon size={22} />
+                <span className="text-sm font-semibold">Post</span>
+              </button>
+              <button
+                onClick={() => create("reel")}
+                disabled={addContentItem.isPending}
+                className="flex flex-col items-center justify-center gap-2 py-8 rounded-xl border border-dashed border-white/15 text-white/60 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
+              >
+                <Film size={22} />
+                <span className="text-sm font-semibold">Reel</span>
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
