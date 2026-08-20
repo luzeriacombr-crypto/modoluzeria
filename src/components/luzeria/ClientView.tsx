@@ -13,6 +13,7 @@ import { formatMonth } from "@/lib/luzeria/utils";
 import { useMe } from "@/lib/luzeria/queries";
 import { MaisAtividadesTab } from "./MaisAtividadesTab";
 import { ClientDocsTab } from "./ClientDocsTab";
+import { ClientReferenceLibraryTab } from "./ClientReferenceLibraryTab";
 
 type OrderMode = "personalizada" | "cronologica";
 type OrderDirection = "asc" | "desc";
@@ -32,8 +33,8 @@ function byScheduledAt(direction: OrderDirection) {
   };
 }
 
-type ClientTab = "posts" | "reels" | "stories" | "finalizados" | "mais" | "docs" | "feed" | "ficha";
-const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizados", "mais", "docs", "feed", "ficha"];
+type ClientTab = "posts" | "reels" | "stories" | "finalizados" | "mais" | "docs" | "biblioteca" | "feed" | "ficha";
+const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizados", "mais", "docs", "biblioteca", "feed", "ficha"];
 
 export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   clientId: string; tab?: string; onTabChange: (tab: ClientTab) => void;
@@ -92,9 +93,10 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   } as const;
 
   const disabledFeatures = new Set(me?.disabledFeatures ?? []);
-  const tabs = (["posts", "reels", "stories", "finalizados", "mais", "docs", "feed", "ficha"] as const)
+  const tabs = (["posts", "reels", "stories", "finalizados", "mais", "docs", "biblioteca", "feed", "ficha"] as const)
     .filter((t) => t !== "stories" || !disabledFeatures.has("stories"))
-    .filter((t) => t !== "docs" || isAdmin);
+    .filter((t) => t !== "docs" || isAdmin)
+    .filter((t) => t !== "biblioteca" || !disabledFeatures.has("reference_library"));
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
   const idx = sortedKeys.indexOf(selectedMonthKey);
@@ -159,7 +161,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           <button key={t} onClick={() => setTab(t as any)}
             className="relative py-3 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap"
             style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
-            {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais atividades" : t === "docs" ? "Roteiros & Planejamento" : t === "finalizados" ? "Finalizados" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
+            {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais atividades" : t === "docs" ? "Roteiros & Planejamento" : t === "biblioteca" ? "Biblioteca" : t === "finalizados" ? "Finalizados" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
             {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
           </button>
         ))}
@@ -295,6 +297,11 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         {tab === "docs" && isAdmin && (
           <div className="mt-2">
             <ClientDocsTab clientId={client.id} />
+          </div>
+        )}
+        {tab === "biblioteca" && (
+          <div className="mt-2">
+            <ClientReferenceLibraryTab clientId={client.id} />
           </div>
         )}
         {tab === "ficha" && (

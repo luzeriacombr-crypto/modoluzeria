@@ -6,9 +6,9 @@ import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
 const GENERAL_KEY = "__general__";
 
-type LibraryLink = { label: string | null; url: string };
+export type LibraryLink = { label: string | null; url: string };
 
-type LibraryItem = {
+export type LibraryItem = {
   id: string;
   clientId: string | null;
   clientName: string | null;
@@ -22,7 +22,6 @@ type LibraryItem = {
 };
 
 export function ReferenceLibraryPage() {
-  const me = useMe().data;
   const { data: clients = [] } = useQuery(clientsQO());
   const { data: items = [], isLoading } = useQuery(referenceLibraryQO());
   const { upsertReferenceLibraryItem, deleteReferenceLibraryItem } = useApi();
@@ -153,55 +152,12 @@ export function ReferenceLibraryPage() {
             </div>
           </div>
 
-          {blocksInFolder.length === 0 ? (
-            <div className="text-white/30 text-sm py-14 text-center">
-              {search.trim() ? "Nada encontrado com esse filtro." : "Nenhuma referência salva aqui ainda."}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {blocksInFolder.map((it) => {
-                const canEdit = !!me && (it.createdBy === me.id || me.role === "master" || me.role === "setor");
-                return (
-                  <div key={it.id} className="rounded-xl bg-[#161616] border border-white/[0.07] p-4 flex flex-col gap-2.5 group/card">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="text-white text-sm font-semibold leading-snug">{it.title}</div>
-                      {canEdit && (
-                        <div className="flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition shrink-0">
-                          <button onClick={() => setEditing(it)} className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5 transition">
-                            <Pencil size={13} />
-                          </button>
-                          <button onClick={() => handleDelete(it.id)} className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition">
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    {it.notes && <p className="text-white/50 text-xs leading-relaxed line-clamp-3">{it.notes}</p>}
-                    {it.links.length > 0 && (
-                      <div className="flex flex-col gap-1">
-                        {it.links.map((l, i) => (
-                          <a
-                            key={i} href={l.url} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs text-[rgb(var(--lz-brand-rgb))] hover:underline"
-                          >
-                            <Link2 size={11} className="shrink-0" />
-                            <span className="truncate">{l.label || l.url}</span>
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                    {it.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-auto pt-1">
-                        {it.tags.map((t) => (
-                          <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/50">#{t}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <ReferenceBlockCards
+            blocks={blocksInFolder}
+            emptyMessage={search.trim() ? "Nada encontrado com esse filtro." : "Nenhuma referência salva aqui ainda."}
+            onEdit={setEditing}
+            onDelete={handleDelete}
+          />
         </>
       )}
 
@@ -227,6 +183,65 @@ export function ReferenceLibraryPage() {
   );
 }
 
+export function ReferenceBlockCards({
+  blocks, emptyMessage, onEdit, onDelete,
+}: {
+  blocks: LibraryItem[];
+  emptyMessage: string;
+  onEdit: (item: LibraryItem) => void;
+  onDelete: (id: string) => void;
+}) {
+  const me = useMe().data;
+  if (blocks.length === 0) {
+    return <div className="text-white/30 text-sm py-14 text-center">{emptyMessage}</div>;
+  }
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {blocks.map((it) => {
+        const canEdit = !!me && (it.createdBy === me.id || me.role === "master" || me.role === "setor");
+        return (
+          <div key={it.id} className="rounded-xl bg-[#161616] border border-white/[0.07] p-4 flex flex-col gap-2.5 group/card">
+            <div className="flex items-start justify-between gap-2">
+              <div className="text-white text-sm font-semibold leading-snug">{it.title}</div>
+              {canEdit && (
+                <div className="flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition shrink-0">
+                  <button onClick={() => onEdit(it)} className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5 transition">
+                    <Pencil size={13} />
+                  </button>
+                  <button onClick={() => onDelete(it.id)} className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+            {it.notes && <p className="text-white/50 text-xs leading-relaxed line-clamp-3">{it.notes}</p>}
+            {it.links.length > 0 && (
+              <div className="flex flex-col gap-1">
+                {it.links.map((l, i) => (
+                  <a
+                    key={i} href={l.url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-[rgb(var(--lz-brand-rgb))] hover:underline"
+                  >
+                    <Link2 size={11} className="shrink-0" />
+                    <span className="truncate">{l.label || l.url}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+            {it.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-auto pt-1">
+                {it.tags.map((t) => (
+                  <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/50">#{t}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="text-center py-14">
@@ -242,7 +257,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
   );
 }
 
-function ReferenceEditorModal({
+export function ReferenceEditorModal({
   item, clients, defaultClientId, onClose, onSave,
 }: {
   item: LibraryItem | null;

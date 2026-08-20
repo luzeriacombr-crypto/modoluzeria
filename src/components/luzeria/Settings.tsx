@@ -21,6 +21,7 @@ const UpdatesTab = lazy(() => import("./UpdatesTab").then((m) => ({ default: m.U
 const PromotionCodesPanel = lazy(() => import("./PromotionCodesPanel").then((m) => ({ default: m.PromotionCodesPanel })));
 const AffiliateProgramPanel = lazy(() => import("./AffiliateProgramPanel").then((m) => ({ default: m.AffiliateProgramPanel })));
 const AgenciesBillingPanel = lazy(() => import("./AgenciesBillingPanel").then((m) => ({ default: m.AgenciesBillingPanel })));
+const ClientMarginPanel = lazy(() => import("./ClientMarginPanel").then((m) => ({ default: m.ClientMarginPanel })));
 const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => ({ default: m.DemoRequestsPanel })));
 const SalesPageEditorTab = lazy(() => import("./SalesPageEditorTab").then((m) => ({ default: m.SalesPageEditorTab })));
 const JourneyStagesTab = lazy(() => import("./JourneyStagesTab").then((m) => ({ default: m.JourneyStagesTab })));
@@ -130,6 +131,9 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "subscription" ? (
         <div className="space-y-10">
           <SubscriptionSettings />
+          <div className="pt-2 border-t border-white/10">
+            <ClientMarginPanel />
+          </div>
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-white/10">
               <AgenciesBillingPanel />

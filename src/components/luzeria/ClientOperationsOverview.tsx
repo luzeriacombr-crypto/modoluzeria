@@ -4,7 +4,6 @@ import { Loader2, LayoutGrid, Info } from "lucide-react";
 import { clientOperationsOverviewQO, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { ClientOperationsRow } from "@/lib/luzeria/journey-stages.functions";
-import { ClientMarginPanel } from "./ClientMarginPanel";
 import { InfoTip } from "./InfoTip";
 
 function daysAgoLabel(iso: string | null): string {
@@ -190,10 +189,6 @@ function ClientOperationsOverviewContent() {
           </table>
         </div>
       )}
-
-      <div className="pt-6 border-t border-white/10">
-        <ClientMarginPanel />
-      </div>
     </div>
   );
 }
