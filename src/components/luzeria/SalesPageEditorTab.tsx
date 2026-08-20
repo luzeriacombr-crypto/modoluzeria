@@ -8,6 +8,7 @@ import {
 import { salesPageBlocksAdminQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { BACKGROUND_SWATCHES, HeroSection, renderBlockNode, SalesPageBody, BG_BLUE, useDragReorder } from "./salesPageBlocks";
+import { PreviewFrame } from "./PreviewFrame";
 import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
 import type { SalesPageBlock, SalesPageBlockType } from "@/lib/luzeria/sales-page.functions";
 
@@ -155,6 +156,57 @@ export function SalesPageEditorTab() {
     .filter((b) => b.isVisible)
     .map((b) => ({ id: b.id, type: b.type, content: drafts[b.id] ?? b.content }));
 
+  const pageBody = previewMode ? (
+    <SalesPageBody hero={previewHero} blocks={previewBlocks} />
+  ) : (
+    <>
+      {hero && (
+        <div ref={(el) => { sectionRefs.current[hero.id] = el; }}>
+          <HeroSection content={drafts[hero.id] ?? hero.content} onChange={(c) => saveContent(hero, c)} />
+        </div>
+      )}
+
+      {rest.map((b, i) => (
+        <div
+          key={b.id}
+          ref={(el) => { sectionRefs.current[b.id] = el; }}
+          className={`relative group/block transition ${blockDrag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))] outline-offset-[-4px]" : ""}`}
+          style={{ opacity: b.isVisible ? 1 : 0.4 }}
+          onDragOver={(e) => blockDrag.onDragOverItem(e, i)}
+          onDrop={(e) => blockDrag.onDropItem(e, i)}
+        >
+          {renderBlockNode({ id: b.id, type: b.type, content: drafts[b.id] ?? b.content }, (c) => saveContent(b, c))}
+          <BlockToolbar
+            isVisible={b.isVisible}
+            canUp={i > 0}
+            canDown={i < rest.length - 1}
+            onMoveUp={() => moveBy(b.id, -1)}
+            onMoveDown={() => moveBy(b.id, 1)}
+            onDragHandleStart={() => blockDrag.onDragStart(i)}
+            onDragHandleEnd={blockDrag.onDragEnd}
+            background={(drafts[b.id] ?? b.content).background}
+            onBackground={(bg) => saveContent(b, { ...(drafts[b.id] ?? b.content), background: bg })}
+            backgroundImage={(drafts[b.id] ?? b.content).backgroundImage}
+            onBackgroundImage={(url) => saveContent(b, { ...(drafts[b.id] ?? b.content), backgroundImage: url })}
+            hideBackgroundImage={b.type === "image_banner"}
+            onFlip={b.type === "feature" ? () => saveContent(b, { ...(drafts[b.id] ?? b.content), reverse: !(drafts[b.id] ?? b.content).reverse }) : undefined}
+            onToggleVisible={() => toggleVisible(b)}
+            onDelete={() => remove(b)}
+          />
+        </div>
+      ))}
+
+      <div className="px-5 sm:px-10 py-8 flex justify-center border-t border-white/10">
+        <button
+          onClick={() => setAdding(true)}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-white/50 hover:text-white border-2 border-dashed border-white/15 hover:border-[rgb(var(--lz-brand-rgb))] rounded-xl px-6 py-3 transition"
+        >
+          <Plus size={16} /> Adicionar seção
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <div className={fullscreen ? "fixed inset-0 z-[400] bg-[#0D0D0D] overflow-y-auto p-4 md:p-6" : "max-w-[1200px]"}>
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
@@ -226,60 +278,19 @@ export function SalesPageEditorTab() {
 
       <div className="rounded-xl border border-white/10 overflow-hidden">
         <div className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: fullscreen ? "calc(100vh - 120px)" : "85vh", background: BG_BLUE }}>
-          <div style={{ width: previewWidth === "mobile" ? 390 : "100%", margin: "0 auto" }}>
-            <div className="text-white" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
-              {previewMode ? (
-                <SalesPageBody hero={previewHero} blocks={previewBlocks} />
-              ) : (
-                <>
-                  {hero && (
-                    <div ref={(el) => { sectionRefs.current[hero.id] = el; }}>
-                      <HeroSection content={drafts[hero.id] ?? hero.content} onChange={(c) => saveContent(hero, c)} />
-                    </div>
-                  )}
-
-                  {rest.map((b, i) => (
-                    <div
-                      key={b.id}
-                      ref={(el) => { sectionRefs.current[b.id] = el; }}
-                      className={`relative group/block transition ${blockDrag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))] outline-offset-[-4px]" : ""}`}
-                      style={{ opacity: b.isVisible ? 1 : 0.4 }}
-                      onDragOver={(e) => blockDrag.onDragOverItem(e, i)}
-                      onDrop={(e) => blockDrag.onDropItem(e, i)}
-                    >
-                      {renderBlockNode({ id: b.id, type: b.type, content: drafts[b.id] ?? b.content }, (c) => saveContent(b, c))}
-                      <BlockToolbar
-                        isVisible={b.isVisible}
-                        canUp={i > 0}
-                        canDown={i < rest.length - 1}
-                        onMoveUp={() => moveBy(b.id, -1)}
-                        onMoveDown={() => moveBy(b.id, 1)}
-                        onDragHandleStart={() => blockDrag.onDragStart(i)}
-                        onDragHandleEnd={blockDrag.onDragEnd}
-                        background={(drafts[b.id] ?? b.content).background}
-                        onBackground={(bg) => saveContent(b, { ...(drafts[b.id] ?? b.content), background: bg })}
-                        backgroundImage={(drafts[b.id] ?? b.content).backgroundImage}
-                        onBackgroundImage={(url) => saveContent(b, { ...(drafts[b.id] ?? b.content), backgroundImage: url })}
-                        hideBackgroundImage={b.type === "image_banner"}
-                        onFlip={b.type === "feature" ? () => saveContent(b, { ...(drafts[b.id] ?? b.content), reverse: !(drafts[b.id] ?? b.content).reverse }) : undefined}
-                        onToggleVisible={() => toggleVisible(b)}
-                        onDelete={() => remove(b)}
-                      />
-                    </div>
-                  ))}
-
-                  <div className="px-5 sm:px-10 py-8 flex justify-center border-t border-white/10">
-                    <button
-                      onClick={() => setAdding(true)}
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-white/50 hover:text-white border-2 border-dashed border-white/15 hover:border-[rgb(var(--lz-brand-rgb))] rounded-xl px-6 py-3 transition"
-                    >
-                      <Plus size={16} /> Adicionar seção
-                    </button>
-                  </div>
-                </>
-              )}
+          {previewWidth === "mobile" ? (
+            <div style={{ width: 390, margin: "0 auto" }}>
+              <PreviewFrame width={390}>
+                <div className="text-white" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif", background: BG_BLUE }}>
+                  {pageBody}
+                </div>
+              </PreviewFrame>
             </div>
-          </div>
+          ) : (
+            <div className="text-white" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+              {pageBody}
+            </div>
+          )}
         </div>
       </div>
 
