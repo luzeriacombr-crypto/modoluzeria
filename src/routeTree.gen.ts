@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermosRouteImport } from './routes/termos'
+import { Route as RevendaRouteImport } from './routes/revenda'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as MfaRouteImport } from './routes/mfa'
@@ -43,6 +44,11 @@ import { Route as AuthenticatedAfiliadoDashboardRouteImport } from './routes/_au
 const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RevendaRoute = RevendaRouteImport.update({
+  id: '/revenda',
+  path: '/revenda',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/revenda': typeof RevendaRoute
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
@@ -238,6 +245,7 @@ export interface FileRoutesByTo {
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/revenda': typeof RevendaRoute
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
@@ -271,6 +279,7 @@ export interface FileRoutesById {
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/revenda': typeof RevendaRoute
   '/termos': typeof TermosRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/ajuda': typeof AuthenticatedAjudaRoute
@@ -304,6 +313,7 @@ export interface FileRouteTypes {
     | '/mfa'
     | '/privacidade'
     | '/redefinir-senha'
+    | '/revenda'
     | '/termos'
     | '/admin'
     | '/ajuda'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/mfa'
     | '/privacidade'
     | '/redefinir-senha'
+    | '/revenda'
     | '/termos'
     | '/admin'
     | '/ajuda'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/mfa'
     | '/privacidade'
     | '/redefinir-senha'
+    | '/revenda'
     | '/termos'
     | '/_authenticated/admin'
     | '/_authenticated/ajuda'
@@ -400,6 +412,7 @@ export interface RootRouteChildren {
   MfaRoute: typeof MfaRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
+  RevendaRoute: typeof RevendaRoute
   TermosRoute: typeof TermosRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
   PromoSlugRoute: typeof PromoSlugRoute
@@ -414,6 +427,13 @@ declare module '@tanstack/react-router' {
       path: '/termos'
       fullPath: '/termos'
       preLoaderRoute: typeof TermosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/revenda': {
+      id: '/revenda'
+      path: '/revenda'
+      fullPath: '/revenda'
+      preLoaderRoute: typeof RevendaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/redefinir-senha': {
@@ -684,6 +704,7 @@ const rootRouteChildren: RootRouteChildren = {
   MfaRoute: MfaRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
+  RevendaRoute: RevendaRoute,
   TermosRoute: TermosRoute,
   PreviewTokenRoute: PreviewTokenRoute,
   PromoSlugRoute: PromoSlugRoute,

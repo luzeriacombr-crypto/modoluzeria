@@ -34,11 +34,11 @@ export function ResellerPanel() {
           instância.
         </p>
         <a
-          href="https://wa.me/5599991135486?text=Oi!%20Quero%20saber%20mais%20sobre%20a%20revenda%20white%20label%20do%20Modo%20Criador."
+          href="/revenda"
           target="_blank" rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[rgb(var(--lz-brand-rgb))] to-[rgba(var(--lz-brand-rgb),0.8)] hover:opacity-90 rounded-xl font-bold text-[#0D0D0D] transition"
         >
-          Quero ser revendedor
+          Saiba como funciona
           <ExternalLink size={16} />
         </a>
       </div>

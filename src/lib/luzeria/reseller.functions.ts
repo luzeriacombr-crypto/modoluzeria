@@ -173,6 +173,92 @@ export const createResoldOrg = createServerFn({ method: "POST" })
     return { orgId: newOrg.id as string };
   });
 
+/** Platform-admin only (Luzeria): cadastra uma revenda do zero — cria a org
+ * dela, convida o responsável por e-mail (mesmo fluxo de convite usado em
+ * createResoldOrg) e já aprova como revendedora com o desconto de atacado
+ * combinado. Existe pra fechar o caso comum: alguém chama no WhatsApp
+ * pedindo pra revender, mas ainda não tem nenhuma conta no Modo Criador —
+ * sem isso, approveReseller sozinho não serve porque exige uma org já
+ * existente. */
+export const createResellerOrg = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { name: string; planId: string; ownerName: string; ownerEmail: string; wholesaleDiscountPercent?: number }) =>
+    z.object({
+      name: z.string().trim().min(2).max(80),
+      planId: z.string().min(1),
+      ownerName: z.string().trim().min(2).max(80),
+      ownerEmail: z.string().trim().toLowerCase().email(),
+      wholesaleDiscountPercent: z.number().min(0).max(95).optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: existingAssignment } = await supabaseAdmin
+      .from("email_role_assignments").select("email").eq("email", data.ownerEmail).maybeSingle();
+    if (existingAssignment) throw new Error("Já existe uma conta com esse e-mail.");
+
+    const slugBase = data.name.trim().toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "agencia";
+
+    const { data: newOrg, error: orgErr } = await supabaseAdmin
+      .from("orgs")
+      .insert({
+        name: data.name.trim(),
+        slug: `${slugBase}-${Date.now().toString(36)}`,
+        plan_id: data.planId,
+        subscription_status: "active",
+        is_reseller: true,
+      })
+      .select("id").single();
+    if (orgErr) throw new Error(orgErr.message);
+
+    const { seedJourneyStagesForOrg } = await import("./journey-stages.functions");
+    await seedJourneyStagesForOrg(supabaseAdmin, newOrg.id);
+
+    const { error: earErr } = await supabaseAdmin.from("email_role_assignments").insert({
+      email: data.ownerEmail, role: "master", name: data.ownerName.trim(), org_id: newOrg.id,
+    });
+    if (earErr) throw new Error(earErr.message);
+
+    const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+      type: "invite",
+      email: data.ownerEmail,
+      options: { data: { name: data.ownerName.trim() } },
+    });
+    if (linkErr || !linkData?.user) throw new Error(linkErr?.message ?? "Não foi possível criar o acesso da revenda.");
+
+    const actionLink = (linkData.properties as any)?.action_link as string | undefined;
+    if (actionLink) {
+      const { sendEmail } = await import("./resend.server");
+      await sendEmail({
+        to: data.ownerEmail,
+        subject: `Seu acesso de revendedor ${data.name.trim()} está pronto`,
+        html: `
+          <p>Olá, ${data.ownerName.trim()}!</p>
+          <p>Sua conta de revenda white label em <strong>${data.name.trim()}</strong> foi criada. Clique no link abaixo pra definir sua senha e acessar:</p>
+          <p><a href="${actionLink}">Criar minha senha</a></p>
+        `,
+      }).catch((e) => console.error("Falha ao enviar e-mail de convite de revenda:", e.message));
+    }
+
+    const discount = data.wholesaleDiscountPercent ?? 60;
+    const { data: plans } = await supabaseAdmin.from("plans").select("id, price_cents").not("price_cents", "is", null);
+    for (const plan of plans ?? []) {
+      const wholesaleCents = Math.round(((plan as any).price_cents as number) * (1 - discount / 100));
+      await supabaseAdmin.from("reseller_wholesale_prices").upsert(
+        { reseller_org_id: newOrg.id, plan_id: (plan as any).id, wholesale_price_cents: wholesaleCents },
+        { onConflict: "reseller_org_id,plan_id" },
+      );
+    }
+
+    return { orgId: newOrg.id as string };
+  });
+
 /** Platform-admin only (Luzeria): aprova uma agência como revendedora e
  * semeia o preço de atacado de cada plano com o desconto combinado (60%
  * por padrão). Rodar de novo com outro desconto sobrescreve os valores. */

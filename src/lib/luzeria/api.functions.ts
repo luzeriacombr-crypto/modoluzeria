@@ -380,6 +380,21 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         if (!ownerByOrg.has(p.org_id)) ownerByOrg.set(p.org_id, { name: p.name, email: p.email });
       });
 
+    // Pra cada revendedor, quantas instâncias ele já revendeu e quanto isso
+    // soma no atacado — dá pra ver isso na lista sem abrir org por org.
+    const { data: wholesaleRows } = await supabaseAdmin
+      .from("reseller_wholesale_prices").select("reseller_org_id, plan_id, wholesale_price_cents");
+    const wholesaleByResellerPlan = new Map<string, number>(
+      (wholesaleRows ?? []).map((w: any) => [`${w.reseller_org_id}:${w.plan_id}`, w.wholesale_price_cents as number]));
+    const resoldCountByReseller = new Map<string, number>();
+    const resoldTotalByReseller = new Map<string, number>();
+    (orgs ?? []).forEach((o: any) => {
+      if (!o.reseller_org_id) return;
+      resoldCountByReseller.set(o.reseller_org_id, (resoldCountByReseller.get(o.reseller_org_id) ?? 0) + 1);
+      const cents = wholesaleByResellerPlan.get(`${o.reseller_org_id}:${o.plan_id}`) ?? 0;
+      resoldTotalByReseller.set(o.reseller_org_id, (resoldTotalByReseller.get(o.reseller_org_id) ?? 0) + cents);
+    });
+
     return (orgs ?? []).map((o: any) => {
       const plan = planMap.get(o.plan_id);
       const owner = ownerByOrg.get(o.id);
@@ -402,6 +417,8 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         isReseller: !!o.is_reseller,
         resellerOrgId: o.reseller_org_id as string | null,
         resellerOrgName: o.reseller_org_id ? (resellerNameById.get(o.reseller_org_id) ?? null) : null,
+        resoldCount: o.is_reseller ? (resoldCountByReseller.get(o.id) ?? 0) : 0,
+        resoldMonthlyCents: o.is_reseller ? (resoldTotalByReseller.get(o.id) ?? 0) : 0,
       };
     });
   });
