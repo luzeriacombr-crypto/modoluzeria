@@ -119,9 +119,14 @@ export const getMe = createServerFn({ method: "GET" })
     const { data: myEmail } = await context.supabase.rpc("get_my_email");
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
-    const { data: org } = orgId
+    const { data: org, error: orgErr } = orgId
       ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller").eq("id", orgId).maybeSingle()
-      : { data: null };
+      : { data: null, error: null };
+    // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
+    // toda agência uma vez, quando uma política de RLS quebrada fazia essa
+    // query falhar sem ninguém perceber — melhor estourar alto do que
+    // voltar um perfil com marca zerada pra todo mundo de novo.
+    if (orgErr) throw new Error(`Falha ao carregar dados da agência: ${orgErr.message}`);
     const logoPath = (org as any)?.logo_path as string | null | undefined;
     const feedPreviewImagePath = (org as any)?.feed_preview_image_path as string | null | undefined;
     const faviconPath = (org as any)?.favicon_path as string | null | undefined;
