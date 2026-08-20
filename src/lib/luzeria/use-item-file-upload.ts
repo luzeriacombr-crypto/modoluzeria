@@ -1,61 +1,13 @@
 import { useState } from "react";
 import { useApi } from "./queries";
-import { supabase } from "@/integrations/supabase/client";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
-// Reusing reel-covers here (not a dedicated bucket) — its RLS policy is
-// proven working right now, unlike freshly created/modified storage.objects
-// policies on this project, which silently fail to take effect regardless
-// of creation method (CLI, dashboard SQL editor) or policy logic (confirmed
-// down to a raw `WITH CHECK (true)` SQL insert still getting rejected).
-// Filenames get a "tmp-" prefix to stay visually distinct from real covers.
-const UPLOAD_BUCKET = "reel-covers";
-
-// 50 MB — Supabase Storage's own hard cap on the free plan (confirmed via a
-// real 413 EntityTooLarge; not configurable past this without upgrading
-// Supabase to Pro). Well past the old ~3 MB working reality either way.
-export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
-
-/** Supabase Storage keys only allow word chars, whitespace, and a specific
- * punctuation set — accented characters (e.g. macOS screenshot names like
- * "Captura de Tela ... às ...") get rejected with a 400 InvalidKey. Only
- * used for the temp storage key; the real filename (kept accented) still
- * goes to Drive via syncUploadToDrive's `name` field. */
-export function sanitizeStorageFileName(name: string): string {
-  const ascii = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return ascii.replace(/[^\w\s!\-.*'()&$@=;:+,?]/g, "_");
-}
-
-/** PUTs the file straight to Supabase Storage's REST endpoint — unlike
- * Google Drive's upload API (confirmed: no CORS support for third-party
- * origins), Supabase Storage is built for exactly this direct-from-browser
- * use case, so it isn't subject to Vercel's 4.5 MB request-body limit
- * either. Uses XHR (not fetch) for real upload-progress events. The file
- * lands in a temp bucket; a server call then relays it into the org's
- * Drive (see syncUploadToDrive). */
-export function putToSupabaseStorage(path: string, file: File, accessToken: string, onProgress: (pct: number) => void): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", `${SUPABASE_URL}/storage/v1/object/${UPLOAD_BUCKET}/${encodeURIComponent(path).replace(/%2F/g, "/")}`, true);
-    xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
-    xhr.setRequestHeader("apikey", SUPABASE_PUBLISHABLE_KEY);
-    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-    xhr.setRequestHeader("x-upsert", "true");
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
-      } else {
-        reject(new Error(`Upload falhou (${xhr.status} ${xhr.statusText}): ${xhr.responseText?.slice(0, 240) || "sem detalhes"}`));
-      }
-    };
-    xhr.onerror = () => reject(new Error("Falha de rede durante o upload."));
-    xhr.send(file);
-  });
-}
+// 4MB — comfortably under any serverless request-body limit even after
+// base64 inflation (~33%, so ~5.3MB on the wire), while still keeping the
+// number of round trips reasonable for a big video (a 300MB reel is ~75
+// chunks). Google's resumable upload protocol wants chunk sizes that are a
+// multiple of 256KB; 4MB already is.
+const CHUNK_SIZE = 4 * 1024 * 1024;
+const MAX_CHUNK_ATTEMPTS = 3;
 
 export function parseDriveError(msg: string | undefined): { kind: "missing"; clientId: string } | { kind: "other"; msg: string } {
   const m = /^\[DELIVERIES_FOLDER_MISSING:([0-9a-f-]{36})\]\s*(.*)$/i.exec(msg ?? "");
@@ -63,15 +15,85 @@ export function parseDriveError(msg: string | undefined): { kind: "missing"; cli
   return { kind: "other", msg: msg ?? "Falha na operação." };
 }
 
+/** ArrayBuffer -> base64, in sub-chunks — spreading a large typed array
+ * straight into String.fromCharCode blows the call stack well before 4MB. */
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const STEP = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += STEP) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + STEP));
+  }
+  return btoa(binary);
+}
+
 export type UploadProgress = { done: number; total: number; pct: number; phase: "uploading" | "syncing" };
+
+/** Sends a file to the org's Google Drive without the browser ever talking
+ * to Drive directly (confirmed: Drive's upload endpoint rejects the
+ * cross-origin PUT with a CORS error) and without staging it in Supabase
+ * Storage first (capped at 50MB on the current plan). Instead: open a
+ * resumable session on Drive (startDriveUploadSession), then relay the
+ * file through our own server a small chunk at a time (uploadDriveChunk) —
+ * each request is tiny regardless of the file's total size, so there's no
+ * practical upload size ceiling beyond Drive's own (a few TB). */
+async function uploadOneFile(
+  itemId: string,
+  file: File,
+  kind: "media" | "briefing",
+  api: ReturnType<typeof useApi>,
+  onProgress: (pct: number) => void,
+): Promise<{ id: string; name: string }> {
+  const { uploadUrl } = await api.startDriveUploadSession.mutateAsync({
+    data: { itemId, name: file.name, mimeType: file.type || "application/octet-stream", kind },
+  });
+
+  const total = file.size;
+  let offset = 0;
+  let finalMeta: any = null;
+  while (offset < total) {
+    const end = Math.min(offset + CHUNK_SIZE, total);
+    const chunkBuffer = await file.slice(offset, end).arrayBuffer();
+    const chunkBase64 = arrayBufferToBase64(chunkBuffer);
+
+    let lastErr: unknown;
+    let result: { done: boolean; meta?: any } | null = null;
+    for (let attempt = 1; attempt <= MAX_CHUNK_ATTEMPTS; attempt++) {
+      try {
+        result = await api.uploadDriveChunk.mutateAsync({
+          data: {
+            uploadUrl, chunkBase64,
+            rangeStart: offset, rangeEnd: end - 1, totalSize: total,
+            mimeType: file.type || "application/octet-stream",
+          },
+        });
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < MAX_CHUNK_ATTEMPTS) await new Promise((r) => setTimeout(r, 800 * attempt));
+      }
+    }
+    if (!result) throw lastErr instanceof Error ? lastErr : new Error("Falha ao enviar um pedaço do arquivo.");
+
+    onProgress(Math.round((end / total) * 100));
+    if (result.done) { finalMeta = result.meta; break; }
+    offset = end;
+  }
+  if (!finalMeta) throw new Error("O envio terminou sem confirmação do Drive.");
+
+  const result = await api.finalizeDriveUpload.mutateAsync({
+    data: { itemId, kind, driveFile: finalMeta },
+  }) as { file: { id: string; name: string } };
+  return result.file;
+}
 
 /** Shared upload orchestration used by "Arquivos" (kind: "media", the
  * default), the Mídia preview's direct-upload (kind: "media"), and the
  * Briefing section's reference-image uploader (kind: "briefing") — same
- * relay (Supabase Storage temp → syncUploadToDrive → Google Drive), just
- * tagged differently so each lands in its own folder/list. */
+ * relay (chunked straight into Google Drive), just tagged differently so
+ * each lands in its own folder/list. */
 export function useItemFileUpload(itemId: string, kind: "media" | "briefing" = "media") {
-  const { syncUploadToDrive } = useApi();
+  const api = useApi();
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [missingClientId, setMissingClientId] = useState<string | null>(null);
@@ -81,41 +103,12 @@ export function useItemFileUpload(itemId: string, kind: "media" | "briefing" = "
     setMissingClientId(null);
     if (selected.length === 0) return;
 
-    const tooBig = selected.filter((f) => f.size > MAX_UPLOAD_BYTES);
-    const toUpload = selected.filter((f) => f.size <= MAX_UPLOAD_BYTES);
-    if (tooBig.length > 0) {
-      setError(
-        tooBig.length === selected.length
-          ? `Arquivo${tooBig.length > 1 ? "s" : ""} grande${tooBig.length > 1 ? "s" : ""} demais (máx. 50 MB).`
-          : `${tooBig.length} arquivo(s) ignorado(s) por serem grandes demais (máx. 50 MB): ${tooBig.map((f) => f.name).join(", ")}`,
-      );
-    }
-    if (toUpload.length === 0) return;
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    if (!accessToken) {
-      setError("Sessão expirada — recarregue a página e tente de novo.");
-      return;
-    }
-
-    setUploadProgress({ done: 0, total: toUpload.length, pct: 0, phase: "uploading" });
+    setUploadProgress({ done: 0, total: selected.length, pct: 0, phase: "uploading" });
     const failed: { name: string; msg: string }[] = [];
-    for (const file of toUpload) {
-      const storagePath = `${itemId}/tmp-${Date.now()}-${sanitizeStorageFileName(file.name)}`;
+    for (const file of selected) {
       try {
-        await putToSupabaseStorage(storagePath, file, accessToken, (pct) =>
+        await uploadOneFile(itemId, file, kind, api, (pct) =>
           setUploadProgress((p) => (p ? { ...p, pct, phase: "uploading" } : p)));
-        setUploadProgress((p) => (p ? { ...p, pct: 100, phase: "syncing" } : p));
-        await syncUploadToDrive.mutateAsync({
-          data: {
-            itemId,
-            storagePath,
-            name: file.name,
-            mimeType: file.type || "application/octet-stream",
-            kind,
-          },
-        });
         setUploadProgress((p) => (p ? { done: p.done + 1, total: p.total, pct: 0, phase: "uploading" } : p));
       } catch (err: any) {
         const p = parseDriveError(err?.message);
@@ -139,6 +132,6 @@ export function useItemFileUpload(itemId: string, kind: "media" | "briefing" = "
     setError,
     missingClientId,
     setMissingClientId,
-    busy: uploadProgress !== null || syncUploadToDrive.isPending,
+    busy: uploadProgress !== null || api.startDriveUploadSession.isPending || api.uploadDriveChunk.isPending || api.finalizeDriveUpload.isPending,
   };
 }

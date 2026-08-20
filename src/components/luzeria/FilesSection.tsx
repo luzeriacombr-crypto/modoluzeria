@@ -319,7 +319,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
       )}
 
       <p className="text-[10px] text-white/40 mt-2 leading-relaxed">
-        Arquivos ficam armazenados no Google Drive da agência. Você pode selecionar vários de uma vez, até 50 MB por arquivo.
+        Arquivos ficam armazenados no Google Drive da agência. Você pode selecionar vários de uma vez, sem limite de tamanho.
         Vídeos grandes podem levar mais tempo pra sincronizar com o Drive depois do envio — se der erro nessa etapa, é só tentar de novo.
       </p>
     </div>

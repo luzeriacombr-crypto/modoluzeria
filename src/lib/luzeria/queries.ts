@@ -35,7 +35,7 @@ import {
   getMyWeek, getWorkload, getItemTimeline, addCommentWithMentions, updateComment,
 } from "./roadmap.functions";
 import {
-  listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, syncUploadToDrive, detachItemFile, deleteItemFileAndDrive,
+  listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, startDriveUploadSession, uploadDriveChunk, finalizeDriveUpload, detachItemFile, deleteItemFileAndDrive,
   getDriveThumbnail, getDriveFileBytes, reorderItemFiles, getGridThumbnails,
   getClientDeliveriesFolder, setClientDeliveriesFolder, clearClientDeliveriesFolder,
 } from "./drive.functions";
@@ -1013,8 +1013,10 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["month"] });
       },
     }),
-    syncUploadToDrive: useMutation({
-      mutationFn: useServerFn(syncUploadToDrive),
+    startDriveUploadSession: useMutation({ mutationFn: useServerFn(startDriveUploadSession) }),
+    uploadDriveChunk: useMutation({ mutationFn: useServerFn(uploadDriveChunk) }),
+    finalizeDriveUpload: useMutation({
+      mutationFn: useServerFn(finalizeDriveUpload),
       onSuccess: (_d, vars: any) => {
         qc.invalidateQueries({ queryKey: ["item-files", vars?.data?.itemId] });
         qc.invalidateQueries({ queryKey: ["month"] });

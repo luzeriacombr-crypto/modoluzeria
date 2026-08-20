@@ -564,12 +564,17 @@ export const attachDriveFile = createServerFn({ method: "POST" })
  * the whole file twice. Still not a guarantee for very large files on a
  * slow connection between the two services; if it times out the file
  * simply stays in the temp bucket (nothing is lost) and the user can retry. */
-export const syncUploadToDrive = createServerFn({ method: "POST" })
+/** Fase 1 do upload direto (sem passar pelo Supabase Storage, que tem teto
+ * de 50MB no plano atual): abre uma sessão resumível no Drive e devolve a
+ * URL da sessão pro navegador. O navegador NÃO consegue mandar os bytes
+ * direto pra essa URL (confirmado: o Drive bloqueia por CORS o PUT com
+ * Content-Range vindo de um domínio de terceiro) — por isso o upload em si
+ * (uploadDriveChunk) também passa pelo servidor, em pedaços pequenos. */
+export const startDriveUploadSession = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { itemId: string; storagePath: string; name: string; mimeType: string; kind?: "media" | "briefing" }) =>
+  .inputValidator((d: { itemId: string; name: string; mimeType: string; kind?: "media" | "briefing" }) =>
     z.object({
       itemId: z.string().uuid(),
-      storagePath: z.string().min(1).max(500),
       name: z.string().min(1).max(255),
       mimeType: z.string().min(1).max(200),
       kind: z.enum(["media", "briefing"]).default("media"),
@@ -582,17 +587,6 @@ export const syncUploadToDrive = createServerFn({ method: "POST" })
     const targetParentId = await resolveTargetFolderForItem(
       context.supabase, context.userId, data.itemId, { kind: data.kind },
     );
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: signed, error: signErr } = await supabaseAdmin.storage
-      .from("reel-covers")
-      .createSignedUrl(data.storagePath, 300);
-    if (signErr || !signed?.signedUrl) throw new Error("Não foi possível acessar o arquivo enviado.");
-
-    const downloadRes = await fetch(signed.signedUrl);
-    if (!downloadRes.ok || !downloadRes.body) {
-      throw new Error(`Falha ao ler o arquivo enviado (${downloadRes.status}).`);
-    }
 
     const metadata: any = { name: data.name, mimeType: data.mimeType };
     if (targetParentId) metadata.parents = [targetParentId];
@@ -615,29 +609,92 @@ export const syncUploadToDrive = createServerFn({ method: "POST" })
     }
     const uploadUrl = sessionRes.headers.get("Location");
     if (!uploadUrl) throw new Error("O Drive não retornou uma URL de upload.");
+    return { uploadUrl };
+  }));
 
-    const uploadRes = await fetch(uploadUrl, {
+/** Só aceita relayar bytes pra uploads que a própria startDriveUploadSession
+ * emitiu — a URL sempre é do domínio de upload do Drive, nunca escolhida
+ * pelo chamador, então validar o host aqui é defesa extra contra SSRF, não
+ * a proteção principal (essa é o middleware de sessão ativa + o próprio
+ * upload_id opaco e não adivinhável que o Drive gera). */
+function assertDriveUploadUrl(url: string) {
+  const parsed = new URL(url);
+  if (parsed.hostname !== "www.googleapis.com" || !parsed.pathname.startsWith("/upload/drive/")) {
+    throw new Error("URL de upload inválida.");
+  }
+}
+
+/** Fase 2: um pedaço (~4MB) do arquivo, em base64 dentro do JSON — grande o
+ * bastante pra não precisar de centenas de idas e vindas, pequeno o
+ * bastante pra nunca chegar perto de qualquer limite de tamanho de corpo de
+ * requisição. Pedaços do meio devolvem 308 (Drive ainda esperando mais);
+ * o último devolve 200 com os metadados do arquivo já pronto. */
+export const uploadDriveChunk = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { uploadUrl: string; chunkBase64: string; rangeStart: number; rangeEnd: number; totalSize: number; mimeType: string }) =>
+    z.object({
+      uploadUrl: z.string().url(),
+      chunkBase64: z.string().min(1),
+      rangeStart: z.number().int().min(0),
+      rangeEnd: z.number().int().min(0),
+      totalSize: z.number().int().min(1),
+      mimeType: z.string().min(1).max(200),
+    }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    assertDriveUploadUrl(data.uploadUrl);
+    const chunk = Buffer.from(data.chunkBase64, "base64");
+    const res = await fetch(data.uploadUrl, {
       method: "PUT",
-      headers: { "Content-Type": data.mimeType },
-      body: downloadRes.body,
-      // @ts-expect-error - Node's fetch requires `duplex` to stream a body; not in the TS lib yet.
-      duplex: "half",
+      headers: {
+        ...await driveHeaders(),
+        "Content-Type": data.mimeType,
+        "Content-Range": `bytes ${data.rangeStart}-${data.rangeEnd}/${data.totalSize}`,
+      },
+      body: chunk,
     });
-    if (!uploadRes.ok) {
-      const txt = await uploadRes.text().catch(() => "");
-      throw new Error(`O Drive recusou o arquivo (${uploadRes.status}): ${txt.slice(0, 240)}`);
+    if (res.status === 308) return { done: false as const };
+    if (res.ok) {
+      const meta: any = await res.json();
+      return { done: true as const, meta };
     }
-    const meta: any = await uploadRes.json();
+    const txt = await res.text().catch(() => "");
+    throw new Error(`O Drive recusou o pedaço do arquivo (${res.status}): ${txt.slice(0, 240)}`);
+  }));
 
+/** Fase 3: registra o arquivo já enviado (o navegador já tem os metadados
+ * devolvidos pelo Drive no último pedaço — evita uma chamada extra só pra
+ * reconsultar o que o Drive já mandou de volta). */
+export const finalizeDriveUpload = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: {
+    itemId: string; kind?: "media" | "briefing";
+    driveFile: { id: string; name: string; mimeType?: string; iconLink?: string; thumbnailLink?: string; webViewLink?: string; size?: string | number };
+  }) =>
+    z.object({
+      itemId: z.string().uuid(),
+      kind: z.enum(["media", "briefing"]).default("media"),
+      driveFile: z.object({
+        id: z.string().min(1),
+        name: z.string().min(1),
+        mimeType: z.string().optional(),
+        iconLink: z.string().optional(),
+        thumbnailLink: z.string().optional(),
+        webViewLink: z.string().optional(),
+        size: z.union([z.string(), z.number()]).optional(),
+      }),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCanWrite(context.supabase, context.userId, data.itemId);
+    const meta = data.driveFile;
     const row = {
       item_id: data.itemId,
       drive_file_id: meta.id,
-      name: meta.name ?? data.name,
-      mime_type: meta.mimeType ?? data.mimeType,
+      name: meta.name,
+      mime_type: meta.mimeType ?? null,
       icon_url: meta.iconLink ?? null,
       thumbnail_url: meta.thumbnailLink ?? null,
       web_view_url: meta.webViewLink ?? `https://drive.google.com/file/d/${meta.id}/view`,
-      size_bytes: meta.size ? Number(meta.size) : null,
+      size_bytes: meta.size != null ? Number(meta.size) : null,
       added_by: context.userId,
       sort_order: 0,
       kind: data.kind,
@@ -646,12 +703,9 @@ export const syncUploadToDrive = createServerFn({ method: "POST" })
       .from("item_files")
       .upsert(row, { onConflict: "item_id,drive_file_id" });
     if (error) throw new Error(error.message);
-
     await syncLegacyDriveLink(context.supabase, data.itemId);
-    await supabaseAdmin.storage.from("reel-covers").remove([data.storagePath]).catch(() => {});
-
     return { ok: true, file: { id: meta.id, name: row.name } };
-  }));
+  });
 
 export const uploadDriveFile = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
