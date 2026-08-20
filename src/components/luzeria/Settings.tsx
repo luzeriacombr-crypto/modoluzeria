@@ -34,8 +34,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "automations" | "general" | "subscription" | "updates" | "site" | "journey";
-const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "subscription", "updates", "site", "journey"];
+type SettingsTab = "team" | "report" | "automations" | "general" | "plano" | "cobranca" | "margem" | "afiliados" | "updates" | "site" | "journey";
+const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "plano", "cobranca", "margem", "afiliados", "updates", "site", "journey"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -77,7 +77,10 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             {tab === "team"   ? "Gerencie acessos, funções e metas da equipe." :
              tab === "report" ? "Relatório consolidado de entregas." :
              tab === "automations" ? "Google Drive, lembretes automáticos e jobs do sistema." :
-             tab === "subscription" ? "Seu plano, cobrança, cupons e programa de afiliados." :
+             tab === "plano" ? "Seu plano atual e uso." :
+             tab === "cobranca" ? "CNPJ/CPF, upgrade de plano e cupons." :
+             tab === "margem" ? "Lucratividade estimada por cliente." :
+             tab === "afiliados" ? "Programa de indicação e comissões." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
              tab === "journey" ? "Etapas do onboarding e da operação mensal, usadas pra avisar clientes no WhatsApp." :
@@ -92,7 +95,10 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "report", label: "Relatório" },
           { id: "automations", label: "Automações" },
           { id: "journey", label: "Jornada do cliente" },
-          { id: "subscription", label: "Financeiro" },
+          { id: "plano", label: "Seu plano" },
+          { id: "cobranca", label: "Cobrança" },
+          { id: "margem", label: "Margem por cliente" },
+          { id: "afiliados", label: "Afiliados" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
           ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }] : []),
@@ -128,12 +134,10 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
 
       <Suspense fallback={<TabLoadingFallback />}>
       {tab === "general" ? <GeneralSettings /> :
-       tab === "subscription" ? (
+       tab === "plano" ? <PlanCardSection /> :
+       tab === "cobranca" ? (
         <div className="space-y-10">
-          <SubscriptionSettings />
-          <div className="pt-2 border-t border-white/10">
-            <ClientMarginPanel />
-          </div>
+          <BillingSection />
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-white/10">
               <AgenciesBillingPanel />
@@ -144,9 +148,6 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               <DemoRequestsPanel />
             </div>
           )}
-          <div className="pt-2 border-t border-white/10">
-            <AffiliateProgramPanel isPlatformAdmin={!!me.isPlatformAdmin} />
-          </div>
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-white/10">
               <PromotionCodesPanel />
@@ -154,6 +155,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           )}
         </div>
        ) :
+       tab === "margem" ? <ClientMarginPanel /> :
+       tab === "afiliados" ? <AffiliateProgramPanel isPlatformAdmin={!!me.isPlatformAdmin} /> :
        tab === "updates" ? <UpdatesTab /> :
        tab === "site" ? (me.isPlatformAdmin ? <SalesPageEditorTab /> : null) :
        tab === "journey" ? <JourneyStagesTab /> :
@@ -645,30 +648,15 @@ function UsageBar({ label, used, max, pct }: { label: string; used: number; max:
   );
 }
 
-function SubscriptionSettings() {
-  const me = useMe().data;
-  if (!me?.orgId) return <div className="text-white/40 text-sm">Carregando…</div>;
-  return (
-    <div className="max-w-2xl">
-      <PlanUsageSection />
-    </div>
-  );
-}
-
 const SUBSCRIPTION_STATUS_LABEL: Record<string, { label: string; color: string }> = {
   active: { label: "Assinatura ativa", color: "#4ADE80" },
   past_due: { label: "Pagamento atrasado", color: "#FF6B6B" },
   canceled: { label: "Cancelada", color: "#FF6B6B" },
 };
 
-function PlanUsageSection() {
+/** "Seu plano" — plano atual + uso (clientes/colaboradores). */
+function PlanCardSection() {
   const { data: status, isLoading } = useQuery(orgPlanStatusQO());
-  const { data: plans } = useQuery(plansQO());
-  const { updateMyOrg, subscribeToPlan } = useApi();
-  const [taxId, setTaxId] = useState("");
-
-  useEffect(() => { if (status?.taxId) setTaxId(status.taxId); }, [status?.taxId]);
-
   if (isLoading || !status) return null;
 
   const clientsPct = status.maxClients ? Math.min(100, Math.round((status.clientsUsed / status.maxClients) * 100)) : 0;
@@ -681,26 +669,8 @@ function PlanUsageSection() {
     : null;
   const statusInfo = SUBSCRIPTION_STATUS_LABEL[status.subscriptionStatus];
 
-  function saveTaxId() {
-    const digits = taxId.replace(/\D/g, "");
-    updateMyOrg.mutate({ data: { taxId: digits || null } }, {
-      onSuccess: () => toast.success("CNPJ/CPF salvo."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
-    });
-  }
-
-  function subscribe(planId: string) {
-    subscribeToPlan.mutate({ data: { planId } }, {
-      onSuccess: (r: any) => {
-        toast.success("Assinatura criada! Abrindo a fatura para pagamento…");
-        if (r?.invoiceUrl) window.open(r.invoiceUrl, "_blank");
-      },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao assinar o plano."),
-    });
-  }
-
   return (
-    <>
+    <div className="max-w-2xl">
       <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
         <Star size={12} /> Seu plano
       </h2>
@@ -725,7 +695,41 @@ function PlanUsageSection() {
         <UsageBar label="Clientes ativos" used={status.clientsUsed} max={status.maxClients} pct={clientsPct} />
         <UsageBar label="Colaboradores" used={status.collaboratorsUsed} max={status.maxCollaborators} pct={collabPct} />
       </div>
+    </div>
+  );
+}
 
+/** "Cobrança" — CNPJ/CPF e upgrade de plano. */
+function BillingSection() {
+  const { data: status, isLoading } = useQuery(orgPlanStatusQO());
+  const { data: plans } = useQuery(plansQO());
+  const { updateMyOrg, subscribeToPlan } = useApi();
+  const [taxId, setTaxId] = useState("");
+
+  useEffect(() => { if (status?.taxId) setTaxId(status.taxId); }, [status?.taxId]);
+
+  if (isLoading || !status) return null;
+
+  function saveTaxId() {
+    const digits = taxId.replace(/\D/g, "");
+    updateMyOrg.mutate({ data: { taxId: digits || null } }, {
+      onSuccess: () => toast.success("CNPJ/CPF salvo."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+    });
+  }
+
+  function subscribe(planId: string) {
+    subscribeToPlan.mutate({ data: { planId } }, {
+      onSuccess: (r: any) => {
+        toast.success("Assinatura criada! Abrindo a fatura para pagamento…");
+        if (r?.invoiceUrl) window.open(r.invoiceUrl, "_blank");
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao assinar o plano."),
+    });
+  }
+
+  return (
+    <div className="max-w-2xl">
       <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
         <Star size={12} /> Assinatura e cobrança
       </h2>
@@ -766,7 +770,7 @@ function PlanUsageSection() {
           ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

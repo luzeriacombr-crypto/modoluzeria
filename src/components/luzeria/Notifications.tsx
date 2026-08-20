@@ -113,7 +113,7 @@ export function NotificationsBell() {
                   } else if (n.type === "forum_reply") {
                     navigate({ to: "/ajuda", search: { tab: "forum" } });
                   } else if (n.type === "demo_request") {
-                    navigate({ to: "/configuracoes", search: { tab: "subscription" } });
+                    navigate({ to: "/configuracoes", search: { tab: "cobranca" } });
                   }
                 }}
                 className="w-full text-left px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors block"
