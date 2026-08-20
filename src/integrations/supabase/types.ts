@@ -1843,6 +1843,7 @@ export type Database = {
           disabled_features: string[]
           favicon_path: string | null
           feed_preview_image_path: string | null
+          fixed_monthly_cost: number | null
           hourly_cost: number | null
           id: string
           logo_path: string | null
@@ -1869,6 +1870,7 @@ export type Database = {
           disabled_features?: string[]
           favicon_path?: string | null
           feed_preview_image_path?: string | null
+          fixed_monthly_cost?: number | null
           hourly_cost?: number | null
           id?: string
           logo_path?: string | null
@@ -1895,6 +1897,7 @@ export type Database = {
           disabled_features?: string[]
           favicon_path?: string | null
           feed_preview_image_path?: string | null
+          fixed_monthly_cost?: number | null
           hourly_cost?: number | null
           id?: string
           logo_path?: string | null

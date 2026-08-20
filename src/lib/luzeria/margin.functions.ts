@@ -23,26 +23,28 @@ export const getOrgCostSettings = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { data, error } = await context.supabase
-      .from("orgs").select("hourly_cost, avg_hours_by_type").eq("id", context.orgId).single();
+      .from("orgs").select("hourly_cost, avg_hours_by_type, fixed_monthly_cost").eq("id", context.orgId).single();
     if (error) throw new Error(error.message);
     return {
       hourlyCost: data.hourly_cost as number | null,
       avgHoursByType: data.avg_hours_by_type as Record<string, number>,
+      fixedMonthlyCost: data.fixed_monthly_cost as number | null,
     };
   });
 
 export const setOrgCostSettings = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { hourlyCost: number | null; avgHoursByType: Record<string, number> }) =>
+  .inputValidator((d: { hourlyCost: number | null; avgHoursByType: Record<string, number>; fixedMonthlyCost: number | null }) =>
     z.object({
       hourlyCost: z.number().min(0).nullable(),
       avgHoursByType: z.record(z.string(), z.number().min(0)),
+      fixedMonthlyCost: z.number().min(0).nullable(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { error } = await context.supabase
       .from("orgs")
-      .update({ hourly_cost: data.hourlyCost, avg_hours_by_type: data.avgHoursByType })
+      .update({ hourly_cost: data.hourlyCost, avg_hours_by_type: data.avgHoursByType, fixed_monthly_cost: data.fixedMonthlyCost })
       .eq("id", context.orgId);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -56,10 +58,11 @@ export const getClientMargins = createServerFn({ method: "GET" })
     await assertAdmin(context.supabase, context.userId);
 
     const { data: org, error: orgErr } = await context.supabase
-      .from("orgs").select("hourly_cost, avg_hours_by_type").eq("id", context.orgId).single();
+      .from("orgs").select("hourly_cost, avg_hours_by_type, fixed_monthly_cost").eq("id", context.orgId).single();
     if (orgErr) throw new Error(orgErr.message);
     const hourlyCost = org.hourly_cost as number | null;
     const avgHoursByType = (org.avg_hours_by_type ?? {}) as Record<string, number>;
+    const fixedMonthlyCost = org.fixed_monthly_cost as number | null;
 
     const { data: rateRows, error: rateErr } = await context.supabase.rpc("admin_list_member_hourly_cost");
     if (rateErr) throw new Error(rateErr.message);
@@ -125,11 +128,23 @@ export const getClientMargins = createServerFn({ method: "GET" })
       return avulsoClientHasOpenItem.get(c.id) ?? true;
     });
 
+    // Custo fixo da agência (aluguel, pró-labore, tarifas etc. — ver
+    // CostSettingsForm) rateado entre os clientes proporcional ao valor de
+    // contrato de cada um: quem paga mais carrega uma fatia maior. Clientes
+    // sem contrato preenchido não entram no rateio (não têm base pra dividir).
+    const totalContractValue = visibleClients.reduce(
+      (sum: number, c: any) => sum + (c.contract_value != null ? Number(c.contract_value) : 0), 0);
+
     const rows = visibleClients.map((c: any) => {
       const estimatedHours = hoursByClient.get(c.id) ?? 0;
       const estimatedCost = anyRateAvailable ? (costByClient.get(c.id) ?? 0) : null;
       const contractValue = c.contract_value as number | null;
-      const margin = contractValue != null && estimatedCost != null ? contractValue - estimatedCost : null;
+      const overheadShare = fixedMonthlyCost != null && contractValue != null && totalContractValue > 0
+        ? fixedMonthlyCost * (contractValue / totalContractValue)
+        : null;
+      const margin = contractValue != null && estimatedCost != null
+        ? contractValue - estimatedCost - (overheadShare ?? 0)
+        : null;
       return {
         clientId: c.id,
         clientName: c.name,
@@ -139,6 +154,7 @@ export const getClientMargins = createServerFn({ method: "GET" })
         deliveredCount: deliveredByClient.get(c.id) ?? 0,
         estimatedHours: Math.round(estimatedHours * 10) / 10,
         estimatedCost,
+        overheadShare,
         margin,
       };
     });
@@ -152,5 +168,5 @@ export const getClientMargins = createServerFn({ method: "GET" })
       return a.margin - b.margin;
     });
 
-    return { days: data.days, hourlyCost, avgHoursByType, rows };
+    return { days: data.days, hourlyCost, avgHoursByType, fixedMonthlyCost, rows };
   });
