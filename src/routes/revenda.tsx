@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ResellerLandingPage } from "@/components/reseller/ResellerLandingPage";
 
 const TITLE = "Revenda o Modo Criador com sua marca";
-const DESCRIPTION = "Compre instâncias do Modo Criador no atacado, coloque sua marca e revenda pros seus clientes pelo preço que você definir.";
+const DESCRIPTION = "Adquira instâncias do Modo Criador com preço de parceiro, coloque sua marca e revenda pros seus clientes pelo preço que você definir.";
 
 export const Route = createFileRoute("/revenda")({
   component: ResellerLandingPage,

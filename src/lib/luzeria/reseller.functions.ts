@@ -110,7 +110,7 @@ export const createResoldOrg = createServerFn({ method: "POST" })
 
     const { data: wholesale } = await context.supabase
       .from("reseller_wholesale_prices").select("plan_id").eq("reseller_org_id", context.orgId).eq("plan_id", data.planId).maybeSingle();
-    if (!wholesale) throw new Error("Não há preço de atacado configurado pra esse plano — fale com a Luzeria.");
+    if (!wholesale) throw new Error("Não há preço de parceiro configurado pra esse plano — fale com a Luzeria.");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 

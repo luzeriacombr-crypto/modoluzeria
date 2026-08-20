@@ -137,7 +137,7 @@ export function AgenciesBillingPanel() {
                           {o.name}
                         </button>
                         {o.isReseller && (
-                          <span title={`${o.resoldCount} instância(s) revendida(s) — ${formatCents(o.resoldMonthlyCents)}/mês no atacado`}
+                          <span title={`${o.resoldCount} instância(s) revendida(s) — ${formatCents(o.resoldMonthlyCents)}/mês em preço de parceiro`}
                             className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0"
                             style={{ backgroundColor: "rgba(var(--lz-brand-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
                             <Crown size={10} /> Revenda{o.resoldCount > 0 ? ` · ${o.resoldCount}` : ""}
@@ -302,7 +302,7 @@ function CreateResellerModal({ onClose }: { onClose: () => void }) {
             </select>
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">Desconto de atacado (%)</label>
+            <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">Desconto de parceiro (%)</label>
             <input type="number" min={0} max={95} value={discount} onChange={(e) => setDiscount(Number(e.target.value))}
               className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
             <p className="text-[11px] text-white/35 mt-1">Aplicado sobre o preço de tabela de cada plano — ela paga esse valor por cada instância que criar.</p>
@@ -352,13 +352,13 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
     mutationFn: useServerFn(approveReseller),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orgs-billing"] });
-      toast.success(`${org.name} aprovada como revendedora — 60% de desconto de atacado já configurado.`);
+      toast.success(`${org.name} aprovada como revendedora — 60% de desconto de parceiro já configurado.`);
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao aprovar revendedor."),
   });
 
   async function handleApproveReseller() {
-    if (!(await requestConfirm(`Aprovar ${org.name} como revendedora white label? Ela poderá criar instâncias novas com 60% de desconto de atacado.`))) return;
+    if (!(await requestConfirm(`Aprovar ${org.name} como revendedora white label? Ela poderá criar instâncias novas com 60% de desconto de parceiro.`))) return;
     approveResellerMutation.mutate({ data: { orgId: org.id } });
   }
 

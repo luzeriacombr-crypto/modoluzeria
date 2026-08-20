@@ -37,7 +37,7 @@ const BENEFITS = [
   },
   {
     icon: Wallet,
-    title: "Preço de atacado fixo",
+    title: "Preço de parceiro fixo",
     text: "Você paga um valor fechado por instância, bem abaixo do preço de tabela. O que cobra do seu cliente é decisão sua.",
   },
   {
@@ -48,10 +48,10 @@ const BENEFITS = [
 ];
 
 const STEPS = [
-  { title: "Você fala com a gente", text: "Manda mensagem contando um pouco da sua agência. A gente combina o desconto de atacado e aprova sua conta como revendedora." },
+  { title: "Você fala com a gente", text: "Manda mensagem contando um pouco da sua agência. A gente define sua condição de parceiro e aprova sua conta como revendedora." },
   { title: "Você cria as instâncias", text: "Sem esperar aprovação a cada cliente novo: você mesma cadastra cada instância, já com nome e marca do cliente final." },
   { title: "Você entrega e cobra do seu jeito", text: "Cada cliente recebe o Modo Criador com a cara da sua agência. Você decide quanto cobra — a gente nunca aparece nem cobra o cliente final." },
-  { title: "Uma fatura só, por mês", text: "A gente cobra só de você, uma vez por mês, a soma do valor de atacado de todas as instâncias ativas." },
+  { title: "Uma fatura só, por mês", text: "A gente cobra só de você, uma vez por mês, a soma do investimento de todas as instâncias ativas." },
 ];
 
 const FIT_YES = [
@@ -71,7 +71,7 @@ const INCLUDED = [
   "Instância completa do Modo Criador — calendário, aprovação por link, relatórios, backup automático no Drive",
   "Marca própria em cada instância: logo, nome e cores da sua agência",
   "Painel de revenda seu, pra criar e acompanhar instâncias quando quiser",
-  "Preço de atacado fixo, sem taxa de implantação nem contrato de fidelidade",
+  "Preço de parceiro fixo, sem taxa de implantação nem contrato de fidelidade",
   "Suporte técnico direto com a Luzeria pelo WhatsApp",
 ];
 
@@ -80,7 +80,7 @@ const FAQ_GROUPS: { category: string; items: [string, string][] }[] = [
     category: "O modelo",
     items: [
       ["O que exatamente eu passo a revender?", "Instâncias completas do Modo Criador, com a marca da sua agência. Pro seu cliente final, o produto é seu — a Luzeria fica nos bastidores."],
-      ["Como minha agência ganha dinheiro?", "Você paga o valor de atacado fixo por instância e cobra do seu cliente final o que quiser — a diferença é a sua margem recorrente, todo mês."],
+      ["Como minha agência ganha dinheiro?", "Você paga um preço fixo de parceiro por instância e cobra do seu cliente final o que quiser — a diferença é a sua margem recorrente, todo mês."],
       ["Tem contrato de fidelidade ou número mínimo?", "Não. Você cria a primeira instância quando quiser e cresce no seu ritmo, sem mínimo e sem multa."],
     ],
   },
@@ -130,7 +130,7 @@ export function ResellerLandingPage() {
               Revenda o<br />Modo Criador<br /><span style={{ color: LIME }}>com sua marca</span>
             </h1>
             <p className="text-lg sm:text-xl text-white/60 max-w-lg mb-9">
-              Compre instâncias no atacado, entregue com a identidade da sua agência e revenda
+              Adquira instâncias com preço de parceiro, entregue com a identidade da sua agência e revenda
               pros seus clientes pelo preço que você definir.
             </p>
             <div className="flex flex-wrap items-center gap-4">
@@ -206,7 +206,7 @@ export function ResellerLandingPage() {
           <div className="mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-6 flex flex-wrap items-center justify-center gap-3 text-center">
             <span className="text-sm sm:text-base font-semibold text-white/70">Preço que você cobra</span>
             <span className="text-white/30 text-xl font-black">−</span>
-            <span className="text-sm sm:text-base font-semibold text-white/70">custo de atacado</span>
+            <span className="text-sm sm:text-base font-semibold text-white/70">custo de parceiro</span>
             <span className="text-white/30 text-xl font-black">=</span>
             <span className="text-sm sm:text-base font-black px-3 py-1 rounded-full" style={{ background: "rgba(215,255,63,0.14)", color: LIME }}>sua margem recorrente</span>
           </div>
@@ -301,7 +301,7 @@ export function ResellerLandingPage() {
       <section style={{ background: BG_WHITE, color: "#0A0E23" }} className="border-t border-black/10">
         <Reveal className="px-5 sm:px-10 max-w-[640px] mx-auto py-20 text-center">
           <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-3">Bora conversar sobre a sua revenda?</h2>
-          <p className="text-[#0A0E23]/60 text-base mb-9">Sem compromisso — a gente te explica tudo e combina o desconto de atacado no WhatsApp.</p>
+          <p className="text-[#0A0E23]/60 text-base mb-9">Sem compromisso — a gente te explica tudo e define sua condição de parceiro no WhatsApp.</p>
           <a
             href={WHATSAPP_HREF} target="_blank" rel="noopener noreferrer"
             className={`inline-flex items-center gap-2 px-8 py-4 rounded-full font-black uppercase text-sm ${POP}`}

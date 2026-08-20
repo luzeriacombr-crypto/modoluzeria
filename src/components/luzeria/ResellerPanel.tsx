@@ -29,9 +29,9 @@ export function ResellerPanel() {
       <div className="bg-gradient-to-br from-white/[0.08] to-white/[0.03] border border-white/15 rounded-2xl p-8 backdrop-blur-sm">
         <h2 className="text-2xl font-black text-white">Revenda White Label</h2>
         <p className="text-sm text-white/50 mt-1 mb-6 max-w-lg">
-          Compre instâncias do Modo Criador no atacado, coloque sua própria marca e revenda pros seus clientes pelo
-          preço que você definir. A gente nunca cobra o cliente final — só a sua agência, com um preço fechado por
-          instância.
+          Adquira instâncias do Modo Criador com preço de parceiro, coloque sua própria marca e revenda pros seus
+          clientes pelo preço que você definir. A gente nunca cobra o cliente final — só a sua agência, com um preço
+          fechado por instância.
         </p>
         <a
           href="/revenda"
@@ -60,7 +60,7 @@ function ResellerDashboard({ program }: { program: Extract<Awaited<ReturnType<ty
             <p className="text-sm text-white/50 mt-1">
               {program.resoldOrgs.length} {program.resoldOrgs.length === 1 ? "instância revendida" : "instâncias revendidas"}
               {" — "}
-              <span className="text-white font-semibold">{formatCents(program.monthlyWholesaleTotalCents)}/mês</span> no atacado
+              <span className="text-white font-semibold">{formatCents(program.monthlyWholesaleTotalCents)}/mês</span> em preço de parceiro
             </p>
           </div>
           <button
@@ -154,7 +154,7 @@ function CreateResoldOrgModal({ onClose, wholesalePrices }: {
             <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">Plano</label>
             <select value={planId} onChange={(e) => setPlanId(e.target.value)}
               className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
-              {wholesalePrices.map((w) => <option key={w.planId} value={w.planId}>{w.planName} — {formatCents(w.wholesalePriceCents)}/mês no atacado</option>)}
+              {wholesalePrices.map((w) => <option key={w.planId} value={w.planId}>{w.planName} — {formatCents(w.wholesalePriceCents)}/mês (parceiro)</option>)}
             </select>
             {retailPrice != null && (
               <p className="text-[11px] text-white/35 mt-1">Preço de tabela pra esse plano: {formatCents(retailPrice)}/mês — você cobra do seu cliente o que quiser.</p>
