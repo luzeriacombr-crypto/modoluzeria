@@ -228,11 +228,12 @@ export function Sidebar({
           <NavGroup
             icon={<Wallet size={15} />}
             label="Financeiro"
-            active={configTabActive("cobranca") || configTabActive("margem") || configTabActive("afiliados")}
+            active={configTabActive("cobranca") || configTabActive("margem") || configTabActive("afiliados") || configTabActive("revenda")}
           >
             <NavSubButton label="Plano e Cobrança" active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} />
             <NavSubButton label="Margem por cliente" active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} />
             <NavSubButton label="Afiliados" active={configTabActive("afiliados")} onClick={() => goToConfigTab("afiliados")} />
+            <NavSubButton label="Revenda" active={configTabActive("revenda")} onClick={() => goToConfigTab("revenda")} />
           </NavGroup>
         )}
         {(canTeam || canReport || canJourney || rotinaEnabled) && (

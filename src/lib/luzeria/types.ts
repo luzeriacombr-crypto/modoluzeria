@@ -225,6 +225,9 @@ export interface Profile {
   tourCompletedAt?: string | null;
   /** True only for masters of the Luzeria org itself (the platform owner). */
   isPlatformAdmin?: boolean;
+  /** True when this org was approved by Luzeria to resell white-label
+   * instances of Modo Criador to its own clients. */
+  isReseller?: boolean;
   orgId?: string | null;
   orgName?: string | null;
   orgTagline?: string | null;

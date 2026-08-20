@@ -83,6 +83,19 @@ export async function updateAsaasPaymentValue(paymentId: string, valueCents: num
   }) as Promise<{ id: string; value: number }>;
 }
 
+/** Updates a subscription's recurring value — used for the reseller's
+ * consolidated wholesale bill, recalculated every time a resold instance is
+ * added/removed. Only changes future charges; also nudges the currently
+ * pending payment (if any) via updateAsaasPaymentValue so this month's
+ * invoice reflects the new total too, same as applyPromotionCodeToOrg
+ * already does for discount codes. */
+export async function updateAsaasSubscriptionValue(subscriptionId: string, valueCents: number) {
+  return asaasFetch(`/subscriptions/${subscriptionId}`, {
+    method: "PUT",
+    body: JSON.stringify({ value: valueCents / 100 }),
+  }) as Promise<{ id: string; value: number }>;
+}
+
 /** Cancels a subscription in Asaas — stops future charges and removes any
  * still-pending (unpaid) invoice for it. Already-paid invoices stay in
  * Asaas's history untouched. */

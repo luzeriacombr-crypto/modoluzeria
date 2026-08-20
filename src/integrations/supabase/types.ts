@@ -1846,11 +1846,13 @@ export type Database = {
           fixed_monthly_cost: number | null
           hourly_cost: number | null
           id: string
+          is_reseller: boolean
           logo_path: string | null
           members_can_set_editor_format: boolean
           name: string
           plan_id: string
           promotion_code_id: string | null
+          reseller_org_id: string | null
           setor_permissions: string[]
           slug: string
           subscription_status: string
@@ -1873,11 +1875,13 @@ export type Database = {
           fixed_monthly_cost?: number | null
           hourly_cost?: number | null
           id?: string
+          is_reseller?: boolean
           logo_path?: string | null
           members_can_set_editor_format?: boolean
           name: string
           plan_id?: string
           promotion_code_id?: string | null
+          reseller_org_id?: string | null
           setor_permissions?: string[]
           slug: string
           subscription_status?: string
@@ -1900,11 +1904,13 @@ export type Database = {
           fixed_monthly_cost?: number | null
           hourly_cost?: number | null
           id?: string
+          is_reseller?: boolean
           logo_path?: string | null
           members_can_set_editor_format?: boolean
           name?: string
           plan_id?: string
           promotion_code_id?: string | null
+          reseller_org_id?: string | null
           setor_permissions?: string[]
           slug?: string
           subscription_status?: string
@@ -1926,6 +1932,52 @@ export type Database = {
             columns: ["promotion_code_id"]
             isOneToOne: false
             referencedRelation: "promotion_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orgs_reseller_org_id_fkey"
+            columns: ["reseller_org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reseller_wholesale_prices: {
+        Row: {
+          created_at: string
+          id: string
+          plan_id: string
+          reseller_org_id: string
+          wholesale_price_cents: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plan_id: string
+          reseller_org_id: string
+          wholesale_price_cents: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plan_id?: string
+          reseller_org_id?: string
+          wholesale_price_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_wholesale_prices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_wholesale_prices_reseller_org_id_fkey"
+            columns: ["reseller_org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
             referencedColumns: ["id"]
           },
         ]

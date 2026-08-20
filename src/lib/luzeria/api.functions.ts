@@ -120,7 +120,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller").eq("id", orgId).maybeSingle()
       : { data: null };
     const logoPath = (org as any)?.logo_path as string | null | undefined;
     const feedPreviewImagePath = (org as any)?.feed_preview_image_path as string | null | undefined;
@@ -144,6 +144,7 @@ export const getMe = createServerFn({ method: "GET" })
       onboardedAt: profile.onboarded_at ?? null,
       tourCompletedAt: (profile as any).tour_completed_at ?? null,
       isPlatformAdmin: role === "master" && orgId === LUZERIA_ORG_ID,
+      isReseller: (org as any)?.is_reseller ?? false,
       orgId,
       orgName: (org as any)?.name ?? null,
       orgTagline: (org as any)?.tagline ?? null,
@@ -298,9 +299,10 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
 
     const { data: orgs, error } = await context.supabase
       .from("orgs")
-      .select("id, name, slug, plan_id, subscription_status, trial_ends_at, asaas_subscription_id, created_at, tax_id, whatsapp")
+      .select("id, name, slug, plan_id, subscription_status, trial_ends_at, asaas_subscription_id, created_at, tax_id, whatsapp, is_reseller, reseller_org_id")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
+    const resellerNameById = new Map((orgs ?? []).map((o: any) => [o.id, o.name as string]));
 
     const { data: plans } = await context.supabase.from("plans").select("id, name, price_cents");
     const planMap = new Map((plans ?? []).map((p: any) => [p.id, p]));
@@ -349,6 +351,9 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         whatsapp: o.whatsapp as string | null,
         ownerName: owner?.name ?? null,
         ownerEmail: owner?.email ?? null,
+        isReseller: !!o.is_reseller,
+        resellerOrgId: o.reseller_org_id as string | null,
+        resellerOrgName: o.reseller_org_id ? (resellerNameById.get(o.reseller_org_id) ?? null) : null,
       };
     });
   });

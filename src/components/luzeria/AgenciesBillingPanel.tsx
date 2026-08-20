@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw } from "lucide-react";
 import { orgsBillingQO } from "@/lib/luzeria/queries";
 import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial } from "@/lib/luzeria/api.functions";
+import { approveReseller } from "@/lib/luzeria/reseller.functions";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
@@ -207,6 +208,20 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
 
   const digits = (org.whatsapp ?? "").replace(/\D/g, "");
 
+  const approveResellerMutation = useMutation({
+    mutationFn: useServerFn(approveReseller),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orgs-billing"] });
+      toast.success(`${org.name} aprovada como revendedora — 60% de desconto de atacado já configurado.`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao aprovar revendedor."),
+  });
+
+  async function handleApproveReseller() {
+    if (!(await requestConfirm(`Aprovar ${org.name} como revendedora white label? Ela poderá criar instâncias novas com 60% de desconto de atacado.`))) return;
+    approveResellerMutation.mutate({ data: { orgId: org.id } });
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-[#161616] border border-white/10 rounded-2xl p-6 max-w-sm w-full">
@@ -275,6 +290,25 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
               </div>
             ) : (
               <p className="text-white/30 text-[13px]">Não cadastrado.</p>
+            )}
+          </div>
+
+          <div>
+            <p className="text-[11px] font-bold uppercase text-white/40 tracking-wider mb-0.5">Revenda</p>
+            {org.resellerOrgName ? (
+              <p className="text-white/80">Instância revendida por <span className="text-white font-semibold">{org.resellerOrgName}</span>.</p>
+            ) : org.isReseller ? (
+              <p className="inline-flex items-center gap-1.5 text-[rgb(var(--lz-brand-rgb))] font-semibold">
+                <Check size={13} /> Aprovada como revendedora
+              </p>
+            ) : (
+              <button
+                onClick={handleApproveReseller}
+                disabled={approveResellerMutation.isPending}
+                className="text-xs font-semibold text-white/60 hover:text-white border border-white/15 hover:border-white/30 rounded-md px-3 py-1.5 transition disabled:opacity-40"
+              >
+                {approveResellerMutation.isPending ? "Aprovando..." : "Aprovar como revendedora"}
+              </button>
             )}
           </div>
         </div>

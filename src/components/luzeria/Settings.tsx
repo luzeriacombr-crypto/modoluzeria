@@ -20,6 +20,7 @@ const AutomationsTab = lazy(() => import("./AutomationsTab").then((m) => ({ defa
 const UpdatesTab = lazy(() => import("./UpdatesTab").then((m) => ({ default: m.UpdatesTab })));
 const PromotionCodesPanel = lazy(() => import("./PromotionCodesPanel").then((m) => ({ default: m.PromotionCodesPanel })));
 const AffiliateProgramPanel = lazy(() => import("./AffiliateProgramPanel").then((m) => ({ default: m.AffiliateProgramPanel })));
+const ResellerPanel = lazy(() => import("./ResellerPanel").then((m) => ({ default: m.ResellerPanel })));
 const AgenciesBillingPanel = lazy(() => import("./AgenciesBillingPanel").then((m) => ({ default: m.AgenciesBillingPanel })));
 const ClientMarginPanel = lazy(() => import("./ClientMarginPanel").then((m) => ({ default: m.ClientMarginPanel })));
 const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => ({ default: m.DemoRequestsPanel })));
@@ -34,8 +35,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "automations" | "general" | "cobranca" | "margem" | "afiliados" | "updates" | "site" | "journey";
-const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "cobranca", "margem", "afiliados", "updates", "site", "journey"];
+type SettingsTab = "team" | "report" | "automations" | "general" | "cobranca" | "margem" | "afiliados" | "revenda" | "updates" | "site" | "journey";
+const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "cobranca", "margem", "afiliados", "revenda", "updates", "site", "journey"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -80,6 +81,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
              tab === "cobranca" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
              tab === "margem" ? "Lucratividade estimada por cliente." :
              tab === "afiliados" ? "Programa de indicação e comissões." :
+             tab === "revenda" ? "Revenda instâncias white label pros seus clientes." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
              tab === "journey" ? "Etapas do onboarding e da operação mensal, usadas pra avisar clientes no WhatsApp." :
@@ -97,6 +99,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "cobranca", label: "Plano e Cobrança" },
           { id: "margem", label: "Margem por cliente" },
           { id: "afiliados", label: "Afiliados" },
+          { id: "revenda", label: "Revenda" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
           ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }] : []),
@@ -157,6 +160,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        ) :
        tab === "margem" ? <ClientMarginPanel /> :
        tab === "afiliados" ? <AffiliateProgramPanel isPlatformAdmin={!!me.isPlatformAdmin} /> :
+       tab === "revenda" ? <ResellerPanel /> :
        tab === "updates" ? <UpdatesTab /> :
        tab === "site" ? (me.isPlatformAdmin ? <SalesPageEditorTab /> : null) :
        tab === "journey" ? <JourneyStagesTab /> :
