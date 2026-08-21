@@ -67,7 +67,7 @@ import {
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
-import { listSalesStages, upsertSalesStage, deleteSalesStage, listLeads, upsertLead, moveLeadStage, markLeadLost, deleteLead, markLeadWon } from "./sales-pipeline.functions";
+import { listLeads, upsertLead, markLeadContacted, setLeadAwaitingReply, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon } from "./sales-pipeline.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
 import { listDemoRequests } from "./demo-request.functions";
@@ -212,9 +212,6 @@ export const journeyStagesQO = () =>
 
 export const cargosQO = () =>
   queryOptions({ queryKey: ["cargos"], queryFn: () => listCargos() });
-
-export const salesStagesQO = () =>
-  queryOptions({ queryKey: ["sales-stages"], queryFn: () => listSalesStages() });
 
 export const leadsQO = (includeArchived?: boolean) =>
   queryOptions({
@@ -862,25 +859,25 @@ export function useApi() {
       },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar cargos."),
     }),
-    upsertSalesStage: useMutation({
-      mutationFn: useServerFn(upsertSalesStage),
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["sales-stages"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar etapa."),
-    }),
-    deleteSalesStage: useMutation({
-      mutationFn: useServerFn(deleteSalesStage),
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["sales-stages"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover etapa."),
-    }),
     upsertLead: useMutation({
       mutationFn: useServerFn(upsertLead),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar oportunidade."),
     }),
-    moveLeadStage: useMutation({
-      mutationFn: useServerFn(moveLeadStage),
+    markLeadContacted: useMutation({
+      mutationFn: useServerFn(markLeadContacted),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao mover oportunidade."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar contato."),
+    }),
+    setLeadAwaitingReply: useMutation({
+      mutationFn: useServerFn(setLeadAwaitingReply),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar lead."),
+    }),
+    scheduleLeadFollowup: useMutation({
+      mutationFn: useServerFn(scheduleLeadFollowup),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao agendar follow-up."),
     }),
     markLeadLost: useMutation({
       mutationFn: useServerFn(markLeadLost),

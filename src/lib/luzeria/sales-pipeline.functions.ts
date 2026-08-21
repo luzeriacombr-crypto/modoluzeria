@@ -2,12 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 
-export type SalesStage = {
-  id: string;
-  name: string;
-  sortOrder: number;
-};
-
 export type Lead = {
   id: string;
   name: string;
@@ -16,66 +10,17 @@ export type Lead = {
   source: string | null;
   notes: string | null;
   valueEstimateCents: number | null;
-  stageId: string | null;
   responsibleId: string | null;
   responsibleName: string | null;
   archived: boolean;
   wonClientId: string | null;
+  awaitingReply: boolean;
+  lastContactAt: string | null;
+  nextFollowupAt: string | null;
+  followUpNote: string | null;
   createdAt: string;
+  updatedAt: string;
 };
-
-/** Mesmas etapas semeadas pra toda agência via CROSS JOIN em
- * supabase/migrations/20260821130000_sales_pipeline.sql — reaproveitado
- * aqui pra semear agências novas (o migration só cobre as que já
- * existiam quando ele rodou). */
-export const DEFAULT_SALES_STAGES = ["Novo", "Contato feito", "Proposta enviada", "Fechado", "Perdido"];
-
-export async function seedSalesStagesForOrg(supabase: any, orgId: string): Promise<void> {
-  const rows = DEFAULT_SALES_STAGES.map((name, i) => ({ org_id: orgId, name, sort_order: i }));
-  const { error } = await supabase.from("sales_stages").insert(rows);
-  if (error) console.error("[seedSalesStagesForOrg] failed:", error.message);
-}
-
-export const listSalesStages = createServerFn({ method: "GET" })
-  .middleware([requireActiveProfile])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("sales_stages").select("id, name, sort_order").eq("org_id", context.orgId).order("sort_order");
-    if (error) throw new Error(error.message);
-    return (data ?? []).map((s: any) => ({ id: s.id, name: s.name, sortOrder: s.sort_order })) as SalesStage[];
-  });
-
-export const upsertSalesStage = createServerFn({ method: "POST" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { id?: string; name: string }) =>
-    z.object({ id: z.string().uuid().optional(), name: z.string().trim().min(1).max(60) }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-    const db: any = context.supabase;
-    if (data.id) {
-      const { error } = await db.from("sales_stages").update({ name: data.name }).eq("id", data.id);
-      if (error) throw new Error(error.message);
-    } else {
-      const { data: existing } = await db.from("sales_stages")
-        .select("sort_order").eq("org_id", context.orgId).order("sort_order", { ascending: false }).limit(1).maybeSingle();
-      const nextOrder = (existing?.sort_order ?? -1) + 1;
-      const { error } = await db.from("sales_stages").insert({ org_id: context.orgId, name: data.name, sort_order: nextOrder });
-      if (error) throw new Error(error.message);
-    }
-    return { ok: true };
-  });
-
-export const deleteSalesStage = createServerFn({ method: "POST" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-    const { error } = await context.supabase.from("sales_stages").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
 
 export const listLeads = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
@@ -83,7 +28,7 @@ export const listLeads = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("leads")
-      .select("id, name, contact_phone, contact_email, source, notes, value_estimate_cents, stage_id, responsible_id, archived, won_client_id, created_at, profiles(name)")
+      .select("id, name, contact_phone, contact_email, source, notes, value_estimate_cents, responsible_id, archived, won_client_id, awaiting_reply, last_contact_at, next_followup_at, follow_up_note, created_at, updated_at, profiles(name)")
       .eq("org_id", context.orgId)
       .order("created_at", { ascending: false });
     if (!data.includeArchived) q = q.eq("archived", false);
@@ -92,8 +37,11 @@ export const listLeads = createServerFn({ method: "GET" })
     return (rows ?? []).map((r: any) => ({
       id: r.id, name: r.name, contactPhone: r.contact_phone, contactEmail: r.contact_email,
       source: r.source, notes: r.notes, valueEstimateCents: r.value_estimate_cents,
-      stageId: r.stage_id, responsibleId: r.responsible_id, responsibleName: r.profiles?.name ?? null,
-      archived: r.archived, wonClientId: r.won_client_id, createdAt: r.created_at,
+      responsibleId: r.responsible_id, responsibleName: r.profiles?.name ?? null,
+      archived: r.archived, wonClientId: r.won_client_id,
+      awaitingReply: r.awaiting_reply, lastContactAt: r.last_contact_at,
+      nextFollowupAt: r.next_followup_at, followUpNote: r.follow_up_note,
+      createdAt: r.created_at, updatedAt: r.updated_at,
     })) as Lead[];
   });
 
@@ -102,7 +50,7 @@ export const upsertLead = createServerFn({ method: "POST" })
   .inputValidator((d: {
     id?: string; name: string; contactPhone?: string | null; contactEmail?: string | null;
     source?: string | null; notes?: string | null; valueEstimateCents?: number | null;
-    stageId?: string | null; responsibleId?: string | null;
+    responsibleId?: string | null;
   }) =>
     z.object({
       id: z.string().uuid().optional(),
@@ -112,7 +60,6 @@ export const upsertLead = createServerFn({ method: "POST" })
       source: z.string().trim().max(80).nullable().optional(),
       notes: z.string().trim().max(2000).nullable().optional(),
       valueEstimateCents: z.number().int().min(0).nullable().optional(),
-      stageId: z.string().uuid().nullable().optional(),
       responsibleId: z.string().uuid().nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
@@ -124,7 +71,6 @@ export const upsertLead = createServerFn({ method: "POST" })
     if (data.source !== undefined) patch.source = data.source;
     if (data.notes !== undefined) patch.notes = data.notes;
     if (data.valueEstimateCents !== undefined) patch.value_estimate_cents = data.valueEstimateCents;
-    if (data.stageId !== undefined) patch.stage_id = data.stageId;
     if (data.responsibleId !== undefined) patch.responsible_id = data.responsibleId;
     if (data.id) {
       patch.updated_at = new Date().toISOString();
@@ -137,13 +83,42 @@ export const upsertLead = createServerFn({ method: "POST" })
     return { id: created.id as string };
   });
 
-export const moveLeadStage = createServerFn({ method: "POST" })
+/** "Marquei contato" — limpa a fila de espera/follow-up e reinicia a
+ * contagem de "esfriando" a partir de agora. */
+export const markLeadContacted = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string; stageId: string }) =>
-    z.object({ id: z.string().uuid(), stageId: z.string().uuid() }).parse(d))
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
-      .from("leads").update({ stage_id: data.stageId, updated_at: new Date().toISOString() }).eq("id", data.id);
+      .from("leads")
+      .update({ last_contact_at: new Date().toISOString(), awaiting_reply: false, next_followup_at: null, follow_up_note: null, updated_at: new Date().toISOString() })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Time recebeu mensagem do lead e precisa responder — cai na fila
+ * "Responder agora" até alguém marcar contato feito. */
+export const setLeadAwaitingReply = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string; awaitingReply: boolean }) =>
+    z.object({ id: z.string().uuid(), awaitingReply: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("leads").update({ awaiting_reply: data.awaitingReply, updated_at: new Date().toISOString() }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const scheduleLeadFollowup = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string; followUpAt: string; note?: string | null }) =>
+    z.object({ id: z.string().uuid(), followUpAt: z.string(), note: z.string().trim().max(500).nullable().optional() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("leads")
+      .update({ next_followup_at: data.followUpAt, follow_up_note: data.note ?? null, updated_at: new Date().toISOString() })
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

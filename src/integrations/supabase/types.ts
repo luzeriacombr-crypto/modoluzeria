@@ -314,83 +314,60 @@ export type Database = {
           },
         ]
       }
-      sales_stages: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          org_id: string
-          sort_order: number
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          org_id: string
-          sort_order?: number
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          org_id?: string
-          sort_order?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sales_stages_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "orgs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       leads: {
         Row: {
           archived: boolean
+          awaiting_reply: boolean
           contact_email: string | null
           contact_phone: string | null
           created_at: string
+          follow_up_note: string | null
           id: string
+          last_contact_at: string | null
           name: string
+          next_followup_at: string | null
           notes: string | null
           org_id: string
           responsible_id: string | null
           source: string | null
-          stage_id: string | null
           updated_at: string
           value_estimate_cents: number | null
           won_client_id: string | null
         }
         Insert: {
           archived?: boolean
+          awaiting_reply?: boolean
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
+          follow_up_note?: string | null
           id?: string
+          last_contact_at?: string | null
           name: string
+          next_followup_at?: string | null
           notes?: string | null
           org_id: string
           responsible_id?: string | null
           source?: string | null
-          stage_id?: string | null
           updated_at?: string
           value_estimate_cents?: number | null
           won_client_id?: string | null
         }
         Update: {
           archived?: boolean
+          awaiting_reply?: boolean
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
+          follow_up_note?: string | null
           id?: string
+          last_contact_at?: string | null
           name?: string
+          next_followup_at?: string | null
           notes?: string | null
           org_id?: string
           responsible_id?: string | null
           source?: string | null
-          stage_id?: string | null
           updated_at?: string
           value_estimate_cents?: number | null
           won_client_id?: string | null
@@ -401,13 +378,6 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "orgs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leads_stage_id_fkey"
-            columns: ["stage_id"]
-            isOneToOne: false
-            referencedRelation: "sales_stages"
             referencedColumns: ["id"]
           },
           {
