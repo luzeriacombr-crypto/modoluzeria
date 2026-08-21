@@ -555,7 +555,12 @@ function TodayCalendarWidget() {
             <span className="text-[11px] text-white/40 tabular-nums shrink-0">
               {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
             </span>
-            <span className="text-sm text-white/90 truncate flex-1">{ev.title}</span>
+            <span className="min-w-0 flex-1">
+              <span className="text-sm text-white/90 truncate block">{ev.title}</span>
+              {ev.attendees?.length > 0 && (
+                <span className="text-[11px] text-white/40 truncate block">com {ev.attendees.join(", ")}</span>
+              )}
+            </span>
           </button>
         ))}
       </div>
@@ -578,6 +583,9 @@ function CalendarEventModal({ event, onClose }: { event: any; onClose: () => voi
           <button onClick={onClose} className="text-white/40 hover:text-white shrink-0"><X size={16} /></button>
         </div>
         <p className="text-[13px] text-white/60">{timeRange}</p>
+        {event.attendees?.length > 0 && (
+          <p className="text-[13px] text-white/50 mt-2">👥 {event.attendees.join(", ")}</p>
+        )}
         {event.location && (
           <p className="text-[13px] text-white/50 mt-2">📍 {event.location}</p>
         )}

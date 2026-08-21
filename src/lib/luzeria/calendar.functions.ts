@@ -219,6 +219,12 @@ export const getTodayCalendarEvents = createServerFn({ method: "GET" })
         location: e.location ?? null,
         description: e.description ?? null,
         link: e.htmlLink ?? null,
+        // Já vem junto na mesma resposta do Google — só não estava sendo
+        // mapeado. Exclui o próprio dono (é óbvio que ele "vai" ao próprio
+        // compromisso) e quem recusou o convite.
+        attendees: ((e.attendees ?? []) as any[])
+          .filter((a) => !a.self && a.responseStatus !== "declined")
+          .map((a) => a.displayName || (a.email ? a.email.split("@")[0] : "Convidado")),
       }));
     return { connected: true, events };
   });
