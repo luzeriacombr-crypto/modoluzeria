@@ -208,6 +208,20 @@ export const getTodayCalendarEvents = createServerFn({ method: "GET" })
     const json: any = await res.json();
     // eslint-disable-next-line no-console
     console.debug("[gcal] raw items from Google:", json.items?.length ?? 0);
+
+    // O Google quase nunca manda displayName pros convidados (só o e-mail)
+    // — "claudio.silva23" antes do @ fica feio. Troca pelo nome de
+    // verdade quando o convidado é alguém da própria equipe (comparando
+    // e-mail via service role, já que profiles.email é admin-only por
+    // RLS). Nunca devolve e-mail nenhum pro cliente, só o nome.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: teammates } = await supabaseAdmin
+      .from("profiles").select("name, email").eq("org_id", context.orgId);
+    const nameByEmail = new Map<string, string>(
+      (teammates ?? [])
+        .filter((p: any) => p.email)
+        .map((p: any) => [(p.email as string).toLowerCase(), p.name as string]));
+
     const events = (json.items ?? [])
       .filter((e: any) => e.status !== "cancelled")
       .map((e: any) => ({
@@ -219,12 +233,14 @@ export const getTodayCalendarEvents = createServerFn({ method: "GET" })
         location: e.location ?? null,
         description: e.description ?? null,
         link: e.htmlLink ?? null,
-        // Já vem junto na mesma resposta do Google — só não estava sendo
-        // mapeado. Exclui o próprio dono (é óbvio que ele "vai" ao próprio
+        // Exclui o próprio dono (é óbvio que ele "vai" ao próprio
         // compromisso) e quem recusou o convite.
         attendees: ((e.attendees ?? []) as any[])
           .filter((a) => !a.self && a.responseStatus !== "declined")
-          .map((a) => a.displayName || (a.email ? a.email.split("@")[0] : "Convidado")),
+          .map((a) => {
+            const email = (a.email as string | undefined)?.toLowerCase();
+            return (email && nameByEmail.get(email)) || a.displayName || (email ? email.split("@")[0] : "Convidado");
+          }),
       }));
     return { connected: true, events };
   });
