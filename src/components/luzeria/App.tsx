@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
+import { PullToRefresh } from "./PullToRefresh";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ClientFichaPanel } from "./ClientFichaPanel";
 import { AppTour } from "./AppTour";
@@ -41,6 +42,7 @@ export function App() {
   const routeId = useRouterState({ select: (s) => s.matches.at(-1)?.routeId ?? "" });
   const [creating, setCreating] = useState<{ category?: string } | null>(null);
   const [customFor, setCustomFor] = useState<Client | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const call = useScreenShareCall();
 
   // Supabase Realtime — invalidate month cache when team edits content items
@@ -195,10 +197,12 @@ export function App() {
       <div className="flex-1 flex flex-col min-w-0">
         <Header sidebarHidden={sidebarHidden} onToggleSidebar={toggleSidebar} />
         <TrialEndingBanner isMaster={me.data?.role === "master"} />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0">
-          <div key={routeId} className="lz-page-in">
-            <Outlet />
-          </div>
+        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0">
+          <PullToRefresh containerRef={mainRef}>
+            <div key={routeId} className="lz-page-in">
+              <Outlet />
+            </div>
+          </PullToRefresh>
         </main>
       </div>
       {/* Always-visible floating toggle when sidebar is hidden — never gets stuck */}

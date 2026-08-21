@@ -509,6 +509,17 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   }
 }
 
+/* O Safari do iPhone dá zoom na página inteira quando um input focado tem
+ * fonte menor que 16px — e às vezes o zoom não volta sozinho depois de
+ * fechar o popup/modal. A maioria dos campos do app usa 12-14px, então
+ * força 16px em telas de celular (não muda nada no desktop, onde esse
+ * comportamento nem existe). */
+@media (max-width: 767px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
 /* ====== Hover utilities (global feedback layer) ====== */
 @utility lz-btn-accent {
   background-image: linear-gradient(135deg, rgb(var(--lz-brand-rgb)), color-mix(in srgb, rgb(var(--lz-brand-rgb)) 78%, black));
