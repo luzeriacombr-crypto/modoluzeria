@@ -125,19 +125,25 @@ export function App() {
     };
   }, [me.data?.orgFaviconUrl]);
 
-  // Cache the org's logo locally so the loading screen (which renders
-  // before we know who's logged in) can show it immediately on a repeat
-  // visit instead of the generic Modo Criador mark — see LuzeriaLoader.tsx.
-  // Clears the cache when the org has no custom logo, so a shared device
-  // switching between orgs doesn't briefly flash a stale one.
+  // Cache the org's logo + brand colors locally so the loading screen
+  // (which renders before we know who's logged in, so before the
+  // --lz-brand-rgb CSS var is set) can show them immediately on a repeat
+  // visit instead of the generic Modo Criador mark/lime — see
+  // LuzeriaLoader.tsx. Clears the cache when the org has neither, so a
+  // shared device switching between orgs doesn't briefly flash stale branding.
   useEffect(() => {
     if (!me.data) return;
-    if (me.data.orgLogoUrl) {
-      localStorage.setItem("lz_org_branding", JSON.stringify({ logoUrl: me.data.orgLogoUrl, name: me.data.orgName ?? null }));
+    if (me.data.orgLogoUrl || me.data.orgColorPrimary) {
+      localStorage.setItem("lz_org_branding", JSON.stringify({
+        logoUrl: me.data.orgLogoUrl ?? null,
+        name: me.data.orgName ?? null,
+        colorPrimary: me.data.orgColorPrimary ?? null,
+        colorPrimaryLight: me.data.orgColorPrimaryLight ?? null,
+      }));
     } else {
       localStorage.removeItem("lz_org_branding");
     }
-  }, [me.data?.orgLogoUrl, me.data?.orgName]);
+  }, [me.data?.orgLogoUrl, me.data?.orgName, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight]);
 
   if (me.isLoading) {
     return <LuzeriaLoader />;
