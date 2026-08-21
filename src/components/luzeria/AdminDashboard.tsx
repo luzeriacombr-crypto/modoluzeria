@@ -3,9 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Users, Target, Package, Clock, AlertTriangle,
   ChevronLeft, ChevronRight, Trophy, Sparkles, Flame, Crown, Medal,
-  X, CheckCircle2, Inbox, Tag, Activity, AlertOctagon, RotateCcw, LayoutGrid, Check,
+  X, CheckCircle2, Inbox, Tag, Activity, AlertOctagon, RotateCcw,
 } from "lucide-react";
-import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoalQO, useMe, reportExtrasQO, orgCostSettingsQO, useApi } from "@/lib/luzeria/queries";
+import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoalQO, useMe, reportExtrasQO, orgCostSettingsQO } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
@@ -13,14 +13,6 @@ import { useCountUp, useGrowIn } from "@/lib/luzeria/animation-hooks";
 import { Avatar } from "./Avatar";
 import { SetupChecklist } from "./SetupChecklist";
 import { InfoTip } from "./InfoTip";
-import { DashboardGrid, type CellRect } from "./DashboardGrid";
-
-const METRIC_DEFAULT_LAYOUT: Record<string, CellRect> = {
-  "metric-clients": { x: 0, y: 0, w: 3, h: 1 },
-  "metric-goal": { x: 3, y: 0, w: 3, h: 1 },
-  "metric-done": { x: 6, y: 0, w: 3, h: 1 },
-  "metric-missing": { x: 9, y: 0, w: 3, h: 1 },
-};
 
 type Period = "month" | "3m" | "6m" | "year";
 const PERIOD_LABEL: Record<Period, string> = {
@@ -72,9 +64,6 @@ export function AdminDashboard() {
   const [rankingMode, setRankingMode] = useState<"meta" | "geral">("meta");
   const [filterMode, setFilterMode] = useState<null | "category" | "health" | "metric">(null);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
-  const [customizingLayout, setCustomizingLayout] = useState(false);
-  const { updateMyOrg } = useApi();
-  const metricLayout = { ...METRIC_DEFAULT_LAYOUT, ...(me?.dashboardLayout ?? {}) };
 
   const dashboard = useQuery(adminDashboardQO(selectedMonthKey));
   const top = useQuery({ ...topMembersQO(period, selectedMonthKey), enabled: rankingMode === "geral" && !!selectedMonthKey });
@@ -236,41 +225,9 @@ export function AdminDashboard() {
           info="Meta do mês menos Entregues — quantos itens ainda faltam pra bater a meta do período. Clique pra ver a lista."
         />;
         return (
-          <>
-            <div className="grid grid-cols-2 gap-3 mb-6 lz-stagger md:hidden">
-              {cardClients}{cardGoal}{cardDone}{cardMissing}
-            </div>
-            <div className="hidden md:block">
-              {isAdmin && (
-                <div className="flex justify-end mb-2">
-                  <button
-                    onClick={() => setCustomizingLayout((v) => !v)}
-                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border transition"
-                    style={customizingLayout
-                      ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D", borderColor: "rgb(var(--lz-brand-rgb))" }
-                      : { color: "rgba(255,255,255,0.5)", borderColor: "rgba(255,255,255,0.15)" }}
-                  >
-                    {customizingLayout ? <Check size={12} /> : <LayoutGrid size={12} />}
-                    {customizingLayout ? "Concluir" : "Personalizar quadros"}
-                  </button>
-                </div>
-              )}
-              <div className="mb-6 lz-stagger">
-                <DashboardGrid
-                  editing={customizingLayout}
-                  layout={metricLayout}
-                  onLayoutChange={(next) => updateMyOrg.mutate({ data: { dashboardLayout: next } })}
-                  rowHeight={140}
-                  widgets={[
-                    { id: "metric-clients", default: METRIC_DEFAULT_LAYOUT["metric-clients"], node: cardClients },
-                    { id: "metric-goal", default: METRIC_DEFAULT_LAYOUT["metric-goal"], node: cardGoal },
-                    { id: "metric-done", default: METRIC_DEFAULT_LAYOUT["metric-done"], node: cardDone },
-                    { id: "metric-missing", default: METRIC_DEFAULT_LAYOUT["metric-missing"], node: cardMissing },
-                  ]}
-                />
-              </div>
-            </div>
-          </>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 lz-stagger">
+            {cardClients}{cardGoal}{cardDone}{cardMissing}
+          </div>
         );
       })()}
 
