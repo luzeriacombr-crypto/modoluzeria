@@ -391,28 +391,30 @@ function GoogleCalendarSection() {
 
   return (
     <div>
-      <div className="flex items-start gap-4">
-        <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
-          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
-          <CalendarClock size={16} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-white">
-            {conn?.connected ? "Conectado" : "Não conectado"}
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+        <div className="flex items-start gap-4 flex-1 min-w-0">
+          <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+            <CalendarClock size={16} />
           </div>
-          <div className="text-[11px] text-white/50 mt-1">
-            {conn?.connected
-              ? `Conectado como ${conn.email}. Seus compromissos de hoje aparecem em Minhas Demandas.`
-              : "Conecte sua Google Agenda pra ver seus compromissos de hoje em Minhas Demandas."}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-white">
+              {conn?.connected ? "Conectado" : "Não conectado"}
+            </div>
+            <div className="text-[11px] text-white/50 mt-1">
+              {conn?.connected
+                ? `Conectado como ${conn.email}. Seus compromissos de hoje aparecem em Minhas Demandas.`
+                : "Conecte sua Google Agenda pra ver seus compromissos de hoje em Minhas Demandas."}
+            </div>
           </div>
         </div>
         {!isLoading && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 sm:ml-0 ml-[52px]">
             {conn?.connected && (
               <button
                 type="button"
                 onClick={() => setShowForm((v) => !v)}
-                className="text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-black"
+                className="text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-black whitespace-nowrap"
                 style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
               >
                 Novo compromisso
@@ -422,7 +424,7 @@ function GoogleCalendarSection() {
               type="button"
               onClick={conn?.connected ? disconnect : connect}
               disabled={getGoogleCalendarAuthUrl.isPending || disconnectGoogleCalendar.isPending}
-              className={`text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md disabled:opacity-50 ${
+              className={`text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md disabled:opacity-50 whitespace-nowrap ${
                 conn?.connected ? "border border-white/15 text-white/80 hover:text-white hover:border-white/30" : "text-black"
               }`}
               style={conn?.connected ? undefined : { backgroundColor: "rgb(var(--lz-brand-rgb))" }}
