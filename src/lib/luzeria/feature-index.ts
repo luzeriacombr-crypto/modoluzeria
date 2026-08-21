@@ -5,6 +5,10 @@ export type FeatureEntry = {
   label: string;
   description: string;
   keywords: string[];
+  /** Termos "guarda-chuva" (ex: "financeiro" pra Plano e Cobrança) — pesam
+   * tanto quanto o próprio nome na hora de ordenar os resultados, mesmo
+   * aparecendo também como keyword comum em outras entradas relacionadas. */
+  strongKeywords?: string[];
   to: string;
   toSearch?: Record<string, string>;
   /** Omit = visible to everyone with access to the app (member included). */
@@ -92,6 +96,7 @@ export const FEATURE_INDEX: FeatureEntry[] = [
     label: "Equipe (Configurações)",
     description: "Aprovar membros novos e definir a meta de posts/reels/stories de cada um.",
     keywords: ["equipe", "membros", "aprovar", "meta", "colaborador"],
+    strongKeywords: ["equipe"],
     to: "/configuracoes",
     toSearch: { tab: "team" },
     roles: ["master", "setor"],
@@ -127,7 +132,8 @@ export const FEATURE_INDEX: FeatureEntry[] = [
     id: "cfg-cobranca",
     label: "Plano e Cobrança",
     description: "Seu plano atual, uso, CNPJ/CPF e upgrade de plano.",
-    keywords: ["plano", "cobrança", "assinatura", "cnpj", "cpf", "upgrade", "pagamento"],
+    keywords: ["plano", "cobrança", "assinatura", "cnpj", "cpf", "upgrade", "pagamento", "financeiro", "dinheiro"],
+    strongKeywords: ["financeiro"],
     to: "/configuracoes",
     toSearch: { tab: "cobranca" },
     roles: ["master"],
@@ -136,7 +142,7 @@ export const FEATURE_INDEX: FeatureEntry[] = [
     id: "cfg-margem",
     label: "Margem por Cliente",
     description: "Quanto cada cliente rende, descontando custo de hora e horas estimadas.",
-    keywords: ["margem", "lucro", "rentabilidade", "custo", "hora"],
+    keywords: ["margem", "lucro", "rentabilidade", "custo", "hora", "financeiro"],
     to: "/configuracoes",
     toSearch: { tab: "margem" },
     roles: ["master"],
@@ -145,7 +151,7 @@ export const FEATURE_INDEX: FeatureEntry[] = [
     id: "cfg-afiliados",
     label: "Afiliados",
     description: "Programa de indicação — indique o Modo Criador e ganhe comissão.",
-    keywords: ["afiliados", "indicação", "comissão", "indicar"],
+    keywords: ["afiliados", "indicação", "comissão", "indicar", "financeiro"],
     to: "/configuracoes",
     toSearch: { tab: "afiliados" },
     roles: ["master"],
@@ -154,7 +160,7 @@ export const FEATURE_INDEX: FeatureEntry[] = [
     id: "cfg-revenda",
     label: "Revenda White Label",
     description: "Revenda instâncias do Modo Criador com a marca da sua agência.",
-    keywords: ["revenda", "white label", "parceiro", "instância", "atacado"],
+    keywords: ["revenda", "white label", "parceiro", "instância", "atacado", "financeiro"],
     to: "/configuracoes",
     toSearch: { tab: "revenda" },
     roles: ["master"],

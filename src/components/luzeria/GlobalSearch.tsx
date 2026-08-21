@@ -10,11 +10,33 @@ function normalize(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
-function matches(entry: FeatureEntry, query: string): boolean {
-  const q = normalize(query);
-  if (normalize(entry.label).includes(q)) return true;
-  if (normalize(entry.description).includes(q)) return true;
-  return entry.keywords.some((k) => normalize(k).includes(q));
+/** Pontua a relevância de uma entrada pra uma busca — maior é melhor, 0 é
+ * "não bate". Prioriza: termo guarda-chuva exato (ex: "financeiro" pra
+ * Plano e Cobrança) > nome exato > nome começa com > keyword exata >
+ * keyword começa com > nome contém > keyword contém > descrição contém.
+ * Isso é o que faz "financeiro" cair primeiro em Plano e Cobrança mesmo
+ * aparecendo também como sinônimo em Margem/Afiliados/Revenda. */
+function scoreEntry(entry: FeatureEntry, rawQuery: string): number {
+  const q = normalize(rawQuery.trim());
+  if (!q) return 1;
+  const label = normalize(entry.label);
+  let best = 0;
+  for (const sk of entry.strongKeywords ?? []) {
+    if (normalize(sk) === q) best = Math.max(best, 100);
+  }
+  if (label === q) best = Math.max(best, 95);
+  else if (label.startsWith(q)) best = Math.max(best, 80);
+  for (const k of entry.keywords) {
+    const nk = normalize(k);
+    if (nk === q) best = Math.max(best, 70);
+    else if (nk.startsWith(q)) best = Math.max(best, 55);
+  }
+  if (label.includes(q)) best = Math.max(best, 40);
+  for (const k of entry.keywords) {
+    if (normalize(k).includes(q)) best = Math.max(best, 25);
+  }
+  if (normalize(entry.description).includes(q)) best = Math.max(best, 10);
+  return best;
 }
 
 /** Botão que abre a busca — usado no cabeçalho (desktop) e na barra
@@ -69,7 +91,11 @@ export function GlobalSearchOverlay() {
       (!e.hideIfDisabled || !disabled.has(e.hideIfDisabled))
     );
     if (!query.trim()) return visible;
-    return visible.filter((e) => matches(e, query));
+    return visible
+      .map((e) => ({ entry: e, score: scoreEntry(e, query) }))
+      .filter((r) => r.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((r) => r.entry);
   }, [me, query]);
 
   function go(entry: FeatureEntry) {
