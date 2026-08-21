@@ -11,7 +11,10 @@ import { LUZERIA_ORG_ID } from "./api.functions";
 
 /** Soma o atacado de tudo que esse revendedor já revendeu e sincroniza a
  * assinatura Asaas dele (cria na primeira vez, atualiza valor depois) —
- * chamada depois de toda ação que muda o total (hoje: criar instância). */
+ * chamada depois de toda ação que muda o total (criar OU cancelar
+ * instância). Se o total zerar (cancelou a última instância) e já existia
+ * assinatura, cancela ela — sem isso o revendedor continuaria sendo
+ * cobrado por uma instância que não existe mais. */
 async function syncResellerWholesaleBill(supabase: any, resellerOrgId: string) {
   const { data: reseller } = await supabase
     .from("orgs").select("name, tax_id, asaas_customer_id, asaas_subscription_id").eq("id", resellerOrgId).maybeSingle();
@@ -23,10 +26,17 @@ async function syncResellerWholesaleBill(supabase: any, resellerOrgId: string) {
     .from("reseller_wholesale_prices").select("plan_id, wholesale_price_cents").eq("reseller_org_id", resellerOrgId);
   const priceByPlan = new Map<string, number>((wholesalePrices ?? []).map((p: any) => [p.plan_id, p.wholesale_price_cents]));
   const totalCents = (resoldOrgs ?? []).reduce((sum: number, o: any) => sum + (priceByPlan.get(o.plan_id) ?? 0), 0);
-  if (totalCents === 0) return;
 
-  const { createAsaasCustomer, createAsaasSubscription, updateAsaasSubscriptionValue, getNextPendingPayment, updateAsaasPaymentValue } =
+  const { createAsaasCustomer, createAsaasSubscription, updateAsaasSubscriptionValue, getNextPendingPayment, updateAsaasPaymentValue, cancelAsaasSubscription } =
     await import("./asaas.server");
+
+  if (totalCents === 0) {
+    if (reseller.asaas_subscription_id) {
+      await cancelAsaasSubscription(reseller.asaas_subscription_id);
+      await supabase.from("orgs").update({ asaas_subscription_id: null }).eq("id", resellerOrgId);
+    }
+    return;
+  }
 
   if (!reseller.asaas_subscription_id) {
     if (!reseller.tax_id) throw new Error("Preencha o CNPJ/CPF da sua agência em Configurações antes de criar a primeira instância revendida.");
@@ -171,6 +181,52 @@ export const createResoldOrg = createServerFn({ method: "POST" })
     await syncResellerWholesaleBill(context.supabase, context.orgId);
 
     return { orgId: newOrg.id as string };
+  });
+
+/** O revendedor cancela uma instância que ele mesmo criou — apaga a
+ * instância inteira (clientes, posts, arquivos, equipe) e recalcula a
+ * assinatura dele pra parar de cobrar por ela. Mesmo nível de confirmação
+ * (digitar o nome) e mesma sequência de apagar do deleteOrg (Luzeria-only),
+ * só que escopado: só funciona se a instância pertence a quem está
+ * chamando (reseller_org_id = a própria org do revendedor) — nunca deixa
+ * um revendedor apagar instância de outro. */
+export const cancelResoldOrg = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { orgId: string; confirmName: string }) =>
+    z.object({ orgId: z.string().uuid(), confirmName: z.string() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Apenas o Adm Master pode cancelar uma instância revendida.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: org, error: orgErr } = await supabaseAdmin
+      .from("orgs").select("id, name, reseller_org_id").eq("id", data.orgId).maybeSingle();
+    if (orgErr || !org) throw new Error("Instância não encontrada.");
+    if ((org as any).reseller_org_id !== context.orgId) throw new Error("Forbidden");
+    if ((org as any).name.trim().toLowerCase() !== data.confirmName.trim().toLowerCase()) {
+      throw new Error("O nome digitado não confere com o nome da instância.");
+    }
+
+    await supabaseAdmin.from("promotion_codes").delete().eq("org_id", data.orgId);
+    await supabaseAdmin.from("clients").delete().eq("org_id", data.orgId);
+    await supabaseAdmin.from("email_role_assignments").delete().eq("org_id", data.orgId);
+    await supabaseAdmin.from("stories_schedule").delete().eq("org_id", data.orgId);
+    await supabaseAdmin.from("cleaning_schedule").delete().eq("org_id", data.orgId);
+    await supabaseAdmin.from("cleaning_log").delete().eq("org_id", data.orgId);
+    await supabaseAdmin.from("cleaning_settings").delete().eq("org_id", data.orgId);
+
+    const { data: profiles } = await supabaseAdmin.from("profiles").select("id").eq("org_id", data.orgId);
+    for (const p of profiles ?? []) {
+      await supabaseAdmin.auth.admin.deleteUser((p as any).id);
+    }
+
+    const { error: delErr } = await supabaseAdmin.from("orgs").delete().eq("id", data.orgId);
+    if (delErr) throw new Error(delErr.message);
+
+    await syncResellerWholesaleBill(context.supabase, context.orgId);
+
+    return { ok: true };
   });
 
 /** Platform-admin only (Luzeria): cadastra uma revenda do zero — cria a org

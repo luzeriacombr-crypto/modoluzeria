@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, Plus, X, Package } from "lucide-react";
-import { getMyResellerProgram, createResoldOrg } from "@/lib/luzeria/reseller.functions";
+import { ExternalLink, Loader2, Plus, X, Package, Trash2, AlertTriangle } from "lucide-react";
+import { getMyResellerProgram, createResoldOrg, cancelResoldOrg } from "@/lib/luzeria/reseller.functions";
 import { getPublicPlans } from "@/lib/luzeria/signup.functions";
 
 function formatCents(cents: number) {
@@ -50,6 +50,7 @@ export function ResellerPanel() {
 
 function ResellerDashboard({ program }: { program: Extract<Awaited<ReturnType<typeof getMyResellerProgram>>, { isReseller: true }> }) {
   const [creating, setCreating] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<{ id: string; name: string } | null>(null);
 
   return (
     <div className="space-y-6">
@@ -95,6 +96,13 @@ function ResellerDashboard({ program }: { program: Extract<Awaited<ReturnType<ty
                 <span className="flex-1 min-w-0 text-sm text-white truncate">{o.name}</span>
                 <span className="text-[10px] font-bold uppercase tracking-wide text-white/40 shrink-0">{o.planName}</span>
                 <span className="text-xs font-semibold text-white/60 shrink-0">{formatCents(o.wholesalePriceCents)}/mês</span>
+                <button
+                  onClick={() => setCancelTarget({ id: o.id, name: o.name })}
+                  title="Cancelar instância"
+                  className="p-1.5 rounded text-white/30 hover:text-red-400 hover:bg-red-500/10 transition shrink-0"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
             ))}
           </div>
@@ -102,6 +110,7 @@ function ResellerDashboard({ program }: { program: Extract<Awaited<ReturnType<ty
       </div>
 
       {creating && <CreateResoldOrgModal onClose={() => setCreating(false)} wholesalePrices={program.wholesalePrices} />}
+      {cancelTarget && <CancelResoldOrgModal target={cancelTarget} onClose={() => setCancelTarget(null)} />}
     </div>
   );
 }
@@ -179,6 +188,69 @@ function CreateResoldOrgModal({ onClose, wholesalePrices }: {
         >
           {create.isPending ? "Criando..." : "Criar instância"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+function CancelResoldOrgModal({ target, onClose }: { target: { id: string; name: string }; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [confirmName, setConfirmName] = useState("");
+  const matches = confirmName.trim().toLowerCase() === target.name.trim().toLowerCase();
+
+  const cancel = useMutation({
+    mutationFn: useServerFn(cancelResoldOrg),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myResellerProgram"] });
+      toast.success(`${target.name} cancelada.`);
+      onClose();
+    },
+    onError: (error: any) => toast.error(error?.message || "Erro ao cancelar instância."),
+  });
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-md bg-[#1C1C1C] border border-red-500/30 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2 text-red-400">
+            <AlertTriangle size={18} />
+            <span className="text-sm font-bold text-white">Cancelar instância</span>
+          </div>
+          <button onClick={onClose} className="text-white/40 hover:text-white"><X size={16} /></button>
+        </div>
+
+        <p className="text-sm text-white/70 mb-3">
+          Isso apaga <span className="text-white font-semibold">{target.name}</span> e tudo dela — clientes, posts,
+          arquivos, equipe — pra sempre, e para de contar na sua fatura mensal. Não tem como desfazer.
+        </p>
+
+        <label className="block text-xs font-bold uppercase text-white/50 mb-2 tracking-wider">
+          Digite "{target.name}" pra confirmar
+        </label>
+        <input
+          type="text"
+          value={confirmName}
+          onChange={(e) => setConfirmName(e.target.value)}
+          className="w-full px-4 py-3 bg-white/[0.08] border border-white/15 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-red-500/60 transition mb-4"
+          placeholder={target.name}
+          autoFocus
+        />
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => cancel.mutate({ data: { orgId: target.id, confirmName } })}
+            disabled={!matches || cancel.isPending}
+            className="flex-1 px-6 py-3 bg-red-500/90 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl transition"
+          >
+            {cancel.isPending ? "Cancelando…" : "Cancelar pra sempre"}
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 px-6 py-3 bg-white/[0.08] hover:bg-white/[0.12] text-white font-bold rounded-xl transition border border-white/10"
+          >
+            Voltar
+          </button>
+        </div>
       </div>
     </div>
   );
