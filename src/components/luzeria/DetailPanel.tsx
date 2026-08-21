@@ -192,7 +192,30 @@ function MediaPreview({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [downloadingFirst, setDownloadingFirst] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const isCarrossel = itemType === "post" && postFormat === "carrossel";
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    if (!canEdit) return;
+    const dropped = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/") || f.type.startsWith("video/"));
+    if (dropped.length === 0) { toast.error("Solte uma imagem ou vídeo."); return; }
+    upload(dropped);
+  }
+  function handleDragOver(e: React.DragEvent) {
+    if (!canEdit) return;
+    e.preventDefault();
+    if (!dragOver) setDragOver(true);
+  }
+  function handleDragLeave(e: React.DragEvent) {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setDragOver(false);
+  }
+  const dropZoneProps = canEdit ? { onDragOver: handleDragOver, onDragLeave: handleDragLeave, onDrop: handleDrop } : {};
+  const dropZoneStyle = dragOver
+    ? { outline: "2px dashed rgb(var(--lz-brand-rgb))", outlineOffset: "3px", borderRadius: "10px" }
+    : undefined;
 
   async function handleDownloadAllFiles() {
     setDownloadingAll(true);
@@ -247,7 +270,7 @@ function MediaPreview({
       });
     }
     return (
-      <div>
+      <div {...dropZoneProps} style={dropZoneStyle}>
         {files.length > 1 && (
           <div className="flex items-center gap-2 mb-1.5">
             {selectMode ? (
@@ -330,7 +353,7 @@ function MediaPreview({
 
   if (!filesLoading && !first && !coverUrl) {
     return (
-      <>
+      <div {...dropZoneProps} style={dropZoneStyle} className="inline-block">
         <button
           type="button"
           onClick={() => canEdit && fileRef.current?.click()}
@@ -339,12 +362,14 @@ function MediaPreview({
         >
           {busy ? (
             <Loader2 size={16} className="animate-spin text-white/40" />
+          ) : dragOver ? (
+            <Upload size={16} className="text-[rgb(var(--lz-brand-rgb))]" />
           ) : (
             <Upload size={16} className="text-white/30 group-hover:text-[rgb(var(--lz-brand-rgb))] transition-colors" />
           )}
         </button>
         {inputEl}
-      </>
+      </div>
     );
   }
 
@@ -385,7 +410,7 @@ function MediaPreview({
   }
 
   return (
-    <>
+    <div {...dropZoneProps} style={dropZoneStyle} className="inline-block">
       {files.length > 1 && (
         <div className="flex items-center gap-2 mb-1.5">
           <button
@@ -434,12 +459,17 @@ function MediaPreview({
             }}
           />
         )}
+        {dragOver && canEdit && (
+          <div className="absolute inset-0 rounded-[10px] bg-black/60 flex items-center justify-center pointer-events-none">
+            <Upload size={18} className="text-[rgb(var(--lz-brand-rgb))]" />
+          </div>
+        )}
       </div>
       {inputEl}
       {opensLightbox && lightboxIndex !== null && (
         <CarouselLightbox files={files} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
       )}
-    </>
+    </div>
   );
 }
 
