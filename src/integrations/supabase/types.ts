@@ -317,57 +317,54 @@ export type Database = {
       leads: {
         Row: {
           archived: boolean
-          awaiting_reply: boolean
           contact_email: string | null
           contact_phone: string | null
           created_at: string
           follow_up_note: string | null
           id: string
-          last_contact_at: string | null
           name: string
           next_followup_at: string | null
           notes: string | null
           org_id: string
           responsible_id: string | null
           source: string | null
+          status: string
           updated_at: string
           value_estimate_cents: number | null
           won_client_id: string | null
         }
         Insert: {
           archived?: boolean
-          awaiting_reply?: boolean
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
           follow_up_note?: string | null
           id?: string
-          last_contact_at?: string | null
           name: string
           next_followup_at?: string | null
           notes?: string | null
           org_id: string
           responsible_id?: string | null
           source?: string | null
+          status?: string
           updated_at?: string
           value_estimate_cents?: number | null
           won_client_id?: string | null
         }
         Update: {
           archived?: boolean
-          awaiting_reply?: boolean
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
           follow_up_note?: string | null
           id?: string
-          last_contact_at?: string | null
           name?: string
           next_followup_at?: string | null
           notes?: string | null
           org_id?: string
           responsible_id?: string | null
           source?: string | null
+          status?: string
           updated_at?: string
           value_estimate_cents?: number | null
           won_client_id?: string | null

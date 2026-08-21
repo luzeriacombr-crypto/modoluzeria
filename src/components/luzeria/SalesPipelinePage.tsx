@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Trash2, Handshake, History, LayoutGrid, MessageCircle, CalendarClock, Check, Inbox, Flame, Snowflake } from "lucide-react";
+import { Plus, Trash2, Handshake, MessageCircle, Snowflake } from "lucide-react";
 import { leadsQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { Modal } from "./Modals";
-import { Avatar } from "./Avatar";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import type { Lead } from "@/lib/luzeria/sales-pipeline.functions";
+import type { Lead, LeadStatus } from "@/lib/luzeria/sales-pipeline.functions";
 
 const formatBRL = (v: number | null) =>
   v == null ? null : (v / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -22,6 +21,10 @@ function timeSince(iso: string): string {
   return `${days}d`;
 }
 
+function isCold(lead: Lead): boolean {
+  return Date.now() - new Date(lead.updatedAt).getTime() > 3 * 24 * 3600 * 1000;
+}
+
 function waLink(phone: string | null, text?: string): string | null {
   if (!phone) return null;
   const digits = phone.replace(/\D/g, "");
@@ -30,19 +33,46 @@ function waLink(phone: string | null, text?: string): string | null {
   return `https://wa.me/${withCountry}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 }
 
-type ViewMode = "painel" | "todos" | "historico";
+const COLUMNS: { key: LeadStatus; label: string; accent: string }[] = [
+  { key: "novo", label: "Novos", accent: "#888780" },
+  { key: "responder", label: "Responder agora", accent: "#E76F51" },
+  { key: "followup", label: "Follow-up", accent: "#4A9EFF" },
+  { key: "fechado", label: "Fechado", accent: "#5BA88A" },
+  { key: "perdido", label: "Perdido", accent: "#E24B4A" },
+];
 
 export function SalesPipelinePage() {
-  const [view, setView] = useState<ViewMode>("painel");
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [followupLead, setFollowupLead] = useState<Lead | null>(null);
+  const [wonLead, setWonLead] = useState<Lead | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overCol, setOverCol] = useState<LeadStatus | null>(null);
 
   const { data: leads = [] } = useQuery(leadsQO(true));
   const api = useApi();
 
-  const activeLeads = useMemo(() => leads.filter((l) => !l.archived), [leads]);
-  const archivedLeads = useMemo(() => leads.filter((l) => l.archived), [leads]);
+  const byStatus = useMemo(() => {
+    const map: Record<LeadStatus, Lead[]> = { novo: [], responder: [], followup: [], fechado: [], perdido: [] };
+    for (const l of leads) map[l.status]?.push(l);
+    return map;
+  }, [leads]);
+
+  function onDropOnColumn(status: LeadStatus, lead: Lead) {
+    setDragId(null); setOverCol(null);
+    if (lead.status === status) return;
+    if (status === "novo" || status === "responder") {
+      api.moveLeadStatus.mutate({ data: { id: lead.id, status } });
+    } else if (status === "followup") {
+      setFollowupLead(lead);
+    } else if (status === "fechado") {
+      setWonLead(lead);
+    } else if (status === "perdido") {
+      requestConfirm(`Marcar "${lead.name}" como perdido?`, { danger: true }).then((ok) => {
+        if (ok) api.markLeadLost.mutate({ data: { id: lead.id } });
+      });
+    }
+  }
 
   return (
     <div className="p-4 md:p-6 h-full flex flex-col">
@@ -51,250 +81,139 @@ export function SalesPipelinePage() {
           <Handshake size={20} className="text-[rgb(var(--lz-brand-rgb))]" />
           <h1 className="text-lg font-bold text-white">Vendas</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-md border border-white/10 p-0.5">
-            <ViewTab active={view === "painel"} onClick={() => setView("painel")} icon={<LayoutGrid size={12} />} label="Painel" />
-            <ViewTab active={view === "todos"} onClick={() => setView("todos")} icon={<Inbox size={12} />} label="Todos" />
-            <ViewTab active={view === "historico"} onClick={() => setView("historico")} icon={<History size={12} />} label="Histórico" />
-          </div>
-          <button
-            onClick={() => setNewLeadOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold"
-            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-          >
-            <Plus size={13} /> Nova oportunidade
-          </button>
-        </div>
+        <button
+          onClick={() => setNewLeadOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold"
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >
+          <Plus size={13} /> Nova oportunidade
+        </button>
       </div>
 
-      {view === "painel" && (
-        <PainelView leads={activeLeads} onOpen={setEditLead} onFollowup={setFollowupLead} />
-      )}
-      {view === "todos" && (
-        <FlatList leads={activeLeads} onOpen={setEditLead} empty="Nenhuma oportunidade em aberto." />
-      )}
-      {view === "historico" && (
-        <FlatList leads={archivedLeads} onOpen={setEditLead} empty="Nenhum lead arquivado ainda." showOutcome />
-      )}
+      <div className="flex-1 overflow-x-auto">
+        <div className="flex gap-3 h-full min-w-max pb-2">
+          {COLUMNS.map((col) => {
+            const colLeads = byStatus[col.key];
+            return (
+              <div
+                key={col.key}
+                onDragOver={(e) => { e.preventDefault(); if (dragId) setOverCol(col.key); }}
+                onDragLeave={() => { if (overCol === col.key) setOverCol(null); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const lead = leads.find((l) => l.id === dragId);
+                  if (lead) onDropOnColumn(col.key, lead);
+                  else { setDragId(null); setOverCol(null); }
+                }}
+                className="w-[270px] shrink-0 rounded-lg border transition-colors flex flex-col"
+                style={{
+                  backgroundColor: overCol === col.key ? "rgba(var(--lz-brand-rgb),0.06)" : "#161616",
+                  borderColor: overCol === col.key ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
+                }}
+              >
+                <div className="px-3 py-2.5 border-b border-white/[0.06] flex items-center justify-between shrink-0">
+                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: col.accent }}>{col.label}</span>
+                  <span className="text-[10px] text-white/30 font-semibold">{colLeads.length}</span>
+                </div>
+                <div className="flex-1 overflow-y-auto p-2 space-y-1.5 min-h-[80px]">
+                  {col.key === "followup"
+                    ? <FollowupColumnBody leads={colLeads} dragId={dragId} onDragStart={setDragId} onDragEnd={() => setDragId(null)} onOpen={setEditLead} />
+                    : colLeads.length === 0
+                    ? <p className="text-[11px] text-white/25 text-center py-6">Nada por aqui.</p>
+                    : colLeads.map((l) => (
+                        <LeadCard key={l.id} lead={l} draggable={col.key !== "fechado" && col.key !== "perdido"}
+                          dragging={dragId === l.id}
+                          onDragStart={() => setDragId(l.id)} onDragEnd={() => setDragId(null)}
+                          onOpen={() => setEditLead(l)} />
+                      ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <LeadFormModal open={newLeadOpen} onClose={() => setNewLeadOpen(false)} />
       <LeadFormModal open={!!editLead} onClose={() => setEditLead(null)} lead={editLead ?? undefined} />
       <FollowupModal lead={followupLead} onClose={() => setFollowupLead(null)} />
+      {wonLead && <WonLeadModal open={!!wonLead} lead={wonLead} onClose={() => setWonLead(null)} />}
     </div>
   );
 }
 
-function ViewTab({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
-  return (
-    <button
-      onClick={onClick}
-      className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold transition-colors"
-      style={{ backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "transparent", color: active ? "#0D0D0D" : "rgba(255,255,255,0.5)" }}
-    >
-      {icon} {label}
-    </button>
-  );
-}
-
-function PainelView({ leads, onOpen, onFollowup }: {
-  leads: Lead[]; onOpen: (l: Lead) => void; onFollowup: (l: Lead) => void;
+function FollowupColumnBody({ leads, dragId, onDragStart, onDragEnd, onOpen }: {
+  leads: Lead[]; dragId: string | null; onDragStart: (id: string) => void; onDragEnd: () => void; onOpen: (l: Lead) => void;
 }) {
-  const me = useMe().data;
-  const [novosTab, setNovosTab] = useState<"meus" | "fila">("meus");
-  const api = useApi();
+  const endOfToday = useMemo(() => { const d = new Date(); d.setHours(23, 59, 59, 999); return d; }, []);
+  const sorted = useMemo(() => [...leads].sort((a, b) => (a.nextFollowupAt ?? "").localeCompare(b.nextFollowupAt ?? "")), [leads]);
+  const hoje = sorted.filter((l) => !l.nextFollowupAt || new Date(l.nextFollowupAt) <= endOfToday);
+  const proximos = sorted.filter((l) => l.nextFollowupAt && new Date(l.nextFollowupAt) > endOfToday);
 
-  const respondendoAgora = useMemo(
-    () => leads.filter((l) => l.awaitingReply).sort((a, b) => a.updatedAt.localeCompare(b.updatedAt)),
-    [leads],
-  );
-  const followupsHoje = useMemo(() => {
-    const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999);
-    return leads
-      .filter((l) => !l.awaitingReply && l.nextFollowupAt && new Date(l.nextFollowupAt) <= endOfToday)
-      .sort((a, b) => (a.nextFollowupAt ?? "").localeCompare(b.nextFollowupAt ?? ""));
-  }, [leads]);
-  const novos = useMemo(
-    () => leads.filter((l) => !l.awaitingReply && !l.lastContactAt && !l.nextFollowupAt)
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-    [leads],
-  );
-  const novosFiltered = novos.filter((l) => (novosTab === "meus" ? l.responsibleId === me?.id : !l.responsibleId));
-  const esfriando = useMemo(() => {
-    const cutoff = Date.now() - 3 * 24 * 3600 * 1000;
-    return leads
-      .filter((l) => !l.awaitingReply && !l.nextFollowupAt && l.lastContactAt && new Date(l.lastContactAt).getTime() < cutoff)
-      .sort((a, b) => (a.lastContactAt ?? "").localeCompare(b.lastContactAt ?? ""));
-  }, [leads]);
+  if (leads.length === 0) return <p className="text-[11px] text-white/25 text-center py-6">Nada por aqui.</p>;
 
   return (
-    <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-3 content-start">
-      <QueueCard
-        icon={<MessageCircle size={14} />} title="Responder agora" count={respondendoAgora.length} accent="#E76F51"
-        empty="Nenhum lead esperando resposta."
-      >
-        {respondendoAgora.map((l) => (
-          <LeadRow key={l.id} lead={l} onOpen={() => onOpen(l)} subtext={`esperando há ${timeSince(l.updatedAt)}`}
-            actions={
-              <>
-                <RowIconBtn href={waLink(l.contactPhone)} icon={<MessageCircle size={13} />} title="Abrir WhatsApp" />
-                <RowIconBtn onClick={() => api.markLeadContacted.mutate({ data: { id: l.id } })} icon={<Check size={13} />} title="Marquei contato" />
-              </>
-            }
-          />
-        ))}
-      </QueueCard>
-
-      <QueueCard
-        icon={<CalendarClock size={14} />} title="Follow-ups do dia" count={followupsHoje.length} accent="#4A9EFF"
-        empty="Nenhum follow-up agendado pra hoje."
-      >
-        {followupsHoje.map((l) => {
-          const overdue = l.nextFollowupAt && new Date(l.nextFollowupAt) < new Date(new Date().setHours(0, 0, 0, 0));
-          return (
-            <LeadRow key={l.id} lead={l} onOpen={() => onOpen(l)}
-              subtext={l.followUpNote || (overdue ? "atrasado" : "hoje")}
-              actions={
-                <>
-                  <RowIconBtn href={waLink(l.contactPhone, l.followUpNote ?? undefined)} icon={<MessageCircle size={13} />} title="Mensagem pronta" />
-                  <RowIconBtn onClick={() => api.markLeadContacted.mutate({ data: { id: l.id } })} icon={<Check size={13} />} title="Marquei contato" />
-                </>
-              }
-            />
-          );
-        })}
-      </QueueCard>
-
-      <QueueCard
-        icon={<Inbox size={14} />} title="Leads novos" count={novosFiltered.length} accent="#5BA88A"
-        empty="Sem leads novos aqui."
-        tabs={
-          <div className="flex items-center gap-1">
-            <MiniTab active={novosTab === "meus"} onClick={() => setNovosTab("meus")} label={`Meus (${novos.filter((l) => l.responsibleId === me?.id).length})`} />
-            <MiniTab active={novosTab === "fila"} onClick={() => setNovosTab("fila")} label={`Fila (${novos.filter((l) => !l.responsibleId).length})`} />
-          </div>
-        }
-      >
-        {novosFiltered.map((l) => (
-          <LeadRow key={l.id} lead={l} onOpen={() => onOpen(l)} subtext={`há ${timeSince(l.createdAt)}${l.source ? ` · ${l.source}` : ""}`}
-            actions={
-              <>
-                <RowIconBtn href={waLink(l.contactPhone)} icon={<MessageCircle size={13} />} title="Abrir WhatsApp" />
-                <RowIconBtn onClick={() => onFollowup(l)} icon={<CalendarClock size={13} />} title="Agendar follow-up" />
-                <RowIconBtn onClick={() => api.markLeadContacted.mutate({ data: { id: l.id } })} icon={<Check size={13} />} title="Marquei contato" />
-              </>
-            }
-          />
-        ))}
-      </QueueCard>
-
-      <QueueCard
-        icon={<Snowflake size={14} />} title="Esfriando" count={esfriando.length} accent="#7EB3FF"
-        empty="Nada esfriando por aqui."
-      >
-        {esfriando.map((l) => (
-          <LeadRow key={l.id} lead={l} onOpen={() => onOpen(l)} subtext={`parado há ${timeSince(l.lastContactAt!)}`}
-            actions={
-              <>
-                <RowIconBtn href={waLink(l.contactPhone)} icon={<MessageCircle size={13} />} title="Abrir WhatsApp" />
-                <RowIconBtn onClick={() => onFollowup(l)} icon={<CalendarClock size={13} />} title="Agendar follow-up" />
-                <RowIconBtn onClick={() => api.markLeadContacted.mutate({ data: { id: l.id } })} icon={<Check size={13} />} title="Marquei contato" />
-              </>
-            }
-          />
-        ))}
-      </QueueCard>
-    </div>
-  );
-}
-
-function QueueCard({ icon, title, count, accent, empty, tabs, children }: {
-  icon: React.ReactNode; title: string; count: number; accent: string; empty: string;
-  tabs?: React.ReactNode; children: React.ReactNode;
-}) {
-  const hasChildren = Array.isArray(children) ? children.length > 0 : !!children;
-  return (
-    <div className="rounded-lg border border-white/[0.06] bg-[#161616] flex flex-col min-h-[200px] max-h-[420px]">
-      <div className="px-3 py-2.5 border-b border-white/[0.06] flex items-center justify-between shrink-0 gap-2">
-        <div className="flex items-center gap-1.5">
-          <span style={{ color: accent }}>{icon}</span>
-          <span className="text-xs font-bold uppercase tracking-wide text-white/70">{title}</span>
-          <span className="text-[10px] text-white/30 font-semibold">{count}</span>
-        </div>
-        {tabs}
-      </div>
-      <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-        {hasChildren ? children : <p className="text-[11px] text-white/25 text-center py-6">{empty}</p>}
-      </div>
-    </div>
-  );
-}
-
-function MiniTab({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-  return (
-    <button onClick={onClick} className="text-[10px] font-semibold px-2 py-0.5 rounded transition-colors"
-      style={{ backgroundColor: active ? "rgba(255,255,255,0.1)" : "transparent", color: active ? "#fff" : "rgba(255,255,255,0.4)" }}>
-      {label}
-    </button>
-  );
-}
-
-function LeadRow({ lead, onOpen, subtext, actions }: { lead: Lead; onOpen: () => void; subtext: string; actions: React.ReactNode }) {
-  const value = formatBRL(lead.valueEstimateCents);
-  return (
-    <div className="rounded-md border border-white/[0.06] bg-[#1C1C1C] px-2.5 py-2 flex items-center gap-2">
-      <div onClick={onOpen} className="flex-1 min-w-0 cursor-pointer">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-semibold text-white truncate">{lead.name}</span>
-          {value && <span className="text-[10px] text-white/30 shrink-0">{value}</span>}
-        </div>
-        <div className="flex items-center gap-1.5 text-[10.5px] text-white/40 mt-0.5">
-          {lead.contactPhone && <span className="truncate">{lead.contactPhone}</span>}
-          <span className="shrink-0">· {subtext}</span>
-        </div>
-      </div>
-      <div className="flex items-center gap-1 shrink-0">{actions}</div>
-    </div>
-  );
-}
-
-function RowIconBtn({ icon, title, onClick, href }: { icon: React.ReactNode; title: string; onClick?: () => void; href?: string | null }) {
-  const cls = "p-1.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-20 disabled:pointer-events-none";
-  if (href !== undefined) {
-    return href ? (
-      <a href={href} target="_blank" rel="noopener noreferrer" title={title} className={cls} onClick={(e) => e.stopPropagation()}>{icon}</a>
-    ) : (
-      <span title="Sem telefone" className={cls} style={{ opacity: 0.2 }}>{icon}</span>
-    );
-  }
-  return <button onClick={(e) => { e.stopPropagation(); onClick?.(); }} title={title} className={cls}>{icon}</button>;
-}
-
-function FlatList({ leads, onOpen, empty, showOutcome }: { leads: Lead[]; onOpen: (l: Lead) => void; empty: string; showOutcome?: boolean }) {
-  const sorted = useMemo(() => [...leads].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [leads]);
-  return (
-    <div className="flex-1 overflow-y-auto max-w-2xl space-y-2">
-      {sorted.length === 0 && <p className="text-sm text-white/40 py-10 text-center">{empty}</p>}
-      {sorted.map((lead) => (
-        <div key={lead.id} onClick={() => onOpen(lead)} className="cursor-pointer bg-[#1C1C1C] border border-white/[0.06] rounded-md px-3 py-2.5 flex items-center gap-2">
-          <Avatar name={lead.name} color="#5BA88A" size={28} />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-semibold text-white truncate">{lead.name}</span>
-              {showOutcome && (
-                <span
-                  className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0"
-                  style={lead.wonClientId
-                    ? { backgroundColor: "rgba(91,168,138,0.15)", color: "#5BA88A" }
-                    : { backgroundColor: "rgba(231,111,81,0.15)", color: "#E76F51" }}
-                >
-                  {lead.wonClientId ? "Ganho" : "Perdido"}
-                </span>
-              )}
-            </div>
-            <div className="text-[11px] text-white/40 mt-0.5">{lead.contactPhone ?? "sem telefone"}{formatBRL(lead.valueEstimateCents) ? ` · ${formatBRL(lead.valueEstimateCents)}` : ""}</div>
-          </div>
-        </div>
+    <>
+      {hoje.map((l) => (
+        <LeadCard key={l.id} lead={l} draggable dragging={dragId === l.id}
+          onDragStart={() => onDragStart(l.id)} onDragEnd={onDragEnd} onOpen={() => onOpen(l)} />
       ))}
+      {proximos.length > 0 && (
+        <div className="flex items-center gap-2 py-1">
+          <span className="flex-1 h-px bg-white/[0.06]" />
+          <span className="text-[9px] uppercase font-bold tracking-wide text-white/25">Próximos</span>
+          <span className="flex-1 h-px bg-white/[0.06]" />
+        </div>
+      )}
+      {proximos.map((l) => (
+        <LeadCard key={l.id} lead={l} draggable dragging={dragId === l.id}
+          onDragStart={() => onDragStart(l.id)} onDragEnd={onDragEnd} onOpen={() => onOpen(l)} />
+      ))}
+    </>
+  );
+}
+
+function LeadCard({ lead, draggable, dragging, onDragStart, onDragEnd, onOpen }: {
+  lead: Lead; draggable: boolean; dragging: boolean;
+  onDragStart: () => void; onDragEnd: () => void; onOpen: () => void;
+}) {
+  const value = formatBRL(lead.valueEstimateCents);
+  const wa = waLink(lead.contactPhone, lead.followUpNote ?? undefined);
+  const cold = lead.status !== "fechado" && lead.status !== "perdido" && isCold(lead);
+
+  return (
+    <div
+      draggable={draggable}
+      onDragStart={draggable ? onDragStart : undefined}
+      onDragEnd={draggable ? onDragEnd : undefined}
+      onClick={onOpen}
+      className="rounded-md border border-white/[0.08] bg-[#1C1C1C] p-2.5 transition-opacity cursor-pointer"
+      style={{ opacity: dragging ? 0.4 : 1, cursor: draggable ? "grab" : "pointer" }}
+    >
+      <div className="flex items-start justify-between gap-1.5">
+        <span className="text-sm font-semibold text-white truncate">{lead.name}</span>
+        <div className="flex items-center gap-1 shrink-0">
+          {cold && <Snowflake size={11} className="text-[#7EB3FF]" />}
+          {wa && (
+            <a href={wa} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+              className="text-white/30 hover:text-[#5BA88A]" title="Abrir WhatsApp">
+              <MessageCircle size={13} />
+            </a>
+          )}
+        </div>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px] text-white/40">
+        {lead.contactPhone && <span>{lead.contactPhone}</span>}
+        {value && <span>{value}</span>}
+      </div>
+      {lead.status === "followup" && (
+        <div className="mt-1 text-[10.5px] text-[#4A9EFF]">
+          {lead.nextFollowupAt ? new Date(lead.nextFollowupAt).toLocaleDateString("pt-BR") : "sem data"}
+          {lead.followUpNote ? ` · ${lead.followUpNote}` : ""}
+        </div>
+      )}
+      {lead.status !== "followup" && (
+        <div className="mt-1 text-[10px] text-white/25">há {timeSince(lead.updatedAt)}</div>
+      )}
     </div>
   );
 }
@@ -306,7 +225,7 @@ function FollowupModal({ lead, onClose }: { lead: Lead | null; onClose: () => vo
 
   useEffect(() => {
     if (!lead) return;
-    const d = new Date(); d.setDate(d.getDate() + 1);
+    const d = lead.nextFollowupAt ? new Date(lead.nextFollowupAt) : new Date(Date.now() + 24 * 3600 * 1000);
     setDate(d.toISOString().slice(0, 10));
     setNote(lead.followUpNote ?? "");
   }, [lead?.id]);
@@ -384,6 +303,8 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
     }).then(onClose);
   }
 
+  const isTerminal = lead && (lead.status === "fechado" || lead.status === "perdido");
+
   return (
     <>
       <Modal open={open} onClose={onClose} title={lead ? "Editar oportunidade" : "Nova oportunidade"}>
@@ -404,28 +325,16 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
             </select>
           </F>
           <F label="Observações"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} /></F>
-          {lead && !lead.archived && (
-            <div className="flex items-center gap-1.5 pt-1">
-              <button
-                onClick={() => api.setLeadAwaitingReply.mutate({ data: { id: lead.id, awaitingReply: !lead.awaitingReply } })}
-                className="flex-1 text-[11px] font-bold uppercase tracking-wide px-2 py-1.5 rounded inline-flex items-center justify-center gap-1"
-                style={lead.awaitingReply
-                  ? { backgroundColor: "rgba(231,111,81,0.2)", color: "#E76F51" }
-                  : { backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" }}
-              >
-                <Flame size={12} /> {lead.awaitingReply ? "Aguardando resposta" : "Marcar: preciso responder"}
-              </button>
-            </div>
-          )}
         </div>
         <div className="flex items-center justify-between mt-5">
-          {lead && !lead.archived ? (
+          {lead && !isTerminal ? (
             <div className="flex items-center gap-1.5">
               <button onClick={() => setWonOpen(true)}
                 className="text-[11px] font-bold uppercase px-2.5 py-1.5 rounded" style={{ backgroundColor: "rgba(91,168,138,0.15)", color: "#5BA88A" }}>
                 Ganho
               </button>
-              <button onClick={() => { api.markLeadLost.mutate({ data: { id: lead.id } }); onClose(); }}
+              <button
+                onClick={async () => { if (await requestConfirm(`Marcar "${lead.name}" como perdido?`, { danger: true })) { api.markLeadLost.mutate({ data: { id: lead.id } }); onClose(); } }}
                 className="text-[11px] font-bold uppercase px-2.5 py-1.5 rounded" style={{ backgroundColor: "rgba(231,111,81,0.15)", color: "#E76F51" }}>
                 Perdido
               </button>

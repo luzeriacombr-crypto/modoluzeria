@@ -2,6 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 
+export const LEAD_STATUSES = ["novo", "responder", "followup", "fechado", "perdido"] as const;
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+
 export type Lead = {
   id: string;
   name: string;
@@ -12,10 +15,9 @@ export type Lead = {
   valueEstimateCents: number | null;
   responsibleId: string | null;
   responsibleName: string | null;
+  status: LeadStatus;
   archived: boolean;
   wonClientId: string | null;
-  awaitingReply: boolean;
-  lastContactAt: string | null;
   nextFollowupAt: string | null;
   followUpNote: string | null;
   createdAt: string;
@@ -28,7 +30,7 @@ export const listLeads = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("leads")
-      .select("id, name, contact_phone, contact_email, source, notes, value_estimate_cents, responsible_id, archived, won_client_id, awaiting_reply, last_contact_at, next_followup_at, follow_up_note, created_at, updated_at, profiles(name)")
+      .select("id, name, contact_phone, contact_email, source, notes, value_estimate_cents, responsible_id, status, archived, won_client_id, next_followup_at, follow_up_note, created_at, updated_at, profiles(name)")
       .eq("org_id", context.orgId)
       .order("created_at", { ascending: false });
     if (!data.includeArchived) q = q.eq("archived", false);
@@ -38,8 +40,7 @@ export const listLeads = createServerFn({ method: "GET" })
       id: r.id, name: r.name, contactPhone: r.contact_phone, contactEmail: r.contact_email,
       source: r.source, notes: r.notes, valueEstimateCents: r.value_estimate_cents,
       responsibleId: r.responsible_id, responsibleName: r.profiles?.name ?? null,
-      archived: r.archived, wonClientId: r.won_client_id,
-      awaitingReply: r.awaiting_reply, lastContactAt: r.last_contact_at,
+      status: r.status, archived: r.archived, wonClientId: r.won_client_id,
       nextFollowupAt: r.next_followup_at, followUpNote: r.follow_up_note,
       createdAt: r.created_at, updatedAt: r.updated_at,
     })) as Lead[];
@@ -78,38 +79,26 @@ export const upsertLead = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: created, error } = await db.from("leads").insert({ org_id: context.orgId, ...patch }).select("id").single();
+    const { data: created, error } = await db.from("leads").insert({ org_id: context.orgId, status: "novo", ...patch }).select("id").single();
     if (error) throw new Error(error.message);
     return { id: created.id as string };
   });
 
-/** "Marquei contato" — limpa a fila de espera/follow-up e reinicia a
- * contagem de "esfriando" a partir de agora. */
-export const markLeadContacted = createServerFn({ method: "POST" })
+/** Move o card entre as colunas "ativas" arrastando manualmente — não
+ * mexe em archived/won_client_id (isso é papel de markLeadWon/Lost). */
+export const moveLeadStatus = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: { id: string; status: "novo" | "responder" | "followup" }) =>
+    z.object({ id: z.string().uuid(), status: z.enum(["novo", "responder", "followup"]) }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
-      .from("leads")
-      .update({ last_contact_at: new Date().toISOString(), awaiting_reply: false, next_followup_at: null, follow_up_note: null, updated_at: new Date().toISOString() })
-      .eq("id", data.id);
+      .from("leads").update({ status: data.status, updated_at: new Date().toISOString() }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
-/** Time recebeu mensagem do lead e precisa responder — cai na fila
- * "Responder agora" até alguém marcar contato feito. */
-export const setLeadAwaitingReply = createServerFn({ method: "POST" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string; awaitingReply: boolean }) =>
-    z.object({ id: z.string().uuid(), awaitingReply: z.boolean() }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("leads").update({ awaiting_reply: data.awaitingReply, updated_at: new Date().toISOString() }).eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
+/** Arrastar pro Follow-up abre o calendário no front — isso aqui grava a
+ * data escolhida (qualquer dia, não só hoje) junto com a nota. */
 export const scheduleLeadFollowup = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string; followUpAt: string; note?: string | null }) =>
@@ -117,18 +106,19 @@ export const scheduleLeadFollowup = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("leads")
-      .update({ next_followup_at: data.followUpAt, follow_up_note: data.note ?? null, updated_at: new Date().toISOString() })
+      .update({ status: "followup", next_followup_at: data.followUpAt, follow_up_note: data.note ?? null, updated_at: new Date().toISOString() })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
+/** Arrastar pro Perdido — só confirmação, sem motivo (mantido simples). */
 export const markLeadLost = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
-      .from("leads").update({ archived: true, updated_at: new Date().toISOString() }).eq("id", data.id);
+      .from("leads").update({ status: "perdido", archived: true, updated_at: new Date().toISOString() }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -144,12 +134,14 @@ export const deleteLead = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Marca o lead como ganho E cria o cliente de verdade — mesma lógica de
- * criação usada em createClient (api.functions.ts): assertClientLimit,
- * seedMonth pro primeiro mês. Reaproveita essas funções (exportadas de lá
- * especialmente pra isso) em vez de chamar createClient diretamente — não
- * existe precedente no código de um createServerFn chamar outro assim, e
- * o contexto (org/permissão) já foi resolvido aqui pelo próprio middleware. */
+/** Arrastar pro Fechado abre o formulário de criar cliente — confirmar
+ * aqui cria o cliente de verdade, reaproveitando a mesma lógica de
+ * createClient (api.functions.ts): assertClientLimit, seedMonth pro
+ * primeiro mês. Reaproveita essas funções (exportadas de lá
+ * especialmente pra isso) em vez de chamar createClient diretamente —
+ * não existe precedente no código de um createServerFn chamar outro
+ * assim, e o contexto (org/permissão) já foi resolvido aqui pelo
+ * próprio middleware. */
 export const markLeadWon = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string; clientName: string; category?: string; color?: string | null; icon?: string | null }) =>
@@ -186,7 +178,7 @@ export const markLeadWon = createServerFn({ method: "POST" })
     }
 
     const { error: updErr } = await context.supabase
-      .from("leads").update({ won_client_id: client.id, archived: true, updated_at: new Date().toISOString() }).eq("id", data.id);
+      .from("leads").update({ status: "fechado", won_client_id: client.id, archived: true, updated_at: new Date().toISOString() }).eq("id", data.id);
     if (updErr) throw new Error(updErr.message);
     return { clientId: client.id as string };
   });
