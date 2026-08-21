@@ -90,6 +90,14 @@ export const listProfiles = createServerFn({ method: "GET" })
     const { data: emailRows } = await context.supabase.rpc("admin_list_profile_emails");
     (emailRows ?? []).forEach((r: any) => emailMap.set(r.id, r.email));
     const signed = await signAvatarPaths(context.supabase, (profiles ?? []).map((p: any) => p.avatar_url));
+    const { data: cargoRows } = await context.supabase
+      .from("profile_cargos").select("profile_id, cargo_id").in("profile_id", (profiles ?? []).map((p: any) => p.id));
+    const cargoIdsByProfile = new Map<string, string[]>();
+    (cargoRows ?? []).forEach((r: any) => {
+      const list = cargoIdsByProfile.get(r.profile_id) ?? [];
+      list.push(r.cargo_id);
+      cargoIdsByProfile.set(r.profile_id, list);
+    });
     return (profiles ?? []).map<Profile>((p: any) => ({
       id: p.id,
       email: emailMap.get(p.id) ?? "",
@@ -103,6 +111,7 @@ export const listProfiles = createServerFn({ method: "GET" })
       onboardedAt: p.onboarded_at ?? null,
       tourCompletedAt: p.tour_completed_at ?? null,
       excludeFromRanking: p.exclude_from_ranking ?? false,
+      cargoIds: cargoIdsByProfile.get(p.id) ?? [],
     }));
   });
 
@@ -150,6 +159,13 @@ export const getMe = createServerFn({ method: "GET" })
     const orgLogoUrl = logoPath ? logoSigned.get(logoPath) ?? null : null;
     const orgFeedPreviewImageUrl = feedPreviewImagePath ? feedPreviewSigned.get(feedPreviewImagePath) ?? null : null;
     const orgFaviconUrl = faviconPath ? faviconSigned.get(faviconPath) ?? null : null;
+    // Cargos atribuídos (pode ter vários) — cargoPermissions já é a união
+    // de todos eles, pra checar direto com hasPermission() sem cruzar listas.
+    const { data: cargoRows } = await context.supabase
+      .from("profile_cargos").select("cargos(name, permissions)").eq("profile_id", context.userId);
+    const myCargos = ((cargoRows ?? []) as any[]).map((r) => r.cargos).filter(Boolean);
+    const cargoNames = myCargos.map((c: any) => c.name as string);
+    const cargoPermissions = [...new Set(myCargos.flatMap((c: any) => (c.permissions ?? []) as string[]))];
     return {
       id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
@@ -181,6 +197,8 @@ export const getMe = createServerFn({ method: "GET" })
       dashboardLayout: ((org as any)?.dashboard_layout ?? {}) as Record<string, { x: number; y: number; w: number; h: number }>,
       heroGradientFrom: ((org as any)?.hero_gradient_from ?? null) as string | null,
       heroGradientTo: ((org as any)?.hero_gradient_to ?? null) as string | null,
+      cargoNames,
+      cargoPermissions,
       defaultLanding: ((profile as any)?.default_landing ?? null) as { view: string; clientId?: string } | null,
     } satisfies Profile;
   });

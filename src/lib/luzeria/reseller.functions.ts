@@ -146,6 +146,8 @@ export const createResoldOrg = createServerFn({ method: "POST" })
 
     const { seedJourneyStagesForOrg } = await import("./journey-stages.functions");
     await seedJourneyStagesForOrg(supabaseAdmin, newOrg.id);
+    const { seedCargosForOrg } = await import("./cargos.functions");
+    await seedCargosForOrg(supabaseAdmin, newOrg.id);
 
     const { error: earErr } = await supabaseAdmin.from("email_role_assignments").insert({
       email: data.ownerEmail, role: "master", name: data.ownerName.trim(), org_id: newOrg.id,
@@ -275,6 +277,8 @@ export const createResellerOrg = createServerFn({ method: "POST" })
 
     const { seedJourneyStagesForOrg } = await import("./journey-stages.functions");
     await seedJourneyStagesForOrg(supabaseAdmin, newOrg.id);
+    const { seedCargosForOrg } = await import("./cargos.functions");
+    await seedCargosForOrg(supabaseAdmin, newOrg.id);
 
     const { error: earErr } = await supabaseAdmin.from("email_role_assignments").insert({
       email: data.ownerEmail, role: "master", name: data.ownerName.trim(), org_id: newOrg.id,

@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, lazy, Suspense } from "react";
-import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO } from "@/lib/luzeria/queries";
+import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO, cargosQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
-import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
+import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
 import { toast } from "sonner";
-import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2 } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2 } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
 
 // Cada uma dessas só renderiza dentro de uma aba específica (nunca mais de
@@ -50,6 +50,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
   const setorAllowedTabs: SettingsTab[] = [
     ...(hasSetorPermission(me, "settings_journey") ? (["journey"] as SettingsTab[]) : []),
     ...(hasSetorPermission(me, "team_reports") ? (["report"] as SettingsTab[]) : []),
+    ...(hasPermission(me, "view_financeiro") ? (["cobranca", "margem"] as SettingsTab[]) : []),
+    ...(hasPermission(me, "manage_team") ? (["team"] as SettingsTab[]) : []),
   ];
   if (!isMaster && setorAllowedTabs.length === 0) {
     return <div className="p-10 text-white/60 text-sm">Acesso restrito ao Administrador Master.</div>;
@@ -233,6 +235,13 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           Diferença entre funções
         </div>
         <TeamPermissionsPanel me={me} />
+      </div>
+
+      <div className="mt-8 pt-6 border-t border-white/[0.06]">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--lz-brand-rgb))] mb-4">
+          Cargos
+        </div>
+        <CargosPanel />
       </div>
         </>
       )}
@@ -591,6 +600,97 @@ function TeamPermissionsPanel({ me }: { me: Profile }) {
       <p className="text-[11px] text-white/30 mt-3">
         O Adm Master sempre tem acesso total e não pode ser restringido. As permissões configuráveis acima valem pra
         todo mundo com a função Adm Setor nesta agência.
+      </p>
+    </div>
+  );
+}
+
+/** Cargos são atômicos e combináveis (uma pessoa pode ter vários ao mesmo
+ * tempo, ex: Editor + Videomaker) — cada cargo aqui é um cartão com nome
+ * editável e uma grade de permissões próprias, além do que a função
+ * (Membro/Setor/Master) já libera. */
+function CargosPanel() {
+  const { upsertCargo, deleteCargo } = useApi();
+  const { data: cargos = [], isLoading } = useQuery(cargosQO());
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  function createCargo() {
+    if (!newName.trim()) return;
+    upsertCargo.mutate({ data: { name: newName.trim(), permissions: [] } }, {
+      onSuccess: () => { setNewName(""); setCreating(false); },
+    });
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!(await requestConfirm(`Apagar o cargo "${name}"? Quem tiver esse cargo perde as permissões dele.`, { danger: true }))) return;
+    deleteCargo.mutate({ data: { id } });
+  }
+
+  function togglePermission(cargo: { id: string; name: string; permissions: string[] }, key: string) {
+    const next = cargo.permissions.includes(key)
+      ? cargo.permissions.filter((k) => k !== key)
+      : [...cargo.permissions, key];
+    upsertCargo.mutate({ data: { id: cargo.id, name: cargo.name, permissions: next as any } });
+  }
+
+  if (isLoading) return <Loader2 className="animate-spin text-white/40" size={20} />;
+
+  return (
+    <div className="space-y-3">
+      {cargos.map((c) => (
+        <div key={c.id} className="bg-[#1C1C1C] rounded-lg p-4">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <span className="text-sm font-semibold text-white">{c.name}</span>
+            <button onClick={() => handleDelete(c.id, c.name)} className="text-white/30 hover:text-red-400 transition-colors">
+              <Trash2 size={14} />
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {PERMISSION_KEYS.map((key) => {
+              const on = c.permissions.includes(key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => togglePermission(c, key)}
+                  title={PERMISSION_LABEL[key].description}
+                  className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border"
+                  style={on
+                    ? { backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))", borderColor: "rgb(var(--lz-brand-rgb))" }
+                    : { color: "rgba(255,255,255,0.5)", borderColor: "rgba(255,255,255,0.15)" }}
+                >
+                  {PERMISSION_LABEL[key].label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {creating ? (
+        <div className="flex items-center gap-2">
+          <input
+            autoFocus value={newName} onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") createCargo(); if (e.key === "Escape") setCreating(false); }}
+            placeholder="Nome do cargo" maxLength={60}
+            className="flex-1 bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+          />
+          <button onClick={createCargo} disabled={upsertCargo.isPending || !newName.trim()}
+            className="px-3 py-2 rounded-md text-sm font-semibold bg-[rgb(var(--lz-brand-rgb))] text-black disabled:opacity-40 shrink-0">
+            Criar
+          </button>
+          <button onClick={() => setCreating(false)} className="text-white/40 hover:text-white p-2"><X size={16} /></button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setCreating(true)}
+          className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border border-white/15 text-white/60 hover:text-white transition-colors"
+        >
+          <Plus size={12} /> Novo cargo
+        </button>
+      )}
+      <p className="text-[11px] text-white/30 mt-1">
+        Cada pessoa pode ter mais de um cargo ao mesmo tempo (atribua em Equipe, no perfil de cada um).
       </p>
     </div>
   );

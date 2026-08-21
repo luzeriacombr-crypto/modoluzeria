@@ -314,6 +314,68 @@ export type Database = {
           },
         ]
       }
+      cargos: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          org_id: string
+          permissions: string[]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          org_id: string
+          permissions?: string[]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string
+          permissions?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cargos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_cargos: {
+        Row: {
+          cargo_id: string
+          profile_id: string
+        }
+        Insert: {
+          cargo_id: string
+          profile_id: string
+        }
+        Update: {
+          cargo_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_cargos_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_cargos_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cleaning_log: {
         Row: {
           created_at: string

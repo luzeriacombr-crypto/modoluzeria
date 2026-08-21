@@ -7,7 +7,7 @@ import { useMe, clientsQO } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { glassCardStyle } from "@/lib/luzeria/utils";
-import { hasSetorPermission } from "@/lib/luzeria/types";
+import { hasSetorPermission, hasPermission } from "@/lib/luzeria/types";
 import { DEFAULT_NAV_LABELS } from "./Sidebar";
 import { GlobalSearchButton } from "./GlobalSearch";
 
@@ -31,10 +31,10 @@ export function MobileNav() {
 
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const isMaster = me?.role === "master";
-  const canTeam = isMaster;
+  const canTeam = isMaster || hasPermission(me, "manage_team");
   const canReport = isMaster || hasSetorPermission(me, "team_reports");
   const canJourney = isMaster || hasSetorPermission(me, "settings_journey");
-  const canFinanceiro = isMaster;
+  const canFinanceiro = isMaster || hasPermission(me, "view_financeiro");
   const disabledFeatures = new Set(me?.disabledFeatures ?? []);
   const navLabel = (id: string, fallback: string) => me?.navLabels?.[id] || fallback;
   function goToConfigTab(tabId: string) {

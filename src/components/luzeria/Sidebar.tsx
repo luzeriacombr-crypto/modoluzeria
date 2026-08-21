@@ -13,7 +13,7 @@ import { Avatar } from "./Avatar";
 import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
 import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { toast } from "sonner";
-import { hasSetorPermission, type Client } from "@/lib/luzeria/types";
+import { hasSetorPermission, hasPermission, type Client } from "@/lib/luzeria/types";
 
 export const DEFAULT_NAV_LABELS: Record<string, string> = {
   "minhas-demandas": "Minhas demandas", dashboard: "Dashboard", clientes: "Clientes",
@@ -77,10 +77,10 @@ export function Sidebar({
   const disabled = new Set(me?.disabledFeatures ?? []);
   const clientsActive = pathname.startsWith("/cliente/");
   const isMaster = me?.role === "master";
-  const canTeam = isMaster;
+  const canTeam = isMaster || hasPermission(me, "manage_team");
   const canReport = isMaster || hasSetorPermission(me, "team_reports");
   const canJourney = isMaster || hasSetorPermission(me, "settings_journey");
-  const canFinanceiro = isMaster;
+  const canFinanceiro = isMaster || hasPermission(me, "view_financeiro");
   const rotinaEnabled = !disabled.has("rotina");
   const configTabActive = (tabId: string) => pathname === "/configuracoes" && routerSearch?.tab === tabId;
   const goToConfigTab = (tabId: string) => navigate({ to: "/configuracoes", search: { tab: tabId } });

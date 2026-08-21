@@ -252,6 +252,15 @@ export interface Profile {
    * profile (not just setor ones) so a Master viewing the Equipe tab can
    * render the current toggle state. */
   setorPermissions?: string[];
+  /** Cargos (Editor, Videomaker, Financeiro...) atribuídos a esse perfil —
+   * uma pessoa pode ter vários ao mesmo tempo. `cargoPermissions` já vem
+   * como a união das permissões de todos eles (calculada no servidor),
+   * pra checar com hasPermission() sem precisar cruzar as duas listas. */
+  cargoNames?: string[];
+  cargoPermissions?: string[];
+  /** Ids dos cargos atribuídos — usado só na lista de equipe (Settings),
+   * pra saber quais checkboxes marcar no seletor de múltipla escolha. */
+  cargoIds?: string[];
   /** Org-wide toggle: when true, a member who's an assignee on an item can
    * set its editor and pick its video format (reel_type/post_format),
    * not just admins. Present for every profile, same reasoning as above. */
@@ -328,6 +337,55 @@ export function hasSetorPermission(me: Pick<Profile, "role" | "setorPermissions"
   if (!me) return false;
   if (me.role === "master") return true;
   return me.role === "setor" && (me.setorPermissions ?? []).includes(key);
+}
+
+/** Catálogo mais amplo de permissões, generalizando SETOR_PERMISSION_KEYS
+ * pra qualquer cargo (não só o papel fixo "setor") — v1 curado com as
+ * chaves mais pedidas, não uma pra cada checagem interna do app (dá pra
+ * crescer esse catálogo depois sem migração, já que cargos.permissions é
+ * só um array de texto). */
+export const PERMISSION_KEYS = [
+  ...SETOR_PERMISSION_KEYS,
+  "view_financeiro", "manage_team", "sales_pipeline", "manage_automations", "view_client_overview",
+] as const;
+export type PermissionKey = (typeof PERMISSION_KEYS)[number];
+export const PERMISSION_LABEL: Record<PermissionKey, { label: string; description: string }> = {
+  ...SETOR_PERMISSION_LABEL,
+  view_financeiro: {
+    label: "Ver Financeiro",
+    description: "Acessar Plano e Cobrança e Margem por Cliente em Configurações.",
+  },
+  manage_team: {
+    label: "Gerenciar equipe",
+    description: "Aprovar membros novos e editar a aba Equipe em Configurações.",
+  },
+  sales_pipeline: {
+    label: "Vendas",
+    description: "Ver e gerenciar o quadro de vendas (leads).",
+  },
+  manage_automations: {
+    label: "Gerenciar automações",
+    description: "Acessar a aba Automações em Configurações (Google Drive, lembretes).",
+  },
+  view_client_overview: {
+    label: "Ver Visão Geral",
+    description: "Acessar a Visão Geral operacional de todos os clientes.",
+  },
+};
+
+/** True for Master always; pra todo mundo, também true se o papel "setor"
+ * tem essa chave liberada por setorPermissions (compat com o mecanismo
+ * antigo, ainda em uso pras 4 chaves originais) OU se algum cargo
+ * atribuído à pessoa inclui essa permissão (união, já resolvida no
+ * servidor em cargoPermissions). */
+export function hasPermission(
+  me: Pick<Profile, "role" | "setorPermissions" | "cargoPermissions"> | null | undefined,
+  key: PermissionKey,
+): boolean {
+  if (!me) return false;
+  if (me.role === "master") return true;
+  if (me.role === "setor" && (SETOR_PERMISSION_KEYS as readonly string[]).includes(key) && (me.setorPermissions ?? []).includes(key)) return true;
+  return (me.cargoPermissions ?? []).includes(key);
 }
 
 export const OPTIONAL_FEATURE_KEYS = [

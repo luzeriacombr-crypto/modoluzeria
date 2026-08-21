@@ -7,7 +7,7 @@ import {
   WEEK_DAYS, WEEK_DAY_LABEL, defaultWorkSchedule, computeMonthlyHourlyCost,
   type Profile, type Role, type WorkSchedule,
 } from "@/lib/luzeria/types";
-import { useApi, useMe, memberPayQO } from "@/lib/luzeria/queries";
+import { useApi, useMe, memberPayQO, cargosQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { Modal } from "./Modals";
@@ -62,7 +62,18 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
 
 function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
   const me = useMe().data;
-  const { setUserRole, setUserActive, setExcludeFromRanking, deleteUser, adminSendPasswordReset, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay } = useApi();
+  const { setUserRole, setUserActive, setExcludeFromRanking, deleteUser, adminSendPasswordReset, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay, setProfileCargos } = useApi();
+  const { data: cargos = [] } = useQuery(cargosQO());
+  const [selectedCargoIds, setSelectedCargoIds] = useState<string[]>(profile.cargoIds ?? []);
+  useEffect(() => { setSelectedCargoIds(profile.cargoIds ?? []); }, [profile.cargoIds]);
+
+  function toggleCargo(cargoId: string) {
+    const next = selectedCargoIds.includes(cargoId)
+      ? selectedCargoIds.filter((id) => id !== cargoId)
+      : [...selectedCargoIds, cargoId];
+    setSelectedCargoIds(next);
+    setProfileCargos.mutate({ data: { profileId: profile.id, cargoIds: next } });
+  }
   const { setViewAs } = useUI();
   const navigate = useNavigate();
   const isSelf = profile.id === me?.id;
@@ -163,6 +174,32 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
             <option value="master">Adm Master</option>
           </select>
         </div>
+
+        {cargos.length > 0 && (
+          <div>
+            <label className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">
+              Cargos (pode ter mais de um)
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {cargos.map((c) => {
+                const on = selectedCargoIds.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => toggleCargo(c.id)}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border"
+                    style={on
+                      ? { backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))", borderColor: "rgb(var(--lz-brand-rgb))" }
+                      : { color: "rgba(255,255,255,0.5)", borderColor: "rgba(255,255,255,0.15)" }}
+                  >
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <label className="flex items-center gap-2 text-sm text-white/70">
           <input type="checkbox" checked={profile.active} disabled={isSelf}

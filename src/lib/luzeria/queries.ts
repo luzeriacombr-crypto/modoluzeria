@@ -66,6 +66,7 @@ import {
   getClientOperationsOverview,
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
+import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
 import { listDemoRequests } from "./demo-request.functions";
@@ -207,6 +208,9 @@ export const clientFichaQO = (clientId: string | null) =>
 
 export const journeyStagesQO = () =>
   queryOptions({ queryKey: ["journey-stages"], queryFn: () => listJourneyStages() });
+
+export const cargosQO = () =>
+  queryOptions({ queryKey: ["cargos"], queryFn: () => listCargos() });
 
 export const clientOperationsOverviewQO = () =>
   queryOptions({ queryKey: ["client-operations-overview"], queryFn: () => getClientOperationsOverview() });
@@ -829,6 +833,24 @@ export function useApi() {
       mutationFn: useServerFn(deleteJourneyStage),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["journey-stages"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover etapa."),
+    }),
+    upsertCargo: useMutation({
+      mutationFn: useServerFn(upsertCargo),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["cargos"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar cargo."),
+    }),
+    deleteCargo: useMutation({
+      mutationFn: useServerFn(deleteCargo),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["cargos"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover cargo."),
+    }),
+    setProfileCargos: useMutation({
+      mutationFn: useServerFn(setProfileCargos),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["profiles"] });
+        qc.invalidateQueries({ queryKey: ["me"] });
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar cargos."),
     }),
     upsertClientDoc: useMutation({
       mutationFn: useServerFn(upsertClientDoc),
