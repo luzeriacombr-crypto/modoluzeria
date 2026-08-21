@@ -21,6 +21,8 @@ interface UI {
   sidebarHidden: boolean;
   fichaClientId: string | null;
   stageComposerClientId: string | null;
+  searchOpen: boolean;
+  setSearchOpen: (v: boolean) => void;
   selectClient: (id: string | null) => void;
   selectMonth: (key: string) => void;
   openItem: (id: string | null, navList?: string[] | null) => void;
@@ -49,6 +51,8 @@ export const useUI = create<UI>((set) => ({
   sidebarHidden: readSidebarHidden(),
   fichaClientId: null,
   stageComposerClientId: null,
+  searchOpen: false,
+  setSearchOpen: (v) => set({ searchOpen: v }),
   selectClient: (id) =>
     set({ selectedClientId: id, selectedItemId: null, itemNavList: null, view: id ? "client" : "my" }),
   selectMonth: (key) => set({ selectedMonthKey: key }),

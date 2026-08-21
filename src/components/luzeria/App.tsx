@@ -17,6 +17,7 @@ import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
 import { PullToRefresh } from "./PullToRefresh";
+import { GlobalSearchOverlay, GlobalSearchButton } from "./GlobalSearch";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ClientFichaPanel } from "./ClientFichaPanel";
 import { AppTour } from "./AppTour";
@@ -220,6 +221,7 @@ export function App() {
       <ClientFichaPanel />
       <MobileNav />
       <AppTour />
+      <GlobalSearchOverlay />
       <GlobalConfirmDialog />
       <IncomingCallModal call={call} />
       <ActiveCallOverlay call={call} />
@@ -257,6 +259,7 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
         </span>
       )}
       <div className="flex-1" />
+      <GlobalSearchButton variant="header" />
       {me?.role === "master" && (
         <button
           onClick={() => navigate({ to: "/configuracoes" })}

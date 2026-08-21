@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { glassCardStyle } from "@/lib/luzeria/utils";
 import { hasSetorPermission } from "@/lib/luzeria/types";
 import { DEFAULT_NAV_LABELS } from "./Sidebar";
+import { GlobalSearchButton } from "./GlobalSearch";
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
@@ -199,6 +200,7 @@ export function MobileNav() {
       <nav className="sidebar-gradient fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around backdrop-blur-xl border-t border-white/[0.08]" data-tour="mobile-bottom-nav">
         <NavBtn icon={<LayoutDashboard size={20} />} active={pathname === "/minhas-tarefas"}
           onClick={() => { navigate({ to: "/minhas-tarefas" }); closeAllSheets(); }} />
+        <GlobalSearchButton variant="mobile" />
         <NavBtn icon={<BarChart2 size={20} />} active={pathname === "/admin"}
           onClick={() => { navigate({ to: "/admin" }); closeAllSheets(); }} />
         <NavBtn icon={<Users size={20} />} active={tab === "clients" || isClientPath}
