@@ -613,7 +613,7 @@ export const subscribeToPlan = createServerFn({ method: "POST" })
 
 /** Throws a friendly error if the org is at/over its plan's client cap.
  * Luzeria itself is exempt (not a customer of its own platform). */
-async function assertClientLimit(supabase: any, orgId: string) {
+export async function assertClientLimit(supabase: any, orgId: string) {
   if (orgId === LUZERIA_ORG_ID) return;
   const { data: org } = await supabase.from("orgs").select("plan_id").eq("id", orgId).maybeSingle();
   const { data: plan } = await supabase.from("plans").select("max_clients, name").eq("id", org?.plan_id ?? "solo").maybeSingle();
@@ -970,7 +970,7 @@ export const setWhatsappGroupLink = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-function monthKey(d: Date) {
+export function monthKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 function nextMonthKey(key: string) {
@@ -978,7 +978,7 @@ function nextMonthKey(key: string) {
   return monthKey(new Date(y, m, 1));
 }
 
-async function seedMonth(supabase: any, clientId: string, key: string) {
+export async function seedMonth(supabase: any, clientId: string, key: string) {
   const { data: month, error: mErr } = await supabase
     .from("months").insert({ client_id: clientId, key }).select().single();
   if (mErr) throw new Error(mErr.message);

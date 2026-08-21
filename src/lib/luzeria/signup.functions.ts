@@ -100,6 +100,8 @@ export const publicSignup = createServerFn({ method: "POST" })
     await seedJourneyStagesForOrg(supabaseAdmin, org.id);
     const { seedCargosForOrg } = await import("./cargos.functions");
     await seedCargosForOrg(supabaseAdmin, org.id);
+    const { seedSalesStagesForOrg } = await import("./sales-pipeline.functions");
+    await seedSalesStagesForOrg(supabaseAdmin, org.id);
 
     let earInserted = false;
     try {
@@ -274,6 +276,8 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
     await seedJourneyStagesForOrg(supabaseAdmin, org.id);
     const { seedCargosForOrg } = await import("./cargos.functions");
     await seedCargosForOrg(supabaseAdmin, org.id);
+    const { seedSalesStagesForOrg } = await import("./sales-pipeline.functions");
+    await seedSalesStagesForOrg(supabaseAdmin, org.id);
 
     let earInserted = false;
     try {

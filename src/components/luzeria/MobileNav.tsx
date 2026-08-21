@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, LayoutGrid, Wallet, UserCog } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, LayoutGrid, Wallet, UserCog, Handshake } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -36,6 +36,7 @@ export function MobileNav() {
   const canJourney = isMaster || hasSetorPermission(me, "settings_journey");
   const canFinanceiro = isMaster || hasPermission(me, "view_financeiro");
   const disabledFeatures = new Set(me?.disabledFeatures ?? []);
+  const canSales = !disabledFeatures.has("sales_pipeline") && hasPermission(me, "sales_pipeline");
   const navLabel = (id: string, fallback: string) => me?.navLabels?.[id] || fallback;
   function goToConfigTab(tabId: string) {
     navigate({ to: "/configuracoes", search: { tab: tabId } });
@@ -157,6 +158,13 @@ export function MobileNav() {
                 icon={<Instagram size={17} />}
                 label={navLabel("instagram", "Instagram")}
                 onClick={() => { navigate({ to: "/instagram" }); closeAllSheets(); }}
+              />
+            )}
+            {canSales && (
+              <MenuLink
+                icon={<Handshake size={17} />}
+                label={navLabel("vendas", "Vendas")}
+                onClick={() => { navigate({ to: "/vendas" }); closeAllSheets(); }}
               />
             )}
             {!disabledFeatures.has("rotina") && (

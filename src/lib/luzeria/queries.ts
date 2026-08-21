@@ -67,6 +67,7 @@ import {
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
+import { listSalesStages, upsertSalesStage, deleteSalesStage, listLeads, upsertLead, moveLeadStage, markLeadLost, deleteLead, markLeadWon } from "./sales-pipeline.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
 import { listDemoRequests } from "./demo-request.functions";
@@ -211,6 +212,15 @@ export const journeyStagesQO = () =>
 
 export const cargosQO = () =>
   queryOptions({ queryKey: ["cargos"], queryFn: () => listCargos() });
+
+export const salesStagesQO = () =>
+  queryOptions({ queryKey: ["sales-stages"], queryFn: () => listSalesStages() });
+
+export const leadsQO = (includeArchived?: boolean) =>
+  queryOptions({
+    queryKey: ["leads", includeArchived ?? false],
+    queryFn: () => listLeads({ data: { includeArchived } }),
+  });
 
 export const clientOperationsOverviewQO = () =>
   queryOptions({ queryKey: ["client-operations-overview"], queryFn: () => getClientOperationsOverview() });
@@ -851,6 +861,45 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["me"] });
       },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar cargos."),
+    }),
+    upsertSalesStage: useMutation({
+      mutationFn: useServerFn(upsertSalesStage),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["sales-stages"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar etapa."),
+    }),
+    deleteSalesStage: useMutation({
+      mutationFn: useServerFn(deleteSalesStage),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["sales-stages"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover etapa."),
+    }),
+    upsertLead: useMutation({
+      mutationFn: useServerFn(upsertLead),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar oportunidade."),
+    }),
+    moveLeadStage: useMutation({
+      mutationFn: useServerFn(moveLeadStage),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao mover oportunidade."),
+    }),
+    markLeadLost: useMutation({
+      mutationFn: useServerFn(markLeadLost),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar como perdido."),
+    }),
+    markLeadWon: useMutation({
+      mutationFn: useServerFn(markLeadWon),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["leads"] });
+        qc.invalidateQueries({ queryKey: ["clients"] });
+        qc.invalidateQueries({ queryKey: ["client-operations-overview"] });
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar como ganho."),
+    }),
+    deleteLead: useMutation({
+      mutationFn: useServerFn(deleteLead),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover oportunidade."),
     }),
     upsertClientDoc: useMutation({
       mutationFn: useServerFn(upsertClientDoc),

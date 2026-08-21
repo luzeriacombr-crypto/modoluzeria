@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Plus, Info, CircleHelp, CalendarDays, Instagram, Users, LayoutGrid, Wallet, UserCog, BookMarked,
-  Settings2, X, ArrowUp, ArrowDown, RotateCcw,
+  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -21,6 +21,7 @@ export const DEFAULT_NAV_LABELS: Record<string, string> = {
   instagram: "Instagram", financeiro: "Financeiro", equipe: "Equipe", ajuda: "Ajuda",
   cobranca: "Plano e Cobrança", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda",
   rotina: "Rotina", membros: "Membros", relatorio: "Relatório", jornada: "Jornada do cliente",
+  vendas: "Vendas",
 };
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
@@ -81,6 +82,7 @@ export function Sidebar({
   const canReport = isMaster || hasSetorPermission(me, "team_reports");
   const canJourney = isMaster || hasSetorPermission(me, "settings_journey");
   const canFinanceiro = isMaster || hasPermission(me, "view_financeiro");
+  const canSales = !disabled.has("sales_pipeline") && hasPermission(me, "sales_pipeline");
   const rotinaEnabled = !disabled.has("rotina");
   const configTabActive = (tabId: string) => pathname === "/configuracoes" && routerSearch?.tab === tabId;
   const goToConfigTab = (tabId: string) => navigate({ to: "/configuracoes", search: { tab: tabId } });
@@ -240,6 +242,11 @@ export function Sidebar({
             ...(isAdmin && !disabled.has("instagram") ? [{ id: "instagram", label: navLabel("instagram", "Instagram"), node: (
               <div key="instagram" data-tour="nav-instagram">
                 <NavButton icon={<Instagram size={15} />} label={navLabel("instagram", "Instagram")} active={pathname === "/instagram"} onClick={() => navigate({ to: "/instagram" })} />
+              </div>
+            ) }] : []),
+            ...(canSales ? [{ id: "vendas", label: navLabel("vendas", "Vendas"), node: (
+              <div key="vendas" data-tour="nav-vendas">
+                <NavButton icon={<Handshake size={15} />} label={navLabel("vendas", "Vendas")} active={pathname === "/vendas"} onClick={() => navigate({ to: "/vendas" })} />
               </div>
             ) }] : []),
             ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Financeiro"), node: (

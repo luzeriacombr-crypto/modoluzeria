@@ -314,6 +314,118 @@ export type Database = {
           },
         ]
       }
+      sales_stages: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          org_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          org_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_stages_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          archived: boolean
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          org_id: string
+          responsible_id: string | null
+          source: string | null
+          stage_id: string | null
+          updated_at: string
+          value_estimate_cents: number | null
+          won_client_id: string | null
+        }
+        Insert: {
+          archived?: boolean
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          org_id: string
+          responsible_id?: string | null
+          source?: string | null
+          stage_id?: string | null
+          updated_at?: string
+          value_estimate_cents?: number | null
+          won_client_id?: string | null
+        }
+        Update: {
+          archived?: boolean
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          org_id?: string
+          responsible_id?: string | null
+          source?: string | null
+          stage_id?: string | null
+          updated_at?: string
+          value_estimate_cents?: number | null
+          won_client_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "sales_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_won_client_id_fkey"
+            columns: ["won_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cargos: {
         Row: {
           created_at: string

@@ -24,6 +24,7 @@ import { Route as PromoSlugRouteImport } from './routes/promo/$slug'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
 import { Route as AuthenticatedVisaoGeralRouteImport } from './routes/_authenticated/visao-geral'
+import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated/rotina'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
@@ -113,6 +114,11 @@ const AssinarCompletarRoute = AssinarCompletarRouteImport.update({
 const AuthenticatedVisaoGeralRoute = AuthenticatedVisaoGeralRouteImport.update({
   id: '/visao-geral',
   path: '/visao-geral',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedVendasRoute = AuthenticatedVendasRouteImport.update({
+  id: '/vendas',
+  path: '/vendas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRotinaRoute = AuthenticatedRotinaRouteImport.update({
@@ -224,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
+  '/vendas': typeof AuthenticatedVendasRoute
   '/visao-geral': typeof AuthenticatedVisaoGeralRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
@@ -256,6 +263,7 @@ export interface FileRoutesByTo {
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
+  '/vendas': typeof AuthenticatedVendasRoute
   '/visao-geral': typeof AuthenticatedVisaoGeralRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
@@ -290,6 +298,7 @@ export interface FileRoutesById {
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/rotina': typeof AuthenticatedRotinaRoute
+  '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/_authenticated/visao-geral': typeof AuthenticatedVisaoGeralRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
@@ -324,6 +333,7 @@ export interface FileRouteTypes {
     | '/minhas-tarefas'
     | '/perfil'
     | '/rotina'
+    | '/vendas'
     | '/visao-geral'
     | '/assinar/completar'
     | '/preview/$token'
@@ -356,6 +366,7 @@ export interface FileRouteTypes {
     | '/minhas-tarefas'
     | '/perfil'
     | '/rotina'
+    | '/vendas'
     | '/visao-geral'
     | '/assinar/completar'
     | '/preview/$token'
@@ -389,6 +400,7 @@ export interface FileRouteTypes {
     | '/_authenticated/minhas-tarefas'
     | '/_authenticated/perfil'
     | '/_authenticated/rotina'
+    | '/_authenticated/vendas'
     | '/_authenticated/visao-geral'
     | '/assinar/completar'
     | '/preview/$token'
@@ -527,6 +539,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVisaoGeralRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/vendas': {
+      id: '/_authenticated/vendas'
+      path: '/vendas'
+      fullPath: '/vendas'
+      preLoaderRoute: typeof AuthenticatedVendasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/rotina': {
       id: '/_authenticated/rotina'
       path: '/rotina'
@@ -652,6 +671,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedRotinaRoute: typeof AuthenticatedRotinaRoute
+  AuthenticatedVendasRoute: typeof AuthenticatedVendasRoute
   AuthenticatedVisaoGeralRoute: typeof AuthenticatedVisaoGeralRoute
   AuthenticatedAfiliadoDashboardRoute: typeof AuthenticatedAfiliadoDashboardRoute
   AuthenticatedClienteClientIdRoute: typeof AuthenticatedClienteClientIdRoute
@@ -670,6 +690,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedRotinaRoute: AuthenticatedRotinaRoute,
+  AuthenticatedVendasRoute: AuthenticatedVendasRoute,
   AuthenticatedVisaoGeralRoute: AuthenticatedVisaoGeralRoute,
   AuthenticatedAfiliadoDashboardRoute: AuthenticatedAfiliadoDashboardRoute,
   AuthenticatedClienteClientIdRoute: AuthenticatedClienteClientIdRoute,

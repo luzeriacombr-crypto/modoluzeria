@@ -389,7 +389,7 @@ export function hasPermission(
 }
 
 export const OPTIONAL_FEATURE_KEYS = [
-  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call", "google_calendar", "client_overview", "forum", "reference_library",
+  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call", "google_calendar", "client_overview", "forum", "reference_library", "sales_pipeline",
 ] as const;
 export type OptionalFeatureKey = (typeof OPTIONAL_FEATURE_KEYS)[number];
 export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string; description: string }> = {
@@ -444,6 +444,10 @@ export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string;
   reference_library: {
     label: "Biblioteca de Referências",
     description: "Item de menu com um banco de links/vídeos de referência salvos por cliente ou de forma geral, pra reaproveitar em roteiros futuros.",
+  },
+  sales_pipeline: {
+    label: "Vendas",
+    description: "Item de menu com um quadro kanban de leads/oportunidades, com conversão direta em cliente ao fechar uma venda.",
   },
 };
 
