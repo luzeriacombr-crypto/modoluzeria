@@ -228,25 +228,35 @@ export function Sidebar({
               </div>
             ) }] : []),
             ...(!disabled.has("reference_library") ? [{ id: "biblioteca", label: navLabel("biblioteca", "Biblioteca"), node: (
-              <NavButton key="biblioteca" icon={<BookMarked size={15} />} label={navLabel("biblioteca", "Biblioteca")} active={pathname === "/biblioteca"} onClick={() => navigate({ to: "/biblioteca" })} />
+              <div key="biblioteca" data-tour="nav-biblioteca">
+                <NavButton icon={<BookMarked size={15} />} label={navLabel("biblioteca", "Biblioteca")} active={pathname === "/biblioteca"} onClick={() => navigate({ to: "/biblioteca" })} />
+              </div>
             ) }] : []),
             ...(isAdmin && !disabled.has("client_overview") ? [{ id: "visao-geral", label: navLabel("visao-geral", "Visão Geral"), node: (
-              <NavButton key="visao-geral" icon={<LayoutGrid size={15} />} label={navLabel("visao-geral", "Visão Geral")} active={pathname === "/visao-geral"} onClick={() => navigate({ to: "/visao-geral" })} />
+              <div key="visao-geral" data-tour="nav-visao-geral">
+                <NavButton icon={<LayoutGrid size={15} />} label={navLabel("visao-geral", "Visão Geral")} active={pathname === "/visao-geral"} onClick={() => navigate({ to: "/visao-geral" })} />
+              </div>
             ) }] : []),
             ...(isAdmin && !disabled.has("instagram") ? [{ id: "instagram", label: navLabel("instagram", "Instagram"), node: (
-              <NavButton key="instagram" icon={<Instagram size={15} />} label={navLabel("instagram", "Instagram")} active={pathname === "/instagram"} onClick={() => navigate({ to: "/instagram" })} />
+              <div key="instagram" data-tour="nav-instagram">
+                <NavButton icon={<Instagram size={15} />} label={navLabel("instagram", "Instagram")} active={pathname === "/instagram"} onClick={() => navigate({ to: "/instagram" })} />
+              </div>
             ) }] : []),
             ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Financeiro"), node: (
-              <NavGroup key="financeiro" icon={<Wallet size={15} />} label={navLabel("financeiro", "Financeiro")}
-                active={configTabActive("cobranca") || configTabActive("margem") || configTabActive("afiliados") || configTabActive("revenda")}>
-                {financeiroItems.map((it) => it.node)}
-              </NavGroup>
+              <div key="financeiro" data-tour="nav-financeiro">
+                <NavGroup icon={<Wallet size={15} />} label={navLabel("financeiro", "Financeiro")}
+                  active={configTabActive("cobranca") || configTabActive("margem") || configTabActive("afiliados") || configTabActive("revenda")}>
+                  {financeiroItems.map((it) => it.node)}
+                </NavGroup>
+              </div>
             ) }] : []),
             ...((canTeam || canReport || canJourney || rotinaEnabled) ? [{ id: "equipe", label: navLabel("equipe", "Equipe"), node: (
-              <NavGroup key="equipe" icon={<UserCog size={15} />} label={navLabel("equipe", "Equipe")}
-                active={configTabActive("team") || configTabActive("report") || configTabActive("journey") || pathname === "/rotina"}>
-                {equipeItems.map((it) => it.node)}
-              </NavGroup>
+              <div key="equipe" data-tour="nav-equipe">
+                <NavGroup icon={<UserCog size={15} />} label={navLabel("equipe", "Equipe")}
+                  active={configTabActive("team") || configTabActive("report") || configTabActive("journey") || pathname === "/rotina"}>
+                  {equipeItems.map((it) => it.node)}
+                </NavGroup>
+              </div>
             ) }] : []),
             { id: "ajuda", label: navLabel("ajuda", "Ajuda"), node: (
               <div key="ajuda" data-tour="nav-ajuda">
