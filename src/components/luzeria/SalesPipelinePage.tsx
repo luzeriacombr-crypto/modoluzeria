@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Trash2, Handshake, MessageCircle, Snowflake, PhoneCall, Check } from "lucide-react";
+import { Plus, Trash2, Handshake, MessageCircle, Snowflake, PhoneCall, Check, UserPlus, Phone, CalendarClock, CheckCircle2, XCircle, X } from "lucide-react";
 import { leadsQO, leadContactsQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { Modal } from "./Modals";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
@@ -38,12 +38,12 @@ function waLink(phone: string | null, text?: string): string | null {
   return `https://wa.me/${withCountry}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 }
 
-const COLUMNS: { key: LeadStatus; label: string; accent: string }[] = [
-  { key: "novo", label: "Novos", accent: "#888780" },
-  { key: "responder", label: "Responder agora", accent: "#E76F51" },
-  { key: "followup", label: "Follow-up", accent: "#4A9EFF" },
-  { key: "fechado", label: "Fechado", accent: "#5BA88A" },
-  { key: "perdido", label: "Perdido", accent: "#E24B4A" },
+const COLUMNS: { key: LeadStatus; label: string; accent: string; icon: typeof UserPlus }[] = [
+  { key: "novo", label: "Novos", accent: "#888780", icon: UserPlus },
+  { key: "responder", label: "Responder agora", accent: "#E76F51", icon: Phone },
+  { key: "followup", label: "Follow-up", accent: "#4A9EFF", icon: CalendarClock },
+  { key: "fechado", label: "Fechado", accent: "#5BA88A", icon: CheckCircle2 },
+  { key: "perdido", label: "Perdido", accent: "#E24B4A", icon: XCircle },
 ];
 
 export function SalesPipelinePage() {
@@ -53,6 +53,7 @@ export function SalesPipelinePage() {
   const [wonLead, setWonLead] = useState<Lead | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<LeadStatus | null>(null);
+  const [expanded, setExpanded] = useState<LeadStatus | null>(null);
 
   const { data: leads = [] } = useQuery(leadsQO(true));
   const api = useApi();
@@ -79,6 +80,19 @@ export function SalesPipelinePage() {
     }
   }
 
+  function dropProps(status: LeadStatus) {
+    return {
+      onDragOver: (e: React.DragEvent) => { e.preventDefault(); if (dragId) setOverCol(status); },
+      onDragLeave: () => { if (overCol === status) setOverCol(null); },
+      onDrop: (e: React.DragEvent) => {
+        e.preventDefault();
+        const lead = leads.find((l) => l.id === dragId);
+        if (lead) onDropOnColumn(status, lead);
+        else { setDragId(null); setOverCol(null); }
+      },
+    };
+  }
+
   return (
     <div className="p-4 md:p-6 h-full flex flex-col">
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
@@ -95,54 +109,114 @@ export function SalesPipelinePage() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-x-auto">
-        <div className="flex gap-3 h-full min-w-max pb-2">
-          {COLUMNS.map((col) => {
-            const colLeads = byStatus[col.key];
-            return (
-              <div
-                key={col.key}
-                onDragOver={(e) => { e.preventDefault(); if (dragId) setOverCol(col.key); }}
-                onDragLeave={() => { if (overCol === col.key) setOverCol(null); }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const lead = leads.find((l) => l.id === dragId);
-                  if (lead) onDropOnColumn(col.key, lead);
-                  else { setDragId(null); setOverCol(null); }
-                }}
-                className="w-[270px] shrink-0 rounded-lg border transition-colors flex flex-col"
-                style={{
-                  backgroundColor: overCol === col.key ? "rgba(var(--lz-brand-rgb),0.06)" : "#161616",
-                  borderColor: overCol === col.key ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
-                }}
-              >
-                <div className="px-3 py-2.5 border-b border-white/[0.06] flex items-center justify-between shrink-0">
-                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: col.accent }}>{col.label}</span>
-                  <span className="text-[10px] text-white/30 font-semibold">{colLeads.length}</span>
-                </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1.5 min-h-[80px]">
-                  {col.key === "followup"
-                    ? <FollowupColumnBody leads={colLeads} dragId={dragId} onDragStart={setDragId} onDragEnd={() => setDragId(null)} onOpen={setEditLead} />
-                    : colLeads.length === 0
-                    ? <p className="text-[11px] text-white/25 text-center py-6">Nada por aqui.</p>
-                    : colLeads.map((l) => (
-                        <LeadCard key={l.id} lead={l} draggable={col.key !== "fechado" && col.key !== "perdido"}
-                          dragging={dragId === l.id}
-                          onDragStart={() => setDragId(l.id)} onDragEnd={() => setDragId(null)}
-                          onOpen={() => setEditLead(l)} />
-                      ))}
-                </div>
-              </div>
-            );
-          })}
+      {!expanded ? (
+        <div>
+          <div className="grid grid-cols-3 gap-3">
+            {COLUMNS.slice(0, 3).map((col) => (
+              <FolderBlock key={col.key} col={col} leads={byStatus[col.key]} {...dropProps(col.key)}
+                isOver={overCol === col.key} onClick={() => setExpanded(col.key)} />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            {COLUMNS.slice(3, 5).map((col) => (
+              <FolderBlock key={col.key} col={col} leads={byStatus[col.key]} {...dropProps(col.key)}
+                isOver={overCol === col.key} onClick={() => setExpanded(col.key)} />
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-3">
+            {COLUMNS.map((col) => (
+              <CompactChip key={col.key} col={col} count={byStatus[col.key].length}
+                active={col.key === expanded} isOver={overCol === col.key}
+                onClick={() => setExpanded(col.key)} {...dropProps(col.key)} />
+            ))}
+            <button onClick={() => setExpanded(null)} className="ml-1 p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 shrink-0" title="Voltar aos blocos">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto rounded-lg border border-white/[0.06] bg-[#161616] p-3 space-y-1.5">
+            {expanded === "followup"
+              ? <FollowupColumnBody leads={byStatus.followup} dragId={dragId} onDragStart={setDragId} onDragEnd={() => setDragId(null)} onOpen={setEditLead} />
+              : byStatus[expanded].length === 0
+              ? <p className="text-[11px] text-white/25 text-center py-10">Nada por aqui.</p>
+              : byStatus[expanded].map((l) => (
+                  <LeadCard key={l.id} lead={l} draggable={expanded !== "fechado" && expanded !== "perdido"}
+                    dragging={dragId === l.id}
+                    onDragStart={() => setDragId(l.id)} onDragEnd={() => setDragId(null)}
+                    onOpen={() => setEditLead(l)} />
+                ))}
+          </div>
+        </div>
+      )}
 
       <LeadFormModal open={newLeadOpen} onClose={() => setNewLeadOpen(false)} />
       <LeadFormModal open={!!editLead} onClose={() => setEditLead(null)} lead={editLead ?? undefined} />
       <FollowupModal lead={followupLead} onClose={() => setFollowupLead(null)} />
       {wonLead && <WonLeadModal open={!!wonLead} lead={wonLead} onClose={() => setWonLead(null)} />}
     </div>
+  );
+}
+
+function FolderBlock({ col, leads, isOver, onClick, onDragOver, onDragLeave, onDrop }: {
+  col: { key: LeadStatus; label: string; accent: string; icon: typeof UserPlus };
+  leads: Lead[]; isOver: boolean; onClick: () => void;
+  onDragOver: (e: React.DragEvent) => void; onDragLeave: () => void; onDrop: (e: React.DragEvent) => void;
+}) {
+  const Icon = col.icon;
+  return (
+    <button
+      onClick={onClick}
+      onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
+      className="text-left rounded-xl p-4 transition-colors border"
+      style={{
+        backgroundColor: isOver ? "rgba(var(--lz-brand-rgb),0.08)" : "#1C1C1C",
+        borderColor: isOver ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
+        borderTopColor: isOver ? "rgb(var(--lz-brand-rgb))" : col.accent,
+        borderTopWidth: "2px",
+      }}
+    >
+      <Icon size={18} style={{ color: col.accent }} />
+      <div className="text-2xl font-bold text-white mt-2">{leads.length}</div>
+      <div className="text-xs text-white/50 mt-0.5">{col.label}</div>
+      {leads.length > 0 && (
+        <div className="flex items-center mt-3">
+          {leads.slice(0, 3).map((l, i) => (
+            <div key={l.id}
+              className="w-5 h-5 rounded-full bg-white/10 border-2 border-[#1C1C1C] text-[9px] text-white flex items-center justify-center font-semibold shrink-0"
+              style={{ marginLeft: i === 0 ? 0 : -6 }}
+            >
+              {l.name.trim()[0]?.toUpperCase() ?? "?"}
+            </div>
+          ))}
+          {leads.length > 3 && <span className="ml-1.5 text-[9px] text-white/30">+{leads.length - 3}</span>}
+        </div>
+      )}
+    </button>
+  );
+}
+
+function CompactChip({ col, count, active, isOver, onClick, onDragOver, onDragLeave, onDrop }: {
+  col: { key: LeadStatus; label: string; accent: string; icon: typeof UserPlus };
+  count: number; active: boolean; isOver: boolean; onClick: () => void;
+  onDragOver: (e: React.DragEvent) => void; onDragLeave: () => void; onDrop: (e: React.DragEvent) => void;
+}) {
+  const Icon = col.icon;
+  return (
+    <button
+      onClick={onClick}
+      onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
+      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border shrink-0 transition-colors"
+      style={{
+        backgroundColor: active ? "rgba(var(--lz-brand-rgb),0.1)" : isOver ? "rgba(255,255,255,0.06)" : "#1C1C1C",
+        borderColor: active ? "rgb(var(--lz-brand-rgb))" : isOver ? col.accent : "rgba(255,255,255,0.06)",
+      }}
+    >
+      <Icon size={14} style={{ color: col.accent }} />
+      <span className="text-xs font-semibold text-white/80 whitespace-nowrap">{col.label}</span>
+      <span className="text-[10px] text-white/30">{count}</span>
+    </button>
   );
 }
 
