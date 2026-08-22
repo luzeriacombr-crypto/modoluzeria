@@ -586,6 +586,58 @@ export type Database = {
           },
         ]
       }
+      campaigns: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          org_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          org_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cleaning_log: {
         Row: {
           created_at: string
@@ -1443,6 +1495,8 @@ export type Database = {
           activity_location: string | null
           activity_quantity: number | null
           blocked_reason: string | null
+          campaign_id: string | null
+          campaign_internal: boolean
           caption: string
           checklist: Json
           copy: string
@@ -1477,6 +1531,8 @@ export type Database = {
           activity_location?: string | null
           activity_quantity?: number | null
           blocked_reason?: string | null
+          campaign_id?: string | null
+          campaign_internal?: boolean
           caption?: string
           checklist?: Json
           copy?: string
@@ -1511,6 +1567,8 @@ export type Database = {
           activity_location?: string | null
           activity_quantity?: number | null
           blocked_reason?: string | null
+          campaign_id?: string | null
+          campaign_internal?: boolean
           caption?: string
           checklist?: Json
           copy?: string
@@ -1542,6 +1600,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "content_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "content_items_editor_id_fkey"
             columns: ["editor_id"]

@@ -152,6 +152,13 @@ export interface ContentItem {
   /** Contagem livre (vídeos gravados / roteiros / itens), conforme
    * ACTIVITY_QUANTITY_LABEL — null quando o tipo não usa quantidade. */
   activityQuantity?: number | null;
+  /** Campanha a que esse item pertence (etiqueta livre, ex: "Aniversário
+   * da loja") — null quando não faz parte de nenhuma. */
+  campaignId?: string | null;
+  campaignName?: string | null;
+  /** Quando true, esse item some de Posts/Reels/Preview de Feed — só
+   * existe dentro da própria campanha. Irrelevante se campaignId é null. */
+  campaignInternal?: boolean;
 }
 
 export interface MonthData {

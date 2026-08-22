@@ -14,6 +14,7 @@ import { useMe } from "@/lib/luzeria/queries";
 import { MaisAtividadesTab } from "./MaisAtividadesTab";
 import { ClientDocsTab } from "./ClientDocsTab";
 import { ClientReferenceLibraryTab } from "./ClientReferenceLibraryTab";
+import { CampanhasTab } from "./CampanhasTab";
 import { Modal } from "./Modals";
 import type { Client } from "@/lib/luzeria/types";
 
@@ -41,7 +42,7 @@ const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizado
  * Posts, Ficha e Stories ficam de fora (Stories já tem seu próprio toggle
  * de sempre, "posts"/"ficha" são o mínimo de navegação garantido). */
 const HIDEABLE_TABS = ["reels", "finalizados", "mais", "feed"] as const;
-type MaisSubTab = "atividades" | "docs" | "biblioteca";
+type MaisSubTab = "atividades" | "campanhas" | "docs" | "biblioteca";
 
 export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   clientId: string; tab?: string; onTabChange: (tab: ClientTab) => void;
@@ -370,6 +371,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           <div className="mt-2">
             <div className="flex items-center gap-2 mb-5">
               <MaisSubTabPill active={maisSubTab === "atividades"} onClick={() => setMaisSubTab("atividades")}>Atividades</MaisSubTabPill>
+              <MaisSubTabPill active={maisSubTab === "campanhas"} onClick={() => setMaisSubTab("campanhas")}>Campanhas</MaisSubTabPill>
               {showDocsSubTab && (
                 <MaisSubTabPill active={maisSubTab === "docs"} onClick={() => setMaisSubTab("docs")}>Roteiros &amp; Planejamento</MaisSubTabPill>
               )}
@@ -388,6 +390,9 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                 profiles={profiles}
                 isAdmin={isAdmin}
               />
+            )}
+            {maisSubTab === "campanhas" && (
+              <CampanhasTab clientId={client.id} monthKey={selectedMonthKey} isAdmin={isAdmin} />
             )}
             {maisSubTab === "docs" && showDocsSubTab && <ClientDocsTab clientId={client.id} />}
             {maisSubTab === "biblioteca" && showBibliotecaSubTab && <ClientReferenceLibraryTab clientId={client.id} />}

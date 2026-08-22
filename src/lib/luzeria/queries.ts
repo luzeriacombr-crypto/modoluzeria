@@ -69,6 +69,7 @@ import { getClientBlockedItems } from "./blocked-items.functions";
 import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
 import { setProfileClientAccess } from "./client-access.functions";
 import { listClientPayments, setOrgPixKey, markClientPaymentReceived, unmarkClientPaymentReceived } from "./client-payments.functions";
+import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
 import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
@@ -233,6 +234,16 @@ export const clientOperationsOverviewQO = () =>
 
 export const clientPaymentsQO = () =>
   queryOptions({ queryKey: ["client-payments"], queryFn: () => listClientPayments() });
+
+export const campaignsQO = (clientId: string) =>
+  queryOptions({ queryKey: ["campaigns", clientId], queryFn: () => listCampaigns({ data: { clientId } }) });
+
+export const campaignItemsQO = (campaignId: string | null) =>
+  queryOptions({
+    queryKey: ["campaign-items", campaignId],
+    queryFn: () => listCampaignItems({ data: { campaignId: campaignId! } }),
+    enabled: !!campaignId,
+  });
 
 export const clientDocsQO = (clientId: string) =>
   queryOptions({
@@ -896,6 +907,25 @@ export function useApi() {
       mutationFn: useServerFn(unmarkClientPaymentReceived),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-payments"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao desfazer marcação."),
+    }),
+    upsertCampaign: useMutation({
+      mutationFn: useServerFn(upsertCampaign),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["campaigns"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar campanha."),
+    }),
+    deleteCampaign: useMutation({
+      mutationFn: useServerFn(deleteCampaign),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["campaigns"] }); invalidateAll(); },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover campanha."),
+    }),
+    setItemCampaign: useMutation({
+      mutationFn: useServerFn(setItemCampaign),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["campaigns"] });
+        qc.invalidateQueries({ queryKey: ["campaign-items"] });
+        invalidateAll();
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar campanha do item."),
     }),
     upsertLead: useMutation({
       mutationFn: useServerFn(upsertLead),

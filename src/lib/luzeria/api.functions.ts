@@ -1128,7 +1128,7 @@ export const getMonth = createServerFn({ method: "GET" })
     if (!month) return null;
     const { data: items } = await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, activity_location, activity_quantity")
+      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, activity_location, activity_quantity, campaign_id, campaign_internal")
       .eq("month_id", month.id).order("type").order("idx");
     const itemIds = (items ?? []).map((it: any) => it.id);
     const [{ data: assignees }, { data: comments }] = await Promise.all([
@@ -1146,6 +1146,12 @@ export const getMonth = createServerFn({ method: "GET" })
       arr.push({ id: c.id, text: c.text, authorId: c.author_id, createdAt: c.created_at, editedAt: c.edited_at, system: c.is_system });
       itemComments.set(c.item_id, arr);
     });
+    const campaignIds = [...new Set((items ?? []).map((it: any) => it.campaign_id).filter(Boolean))];
+    const campaignNameById = new Map<string, string>();
+    if (campaignIds.length > 0) {
+      const { data: campaignRows } = await context.supabase.from("campaigns").select("id, name").in("id", campaignIds);
+      (campaignRows ?? []).forEach((c: any) => campaignNameById.set(c.id, c.name));
+    }
     const mapped = (items ?? []).map<ContentItem>((it) => ({
       id: it.id, type: it.type as ContentType, idx: it.idx, title: it.title,
       status: it.status as Status, copy: it.copy, driveLink: it.drive_link,
@@ -1168,6 +1174,9 @@ export const getMonth = createServerFn({ method: "GET" })
       feedOrder: ((it as any).feed_order ?? null) as any,
       location: ((it as any).activity_location ?? null) as any,
       activityQuantity: ((it as any).activity_quantity ?? null) as any,
+      campaignId: (it as any).campaign_id ?? null,
+      campaignName: (it as any).campaign_id ? campaignNameById.get((it as any).campaign_id) ?? null : null,
+      campaignInternal: (it as any).campaign_internal ?? false,
     }));
     const coverPaths = (items ?? []).map((it: any) => it.cover_path).filter(Boolean);
     const signedCovers = await signCoverPaths(context.supabase, coverPaths);
@@ -1181,8 +1190,11 @@ export const getMonth = createServerFn({ method: "GET" })
       id: month.id, key: month.key,
       feedOrderMode: ((month as any).feed_order_mode ?? "personalizada") as any,
       feedOrderDirection: ((month as any).feed_order_direction ?? "asc") as any,
-      posts: mapped.filter((i) => i.type === "post"),
-      reels: mapped.filter((i) => i.type === "reel"),
+      // Itens "internos" de uma campanha ficam de fora de Posts/Reels (e,
+      // por consequência, do Preview de Feed, que lê esses mesmos arrays) —
+      // só existem dentro da própria campanha (ver campaigns.functions.ts).
+      posts: mapped.filter((i) => i.type === "post" && !i.campaignInternal),
+      reels: mapped.filter((i) => i.type === "reel" && !i.campaignInternal),
       stories: mapped.filter((i) => i.type === "story"),
       outros: mapped.filter((i) => i.type === "outros"),
       gravacoes: mapped.filter((i) => i.type === "gravacao"),
@@ -1641,7 +1653,7 @@ export const addAssignee = createServerFn({ method: "POST" })
 
 export const addContentItem = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string; dueDate?: string | null; notes?: string | null; location?: string | null; quantity?: number | null }) =>
+  .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string; dueDate?: string | null; notes?: string | null; location?: string | null; quantity?: number | null; campaignId?: string | null; campaignInternal?: boolean }) =>
     z.object({
       clientId: z.string().uuid(),
       key: z.string(),
@@ -1651,6 +1663,8 @@ export const addContentItem = createServerFn({ method: "POST" })
       notes: z.string().trim().max(2000).nullable().optional(),
       location: z.string().trim().max(500).nullable().optional(),
       quantity: z.number().int().min(0).max(100000).nullable().optional(),
+      campaignId: z.string().uuid().nullable().optional(),
+      campaignInternal: z.boolean().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
@@ -1678,6 +1692,10 @@ export const addContentItem = createServerFn({ method: "POST" })
     if (data.notes) insertRow.copy = data.notes;
     if (data.location) insertRow.activity_location = data.location;
     if (data.quantity !== undefined && data.quantity !== null) insertRow.activity_quantity = data.quantity;
+    if (data.campaignId) {
+      insertRow.campaign_id = data.campaignId;
+      insertRow.campaign_internal = data.campaignInternal ?? false;
+    }
     const { data: inserted, error: iErr } = await context.supabase
       .from("content_items").insert(insertRow).select("id").single();
     if (iErr) throw new Error(iErr.message);

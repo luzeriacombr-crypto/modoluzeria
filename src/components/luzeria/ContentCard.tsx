@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar, Image as ImageIcon, Trash2, Check } from "lucide-react";
+import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar, Image as ImageIcon, Trash2, Check, Megaphone } from "lucide-react";
 import { isDoneStatus, hasSetorPermission, type ContentItem, type Profile } from "@/lib/luzeria/types";
 import {
   statusOptionsFor, REEL_TYPE_LABEL, POST_FORMAT_LABEL,
@@ -129,6 +129,14 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
           </button>
         )}
 
+        {item.campaignName && (
+          <span
+            className="self-start inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+          >
+            <Megaphone size={10} /> {item.campaignName}
+          </span>
+        )}
         {item.type === "post" && item.postFormat && (
           <span
             className="self-start rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
@@ -271,6 +279,14 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
         {formatBadge && (
           <span className="shrink-0 rounded px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-white/50 bg-white/[0.06]">
             {formatBadge}
+          </span>
+        )}
+        {item.campaignName && (
+          <span
+            className="shrink-0 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide"
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+          >
+            <Megaphone size={9} /> {item.campaignName}
           </span>
         )}
       </div>

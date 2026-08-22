@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square } from "lucide-react";
-import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO } from "@/lib/luzeria/queries";
+import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getInstagramConnectionStatus } from "@/lib/luzeria/instagram.functions";
@@ -479,8 +479,9 @@ export function DetailPanel() {
   const { data: profiles = [] } = useQuery(profilesQO());
   const { data: clients = [] } = useQuery(clientsQO());
   const me = useMe().data;
-  const { setItemStatus, updateItem, setItemEditor, setItemReelType, setItemPostFormat, addAssignee, removeAssignee, addCommentWithMentions, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish } = useApi();
+  const { setItemStatus, updateItem, setItemEditor, setItemReelType, setItemPostFormat, addAssignee, removeAssignee, addCommentWithMentions, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish, setItemCampaign } = useApi();
   const { data: appSettings } = useQuery(appSettingsQO());
+  const { data: campaigns = [] } = useQuery({ ...campaignsQO(selectedClientId ?? ""), enabled: !!selectedClientId });
 
   const item = useMemo(() => (selectedItemId && month ? findItem(month, selectedItemId) : undefined), [month, selectedItemId]);
   const navIndex = itemNavList && selectedItemId ? itemNavList.indexOf(selectedItemId) : -1;
@@ -956,6 +957,31 @@ export function DetailPanel() {
                 )}
               </div>
             </ModalSection>
+
+            {/* Campanha — só aparece quando o cliente já tem alguma criada,
+             * já que a maioria dos clientes nunca vai usar isso. */}
+            {isAdmin && campaigns.length > 0 && (
+              <ModalSection label="Campanha">
+                <select
+                  value={item.campaignId ?? ""}
+                  onChange={(e) => {
+                    const campaignId = e.target.value || null;
+                    setItemCampaign.mutate({ data: { itemId: item.id, campaignId, campaignInternal: campaignId ? (item.campaignInternal ?? false) : false } });
+                  }}
+                  className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                >
+                  <option value="">Nenhuma</option>
+                  {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                {item.campaignId && (
+                  <label className="flex items-center gap-2 text-xs text-white/60 mt-2">
+                    <input type="checkbox" checked={item.campaignInternal ?? false}
+                      onChange={(e) => setItemCampaign.mutate({ data: { itemId: item.id, campaignId: item.campaignId!, campaignInternal: e.target.checked } })} />
+                    Interno — não aparece em Posts/Reels/Preview de Feed
+                  </label>
+                )}
+              </ModalSection>
+            )}
 
         {/* Responsáveis */}
         <ModalSection label="Responsáveis">
