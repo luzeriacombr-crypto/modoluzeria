@@ -78,13 +78,23 @@ export const listCampaignItems = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, campaign_internal, updated_at, months(key)")
+      .select("id, type, idx, title, status, campaign_internal, updated_at, month_id")
       .eq("campaign_id", data.campaignId).order("created_at");
     if (error) throw new Error(error.message);
+    // Busca o mês de cada item numa consulta separada (não embutida) — um
+    // embed teria virado INNER JOIN por content_items.month_id ser NOT
+    // NULL, e se a RLS de "months" barrasse uma linha por qualquer motivo
+    // o item inteiro sumiria do resultado, não só o campo do mês.
+    const monthIds = [...new Set((rows ?? []).map((it: any) => it.month_id))];
+    const monthKeyById = new Map<string, string>();
+    if (monthIds.length > 0) {
+      const { data: months } = await context.supabase.from("months").select("id, key").in("id", monthIds);
+      (months ?? []).forEach((m: any) => monthKeyById.set(m.id, m.key));
+    }
     return (rows ?? []).map((it: any) => ({
       id: it.id, type: it.type as ContentType, idx: it.idx, title: it.title,
       status: it.status, campaignInternal: it.campaign_internal, updatedAt: it.updated_at,
-      monthKey: it.months?.key ?? null,
+      monthKey: monthKeyById.get(it.month_id) ?? null,
     }));
   });
 
