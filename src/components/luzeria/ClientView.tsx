@@ -110,15 +110,19 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   // e reaparecem aqui, só pra consulta, na aba "Finalizados".
   const notFinalized = (items: ContentItem[]) => items.filter((i) => i.status !== "FINALIZADO");
   const onlyFinalized = (items: ContentItem[]) => items.filter((i) => i.status === "FINALIZADO");
+  // Itens marcados como "interno" numa campanha continuam existindo em
+  // month.posts/reels (senão o modal de detalhe se perderia ao alternar o
+  // toggle), mas somem daqui — só ficam visíveis dentro da própria campanha.
+  const notCampaignInternal = (items: ContentItem[]) => items.filter((i) => !i.campaignInternal);
 
   const TAB_CONFIG = {
-    posts: { label: "Posts", type: "post" as const, items: notFinalized(month?.posts ?? []) },
-    reels: { label: "Reels", type: "reel" as const, items: notFinalized(month?.reels ?? []) },
+    posts: { label: "Posts", type: "post" as const, items: notFinalized(notCampaignInternal(month?.posts ?? [])) },
+    reels: { label: "Reels", type: "reel" as const, items: notFinalized(notCampaignInternal(month?.reels ?? [])) },
     stories: { label: "Stories", type: "story" as const, items: month?.stories ?? [] },
     finalizados: {
       label: "Finalizados",
       type: "post" as const,
-      items: [...onlyFinalized(month?.posts ?? []), ...onlyFinalized(month?.reels ?? [])],
+      items: [...onlyFinalized(notCampaignInternal(month?.posts ?? [])), ...onlyFinalized(notCampaignInternal(month?.reels ?? []))],
     },
   } as const;
 

@@ -1190,11 +1190,13 @@ export const getMonth = createServerFn({ method: "GET" })
       id: month.id, key: month.key,
       feedOrderMode: ((month as any).feed_order_mode ?? "personalizada") as any,
       feedOrderDirection: ((month as any).feed_order_direction ?? "asc") as any,
-      // Itens "internos" de uma campanha ficam de fora de Posts/Reels (e,
-      // por consequência, do Preview de Feed, que lê esses mesmos arrays) —
-      // só existem dentro da própria campanha (ver campaigns.functions.ts).
-      posts: mapped.filter((i) => i.type === "post" && !i.campaignInternal),
-      reels: mapped.filter((i) => i.type === "reel" && !i.campaignInternal),
+      // Itens "internos" de campanha continuam aqui (senão o modal de
+      // detalhe do item, que acha o item procurando nesses arrays, fecharia
+      // sozinho ao marcar/desmarcar interno) — quem exclui da grade visível
+      // de Posts/Reels e do Preview de Feed é o consumidor (ClientView,
+      // FeedPreview), filtrando por campaignInternal na hora de renderizar.
+      posts: mapped.filter((i) => i.type === "post"),
+      reels: mapped.filter((i) => i.type === "reel"),
       stories: mapped.filter((i) => i.type === "story"),
       outros: mapped.filter((i) => i.type === "outros"),
       gravacoes: mapped.filter((i) => i.type === "gravacao"),

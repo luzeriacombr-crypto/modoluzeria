@@ -32,7 +32,7 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
 
   const ready = useMemo(() => {
     const all = [...month.posts, ...month.reels].filter(
-      (i) => FEED_STATUSES.has(i.status),
+      (i) => FEED_STATUSES.has(i.status) && !i.campaignInternal,
     );
     if (isChronological) {
       const dir = month.feedOrderDirection === "desc" ? -1 : 1;
