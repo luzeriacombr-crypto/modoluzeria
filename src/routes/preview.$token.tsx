@@ -274,7 +274,7 @@ function driveThumbnailUrl(fileId: string, size = 480) {
 
 function PublicGridCell({ item, onClick }: {
   item: {
-    id: string; type: string; gridThumb?: string | null; files: { driveFileId: string }[];
+    id: string; type: string; title?: string | null; gridThumb?: string | null; files: { driveFileId: string }[];
     stage: ClientStage; stageLabel: string;
   };
   onClick: () => void;
@@ -299,8 +299,11 @@ function PublicGridCell({ item, onClick }: {
           onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "1"; }}
           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
       ) : (
-        <div className="w-full h-full grid place-items-center text-white/30 text-[10px] font-bold uppercase">
-          {isReel ? "Reel" : "Post"}
+        <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2 text-center">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-white/25">{isReel ? "Reel" : "Post"}</span>
+          <span className="text-white/70 text-[11px] font-semibold leading-snug line-clamp-3">
+            {item.title || (isReel ? "Reel" : "Post")}
+          </span>
         </div>
       )}
       {(isReel || isCarousel) && (
