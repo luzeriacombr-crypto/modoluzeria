@@ -149,7 +149,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
   }
 
   return (
-    <Modal open onClose={onClose} title={profile.name}>
+    <Modal open onClose={onClose} title={profile.name} maxWidthClass="max-w-2xl">
       <div className="flex flex-col items-center gap-2 mb-5">
         <AvatarEditor
           me={profile}
@@ -163,16 +163,30 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
         <div className="text-[11px] text-white/40 truncate">{profile.email}</div>
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">Função</label>
-          <select value={profile.role} disabled={isSelf}
-            onChange={(e) => setUserRole.mutate({ data: { userId: profile.id, role: e.target.value as Role } })}
-            className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] disabled:opacity-50 disabled:cursor-not-allowed">
-            <option value="member">Membro</option>
-            <option value="setor">Adm Setor</option>
-            <option value="master">Adm Master</option>
-          </select>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">Função</label>
+            <select value={profile.role} disabled={isSelf}
+              onChange={(e) => setUserRole.mutate({ data: { userId: profile.id, role: e.target.value as Role } })}
+              className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] disabled:opacity-50 disabled:cursor-not-allowed">
+              <option value="member">Membro</option>
+              <option value="setor">Adm Setor</option>
+              <option value="master">Adm Master</option>
+            </select>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-white/70">
+            <input type="checkbox" checked={profile.active} disabled={isSelf}
+              onChange={(e) => setUserActive.mutate({ data: { userId: profile.id, active: e.target.checked } })} />
+            Ativo
+          </label>
+
+          <label className="flex items-center gap-2 text-sm text-white/70" title="Não conta pontos no ranking de Top Membros">
+            <input type="checkbox" checked={profile.excludeFromRanking ?? false}
+              onChange={(e) => setExcludeFromRanking.mutate({ data: { userId: profile.id, excludeFromRanking: e.target.checked } })} />
+            Excluir do ranking
+          </label>
         </div>
 
         {cargos.length > 0 && (
@@ -200,29 +214,29 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
             </div>
           </div>
         )}
+      </div>
 
-        <label className="flex items-center gap-2 text-sm text-white/70">
-          <input type="checkbox" checked={profile.active} disabled={isSelf}
-            onChange={(e) => setUserActive.mutate({ data: { userId: profile.id, active: e.target.checked } })} />
-          Ativo
-        </label>
-
-        <label className="flex items-center gap-2 text-sm text-white/70" title="Não conta pontos no ranking de Top Membros">
-          <input type="checkbox" checked={profile.excludeFromRanking ?? false}
-            onChange={(e) => setExcludeFromRanking.mutate({ data: { userId: profile.id, excludeFromRanking: e.target.checked } })} />
-          Excluir do ranking
-        </label>
-
-        <div className="pt-3 border-t border-white/[0.06] space-y-3">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] uppercase font-semibold tracking-wider text-white/40">Remuneração</span>
-            <InfoTip text="Usado pra calcular o custo-hora dessa pessoa na Margem por cliente: salário mensal ÷ horas mensais estimadas da escala abaixo. Só master vê e edita isso." />
-          </div>
-          <div>
-            <label className="block text-[11px] text-white/50 mb-1">Salário mensal (R$)</label>
-            <input type="number" min="0" step="0.01" value={salary} onChange={(e) => setSalary(e.target.value)}
-              placeholder="Não definido"
-              className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+      <div className="pt-4 mt-4 border-t border-white/[0.06]">
+        <div className="flex items-center gap-1.5 mb-3">
+          <span className="text-[10px] uppercase font-semibold tracking-wider text-white/40">Remuneração</span>
+          <InfoTip text="Usado pra calcular o custo-hora dessa pessoa na Margem por cliente: salário mensal ÷ horas mensais estimadas da escala abaixo. Só master vê e edita isso." />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-x-6 gap-y-3">
+          <div className="space-y-3">
+            <div>
+              <label className="block text-[11px] text-white/50 mb-1">Salário mensal (R$)</label>
+              <input type="number" min="0" step="0.01" value={salary} onChange={(e) => setSalary(e.target.value)}
+                placeholder="Não definido"
+                className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+            </div>
+            <div className="text-[11px] text-white/50">
+              Custo-hora estimado: <span className="text-white font-semibold">{money(previewHourlyCost)}</span>
+            </div>
+            <button onClick={savePay} disabled={setMemberPay.isPending}
+              className="w-full rounded-md px-3 py-1.5 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+              {setMemberPay.isPending ? "Salvando…" : "Salvar remuneração"}
+            </button>
           </div>
           <div>
             <label className="block text-[11px] text-white/50 mb-1.5">Escala semanal</label>
@@ -244,19 +258,11 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
               ))}
             </div>
           </div>
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] text-white/50">
-              Custo-hora estimado: <span className="text-white font-semibold">{money(previewHourlyCost)}</span>
-            </span>
-            <button onClick={savePay} disabled={setMemberPay.isPending}
-              className="rounded-md px-3 py-1.5 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
-              {setMemberPay.isPending ? "Salvando…" : "Salvar remuneração"}
-            </button>
-          </div>
         </div>
+      </div>
 
-        <div className="flex flex-col gap-1.5 pt-2 border-t border-white/[0.06]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 pt-3 mt-3 border-t border-white/[0.06]">
+        <div className="flex flex-col gap-1.5">
           <button
             onClick={() => { setViewAs(profile.id); onClose(); navigate({ to: "/minhas-tarefas" }); }}
             className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
@@ -266,6 +272,8 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
             disabled={adminSendPasswordReset.isPending}
             className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left disabled:opacity-40"
           ><KeyRound size={15} /> Resetar senha (por e-mail)</button>
+        </div>
+        <div className="flex flex-col gap-1.5">
           <button
             onClick={() => setShowPasswordField((v) => !v)}
             className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"

@@ -6,19 +6,19 @@ import { useQuery } from "@tanstack/react-query";
 import { profilesQO, useApi } from "@/lib/luzeria/queries";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
 
-export function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+export function Modal({ open, onClose, title, children, maxWidthClass = "max-w-md" }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; maxWidthClass?: string }) {
   if (!open) return null;
   // Portal to <body> — some callers (e.g. the header) render this inside an
   // ancestor with backdrop-filter, which creates a new containing block for
   // `fixed` descendants and traps the overlay inside that ancestor's box.
   return createPortal(
     <div className="lz-overlay z-[100] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-[#1C1C1C] rounded-2xl w-full max-w-md border border-white/10 shadow-2xl lz-modal-in" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+      <div className={`bg-[#1C1C1C] rounded-2xl w-full ${maxWidthClass} border border-white/10 shadow-2xl lz-modal-in flex flex-col max-h-[85vh]`} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
           <h2 className="text-base font-semibold text-white tracking-tight">{title}</h2>
           <button onClick={onClose} className="lz-icon-btn h-7 w-7"><X size={16} /></button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className="p-5 overflow-y-auto">{children}</div>
       </div>
     </div>,
     document.body,
