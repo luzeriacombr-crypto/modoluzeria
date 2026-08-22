@@ -79,7 +79,7 @@ export const listCampaignItems = createServerFn({ method: "GET" })
     const { data: rows, error } = await context.supabase
       .from("content_items")
       .select("id, type, idx, title, status, campaign_internal, updated_at, month_id")
-      .eq("campaign_id", data.campaignId).order("created_at");
+      .eq("campaign_id", data.campaignId).order("idx");
     if (error) throw new Error(error.message);
     // Busca o mês de cada item numa consulta separada (não embutida) — um
     // embed teria virado INNER JOIN por content_items.month_id ser NOT
