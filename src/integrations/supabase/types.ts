@@ -393,6 +393,55 @@ export type Database = {
           },
         ]
       }
+      lead_contacts: {
+        Row: {
+          contacted_at: string
+          created_by: string | null
+          id: string
+          lead_id: string
+          note: string | null
+          org_id: string
+        }
+        Insert: {
+          contacted_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id: string
+          note?: string | null
+          org_id: string
+        }
+        Update: {
+          contacted_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id?: string
+          note?: string | null
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_contacts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_contacts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_contacts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cargos: {
         Row: {
           created_at: string

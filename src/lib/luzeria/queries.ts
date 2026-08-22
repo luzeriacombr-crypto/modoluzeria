@@ -67,7 +67,7 @@ import {
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
-import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon } from "./sales-pipeline.functions";
+import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
 import { listDemoRequests } from "./demo-request.functions";
@@ -217,6 +217,13 @@ export const leadsQO = (includeArchived?: boolean) =>
   queryOptions({
     queryKey: ["leads", includeArchived ?? false],
     queryFn: () => listLeads({ data: { includeArchived } }),
+  });
+
+export const leadContactsQO = (leadId: string | null) =>
+  queryOptions({
+    queryKey: ["lead-contacts", leadId],
+    queryFn: () => listLeadContacts({ data: { leadId: leadId! } }),
+    enabled: !!leadId,
   });
 
 export const clientOperationsOverviewQO = () =>
@@ -868,6 +875,14 @@ export function useApi() {
       mutationFn: useServerFn(moveLeadStatus),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao mover oportunidade."),
+    }),
+    logLeadContact: useMutation({
+      mutationFn: useServerFn(logLeadContact),
+      onSuccess: (_data, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["leads"] });
+        qc.invalidateQueries({ queryKey: ["lead-contacts", vars.data.leadId] });
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao registrar contato."),
     }),
     scheduleLeadFollowup: useMutation({
       mutationFn: useServerFn(scheduleLeadFollowup),

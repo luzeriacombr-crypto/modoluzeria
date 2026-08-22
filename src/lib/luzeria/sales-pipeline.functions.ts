@@ -20,8 +20,17 @@ export type Lead = {
   wonClientId: string | null;
   nextFollowupAt: string | null;
   followUpNote: string | null;
+  contactCount: number;
+  lastContactAt: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type LeadContact = {
+  id: string;
+  contactedAt: string;
+  note: string | null;
+  byName: string | null;
 };
 
 export const listLeads = createServerFn({ method: "GET" })
@@ -36,14 +45,60 @@ export const listLeads = createServerFn({ method: "GET" })
     if (!data.includeArchived) q = q.eq("archived", false);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
+
+    const leadIds = (rows ?? []).map((r: any) => r.id);
+    const countByLead = new Map<string, number>();
+    const lastByLead = new Map<string, string>();
+    if (leadIds.length > 0) {
+      const { data: contacts } = await context.supabase
+        .from("lead_contacts").select("lead_id, contacted_at").in("lead_id", leadIds);
+      for (const c of contacts ?? []) {
+        countByLead.set(c.lead_id, (countByLead.get(c.lead_id) ?? 0) + 1);
+        const prev = lastByLead.get(c.lead_id);
+        if (!prev || c.contacted_at > prev) lastByLead.set(c.lead_id, c.contacted_at);
+      }
+    }
+
     return (rows ?? []).map((r: any) => ({
       id: r.id, name: r.name, contactPhone: r.contact_phone, contactEmail: r.contact_email,
       source: r.source, notes: r.notes, valueEstimateCents: r.value_estimate_cents,
       responsibleId: r.responsible_id, responsibleName: r.profiles?.name ?? null,
       status: r.status, archived: r.archived, wonClientId: r.won_client_id,
       nextFollowupAt: r.next_followup_at, followUpNote: r.follow_up_note,
+      contactCount: countByLead.get(r.id) ?? 0, lastContactAt: lastByLead.get(r.id) ?? null,
       createdAt: r.created_at, updatedAt: r.updated_at,
     })) as Lead[];
+  });
+
+/** Registra "marquei contato" — cada clique vira uma linha no histórico,
+ * pra contar quantos follow-ups já rolaram com esse lead e saber a data
+ * do último de verdade (não confundir com updated_at, que muda em
+ * qualquer edição). */
+export const logLeadContact = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { leadId: string; note?: string | null }) =>
+    z.object({ leadId: z.string().uuid(), note: z.string().trim().max(500).nullable().optional() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("lead_contacts").insert({
+      lead_id: data.leadId, org_id: context.orgId, created_by: context.userId, note: data.note ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const listLeadContacts = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { leadId: string }) => z.object({ leadId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("lead_contacts")
+      .select("id, contacted_at, note, profiles(name)")
+      .eq("lead_id", data.leadId)
+      .order("contacted_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r: any) => ({
+      id: r.id, contactedAt: r.contacted_at, note: r.note, byName: r.profiles?.name ?? null,
+    })) as LeadContact[];
   });
 
 export const upsertLead = createServerFn({ method: "POST" })

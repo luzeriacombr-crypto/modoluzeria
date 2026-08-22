@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Trash2, Handshake, MessageCircle, Snowflake } from "lucide-react";
-import { leadsQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { Plus, Trash2, Handshake, MessageCircle, Snowflake, PhoneCall, Check } from "lucide-react";
+import { leadsQO, leadContactsQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { Modal } from "./Modals";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -22,7 +22,12 @@ function timeSince(iso: string): string {
 }
 
 function isCold(lead: Lead): boolean {
-  return Date.now() - new Date(lead.updatedAt).getTime() > 3 * 24 * 3600 * 1000;
+  const ref = lead.lastContactAt ?? lead.updatedAt;
+  return Date.now() - new Date(ref).getTime() > 3 * 24 * 3600 * 1000;
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("pt-BR");
 }
 
 function waLink(phone: string | null, text?: string): string | null {
@@ -207,13 +212,16 @@ function LeadCard({ lead, draggable, dragging, onDragStart, onDragEnd, onOpen }:
       </div>
       {lead.status === "followup" && (
         <div className="mt-1 text-[10.5px] text-[#4A9EFF]">
-          {lead.nextFollowupAt ? new Date(lead.nextFollowupAt).toLocaleDateString("pt-BR") : "sem data"}
+          {lead.nextFollowupAt ? formatDate(lead.nextFollowupAt) : "sem data"}
           {lead.followUpNote ? ` · ${lead.followUpNote}` : ""}
         </div>
       )}
-      {lead.status !== "followup" && (
-        <div className="mt-1 text-[10px] text-white/25">há {timeSince(lead.updatedAt)}</div>
-      )}
+      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/25">
+        {lead.status !== "followup" && <span>há {timeSince(lead.lastContactAt ?? lead.updatedAt)}</span>}
+        {lead.contactCount > 0 && (
+          <span className="inline-flex items-center gap-0.5"><PhoneCall size={9} /> {lead.contactCount}</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -259,6 +267,48 @@ function FollowupModal({ lead, onClose }: { lead: Lead | null; onClose: () => vo
         </button>
       </div>
     </Modal>
+  );
+}
+
+function ContactHistory({ lead }: { lead: Lead }) {
+  const api = useApi();
+  const [expanded, setExpanded] = useState(false);
+  const { data: contacts = [] } = useQuery({ ...leadContactsQO(lead.id), enabled: expanded });
+
+  return (
+    <div className="rounded-md border border-white/[0.06] bg-[#161616] p-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="text-[11px] text-white/50">
+          <span className="font-semibold text-white">{lead.contactCount}</span> contato{lead.contactCount === 1 ? "" : "s"} registrado{lead.contactCount === 1 ? "" : "s"}
+          {lead.lastContactAt && <span> · último em {formatDate(lead.lastContactAt)}</span>}
+        </div>
+        <button
+          onClick={() => api.logLeadContact.mutate({ data: { leadId: lead.id } })}
+          disabled={api.logLeadContact.isPending}
+          className="inline-flex items-center gap-1 text-[11px] font-bold uppercase px-2.5 py-1.5 rounded disabled:opacity-50"
+          style={{ backgroundColor: "rgba(91,168,138,0.15)", color: "#5BA88A" }}
+        >
+          <Check size={12} /> Marquei contato
+        </button>
+      </div>
+      {lead.contactCount > 0 && (
+        <button onClick={() => setExpanded((v) => !v)} className="mt-1.5 text-[10.5px] text-white/30 hover:text-white/60">
+          {expanded ? "Ocultar histórico" : "Ver histórico"}
+        </button>
+      )}
+      {expanded && (
+        <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+          {contacts.map((c) => (
+            <div key={c.id} className="text-[10.5px] text-white/40 flex items-center gap-1.5">
+              <PhoneCall size={10} className="shrink-0" />
+              <span>{new Date(c.contactedAt).toLocaleString("pt-BR")}</span>
+              {c.byName && <span className="text-white/25">· {c.byName}</span>}
+              {c.note && <span className="text-white/25 truncate">· {c.note}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -325,6 +375,7 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
             </select>
           </F>
           <F label="Observações"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} /></F>
+          {lead && <ContactHistory lead={lead} />}
         </div>
         <div className="flex items-center justify-between mt-5">
           {lead && !isTerminal ? (
