@@ -110,17 +110,21 @@ export function SalesPipelinePage() {
       </div>
 
       {!expanded ? (
-        <div>
-          <div className="grid grid-cols-3 gap-3">
+        <div className="flex-1 flex flex-col gap-3 min-h-0">
+          <div className="grid grid-cols-3 gap-3 flex-1 min-h-0">
             {COLUMNS.slice(0, 3).map((col) => (
               <FolderBlock key={col.key} col={col} leads={byStatus[col.key]} {...dropProps(col.key)}
-                isOver={overCol === col.key} onClick={() => setExpanded(col.key)} />
+                isOver={overCol === col.key} dragId={dragId}
+                onDragStartLead={setDragId} onDragEndLead={() => setDragId(null)}
+                onExpand={() => setExpanded(col.key)} onOpenLead={setEditLead} />
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-3 mt-3">
+          <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
             {COLUMNS.slice(3, 5).map((col) => (
               <FolderBlock key={col.key} col={col} leads={byStatus[col.key]} {...dropProps(col.key)}
-                isOver={overCol === col.key} onClick={() => setExpanded(col.key)} />
+                isOver={overCol === col.key} dragId={dragId}
+                onDragStartLead={setDragId} onDragEndLead={() => setDragId(null)}
+                onExpand={() => setExpanded(col.key)} onOpenLead={setEditLead} />
             ))}
           </div>
         </div>
@@ -159,17 +163,34 @@ export function SalesPipelinePage() {
   );
 }
 
-function FolderBlock({ col, leads, isOver, onClick, onDragOver, onDragLeave, onDrop }: {
+function leadPreviewSubtitle(col: LeadStatus, lead: Lead): string {
+  if (col === "followup") return lead.nextFollowupAt ? formatDate(lead.nextFollowupAt) : "sem data";
+  if (col === "novo") return `há ${timeSince(lead.createdAt)}`;
+  return `há ${timeSince(lead.lastContactAt ?? lead.updatedAt)}`;
+}
+
+function FolderBlock({ col, leads, isOver, dragId, onDragStartLead, onDragEndLead, onExpand, onOpenLead, onDragOver, onDragLeave, onDrop }: {
   col: { key: LeadStatus; label: string; accent: string; icon: typeof UserPlus };
-  leads: Lead[]; isOver: boolean; onClick: () => void;
+  leads: Lead[]; isOver: boolean; dragId: string | null;
+  onDragStartLead: (id: string) => void; onDragEndLead: () => void;
+  onExpand: () => void; onOpenLead: (l: Lead) => void;
   onDragOver: (e: React.DragEvent) => void; onDragLeave: () => void; onDrop: (e: React.DragEvent) => void;
 }) {
   const Icon = col.icon;
+  const draggableRows = col.key !== "fechado" && col.key !== "perdido";
+  const recent = useMemo(() => {
+    const sorted = col.key === "followup"
+      ? [...leads].sort((a, b) => (a.nextFollowupAt ?? "").localeCompare(b.nextFollowupAt ?? ""))
+      : [...leads].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    return sorted.slice(0, 6);
+  }, [leads, col.key]);
+  const extra = leads.length - recent.length;
+
   return (
-    <button
-      onClick={onClick}
+    <div
+      onClick={onExpand}
       onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-      className="text-left rounded-xl p-4 transition-colors border"
+      className="h-full flex flex-col text-left rounded-xl p-4 transition-colors border cursor-pointer"
       style={{
         backgroundColor: isOver ? "rgba(var(--lz-brand-rgb),0.08)" : "#1C1C1C",
         borderColor: isOver ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
@@ -177,23 +198,32 @@ function FolderBlock({ col, leads, isOver, onClick, onDragOver, onDragLeave, onD
         borderTopWidth: "2px",
       }}
     >
-      <Icon size={18} style={{ color: col.accent }} />
-      <div className="text-2xl font-bold text-white mt-2">{leads.length}</div>
-      <div className="text-xs text-white/50 mt-0.5">{col.label}</div>
-      {leads.length > 0 && (
-        <div className="flex items-center mt-3">
-          {leads.slice(0, 3).map((l, i) => (
-            <div key={l.id}
-              className="w-5 h-5 rounded-full bg-white/10 border-2 border-[#1C1C1C] text-[9px] text-white flex items-center justify-center font-semibold shrink-0"
-              style={{ marginLeft: i === 0 ? 0 : -6 }}
-            >
-              {l.name.trim()[0]?.toUpperCase() ?? "?"}
-            </div>
-          ))}
-          {leads.length > 3 && <span className="ml-1.5 text-[9px] text-white/30">+{leads.length - 3}</span>}
-        </div>
-      )}
-    </button>
+      <div className="flex items-center justify-between shrink-0">
+        <Icon size={18} style={{ color: col.accent }} />
+        <span className="text-2xl font-bold text-white">{leads.length}</span>
+      </div>
+      <div className="text-xs text-white/50 mt-1 mb-2 shrink-0">{col.label}</div>
+      <div className="flex-1 overflow-y-auto min-h-0 -mx-1.5 space-y-0.5">
+        {recent.length === 0 && <p className="text-[11px] text-white/20 px-1.5 py-2">Nada por aqui.</p>}
+        {recent.map((l) => (
+          <div
+            key={l.id}
+            draggable={draggableRows}
+            onDragStart={draggableRows ? (e) => { e.stopPropagation(); onDragStartLead(l.id); } : undefined}
+            onDragEnd={draggableRows ? (e) => { e.stopPropagation(); onDragEndLead(); } : undefined}
+            onClick={(e) => { e.stopPropagation(); onOpenLead(l); }}
+            className="px-1.5 py-1 rounded hover:bg-white/[0.06] transition-colors"
+            style={{ opacity: dragId === l.id ? 0.4 : 1, cursor: draggableRows ? "grab" : "pointer" }}
+          >
+            <div className="text-xs text-white font-medium truncate">{l.name}</div>
+            <div className="text-[10px] text-white/35 truncate">{leadPreviewSubtitle(col.key, l)}</div>
+          </div>
+        ))}
+        {extra > 0 && (
+          <div className="px-1.5 py-1 text-[10.5px] text-white/30 hover:text-white/50">+{extra} mais — ver todos</div>
+        )}
+      </div>
+    </div>
   );
 }
 
