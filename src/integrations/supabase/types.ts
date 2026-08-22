@@ -534,6 +534,58 @@ export type Database = {
           },
         ]
       }
+      client_payments: {
+        Row: {
+          amount_cents: number | null
+          client_id: string
+          id: string
+          marked_by: string | null
+          org_id: string
+          paid_at: string
+          period: string
+        }
+        Insert: {
+          amount_cents?: number | null
+          client_id: string
+          id?: string
+          marked_by?: string | null
+          org_id: string
+          paid_at?: string
+          period: string
+        }
+        Update: {
+          amount_cents?: number | null
+          client_id?: string
+          id?: string
+          marked_by?: string | null
+          org_id?: string
+          paid_at?: string
+          period?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_payments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_payments_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cleaning_log: {
         Row: {
           created_at: string
@@ -1250,6 +1302,7 @@ export type Database = {
           notes: string | null
           notify_stories_in_tasks: boolean
           org_id: string | null
+          payment_due_day: number | null
           photo_url: string | null
           posts_per_week: number | null
           reels_per_week: number | null
@@ -1274,6 +1327,7 @@ export type Database = {
           notes?: string | null
           notify_stories_in_tasks?: boolean
           org_id?: string | null
+          payment_due_day?: number | null
           photo_url?: string | null
           posts_per_week?: number | null
           reels_per_week?: number | null
@@ -1298,6 +1352,7 @@ export type Database = {
           notes?: string | null
           notify_stories_in_tasks?: boolean
           org_id?: string | null
+          payment_due_day?: number | null
           photo_url?: string | null
           posts_per_week?: number | null
           reels_per_week?: number | null
@@ -2076,6 +2131,7 @@ export type Database = {
           name: string
           nav_labels: Json
           nav_order: Json
+          pix_key: string | null
           plan_id: string
           promotion_code_id: string | null
           reseller_org_id: string | null
@@ -2111,6 +2167,7 @@ export type Database = {
           name: string
           nav_labels?: Json
           nav_order?: Json
+          pix_key?: string | null
           plan_id?: string
           promotion_code_id?: string | null
           reseller_org_id?: string | null
@@ -2146,6 +2203,7 @@ export type Database = {
           name?: string
           nav_labels?: Json
           nav_order?: Json
+          pix_key?: string | null
           plan_id?: string
           promotion_code_id?: string | null
           reseller_org_id?: string | null

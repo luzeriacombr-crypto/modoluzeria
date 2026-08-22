@@ -350,6 +350,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
   const [reviewDay, setReviewDay] = useState<string>(client.customFields.reviewDay ?? "");
   const [notes, setNotes] = useState<string>(client.customFields.notes ?? "");
   const [contractValue, setContractValue] = useState<string | number>(client.contractValue ?? "");
+  const [paymentDueDay, setPaymentDueDay] = useState<string | number>(client.paymentDueDay ?? "");
   const [photoPreview, setPhotoPreview] = useState<string | null>(client.photoUrl ?? null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
@@ -363,6 +364,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     setReviewDay(client.customFields.reviewDay ?? "");
     setNotes(client.customFields.notes ?? "");
     setContractValue(client.contractValue ?? "");
+    setPaymentDueDay(client.paymentDueDay ?? "");
     setPhotoPreview(client.photoUrl ?? null);
   }, [client.id]);
 
@@ -402,7 +404,10 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       reels_per_week: Number(reelsPerWeek) || 0,
       fixed_responsible_id: responsible || null,
       review_day: reviewDay, notes,
-      ...(isMaster ? { contract_value: contractValue === "" ? null : Number(contractValue) } : {}),
+      ...(isMaster ? {
+        contract_value: contractValue === "" ? null : Number(contractValue),
+        payment_due_day: paymentDueDay === "" ? null : Number(paymentDueDay),
+      } : {}),
     });
     toast.success("Configuração salva");
   }
@@ -484,6 +489,17 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
             value={contractValue} disabled={!canEdit}
             onChange={(e) => setContractValue(e.target.value)}
             placeholder="Não informado"
+            className={inp}
+          />
+        </ConfigField>
+      )}
+      {isMaster && (
+        <ConfigField label="Dia de vencimento do pagamento">
+          <input
+            type="number" min="1" max="31" step="1"
+            value={paymentDueDay} disabled={!canEdit}
+            onChange={(e) => setPaymentDueDay(e.target.value)}
+            placeholder="Ex: 10"
             className={inp}
           />
         </ConfigField>

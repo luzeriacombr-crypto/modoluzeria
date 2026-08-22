@@ -26,6 +26,7 @@ const ClientMarginPanel = lazy(() => import("./ClientMarginPanel").then((m) => (
 const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => ({ default: m.DemoRequestsPanel })));
 const SalesPageEditorTab = lazy(() => import("./SalesPageEditorTab").then((m) => ({ default: m.SalesPageEditorTab })));
 const JourneyStagesTab = lazy(() => import("./JourneyStagesTab").then((m) => ({ default: m.JourneyStagesTab })));
+const ClientPaymentsPanel = lazy(() => import("./ClientPaymentsPanel").then((m) => ({ default: m.ClientPaymentsPanel })));
 
 function TabLoadingFallback() {
   return (
@@ -35,8 +36,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "automations" | "general" | "cobranca" | "margem" | "afiliados" | "revenda" | "updates" | "site" | "journey";
-const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "cobranca", "margem", "afiliados", "revenda", "updates", "site", "journey"];
+type SettingsTab = "team" | "report" | "automations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "updates" | "site" | "journey";
+const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "updates", "site", "journey"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -50,7 +51,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
   const setorAllowedTabs: SettingsTab[] = [
     ...(hasSetorPermission(me, "settings_journey") ? (["journey"] as SettingsTab[]) : []),
     ...(hasSetorPermission(me, "team_reports") ? (["report"] as SettingsTab[]) : []),
-    ...(hasPermission(me, "view_financeiro") ? (["cobranca", "margem"] as SettingsTab[]) : []),
+    ...(hasPermission(me, "view_financeiro") ? (["cobranca", "margem", "pagamentos"] as SettingsTab[]) : []),
     ...(hasPermission(me, "manage_team") ? (["team"] as SettingsTab[]) : []),
   ];
   if (!isMaster && setorAllowedTabs.length === 0) {
@@ -82,6 +83,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
              tab === "automations" ? "Google Drive, lembretes automáticos e jobs do sistema." :
              tab === "cobranca" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
              tab === "margem" ? "Lucratividade estimada por cliente." :
+             tab === "pagamentos" ? "Data de vencimento e status de pagamento de cada cliente." :
              tab === "afiliados" ? "Programa de indicação e comissões." :
              tab === "revenda" ? "Revenda instâncias white label pros seus clientes." :
              tab === "updates" ? "O que mudou no Modo Criador." :
@@ -100,6 +102,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "journey", label: "Jornada do cliente" },
           { id: "cobranca", label: "Plano e Cobrança" },
           { id: "margem", label: "Margem por cliente" },
+          { id: "pagamentos", label: "Pagamentos" },
           { id: "afiliados", label: "Afiliados" },
           { id: "revenda", label: "Revenda" },
           { id: "updates", label: "Atualizações" },
@@ -161,6 +164,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         </div>
        ) :
        tab === "margem" ? <ClientMarginPanel /> :
+       tab === "pagamentos" ? <ClientPaymentsPanel /> :
        tab === "afiliados" ? <AffiliateProgramPanel isPlatformAdmin={!!me.isPlatformAdmin} /> :
        tab === "revenda" ? <ResellerPanel /> :
        tab === "updates" ? <UpdatesTab /> :

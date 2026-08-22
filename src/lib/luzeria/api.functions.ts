@@ -926,7 +926,7 @@ export const listClients = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.from("clients")
-      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value")
+      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day")
       .order("name");
     if (error) throw new Error(error.message);
     const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
@@ -952,6 +952,7 @@ export const listClients = createServerFn({ method: "GET" })
       photoUrl: c.photo_url ? (signedPhotos.get(c.photo_url) ?? null) : null,
       notifyStoriesInTasks: c.notify_stories_in_tasks ?? false,
       contractValue: isMaster ? (c.contract_value ?? null) : undefined,
+      paymentDueDay: isMaster ? (c.payment_due_day ?? null) : undefined,
     }));
   });
 
@@ -1035,10 +1036,10 @@ export const updateClient = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string; patch: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     let patch = data.patch;
-    if (Object.prototype.hasOwnProperty.call(patch, "contract_value")) {
+    if (Object.prototype.hasOwnProperty.call(patch, "contract_value") || Object.prototype.hasOwnProperty.call(patch, "payment_due_day")) {
       const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
       if (!isMaster) {
-        const { contract_value, ...rest } = patch;
+        const { contract_value, payment_due_day, ...rest } = patch;
         patch = rest;
       }
     }

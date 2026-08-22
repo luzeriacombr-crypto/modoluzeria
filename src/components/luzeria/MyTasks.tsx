@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, todayCalendarEventsQO, clientsQO, useMe, useApi } from "@/lib/luzeria/queries";
-import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, type Status } from "@/lib/luzeria/types";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, todayCalendarEventsQO, clientsQO, clientPaymentsQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, hasPermission, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon } from "lucide-react";
+import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
@@ -65,6 +65,13 @@ export function MyTasks() {
   const whatsappRemindersEnabled = !disabledFeatures.has("whatsapp_reminders");
   const { data: mentions = [] } = useQuery({ ...myMentionsQO(), enabled: isMeView });
   const { data: weeklyReminders = [] } = useQuery({ ...weeklyClientRemindersQO(), enabled: isAdmin && isMeView && whatsappRemindersEnabled });
+  const canFinanceiro = me?.role === "master" || hasPermission(me, "view_financeiro");
+  const { data: paymentsData } = useQuery({ ...clientPaymentsQO(), enabled: canFinanceiro && isMeView });
+  const upcomingPayments = (paymentsData?.clients ?? [])
+    .filter((c) => !c.paidThisPeriod)
+    .map((c) => ({ ...c, daysUntil: Math.round((new Date(c.nextDueDate + "T00:00:00").getTime() - new Date(new Date().toDateString()).getTime()) / 86400000) }))
+    .filter((c) => c.daysUntil <= 7)
+    .sort((a, b) => a.daysUntil - b.daysUntil);
   const googleCalendarEnabled = !disabledFeatures.has("google_calendar");
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(readOpenSections);
   const isSectionOpen = (id: string) => openSections[id] ?? true;
@@ -263,6 +270,39 @@ export function MyTasks() {
                   <Check size={12} strokeWidth={3} /> Marcar feito
                 </button>
               </div>
+            ))}
+          </div>
+          )}
+        </div>
+      )}
+
+      {canFinanceiro && isMeView && upcomingPayments.length > 0 && (
+        <div className="mb-6">
+          <SectionHeader
+            icon={<Wallet size={11} />}
+            iconBg="rgba(91,168,138,0.18)" iconColor="#5BA88A"
+            label="Pagamentos próximos" count={upcomingPayments.length}
+            open={isSectionOpen("upcoming-payments")} onToggle={() => toggleSection("upcoming-payments")}
+          />
+          {isSectionOpen("upcoming-payments") && (
+          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden lz-stagger">
+            {upcomingPayments.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => navigate({ to: "/configuracoes", search: { tab: "pagamentos" } })}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left border-b border-white/[0.05] last:border-b-0"
+              >
+                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
+                  style={{ backgroundColor: p.color + "33", color: p.color.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : p.color }}>
+                  {p.name}
+                </span>
+                <span className="text-sm text-white/70 flex-1">
+                  {p.daysUntil < 0 ? `Atrasado há ${Math.abs(p.daysUntil)}d` : p.daysUntil === 0 ? "Vence hoje" : `Vence em ${p.daysUntil}d`}
+                </span>
+                <span className="text-[11px] text-white/40 shrink-0 tabular-nums">
+                  {new Date(p.nextDueDate + "T00:00:00").toLocaleDateString("pt-BR")}
+                </span>
+              </button>
             ))}
           </div>
           )}

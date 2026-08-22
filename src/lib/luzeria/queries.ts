@@ -68,6 +68,7 @@ import {
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
 import { setProfileClientAccess } from "./client-access.functions";
+import { listClientPayments, setOrgPixKey, markClientPaymentReceived, unmarkClientPaymentReceived } from "./client-payments.functions";
 import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
@@ -229,6 +230,9 @@ export const leadContactsQO = (leadId: string | null) =>
 
 export const clientOperationsOverviewQO = () =>
   queryOptions({ queryKey: ["client-operations-overview"], queryFn: () => getClientOperationsOverview() });
+
+export const clientPaymentsQO = () =>
+  queryOptions({ queryKey: ["client-payments"], queryFn: () => listClientPayments() });
 
 export const clientDocsQO = (clientId: string) =>
   queryOptions({
@@ -874,6 +878,24 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["clients"] });
       },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar acesso a clientes."),
+    }),
+    setOrgPixKey: useMutation({
+      mutationFn: useServerFn(setOrgPixKey),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["me"] });
+        qc.invalidateQueries({ queryKey: ["client-payments"] });
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar chave Pix."),
+    }),
+    markClientPaymentReceived: useMutation({
+      mutationFn: useServerFn(markClientPaymentReceived),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-payments"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar pagamento."),
+    }),
+    unmarkClientPaymentReceived: useMutation({
+      mutationFn: useServerFn(unmarkClientPaymentReceived),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-payments"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao desfazer marcação."),
     }),
     upsertLead: useMutation({
       mutationFn: useServerFn(upsertLead),

@@ -202,6 +202,9 @@ export interface Client {
   notifyStoriesInTasks?: boolean;
   /** Valor mensal do contrato — master-only, usado pelo painel de margem/lucratividade. */
   contractValue?: number | null;
+  /** Dia do mês (1-31) em que o pagamento desse cliente vence — master-only,
+   * usado pra "Pagamentos próximos" em Minhas Demandas e na aba Financeiro. */
+  paymentDueDay?: number | null;
 }
 
 export type Role = "master" | "setor" | "member";
