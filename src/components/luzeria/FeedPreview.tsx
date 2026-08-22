@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, CheckCircle2, Copy as CopyIcon, Film, Image as ImageIcon, Layers, MessageSquare, RefreshCw, Share2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { Check, CheckCircle2, Copy as CopyIcon, Download, Film, Image as ImageIcon, Layers, Loader2, MessageSquare, RefreshCw, Share2 } from "lucide-react";
 import { itemFilesQO, gridThumbnailsQO, feedApprovalSummaryQO, activeFeedMonthQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { listItemFiles, getDriveVideoToken } from "@/lib/luzeria/drive.functions";
+import { downloadDriveFiles } from "@/lib/luzeria/drive-download";
 import type { Client, ContentItem, MonthData } from "@/lib/luzeria/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { InstagramPostModal, type IGModalItem } from "./InstagramPostModal";
@@ -113,6 +117,7 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
           {isAdmin && (
             <div className="flex items-center gap-2">
               <ActiveMonthToggle clientId={client.id} monthId={month.id} />
+              {cells.items.length > 0 && <DownloadAllButton items={cells.items} />}
               <ShareButton clientId={client.id} monthId={month.id} />
             </div>
           )}
@@ -326,6 +331,42 @@ function FeedCell({
         style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)" }}>
         {item.title || "Sem título"}
       </div>
+    </button>
+  );
+}
+
+/* ============ Download all (high quality, from Drive) ============ */
+function DownloadAllButton({ items }: { items: FeedItem[] }) {
+  const [downloading, setDownloading] = useState(false);
+  const fetchDriveToken = useServerFn(getDriveVideoToken);
+  const fetchItemFiles = useServerFn(listItemFiles);
+
+  async function handleDownloadAll() {
+    setDownloading(true);
+    try {
+      const fileLists = await Promise.all(items.map((i) => fetchItemFiles({ data: { itemId: i.id } })));
+      const allFiles = fileLists.flat().map((f: any) => ({ driveFileId: f.driveFileId, name: f.name }));
+      if (allFiles.length === 0) { toast.error("Nenhum arquivo pra baixar ainda."); return; }
+      await downloadDriveFiles(fetchDriveToken, allFiles);
+      toast.success(`${allFiles.length} arquivo${allFiles.length === 1 ? "" : "s"} baixado${allFiles.length === 1 ? "" : "s"}.`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao baixar arquivos.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleDownloadAll}
+      disabled={downloading}
+      title="Baixa os arquivos originais (posts e reels) direto do Drive, sem perda de qualidade"
+      className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full transition disabled:opacity-50"
+      style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.12)" }}
+    >
+      {downloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+      {downloading ? "Baixando…" : "Baixar em alta qualidade"}
     </button>
   );
 }
