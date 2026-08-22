@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List, CheckSquare, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List, CheckSquare, Trash2, X, Settings2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { clientsQO, monthKeysQO, monthQO, profilesQO, useApi } from "@/lib/luzeria/queries";
@@ -14,6 +14,8 @@ import { useMe } from "@/lib/luzeria/queries";
 import { MaisAtividadesTab } from "./MaisAtividadesTab";
 import { ClientDocsTab } from "./ClientDocsTab";
 import { ClientReferenceLibraryTab } from "./ClientReferenceLibraryTab";
+import { Modal } from "./Modals";
+import type { Client } from "@/lib/luzeria/types";
 
 type OrderMode = "personalizada" | "cronologica";
 type OrderDirection = "asc" | "desc";
@@ -33,8 +35,13 @@ function byScheduledAt(direction: OrderDirection) {
   };
 }
 
-type ClientTab = "posts" | "reels" | "stories" | "finalizados" | "mais" | "docs" | "biblioteca" | "feed" | "ficha";
-const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizados", "mais", "docs", "biblioteca", "feed", "ficha"];
+type ClientTab = "posts" | "reels" | "stories" | "finalizados" | "mais" | "feed" | "ficha";
+const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizados", "mais", "feed", "ficha"];
+/** Abas que dá pra ocultar (por padrão da agência ou só pra um cliente) —
+ * Posts, Ficha e Stories ficam de fora (Stories já tem seu próprio toggle
+ * de sempre, "posts"/"ficha" são o mínimo de navegação garantido). */
+const HIDEABLE_TABS = ["reels", "finalizados", "mais", "feed"] as const;
+type MaisSubTab = "atividades" | "docs" | "biblioteca";
 
 export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   clientId: string; tab?: string; onTabChange: (tab: ClientTab) => void;
@@ -70,7 +77,9 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   }
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
-  const { duplicateMonth, addContentItem, deleteItem, deleteContentItems } = useApi();
+  const [maisSubTab, setMaisSubTab] = useState<MaisSubTab>("atividades");
+  const [customizingTabs, setCustomizingTabs] = useState(false);
+  const { duplicateMonth, addContentItem, deleteItem, deleteContentItems, updateMyOrg, updateClient } = useApi();
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   function toggleSelected(id: string) {
@@ -113,10 +122,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   } as const;
 
   const disabledFeatures = new Set(me?.disabledFeatures ?? []);
-  const tabs = (["posts", "reels", "stories", "finalizados", "mais", "docs", "biblioteca", "feed", "ficha"] as const)
+  const hiddenTabs = client.hiddenTabs != null ? new Set(client.hiddenTabs) : disabledFeatures;
+  const showDocsSubTab = isAdmin;
+  const showBibliotecaSubTab = !disabledFeatures.has("reference_library");
+  const tabs = VALID_CLIENT_TABS
     .filter((t) => t !== "stories" || !disabledFeatures.has("stories"))
-    .filter((t) => t !== "docs" || isAdmin)
-    .filter((t) => t !== "biblioteca" || !disabledFeatures.has("reference_library"));
+    .filter((t) => !(HIDEABLE_TABS as readonly string[]).includes(t) || !hiddenTabs.has(t));
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
   const idx = sortedKeys.indexOf(selectedMonthKey);
@@ -176,16 +187,36 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
       {/* Tabs — horizontally scrollable on its own (touch swipe), scrollbar
        * hidden, so the rest of the page never shifts sideways on mobile
        * when there are more tabs than fit the viewport width. */}
-      <div className="flex items-center gap-6 mt-8 border-b border-white/[0.06] overflow-x-auto overflow-y-hidden lz-no-scrollbar">
-        {tabs.map((t) => (
-          <button key={t} onClick={() => setTab(t as any)}
-            className="relative py-3 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap"
-            style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
-            {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais atividades" : t === "docs" ? "Roteiros & Planejamento" : t === "biblioteca" ? "Biblioteca" : t === "finalizados" ? "Finalizados" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
-            {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
+      <div className="flex items-center gap-2 mt-8 border-b border-white/[0.06]">
+        <div className="flex items-center gap-6 overflow-x-auto overflow-y-hidden lz-no-scrollbar flex-1 min-w-0">
+          {tabs.map((t) => (
+            <button key={t} onClick={() => setTab(t as any)}
+              className="relative py-3 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap"
+              style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
+              {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : t === "finalizados" ? "Finalizados" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
+              {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
+            </button>
+          ))}
+        </div>
+        {isAdmin && (
+          <button onClick={() => setCustomizingTabs(true)} title="Personalizar abas"
+            className="shrink-0 p-1.5 mb-1 rounded-md text-white/40 hover:text-white hover:bg-white/5 transition">
+            <Settings2 size={15} />
           </button>
-        ))}
+        )}
       </div>
+      {customizingTabs && (
+        <CustomizeTabsModal
+          client={client}
+          disabledFeatures={disabledFeatures}
+          onClose={() => setCustomizingTabs(false)}
+          onSaveOrgDefault={(hidden) => updateMyOrg.mutate({
+            data: { disabledFeatures: [...new Set([...(me?.disabledFeatures ?? []).filter((f) => !(HIDEABLE_TABS as readonly string[]).includes(f)), ...hidden])] },
+          })}
+          onSaveClientOverride={(hidden) => updateClient.mutate({ data: { id: client.id, patch: { hidden_tabs: hidden } } })}
+          onClearClientOverride={() => updateClient.mutate({ data: { id: client.id, patch: { hidden_tabs: null } } })}
+        />
+      )}
 
       <div className="mt-2">
         {(tab in TAB_CONFIG) && (() => {
@@ -335,26 +366,31 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             </>
           );
         })()}
-        {tab === "mais" && month && (
-          <MaisAtividadesTab
-            clientId={clientId}
-            monthKey={selectedMonthKey}
-            gravacoes={month.gravacoes ?? []}
-            roteiros={month.roteiros ?? []}
-            sistemas={month.sistemas ?? []}
-            outros={month.outros ?? []}
-            profiles={profiles}
-            isAdmin={isAdmin}
-          />
-        )}
-        {tab === "docs" && isAdmin && (
+        {tab === "mais" && (
           <div className="mt-2">
-            <ClientDocsTab clientId={client.id} />
-          </div>
-        )}
-        {tab === "biblioteca" && (
-          <div className="mt-2">
-            <ClientReferenceLibraryTab clientId={client.id} />
+            <div className="flex items-center gap-2 mb-5">
+              <MaisSubTabPill active={maisSubTab === "atividades"} onClick={() => setMaisSubTab("atividades")}>Atividades</MaisSubTabPill>
+              {showDocsSubTab && (
+                <MaisSubTabPill active={maisSubTab === "docs"} onClick={() => setMaisSubTab("docs")}>Roteiros &amp; Planejamento</MaisSubTabPill>
+              )}
+              {showBibliotecaSubTab && (
+                <MaisSubTabPill active={maisSubTab === "biblioteca"} onClick={() => setMaisSubTab("biblioteca")}>Biblioteca</MaisSubTabPill>
+              )}
+            </div>
+            {maisSubTab === "atividades" && month && (
+              <MaisAtividadesTab
+                clientId={clientId}
+                monthKey={selectedMonthKey}
+                gravacoes={month.gravacoes ?? []}
+                roteiros={month.roteiros ?? []}
+                sistemas={month.sistemas ?? []}
+                outros={month.outros ?? []}
+                profiles={profiles}
+                isAdmin={isAdmin}
+              />
+            )}
+            {maisSubTab === "docs" && showDocsSubTab && <ClientDocsTab clientId={client.id} />}
+            {maisSubTab === "biblioteca" && showBibliotecaSubTab && <ClientReferenceLibraryTab clientId={client.id} />}
           </div>
         )}
         {tab === "ficha" && (
@@ -365,5 +401,80 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         {tab === "feed" && month && <FeedPreview month={month} client={client} />}
       </div>
     </div>
+  );
+}
+
+function MaisSubTabPill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick}
+      className="rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors"
+      style={{
+        backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
+        color: active ? "#0D0D0D" : "rgba(255,255,255,0.6)",
+      }}>
+      {children}
+    </button>
+  );
+}
+
+const HIDEABLE_TAB_LABEL: Record<(typeof HIDEABLE_TABS)[number], string> = {
+  reels: "Reels", finalizados: "Finalizados", mais: "Mais", feed: "Preview de Feed",
+};
+
+function CustomizeTabsModal({ client, disabledFeatures, onClose, onSaveOrgDefault, onSaveClientOverride, onClearClientOverride }: {
+  client: Client;
+  disabledFeatures: Set<string>;
+  onClose: () => void;
+  onSaveOrgDefault: (hidden: string[]) => void;
+  onSaveClientOverride: (hidden: string[]) => void;
+  onClearClientOverride: () => void;
+}) {
+  const hasOverride = client.hiddenTabs != null;
+  const [hidden, setHidden] = useState<Set<string>>(new Set(client.hiddenTabs ?? disabledFeatures));
+
+  function toggle(t: string) {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      next.has(t) ? next.delete(t) : next.add(t);
+      return next;
+    });
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Personalizar abas">
+      <p className="text-xs text-white/50 mb-4">Escolha quais abas ficam visíveis. Salve como padrão pra todos os clientes, ou só pra {client.name}.</p>
+      <div className="space-y-2 mb-5">
+        {HIDEABLE_TABS.map((t) => (
+          <label key={t} className="flex items-center gap-2.5 text-sm text-white/80">
+            <input type="checkbox" checked={!hidden.has(t)} onChange={() => toggle(t)} />
+            {HIDEABLE_TAB_LABEL[t]}
+          </label>
+        ))}
+      </div>
+      {hasOverride && (
+        <button
+          onClick={() => { onClearClientOverride(); onClose(); }}
+          className="text-[11px] text-white/40 hover:text-white mb-4 underline"
+        >
+          Remover exceção — voltar a usar o padrão da agência pra {client.name}
+        </button>
+      )}
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={onClose} className="px-3 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
+        <button
+          onClick={() => { onSaveClientOverride([...hidden]); onClose(); }}
+          className="px-3 py-2 rounded-md text-xs font-bold border border-white/15 text-white/80 hover:border-[rgb(var(--lz-brand-rgb))] hover:text-[rgb(var(--lz-brand-rgb))] transition"
+        >
+          Salvar só pra {client.name}
+        </button>
+        <button
+          onClick={() => { onSaveOrgDefault([...hidden]); onClose(); }}
+          className="px-4 py-2 rounded-md text-xs font-bold transition-opacity hover:opacity-90"
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >
+          Salvar como padrão da agência
+        </button>
+      </div>
+    </Modal>
   );
 }

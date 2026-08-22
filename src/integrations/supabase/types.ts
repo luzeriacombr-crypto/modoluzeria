@@ -1295,6 +1295,7 @@ export type Database = {
           description: string
           favorite: boolean
           fixed_responsible_id: string | null
+          hidden_tabs: string[] | null
           icon: string | null
           id: string
           name: string
@@ -1320,6 +1321,7 @@ export type Database = {
           description?: string
           favorite?: boolean
           fixed_responsible_id?: string | null
+          hidden_tabs?: string[] | null
           icon?: string | null
           id?: string
           name: string
@@ -1345,6 +1347,7 @@ export type Database = {
           description?: string
           favorite?: boolean
           fixed_responsible_id?: string | null
+          hidden_tabs?: string[] | null
           icon?: string | null
           id?: string
           name?: string

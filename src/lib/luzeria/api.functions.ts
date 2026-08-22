@@ -926,7 +926,7 @@ export const listClients = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.from("clients")
-      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day")
+      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, hidden_tabs")
       .order("name");
     if (error) throw new Error(error.message);
     const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
@@ -953,6 +953,7 @@ export const listClients = createServerFn({ method: "GET" })
       notifyStoriesInTasks: c.notify_stories_in_tasks ?? false,
       contractValue: isMaster ? (c.contract_value ?? null) : undefined,
       paymentDueDay: isMaster ? (c.payment_due_day ?? null) : undefined,
+      hiddenTabs: c.hidden_tabs ?? null,
     }));
   });
 

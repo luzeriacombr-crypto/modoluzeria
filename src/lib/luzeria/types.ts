@@ -205,6 +205,10 @@ export interface Client {
   /** Dia do mês (1-31) em que o pagamento desse cliente vence — master-only,
    * usado pra "Pagamentos próximos" em Minhas Demandas e na aba Financeiro. */
   paymentDueDay?: number | null;
+  /** Exceção por cliente às abas customizáveis (reels/finalizados/mais/feed)
+   * — null = usa o padrão da agência (me.disabledFeatures); um array
+   * substitui o padrão só pra esse cliente. */
+  hiddenTabs?: string[] | null;
 }
 
 export type Role = "master" | "setor" | "member";
@@ -400,6 +404,7 @@ export function hasPermission(
 
 export const OPTIONAL_FEATURE_KEYS = [
   "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call", "google_calendar", "client_overview", "forum", "reference_library", "sales_pipeline",
+  "reels", "finalizados", "mais", "feed",
 ] as const;
 export type OptionalFeatureKey = (typeof OPTIONAL_FEATURE_KEYS)[number];
 export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string; description: string }> = {
@@ -458,6 +463,22 @@ export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string;
   sales_pipeline: {
     label: "Vendas",
     description: "Item de menu com um quadro kanban de leads/oportunidades, com conversão direta em cliente ao fechar uma venda.",
+  },
+  reels: {
+    label: "Aba Reels (na página do cliente)",
+    description: "Aba \"Reels\" dentro de cada cliente. Pode ser ocultada por cliente em Personalizar abas.",
+  },
+  finalizados: {
+    label: "Aba Finalizados (na página do cliente)",
+    description: "Aba \"Finalizados\" dentro de cada cliente. Pode ser ocultada por cliente em Personalizar abas.",
+  },
+  mais: {
+    label: "Aba Mais (na página do cliente)",
+    description: "Aba \"Mais\" (atividades, roteiros & planejamento, biblioteca) dentro de cada cliente. Pode ser ocultada por cliente em Personalizar abas.",
+  },
+  feed: {
+    label: "Aba Preview de Feed (na página do cliente)",
+    description: "Aba \"Preview de Feed\" dentro de cada cliente. Pode ser ocultada por cliente em Personalizar abas.",
   },
 };
 
