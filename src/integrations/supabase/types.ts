@@ -504,6 +504,36 @@ export type Database = {
           },
         ]
       }
+      client_access: {
+        Row: {
+          client_id: string
+          profile_id: string
+        }
+        Insert: {
+          client_id: string
+          profile_id: string
+        }
+        Update: {
+          client_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_access_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_access_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cleaning_log: {
         Row: {
           created_at: string
@@ -2263,6 +2293,7 @@ export type Database = {
         Row: {
           active: boolean
           avatar_url: string | null
+          client_access_restricted: boolean
           color: string
           created_at: string
           default_landing: Json | null
@@ -2278,6 +2309,7 @@ export type Database = {
         Insert: {
           active?: boolean
           avatar_url?: string | null
+          client_access_restricted?: boolean
           color?: string
           created_at?: string
           default_landing?: Json | null
@@ -2293,6 +2325,7 @@ export type Database = {
         Update: {
           active?: boolean
           avatar_url?: string | null
+          client_access_restricted?: boolean
           color?: string
           created_at?: string
           default_landing?: Json | null

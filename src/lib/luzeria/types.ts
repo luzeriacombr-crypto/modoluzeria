@@ -261,6 +261,13 @@ export interface Profile {
   /** Ids dos cargos atribuídos — usado só na lista de equipe (Settings),
    * pra saber quais checkboxes marcar no seletor de múltipla escolha. */
   cargoIds?: string[];
+  /** Quando true, esse perfil só enxerga (em qualquer lugar do app — e
+   * também no banco, via RLS) os clientes listados em `clientAccessIds`.
+   * Default false = vê todos os clientes da org, igual sempre foi. */
+  clientAccessRestricted?: boolean;
+  /** Ids dos clientes liberados pra esse perfil quando `clientAccessRestricted`
+   * é true. Ignorado quando false. */
+  clientAccessIds?: string[];
   /** Org-wide toggle: when true, a member who's an assignee on an item can
    * set its editor and pick its video format (reel_type/post_format),
    * not just admins. Present for every profile, same reasoning as above. */

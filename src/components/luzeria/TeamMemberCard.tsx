@@ -7,7 +7,7 @@ import {
   WEEK_DAYS, WEEK_DAY_LABEL, defaultWorkSchedule, computeMonthlyHourlyCost,
   type Profile, type Role, type WorkSchedule,
 } from "@/lib/luzeria/types";
-import { useApi, useMe, memberPayQO, cargosQO } from "@/lib/luzeria/queries";
+import { useApi, useMe, memberPayQO, cargosQO, clientsQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { Modal } from "./Modals";
@@ -62,7 +62,7 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
 
 function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
   const me = useMe().data;
-  const { setUserRole, setUserActive, setExcludeFromRanking, deleteUser, adminSendPasswordReset, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay, setProfileCargos } = useApi();
+  const { setUserRole, setUserActive, setExcludeFromRanking, deleteUser, adminSendPasswordReset, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay, setProfileCargos, setProfileClientAccess } = useApi();
   const { data: cargos = [] } = useQuery(cargosQO());
   const [selectedCargoIds, setSelectedCargoIds] = useState<string[]>(profile.cargoIds ?? []);
   useEffect(() => { setSelectedCargoIds(profile.cargoIds ?? []); }, [profile.cargoIds]);
@@ -73,6 +73,31 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
       : [...selectedCargoIds, cargoId];
     setSelectedCargoIds(next);
     setProfileCargos.mutate({ data: { profileId: profile.id, cargoIds: next } });
+  }
+
+  const { data: allClients = [] } = useQuery(clientsQO());
+  const [clientRestricted, setClientRestricted] = useState(profile.clientAccessRestricted ?? false);
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>(profile.clientAccessIds ?? []);
+  const [clientSearch, setClientSearch] = useState("");
+  useEffect(() => {
+    setClientRestricted(profile.clientAccessRestricted ?? false);
+    setSelectedClientIds(profile.clientAccessIds ?? []);
+  }, [profile.clientAccessRestricted, profile.clientAccessIds]);
+
+  function saveClientAccess(restricted: boolean, clientIds: string[]) {
+    setProfileClientAccess.mutate({ data: { profileId: profile.id, restricted, clientIds } });
+  }
+  function toggleClientRestricted() {
+    const next = !clientRestricted;
+    setClientRestricted(next);
+    saveClientAccess(next, selectedClientIds);
+  }
+  function toggleClientAccess(clientId: string) {
+    const next = selectedClientIds.includes(clientId)
+      ? selectedClientIds.filter((id) => id !== clientId)
+      : [...selectedClientIds, clientId];
+    setSelectedClientIds(next);
+    saveClientAccess(clientRestricted, next);
   }
   const { setViewAs } = useUI();
   const navigate = useNavigate();
@@ -212,6 +237,42 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
                 );
               })}
             </div>
+          </div>
+        )}
+      </div>
+
+      <div className="pt-4 mt-4 border-t border-white/[0.06]">
+        <label className="flex items-center gap-2 text-sm text-white/70 mb-2" title="Quando ligado, essa pessoa só enxerga (em qualquer lugar do app) os clientes marcados abaixo">
+          <input type="checkbox" checked={clientRestricted} disabled={isSelf} onChange={toggleClientRestricted} />
+          Restringir a clientes específicos
+        </label>
+        {clientRestricted && (
+          <div>
+            <input
+              value={clientSearch} onChange={(e) => setClientSearch(e.target.value)}
+              placeholder="Buscar cliente..."
+              disabled={isSelf}
+              className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-2 disabled:opacity-50"
+            />
+            <div className="max-h-40 overflow-y-auto space-y-0.5 pr-1">
+              {allClients
+                .filter((c) => !clientSearch.trim() || c.name.toLowerCase().includes(clientSearch.trim().toLowerCase()))
+                .map((c) => {
+                  const on = selectedClientIds.includes(c.id);
+                  return (
+                    <label key={c.id} className="flex items-center gap-2 text-xs text-white/70 px-1 py-1 rounded hover:bg-white/5 cursor-pointer">
+                      <input type="checkbox" checked={on} disabled={isSelf} onChange={() => toggleClientAccess(c.id)} />
+                      <span className="truncate">{c.name}</span>
+                    </label>
+                  );
+                })}
+              {allClients.length === 0 && <p className="text-[11px] text-white/30 px-1">Nenhum cliente cadastrado.</p>}
+            </div>
+            <p className="text-[10.5px] text-white/30 mt-1.5">
+              {selectedClientIds.length === 0
+                ? "Nenhum cliente selecionado — a pessoa não verá nenhum cliente."
+                : `${selectedClientIds.length} cliente${selectedClientIds.length === 1 ? "" : "s"} liberado${selectedClientIds.length === 1 ? "" : "s"}.`}
+            </p>
           </div>
         )}
       </div>

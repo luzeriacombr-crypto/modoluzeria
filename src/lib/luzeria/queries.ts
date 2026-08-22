@@ -67,6 +67,7 @@ import {
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
+import { setProfileClientAccess } from "./client-access.functions";
 import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
@@ -865,6 +866,14 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["me"] });
       },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar cargos."),
+    }),
+    setProfileClientAccess: useMutation({
+      mutationFn: useServerFn(setProfileClientAccess),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["profiles"] });
+        qc.invalidateQueries({ queryKey: ["clients"] });
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar acesso a clientes."),
     }),
     upsertLead: useMutation({
       mutationFn: useServerFn(upsertLead),

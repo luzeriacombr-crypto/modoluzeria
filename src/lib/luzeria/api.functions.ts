@@ -79,7 +79,7 @@ export const listProfiles = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: profiles, error } = await context.supabase
       .from("profiles")
-      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, exclude_from_ranking")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, exclude_from_ranking, client_access_restricted")
       .order("name");
     if (error) throw new Error(error.message);
     const { data: roles } = await context.supabase.from("user_roles").select("user_id, role");
@@ -98,6 +98,14 @@ export const listProfiles = createServerFn({ method: "GET" })
       list.push(r.cargo_id);
       cargoIdsByProfile.set(r.profile_id, list);
     });
+    const { data: clientAccessRows } = await context.supabase
+      .from("client_access").select("profile_id, client_id").in("profile_id", (profiles ?? []).map((p: any) => p.id));
+    const clientAccessByProfile = new Map<string, string[]>();
+    (clientAccessRows ?? []).forEach((r: any) => {
+      const list = clientAccessByProfile.get(r.profile_id) ?? [];
+      list.push(r.client_id);
+      clientAccessByProfile.set(r.profile_id, list);
+    });
     return (profiles ?? []).map<Profile>((p: any) => ({
       id: p.id,
       email: emailMap.get(p.id) ?? "",
@@ -112,6 +120,8 @@ export const listProfiles = createServerFn({ method: "GET" })
       tourCompletedAt: p.tour_completed_at ?? null,
       excludeFromRanking: p.exclude_from_ranking ?? false,
       cargoIds: cargoIdsByProfile.get(p.id) ?? [],
+      clientAccessRestricted: p.client_access_restricted ?? false,
+      clientAccessIds: clientAccessByProfile.get(p.id) ?? [],
     }));
   });
 
