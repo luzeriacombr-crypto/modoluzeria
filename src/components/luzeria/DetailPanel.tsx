@@ -8,7 +8,7 @@ import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getInstagramConnectionStatus } from "@/lib/luzeria/instagram.functions";
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
-import { downloadDriveFile, downloadDriveFiles } from "@/lib/luzeria/drive-download";
+import { downloadDriveFile, downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
 import { FileActionsMenu } from "./FileActionsMenu";
 import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, ACTIVITY_QUANTITY_LABEL, hasSetorPermission, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
@@ -220,7 +220,11 @@ function MediaPreview({
   async function handleDownloadAllFiles() {
     setDownloadingAll(true);
     try {
-      await downloadDriveFiles(fetchDriveToken, files);
+      if (files.length === 1) {
+        await downloadDriveFile(fetchDriveToken, files[0].driveFileId, files[0].name);
+      } else {
+        await downloadDriveFilesAsZip(fetchDriveToken, files, "arquivos.zip");
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao baixar imagens.");
     } finally {
@@ -255,7 +259,11 @@ function MediaPreview({
       if (!chosen.length) return;
       setDownloadingAll(true);
       try {
-        await downloadDriveFiles(fetchDriveToken, chosen);
+        if (chosen.length === 1) {
+          await downloadDriveFile(fetchDriveToken, chosen[0].driveFileId, chosen[0].name);
+        } else {
+          await downloadDriveFilesAsZip(fetchDriveToken, chosen, "arquivos.zip");
+        }
       } catch (e: any) {
         toast.error(e?.message ?? "Erro ao baixar imagens.");
       } finally {

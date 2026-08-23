@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Upload, Loader2, Image as ImageIcon, Download } from "lucide-react";
 import { itemFilesQO, driveThumbnailQO, useApi } from "@/lib/luzeria/queries";
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
-import { downloadDriveFile, downloadDriveFiles } from "@/lib/luzeria/drive-download";
+import { downloadDriveFile, downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
 import { useItemFileUpload } from "@/lib/luzeria/use-item-file-upload";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -78,7 +78,7 @@ export function BriefingUploads({ itemId, clientId, canEdit }: { itemId: string;
   async function handleDownloadAll() {
     setDownloadingAll(true);
     try {
-      await downloadDriveFiles(fetchDriveToken, files);
+      await downloadDriveFilesAsZip(fetchDriveToken, files, "imagens-referencia.zip");
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao baixar imagens.");
     } finally {
