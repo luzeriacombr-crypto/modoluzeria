@@ -84,8 +84,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             {tab === "team" || tab === "report" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
              tab === "automations" ? "Google Drive, lembretes automáticos e jobs do sistema." :
              tab === "cobranca" || tab === "afiliados" || tab === "revenda" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
-             tab === "cliente" || tab === "margem" || tab === "journey" ? "Visão geral, jornada e margem de cada cliente." :
-             tab === "pagamentos" ? "Data de vencimento e status de pagamento de cada cliente." :
+             tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? "Visão geral, jornada, margem e pagamentos de cada cliente." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
              "Ajustes gerais da operação."}
@@ -97,16 +96,15 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         {[
           { id: "team", label: "Equipe" },
           { id: "automations", label: "Automações" },
-          { id: "cliente", label: "Cliente" },
+          { id: "cliente", label: "Clientes" },
           { id: "cobranca", label: "Plano e Cobrança" },
-          { id: "pagamentos", label: "Pagamentos" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
           ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }] : []),
         ].filter((t) => allowedTabs.includes(t.id as SettingsTab)).map((t) => {
           const active = tab === (t.id as any) ||
             (t.id === "team" && tab === "report") ||
-            (t.id === "cliente" && (tab === "margem" || tab === "journey")) ||
+            (t.id === "cliente" && (tab === "margem" || tab === "journey" || tab === "pagamentos")) ||
             (t.id === "cobranca" && (tab === "afiliados" || tab === "revenda"));
           return (
             <button key={t.id} onClick={() => setTab(t.id as any)}
@@ -164,15 +162,14 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           )}
         </div>
        ) :
-       tab === "cliente" || tab === "margem" || tab === "journey" ? (
+       tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? (
         <ClienteTab
-          initialSub={tab === "margem" ? "margem" : tab === "journey" ? "jornada" : "overview"}
+          initialSub={tab === "margem" ? "margem" : tab === "journey" ? "jornada" : tab === "pagamentos" ? "pagamentos" : "overview"}
           canJourney={hasSetorPermission(me, "settings_journey")}
           canMargem={hasPermission(me, "view_financeiro")}
           isAdmin={isAdmin}
         />
        ) :
-       tab === "pagamentos" ? <ClientPaymentsPanel /> :
        tab === "updates" ? <UpdatesTab /> :
        tab === "site" ? (me.isPlatformAdmin ? <SalesPageEditorTab /> : null) :
        tab === "automations" ? (
@@ -947,14 +944,15 @@ function SubTabPill({ active, onClick, label }: { active: boolean; onClick: () =
 }
 
 function ClienteTab({ initialSub, canJourney, canMargem, isAdmin }: {
-  initialSub: "overview" | "jornada" | "margem"; canJourney: boolean; canMargem: boolean; isAdmin: boolean;
+  initialSub: "overview" | "jornada" | "margem" | "pagamentos"; canJourney: boolean; canMargem: boolean; isAdmin: boolean;
 }) {
   const subs = [
     ...(isAdmin ? [{ id: "overview" as const, label: "Visão Geral" }] : []),
     ...(canJourney ? [{ id: "jornada" as const, label: "Jornada" }] : []),
     ...(canMargem ? [{ id: "margem" as const, label: "Margem" }] : []),
+    ...(canMargem ? [{ id: "pagamentos" as const, label: "Pagamentos" }] : []),
   ];
-  const [sub, setSub] = useState<"overview" | "jornada" | "margem">(
+  const [sub, setSub] = useState<"overview" | "jornada" | "margem" | "pagamentos">(
     subs.some((s) => s.id === initialSub) ? initialSub : (subs[0]?.id ?? "overview"),
   );
   return (
@@ -964,7 +962,8 @@ function ClienteTab({ initialSub, canJourney, canMargem, isAdmin }: {
       </div>
       {sub === "overview" ? <ClientOperationsOverview /> :
        sub === "jornada" ? <JourneyStagesTab /> :
-       sub === "margem" ? <ClientMarginPanel /> : null}
+       sub === "margem" ? <ClientMarginPanel /> :
+       sub === "pagamentos" ? <ClientPaymentsPanel /> : null}
     </div>
   );
 }

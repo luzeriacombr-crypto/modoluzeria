@@ -68,7 +68,7 @@ import {
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
 import { setProfileClientAccess } from "./client-access.functions";
-import { listClientPayments, setOrgPixKey, markClientPaymentReceived, unmarkClientPaymentReceived } from "./client-payments.functions";
+import { listClientPayments, setOrgPixKey, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
 import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
 import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
@@ -234,6 +234,13 @@ export const clientOperationsOverviewQO = () =>
 
 export const clientPaymentsQO = () =>
   queryOptions({ queryKey: ["client-payments"], queryFn: () => listClientPayments() });
+
+export const clientPaymentHistoryQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["client-payment-history", clientId],
+    queryFn: () => listClientPaymentHistory({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
+  });
 
 export const campaignsQO = (clientId: string) =>
   queryOptions({ queryKey: ["campaigns", clientId], queryFn: () => listCampaigns({ data: { clientId } }) });
@@ -583,6 +590,7 @@ export function useApi() {
     updateClient: useMutation({ mutationFn: useServerFn(updateClient), onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["clients"] });
       qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
+      qc.invalidateQueries({ queryKey: ["client-payments"] });
     } }),
     setNotifyStoriesInTasks: useMutation({
       mutationFn: useServerFn(setNotifyStoriesInTasks),

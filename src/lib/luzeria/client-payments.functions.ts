@@ -109,6 +109,42 @@ export const listClientPayments = createServerFn({ method: "GET" })
     return { pixKey: org?.pix_key ?? null, clients: rows };
   });
 
+export type ClientPaymentHistoryRow = {
+  period: string;
+  paidAt: string | null;
+  amountCents: number | null;
+};
+
+/** Últimos 12 períodos (mês atual incluso) pra um cliente — junta os meses
+ * que existem (via `months`) com o que já foi marcado como pago em
+ * client_payments, pra mostrar tanto "pago" quanto "pendente"/"sem dado"
+ * mês a mês, não só os que têm registro de pagamento. */
+export const listClientPaymentHistory = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertFinanceiroAccess(context.supabase, context.userId);
+    const now = new Date();
+    const periods: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      periods.push(monthKey(d));
+    }
+    const { data: payments, error } = await context.supabase
+      .from("client_payments")
+      .select("period, paid_at, amount_cents")
+      .eq("client_id", data.clientId)
+      .in("period", periods);
+    if (error) throw new Error(error.message);
+    const byPeriod = new Map<string, { paidAt: string; amountCents: number | null }>();
+    (payments ?? []).forEach((p: any) => byPeriod.set(p.period, { paidAt: p.paid_at, amountCents: p.amount_cents }));
+    return periods.map((period): ClientPaymentHistoryRow => ({
+      period,
+      paidAt: byPeriod.get(period)?.paidAt ?? null,
+      amountCents: byPeriod.get(period)?.amountCents ?? null,
+    }));
+  });
+
 export const setOrgPixKey = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { pixKey: string | null }) => z.object({ pixKey: z.string().trim().max(140).nullable() }).parse(d))

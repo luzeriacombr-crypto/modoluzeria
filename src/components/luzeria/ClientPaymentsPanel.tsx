@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, MessageCircle, Check, Undo2 } from "lucide-react";
-import { clientPaymentsQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { Loader2, MessageCircle, Check, Undo2, Pencil, History, ChevronDown } from "lucide-react";
+import { clientPaymentsQO, clientPaymentHistoryQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
 
@@ -23,6 +23,16 @@ function daysUntil(iso: string): number {
   const due = new Date(iso + "T00:00:00").getTime();
   const today = new Date(); today.setHours(0, 0, 0, 0);
   return Math.round((due - today.getTime()) / 86400000);
+}
+
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleDateString("pt-BR");
+}
+
+const MONTH_LABELS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+function periodLabel(period: string): string {
+  const [y, m] = period.split("-").map(Number);
+  return `${MONTH_LABELS[(m ?? 1) - 1]}/${y}`;
 }
 
 function waLink(phone: string | null, text: string): string | null {
@@ -67,12 +77,71 @@ function PixKeyForm({ pixKey, isMaster }: { pixKey: string | null; isMaster: boo
   );
 }
 
+function DueDayEditor({ clientId, day, isMaster }: { clientId: string; day: number; isMaster: boolean }) {
+  const api = useApi();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(String(day));
+  useEffect(() => setValue(String(day)), [day]);
+
+  if (!isMaster) return <span className="text-[11px] text-foreground/40">dia {day}</span>;
+  if (!editing) {
+    return (
+      <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-[11px] text-foreground/40 hover:text-foreground transition">
+        dia {day} <Pencil size={10} />
+      </button>
+    );
+  }
+  return (
+    <form
+      className="inline-flex items-center gap-1"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const n = Math.min(31, Math.max(1, Number(value) || day));
+        setEditing(false);
+        if (n !== day) api.updateClient.mutate({ data: { id: clientId, patch: { payment_due_day: n } } });
+      }}
+    >
+      <input
+        type="number" min={1} max={31} autoFocus value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={(e) => e.currentTarget.form?.requestSubmit()}
+        className="w-12 bg-card border border-foreground/10 rounded px-1.5 py-0.5 text-[11px] text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+      />
+    </form>
+  );
+}
+
+function PaymentHistoryPanel({ clientId }: { clientId: string }) {
+  const { data, isLoading } = useQuery(clientPaymentHistoryQO(clientId));
+  if (isLoading || !data) {
+    return <div className="py-4 flex justify-center"><Loader2 className="animate-spin text-foreground/30" size={16} /></div>;
+  }
+  return (
+    <div className="py-3 px-2 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+      {data.map((h) => (
+        <div key={h.period} className="rounded-md px-2.5 py-2 text-center"
+          style={h.paidAt
+            ? { backgroundColor: "rgba(91,168,138,0.12)" }
+            : { backgroundColor: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}>
+          <div className="text-[10px] uppercase font-bold tracking-wide text-foreground/40">{periodLabel(h.period)}</div>
+          <div className="text-[11px] font-semibold mt-0.5" style={{ color: h.paidAt ? "#5BA88A" : "var(--foreground)" }}>
+            {h.paidAt ? "Pago" : "—"}
+          </div>
+          {h.paidAt && <div className="text-[9.5px] text-foreground/35 mt-0.5">{formatDateTime(h.paidAt)}</div>}
+          {h.amountCents != null && <div className="text-[9.5px] text-foreground/35">{money(h.amountCents / 100)}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ClientPaymentsPanel() {
   const me = useMe().data;
   const isMaster = me?.role === "master";
   const { data, isLoading } = useQuery(clientPaymentsQO());
   const api = useApi();
   const period = currentPeriod();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (isLoading || !data) {
     return <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin text-foreground/40" size={24} /></div>;
@@ -107,13 +176,16 @@ export function ClientPaymentsPanel() {
                 const overdue = days < 0 && !r.paidThisPeriod;
                 const dueSoon = days >= 0 && days <= 7 && !r.paidThisPeriod;
                 const wa = waLink(r.whatsappPhone, buildPaymentMessage(r, data.pixKey));
+                const expanded = expandedId === r.id;
                 return (
-                  <tr key={r.id} className="border-b border-foreground/4 last:border-0">
+                  <Fragment key={r.id}>
+                  <tr className={expanded ? "" : "border-b border-foreground/4 last:border-0"}>
                     <td className="px-4 py-3 text-foreground font-medium">{r.name}</td>
                     <td className="px-4 py-3 text-foreground/70">
                       {formatDate(r.nextDueDate)}
                       {overdue && <span className="ml-1.5 text-[10px] font-bold text-red-400">ATRASADO</span>}
                       {dueSoon && <span className="ml-1.5 text-[10px] font-bold" style={{ color: "#F5A623" }}>EM {days}D</span>}
+                      <div className="mt-0.5"><DueDayEditor clientId={r.id} day={r.paymentDueDay} isMaster={isMaster} /></div>
                     </td>
                     <td className="px-4 py-3 text-foreground/70">{money(r.contractValue)}</td>
                     <td className="px-4 py-3 text-foreground/70">{r.postsDoneThisMonth}</td>
@@ -126,9 +198,18 @@ export function ClientPaymentsPanel() {
                       >
                         {r.paidThisPeriod ? "Em dia" : "Pendente"}
                       </span>
+                      {r.paidThisPeriod && r.paidAt && (
+                        <div className="text-[9.5px] text-foreground/35 mt-1">pago em {formatDateTime(r.paidAt)}</div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setExpandedId(expanded ? null : r.id)}
+                          className="p-1.5 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5 inline-flex items-center gap-0.5" title="Ver histórico de pagamentos"
+                        >
+                          <History size={15} /> <ChevronDown size={11} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+                        </button>
                         {wa && (
                           <a href={wa} target="_blank" rel="noopener noreferrer"
                             className="p-1.5 rounded text-foreground/40 hover:text-[#5BA88A] hover:bg-foreground/5" title="Enviar cobrança pelo WhatsApp">
@@ -153,6 +234,14 @@ export function ClientPaymentsPanel() {
                       </div>
                     </td>
                   </tr>
+                  {expanded && (
+                    <tr className="border-b border-foreground/4 last:border-0">
+                      <td colSpan={6} className="bg-foreground/[0.02]">
+                        <PaymentHistoryPanel clientId={r.id} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
             </tbody>
