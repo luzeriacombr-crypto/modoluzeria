@@ -161,6 +161,10 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
    * lateral) que já era usado antes de virar escolhível. */
   --lz-hero-a-rgb: 200, 212, 78;
   --lz-hero-b-rgb: 17, 31, 92;
+  /* Pilula de navegação de mês no hero do Dashboard — um véu escuro sobre
+   * o degradê colorido no escuro; no claro fica só o traçado (mais
+   * minimalista), sem o preenchimento acinzentado. */
+  --lz-hero-pill-bg: rgba(0, 0, 0, 0.3);
   /* Cor da marca usada como TEXTO (badges/pills tipo "OLÁ, JÚNIOR!"). No
    * escuro, a marca (geralmente um tom vivo/claro) já lê bem direto. No
    * claro, o mesmo tom vivo quase some contra um fundo branco — aqui vira
@@ -276,6 +280,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   --chart-4: #8B5FC9;
   --chart-5: #4B5563;
   --lz-accent-ink: color-mix(in srgb, rgb(var(--lz-brand-rgb)) 55%, black);
+  --lz-hero-pill-bg: transparent;
   --lz-surface-raised: #FCFCFB;
   --lz-border-soft: rgba(22, 23, 27, 0.06);
   --lz-border-strong: rgba(22, 23, 27, 0.16);

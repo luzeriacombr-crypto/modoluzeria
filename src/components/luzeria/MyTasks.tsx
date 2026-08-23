@@ -152,13 +152,13 @@ export function MyTasks() {
             <p className="italic text-foreground/60 text-[13px] leading-relaxed text-balance">
               "{dailyVerse.text}"
             </p>
-            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "rgba(var(--lz-brand-rgb), 0.7)" }}>
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "color-mix(in srgb, var(--lz-accent-ink) 80%, transparent)" }}>
               {dailyVerse.reference}
             </p>
           </div>
         )}
       </div>
-      <div className="flex items-end justify-between mb-9">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-9">
         <div>
           <h1 className="text-[24px] sm:text-[32px] font-semibold text-foreground leading-none tracking-tight whitespace-nowrap">Coisas para fazer</h1>
           <p className="text-sm text-foreground/50 mt-2.5">
@@ -166,22 +166,24 @@ export function MyTasks() {
           </p>
         </div>
         {isAdmin && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <button
               onClick={() => setShowNovaDemanda(true)}
-              className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-1.5 shrink-0"
+              className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-1.5 shrink-0 self-start"
             >
               <Plus size={14} /> Nova demanda
             </button>
-            <span className="text-xs text-foreground/40">Ver como:</span>
-            <select value={viewAs} onChange={(e) => setViewAs(e.target.value)}
-              className="bg-card border border-foreground/10 text-sm text-foreground rounded-md px-3 py-1.5 outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
-              <option value="">{me?.name} (eu)</option>
-              {profiles.filter((p) => p.id !== me?.id).map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-            {targetProfile && targetId !== me?.id && <Avatar profile={targetProfile} size={28} />}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-foreground/40 shrink-0">Ver como:</span>
+              <select value={viewAs} onChange={(e) => setViewAs(e.target.value)}
+                className="bg-card border border-foreground/10 text-sm text-foreground rounded-md px-3 py-1.5 outline-none focus:border-[rgb(var(--lz-brand-rgb))] min-w-0 flex-1 sm:flex-none">
+                <option value="">{me?.name} (eu)</option>
+                {profiles.filter((p) => p.id !== me?.id).map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {targetProfile && targetId !== me?.id && <Avatar profile={targetProfile} size={28} />}
+            </div>
           </div>
         )}
       </div>

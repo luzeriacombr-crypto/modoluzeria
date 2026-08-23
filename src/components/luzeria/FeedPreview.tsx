@@ -451,7 +451,7 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
               value={`${PUBLIC_PREVIEW_BASE}/preview/${token}`}
               onFocus={(e) => e.currentTarget.select()}
               className="flex-1 text-[12px] px-2.5 py-2 rounded-md outline-none"
-              style={{ background: "var(--background)", color: "#fff", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}
+              style={{ background: "var(--background)", color: "var(--foreground)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}
             />
             <button
               onClick={copyLink}

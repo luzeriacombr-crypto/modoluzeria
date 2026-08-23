@@ -171,7 +171,7 @@ export function AdminDashboard() {
         <div className="relative grid md:grid-cols-[1fr_auto] gap-8 p-6 md:p-8 items-center">
           <div className="text-center md:text-left flex flex-col items-center md:items-start">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-text-rgb))" }}>
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
               <Sparkles size={11} /> Dashboard
             </div>
             <h1
@@ -182,7 +182,8 @@ export function AdminDashboard() {
             <p className="mt-2 italic text-foreground/70 text-sm md:text-base">{message}</p>
 
             {/* Month selector */}
-            <div className="mt-5 inline-flex items-center gap-1 rounded-full bg-black/30 backdrop-blur p-1 border border-foreground/10 mx-auto md:mx-0">
+            <div className="mt-5 inline-flex items-center gap-1 rounded-full backdrop-blur p-1 border border-foreground/10 mx-auto md:mx-0"
+              style={{ backgroundColor: "var(--lz-hero-pill-bg)" }}>
               <button onClick={() => selectMonth(shiftMonth(selectedMonthKey, -1))}
                 className="h-8 w-8 rounded-full hover:bg-foreground/10 text-foreground/70 flex items-center justify-center transition">
                 <ChevronLeft size={15} />
@@ -706,12 +707,11 @@ function BigDonut({ percent, done, total }: { percent: number; done: number; tot
   );
 }
 
-function hexA(hex: string, a: number) {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0,2), 16);
-  const g = parseInt(h.slice(2,4), 16);
-  const b = parseInt(h.slice(4,6), 16);
-  return `rgba(${r},${g},${b},${a})`;
+function hexA(color: string, a: number) {
+  // color-mix aceita qualquer sintaxe de cor válida (hex, rgb(), var()...),
+  // diferente do parsing manual de antes que só funcionava com hex puro e
+  // quebrava silenciosamente pra tons como "rgb(var(--lz-sidebar-rgb))".
+  return `color-mix(in srgb, ${color} ${a * 100}%, transparent)`;
 }
 
 type FilteredItemsPanelProps = {

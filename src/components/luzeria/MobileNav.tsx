@@ -205,11 +205,11 @@ export function MobileNav() {
       )}
 
       <nav className="bg-background fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around backdrop-blur-xl border-t border-border" data-tour="mobile-bottom-nav">
-        <NavBtn icon={<LayoutDashboard size={20} />} active={pathname === "/minhas-tarefas"}
+        <NavBtn icon={<LayoutDashboard size={20} />} active={pathname === "/minhas-tarefas" && tab === "home"}
           onClick={() => { navigate({ to: "/minhas-tarefas" }); closeAllSheets(); }} />
-        <NavBtn icon={<BarChart2 size={20} />} active={pathname === "/admin"}
+        <NavBtn icon={<BarChart2 size={20} />} active={pathname === "/admin" && tab === "home"}
           onClick={() => { navigate({ to: "/admin" }); closeAllSheets(); }} />
-        <NavBtn icon={<Users size={20} />} active={tab === "clients" || isClientPath}
+        <NavBtn icon={<Users size={20} />} active={tab === "clients" || (isClientPath && tab === "home")}
           dataTour="mobile-clients-btn"
           onClick={() => { setShowClients((v) => !v); setShowMenu(false); }} />
         <NavBtn icon={<Menu size={20} />} active={tab === "menu"}

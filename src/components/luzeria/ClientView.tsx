@@ -197,7 +197,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           {tabs.map((t) => (
             <button key={t} onClick={() => setTab(t as any)}
               className="relative py-3 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap"
-              style={{ color: tab === t ? "#FFFFFF" : "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>
+              style={{ color: tab === t ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>
               {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : t === "finalizados" ? "Finalizados" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
               {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
             </button>

@@ -85,11 +85,6 @@ export function App() {
       : me.data?.orgColorPrimary ? deriveSecondaryHex(me.data.orgColorPrimary) : null;
     const light = lightHex ? hexToRgbChannels(lightHex) : null;
     const sidebar = me.data?.orgColorSidebar ? hexToRgbChannels(me.data.orgColorSidebar) : null;
-    // A color naturally dark even at full brightness (navy, deep purple...)
-    // reads as low-contrast when shown directly as accent text on this
-    // app's near-black UI — --lz-brand-text-rgb is the same color when it's
-    // light enough to read, or white as a safe fallback otherwise.
-    const text = me.data?.orgColorPrimary ? readableAccentRgbChannels(me.data.orgColorPrimary) : null;
     // Degradê do cabeçalho do Dashboard: usa as cores escolhidas em
     // Configurações se a agência definiu alguma, senão cai pro par que já
     // era usado antes (cor clara da marca + cor da barra lateral).
@@ -98,7 +93,6 @@ export function App() {
     if (primary) root.setProperty("--lz-brand-rgb", primary);
     if (light) root.setProperty("--lz-brand-light-rgb", light);
     if (sidebar) root.setProperty("--lz-sidebar-rgb", sidebar);
-    if (text) root.setProperty("--lz-brand-text-rgb", text);
     if (heroA) root.setProperty("--lz-hero-a-rgb", heroA);
     if (heroB) root.setProperty("--lz-hero-b-rgb", heroB);
     if (me.data?.borderRadius != null) root.setProperty("--lz-radius", `${me.data.borderRadius}px`);

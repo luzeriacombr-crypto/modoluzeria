@@ -61,7 +61,7 @@ function IntroBanner() {
           <p>
             Já a <span className="text-foreground/80 font-medium">última análise do mês</span> vem da{" "}
             <span className="text-foreground/80 font-medium">Jornada do cliente</span> — pra isso funcionar, marque em{" "}
-            <span className="text-foreground/80 font-medium">Configurações → Jornada do cliente</span> qual etapa representa
+            <span className="text-foreground/80 font-medium">Configurações → Cliente → Jornada</span> qual etapa representa
             "Análise do mês" (passe o mouse ou toque no <Info size={10} className="inline -mt-0.5" /> de cada coluna abaixo
             pra entender o que ela mostra). Se não for útil pra sua agência, dá pra desligar em{" "}
             <span className="text-foreground/80 font-medium">Configurações → Geral</span>, na seção de recursos opcionais.
@@ -124,7 +124,7 @@ function ClientOperationsOverviewContent() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1">
                     Etapa atual
-                    <InfoTip text="Em qual etapa da Jornada do Cliente esse cliente está agora — a mesma configurada em Configurações → Jornada do cliente." />
+                    <InfoTip text="Em qual etapa da Jornada do Cliente esse cliente está agora — a mesma configurada em Configurações → Cliente → Jornada." />
                   </span>
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">

@@ -7,7 +7,7 @@ import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
 import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
 import { toast } from "sonner";
-import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2 } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Gift } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
 
 // Cada uma dessas só renderiza dentro de uma aba específica (nunca mais de
@@ -27,6 +27,7 @@ const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => (
 const SalesPageEditorTab = lazy(() => import("./SalesPageEditorTab").then((m) => ({ default: m.SalesPageEditorTab })));
 const JourneyStagesTab = lazy(() => import("./JourneyStagesTab").then((m) => ({ default: m.JourneyStagesTab })));
 const ClientPaymentsPanel = lazy(() => import("./ClientPaymentsPanel").then((m) => ({ default: m.ClientPaymentsPanel })));
+const ClientOperationsOverview = lazy(() => import("./ClientOperationsOverview").then((m) => ({ default: m.ClientOperationsOverview })));
 
 function TabLoadingFallback() {
   return (
@@ -36,8 +37,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "automations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "updates" | "site" | "journey";
-const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "updates", "site", "journey"];
+type SettingsTab = "team" | "report" | "automations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "updates" | "site" | "journey" | "cliente";
+const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "updates", "site", "journey", "cliente"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -48,11 +49,13 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
 
   if (!me) return null;
   const isMaster = me.role === "master";
+  const isAdmin = isMaster || me.role === "setor";
   const setorAllowedTabs: SettingsTab[] = [
-    ...(hasSetorPermission(me, "settings_journey") ? (["journey"] as SettingsTab[]) : []),
+    ...(hasSetorPermission(me, "settings_journey") ? (["journey", "cliente"] as SettingsTab[]) : []),
     ...(hasSetorPermission(me, "team_reports") ? (["report"] as SettingsTab[]) : []),
-    ...(hasPermission(me, "view_financeiro") ? (["cobranca", "margem", "pagamentos"] as SettingsTab[]) : []),
+    ...(hasPermission(me, "view_financeiro") ? (["cobranca", "margem", "pagamentos", "cliente"] as SettingsTab[]) : []),
     ...(hasPermission(me, "manage_team") ? (["team"] as SettingsTab[]) : []),
+    ...(isAdmin ? (["cliente"] as SettingsTab[]) : []),
   ];
   if (!isMaster && setorAllowedTabs.length === 0) {
     return <div className="p-10 text-foreground/60 text-sm">Acesso restrito ao Administrador Master.</div>;
@@ -78,17 +81,13 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         <div>
           <h1 className="text-[32px] font-bold text-foreground tracking-tight">Configurações</h1>
           <p className="text-sm text-foreground/50 mt-2">
-            {tab === "team"   ? "Gerencie acessos, funções e metas da equipe." :
-             tab === "report" ? "Relatório consolidado de entregas." :
+            {tab === "team" || tab === "report" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
              tab === "automations" ? "Google Drive, lembretes automáticos e jobs do sistema." :
-             tab === "cobranca" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
-             tab === "margem" ? "Lucratividade estimada por cliente." :
+             tab === "cobranca" || tab === "afiliados" || tab === "revenda" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
+             tab === "cliente" || tab === "margem" || tab === "journey" ? "Visão geral, jornada e margem de cada cliente." :
              tab === "pagamentos" ? "Data de vencimento e status de pagamento de cada cliente." :
-             tab === "afiliados" ? "Programa de indicação e comissões." :
-             tab === "revenda" ? "Revenda instâncias white label pros seus clientes." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
-             tab === "journey" ? "Etapas do onboarding e da operação mensal, usadas pra avisar clientes no WhatsApp." :
              "Ajustes gerais da operação."}
           </p>
         </div>
@@ -97,19 +96,18 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
       <div className="flex items-center gap-1 border-b border-foreground/10 mb-6 overflow-x-auto overflow-y-hidden" data-tour="settings-tabs">
         {[
           { id: "team", label: "Equipe" },
-          { id: "report", label: "Relatório" },
           { id: "automations", label: "Automações" },
-          { id: "journey", label: "Jornada do cliente" },
+          { id: "cliente", label: "Cliente" },
           { id: "cobranca", label: "Plano e Cobrança" },
-          { id: "margem", label: "Margem por cliente" },
           { id: "pagamentos", label: "Pagamentos" },
-          { id: "afiliados", label: "Afiliados" },
-          { id: "revenda", label: "Revenda" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
           ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }] : []),
         ].filter((t) => allowedTabs.includes(t.id as SettingsTab)).map((t) => {
-          const active = tab === (t.id as any);
+          const active = tab === (t.id as any) ||
+            (t.id === "team" && tab === "report") ||
+            (t.id === "cliente" && (tab === "margem" || tab === "journey")) ||
+            (t.id === "cobranca" && (tab === "afiliados" || tab === "revenda"));
           return (
             <button key={t.id} onClick={() => setTab(t.id as any)}
               className="shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
@@ -140,7 +138,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
 
       <Suspense fallback={<TabLoadingFallback />}>
       {tab === "general" ? <GeneralSettings /> :
-       tab === "cobranca" ? (
+       tab === "cobranca" || tab === "afiliados" || tab === "revenda" ? (
         <div className="space-y-10">
           <PlanCardSection />
           <div className="pt-2 border-t border-foreground/10">
@@ -161,15 +159,22 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               <PromotionCodesPanel />
             </div>
           )}
+          {isMaster && (
+            <GanheComModoCriadorSection initiallyOpen={tab === "afiliados" || tab === "revenda"} isPlatformAdmin={!!me.isPlatformAdmin} />
+          )}
         </div>
        ) :
-       tab === "margem" ? <ClientMarginPanel /> :
+       tab === "cliente" || tab === "margem" || tab === "journey" ? (
+        <ClienteTab
+          initialSub={tab === "margem" ? "margem" : tab === "journey" ? "jornada" : "overview"}
+          canJourney={hasSetorPermission(me, "settings_journey")}
+          canMargem={hasPermission(me, "view_financeiro")}
+          isAdmin={isAdmin}
+        />
+       ) :
        tab === "pagamentos" ? <ClientPaymentsPanel /> :
-       tab === "afiliados" ? <AffiliateProgramPanel isPlatformAdmin={!!me.isPlatformAdmin} /> :
-       tab === "revenda" ? <ResellerPanel /> :
        tab === "updates" ? <UpdatesTab /> :
        tab === "site" ? (me.isPlatformAdmin ? <SalesPageEditorTab /> : null) :
-       tab === "journey" ? <JourneyStagesTab /> :
        tab === "automations" ? (
         <div className="space-y-10">
           {!(me.disabledFeatures ?? []).includes("drive") && (
@@ -183,7 +188,16 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           </div>
         </div>
        ) :
-       tab === "report" ? <ReportsTab /> : (
+       tab === "team" || tab === "report" ? (
+        <>
+      {allowedTabs.includes("report") && (
+        <div className="flex items-center gap-1 mb-6 -mt-2">
+          {[{ id: "team" as const, label: "Equipe" }, { id: "report" as const, label: "Relatório" }].map((s) => (
+            <SubTabPill key={s.id} active={tab === s.id} onClick={() => setTab(s.id)} label={s.label} />
+          ))}
+        </div>
+      )}
+      {tab === "report" ? <ReportsTab /> : (
         <>
       {pending.length > 0 && (
         <>
@@ -249,6 +263,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
       </div>
         </>
       )}
+        </>
+       ) : null}
       </Suspense>
 
       {adding && (
@@ -913,6 +929,62 @@ function BillingSection() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function SubTabPill({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+  return (
+    <button onClick={onClick}
+      className="px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wide transition-colors"
+      style={{
+        backgroundColor: active ? "rgba(var(--lz-brand-light-rgb),0.15)" : "transparent",
+        color: active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
+      }}>
+      {label}
+    </button>
+  );
+}
+
+function ClienteTab({ initialSub, canJourney, canMargem, isAdmin }: {
+  initialSub: "overview" | "jornada" | "margem"; canJourney: boolean; canMargem: boolean; isAdmin: boolean;
+}) {
+  const subs = [
+    ...(isAdmin ? [{ id: "overview" as const, label: "Visão Geral" }] : []),
+    ...(canJourney ? [{ id: "jornada" as const, label: "Jornada" }] : []),
+    ...(canMargem ? [{ id: "margem" as const, label: "Margem" }] : []),
+  ];
+  const [sub, setSub] = useState<"overview" | "jornada" | "margem">(
+    subs.some((s) => s.id === initialSub) ? initialSub : (subs[0]?.id ?? "overview"),
+  );
+  return (
+    <div>
+      <div className="flex items-center gap-1 mb-6 -mt-2">
+        {subs.map((s) => <SubTabPill key={s.id} active={sub === s.id} onClick={() => setSub(s.id)} label={s.label} />)}
+      </div>
+      {sub === "overview" ? <ClientOperationsOverview /> :
+       sub === "jornada" ? <JourneyStagesTab /> :
+       sub === "margem" ? <ClientMarginPanel /> : null}
+    </div>
+  );
+}
+
+function GanheComModoCriadorSection({ initiallyOpen, isPlatformAdmin }: { initiallyOpen: boolean; isPlatformAdmin: boolean }) {
+  const [open, setOpen] = useState(initiallyOpen);
+  return (
+    <div className="pt-2 border-t border-foreground/10">
+      <button onClick={() => setOpen((v) => !v)}
+        className="lz-btn-ghost text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
+        <Gift size={14} /> Ganhe com o Modo Criador!
+      </button>
+      {open && (
+        <div className="mt-6 space-y-10">
+          <AffiliateProgramPanel isPlatformAdmin={isPlatformAdmin} />
+          <div className="pt-2 border-t border-foreground/10">
+            <ResellerPanel />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
