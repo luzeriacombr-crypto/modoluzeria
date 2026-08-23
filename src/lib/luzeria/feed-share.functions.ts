@@ -34,7 +34,7 @@ async function driveFetch(path: string) {
 async function fetchThumbDataUrl(fileId: string, size = 480): Promise<string | null> {
   try {
     const meta: any = await driveFetch(
-      `/drive/v3/files/${encodeURIComponent(fileId)}?fields=thumbnailLink,mimeType&supportsAllDrives=true`,
+      `/files/${encodeURIComponent(fileId)}?fields=thumbnailLink,mimeType&supportsAllDrives=true`,
     );
     const link: string | undefined = meta?.thumbnailLink;
     if (!link) return null;
@@ -582,7 +582,7 @@ export const getPublicDriveVideoToken = createServerFn({ method: "GET" })
     return withDriveOrg(orgId as string, async () => {
       const token = await getAccessToken();
       const meta: any = await driveFetch(
-        `/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=mimeType,name&supportsAllDrives=true`,
+        `/files/${encodeURIComponent(data.fileId)}?fields=mimeType,name&supportsAllDrives=true`,
       );
       return {
         token,

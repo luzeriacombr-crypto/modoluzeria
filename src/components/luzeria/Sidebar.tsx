@@ -544,7 +544,7 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
   return (
     <div ref={ref}
       className="group relative rounded-lg transition-[border-color] mx-1 overflow-hidden"
-      style={active ? glassCardStyle(true) : { background: "transparent", border: "1px solid transparent" }}
+      style={active ? glassCardStyle(true, "var(--sidebar)") : { background: "transparent", border: "1px solid transparent" }}
     >
       {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
       {/* Hover wash — a separate layer since an active row's background above

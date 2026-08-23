@@ -192,7 +192,7 @@ function FolderBlock({ col, leads, isOver, dragId, onDragStartLead, onDragEndLea
       onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
       className="h-full flex flex-col text-left rounded-xl p-4 transition-colors border cursor-pointer"
       style={{
-        backgroundColor: isOver ? "rgba(var(--lz-brand-rgb),0.08)" : "#1C1C1C",
+        backgroundColor: isOver ? "rgba(var(--lz-brand-rgb),0.08)" : "var(--card)",
         borderColor: isOver ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
         borderTopColor: isOver ? "rgb(var(--lz-brand-rgb))" : col.accent,
         borderTopWidth: "2px",
@@ -239,7 +239,7 @@ function CompactChip({ col, count, active, isOver, onClick, onDragOver, onDragLe
       onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border shrink-0 transition-colors"
       style={{
-        backgroundColor: active ? "rgba(var(--lz-brand-rgb),0.1)" : isOver ? "color-mix(in srgb, var(--foreground) 6%, transparent)" : "#1C1C1C",
+        backgroundColor: active ? "rgba(var(--lz-brand-rgb),0.1)" : isOver ? "color-mix(in srgb, var(--foreground) 6%, transparent)" : "var(--card)",
         borderColor: active ? "rgb(var(--lz-brand-rgb))" : isOver ? col.accent : "color-mix(in srgb, var(--foreground) 6%, transparent)",
       }}
     >
