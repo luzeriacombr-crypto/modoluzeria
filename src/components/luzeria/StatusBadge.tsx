@@ -81,7 +81,7 @@ export function StatusBadge({
         style={{
           backgroundColor: meta.bg,
           color: meta.color,
-          boxShadow: onChange ? `0 0 0 0 ${meta.color}00` : undefined,
+          boxShadow: onChange ? "0 0 0 0 transparent" : undefined,
         }}
         onMouseEnter={(e) => {
           if (onChange) e.currentTarget.style.boxShadow = `0 0 0 3px ${meta.bg}`;

@@ -150,7 +150,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -158,15 +158,18 @@ export const getMe = createServerFn({ method: "GET" })
     // voltar um perfil com marca zerada pra todo mundo de novo.
     if (orgErr) throw new Error(`Falha ao carregar dados da agência: ${orgErr.message}`);
     const logoPath = (org as any)?.logo_path as string | null | undefined;
+    const logoPathLight = (org as any)?.logo_path_light as string | null | undefined;
     const feedPreviewImagePath = (org as any)?.feed_preview_image_path as string | null | undefined;
     const faviconPath = (org as any)?.favicon_path as string | null | undefined;
-    const [signed, logoSigned, feedPreviewSigned, faviconSigned] = await Promise.all([
+    const [signed, logoSigned, logoLightSigned, feedPreviewSigned, faviconSigned] = await Promise.all([
       signAvatarPaths(context.supabase, [profile.avatar_url]),
       signAvatarPaths(context.supabase, [logoPath], null),
+      signAvatarPaths(context.supabase, [logoPathLight], null),
       signAvatarPaths(context.supabase, [feedPreviewImagePath], FEED_PREVIEW_THUMB),
       signAvatarPaths(context.supabase, [faviconPath], FAVICON_THUMB),
     ]);
     const orgLogoUrl = logoPath ? logoSigned.get(logoPath) ?? null : null;
+    const orgLogoUrlLight = logoPathLight ? logoLightSigned.get(logoPathLight) ?? null : null;
     const orgFeedPreviewImageUrl = feedPreviewImagePath ? feedPreviewSigned.get(feedPreviewImagePath) ?? null : null;
     const orgFaviconUrl = faviconPath ? faviconSigned.get(faviconPath) ?? null : null;
     // Cargos atribuídos (pode ter vários) — cargoPermissions já é a união
@@ -194,6 +197,7 @@ export const getMe = createServerFn({ method: "GET" })
       orgColorPrimaryLight: (org as any)?.color_primary_light ?? null,
       orgColorSidebar: (org as any)?.color_sidebar ?? null,
       orgLogoUrl,
+      orgLogoUrlLight,
       orgFeedPreviewImageUrl,
       orgFeedPreviewImagePath: feedPreviewImagePath ?? null,
       orgFaviconUrl,
@@ -232,7 +236,7 @@ export const updateSetorPermissions = createServerFn({ method: "POST" })
 export const updateMyOrg = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: {
-    name?: string; tagline?: string | null; logoPath?: string | null;
+    name?: string; tagline?: string | null; logoPath?: string | null; logoPathLight?: string | null;
     colorPrimary?: string | null; colorPrimaryLight?: string | null; colorSidebar?: string | null;
     taxId?: string | null; feedPreviewImagePath?: string | null; faviconPath?: string | null;
     disabledFeatures?: string[];
@@ -248,6 +252,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       name: z.string().trim().min(1).max(80).optional(),
       tagline: z.string().trim().max(120).nullable().optional(),
       logoPath: z.string().max(300).nullable().optional(),
+      logoPathLight: z.string().max(300).nullable().optional(),
       colorPrimary: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       colorPrimaryLight: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       colorSidebar: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
@@ -275,6 +280,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.name !== undefined) patch.name = data.name;
     if (data.tagline !== undefined) patch.tagline = data.tagline;
     if (data.logoPath !== undefined) patch.logo_path = data.logoPath;
+    if (data.logoPathLight !== undefined) patch.logo_path_light = data.logoPathLight;
     if (data.colorPrimary !== undefined) patch.color_primary = data.colorPrimary;
     if (data.colorPrimaryLight !== undefined) patch.color_primary_light = data.colorPrimaryLight;
     if (data.colorSidebar !== undefined) patch.color_sidebar = data.colorSidebar;

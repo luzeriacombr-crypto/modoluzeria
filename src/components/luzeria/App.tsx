@@ -19,7 +19,6 @@ import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
 import { PullToRefresh } from "./PullToRefresh";
-import { GlobalSearchOverlay, GlobalSearchButton } from "./GlobalSearch";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ClientFichaPanel } from "./ClientFichaPanel";
 import { AppTour } from "./AppTour";
@@ -142,6 +141,7 @@ export function App() {
     if (me.data.orgLogoUrl || me.data.orgColorPrimary) {
       localStorage.setItem("lz_org_branding", JSON.stringify({
         logoUrl: me.data.orgLogoUrl ?? null,
+        logoUrlLight: me.data.orgLogoUrlLight ?? null,
         name: me.data.orgName ?? null,
         colorPrimary: me.data.orgColorPrimary ?? null,
         colorPrimaryLight: me.data.orgColorPrimaryLight ?? null,
@@ -149,7 +149,7 @@ export function App() {
     } else {
       localStorage.removeItem("lz_org_branding");
     }
-  }, [me.data?.orgLogoUrl, me.data?.orgName, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight]);
+  }, [me.data?.orgLogoUrl, me.data?.orgLogoUrlLight, me.data?.orgName, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight]);
 
   if (me.isLoading) {
     return <LuzeriaLoader />;
@@ -224,7 +224,6 @@ export function App() {
       <ClientFichaPanel />
       <MobileNav />
       <AppTour />
-      <GlobalSearchOverlay />
       <GlobalConfirmDialog />
       <IncomingCallModal call={call} />
       <ActiveCallOverlay call={call} />
@@ -236,6 +235,8 @@ export function App() {
 
 function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; onToggleSidebar: () => void }) {
   const me = useMe().data;
+  const { theme } = useTheme();
+  const headerLogoUrl = (theme === "light" && me?.orgLogoUrlLight) || me?.orgLogoUrl;
   const navigate = useNavigate();
   const disabled = new Set(me?.disabledFeatures ?? []);
   const canCall = useCallStore((s) => s.canCall);
@@ -252,9 +253,9 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
       >
         {sidebarHidden ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
       </button>
-      {me?.orgLogoUrl ? (
+      {headerLogoUrl ? (
         <div className="md:hidden h-10 max-w-[140px]">
-          <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="h-full max-w-full object-contain object-left" />
+          <img src={headerLogoUrl} alt={me.orgName ?? "Logo"} className="h-full max-w-full object-contain object-left" />
         </div>
       ) : (
         <span className="md:hidden text-foreground font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px]">
@@ -262,7 +263,6 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
         </span>
       )}
       <div className="flex-1" />
-      <GlobalSearchButton variant="header" />
       {me?.role === "master" && (
         <button
           onClick={() => navigate({ to: "/configuracoes" })}

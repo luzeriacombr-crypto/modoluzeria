@@ -6,7 +6,7 @@ import { useTheme } from "@/lib/luzeria/theme-store";
  * successful load — this component renders before the profile fetch
  * resolves (before --lz-brand-rgb is set), so it has no other way to know
  * which org is logged in yet. */
-function readCachedBranding(): { logoUrl: string | null; name: string | null; colorPrimary: string | null; colorPrimaryLight: string | null } | null {
+function readCachedBranding(): { logoUrl: string | null; logoUrlLight: string | null; name: string | null; colorPrimary: string | null; colorPrimaryLight: string | null } | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem("lz_org_branding");
@@ -19,6 +19,7 @@ function readCachedBranding(): { logoUrl: string | null; name: string | null; co
 export function LuzeriaLoader({ fullScreen = true }: { fullScreen?: boolean }) {
   const cached = readCachedBranding();
   const { theme } = useTheme();
+  const logoUrl = (theme === "light" && cached?.logoUrlLight) || cached?.logoUrl || null;
   const barRgb = cached?.colorPrimary ? hexToRgbChannels(cached.colorPrimary) : null;
   const trackRgb = cached?.colorPrimaryLight ? hexToRgbChannels(cached.colorPrimaryLight) : barRgb;
   return (
@@ -39,15 +40,15 @@ export function LuzeriaLoader({ fullScreen = true }: { fullScreen?: boolean }) {
         .lz-logo { animation: lz-fade 0.4s ease-out both; }
       `}</style>
 
-      {cached?.logoUrl ? (
+      {logoUrl ? (
         <img
-          src={cached.logoUrl}
-          alt={cached.name ?? "Logo"}
+          src={logoUrl}
+          alt={cached?.name ?? "Logo"}
           className="lz-logo"
           style={{ height: 32, maxWidth: 200, width: "auto", objectFit: "contain" }}
         />
       ) : (
-        <ModoCriadorLogo variant="white" className="lz-logo" style={{ height: 32, width: "auto" }} />
+        <ModoCriadorLogo variant={theme === "light" ? "black" : "white"} className="lz-logo" style={{ height: 32, width: "auto" }} />
       )}
 
       <div style={{ width: 128, height: 2, borderRadius: 9999, overflow: "hidden", background: trackRgb ? `rgba(${trackRgb},0.15)` : "rgba(var(--lz-brand-light-rgb),0.15)" }}>

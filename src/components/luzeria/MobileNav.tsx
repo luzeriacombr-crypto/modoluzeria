@@ -9,7 +9,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { glassCardStyle } from "@/lib/luzeria/utils";
 import { hasSetorPermission, hasPermission } from "@/lib/luzeria/types";
 import { DEFAULT_NAV_LABELS } from "./Sidebar";
-import { GlobalSearchButton } from "./GlobalSearch";
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
@@ -72,14 +71,14 @@ export function MobileNav() {
   return (
     <>
       {showClients && !isClientPath && (
-        <div className="fixed inset-0 z-40 bg-[#0D0D0D] pt-14 pb-20 flex flex-col">
-          <div className="px-5 py-4 border-b border-white/[0.08] bg-[#0D0D0D] flex items-end justify-between shrink-0">
-            <h2 className="text-lg font-bold text-white">Clientes</h2>
-            <span className="text-xs text-white/40">{activeClients.length}</span>
+        <div className="fixed inset-0 z-40 bg-background pt-14 pb-20 flex flex-col">
+          <div className="px-5 py-4 border-b border-border bg-background flex items-end justify-between shrink-0">
+            <h2 className="text-lg font-bold text-foreground">Clientes</h2>
+            <span className="text-xs text-foreground/40">{activeClients.length}</span>
           </div>
           <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-6">
             {activeClients.length === 0 && (
-              <p className="text-xs text-white/40 py-10 text-center">Sem clientes ainda.</p>
+              <p className="text-xs text-foreground/40 py-10 text-center">Sem clientes ainda.</p>
             )}
             {grouped.map(([cat, list]) => {
               const color = CATEGORY_COLOR[cat] ?? "#5BA88A";
@@ -92,7 +91,7 @@ export function MobileNav() {
                     >
                       {cat}
                     </span>
-                    <span className="text-[10px] text-white/30">{list.length}</span>
+                    <span className="text-[10px] text-foreground/30">{list.length}</span>
                     <span
                       className="flex-1 h-px ml-1"
                       style={{ backgroundColor: `color-mix(in oklab, ${color} 25%, transparent)` }}
@@ -109,8 +108,8 @@ export function MobileNav() {
                           style={glassCardStyle()}
                         >
                           <Avatar name={c.name} color={cc} avatarUrl={c.photoUrl} size={32} />
-                          <span className="text-xs font-semibold text-white truncate flex-1 min-w-0">{c.name}</span>
-                          {c.favorite && <Star size={11} className="text-[rgb(var(--lz-brand-rgb))] fill-[rgb(var(--lz-brand-rgb))] shrink-0 absolute top-1.5 right-1.5" />}
+                          <span className="text-xs font-semibold text-foreground truncate flex-1 min-w-0">{c.name}</span>
+                          {c.favorite && <Star size={11} className="text-[var(--lz-accent-ink)] fill-[var(--lz-accent-ink)] shrink-0 absolute top-1.5 right-1.5" />}
                         </button>
                       );
                     })}
@@ -123,10 +122,10 @@ export function MobileNav() {
       )}
 
       {showMenu && (
-        <div className="fixed inset-0 z-40 bg-[#0D0D0D] pt-14 pb-20 flex flex-col" data-tour="mobile-menu-sheet">
-          <div className="px-5 py-4 border-b border-white/[0.08] bg-[#0D0D0D] flex items-center justify-between shrink-0">
-            <h2 className="text-lg font-bold text-white">Menu</h2>
-            <button onClick={() => setShowMenu(false)} className="text-white/50 hover:text-white p-1" aria-label="Fechar">
+        <div className="fixed inset-0 z-40 bg-background pt-14 pb-20 flex flex-col" data-tour="mobile-menu-sheet">
+          <div className="px-5 py-4 border-b border-border bg-background flex items-center justify-between shrink-0">
+            <h2 className="text-lg font-bold text-foreground">Menu</h2>
+            <button onClick={() => setShowMenu(false)} className="text-foreground/50 hover:text-foreground p-1" aria-label="Fechar">
               <X size={20} />
             </button>
           </div>
@@ -178,7 +177,7 @@ export function MobileNav() {
 
             {canFinanceiro && (
               <>
-                <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-white/30">{navLabel("financeiro", DEFAULT_NAV_LABELS.financeiro)}</p>
+                <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-foreground/30">{navLabel("financeiro", DEFAULT_NAV_LABELS.financeiro)}</p>
                 <MenuLink icon={<Wallet size={17} />} label={navLabel("cobranca", DEFAULT_NAV_LABELS.cobranca)} onClick={() => goToConfigTab("cobranca")} />
                 <MenuLink icon={<Wallet size={17} />} label={navLabel("margem", DEFAULT_NAV_LABELS.margem)} onClick={() => goToConfigTab("margem")} />
                 <MenuLink icon={<Wallet size={17} />} label={navLabel("afiliados", DEFAULT_NAV_LABELS.afiliados)} onClick={() => goToConfigTab("afiliados")} />
@@ -188,7 +187,7 @@ export function MobileNav() {
 
             {(canTeam || canReport || canJourney) && (
               <>
-                <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-white/30">{navLabel("equipe", DEFAULT_NAV_LABELS.equipe)}</p>
+                <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-foreground/30">{navLabel("equipe", DEFAULT_NAV_LABELS.equipe)}</p>
                 {canTeam && <MenuLink icon={<UserCog size={17} />} label={navLabel("membros", DEFAULT_NAV_LABELS.membros)} onClick={() => goToConfigTab("team")} />}
                 {canReport && <MenuLink icon={<UserCog size={17} />} label={navLabel("relatorio", DEFAULT_NAV_LABELS.relatorio)} onClick={() => goToConfigTab("report")} />}
                 {canJourney && <MenuLink icon={<UserCog size={17} />} label={navLabel("jornada", DEFAULT_NAV_LABELS.jornada)} onClick={() => goToConfigTab("journey")} />}
@@ -205,10 +204,9 @@ export function MobileNav() {
         </div>
       )}
 
-      <nav className="sidebar-gradient fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around backdrop-blur-xl border-t border-white/[0.08]" data-tour="mobile-bottom-nav">
+      <nav className="bg-background fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around backdrop-blur-xl border-t border-border" data-tour="mobile-bottom-nav">
         <NavBtn icon={<LayoutDashboard size={20} />} active={pathname === "/minhas-tarefas"}
           onClick={() => { navigate({ to: "/minhas-tarefas" }); closeAllSheets(); }} />
-        <GlobalSearchButton variant="mobile" />
         <NavBtn icon={<BarChart2 size={20} />} active={pathname === "/admin"}
           onClick={() => { navigate({ to: "/admin" }); closeAllSheets(); }} />
         <NavBtn icon={<Users size={20} />} active={tab === "clients" || isClientPath}
@@ -226,7 +224,7 @@ function NavBtn({ icon, active, onClick, badge, dataTour }: { icon: React.ReactN
   return (
     <button onClick={onClick} data-tour={dataTour}
       className="relative flex items-center justify-center h-12 w-14 transition-colors"
-      style={{ color: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.4)" }}>
+      style={{ color: active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 40%, transparent)" }}>
       {icon}
       {badge !== undefined && badge > 0 && (
         <span className="absolute top-1 right-3 min-w-[14px] h-[14px] rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center px-1">
@@ -240,12 +238,12 @@ function NavBtn({ icon, active, onClick, badge, dataTour }: { icon: React.ReactN
 function MenuLink({ icon, label, onClick, dataTour }: { icon: React.ReactNode; label: string; onClick: () => void; dataTour?: string }) {
   return (
     <button onClick={onClick} data-tour={dataTour}
-      className="w-full flex items-center justify-between gap-2 px-3 py-3 rounded-lg text-white/80 hover:bg-white/5 active:bg-white/5 transition-colors">
+      className="w-full flex items-center justify-between gap-2 px-3 py-3 rounded-lg text-foreground/80 hover:bg-foreground/5 active:bg-foreground/5 transition-colors">
       <span className="flex items-center gap-3 text-sm font-medium">
-        <span className="text-white/50">{icon}</span>
+        <span className="text-foreground/50">{icon}</span>
         {label}
       </span>
-      <ChevronRight size={16} className="text-white/30" />
+      <ChevronRight size={16} className="text-foreground/30" />
     </button>
   );
 }

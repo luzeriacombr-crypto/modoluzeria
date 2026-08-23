@@ -2195,6 +2195,7 @@ export type Database = {
           id: string
           is_reseller: boolean
           logo_path: string | null
+          logo_path_light: string | null
           members_can_set_editor_format: boolean
           name: string
           nav_labels: Json
@@ -2231,6 +2232,7 @@ export type Database = {
           id?: string
           is_reseller?: boolean
           logo_path?: string | null
+          logo_path_light?: string | null
           members_can_set_editor_format?: boolean
           name: string
           nav_labels?: Json
@@ -2267,6 +2269,7 @@ export type Database = {
           id?: string
           is_reseller?: boolean
           logo_path?: string | null
+          logo_path_light?: string | null
           members_can_set_editor_format?: boolean
           name?: string
           nav_labels?: Json

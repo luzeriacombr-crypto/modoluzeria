@@ -173,7 +173,7 @@ export function CalendarioPage() {
                       onMouseLeave={() => setHover(null)}
                       className="w-full text-left px-1.5 py-1 rounded text-[10.5px] leading-tight truncate transition hover:opacity-80"
                       style={{
-                        backgroundColor: `${STATUS_META[it.status as Status]?.color ?? "#5BA88A"}22`,
+                        backgroundColor: `color-mix(in srgb, ${STATUS_META[it.status as Status]?.color ?? "#5BA88A"} 13%, transparent)`,
                         color: STATUS_META[it.status as Status]?.color ?? "#5BA88A",
                       }}
                     >

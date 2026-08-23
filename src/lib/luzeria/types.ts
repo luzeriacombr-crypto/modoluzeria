@@ -246,6 +246,7 @@ export interface Profile {
   orgName?: string | null;
   orgTagline?: string | null;
   orgLogoUrl?: string | null;
+  orgLogoUrlLight?: string | null;
   orgColorPrimary?: string | null;
   orgColorPrimaryLight?: string | null;
   orgColorSidebar?: string | null;
@@ -502,21 +503,21 @@ export const STATUS_META: Record<
   Status,
   { label: string; bg: string; color: string; icon: string }
 > = {
-  PLANEJAMENTO:        { label: "Planejamento",        bg: "#1E2A3A", color: "#7EB3FF", icon: "FileText" },
-  COPY:                { label: "Copy",                bg: "#2A1E3A", color: "#B97EFF", icon: "PenLine" },
-  REVISAO_INTERNA:     { label: "Revisão interna",     bg: "#2A2A1E", color: "#FFD97E", icon: "Search" },
-  REVISAO_CLIENTE:     { label: "Revisão cliente",     bg: "#0D2B4A", color: "#4A9EFF", icon: "MessageSquare" },
-  AGENDAMENTO:         { label: "Agendamento",         bg: "#1A2E2A", color: "#7EFFD9", icon: "CalendarCheck" },
-  REVISAO_AGENDAMENTO: { label: "Revisão agendamento", bg: "#2A1E1E", color: "#FF9E7E", icon: "CalendarClock" },
-  PRONTO_PARA_PUBLICAR: { label: "Pronto para publicar", bg: "#1A3A1A", color: "rgb(var(--lz-brand-rgb))", icon: "CheckCircle" },
-  FINALIZADO:          { label: "Finalizado/Publicado", bg: "#20242A", color: "#9AA4B2", icon: "Archive" },
-  TRAVADO:             { label: "Travado",             bg: "#3A1A1A", color: "#FF6B6B", icon: "Ban" },
-  CRIACAO:             { label: "Criação de arte",     bg: "#3D2B5E", color: "#C084FC", icon: "Paintbrush" },
-  REVISAO_ARTE:        { label: "Revisão de arte",     bg: "#4A2800", color: "#FF8C42", icon: "Eye" },
-  EM_GRAVACAO:         { label: "Em gravação",         bg: "#1A1A3A", color: "#7E9EFF", icon: "Video" },
-  EM_EDICAO:           { label: "Em edição",         bg: "#2A1A2A", color: "#FF7EE8", icon: "Scissors" },
-  PENDENTE:            { label: "Pendente",             bg: "#2A2A1E", color: "#FFD97E", icon: "Clock" },
-  CONCLUIDO:           { label: "Concluído",            bg: "#1A3A1A", color: "rgb(var(--lz-brand-rgb))", icon: "CheckCircle" },
+  PLANEJAMENTO:        { label: "Planejamento",        bg: "var(--status-planejamento-bg)", color: "var(--status-planejamento-color)", icon: "FileText" },
+  COPY:                { label: "Copy",                bg: "var(--status-copy-bg)", color: "var(--status-copy-color)", icon: "PenLine" },
+  REVISAO_INTERNA:     { label: "Revisão interna",     bg: "var(--status-revisao-interna-bg)", color: "var(--status-revisao-interna-color)", icon: "Search" },
+  REVISAO_CLIENTE:     { label: "Revisão cliente",     bg: "var(--status-revisao-cliente-bg)", color: "var(--status-revisao-cliente-color)", icon: "MessageSquare" },
+  AGENDAMENTO:         { label: "Agendamento",         bg: "var(--status-agendamento-bg)", color: "var(--status-agendamento-color)", icon: "CalendarCheck" },
+  REVISAO_AGENDAMENTO: { label: "Revisão agendamento", bg: "var(--status-revisao-agendamento-bg)", color: "var(--status-revisao-agendamento-color)", icon: "CalendarClock" },
+  PRONTO_PARA_PUBLICAR: { label: "Pronto para publicar", bg: "var(--status-pronto-bg)", color: "var(--status-pronto-color)", icon: "CheckCircle" },
+  FINALIZADO:          { label: "Finalizado/Publicado", bg: "var(--status-finalizado-bg)", color: "var(--status-finalizado-color)", icon: "Archive" },
+  TRAVADO:             { label: "Travado",             bg: "var(--status-travado-bg)", color: "var(--status-travado-color)", icon: "Ban" },
+  CRIACAO:             { label: "Criação de arte",     bg: "var(--status-criacao-bg)", color: "var(--status-criacao-color)", icon: "Paintbrush" },
+  REVISAO_ARTE:        { label: "Revisão de arte",     bg: "var(--status-revisao-arte-bg)", color: "var(--status-revisao-arte-color)", icon: "Eye" },
+  EM_GRAVACAO:         { label: "Em gravação",         bg: "var(--status-gravacao-bg)", color: "var(--status-gravacao-color)", icon: "Video" },
+  EM_EDICAO:           { label: "Em edição",         bg: "var(--status-edicao-bg)", color: "var(--status-edicao-color)", icon: "Scissors" },
+  PENDENTE:            { label: "Pendente",             bg: "var(--status-pendente-bg)", color: "var(--status-pendente-color)", icon: "Clock" },
+  CONCLUIDO:           { label: "Concluído",            bg: "var(--status-concluido-bg)", color: "var(--status-concluido-color)", icon: "CheckCircle" },
 };
 
 /** Rótulo exibido para um status — clientes Avulsos veem "Entregue" no lugar

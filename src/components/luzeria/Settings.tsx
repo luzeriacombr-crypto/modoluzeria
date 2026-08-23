@@ -410,6 +410,7 @@ function GeneralSettings() {
           orgName={me.orgName ?? ""}
           orgTagline={me.orgTagline ?? ""}
           orgLogoUrl={me.orgLogoUrl ?? null}
+          orgLogoUrlLight={me.orgLogoUrlLight ?? null}
           orgColorPrimary={me.orgColorPrimary ?? "#C8D44E"}
           orgColorPrimaryLight={me.orgColorPrimaryLight ?? "#C8D44E"}
           orgColorSidebar={me.orgColorSidebar ?? "#1A3A2E"}
@@ -917,10 +918,10 @@ function BillingSection() {
 }
 
 function OrgBrandingSection({
-  orgId, orgName, orgTagline, orgLogoUrl, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar,
+  orgId, orgName, orgTagline, orgLogoUrl, orgLogoUrlLight, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar,
   orgFeedPreviewImageUrl, orgFaviconUrl, borderRadius, heroGradientFrom, heroGradientTo,
 }: {
-  orgId: string; orgName: string; orgTagline: string; orgLogoUrl: string | null;
+  orgId: string; orgName: string; orgTagline: string; orgLogoUrl: string | null; orgLogoUrlLight: string | null;
   orgColorPrimary: string; orgColorPrimaryLight: string; orgColorSidebar: string;
   orgFeedPreviewImageUrl: string | null; orgFaviconUrl: string | null; borderRadius: number;
   heroGradientFrom: string | null; heroGradientTo: string | null;
@@ -935,6 +936,7 @@ function OrgBrandingSection({
   const [heroFrom, setHeroFrom] = useState(heroGradientFrom);
   const [heroTo, setHeroTo] = useState(heroGradientTo);
   const [uploading, setUploading] = useState(false);
+  const [uploadingLight, setUploadingLight] = useState(false);
   const [uploadingPreview, setUploadingPreview] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
 
@@ -991,6 +993,36 @@ function OrgBrandingSection({
   function removeLogo() {
     updateMyOrg.mutate({ data: { logoPath: null } }, {
       onSuccess: () => toast.success("Logo removida."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
+    });
+  }
+
+  async function pickLogoLight(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Escolha um arquivo de imagem."); return; }
+    if (file.size > MAX_LOGO_BYTES) { toast.error("Imagem muito grande (máximo 3 MB)."); return; }
+    setUploadingLight(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `org-logos-light/${orgId}/logo-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        contentType: file.type, upsert: true,
+      });
+      if (upErr) throw upErr;
+      await updateMyOrg.mutateAsync({ data: { logoPathLight: path } });
+      toast.success("Logo do modo claro atualizada.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao enviar a logo.");
+    } finally {
+      setUploadingLight(false);
+    }
+  }
+
+  function removeLogoLight() {
+    updateMyOrg.mutate({ data: { logoPathLight: null } }, {
+      onSuccess: () => toast.success("Logo do modo claro removida — volta a usar a mesma dos dois temas."),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
     });
   }
@@ -1066,27 +1098,60 @@ function OrgBrandingSection({
           A tela de login em si continua igual pra todas as agências.
         </p>
 
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-md bg-black/30 border border-foreground/10 flex items-center justify-center overflow-hidden shrink-0">
-            {orgLogoUrl ? (
-              <img src={orgLogoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
-            ) : (
-              <span className="text-[10px] text-foreground/30 text-center px-1">Sem logo</span>
-            )}
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <p className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-2">Logo (modo escuro)</p>
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-md bg-black/30 border border-foreground/10 flex items-center justify-center overflow-hidden shrink-0">
+                {orgLogoUrl ? (
+                  <img src={orgLogoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
+                ) : (
+                  <span className="text-[10px] text-foreground/30 text-center px-1">Sem logo</span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <label className="lz-btn-ghost text-xs px-4 py-2 rounded-md cursor-pointer disabled:opacity-50">
+                  {uploading ? "Enviando…" : "Enviar logo"}
+                  <input type="file" accept="image/*" className="hidden" onChange={pickLogo} disabled={uploading} />
+                </label>
+                {orgLogoUrl && (
+                  <button onClick={removeLogo} disabled={updateMyOrg.isPending}
+                    className="text-[11px] text-foreground/50 hover:text-red-400 transition disabled:opacity-50">
+                    Remover
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <label className="lz-btn-ghost text-xs px-4 py-2 rounded-md cursor-pointer disabled:opacity-50">
-              {uploading ? "Enviando…" : "Enviar logo"}
-              <input type="file" accept="image/*" className="hidden" onChange={pickLogo} disabled={uploading} />
-            </label>
-            {orgLogoUrl && (
-              <button onClick={removeLogo} disabled={updateMyOrg.isPending}
-                className="text-[11px] text-foreground/50 hover:text-red-400 transition disabled:opacity-50">
-                Remover
-              </button>
-            )}
+          <div>
+            <p className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-2">Logo (modo claro) — opcional</p>
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-md bg-white border border-foreground/10 flex items-center justify-center overflow-hidden shrink-0">
+                {orgLogoUrlLight ? (
+                  <img src={orgLogoUrlLight} alt="Logo (claro)" className="max-h-full max-w-full object-contain" />
+                ) : (
+                  <span className="text-[10px] text-black/30 text-center px-1">Usa a mesma</span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <label className="lz-btn-ghost text-xs px-4 py-2 rounded-md cursor-pointer disabled:opacity-50">
+                  {uploadingLight ? "Enviando…" : "Enviar logo"}
+                  <input type="file" accept="image/*" className="hidden" onChange={pickLogoLight} disabled={uploadingLight} />
+                </label>
+                {orgLogoUrlLight && (
+                  <button onClick={removeLogoLight} disabled={updateMyOrg.isPending}
+                    className="text-[11px] text-foreground/50 hover:text-red-400 transition disabled:opacity-50">
+                    Remover
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
+        <p className="text-[10.5px] text-foreground/35 leading-relaxed -mt-1">
+          Se a sua logo não fica boa no fundo branco do modo claro (por ser branca, ou muito clara), envie uma
+          segunda versão aqui — só pra esse tema. Se não enviar, o app usa a mesma logo nos dois.
+        </p>
 
         <Field label="Nome da agência">
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} className="lz-input" />

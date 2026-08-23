@@ -208,6 +208,41 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   --lz-surface-raised: #1E1E1E;
   --lz-border-soft: rgba(255, 255, 255, 0.05);
   --lz-border-strong: rgba(255, 255, 255, 0.14);
+
+  /* Cores dos status de conteúdo (STATUS_META em types.ts) — pares
+   * bg/color feitos pra ler bem no escuro (fundo bem escuro + texto vivo).
+   * O modo claro sobrescreve os dois abaixo com a mesma cor "accent",
+   * só invertendo a intensidade (fundo clarinho + texto escurecido). */
+  --status-planejamento-bg: #1E2A3A;
+  --status-planejamento-color: #7EB3FF;
+  --status-copy-bg: #2A1E3A;
+  --status-copy-color: #B97EFF;
+  --status-revisao-interna-bg: #2A2A1E;
+  --status-revisao-interna-color: #FFD97E;
+  --status-revisao-cliente-bg: #0D2B4A;
+  --status-revisao-cliente-color: #4A9EFF;
+  --status-agendamento-bg: #1A2E2A;
+  --status-agendamento-color: #7EFFD9;
+  --status-revisao-agendamento-bg: #2A1E1E;
+  --status-revisao-agendamento-color: #FF9E7E;
+  --status-pronto-bg: #1A3A1A;
+  --status-pronto-color: rgb(var(--lz-brand-rgb));
+  --status-finalizado-bg: #20242A;
+  --status-finalizado-color: #9AA4B2;
+  --status-travado-bg: #3A1A1A;
+  --status-travado-color: #FF6B6B;
+  --status-criacao-bg: #3D2B5E;
+  --status-criacao-color: #C084FC;
+  --status-revisao-arte-bg: #4A2800;
+  --status-revisao-arte-color: #FF8C42;
+  --status-gravacao-bg: #1A1A3A;
+  --status-gravacao-color: #7E9EFF;
+  --status-edicao-bg: #2A1A2A;
+  --status-edicao-color: #FF7EE8;
+  --status-pendente-bg: #2A2A1E;
+  --status-pendente-color: #FFD97E;
+  --status-concluido-bg: #1A3A1A;
+  --status-concluido-color: rgb(var(--lz-brand-rgb));
 }
 
 /* Modo claro — ativado adicionando .light em <html> (ver theme-store.ts).
@@ -244,6 +279,40 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   --lz-surface-raised: #FCFCFB;
   --lz-border-soft: rgba(22, 23, 27, 0.06);
   --lz-border-strong: rgba(22, 23, 27, 0.16);
+
+  /* Mesma cor "accent" de cada status, só invertendo intensidade: no escuro
+   * é fundo-escuro-com-texto-vivo, aqui é fundo-clarinho-com-texto-escuro —
+   * senão o texto vivo (feito pra contrastar com preto) some no branco. */
+  --status-planejamento-bg: color-mix(in srgb, #7EB3FF 15%, white);
+  --status-planejamento-color: color-mix(in srgb, #7EB3FF 60%, black);
+  --status-copy-bg: color-mix(in srgb, #B97EFF 15%, white);
+  --status-copy-color: color-mix(in srgb, #B97EFF 60%, black);
+  --status-revisao-interna-bg: color-mix(in srgb, #FFD97E 18%, white);
+  --status-revisao-interna-color: color-mix(in srgb, #FFD97E 65%, black);
+  --status-revisao-cliente-bg: color-mix(in srgb, #4A9EFF 15%, white);
+  --status-revisao-cliente-color: color-mix(in srgb, #4A9EFF 60%, black);
+  --status-agendamento-bg: color-mix(in srgb, #7EFFD9 18%, white);
+  --status-agendamento-color: color-mix(in srgb, #7EFFD9 65%, black);
+  --status-revisao-agendamento-bg: color-mix(in srgb, #FF9E7E 18%, white);
+  --status-revisao-agendamento-color: color-mix(in srgb, #FF9E7E 60%, black);
+  --status-pronto-bg: color-mix(in srgb, rgb(var(--lz-brand-rgb)) 15%, white);
+  --status-pronto-color: color-mix(in srgb, rgb(var(--lz-brand-rgb)) 55%, black);
+  --status-finalizado-bg: color-mix(in srgb, #9AA4B2 20%, white);
+  --status-finalizado-color: color-mix(in srgb, #9AA4B2 70%, black);
+  --status-travado-bg: color-mix(in srgb, #FF6B6B 15%, white);
+  --status-travado-color: color-mix(in srgb, #FF6B6B 65%, black);
+  --status-criacao-bg: color-mix(in srgb, #C084FC 15%, white);
+  --status-criacao-color: color-mix(in srgb, #C084FC 60%, black);
+  --status-revisao-arte-bg: color-mix(in srgb, #FF8C42 18%, white);
+  --status-revisao-arte-color: color-mix(in srgb, #FF8C42 60%, black);
+  --status-gravacao-bg: color-mix(in srgb, #7E9EFF 15%, white);
+  --status-gravacao-color: color-mix(in srgb, #7E9EFF 60%, black);
+  --status-edicao-bg: color-mix(in srgb, #FF7EE8 15%, white);
+  --status-edicao-color: color-mix(in srgb, #FF7EE8 60%, black);
+  --status-pendente-bg: color-mix(in srgb, #FFD97E 18%, white);
+  --status-pendente-color: color-mix(in srgb, #FFD97E 65%, black);
+  --status-concluido-bg: color-mix(in srgb, rgb(var(--lz-brand-rgb)) 15%, white);
+  --status-concluido-color: color-mix(in srgb, rgb(var(--lz-brand-rgb)) 55%, black);
 }
 
 @layer base {
