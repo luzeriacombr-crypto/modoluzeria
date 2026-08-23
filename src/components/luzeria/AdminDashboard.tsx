@@ -171,7 +171,7 @@ export function AdminDashboard() {
         <div className="relative grid md:grid-cols-[1fr_auto] gap-8 p-6 md:p-8 items-center">
           <div className="text-center md:text-left flex flex-col items-center md:items-start">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+              style={{ backgroundColor: "var(--lz-hero-badge-bg)", color: "var(--lz-accent-ink)" }}>
               <Sparkles size={11} /> Dashboard
             </div>
             <h1
@@ -690,8 +690,8 @@ function BigDonut({ percent, done, total }: { percent: number; done: number; tot
       <svg width={size} height={size} className="-rotate-90">
         <defs>
           <linearGradient id="bigdonut" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="rgb(var(--lz-brand-rgb))" />
-            <stop offset="100%" stopColor="rgb(var(--lz-brand-light-rgb))" />
+            <stop offset="0%" stopColor="var(--lz-donut-stop1)" />
+            <stop offset="100%" stopColor="var(--lz-donut-stop2)" />
           </linearGradient>
         </defs>
         <circle cx={size/2} cy={size/2} r={r} stroke="color-mix(in srgb, var(--foreground) 6%, transparent)" strokeWidth={stroke} fill="none" />

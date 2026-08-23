@@ -525,6 +525,74 @@ export const getPublicDriveThumbnail = createServerFn({ method: "GET" })
     return { dataUrl };
   });
 
+/* ============ PUBLIC: download original files by token + itemId ============ */
+
+export const getPublicItemFiles = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string; itemId: string }) =>
+    z.object({ token: z.string().min(8).max(60), itemId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+    );
+    const { data: clientId } = await supabase.rpc("get_client_id_for_token", { _token: data.token });
+    if (!clientId) return [];
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // O item precisa realmente pertencer ao cliente do token — sem isso,
+    // qualquer link público serviria pra listar arquivos de qualquer item
+    // de qualquer cliente da agência.
+    const { data: item } = await supabaseAdmin
+      .from("content_items")
+      .select("id, months!inner(client_id)")
+      .eq("id", data.itemId)
+      .eq("months.client_id", clientId as string)
+      .maybeSingle();
+    if (!item) return [];
+    const { data: rows, error } = await supabaseAdmin
+      .from("item_files")
+      .select("drive_file_id, name")
+      .eq("item_id", data.itemId)
+      .eq("kind", "media")
+      .order("sort_order")
+      .order("created_at");
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r: any) => ({ driveFileId: r.drive_file_id as string, name: r.name as string }));
+  });
+
+export const getPublicDriveVideoToken = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string; fileId: string }) =>
+    z.object({ token: z.string().min(8).max(60), fileId: z.string().min(5).max(200) }).parse(d))
+  .handler(async ({ data }) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+    );
+    // Mesma checagem por-arquivo que getPublicDriveThumbnail já usa — sem
+    // isso, o link público viraria uma forma de trocar por um token de
+    // acesso ao Drive da agência pra qualquer fileId, não só os do preview.
+    const { data: ok } = await supabase.rpc("verify_public_token_file", {
+      _token: data.token,
+      _file_id: data.fileId,
+    });
+    if (!ok) throw new Error("Arquivo não encontrado nesse link.");
+    const { data: orgId } = await supabase.rpc("get_org_id_for_token", { _token: data.token });
+    if (!orgId) throw new Error("Link inválido.");
+    return withDriveOrg(orgId as string, async () => {
+      const token = await getAccessToken();
+      const meta: any = await driveFetch(
+        `/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=mimeType,name&supportsAllDrives=true`,
+      );
+      return {
+        token,
+        url: `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(data.fileId)}?alt=media&supportsAllDrives=true`,
+        mimeType: (meta?.mimeType as string) ?? "video/mp4",
+        name: (meta?.name as string) ?? "arquivo",
+      };
+    });
+  });
+
 /* ============ PUBLIC: add feedback ============ */
 
 export const addPublicFeedback = createServerFn({ method: "POST" })

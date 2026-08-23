@@ -112,7 +112,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             <button key={t.id} onClick={() => setTab(t.id as any)}
               className="shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
               style={{
-                color: active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
+                color: active ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
                 borderColor: active ? "rgb(var(--lz-brand-rgb))" : "transparent",
               }}>
               {t.label}

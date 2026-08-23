@@ -2,9 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { publicFeedQO } from "@/lib/luzeria/queries";
-import { addPublicFeedback, approvePublicFeed, approvePublicItem } from "@/lib/luzeria/feed-share.functions";
-import { Film, Layers, AlertTriangle, type LucideIcon } from "lucide-react";
+import { addPublicFeedback, approvePublicFeed, approvePublicItem, getPublicItemFiles, getPublicDriveVideoToken } from "@/lib/luzeria/feed-share.functions";
+import { downloadDriveFiles } from "@/lib/luzeria/drive-download";
+import { Film, Layers, AlertTriangle, Download, Loader2, type LucideIcon } from "lucide-react";
 import { Hammer, ClipboardCheck, Rocket, CheckCheck } from "lucide-react";
 import { InstagramPostModal, type IGModalItem } from "@/components/luzeria/InstagramPostModal";
 import { PublicProgressBar } from "@/components/luzeria/PublicProgressBar";
@@ -141,6 +143,11 @@ function PublicPreviewPage() {
             </div>
           </div>
         </div>
+        {items.length > 0 && (
+          <div className="mt-4">
+            <PublicDownloadAllButton token={token} items={items} />
+          </div>
+        )}
       </div>
 
       {/* Grid */}
@@ -326,6 +333,43 @@ function PublicGridCell({ item, onClick }: {
         </span>
       </div>
       {clickable && <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />}
+    </button>
+  );
+}
+
+function PublicDownloadAllButton({ token, items }: { token: string; items: { id: string }[] }) {
+  const [downloading, setDownloading] = useState(false);
+  const fetchItemFiles = useServerFn(getPublicItemFiles);
+  const fetchDriveTokenRaw = useServerFn(getPublicDriveVideoToken);
+  const fetchDriveToken = (opts: { data: { fileId: string } }) =>
+    fetchDriveTokenRaw({ data: { token, fileId: opts.data.fileId } });
+
+  async function handleDownloadAll() {
+    setDownloading(true);
+    try {
+      const fileLists = await Promise.all(items.map((i) => fetchItemFiles({ data: { token, itemId: i.id } })));
+      const allFiles = fileLists.flat().map((f) => ({ driveFileId: f.driveFileId, name: f.name }));
+      if (allFiles.length === 0) { toast.error("Nenhum arquivo pra baixar ainda."); return; }
+      await downloadDriveFiles(fetchDriveToken, allFiles);
+      toast.success(`${allFiles.length} arquivo${allFiles.length === 1 ? "" : "s"} baixado${allFiles.length === 1 ? "" : "s"}.`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao baixar arquivos.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleDownloadAll}
+      disabled={downloading}
+      title="Baixa os arquivos originais (posts e reels) direto do Drive, sem perda de qualidade"
+      className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider px-3.5 py-2 rounded-full transition disabled:opacity-50"
+      style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.1)" }}
+    >
+      {downloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+      {downloading ? "Baixando…" : "Baixar tudo em alta qualidade"}
     </button>
   );
 }

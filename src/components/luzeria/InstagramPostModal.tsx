@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Heart, MessageCircle, Pause, Play, Send, Share2, X, Bookmark, Calendar, Pencil } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { ChevronLeft, ChevronRight, Heart, MessageCircle, Pause, Play, Send, Share2, X, Bookmark, Calendar, Pencil, Download, Loader2 } from "lucide-react";
 import { driveThumbnailQO, publicDriveThumbQO } from "@/lib/luzeria/queries";
+import { listItemFiles, getDriveVideoToken } from "@/lib/luzeria/drive.functions";
+import { getPublicItemFiles, getPublicDriveVideoToken } from "@/lib/luzeria/feed-share.functions";
+import { downloadDriveFiles } from "@/lib/luzeria/drive-download";
 
 /* ------------ Shared types ------------ */
 export type IGModalFile = {
@@ -138,6 +143,34 @@ export function InstagramPostModal({
   const [itemApproved, setItemApproved] = useState(false);
   const [itemApproving, setItemApproving] = useState(false);
   const isPublic = mode.kind === "public";
+
+  // Baixar em alta qualidade — mesma lógica interna e pública, só troca
+  // qual server fn é chamada (a pública valida o token por arquivo).
+  const [downloading, setDownloading] = useState(false);
+  const fetchInternalFiles = useServerFn(listItemFiles);
+  const fetchInternalToken = useServerFn(getDriveVideoToken);
+  const fetchPublicFiles = useServerFn(getPublicItemFiles);
+  const fetchPublicTokenRaw = useServerFn(getPublicDriveVideoToken);
+  async function downloadOriginals() {
+    setDownloading(true);
+    try {
+      const shareToken = isPublic ? (mode as { kind: "public"; token: string }).token : null;
+      const files = isPublic && shareToken
+        ? await fetchPublicFiles({ data: { token: shareToken, itemId: item.id } })
+        : await fetchInternalFiles({ data: { itemId: item.id } });
+      const allFiles = files.map((f: any) => ({ driveFileId: f.driveFileId, name: f.name }));
+      if (allFiles.length === 0) { toast.error("Nenhum arquivo pra baixar ainda."); return; }
+      const fetchToken = isPublic && shareToken
+        ? (opts: { data: { fileId: string } }) => fetchPublicTokenRaw({ data: { token: shareToken, fileId: opts.data.fileId } })
+        : fetchInternalToken;
+      await downloadDriveFiles(fetchToken, allFiles);
+      toast.success(`${allFiles.length} arquivo${allFiles.length === 1 ? "" : "s"} baixado${allFiles.length === 1 ? "" : "s"}.`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao baixar arquivo.");
+    } finally {
+      setDownloading(false);
+    }
+  }
   const feedbackLabel = isPublic ? "Sugestões" : "Comentários";
   const detailsRef = useRef<HTMLDivElement>(null);
 
@@ -320,14 +353,25 @@ export function InstagramPostModal({
               <div className="text-[13px] text-muted-foreground italic">Sem legenda definida.</div>
             )}
 
-            {driveEmbedUrl && (
+            <div className="flex items-center gap-4 mt-3">
+              {driveEmbedUrl && (
+                <button
+                  onClick={() => setPlayingVideo(true)}
+                  className="inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground hover:text-foreground"
+                >
+                  <Play size={13} /> Assistir vídeo
+                </button>
+              )}
               <button
-                onClick={() => setPlayingVideo(true)}
-                className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground hover:text-foreground"
+                onClick={downloadOriginals}
+                disabled={downloading}
+                title="Baixa o(s) arquivo(s) original(is) direto do Drive, sem perda de qualidade"
+                className="inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground hover:text-foreground disabled:opacity-50"
               >
-                <Play size={13} /> Assistir vídeo
+                {downloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                {downloading ? "Baixando…" : "Baixar em alta qualidade"}
               </button>
-            )}
+            </div>
 
             {/* Feedback list */}
             <div className="mt-5 pt-4 border-t border-neutral-200">
