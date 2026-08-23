@@ -52,16 +52,16 @@ export function ClientFichaPanel() {
       <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]" onClick={() => openFicha(null)} />
       <div
         ref={panelRef}
-        className="fixed z-50 bg-[#0D0D0D] border-white/10 flex flex-col lz-slide-in overflow-y-auto
+        className="fixed z-50 bg-background border-foreground/10 flex flex-col lz-slide-in overflow-y-auto
           inset-x-0 bottom-0 max-h-[92vh] rounded-t-2xl border-t
           md:rounded-none md:border-t-0 md:border-l md:right-0 md:top-0 md:bottom-0 md:left-auto md:w-[480px] md:max-h-none"
       >
         <div className="md:hidden flex justify-center pt-2 pb-1">
-          <div className="h-1 w-10 rounded-full bg-white/20" />
+          <div className="h-1 w-10 rounded-full bg-foreground/20" />
         </div>
 
         {/* Header */}
-        <div className="px-6 pt-5 pb-4 border-b border-white/[0.08]">
+        <div className="px-6 pt-5 pb-4 border-b border-foreground/8">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0">
               <div
@@ -71,14 +71,14 @@ export function ClientFichaPanel() {
                 {client.icon ?? client.name[0]?.toUpperCase()}
               </div>
               <div className="min-w-0">
-                <div className="text-[10px] uppercase font-bold tracking-wider" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
+                <div className="text-[10px] uppercase font-bold tracking-wider" style={{ color: "var(--lz-accent-ink)" }}>
                   Ficha do cliente
                 </div>
-                <h2 className="text-[20px] font-bold text-white truncate">{client.name}</h2>
-                <div className="text-[11px] text-white/40">{client.category}</div>
+                <h2 className="text-[20px] font-bold text-foreground truncate">{client.name}</h2>
+                <div className="text-[11px] text-foreground/40">{client.category}</div>
               </div>
             </div>
-            <button onClick={() => openFicha(null)} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition">
+            <button onClick={() => openFicha(null)} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5 transition">
               <X size={16} />
             </button>
           </div>
@@ -118,7 +118,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         <Section label="Métricas">
           <div className="grid grid-cols-2 gap-2">
             <MetricMini icon={<FileText size={13} />} label="Itens totais" value={metrics?.totalItems ?? 0} />
-            <MetricMini icon={<CheckCircle2 size={13} />} label="Prontos" value={metrics?.finalized ?? 0} color="rgb(var(--lz-brand-rgb))" />
+            <MetricMini icon={<CheckCircle2 size={13} />} label="Prontos" value={metrics?.finalized ?? 0} color="var(--lz-accent-ink)" />
             <MetricMini
               icon={<AlertOctagon size={13} />}
               label="Travados"
@@ -129,7 +129,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             <MetricMini icon={<Clock size={13} />} label="Lead time médio" value={formatHours(metrics?.avgLeadTimeHours ?? null)} />
           </div>
           {metrics?.lastDeliveryAt && (
-            <p className="mt-2 text-[10px] text-white/40">
+            <p className="mt-2 text-[10px] text-foreground/40">
               Última entrega: {new Date(metrics.lastDeliveryAt).toLocaleDateString("pt-BR")}
             </p>
           )}
@@ -164,7 +164,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             disabled={!isAdmin}
             rows={4}
             placeholder={isAdmin ? "Tom de voz, nicho, observações, instruções do cliente…" : "Sem descrição."}
-            className="w-full bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 resize-none disabled:opacity-70"
+            className="w-full bg-card border border-foreground/8 rounded-md px-3 py-2.5 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 resize-none disabled:opacity-70"
           />
         </Section>
 
@@ -182,22 +182,22 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         <Section label="Links importantes">
           <div className="space-y-2">
             {(ficha?.links ?? []).length === 0 && (
-              <p className="text-xs text-white/40">Nenhum link cadastrado.</p>
+              <p className="text-xs text-foreground/40">Nenhum link cadastrado.</p>
             )}
             {(ficha?.links ?? []).map((l) => {
               const href = normUrl(l.url);
               return (
-                <div key={l.id} className="flex items-center gap-2 bg-[#1C1C1C] border border-white/[0.06] rounded-md px-3 py-2">
-                  <LinkIcon size={14} style={{ color: "rgb(var(--lz-brand-rgb))" }} className="shrink-0" />
+                <div key={l.id} className="flex items-center gap-2 bg-card border border-foreground/6 rounded-md px-3 py-2">
+                  <LinkIcon size={14} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold text-white truncate">{l.label}</div>
+                    <div className="text-xs font-semibold text-foreground truncate">{l.label}</div>
                     {href ? (
                       <a href={href} target="_blank" rel="noopener noreferrer"
-                        className="text-[11px] text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] truncate inline-flex items-center gap-1">
+                        className="text-[11px] text-foreground/50 hover:text-[var(--lz-accent-ink)] truncate inline-flex items-center gap-1">
                         {l.url} <ExternalLink size={10} />
                       </a>
                     ) : (
-                      <div className="text-[11px] text-white/40 truncate">{l.url}</div>
+                      <div className="text-[11px] text-foreground/40 truncate">{l.url}</div>
                     )}
                   </div>
                   {isAdmin && (
@@ -206,7 +206,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
                         if (await requestConfirm(`Excluir o link "${l.label}"?`, { danger: true }))
                           api.deleteClientLink.mutate({ data: { id: l.id } });
                       }}
-                      className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5"
+                      className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5"
                     ><Trash2 size={13} /></button>
                   )}
                 </div>
@@ -218,8 +218,8 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
 
         {/* Contacts */}
         <Section label="Contatos" id="contatos-section">
-          <div className="mb-3 pb-3 border-b border-white/[0.06]">
-            <label className="flex items-center gap-1.5 text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">
+          <div className="mb-3 pb-3 border-b border-foreground/6">
+            <label className="flex items-center gap-1.5 text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">
               <Users size={11} /> Grupo com o cliente (WhatsApp)
             </label>
             <input
@@ -233,23 +233,23 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
               }}
               disabled={!isAdmin}
               placeholder={isAdmin ? "Link de convite do grupo (chat.whatsapp.com/…)" : "Nenhum grupo cadastrado."}
-              className="w-full bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 disabled:opacity-70"
+              className="w-full bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 disabled:opacity-70"
             />
-            <p className="mt-1 text-[10px] text-white/30">
+            <p className="mt-1 text-[10px] text-foreground/30">
               Quando preenchido, as mensagens de atualização vão pro grupo em vez do contato individual.
             </p>
           </div>
           <div className="space-y-2">
             {(ficha?.contacts ?? []).length === 0 && (
-              <p className="text-xs text-white/40">Nenhum contato cadastrado.</p>
+              <p className="text-xs text-foreground/40">Nenhum contato cadastrado.</p>
             )}
             {(ficha?.contacts ?? []).map((c) => (
-              <div key={c.id} className="bg-[#1C1C1C] border border-white/[0.06] rounded-md px-3 py-2.5">
+              <div key={c.id} className="bg-card border border-foreground/6 rounded-md px-3 py-2.5">
                 <div className="flex items-center gap-2">
-                  <User size={14} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
+                  <User size={14} style={{ color: "var(--lz-accent-ink)" }} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-white truncate">{c.name}</div>
-                    {c.role && <div className="text-[11px] text-white/50">{c.role}</div>}
+                    <div className="text-sm font-semibold text-foreground truncate">{c.name}</div>
+                    {c.role && <div className="text-[11px] text-foreground/50">{c.role}</div>}
                   </div>
                   {isAdmin && (
                     <button
@@ -257,25 +257,25 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
                         if (await requestConfirm(`Excluir o contato "${c.name}"?`, { danger: true }))
                           api.deleteClientContact.mutate({ data: { id: c.id } });
                       }}
-                      className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5"
+                      className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5"
                     ><Trash2 size={13} /></button>
                   )}
                 </div>
                 {(c.email || c.phone) && (
-                  <div className="mt-1.5 flex flex-wrap gap-3 text-[11px] text-white/70">
+                  <div className="mt-1.5 flex flex-wrap gap-3 text-[11px] text-foreground/70">
                     {c.email && (
-                      <a href={`mailto:${c.email}`} className="inline-flex items-center gap-1 hover:text-[rgb(var(--lz-brand-rgb))]">
+                      <a href={`mailto:${c.email}`} className="inline-flex items-center gap-1 hover:text-[var(--lz-accent-ink)]">
                         <Mail size={11} /> {c.email}
                       </a>
                     )}
                     {c.phone && (
-                      <a href={`tel:${c.phone.replace(/\D/g, "")}`} className="inline-flex items-center gap-1 hover:text-[rgb(var(--lz-brand-rgb))]">
+                      <a href={`tel:${c.phone.replace(/\D/g, "")}`} className="inline-flex items-center gap-1 hover:text-[var(--lz-accent-ink)]">
                         <Phone size={11} /> {c.phone}
                       </a>
                     )}
                   </div>
                 )}
-                {c.notes && <div className="mt-1.5 text-[11px] text-white/50 whitespace-pre-wrap">{c.notes}</div>}
+                {c.notes && <div className="mt-1.5 text-[11px] text-foreground/50 whitespace-pre-wrap">{c.notes}</div>}
               </div>
             ))}
             {isAdmin && <AddContactRow clientId={client.id} onSubmit={(d) => api.upsertClientContact.mutate({ data: d })} />}
@@ -285,10 +285,10 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         {/* Secrets - admin only */}
         {isAdmin && (
           <Section label="Senhas e acessos" last={!isMaster}>
-            <div className="mb-2 text-[10px] text-white/40">Visível apenas para administradores.</div>
+            <div className="mb-2 text-[10px] text-foreground/40">Visível apenas para administradores.</div>
             <div className="space-y-2">
               {(ficha?.secrets ?? []).length === 0 && (
-                <p className="text-xs text-white/40">Nenhum acesso cadastrado.</p>
+                <p className="text-xs text-foreground/40">Nenhum acesso cadastrado.</p>
               )}
               {(ficha?.secrets ?? []).map((s) => (
                 <SecretRow key={s.id} secret={s} onDelete={() => api.deleteClientSecret.mutate({ data: { id: s.id } })} />
@@ -301,7 +301,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         {/* Stories (admin) */}
         {isAdmin && (
           <Section label="Stories">
-            <label className="flex items-center gap-2 text-sm text-white/70">
+            <label className="flex items-center gap-2 text-sm text-foreground/70">
               <input
                 type="checkbox"
                 checked={client.notifyStoriesInTasks ?? false}
@@ -309,7 +309,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
               />
               Notificar Stories em Minhas Demandas
             </label>
-            <p className="text-[11px] text-white/40 mt-1.5">
+            <p className="text-[11px] text-foreground/40 mt-1.5">
               Quando ativado, Stories atribuídos deste cliente aparecem na lista de tarefas do responsável — como Posts e Reels.
             </p>
           </Section>
@@ -412,7 +412,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     toast.success("Configuração salva");
   }
 
-  const inp = "w-full bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] transition-colors disabled:opacity-60";
+  const inp = "w-full bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] transition-colors disabled:opacity-60";
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -432,7 +432,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
                 )}
                 {photoUploading && (
                   <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
-                    <Loader2 size={18} className="animate-spin text-white" />
+                    <Loader2 size={18} className="animate-spin text-foreground" />
                   </div>
                 )}
               </div>
@@ -447,7 +447,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
                 <button
                   onClick={() => photoInputRef.current?.click()}
                   disabled={photoUploading}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-white/10 text-white/70 hover:text-white hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
                 >
                   <Camera size={13} /> {photoPreview ? "Alterar foto" : "Adicionar foto"}
                 </button>
@@ -549,7 +549,7 @@ function ClientStageSection({ clientId, isAdmin }: { clientId: string; isAdmin: 
   if (!isAdmin) {
     const current = stages.find((s) => s.id === ficha?.currentStageId);
     return (
-      <p className="text-sm text-white/70">{current ? current.name : "Nenhuma etapa definida ainda."}</p>
+      <p className="text-sm text-foreground/70">{current ? current.name : "Nenhuma etapa definida ainda."}</p>
     );
   }
 
@@ -566,11 +566,11 @@ function ClientStageSection({ clientId, isAdmin }: { clientId: string; isAdmin: 
   return (
     <div>
       <div className="flex items-center gap-2">
-        <Milestone size={14} className="text-white/40 shrink-0" />
+        <Milestone size={14} className="text-foreground/40 shrink-0" />
         <select
           value={ficha?.currentStageId ?? ""}
           onChange={(e) => handleChange(e.target.value)}
-          className="flex-1 bg-[#1C1C1C] border border-white/10 rounded-md px-2.5 py-1.5 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+          className="flex-1 bg-card border border-foreground/10 rounded-md px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
         >
           <option value="" disabled>Selecionar etapa…</option>
           <optgroup label={TRACK_LABEL.operational}>
@@ -622,12 +622,12 @@ function StageUpdateComposer({ composer, whatsappPhone, whatsappGroupLink, onCha
   const hasGroup = !!whatsappGroupLink?.trim();
   const hasTarget = hasGroup || !!whatsappPhone;
   return (
-    <div className="mt-3 bg-[#1C1C1C] border border-white/[0.08] rounded-md p-3 space-y-2">
-      <div className="text-[11px] font-semibold text-white/70">
+    <div className="mt-3 bg-card border border-foreground/8 rounded-md p-3 space-y-2">
+      <div className="text-[11px] font-semibold text-foreground/70">
         {composer.trigger === "weekly_nudge" ? "Lembrete: avisar o cliente sobre o andamento" : "Avisar o cliente sobre a nova etapa"}
       </div>
       {hasGroup && (
-        <div className="text-[10px] text-white/40 inline-flex items-center gap-1">
+        <div className="text-[10px] text-foreground/40 inline-flex items-center gap-1">
           <Users size={10} /> Vai pro grupo com o cliente
         </div>
       )}
@@ -635,10 +635,10 @@ function StageUpdateComposer({ composer, whatsappPhone, whatsappGroupLink, onCha
         value={composer.message}
         onChange={(e) => onChangeMessage(e.target.value)}
         rows={3}
-        className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2.5 py-2 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
+        className="w-full bg-background border border-foreground/10 rounded px-2.5 py-2 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
       />
       <div className="flex items-center justify-between gap-2">
-        <button onClick={onClose} className="text-[11px] text-white/50 hover:text-white px-2 py-1">Fechar</button>
+        <button onClick={onClose} className="text-[11px] text-foreground/50 hover:text-foreground px-2 py-1">Fechar</button>
         {hasTarget ? (
           <button
             onClick={onSend}
@@ -662,7 +662,7 @@ function StageUpdateComposer({ composer, whatsappPhone, whatsappGroupLink, onCha
 function ConfigField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">{label}</span>
+      <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">{label}</span>
       {children}
     </label>
   );
@@ -670,8 +670,8 @@ function ConfigField({ label, children }: { label: string; children: React.React
 
 function Section({ label, children, last, id }: { label: string; children: React.ReactNode; last?: boolean; id?: string }) {
   return (
-    <div id={id} className={`px-6 py-5 ${last ? "" : "border-b border-white/[0.08]"}`}>
-      <div className="text-[10px] uppercase font-bold tracking-wider mb-3" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{label}</div>
+    <div id={id} className={`px-6 py-5 ${last ? "" : "border-b border-foreground/8"}`}>
+      <div className="text-[10px] uppercase font-bold tracking-wider mb-3" style={{ color: "var(--lz-accent-ink)" }}>{label}</div>
       {children}
     </div>
   );
@@ -720,18 +720,18 @@ function InstagramSection({ clientId }: { clientId: string }) {
 
   return (
     <div>
-      <p className="text-[11px] text-white/40 mb-3">
+      <p className="text-[11px] text-foreground/40 mb-3">
         Conecte a conta do Instagram (Business ou Criador de Conteúdo) desse cliente pra poder publicar Posts direto pelo Modo Criador.
       </p>
       {status.isLoading ? (
-        <div className="text-white/40 text-sm">Verificando…</div>
+        <div className="text-foreground/40 text-sm">Verificando…</div>
       ) : data?.connected ? (
         <div className="flex items-center justify-between">
-          <div className="text-sm text-[rgb(var(--lz-brand-rgb))] font-medium flex items-center gap-1.5">
+          <div className="text-sm text-[var(--lz-accent-ink)] font-medium flex items-center gap-1.5">
             <Instagram size={14} /> Conectado{data.igUsername ? ` — @${data.igUsername}` : ""}
           </div>
           <button onClick={handleDisconnect} disabled={disconnecting}
-            className="text-[11px] text-white/50 hover:text-red-400 transition disabled:opacity-50">
+            className="text-[11px] text-foreground/50 hover:text-red-400 transition disabled:opacity-50">
             Desconectar
           </button>
         </div>
@@ -743,7 +743,7 @@ function InstagramSection({ clientId }: { clientId: string }) {
         </button>
       ) : (
         <button disabled title="Ainda em revisão junto à Meta — em breve"
-          className="text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 opacity-40 cursor-not-allowed border border-white/[0.08] text-white/60">
+          className="text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 opacity-40 cursor-not-allowed border border-foreground/8 text-foreground/60">
           <Instagram size={14} />
           Conectar Instagram
           <span className="text-[10px] uppercase tracking-wider">· Em breve</span>
@@ -795,18 +795,18 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-white/50 leading-relaxed">
-        Todos os uploads desse cliente vão para esta pasta, em subpasta <span className="text-white/80">[Mês Ano]</span>.
+      <p className="text-[11px] text-foreground/50 leading-relaxed">
+        Todos os uploads desse cliente vão para esta pasta, em subpasta <span className="text-foreground/80">[Mês Ano]</span>.
       </p>
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
-          <FolderOpen size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/40" />
+          <FolderOpen size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground/40" />
           <input
             value={value}
             disabled={!isAdmin || isLoading || busy}
             onChange={(e) => { setValue(e.target.value); setDirty(true); }}
             placeholder="https://drive.google.com/drive/folders/…"
-            className="w-full pl-8 pr-3 py-2 bg-[#1C1C1C] border border-white/[0.08] rounded-md text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 disabled:opacity-60"
+            className="w-full pl-8 pr-3 py-2 bg-card border border-foreground/8 rounded-md text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 disabled:opacity-60"
           />
         </div>
         <div className="flex gap-2">
@@ -814,7 +814,7 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
             type="button"
             disabled={!openHref}
             onClick={() => openHref && window.open(openHref, "_blank", "noopener,noreferrer")}
-            className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-[11px] font-semibold border border-white/15 text-white/80 hover:text-white hover:border-white/30 disabled:opacity-30 disabled:cursor-not-allowed transition"
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 disabled:opacity-30 disabled:cursor-not-allowed transition"
             title="Abrir pasta no Drive"
           >
             Abrir pasta <ExternalLink size={11} />
@@ -837,13 +837,13 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
           type="button"
           onClick={clear}
           disabled={busy}
-          className="text-[10px] text-white/40 hover:text-red-400 inline-flex items-center gap-1 mt-1"
+          className="text-[10px] text-foreground/40 hover:text-red-400 inline-flex items-center gap-1 mt-1"
         >
           <Trash2 size={10} /> Remover pasta
         </button>
       )}
       {!isAdmin && !data?.folderId && (
-        <p className="text-[10px] text-white/40">Nenhuma pasta configurada. Peça a um administrador.</p>
+        <p className="text-[10px] text-foreground/40">Nenhuma pasta configurada. Peça a um administrador.</p>
       )}
     </div>
   );
@@ -854,12 +854,12 @@ function MetricMini({ icon, label, value, color, onClick }: { icon: React.ReactN
   return (
     <Comp
       onClick={onClick}
-      className={`bg-[#1C1C1C] rounded-md px-3 py-2.5 text-left w-full ${onClick ? "hover:bg-[#242424] transition cursor-pointer" : ""}`}
+      className={`bg-card rounded-md px-3 py-2.5 text-left w-full ${onClick ? "hover:bg-[#242424] transition cursor-pointer" : ""}`}
     >
-      <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-white/50">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-foreground/50">
         {icon} {label}
       </div>
-      <div className="text-xl font-bold tabular-nums mt-0.5" style={{ color: color ?? "#FFFFFF" }}>{value}</div>
+      <div className="text-xl font-bold tabular-nums mt-0.5" style={{ color: color ?? "var(--foreground)" }}>{value}</div>
     </Comp>
   );
 }
@@ -872,12 +872,12 @@ function AddLinkRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d: an
       <input
         value={label} onChange={(e) => setLabel(e.target.value)}
         placeholder="Rótulo (ex.: Drive principal)"
-        className="sm:w-40 bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
+        className="sm:w-40 bg-card border border-foreground/8 rounded-md px-3 py-2 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30"
       />
       <input
         value={url} onChange={(e) => setUrl(e.target.value)}
         placeholder="https://…"
-        className="flex-1 bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
+        className="flex-1 bg-card border border-foreground/8 rounded-md px-3 py-2 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30"
       />
       <button
         disabled={!label.trim() || !url.trim()}
@@ -902,23 +902,23 @@ function AddContactRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d:
   if (!open) {
     return (
       <button onClick={() => setOpen(true)}
-        className="w-full mt-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 py-2 text-[11px] text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))]">
+        className="w-full mt-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-foreground/15 py-2 text-[11px] text-foreground/50 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))]">
         <Plus size={12} /> Novo contato
       </button>
     );
   }
   return (
-    <div className="bg-[#1C1C1C] border border-white/[0.08] rounded-md p-3 space-y-2">
+    <div className="bg-card border border-foreground/8 rounded-md p-3 space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
-        <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Cargo" className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Telefone" className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+        <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Cargo" className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Telefone" className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
       </div>
       <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observações" rows={2}
-        className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none" />
+        className="w-full bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none" />
       <div className="flex items-center justify-end gap-2">
-        <button onClick={() => setOpen(false)} className="text-[11px] text-white/50 hover:text-white px-2 py-1">Cancelar</button>
+        <button onClick={() => setOpen(false)} className="text-[11px] text-foreground/50 hover:text-foreground px-2 py-1">Cancelar</button>
         <button
           disabled={!name.trim()}
           onClick={() => {
@@ -964,13 +964,13 @@ function OnboardingBlock({ clientId }: { clientId: string }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2 gap-2">
-        <span className="text-xs text-white/60">
+        <span className="text-xs text-foreground/60">
           {list.length ? `${done}/${list.length} concluído` : "Nenhuma etapa cadastrada."}
         </span>
         <div className="flex items-center gap-2">
           {allDone && (
             <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1"
-              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
               <CheckCircle2 size={11} /> Onboarding completo
             </span>
           )}
@@ -979,7 +979,7 @@ function OnboardingBlock({ clientId }: { clientId: string }) {
               onClick={saveAsDefault}
               disabled={api.setOnboardingDefaults.isPending}
               title="Torna este checklist o padrão para todos os clientes (existentes e novos)"
-              className="shrink-0 text-[10px] uppercase font-semibold tracking-wide px-2 py-1 rounded text-white/50 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40"
+              className="shrink-0 text-[10px] uppercase font-semibold tracking-wide px-2 py-1 rounded text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-40"
             >
               Salvar como padrão
             </button>
@@ -993,23 +993,23 @@ function OnboardingBlock({ clientId }: { clientId: string }) {
               onClick={() => save(list.map((x) => x.id === c.id ? { ...x, done: !x.done } : x))}
               className="h-4 w-4 rounded border flex items-center justify-center shrink-0"
               style={{
-                borderColor: c.done ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.25)",
+                borderColor: c.done ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 25%, transparent)",
                 backgroundColor: c.done ? "rgb(var(--lz-brand-rgb))" : "transparent",
               }}
             >{c.done && <Check size={10} color="#0D0D0D" strokeWidth={3} />}</button>
             <input
               value={c.text}
               onChange={(e) => save(list.map((x) => x.id === c.id ? { ...x, text: e.target.value } : x))}
-              className={`flex-1 bg-transparent text-sm outline-none ${c.done ? "line-through text-white/40" : "text-white/90"}`}
+              className={`flex-1 bg-transparent text-sm outline-none ${c.done ? "line-through text-foreground/40" : "text-foreground/90"}`}
             />
             <button
               onClick={() => save(list.filter((x) => x.id !== c.id))}
-              className="opacity-0 group-hover:opacity-100 p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5"
+              className="opacity-0 group-hover:opacity-100 p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5"
             ><Trash2 size={11} /></button>
           </div>
         ))}
         <div className="flex items-center gap-2 mt-1">
-          <ListChecks size={13} className="text-white/30 shrink-0" />
+          <ListChecks size={13} className="text-foreground/30 shrink-0" />
           <input
             value={newItem}
             onChange={(e) => setNewItem(e.target.value)}
@@ -1022,12 +1022,12 @@ function OnboardingBlock({ clientId }: { clientId: string }) {
               }
             }}
             placeholder="Ex.: Acesso ao Drive, briefing assinado, identidade visual…"
-            className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/30 border-b border-white/[0.06] focus:border-[rgb(var(--lz-brand-rgb))] py-1"
+            className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-foreground/30 border-b border-foreground/6 focus:border-[rgb(var(--lz-brand-rgb))] py-1"
           />
         </div>
       </div>
       {onboarding?.completedAt && (
-        <p className="text-[10px] text-white/40 mt-3">
+        <p className="text-[10px] text-foreground/40 mt-3">
           Concluído em {new Date(onboarding.completedAt).toLocaleDateString("pt-BR")}
         </p>
       )}
@@ -1045,12 +1045,12 @@ function RecurringBlock({ clientId }: { clientId: string }) {
 
   return (
     <div>
-      <p className="text-[11px] text-white/50 mb-3">
+      <p className="text-[11px] text-foreground/50 mb-3">
         Tarefas geradas automaticamente. Use "Gerar agora" para criar os itens dos próximos 14 dias.
       </p>
       <div className="space-y-2">
         {templates.length === 0 && !adding && (
-          <p className="text-xs text-white/40">Nenhuma recorrência cadastrada.</p>
+          <p className="text-xs text-foreground/40">Nenhuma recorrência cadastrada.</p>
         )}
         {templates.map((t) => (
           <RecurringRow
@@ -1073,7 +1073,7 @@ function RecurringBlock({ clientId }: { clientId: string }) {
       <div className="flex items-center gap-2 mt-3">
         {!adding && (
           <button onClick={() => setAdding(true)}
-            className="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 py-2 text-[11px] text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))]">
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-foreground/15 py-2 text-[11px] text-foreground/50 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))]">
             <Plus size={12} /> Nova recorrência
           </button>
         )}
@@ -1084,7 +1084,7 @@ function RecurringBlock({ clientId }: { clientId: string }) {
             })}
             disabled={api.generateRecurring.isPending}
             className="px-3 py-2 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 disabled:opacity-40"
-            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
           ><Zap size={12} /> {api.generateRecurring.isPending ? "Gerando…" : "Gerar agora"}</button>
         )}
       </div>
@@ -1101,19 +1101,19 @@ function RecurringRow({ tpl, profiles, onUpdate, onDelete }: {
     : `Dia ${tpl.dayOfMonth ?? 1} do mês`;
   const typeLabel = CONTENT_TYPE_LABEL[tpl.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item";
   return (
-    <div className="bg-[#1C1C1C] border border-white/[0.06] rounded-md px-3 py-2.5">
+    <div className="bg-card border border-foreground/6 rounded-md px-3 py-2.5">
       <div className="flex items-center gap-2">
-        <Repeat size={13} style={{ color: tpl.active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.3)" }} />
+        <Repeat size={13} style={{ color: tpl.active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 30%, transparent)" }} />
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-white truncate">{tpl.title}</div>
-          <div className="text-[10px] text-white/40">{typeLabel} · {when}</div>
+          <div className="text-sm font-semibold text-foreground truncate">{tpl.title}</div>
+          <div className="text-[10px] text-foreground/40">{typeLabel} · {when}</div>
         </div>
         <button
           onClick={() => onUpdate({ active: !tpl.active })}
-          className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5"
+          className="p-1 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5"
           title={tpl.active ? "Desativar" : "Ativar"}
         ><Power size={12} /></button>
-        <button onClick={onDelete} className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5">
+        <button onClick={onDelete} className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5">
           <Trash2 size={12} />
         </button>
       </div>
@@ -1122,13 +1122,13 @@ function RecurringRow({ tpl, profiles, onUpdate, onDelete }: {
           {tpl.defaultAssignees.map((uid: string) => {
             const p = profiles.find((x) => x.id === uid);
             return p ? (
-              <span key={uid} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/70">{p.name}</span>
+              <span key={uid} className="text-[10px] px-1.5 py-0.5 rounded bg-foreground/5 text-foreground/70">{p.name}</span>
             ) : null;
           })}
         </div>
       )}
       {tpl.lastGeneratedAt && (
-        <div className="text-[10px] text-white/30 mt-1">Última geração: {new Date(tpl.lastGeneratedAt).toLocaleDateString("pt-BR")}</div>
+        <div className="text-[10px] text-foreground/30 mt-1">Última geração: {new Date(tpl.lastGeneratedAt).toLocaleDateString("pt-BR")}</div>
       )}
     </div>
   );
@@ -1145,12 +1145,12 @@ function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
   const [assignees, setAssignees] = useState<string[]>([]);
 
   return (
-    <div className="bg-[#1C1C1C] border border-white/[0.08] rounded-md p-3 space-y-2">
+    <div className="bg-card border border-foreground/8 rounded-md p-3 space-y-2">
       <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título da tarefa recorrente"
-        className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+        className="w-full bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
       <div className="grid grid-cols-3 gap-2">
         <select value={type} onChange={(e) => setType(e.target.value as any)}
-          className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
+          className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
           <option value="post">Post</option>
           <option value="reel">Reel</option>
           <option value="outros">Outro</option>
@@ -1159,24 +1159,24 @@ function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
           <option value="sistema">Sistema</option>
         </select>
         <select value={cadence} onChange={(e) => setCadence(e.target.value as any)}
-          className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
+          className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
           <option value="weekly">Semanal</option>
           <option value="monthly">Mensal</option>
         </select>
         {cadence === "weekly" ? (
           <select value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))}
-            className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
+            className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
             {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d, i) => (
               <option key={i} value={i}>{d}</option>
             ))}
           </select>
         ) : (
           <input type="number" min={1} max={31} value={dayOfMonth} onChange={(e) => setDayOfMonth(Number(e.target.value))}
-            className="bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+            className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
         )}
       </div>
       <div>
-        <div className="text-[10px] uppercase tracking-wider text-white/40 mb-1">Responsáveis padrão</div>
+        <div className="text-[10px] uppercase tracking-wider text-foreground/40 mb-1">Responsáveis padrão</div>
         <div className="flex flex-wrap gap-1.5">
           {profiles.filter((p) => p.active).map((p) => {
             const sel = assignees.includes(p.id);
@@ -1184,14 +1184,14 @@ function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
               <button key={p.id}
                 onClick={() => setAssignees((a) => sel ? a.filter((x) => x !== p.id) : [...a, p.id])}
                 className="px-2 py-1 rounded text-[10px] font-semibold transition-colors"
-                style={{ backgroundColor: sel ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)", color: sel ? "#0D0D0D" : "#FFFFFF" }}
+                style={{ backgroundColor: sel ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)", color: sel ? "#0D0D0D" : "#FFFFFF" }}
               >{p.name}</button>
             );
           })}
         </div>
       </div>
       <div className="flex items-center justify-end gap-2">
-        <button onClick={onCancel} className="text-[11px] text-white/50 hover:text-white px-2 py-1">Cancelar</button>
+        <button onClick={onCancel} className="text-[11px] text-foreground/50 hover:text-foreground px-2 py-1">Cancelar</button>
         <button disabled={!title.trim()}
           onClick={() => onSubmit({
             clientId, type, title: title.trim(), cadence,
@@ -1210,11 +1210,11 @@ function SecretRow({ secret, onDelete }: { secret: any; onDelete: () => void }) 
   const [show, setShow] = useState(false);
   const [copied, setCopied] = useState(false);
   return (
-    <div className="bg-[#1C1C1C] border border-white/[0.06] rounded-md px-3 py-2.5">
+    <div className="bg-card border border-foreground/6 rounded-md px-3 py-2.5">
       <div className="flex items-center gap-2">
-        <KeyRound size={14} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
-        <div className="text-sm font-semibold text-white flex-1 truncate">{secret.label}</div>
-        <button onClick={() => setShow((s) => !s)} className="p-1 rounded text-white/40 hover:text-white hover:bg-white/5" title={show ? "Ocultar" : "Revelar"}>
+        <KeyRound size={14} style={{ color: "var(--lz-accent-ink)" }} />
+        <div className="text-sm font-semibold text-foreground flex-1 truncate">{secret.label}</div>
+        <button onClick={() => setShow((s) => !s)} className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5" title={show ? "Ocultar" : "Revelar"}>
           {show ? <EyeOff size={13} /> : <Eye size={13} />}
         </button>
         <button
@@ -1226,17 +1226,17 @@ function SecretRow({ secret, onDelete }: { secret: any; onDelete: () => void }) 
               window.setTimeout(() => setCopied(false), 1500);
             } catch { toast.error("Não foi possível copiar"); }
           }}
-          className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5"
+          className="p-1 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5"
           title="Copiar valor"
         >{copied ? <Check size={13} /> : <Copy size={13} />}</button>
-        <button onClick={async () => { if (await requestConfirm(`Excluir "${secret.label}"?`, { danger: true })) onDelete(); }} className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5">
+        <button onClick={async () => { if (await requestConfirm(`Excluir "${secret.label}"?`, { danger: true })) onDelete(); }} className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5">
           <Trash2 size={13} />
         </button>
       </div>
-      <div className="mt-1 text-[12px] font-mono break-all" style={{ color: show ? "#FFF" : "rgba(255,255,255,0.3)" }}>
+      <div className="mt-1 text-[12px] font-mono break-all" style={{ color: show ? "#FFF" : "color-mix(in srgb, var(--foreground) 30%, transparent)" }}>
         {show ? secret.value : "••••••••••••"}
       </div>
-      {secret.notes && <div className="mt-1 text-[11px] text-white/40 whitespace-pre-wrap">{secret.notes}</div>}
+      {secret.notes && <div className="mt-1 text-[11px] text-foreground/40 whitespace-pre-wrap">{secret.notes}</div>}
     </div>
   );
 }
@@ -1249,18 +1249,18 @@ function AddSecretRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d: 
   if (!open) {
     return (
       <button onClick={() => setOpen(true)}
-        className="w-full mt-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 py-2 text-[11px] text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))]">
+        className="w-full mt-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-foreground/15 py-2 text-[11px] text-foreground/50 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))]">
         <Plus size={12} /> Novo acesso
       </button>
     );
   }
   return (
-    <div className="bg-[#1C1C1C] border border-white/[0.08] rounded-md p-3 space-y-2">
-      <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Rótulo (ex.: Instagram)" className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
-      <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Senha / token / login" className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white font-mono outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
-      <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observações (opcional)" className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+    <div className="bg-card border border-foreground/8 rounded-md p-3 space-y-2">
+      <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Rótulo (ex.: Instagram)" className="w-full bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+      <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Senha / token / login" className="w-full bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground font-mono outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+      <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observações (opcional)" className="w-full bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
       <div className="flex items-center justify-end gap-2">
-        <button onClick={() => setOpen(false)} className="text-[11px] text-white/50 hover:text-white px-2 py-1">Cancelar</button>
+        <button onClick={() => setOpen(false)} className="text-[11px] text-foreground/50 hover:text-foreground px-2 py-1">Cancelar</button>
         <button
           disabled={!label.trim() || !value}
           onClick={() => {

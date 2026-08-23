@@ -160,15 +160,15 @@ export function MentionInput({ value, onChange, placeholder, className, onSubmit
         }}
         placeholder={placeholder ?? "Escreva um comentário... use @ para mencionar"}
         rows={rows}
-        className={className ?? "lz-input-dark w-full bg-[#0D0D0D] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 resize-none"}
+        className={className ?? "lz-input-dark w-full bg-background border border-foreground/10 rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 resize-none"}
       />
       {open && matches.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-[#1C1C1C] border border-white/10 rounded-lg overflow-hidden shadow-2xl">
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-card border border-foreground/10 rounded-lg overflow-hidden shadow-2xl">
           {matches.map((m, idx) => (
             <button key={m.id} type="button" onMouseDown={(e) => { e.preventDefault(); pickMember(m); }}
               className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
-                idx === hi ? "" : "text-white/80 hover:bg-white/5"}`}
-              style={idx === hi ? { backgroundColor: "rgba(var(--lz-brand-light-rgb), 0.1)", color: "rgb(var(--lz-brand-rgb))" } : undefined}>
+                idx === hi ? "" : "text-foreground/80 hover:bg-foreground/5"}`}
+              style={idx === hi ? { backgroundColor: "rgba(var(--lz-brand-light-rgb), 0.1)", color: "var(--lz-accent-ink)" } : undefined}>
               <Avatar profile={m} size={22} />
               <span className="truncate">{m.name}</span>
             </button>
@@ -194,6 +194,6 @@ export function renderMentions(text: string) {
   return parts.map((p, i) =>
     typeof p === "string"
       ? <span key={i}>{p}</span>
-      : <span key={i} className="text-[rgb(var(--lz-brand-rgb))] font-semibold">@{p.name}</span>
+      : <span key={i} className="text-[var(--lz-accent-ink)] font-semibold">@{p.name}</span>
   );
 }

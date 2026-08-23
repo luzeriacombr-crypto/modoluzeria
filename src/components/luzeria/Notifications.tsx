@@ -39,10 +39,10 @@ export function NotificationsBell() {
     <div className="relative" ref={ref}>
       <button ref={btnRef} onClick={() => setOpen((o) => !o)}
         data-tour="notifications"
-        className="relative p-2 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition">
+        className="relative p-2 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition">
         <Bell size={17} />
         {unread > 0 && (
-          <span className="absolute top-1 right-1 min-w-[14px] h-[14px] rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center px-1">
+          <span className="absolute top-1 right-1 min-w-[14px] h-[14px] rounded-full bg-red-500 text-[9px] font-bold text-foreground flex items-center justify-center px-1">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -59,35 +59,35 @@ export function NotificationsBell() {
           ref={popRef}
           className={isMobile ? "fixed inset-0 z-[100] flex flex-col lz-notif-pop" : "fixed w-[380px] overflow-hidden z-[100] lz-notif-pop"}
           style={isMobile ? {
-            background: "#1C1C1C",
+            background: "var(--card)",
           } : {
             top: pos!.top,
             right: pos!.right,
-            background: "#1C1C1C",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: "var(--card)",
+            border: "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
             borderRadius: 12,
             boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
           }}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-foreground/6 shrink-0">
             <div className="flex items-center gap-2">
               {isMobile && (
-                <button onClick={() => setOpen(false)} className="p-1 -ml-1 text-white/60 hover:text-white">
+                <button onClick={() => setOpen(false)} className="p-1 -ml-1 text-foreground/60 hover:text-foreground">
                   <X size={18} />
                 </button>
               )}
-              <span className="text-sm font-bold text-white">Notificações</span>
+              <span className="text-sm font-bold text-foreground">Notificações</span>
             </div>
             <div className="flex items-center gap-3">
               <PushNotificationButton />
               {unread > 0 && (
                 <button onClick={() => markNotificationRead.mutate({ data: { all: true } })}
-                  className="text-[11px] text-[rgb(var(--lz-brand-rgb))] hover:underline">Marcar todas como lidas</button>
+                  className="text-[11px] text-[var(--lz-accent-ink)] hover:underline">Marcar todas como lidas</button>
               )}
             </div>
           </div>
           <div className={isMobile ? "flex-1 overflow-y-auto" : "max-h-[480px] overflow-y-auto"}>
-            {list.length === 0 && <p className="text-xs text-white/40 px-4 py-6 text-center">Sem notificações.</p>}
+            {list.length === 0 && <p className="text-xs text-foreground/40 px-4 py-6 text-center">Sem notificações.</p>}
             {list.map((n: any) => (
               <button
                 key={n.id}
@@ -116,7 +116,7 @@ export function NotificationsBell() {
                     navigate({ to: "/configuracoes", search: { tab: "cobranca" } });
                   }
                 }}
-                className="w-full text-left px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors block"
+                className="w-full text-left px-4 py-3 border-b border-foreground/4 hover:bg-foreground/[0.04] transition-colors block"
                 style={{
                   backgroundColor: !n.read ? "rgba(var(--lz-brand-light-rgb),0.06)" : "transparent",
                   opacity: n.read ? 0.6 : 1,
@@ -125,8 +125,8 @@ export function NotificationsBell() {
                 <div className="flex items-start gap-2">
                   {!n.read && <span className="h-1.5 w-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
                   <div className="flex-1">
-                    <p className="text-xs text-white/90">{n.message}</p>
-                    <p className="text-[10px] text-white/40 mt-0.5">{relTime(n.createdAt)}</p>
+                    <p className="text-xs text-foreground/90">{n.message}</p>
+                    <p className="text-[10px] text-foreground/40 mt-0.5">{relTime(n.createdAt)}</p>
                   </div>
                 </div>
               </button>

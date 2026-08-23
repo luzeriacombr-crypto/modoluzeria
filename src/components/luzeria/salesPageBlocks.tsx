@@ -116,7 +116,7 @@ export function SectionResizeHandle({ resize }: { resize: ReturnType<typeof useR
       className={`absolute left-0 right-0 bottom-0 h-3 cursor-ns-resize flex items-end justify-center z-20 group/resize touch-none transition-opacity ${resize.dragging ? "opacity-100" : "opacity-0 hover:opacity-100"}`}
       title="Arrastar pra redimensionar a seção"
     >
-      <div className="w-14 h-1 rounded-full mb-1 transition-colors" style={{ background: resize.dragging ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.35)" }} />
+      <div className="w-14 h-1 rounded-full mb-1 transition-colors" style={{ background: resize.dragging ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 35%, transparent)" }} />
     </div>
   );
 }
@@ -235,7 +235,7 @@ function Editable({
   }
 
   if (editing) {
-    const commonClass = `${className} bg-white/10 outline outline-2 outline-[rgb(var(--lz-brand-rgb))] rounded px-1 -mx-1`;
+    const commonClass = `${className} bg-foreground/10 outline outline-2 outline-[rgb(var(--lz-brand-rgb))] rounded px-1 -mx-1`;
     if (multiline) {
       return (
         <textarea
@@ -285,7 +285,7 @@ function Editable({
  * ---------------------------------------------------------------------- */
 export function AppCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`w-full max-w-[420px] rounded-2xl border border-white/10 shadow-2xl overflow-hidden ${LIFT} ${className}`}
+    <div className={`w-full max-w-[420px] rounded-2xl border border-foreground/10 shadow-2xl overflow-hidden ${LIFT} ${className}`}
       style={{ background: "#141414", ...EASE }}>
       {children}
     </div>
@@ -297,22 +297,22 @@ function FeedPreviewVisual() {
     <AppCard className="max-w-[300px]">
       <div className="relative w-full aspect-[4/5]" style={{ background: "linear-gradient(135deg, #2A1E3A, #0D2B4A)" }}>
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="h-14 w-14 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.1)" }}>
-            <Play size={20} className="text-white/70 fill-white/70 ml-0.5" />
+          <div className="h-14 w-14 rounded-full flex items-center justify-center" style={{ background: "color-mix(in srgb, var(--foreground) 10%, transparent)" }}>
+            <Play size={20} className="text-foreground/70 fill-white/70 ml-0.5" />
           </div>
         </div>
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 bg-black/50 rounded-full pl-1 pr-2.5 py-1">
           <span className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-black" style={{ background: LIME, color: "#0A0E23" }}>C</span>
-          <span className="text-[10px] font-semibold text-white">Clínica Vitta</span>
+          <span className="text-[10px] font-semibold text-foreground">Clínica Vitta</span>
         </div>
-        <div className="absolute top-2.5 right-2.5 text-[9px] font-bold text-white bg-black/50 rounded-full px-2 py-0.5">1/5</div>
+        <div className="absolute top-2.5 right-2.5 text-[9px] font-bold text-foreground bg-black/50 rounded-full px-2 py-0.5">1/5</div>
       </div>
-      <div className="px-3.5 pt-3 pb-1 flex items-center gap-3 text-white/70">
+      <div className="px-3.5 pt-3 pb-1 flex items-center gap-3 text-foreground/70">
         <Heart size={17} /> <MessageCircle size={17} /> <Send size={17} /> <div className="flex-1" /> <Bookmark size={17} />
       </div>
       <div className="px-3.5 pb-3.5 flex gap-2">
         <div className="flex-1 rounded-lg py-2.5 text-center text-[11px] font-bold" style={{ background: LIME, color: "#0A0E23" }}>✓ Aprovar post</div>
-        <div className="flex-1 rounded-lg py-2.5 text-center text-[11px] font-bold border border-white/20 text-white/80">Sugerir</div>
+        <div className="flex-1 rounded-lg py-2.5 text-center text-[11px] font-bold border border-foreground/20 text-foreground/80">Sugerir</div>
       </div>
     </AppCard>
   );
@@ -328,25 +328,25 @@ function DashboardVisual() {
   return (
     <AppCard>
       <div className="p-5">
-        <div className="text-[10px] uppercase font-bold tracking-wider text-white/40 mb-3">Dashboard · Julho 2026</div>
+        <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-3">Dashboard · Julho 2026</div>
         <div className="flex items-center gap-4 mb-4">
           <div className="h-20 w-20 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: `conic-gradient(rgb(var(--lz-brand-rgb)) ${pct * 3.6}deg, rgba(255,255,255,0.08) 0deg)` }}>
+            style={{ background: `conic-gradient(rgb(var(--lz-brand-rgb)) ${pct * 3.6}deg, color-mix(in srgb, var(--foreground) 8%, transparent) 0deg)` }}>
             <div className="h-14 w-14 rounded-full flex flex-col items-center justify-center" style={{ background: "#141414" }}>
-              <span className="text-base font-black text-white">{pct}%</span>
-              <span className="text-[8px] text-white/40 uppercase tracking-wide">entregas</span>
+              <span className="text-base font-black text-foreground">{pct}%</span>
+              <span className="text-[8px] text-foreground/40 uppercase tracking-wide">entregas</span>
             </div>
           </div>
           <div>
-            <div className="text-white font-bold text-sm">Bom ritmo!</div>
-            <div className="text-white/40 text-xs">Vamos fechar forte esse mês.</div>
+            <div className="text-foreground font-bold text-sm">Bom ritmo!</div>
+            <div className="text-foreground/40 text-xs">Vamos fechar forte esse mês.</div>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2">
           {tiles.map((t) => (
-            <div key={t.label} className="rounded-lg p-2.5 border border-white/[0.06]" style={{ background: "rgba(255,255,255,0.03)" }}>
+            <div key={t.label} className="rounded-lg p-2.5 border border-foreground/6" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)" }}>
               <div className="text-lg font-black" style={{ color: t.color }}>{t.value}</div>
-              <div className="text-[9px] text-white/40 leading-tight mt-0.5">{t.label}</div>
+              <div className="text-[9px] text-foreground/40 leading-tight mt-0.5">{t.label}</div>
             </div>
           ))}
         </div>
@@ -365,20 +365,20 @@ function ReportVisual() {
     <AppCard>
       <div className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <div className="text-[10px] uppercase font-bold tracking-wider text-white/40">Produtividade da equipe</div>
-          <BarChart3 size={14} className="text-white/30" />
+          <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40">Produtividade da equipe</div>
+          <BarChart3 size={14} className="text-foreground/30" />
         </div>
         <div className="space-y-3.5">
           {rows.map((r, i) => (
             <div key={r.name} className="flex items-center gap-3">
-              <span className="h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0"
+              <span className="h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-black text-foreground shrink-0"
                 style={{ background: r.color, color: "#0A0E23" }}>{r.name.charAt(0)}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11.5px] font-semibold text-white truncate">{r.name}</span>
-                  <span className="text-[10px] text-white/40">{r.done} entregues</span>
+                  <span className="text-[11.5px] font-semibold text-foreground truncate">{r.name}</span>
+                  <span className="text-[10px] text-foreground/40">{r.done} entregues</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+                <div className="h-1.5 rounded-full bg-foreground/[0.08] overflow-hidden">
                   <div className="h-full rounded-full" style={{ width: `${r.pct}%`, background: r.color }} />
                 </div>
               </div>
@@ -400,17 +400,17 @@ function CalendarVisual() {
     <AppCard>
       <div className="p-4">
         <div className="flex items-center justify-between mb-3 px-0.5">
-          <ChevronLeft size={14} className="text-white/30" />
-          <span className="text-[11px] font-bold text-white">Agosto 2026</span>
-          <ChevronRight size={14} className="text-white/30" />
+          <ChevronLeft size={14} className="text-foreground/30" />
+          <span className="text-[11px] font-bold text-foreground">Agosto 2026</span>
+          <ChevronRight size={14} className="text-foreground/30" />
         </div>
         <div className="grid grid-cols-7 gap-1">
           {["S", "T", "Q", "Q", "S", "S", "D"].map((d, i) => (
-            <div key={i} className="text-center text-[8px] font-bold text-white/30 pb-1">{d}</div>
+            <div key={i} className="text-center text-[8px] font-bold text-foreground/30 pb-1">{d}</div>
           ))}
           {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
-            <div key={day} className="aspect-square rounded-md flex flex-col items-center justify-center gap-0.5 border border-white/[0.04]" style={{ background: "rgba(255,255,255,0.02)" }}>
-              <span className="text-[8px] text-white/40">{day}</span>
+            <div key={day} className="aspect-square rounded-md flex flex-col items-center justify-center gap-0.5 border border-foreground/4" style={{ background: "color-mix(in srgb, var(--foreground) 2%, transparent)" }}>
+              <span className="text-[8px] text-foreground/40">{day}</span>
               <div className="flex gap-0.5">
                 {(dots[day] ?? []).map((c, i) => <span key={i} className="h-1 w-1 rounded-full" style={{ background: c }} />)}
               </div>
@@ -426,21 +426,21 @@ function NotificationVisual() {
   return (
     <AppCard className="max-w-[340px]">
       <div className="p-5">
-        <div className="text-[10px] uppercase font-bold tracking-wider text-white/40 mb-4">Notificações · agora</div>
+        <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-4">Notificações · agora</div>
         {[
           { t: "Novo comentário", d: "Bruno comentou no Post 02 — Clínica Vitta", time: "agora" },
           { t: "Prazo se aproximando", d: "Reel \"Bastidores\" vence amanhã", time: "há 12min" },
           { t: "Post aprovado ✓", d: "Cliente aprovou \"Depoimento — Ana\"", time: "há 1h" },
         ].map((n) => (
-          <div key={n.t} className="flex items-start gap-2.5 rounded-lg p-2.5 mb-2 last:mb-0 border border-white/[0.06]" style={{ background: "rgba(255,255,255,0.03)" }}>
+          <div key={n.t} className="flex items-start gap-2.5 rounded-lg p-2.5 mb-2 last:mb-0 border border-foreground/6" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)" }}>
             <span className="h-7 w-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(var(--lz-brand-light-rgb),0.15)" }}>
               <Bell size={13} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
             </span>
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-bold text-white truncate">{n.t}</div>
-              <div className="text-[10px] text-white/45 leading-snug">{n.d}</div>
+              <div className="text-[11px] font-bold text-foreground truncate">{n.t}</div>
+              <div className="text-[10px] text-foreground/45 leading-snug">{n.d}</div>
             </div>
-            <span className="text-[9px] text-white/30 shrink-0">{n.time}</span>
+            <span className="text-[9px] text-foreground/30 shrink-0">{n.time}</span>
           </div>
         ))}
       </div>
@@ -458,19 +458,19 @@ function ResponsiveVisual() {
     <AppCard className="max-w-[420px]">
       <div className="p-6 flex items-end justify-center gap-4">
         {devices.map(({ Icon, w, h }, i) => (
-          <div key={i} className={`${w} ${h} rounded-lg border border-white/10 flex flex-col overflow-hidden shrink-0`} style={{ background: "rgba(255,255,255,0.03)" }}>
+          <div key={i} className={`${w} ${h} rounded-lg border border-foreground/10 flex flex-col overflow-hidden shrink-0`} style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)" }}>
             <div className="flex-1 flex flex-col gap-1 p-1.5">
               <div className="h-1.5 rounded-full w-full" style={{ background: "rgb(var(--lz-brand-rgb))" }} />
-              <div className="h-1 rounded-full w-3/4 bg-white/15" />
-              <div className="h-1 rounded-full w-1/2 bg-white/15" />
+              <div className="h-1 rounded-full w-3/4 bg-foreground/15" />
+              <div className="h-1 rounded-full w-1/2 bg-foreground/15" />
             </div>
-            <div className="flex items-center justify-center py-1.5 border-t border-white/[0.06]">
-              <Icon size={12} className="text-white/40" />
+            <div className="flex items-center justify-center py-1.5 border-t border-foreground/6">
+              <Icon size={12} className="text-foreground/40" />
             </div>
           </div>
         ))}
       </div>
-      <div className="px-5 pb-4 flex items-center justify-center gap-1.5 text-[10px] text-white/40">
+      <div className="px-5 pb-4 flex items-center justify-center gap-1.5 text-[10px] text-foreground/40">
         <Zap size={11} style={{ color: "rgb(var(--lz-brand-rgb))" }} /> Carrega rápido em qualquer tela
       </div>
     </AppCard>
@@ -496,7 +496,7 @@ function SecurityVisual() {
           {rows.map((r) => (
             <div key={r} className="flex items-start gap-2">
               <Check size={13} className="shrink-0 mt-0.5" style={{ color: "rgb(var(--lz-brand-rgb))" }} strokeWidth={2.5} />
-              <span className="text-[11.5px] text-white/70 leading-relaxed">{r}</span>
+              <span className="text-[11.5px] text-foreground/70 leading-relaxed">{r}</span>
             </div>
           ))}
         </div>
@@ -698,34 +698,34 @@ function ImageToolbar({
       onPointerDown={(e) => e.stopPropagation()}
       className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-black/85 backdrop-blur rounded-lg p-1 shadow-xl opacity-0 group-hover/stackimg:opacity-100 focus-within:opacity-100 transition z-30 whitespace-nowrap"
     >
-      <label className="p-1.5 rounded text-white/80 hover:text-white hover:bg-white/10 cursor-pointer" title="Enviar foto">
+      <label className="p-1.5 rounded text-foreground/80 hover:text-foreground hover:bg-foreground/10 cursor-pointer" title="Enviar foto">
         {uploading ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
         <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadFile(f); }} />
       </label>
       <div className="relative">
-        <button onClick={() => setPickerOpen((v) => !v)} className="p-1.5 rounded text-white/80 hover:text-white hover:bg-white/10" title="Usar ilustração pronta">
+        <button onClick={() => setPickerOpen((v) => !v)} className="p-1.5 rounded text-foreground/80 hover:text-foreground hover:bg-foreground/10" title="Usar ilustração pronta">
           <Sparkles size={13} />
         </button>
         {pickerOpen && (
-          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-[#1C1C1C] border border-white/10 rounded-lg p-1 flex flex-col gap-0.5 shadow-xl min-w-[150px] max-h-48 overflow-y-auto z-40">
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-card border border-foreground/10 rounded-lg p-1 flex flex-col gap-0.5 shadow-xl min-w-[150px] max-h-48 overflow-y-auto z-40">
             {BUILTIN_KEYS.map((k) => (
               <button key={k} onClick={() => { onPickBuiltin(k); setPickerOpen(false); }}
-                className="text-[11px] text-left px-2 py-1.5 rounded hover:bg-white/10 text-white/80 whitespace-nowrap">
+                className="text-[11px] text-left px-2 py-1.5 rounded hover:bg-foreground/10 text-foreground/80 whitespace-nowrap">
                 {BUILTIN_LABELS[k] ?? k}
               </button>
             ))}
           </div>
         )}
       </div>
-      <button onClick={onToggleFloating} className="p-1.5 rounded hover:bg-white/10" title={img.floating ? "Fixar (parar de flutuar)" : "Deixar flutuante"}
-        style={{ color: img.floating ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.8)" }}>
+      <button onClick={onToggleFloating} className="p-1.5 rounded hover:bg-foreground/10" title={img.floating ? "Fixar (parar de flutuar)" : "Deixar flutuante"}
+        style={{ color: img.floating ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 80%, transparent)" }}>
         <Waves size={13} />
       </button>
-      <button onClick={onToggleRounded} className="p-1.5 rounded hover:bg-white/10" title={img.rounded ? "Cantos arredondados (clique pra deixar reto)" : "Cantos retos (clique pra arredondar)"}
-        style={{ color: img.rounded ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.8)" }}>
+      <button onClick={onToggleRounded} className="p-1.5 rounded hover:bg-foreground/10" title={img.rounded ? "Cantos arredondados (clique pra deixar reto)" : "Cantos retos (clique pra arredondar)"}
+        style={{ color: img.rounded ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 80%, transparent)" }}>
         <Squircle size={13} />
       </button>
-      <button onClick={onRemove} className="p-1.5 rounded text-white/80 hover:text-red-400 hover:bg-white/10" title="Remover">
+      <button onClick={onRemove} className="p-1.5 rounded text-foreground/80 hover:text-red-400 hover:bg-foreground/10" title="Remover">
         <X size={13} />
       </button>
     </div>
@@ -758,7 +758,7 @@ function EditableStackImage({
         <div
           {...resize.handleProps}
           className="absolute bottom-0 right-0 w-4 h-4 rounded-tl-md cursor-nwse-resize opacity-0 group-hover/stackimg:opacity-100 transition z-30"
-          style={{ background: resize.dragging ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.55)" }}
+          style={{ background: resize.dragging ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 55%, transparent)" }}
           title="Arrastar pra redimensionar"
         />
       </div>
@@ -788,14 +788,14 @@ function EditableSingleImage({
           <div
             {...resize.handleProps}
             className="absolute bottom-0 right-0 w-4 h-4 rounded-tl-md cursor-ew-resize opacity-0 group-hover/stackimg:opacity-100 transition z-30"
-            style={{ background: resize.dragging ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.55)" }}
+            style={{ background: resize.dragging ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 55%, transparent)" }}
             title="Arrastar pra redimensionar"
           />
         </div>
       </div>
       {onAdd && (
         <div className="flex justify-center mt-2">
-          <button onClick={onAdd} className="text-[11px] text-white/40 hover:text-white inline-flex items-center gap-1 transition"><Plus size={11} /> Adicionar mais uma imagem</button>
+          <button onClick={onAdd} className="text-[11px] text-foreground/40 hover:text-foreground inline-flex items-center gap-1 transition"><Plus size={11} /> Adicionar mais uma imagem</button>
         </div>
       )}
     </div>
@@ -846,7 +846,7 @@ function ImageStackInteractive({
     return (
       <button
         onClick={addImage}
-        className="w-full aspect-square max-w-[220px] mx-auto rounded-xl border-2 border-dashed border-white/20 hover:border-[rgb(var(--lz-brand-rgb))] flex flex-col items-center justify-center gap-2 text-white/40 hover:text-white transition"
+        className="w-full aspect-square max-w-[220px] mx-auto rounded-xl border-2 border-dashed border-foreground/20 hover:border-[rgb(var(--lz-brand-rgb))] flex flex-col items-center justify-center gap-2 text-foreground/40 hover:text-foreground transition"
       >
         <ImagePlus size={22} /> <span className="text-xs">Adicionar imagem</span>
       </button>
@@ -887,14 +887,14 @@ function ImageStackInteractive({
         />
       ))}
       {images.length < 4 && (
-        <button onClick={addImage} className="absolute bottom-2 right-2 z-30 bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90 transition" title="Adicionar imagem">
+        <button onClick={addImage} className="absolute bottom-2 right-2 z-30 bg-black/70 backdrop-blur text-foreground rounded-full p-2 hover:bg-black/90 transition" title="Adicionar imagem">
           <Plus size={14} />
         </button>
       )}
       {floatingCount >= 2 && onFloatSync && (
         <button
           onClick={() => onFloatSync(!floatSync)}
-          className="absolute top-2 left-2 z-30 text-[10px] font-semibold px-2.5 py-1.5 rounded-full bg-black/70 backdrop-blur text-white hover:bg-black/90 transition inline-flex items-center gap-1"
+          className="absolute top-2 left-2 z-30 text-[10px] font-semibold px-2.5 py-1.5 rounded-full bg-black/70 backdrop-blur text-foreground hover:bg-black/90 transition inline-flex items-center gap-1"
           title="Controla se as imagens flutuantes se movem juntas ou cada uma no seu tempo"
         >
           <Waves size={11} /> {floatSync ? "Sincronizado" : "Natural"}
@@ -948,25 +948,25 @@ function ImageStackEditor({ images, onChange, topicHint }: { images: ImageSpec[]
     <div>
       <div className="space-y-3">
         {images.map((img, i) => (
-          <div key={img.id} className="bg-[#0D0D0D] rounded-md p-3 border border-white/[0.06] space-y-2">
+          <div key={img.id} className="bg-background rounded-md p-3 border border-foreground/6 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex gap-2">
                 <button
                   onClick={() => updateAt(i, { source: "upload" })}
-                  className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${img.source === "upload" ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "border border-white/15 text-white/60"}`}
+                  className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${img.source === "upload" ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "border border-foreground/15 text-foreground/60"}`}
                 >Enviar foto</button>
                 <button
                   onClick={() => updateAt(i, { source: "builtin", builtinKey: img.builtinKey ?? guessBuiltinKey(topicHint) })}
-                  className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${img.source === "builtin" ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "border border-white/15 text-white/60"}`}
+                  className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${img.source === "builtin" ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "border border-foreground/15 text-foreground/60"}`}
                 >Usar ilustração pronta</button>
               </div>
-              <button onClick={() => removeAt(i)} className="text-white/40 hover:text-red-400"><X size={14} /></button>
+              <button onClick={() => removeAt(i)} className="text-foreground/40 hover:text-red-400"><X size={14} /></button>
             </div>
 
             {img.source === "upload" ? (
               <div className="flex items-center gap-3">
-                {img.url && <img src={img.url} alt="" className="h-14 w-14 rounded-md object-cover border border-white/10" />}
-                <label className="inline-flex items-center gap-1.5 text-xs text-white/60 hover:text-white cursor-pointer border border-white/15 rounded-md px-3 py-2">
+                {img.url && <img src={img.url} alt="" className="h-14 w-14 rounded-md object-cover border border-foreground/10" />}
+                <label className="inline-flex items-center gap-1.5 text-xs text-foreground/60 hover:text-foreground cursor-pointer border border-foreground/15 rounded-md px-3 py-2">
                   {uploading ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
                   {img.url ? "Trocar imagem" : "Escolher imagem"}
                   <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(i, f); }} />
@@ -974,7 +974,7 @@ function ImageStackEditor({ images, onChange, topicHint }: { images: ImageSpec[]
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <div className="h-14 w-20 rounded-md overflow-hidden border border-white/10 flex items-center justify-center bg-[#141414] shrink-0 scale-[0.3] origin-top-left" style={{ width: 420, height: 200 }}>
+                <div className="h-14 w-20 rounded-md overflow-hidden border border-foreground/10 flex items-center justify-center bg-card shrink-0 scale-[0.3] origin-top-left" style={{ width: 420, height: 200 }}>
                   {(() => { const Cmp = BUILTIN_ILLUSTRATIONS[img.builtinKey ?? ""]; return Cmp ? <Cmp /> : null; })()}
                 </div>
                 <select value={img.builtinKey} onChange={(e) => updateAt(i, { builtinKey: e.target.value })} className="lz-input-dark text-xs">
@@ -986,7 +986,7 @@ function ImageStackEditor({ images, onChange, topicHint }: { images: ImageSpec[]
         ))}
       </div>
       {images.length < 12 && (
-        <button onClick={addImage} className="mt-3 text-xs text-white/50 hover:text-white inline-flex items-center gap-1"><Plus size={12} /> Adicionar imagem</button>
+        <button onClick={addImage} className="mt-3 text-xs text-foreground/50 hover:text-foreground inline-flex items-center gap-1"><Plus size={12} /> Adicionar imagem</button>
       )}
     </div>
   );
@@ -1000,22 +1000,22 @@ function EditImagesModal({
 }) {
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-lg bg-[#1C1C1C] border border-white/10 rounded-2xl p-6 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-lg bg-card border border-foreground/10 rounded-2xl p-6 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-white">{title}</h3>
-          <button onClick={onClose} className="text-white/40 hover:text-white"><X size={16} /></button>
+          <h3 className="text-sm font-bold text-foreground">{title}</h3>
+          <button onClick={onClose} className="text-foreground/40 hover:text-foreground"><X size={16} /></button>
         </div>
         {onImageFit && (
           <div className="mb-4">
-            <div className="text-[9px] uppercase tracking-wide text-white/30 mb-1.5">Como as imagens aparecem</div>
+            <div className="text-[9px] uppercase tracking-wide text-foreground/30 mb-1.5">Como as imagens aparecem</div>
             <div className="flex gap-1.5">
               <button
                 onClick={() => onImageFit("natural")}
                 className="flex-1 text-[11px] font-semibold px-2.5 py-2 rounded-md transition"
                 style={{
                   background: (imageFit ?? "natural") === "natural" ? "rgb(var(--lz-brand-rgb))" : "transparent",
-                  color: (imageFit ?? "natural") === "natural" ? "#0D0D0D" : "rgba(255,255,255,0.6)",
-                  border: (imageFit ?? "natural") === "natural" ? "none" : "1px solid rgba(255,255,255,0.15)",
+                  color: (imageFit ?? "natural") === "natural" ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
+                  border: (imageFit ?? "natural") === "natural" ? "none" : "1px solid color-mix(in srgb, var(--foreground) 15%, transparent)",
                 }}
               >
                 Manter dimensões
@@ -1025,14 +1025,14 @@ function EditImagesModal({
                 className="flex-1 text-[11px] font-semibold px-2.5 py-2 rounded-md transition"
                 style={{
                   background: imageFit === "fill" ? "rgb(var(--lz-brand-rgb))" : "transparent",
-                  color: imageFit === "fill" ? "#0D0D0D" : "rgba(255,255,255,0.6)",
-                  border: imageFit === "fill" ? "none" : "1px solid rgba(255,255,255,0.15)",
+                  color: imageFit === "fill" ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
+                  border: imageFit === "fill" ? "none" : "1px solid color-mix(in srgb, var(--foreground) 15%, transparent)",
                 }}
               >
                 Preencher (1:1)
               </button>
             </div>
-            <p className="text-[10px] text-white/30 mt-1.5 leading-relaxed">
+            <p className="text-[10px] text-foreground/30 mt-1.5 leading-relaxed">
               {(imageFit ?? "natural") === "natural"
                 ? "Cada quadro acompanha o tamanho real da foto — fica mais orgânico."
                 : "Corta as fotos num quadrado igual, deixando a grade uniforme."}
@@ -1105,7 +1105,7 @@ function EditableImageArea({
       {images.length === 0 ? (
         <button
           onClick={() => setOpen(true)}
-          className="w-full aspect-square max-w-[220px] mx-auto rounded-xl border-2 border-dashed border-white/20 hover:border-[rgb(var(--lz-brand-rgb))] flex flex-col items-center justify-center gap-2 text-white/40 hover:text-white transition"
+          className="w-full aspect-square max-w-[220px] mx-auto rounded-xl border-2 border-dashed border-foreground/20 hover:border-[rgb(var(--lz-brand-rgb))] flex flex-col items-center justify-center gap-2 text-foreground/40 hover:text-foreground transition"
         >
           <ImagePlus size={22} /> <span className="text-xs">Adicionar imagem</span>
         </button>
@@ -1113,14 +1113,14 @@ function EditableImageArea({
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
             {images.map((img) => (
-              <div key={img.id} className={`rounded-xl overflow-hidden border border-white/10 shadow-sm ${fill ? "aspect-square" : ""}`}>
+              <div key={img.id} className={`rounded-xl overflow-hidden border border-foreground/10 shadow-sm ${fill ? "aspect-square" : ""}`}>
                 <ImageSpecVisual img={img} alt={alt} fill={fill} />
               </div>
             ))}
           </div>
           <button
             onClick={() => setOpen(true)}
-            className="absolute top-2 right-2 opacity-0 group-hover/img:opacity-100 focus:opacity-100 transition bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90 z-10"
+            className="absolute top-2 right-2 opacity-0 group-hover/img:opacity-100 focus:opacity-100 transition bg-black/70 backdrop-blur text-foreground rounded-full p-2 hover:bg-black/90 z-10"
             title="Editar imagens"
           >
             <Pencil size={13} />
@@ -1154,7 +1154,7 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
   const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
 
   return (
-    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 relative">
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-foreground/10 relative">
       <Reveal className="px-5 sm:px-10 max-w-[820px] mx-auto" style={{ paddingTop: resize.display, paddingBottom: resize.display }}>
         {editable ? (
           <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8 block" />
@@ -1165,7 +1165,7 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
           {items.map((t, i) => (
             <li
               key={i}
-              className={`group/item flex gap-3 text-base sm:text-lg items-start rounded-md transition ${dark ? "text-white/80" : "text-[#0A0E23]/75"} ${drag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))] outline-offset-4" : ""}`}
+              className={`group/item flex gap-3 text-base sm:text-lg items-start rounded-md transition ${dark ? "text-foreground/80" : "text-[#0A0E23]/75"} ${drag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))] outline-offset-4" : ""}`}
               onDragOver={editable ? (e) => drag.onDragOverItem(e, i) : undefined}
               onDrop={editable ? (e) => drag.onDropItem(e, i) : undefined}
             >
@@ -1188,7 +1188,7 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
                     onCommit={(v) => { const next = [...items]; next[i] = v; set({ items: next }); }}
                     className="text-balance flex-1"
                   />
-                  <button onClick={() => set({ items: items.filter((_, j) => j !== i) })} className="opacity-0 group-hover/item:opacity-100 text-white/30 hover:text-red-400 shrink-0 mt-0.5"><X size={14} /></button>
+                  <button onClick={() => set({ items: items.filter((_, j) => j !== i) })} className="opacity-0 group-hover/item:opacity-100 text-foreground/30 hover:text-red-400 shrink-0 mt-0.5"><X size={14} /></button>
                 </>
               ) : (
                 <span className="text-balance">{t}</span>
@@ -1202,12 +1202,12 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
           )}
         </ul>
         {editable ? (
-          <div className={`mt-8 flex flex-wrap gap-x-1.5 gap-y-1 items-baseline ${dark ? "text-white" : "text-[#0A0E23]"}`}>
+          <div className={`mt-8 flex flex-wrap gap-x-1.5 gap-y-1 items-baseline ${dark ? "text-foreground" : "text-[#0A0E23]"}`}>
             <Editable value={content.closingTextPlain ?? ""} onCommit={(v) => set({ closingTextPlain: v })} placeholder="Frase de fechamento (opcional)" />
             <Editable value={content.closingTextAccent ?? ""} onCommit={(v) => set({ closingTextAccent: v })} className="font-bold" style={{ color: LIME }} placeholder="parte destacada (opcional)" />
           </div>
         ) : hasClosing ? (
-          <p className={`mt-8 text-balance ${dark ? "text-white" : "text-[#0A0E23]"}`}>
+          <p className={`mt-8 text-balance ${dark ? "text-foreground" : "text-[#0A0E23]"}`}>
             {content.closingTextPlain ? `${content.closingTextPlain} ` : ""}
             <span className="font-bold" style={{ color: LIME }}>{content.closingTextAccent}</span>
           </p>
@@ -1229,7 +1229,7 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
   const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
 
   return (
-    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 relative">
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-foreground/10 relative">
       <Reveal className="px-5 sm:px-10 max-w-[1000px] mx-auto" style={{ paddingTop: resize.display, paddingBottom: resize.display }}>
         {editable ? (
           <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 block text-center" />
@@ -1240,7 +1240,7 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
           {items.map((s, i) => (
             <div
               key={i}
-              className={`relative group/step rounded-xl p-5 border transition ${dark ? "bg-white/[0.04] border-white/10" : "bg-black/[0.04] border-black/10"} ${LIFT} ${drag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))] outline-offset-4" : ""}`}
+              className={`relative group/step rounded-xl p-5 border transition ${dark ? "bg-foreground/[0.04] border-foreground/10" : "bg-black/[0.04] border-black/10"} ${LIFT} ${drag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))] outline-offset-4" : ""}`}
               style={EASE}
               onDragOver={editable ? (e) => drag.onDragOverItem(e, i) : undefined}
               onDrop={editable ? (e) => drag.onDropItem(e, i) : undefined}
@@ -1256,7 +1256,7 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
                   >
                     <GripVertical size={16} />
                   </span>
-                  <button onClick={() => set({ items: items.filter((_, j) => j !== i) })} className="absolute top-2 right-2 opacity-0 group-hover/step:opacity-100 text-white/40 hover:text-red-400"><X size={14} /></button>
+                  <button onClick={() => set({ items: items.filter((_, j) => j !== i) })} className="absolute top-2 right-2 opacity-0 group-hover/step:opacity-100 text-foreground/40 hover:text-red-400"><X size={14} /></button>
                 </>
               )}
               <div className="flex items-center gap-2 mb-3">
@@ -1274,12 +1274,12 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
               {editable ? (
                 <>
                   <Editable value={s.title} onCommit={(v) => setItem(i, { title: v })} className="font-bold mb-1 block" />
-                  <Editable value={s.description} multiline onCommit={(v) => setItem(i, { description: v })} className={`text-sm leading-relaxed block ${dark ? "text-white/60" : "text-[#0A0E23]/60"}`} />
+                  <Editable value={s.description} multiline onCommit={(v) => setItem(i, { description: v })} className={`text-sm leading-relaxed block ${dark ? "text-foreground/60" : "text-[#0A0E23]/60"}`} />
                 </>
               ) : (
                 <>
                   <div className="font-bold mb-1">{s.title}</div>
-                  <div className={`text-sm leading-relaxed ${dark ? "text-white/60" : "text-[#0A0E23]/60"}`}>{s.description}</div>
+                  <div className={`text-sm leading-relaxed ${dark ? "text-foreground/60" : "text-[#0A0E23]/60"}`}>{s.description}</div>
                 </>
               )}
             </div>
@@ -1287,7 +1287,7 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
           {editable && (
             <button
               onClick={() => set({ items: [...items, { icon: "star", number: String(items.length + 1).padStart(2, "0"), title: "Novo passo", description: "" }] })}
-              className={`rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 min-h-[120px] transition ${dark ? "border-white/15 hover:border-[rgb(var(--lz-brand-rgb))] text-white/40" : "border-black/15 hover:border-[rgb(var(--lz-brand-rgb))] text-black/40"} hover:text-white`}
+              className={`rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 min-h-[120px] transition ${dark ? "border-foreground/15 hover:border-[rgb(var(--lz-brand-rgb))] text-foreground/40" : "border-black/15 hover:border-[rgb(var(--lz-brand-rgb))] text-black/40"} hover:text-foreground`}
             >
               <Plus size={18} /> <span className="text-xs">Adicionar passo</span>
             </button>
@@ -1302,13 +1302,13 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
 export function FeatureBlock({ content, onChange }: { content: any; onChange?: (c: any) => void }) {
   const { style: bgStyle, dark } = sectionBackgroundStyle(content);
   const editable = !!onChange;
-  const bodyClass = dark ? "text-white/65" : "text-[#0A0E23]/60";
+  const bodyClass = dark ? "text-foreground/65" : "text-[#0A0E23]/60";
   const set = (patch: any) => onChange?.({ ...content, ...patch });
   const py = paddingYValue(content);
   const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
 
   return (
-    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 relative">
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-foreground/10 relative">
       <Reveal className="px-5 sm:px-10 max-w-[1100px] mx-auto" style={{ paddingTop: resize.display, paddingBottom: resize.display }}>
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <div className={content.reverse ? "lg:order-2" : ""}>
@@ -1354,7 +1354,7 @@ export function GalleryBlock({ content, onChange }: { content: any; onChange?: (
   const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
   if (!editable && images.length === 0) return null;
   return (
-    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 relative">
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-foreground/10 relative">
       <Reveal className="px-5 sm:px-10 max-w-[1000px] mx-auto" style={{ paddingTop: resize.display, paddingBottom: resize.display }}>
         {editable ? (
           <Editable as="h2" value={content.heading} onCommit={(v) => set({ heading: v })} className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 block text-center" />
@@ -1378,7 +1378,7 @@ export function TextBlurbBlock({ content, onChange }: { content: any; onChange?:
   const py = paddingYValue(content);
   const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
   return (
-    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-white/10 text-center relative">
+    <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-foreground/10 text-center relative">
       <div className="px-5 sm:px-10 max-w-[720px] mx-auto" style={{ paddingTop: resize.display, paddingBottom: resize.display }}>
         <div className="inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wide font-bold mb-3" style={{ color: dark ? LIME : ACCENT_ON_LIGHT }}>
           {editable ? (
@@ -1389,9 +1389,9 @@ export function TextBlurbBlock({ content, onChange }: { content: any; onChange?:
           {editable ? <Editable value={content.eyebrowLabel} onCommit={(v) => set({ eyebrowLabel: v })} /> : content.eyebrowLabel}
         </div>
         {editable ? (
-          <Editable value={content.paragraph} multiline onCommit={(v) => set({ paragraph: v })} className={`text-sm leading-relaxed block ${dark ? "text-white/70" : "text-[#0A0E23]/70"}`} />
+          <Editable value={content.paragraph} multiline onCommit={(v) => set({ paragraph: v })} className={`text-sm leading-relaxed block ${dark ? "text-foreground/70" : "text-[#0A0E23]/70"}`} />
         ) : (
-          <p className={`text-sm leading-relaxed ${dark ? "text-white/70" : "text-[#0A0E23]/70"}`}>{content.paragraph}</p>
+          <p className={`text-sm leading-relaxed ${dark ? "text-foreground/70" : "text-[#0A0E23]/70"}`}>{content.paragraph}</p>
         )}
       </div>
       {editable && <SectionResizeHandle resize={resize} />}
@@ -1416,7 +1416,7 @@ export function ImageBannerBlock({ content, onChange }: { content: any; onChange
   if (!editable) {
     if (!content.imageUrl) return null;
     return (
-      <section className="border-t border-white/10">
+      <section className="border-t border-foreground/10">
         <img src={content.imageUrl} alt={content.alt ?? ""} className="w-full object-cover block" style={{ height: heightPx }} />
       </section>
     );
@@ -1425,23 +1425,23 @@ export function ImageBannerBlock({ content, onChange }: { content: any; onChange
   const { style: bgStyle } = sectionBackgroundStyle({ background: content.background });
 
   return (
-    <section style={bgStyle} className="border-t border-white/10 relative">
+    <section style={bgStyle} className="border-t border-foreground/10 relative">
       <div className="relative w-full group/banner" style={{ height: resize.display }}>
         {content.imageUrl ? (
           <>
             <img src={content.imageUrl} alt={content.alt ?? ""} className="w-full h-full object-cover block" />
             <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover/banner:opacity-100 focus-within:opacity-100 transition">
-              <label className="bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90 cursor-pointer" title="Trocar imagem">
+              <label className="bg-black/70 backdrop-blur text-foreground rounded-full p-2 hover:bg-black/90 cursor-pointer" title="Trocar imagem">
                 {uploading ? <Loader2 size={13} className="animate-spin" /> : <Pencil size={13} />}
                 <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
               </label>
-              <button onClick={() => set({ imageUrl: null })} className="bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90" title="Remover imagem">
+              <button onClick={() => set({ imageUrl: null })} className="bg-black/70 backdrop-blur text-foreground rounded-full p-2 hover:bg-black/90" title="Remover imagem">
                 <X size={13} />
               </button>
             </div>
           </>
         ) : (
-          <label className="w-full h-full flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/20 hover:border-[rgb(var(--lz-brand-rgb))] text-white/40 hover:text-white cursor-pointer transition">
+          <label className="w-full h-full flex flex-col items-center justify-center gap-2 border-2 border-dashed border-foreground/20 hover:border-[rgb(var(--lz-brand-rgb))] text-foreground/40 hover:text-foreground cursor-pointer transition">
             {uploading ? <Loader2 size={22} className="animate-spin" /> : <ImagePlus size={22} />}
             <span className="text-xs">Adicionar imagem</span>
             <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
@@ -1472,7 +1472,7 @@ export function SingleImageBlock({ content, onChange }: { content: any; onChange
   if (!editable) {
     if (!content.imageUrl) return null;
     return (
-      <section style={bgStyle} className="border-t border-white/10">
+      <section style={bgStyle} className="border-t border-foreground/10">
         <Reveal className={`px-5 sm:px-10 max-w-[860px] mx-auto`} style={{ paddingTop: py, paddingBottom: py }}>
           <img src={content.imageUrl} alt={content.alt ?? ""} className={`w-full h-auto rounded-xl shadow-xl block ${LIFT}`} />
         </Reveal>
@@ -1481,24 +1481,24 @@ export function SingleImageBlock({ content, onChange }: { content: any; onChange
   }
 
   return (
-    <section style={bgStyle} className="border-t border-white/10 relative">
+    <section style={bgStyle} className="border-t border-foreground/10 relative">
       <div className="px-5 sm:px-10 max-w-[860px] mx-auto" style={{ paddingTop: resize.display, paddingBottom: resize.display }}>
         <div className="relative group/single">
           {content.imageUrl ? (
             <>
               <img src={content.imageUrl} alt={content.alt ?? ""} className="w-full h-auto rounded-xl shadow-xl block" />
               <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover/single:opacity-100 focus-within:opacity-100 transition">
-                <label className="bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90 cursor-pointer" title="Trocar imagem">
+                <label className="bg-black/70 backdrop-blur text-foreground rounded-full p-2 hover:bg-black/90 cursor-pointer" title="Trocar imagem">
                   {uploading ? <Loader2 size={13} className="animate-spin" /> : <Pencil size={13} />}
                   <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
                 </label>
-                <button onClick={() => set({ imageUrl: null })} className="bg-black/70 backdrop-blur text-white rounded-full p-2 hover:bg-black/90" title="Remover imagem">
+                <button onClick={() => set({ imageUrl: null })} className="bg-black/70 backdrop-blur text-foreground rounded-full p-2 hover:bg-black/90" title="Remover imagem">
                   <X size={13} />
                 </button>
               </div>
             </>
           ) : (
-            <label className="w-full aspect-video rounded-xl flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/20 hover:border-[rgb(var(--lz-brand-rgb))] text-white/40 hover:text-white cursor-pointer transition">
+            <label className="w-full aspect-video rounded-xl flex flex-col items-center justify-center gap-2 border-2 border-dashed border-foreground/20 hover:border-[rgb(var(--lz-brand-rgb))] text-foreground/40 hover:text-foreground cursor-pointer transition">
               {uploading ? <Loader2 size={22} className="animate-spin" /> : <ImagePlus size={22} />}
               <span className="text-xs">Adicionar imagem</span>
               <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
@@ -1523,7 +1523,7 @@ export function HeroSection({ content, onChange, onCtaClick }: { content: any; o
     <section className="px-5 sm:px-10 max-w-[1200px] mx-auto pt-8 pb-16">
       <div className="grid lg:grid-cols-2 gap-2 lg:gap-8 items-center">
         <div className="order-2 lg:order-1">
-          <div className="inline-flex items-center gap-2 border border-white/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide mb-6">
+          <div className="inline-flex items-center gap-2 border border-foreground/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide mb-6">
             {editable ? (
               <EditableIcon value={content.eyebrowIcon} onChange={(v) => set({ eyebrowIcon: v })} style={{ color: LIME }} />
             ) : (
@@ -1543,9 +1543,9 @@ export function HeroSection({ content, onChange, onCtaClick }: { content: any; o
             </span>
           </h1>
           {editable ? (
-            <Editable value={content.subtitle} multiline onCommit={(v) => set({ subtitle: v })} className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed block" />
+            <Editable value={content.subtitle} multiline onCommit={(v) => set({ subtitle: v })} className="text-foreground/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed block" />
           ) : (
-            <p className="text-white/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">{content.subtitle}</p>
+            <p className="text-foreground/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">{content.subtitle}</p>
           )}
           <div
             className={`mt-8 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full ${editable ? "" : POP}`}
@@ -1556,7 +1556,7 @@ export function HeroSection({ content, onChange, onCtaClick }: { content: any; o
           </div>
           <div className="flex items-center gap-3 mt-3 max-w-[480px]">
             <img src={clickupTrelloLogos} alt="Logos do ClickUp e do Trello" className="h-9 w-auto shrink-0 opacity-80" />
-            <p className="text-white/40 text-xs">
+            <p className="text-foreground/40 text-xs">
               Usava o ClickUp ou Trello? Sem problemas, você pode migrar todo o seu fluxo com facilidade.
             </p>
           </div>

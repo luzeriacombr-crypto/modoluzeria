@@ -322,27 +322,27 @@ export function AppTour() {
       {highlight}
       <div
         style={cardStyle}
-        className="rounded-xl bg-[#1C1C1C] border p-4 shadow-2xl text-white"
+        className="rounded-xl bg-card border p-4 shadow-2xl text-foreground"
       >
         <div className="flex items-start gap-2 mb-2">
           <div className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
-            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
             <Sparkles size={14} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] uppercase tracking-wider font-bold text-[rgb(var(--lz-brand-rgb))]">
+            <div className="text-[10px] uppercase tracking-wider font-bold text-[var(--lz-accent-ink)]">
               Tour · {stepIdx + 1} de {visibleSteps.length}
             </div>
-            <h3 className="text-white font-bold text-sm mt-0.5 leading-tight">{step.title}</h3>
+            <h3 className="text-foreground font-bold text-sm mt-0.5 leading-tight">{step.title}</h3>
           </div>
-          <button onClick={() => close(true)} className="text-white/40 hover:text-white shrink-0" aria-label="Fechar">
+          <button onClick={() => close(true)} className="text-foreground/40 hover:text-foreground shrink-0" aria-label="Fechar">
             <X size={16} />
           </button>
         </div>
-        <p className="text-white/70 text-[13px] leading-relaxed mb-4">{stepDesc}</p>
+        <p className="text-foreground/70 text-[13px] leading-relaxed mb-4">{stepDesc}</p>
 
         {/* Progress bar */}
-        <div className="h-1 w-full rounded-full bg-white/5 mb-3 overflow-hidden">
+        <div className="h-1 w-full rounded-full bg-foreground/5 mb-3 overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
             style={{ width: `${((stepIdx + 1) / visibleSteps.length) * 100}%`, backgroundColor: "rgb(var(--lz-brand-rgb))" }}
@@ -352,7 +352,7 @@ export function AppTour() {
         <div className="flex items-center justify-between gap-2">
           <button
             onClick={() => close(true)}
-            className="text-[11px] text-white/40 hover:text-white/70 underline-offset-2 hover:underline"
+            className="text-[11px] text-foreground/40 hover:text-foreground/70 underline-offset-2 hover:underline"
           >
             Pular tour
           </button>
@@ -360,7 +360,7 @@ export function AppTour() {
             <button
               onClick={prev}
               disabled={stepIdx === 0}
-              className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-md text-white/70 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-md text-foreground/70 hover:bg-foreground/5 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ArrowLeft size={12} /> Anterior
             </button>

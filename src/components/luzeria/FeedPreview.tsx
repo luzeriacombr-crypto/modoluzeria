@@ -110,9 +110,9 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
       {/* IG-style "profile" header */}
       <div className="mx-auto max-w-[640px] px-4">
         <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-          <div className="text-[12px] uppercase tracking-wider text-white/40 font-semibold">
+          <div className="text-[12px] uppercase tracking-wider text-foreground/40 font-semibold">
             Preview de feed · {cells.items.length} publicaç{cells.items.length === 1 ? "ão" : "ões"}
-            {canDrag && <span className="ml-2 text-white/30 normal-case tracking-normal">— arraste para reordenar</span>}
+            {canDrag && <span className="ml-2 text-foreground/30 normal-case tracking-normal">— arraste para reordenar</span>}
           </div>
           {isAdmin && (
             <div className="flex items-center gap-2">
@@ -123,7 +123,7 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
           )}
         </div>
         <div className="flex items-center justify-end gap-1.5 mb-3">
-          <span className="text-[10px] uppercase font-semibold text-white/30 tracking-wider mr-1">Ordem</span>
+          <span className="text-[10px] uppercase font-semibold text-foreground/30 tracking-wider mr-1">Ordem</span>
           {(["personalizada", "cronologica"] as const).map((m) => {
             const active = month.feedOrderMode === m;
             return (
@@ -133,8 +133,8 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
                 onClick={() => setFeedOrderMode.mutate({ data: { monthId: month.id, mode: m } })}
                 className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors disabled:cursor-default"
                 style={{
-                  backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
-                  color: active ? "#0D0D0D" : "rgba(255,255,255,0.5)",
+                  backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
+                  color: active ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
                 }}
               >
                 {m === "personalizada" ? "Personalizada" : "Cronológica"}
@@ -146,10 +146,10 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
               value={month.feedOrderDirection}
               disabled={!isAdmin}
               onChange={(e) => setFeedOrderDirection.mutate({ data: { monthId: month.id, direction: e.target.value as "asc" | "desc" } })}
-              className="ml-1 bg-transparent border border-white/10 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white/50 outline-none cursor-pointer hover:text-white/70 hover:border-white/20 transition-colors disabled:cursor-default"
+              className="ml-1 bg-transparent border border-foreground/10 rounded-full px-2.5 py-1 text-[10px] font-semibold text-foreground/50 outline-none cursor-pointer hover:text-foreground/70 hover:border-foreground/20 transition-colors disabled:cursor-default"
             >
-              <option value="desc" className="bg-[#1C1C1C] text-white">Recentes primeiro</option>
-              <option value="asc" className="bg-[#1C1C1C] text-white">Antigas primeiro</option>
+              <option value="desc" className="bg-card text-foreground">Recentes primeiro</option>
+              <option value="asc" className="bg-card text-foreground">Antigas primeiro</option>
             </select>
           )}
         </div>
@@ -174,9 +174,9 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
             <div
               key={`ph-${i}`}
               className="aspect-[4/5] flex items-center justify-center"
-              style={{ background: "#161616" }}
+              style={{ background: "var(--card)" }}
             >
-              <ImageIcon size={22} style={{ color: "rgba(255,255,255,0.10)" }} />
+              <ImageIcon size={22} style={{ color: "color-mix(in srgb, var(--foreground) 10%, transparent)" }} />
             </div>
           ))}
         </div>
@@ -218,10 +218,10 @@ function FeedApprovalDetails({
   const withComment = data.items.filter((r) => !r.approved && r.comment);
 
   return (
-    <div className="mt-5 pt-4 border-t border-white/[0.06]">
-      <div className="text-[12px] uppercase tracking-wider text-white/40 font-semibold mb-3">Detalhes</div>
+    <div className="mt-5 pt-4 border-t border-foreground/6">
+      <div className="text-[12px] uppercase tracking-wider text-foreground/40 font-semibold mb-3">Detalhes</div>
 
-      <div className="text-[13px] mb-4" style={{ color: data.feedApprovedAt ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.4)" }}>
+      <div className="text-[13px] mb-4" style={{ color: data.feedApprovedAt ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 40%, transparent)" }}>
         {data.feedApprovedAt
           ? `✓ Feed aprovado pelo cliente em ${new Date(data.feedApprovedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`
           : "Feed ainda não aprovado pelo cliente."}
@@ -229,16 +229,16 @@ function FeedApprovalDetails({
 
       <div className="space-y-3">
         <div>
-          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold text-white/50 mb-1.5">
+          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold text-foreground/50 mb-1.5">
             <CheckCircle2 size={13} /> Posts aprovados ({approved.length})
           </div>
           {approved.length === 0 ? (
-            <div className="text-[12px] text-white/30">Nenhum ainda.</div>
+            <div className="text-[12px] text-foreground/30">Nenhum ainda.</div>
           ) : (
             <ul className="space-y-1">
               {approved.map((r) => (
                 <li key={r.itemId}>
-                  <button onClick={() => onOpenItem(r.itemId)} className="text-[12.5px] text-white/70 hover:text-white transition-colors text-left">
+                  <button onClick={() => onOpenItem(r.itemId)} className="text-[12.5px] text-foreground/70 hover:text-foreground transition-colors text-left">
                     {byId.get(r.itemId)?.title || "Sem título"}
                   </button>
                 </li>
@@ -248,19 +248,19 @@ function FeedApprovalDetails({
         </div>
 
         <div>
-          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold text-white/50 mb-1.5">
+          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold text-foreground/50 mb-1.5">
             <MessageSquare size={13} /> Posts com sugestão de alteração ({withComment.length})
           </div>
           {withComment.length === 0 ? (
-            <div className="text-[12px] text-white/30">Nenhum ainda.</div>
+            <div className="text-[12px] text-foreground/30">Nenhum ainda.</div>
           ) : (
             <ul className="space-y-1.5">
               {withComment.map((r) => (
                 <li key={r.itemId}>
-                  <button onClick={() => onOpenItem(r.itemId)} className="text-[12.5px] text-white/70 hover:text-white transition-colors text-left">
+                  <button onClick={() => onOpenItem(r.itemId)} className="text-[12.5px] text-foreground/70 hover:text-foreground transition-colors text-left">
                     {byId.get(r.itemId)?.title || "Sem título"}
                   </button>
-                  <div className="text-[11.5px] text-white/40 pl-0.5">{r.comment}</div>
+                  <div className="text-[11.5px] text-foreground/40 pl-0.5">{r.comment}</div>
                 </li>
               ))}
             </ul>
@@ -304,7 +304,7 @@ function FeedCell({
       onClick={onOpen}
       className="relative aspect-[4/5] overflow-hidden group transition"
       style={{
-        background: "#1C1C1C",
+        background: "var(--card)",
         cursor: draggable ? "grab" : "pointer",
         opacity: isDragging ? 0.4 : 1,
         outline: isOver ? "2px solid rgb(var(--lz-brand-rgb))" : "none",
@@ -316,18 +316,18 @@ function FeedCell({
         <img src={url} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center gap-1">
-          <ImageIcon size={26} style={{ color: "rgba(255,255,255,0.18)" }} />
-          <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <ImageIcon size={26} style={{ color: "color-mix(in srgb, var(--foreground) 18%, transparent)" }} />
+          <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}>
             #{String(item.idx).padStart(2, "0")} · {isReel ? "Reel" : "Post"}
           </div>
         </div>
       )}
       {(isReel || isCarousel) && (
-        <div className="absolute top-1.5 right-1.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+        <div className="absolute top-1.5 right-1.5 text-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
           {isReel ? <Film size={16} /> : <Layers size={16} />}
         </div>
       )}
-      <div className="absolute bottom-0 inset-x-0 px-1.5 py-1 text-[10px] font-semibold text-white truncate opacity-0 group-hover:opacity-100 transition"
+      <div className="absolute bottom-0 inset-x-0 px-1.5 py-1 text-[10px] font-semibold text-foreground truncate opacity-0 group-hover:opacity-100 transition"
         style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)" }}>
         {item.title || "Sem título"}
       </div>
@@ -363,7 +363,7 @@ function DownloadAllButton({ items }: { items: FeedItem[] }) {
       disabled={downloading}
       title="Baixa os arquivos originais (posts e reels) direto do Drive, sem perda de qualidade"
       className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full transition disabled:opacity-50"
-      style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.12)" }}
+      style={{ background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 80%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 12%, transparent)" }}
     >
       {downloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
       {downloading ? "Baixando…" : "Baixar em alta qualidade"}
@@ -385,7 +385,7 @@ function ActiveMonthToggle({ clientId, monthId }: { clientId: string; monthId: s
     return (
       <span
         className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full"
-        style={{ background: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+        style={{ background: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
       >
         <CheckCircle2 size={13} /> Mês ativo no link
       </span>
@@ -396,7 +396,7 @@ function ActiveMonthToggle({ clientId, monthId }: { clientId: string; monthId: s
       onClick={() => setActiveFeedMonth.mutate({ data: { clientId, monthId } })}
       disabled={setActiveFeedMonth.isPending}
       title="Faz o link fixo do cliente passar a mostrar esse mês"
-      className="text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition disabled:opacity-50"
+      className="text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full border border-foreground/15 text-foreground/60 hover:text-foreground hover:border-foreground/30 transition disabled:opacity-50"
     >
       {setActiveFeedMonth.isPending ? "Ativando…" : "Ativar esse mês no link"}
     </button>
@@ -440,9 +440,9 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
       {open && token && (
         <div
           className="absolute right-0 mt-2 z-50 w-[340px] rounded-xl p-3 shadow-2xl"
-          style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}
         >
-          <div className="text-[11px] uppercase tracking-wider text-white/40 font-semibold mb-2">
+          <div className="text-[11px] uppercase tracking-wider text-foreground/40 font-semibold mb-2">
             Link público do preview
           </div>
           <div className="flex items-stretch gap-1.5">
@@ -451,7 +451,7 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
               value={`${PUBLIC_PREVIEW_BASE}/preview/${token}`}
               onFocus={(e) => e.currentTarget.select()}
               className="flex-1 text-[12px] px-2.5 py-2 rounded-md outline-none"
-              style={{ background: "#0D0D0D", color: "#fff", border: "1px solid rgba(255,255,255,0.08)" }}
+              style={{ background: "var(--background)", color: "#fff", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}
             />
             <button
               onClick={copyLink}
@@ -466,13 +466,13 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
             <button
               onClick={rotate}
               disabled={rotateShareToken.isPending}
-              className="text-[11px] text-white/60 hover:text-white inline-flex items-center gap-1"
+              className="text-[11px] text-foreground/60 hover:text-foreground inline-flex items-center gap-1"
             >
               <RefreshCw size={11} /> Gerar novo link (revoga o anterior)
             </button>
-            <button onClick={() => setOpen(false)} className="text-[11px] text-white/40 hover:text-white">Fechar</button>
+            <button onClick={() => setOpen(false)} className="text-[11px] text-foreground/40 hover:text-foreground">Fechar</button>
           </div>
-          <div className="mt-2 text-[10.5px] text-white/40 leading-snug">
+          <div className="mt-2 text-[10.5px] text-foreground/40 leading-snug">
             Link fixo — não muda de mês pra mês, sempre mostra o mês mais recente. Quem tiver
             o link vê apenas as publicações prontas e pode deixar comentários.
           </div>

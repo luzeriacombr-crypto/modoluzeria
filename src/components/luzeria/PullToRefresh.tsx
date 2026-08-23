@@ -78,7 +78,7 @@ export function PullToRefresh({ containerRef, children }: {
           size={18}
           className={refreshing ? "animate-spin" : ""}
           style={{
-            color: "rgb(var(--lz-brand-rgb))",
+            color: "var(--lz-accent-ink)",
             opacity: Math.min(pull / PULL_THRESHOLD, 1),
             transform: refreshing ? undefined : `rotate(${Math.min(pull / PULL_THRESHOLD, 1) * 300}deg)`,
           }}

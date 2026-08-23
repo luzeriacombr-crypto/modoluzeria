@@ -19,10 +19,10 @@ function formatSize(n: number | null | undefined) {
 
 function MimeIcon({ mime }: { mime?: string | null }) {
   const m = mime ?? "";
-  if (m.startsWith("image/")) return <ImageIcon size={16} style={{ color: "rgb(var(--lz-brand-rgb))" }} />;
-  if (m.startsWith("video/")) return <Film size={16} style={{ color: "rgb(var(--lz-brand-rgb))" }} />;
-  if (m.includes("folder")) return <FolderOpen size={16} style={{ color: "rgb(var(--lz-brand-rgb))" }} />;
-  return <FileText size={16} style={{ color: "rgb(var(--lz-brand-rgb))" }} />;
+  if (m.startsWith("image/")) return <ImageIcon size={16} style={{ color: "var(--lz-accent-ink)" }} />;
+  if (m.startsWith("video/")) return <Film size={16} style={{ color: "var(--lz-accent-ink)" }} />;
+  if (m.includes("folder")) return <FolderOpen size={16} style={{ color: "var(--lz-accent-ink)" }} />;
+  return <FileText size={16} style={{ color: "var(--lz-accent-ink)" }} />;
 }
 
 function isThumbnailable(mime?: string | null) {
@@ -36,11 +36,11 @@ function FileThumb({ fileId, mime, name }: { fileId: string; mime?: string | nul
   const { data, isLoading } = useQuery(driveThumbnailQO(fileId, enabled));
   const url = data?.dataUrl ?? null;
   return (
-    <div className="w-10 h-10 shrink-0 rounded-md overflow-hidden bg-[#0D0D0D] border border-white/[0.08] flex items-center justify-center">
+    <div className="w-10 h-10 shrink-0 rounded-md overflow-hidden bg-background border border-foreground/8 flex items-center justify-center">
       {url ? (
         <img src={url} alt={name} className="w-full h-full object-cover" loading="lazy" />
       ) : isLoading && enabled ? (
-        <Loader2 size={12} className="animate-spin text-white/30" />
+        <Loader2 size={12} className="animate-spin text-foreground/30" />
       ) : (
         <MimeIcon mime={mime} />
       )}
@@ -135,12 +135,12 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
       {/* List */}
       <div className="space-y-1.5">
         {isLoading && (
-          <div className="flex items-center gap-2 text-xs text-white/40 px-1">
+          <div className="flex items-center gap-2 text-xs text-foreground/40 px-1">
             <Loader2 size={12} className="animate-spin" /> carregando...
           </div>
         )}
         {!isLoading && orderedFiles.length === 0 && (
-          <p className="text-[11px] text-white/40 px-1">Nenhum arquivo anexado.</p>
+          <p className="text-[11px] text-foreground/40 px-1">Nenhum arquivo anexado.</p>
         )}
         {orderedFiles.map((f, i) => (
           <div
@@ -153,7 +153,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
             }}
             onDragOver={(e) => { if (canEdit) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } }}
             onDrop={(e) => { if (canEdit) { e.preventDefault(); onDrop(f.id); } }}
-            className="group flex items-center gap-2 rounded-md bg-[#1C1C1C] border border-white/[0.08] px-2 py-2 hover:border-white/20 transition-colors"
+            className="group flex items-center gap-2 rounded-md bg-card border border-foreground/8 px-2 py-2 hover:border-foreground/20 transition-colors"
           >
             {canEdit && (
               <div className="flex flex-col items-center shrink-0 -ml-0.5">
@@ -161,13 +161,13 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
                   type="button"
                   onClick={(e) => { e.stopPropagation(); moveBy(f.id, -1); }}
                   disabled={i === 0 || reorderItemFiles.isPending}
-                  className="text-white/30 hover:text-[rgb(var(--lz-brand-rgb))] disabled:opacity-20 disabled:cursor-not-allowed leading-none"
+                  className="text-foreground/30 hover:text-[var(--lz-accent-ink)] disabled:opacity-20 disabled:cursor-not-allowed leading-none"
                   title="Mover para cima"
                 >
                   <ChevronUp size={12} />
                 </button>
                 <span
-                  className="cursor-grab active:cursor-grabbing text-white/30 hover:text-white/60 leading-none"
+                  className="cursor-grab active:cursor-grabbing text-foreground/30 hover:text-foreground/60 leading-none"
                   title="Arrastar para reordenar"
                 >
                   <GripVertical size={12} />
@@ -176,7 +176,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
                   type="button"
                   onClick={(e) => { e.stopPropagation(); moveBy(f.id, 1); }}
                   disabled={i === orderedFiles.length - 1 || reorderItemFiles.isPending}
-                  className="text-white/30 hover:text-[rgb(var(--lz-brand-rgb))] disabled:opacity-20 disabled:cursor-not-allowed leading-none"
+                  className="text-foreground/30 hover:text-[var(--lz-accent-ink)] disabled:opacity-20 disabled:cursor-not-allowed leading-none"
                   title="Mover para baixo"
                 >
                   <ChevronDown size={12} />
@@ -190,13 +190,13 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
               rel="noopener noreferrer"
               referrerPolicy="no-referrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-[13px] font-medium text-white hover:text-[rgb(var(--lz-brand-rgb))] truncate"
+              className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground hover:text-[var(--lz-accent-ink)] truncate"
               title={f.name}
             >
               {i === 0 && (
                 <span
                   className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-                  style={{ background: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+                  style={{ background: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
                   title="Aparece na prévia de Mídia"
                 >
                   Capa
@@ -206,7 +206,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
               <ExternalLink size={11} className="shrink-0 opacity-50" />
             </a>
             {f.sizeBytes ? (
-              <span className="text-[10px] text-white/30 shrink-0">{formatSize(f.sizeBytes)}</span>
+              <span className="text-[10px] text-foreground/30 shrink-0">{formatSize(f.sizeBytes)}</span>
             ) : null}
             {canEdit && (
               <button
@@ -218,7 +218,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
                   }
                 }}
                 title="Desvincular"
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-white/40 hover:text-red-400 p-1 rounded hover:bg-white/5"
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-foreground/40 hover:text-red-400 p-1 rounded hover:bg-foreground/5"
               >
                 <Trash2 size={13} />
               </button>
@@ -256,7 +256,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
               type="button"
               disabled={busy}
               onClick={() => setShowLink((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold border border-white/15 text-white/80 hover:text-white hover:border-white/30 transition disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition disabled:opacity-50"
             >
               <Link2 size={12} /> Colar link do Drive
             </button>
@@ -280,7 +280,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
                 }}
                 autoFocus
                 placeholder="Cole o link ou ID do arquivo/pasta..."
-                className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 transition-colors"
+                className="flex-1 bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 transition-colors"
               />
               <button
                 type="button"
@@ -318,7 +318,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
         </div>
       )}
 
-      <p className="text-[10px] text-white/40 mt-2 leading-relaxed">
+      <p className="text-[10px] text-foreground/40 mt-2 leading-relaxed">
         Arquivos ficam armazenados no Google Drive da agência. Você pode selecionar vários de uma vez, sem limite de tamanho.
         Vídeos grandes podem levar mais tempo pra sincronizar com o Drive depois do envio — se der erro nessa etapa, é só tentar de novo.
       </p>

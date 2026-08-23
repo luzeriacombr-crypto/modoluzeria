@@ -13,9 +13,9 @@ export function Modal({ open, onClose, title, children, maxWidthClass = "max-w-m
   // `fixed` descendants and traps the overlay inside that ancestor's box.
   return createPortal(
     <div className="lz-overlay z-[100] flex items-center justify-center p-4" onClick={onClose}>
-      <div className={`bg-[#1C1C1C] rounded-2xl w-full ${maxWidthClass} border border-white/10 shadow-2xl lz-modal-in flex flex-col max-h-[85vh]`} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
-          <h2 className="text-base font-semibold text-white tracking-tight">{title}</h2>
+      <div className={`bg-card rounded-2xl w-full ${maxWidthClass} border border-foreground/10 shadow-2xl lz-modal-in flex flex-col max-h-[85vh]`} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-foreground/6 shrink-0">
+          <h2 className="text-base font-semibold text-foreground tracking-tight">{title}</h2>
           <button onClick={onClose} className="lz-icon-btn h-7 w-7"><X size={16} /></button>
         </div>
         <div className="p-5 overflow-y-auto">{children}</div>
@@ -34,13 +34,13 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
   const isAvulso = category === "Avulsos";
   return (
     <Modal open={open} onClose={onClose} title={isAvulso ? "Nova demanda avulsa" : "Novo cliente"}>
-      <label className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">Nome</label>
+      <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Nome</label>
       <input value={name} onChange={(e) => setName(e.target.value)} autoFocus
         placeholder={isAvulso ? "Ex: João Silva, Empresa XYZ" : ""}
-        className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]" />
+        className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]" />
 
       <div className="mt-4">
-        <div className="text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">Cor</div>
+        <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Cor</div>
         <div className="flex flex-wrap gap-1.5">
           {PRESET_COLORS.map((c) => (
             <button key={c} type="button" onClick={() => setColor(c)}
@@ -51,14 +51,14 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
       </div>
 
       <div className="mt-4">
-        <div className="text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">Inicial / Emoji (opcional)</div>
+        <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Inicial / Emoji (opcional)</div>
         <input value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={2}
           placeholder="(automático)"
-          className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+          className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
       </div>
 
       <div className="flex items-center justify-end gap-2 mt-5">
-        <button onClick={onClose} className="px-3 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
+        <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
         <button disabled={!name.trim() || createClient.isPending}
           onClick={() => createClient.mutateAsync({
             data: { name: name.trim(), category, color, icon: icon.trim() || null },
@@ -127,7 +127,7 @@ export function CustomFieldsModal({ client, onClose }: { client: Client | null; 
         <F label="Observações"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} /></F>
       </div>
       <div className="flex items-center justify-end gap-2 mt-5">
-        <button onClick={onClose} className="px-3 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
+        <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
         <button onClick={save} className="px-4 py-2 rounded-md text-sm font-bold transition-opacity hover:opacity-90"
           style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>Salvar</button>
       </div>
@@ -135,7 +135,7 @@ export function CustomFieldsModal({ client, onClose }: { client: Client | null; 
   );
 }
 
-const inp = "w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]";
+const inp = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]";
 function F({ label, children }: { label: string; children: React.ReactNode }) {
-  return (<label className="block"><span className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">{label}</span>{children}</label>);
+  return (<label className="block"><span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">{label}</span>{children}</label>);
 }

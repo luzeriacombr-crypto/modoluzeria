@@ -10,7 +10,7 @@ export function Avatar({
   ring?: boolean;
   avatarUrl?: string | null;
 }) {
-  const c = profile?.color ?? color ?? "rgb(var(--lz-brand-rgb))";
+  const c = profile?.color ?? color ?? "var(--lz-accent-ink)";
   const n = profile?.name ?? name ?? "?";
   const initial = profile?.icon || n.trim().charAt(0).toUpperCase() || "?";
   const photo = avatarUrl ?? profile?.avatarUrl ?? null;
@@ -22,7 +22,7 @@ export function Avatar({
         alt={n}
         title={n}
         className={`rounded-full object-cover shrink-0 ${ring ? "ring-2 ring-[#1C1C1C]" : ""}`}
-        style={{ width: size, height: size, backgroundColor: "#1C1C1C" }}
+        style={{ width: size, height: size, backgroundColor: "var(--card)" }}
         loading="lazy"
       />
     );
@@ -57,7 +57,7 @@ export function AvatarStack({
       ))}
       {extra > 0 && (
         <div
-          className="rounded-full bg-[#252525] text-white/70 ring-2 ring-[#1C1C1C] flex items-center justify-center font-semibold"
+          className="rounded-full bg-card text-foreground/70 ring-2 ring-[#1C1C1C] flex items-center justify-center font-semibold"
           style={{ width: size, height: size, fontSize: Math.round(size * 0.38), marginLeft: -8 }}
         >+{extra}</div>
       )}

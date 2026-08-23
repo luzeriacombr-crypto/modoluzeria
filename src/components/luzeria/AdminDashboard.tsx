@@ -36,14 +36,14 @@ function monthRange(monthKey: string) {
 }
 
 function pctColor(p: number) {
-  if (p >= 80) return "rgb(var(--lz-brand-rgb))";
+  if (p >= 80) return "var(--lz-accent-ink)";
   if (p >= 50) return "#FF8C42";
   return "#FF4444";
 }
 
 // Paleta criativa derivada das cores já presentes no app.
 const PALETTE = {
-  lime: "rgb(var(--lz-brand-rgb))",
+  lime: "var(--lz-accent-ink)",
   limeDeep: "#8FA832",
   green: "#5BA88A",
   greenDeep: "#2D4A3E",
@@ -156,9 +156,9 @@ export function AdminDashboard() {
       <div data-tour="dashboard-hero" className="relative overflow-hidden rounded-2xl mb-6"
         style={{
           background:
-            "radial-gradient(120% 140% at 0% 0%, rgba(var(--lz-hero-a-rgb),0.18) 0%, color-mix(in srgb, rgb(var(--lz-hero-a-rgb)) 10%, transparent) 35%, rgba(28,28,28,0) 70%), " +
-            "radial-gradient(80% 120% at 100% 100%, color-mix(in srgb, color-mix(in srgb, rgb(var(--lz-hero-b-rgb)) 40%, #0D0D0D) 55%, transparent) 0%, rgba(28,28,28,0) 65%), " +
-            "linear-gradient(180deg, #161616 0%, #111111 100%)",
+            "radial-gradient(120% 140% at 0% 0%, rgba(var(--lz-hero-a-rgb),0.18) 0%, color-mix(in srgb, rgb(var(--lz-hero-a-rgb)) 10%, transparent) 35%, transparent 70%), " +
+            "radial-gradient(80% 120% at 100% 100%, color-mix(in srgb, color-mix(in srgb, rgb(var(--lz-hero-b-rgb)) 40%, var(--background)) 55%, transparent) 0%, transparent 65%), " +
+            "linear-gradient(180deg, var(--card) 0%, var(--background) 100%)",
           border: "1px solid rgba(var(--lz-hero-a-rgb),0.18)",
         }}>
         {/* Glow blobs */}
@@ -175,23 +175,23 @@ export function AdminDashboard() {
               <Sparkles size={11} /> Dashboard
             </div>
             <h1
-              className="mt-3 text-white font-bold text-[36px] md:text-[48px] leading-tight tracking-tight"
+              className="mt-3 text-foreground font-bold text-[36px] md:text-[48px] leading-tight tracking-tight"
             >
               ENTREGAS
             </h1>
-            <p className="mt-2 italic text-white/70 text-sm md:text-base">{message}</p>
+            <p className="mt-2 italic text-foreground/70 text-sm md:text-base">{message}</p>
 
             {/* Month selector */}
-            <div className="mt-5 inline-flex items-center gap-1 rounded-full bg-black/30 backdrop-blur p-1 border border-white/10 mx-auto md:mx-0">
+            <div className="mt-5 inline-flex items-center gap-1 rounded-full bg-black/30 backdrop-blur p-1 border border-foreground/10 mx-auto md:mx-0">
               <button onClick={() => selectMonth(shiftMonth(selectedMonthKey, -1))}
-                className="h-8 w-8 rounded-full hover:bg-white/10 text-white/70 flex items-center justify-center transition">
+                className="h-8 w-8 rounded-full hover:bg-foreground/10 text-foreground/70 flex items-center justify-center transition">
                 <ChevronLeft size={15} />
               </button>
-              <div className="px-4 text-white text-sm font-semibold min-w-[140px] text-center">
+              <div className="px-4 text-foreground text-sm font-semibold min-w-[140px] text-center">
                 {formatMonth(selectedMonthKey)}
               </div>
               <button onClick={() => selectMonth(shiftMonth(selectedMonthKey, +1))}
-                className="h-8 w-8 rounded-full hover:bg-white/10 text-white/70 flex items-center justify-center transition">
+                className="h-8 w-8 rounded-full hover:bg-foreground/10 text-foreground/70 flex items-center justify-center transition">
                 <ChevronRight size={15} />
               </button>
             </div>
@@ -216,11 +216,11 @@ export function AdminDashboard() {
           info="Itens já finalizados (prontos pra publicar, finalizados ou concluídos) dentro do período selecionado. Clique pra ver a lista." />;
         const missing = (t?.planned ?? 0) - (t?.done ?? 0);
         const cardMissing = <MetricCard
-          tone={missing > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
+          tone={missing > 0 ? "#FF4444" : "var(--lz-accent-ink)"}
           icon={<Clock size={16} />}
           label="Falta"
           value={missing}
-          valueColor={missing > 0 ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}
+          valueColor={missing > 0 ? "#FF4444" : "var(--lz-accent-ink)"}
           onClick={() => { setFilterMode("metric"); setSelectedFilter("pending"); }}
           info="Meta do mês menos Entregues — quantos itens ainda faltam pra bater a meta do período. Clique pra ver a lista."
         />;
@@ -241,26 +241,26 @@ export function AdminDashboard() {
       )}
 
       {/* Top members */}
-      <div className="rounded-xl bg-[#161616] border border-white/[0.07] p-5 mb-6 relative overflow-hidden">
+      <div className="rounded-xl bg-card border border-foreground/7 p-5 mb-6 relative overflow-hidden">
         <div className="pointer-events-none absolute -top-16 -right-10 h-48 w-48 rounded-full opacity-15 blur-3xl" style={{ background: PALETTE.lime }} />
         <div className="flex items-center justify-start md:justify-between flex-wrap gap-3 mb-5 relative">
-          <h2 className="text-white font-semibold inline-flex items-center gap-2">
-            <Trophy size={16} className="text-[rgb(var(--lz-brand-rgb))]" />
-            Top Membros <span className="text-white/40 font-normal">— {PERIOD_LABEL[period]}</span>
+          <h2 className="text-foreground font-semibold inline-flex items-center gap-2">
+            <Trophy size={16} className="text-[var(--lz-accent-ink)]" />
+            Top Membros <span className="text-foreground/40 font-normal">— {PERIOD_LABEL[period]}</span>
           </h2>
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1 bg-[#0D0D0D] rounded-md p-1 text-xs">
+            <div className="flex items-center gap-1 bg-background rounded-md p-1 text-xs">
               {(["meta", "geral"] as const).map((m) => (
                 <button key={m} onClick={() => setRankingMode(m)}
-                  className={`px-3 py-1.5 rounded transition ${rankingMode === m ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] font-semibold" : "text-white/60 hover:text-white"}`}>
+                  className={`px-3 py-1.5 rounded transition ${rankingMode === m ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] font-semibold" : "text-foreground/60 hover:text-foreground"}`}>
                   {m === "meta" ? "Por meta" : "Geral"}
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-1 bg-[#0D0D0D] rounded-md p-1 text-xs">
+            <div className="flex items-center gap-1 bg-background rounded-md p-1 text-xs">
               {(Object.keys(PERIOD_LABEL) as Period[]).map((p) => (
                 <button key={p} onClick={() => setPeriod(p)}
-                  className={`px-3 py-1.5 rounded transition ${period === p ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] font-semibold" : "text-white/60 hover:text-white"}`}>
+                  className={`px-3 py-1.5 rounded transition ${period === p ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] font-semibold" : "text-foreground/60 hover:text-foreground"}`}>
                   {PERIOD_LABEL[p]}
                 </button>
               ))}
@@ -274,7 +274,7 @@ export function AdminDashboard() {
               i === 0 ? PALETTE.lime :
               i === 1 ? PALETTE.blue :
               i === 2 ? PALETTE.purple :
-                        "rgba(255,255,255,0.35)";
+                        "color-mix(in srgb, var(--foreground) 35%, transparent)";
             const rankIcon =
               i === 0 ? <Crown size={13} /> :
               i === 1 ? <Medal size={13} /> :
@@ -285,7 +285,7 @@ export function AdminDashboard() {
                 key={r.id}
                 disabled={!canOpen}
                 onClick={() => canOpen && setOpenMember({ id: r.id, name: r.name, color: r.color, avatarUrl: r.avatarUrl })}
-                className={`w-full flex flex-row items-start gap-3 px-2 py-2 rounded-lg transition-colors text-left ${canOpen ? "hover:bg-white/[0.05] cursor-pointer" : "cursor-default"}`}
+                className={`w-full flex flex-row items-start gap-3 px-2 py-2 rounded-lg transition-colors text-left ${canOpen ? "hover:bg-foreground/[0.05] cursor-pointer" : "cursor-default"}`}
               >
                 <div className="w-8 inline-flex items-center justify-center gap-1 text-[11px] font-bold tabular-nums"
                   style={{ color: rankColor }}>
@@ -293,27 +293,27 @@ export function AdminDashboard() {
                 </div>
                 <Avatar name={r.name} color={r.color} avatarUrl={r.avatarUrl} size={30} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-white text-sm font-medium truncate mb-1 flex flex-row items-center gap-2">
+                  <div className="text-foreground text-sm font-medium truncate mb-1 flex flex-row items-center gap-2">
                     {r.name}
                     {r.id === me?.id && (
                       <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded"
-                        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>Você</span>
+                        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>Você</span>
                     )}
                   </div>
                   <GrowBar pct={r.barPct} gradient={`linear-gradient(90deg, ${rankColor}, ${PALETTE.lime})`} />
                 </div>
-                <div className="text-white font-bold tabular-nums w-12 text-right">{r.rightLabel}</div>
+                <div className="text-foreground font-bold tabular-nums w-12 text-right">{r.rightLabel}</div>
               </button>
             );
           })}
           {rankingRows.length === 0 && noGoalRows.length === 0 && (
-            <div className="text-white/40 text-sm text-center py-8">
+            <div className="text-foreground/40 text-sm text-center py-8">
               {rankingMode === "meta" ? "Nenhuma meta definida para o período." : "Sem finalizações no período."}
             </div>
           )}
           {rankingMode === "meta" && noGoalRows.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-white/[0.06]">
-              <div className="flex items-center gap-1.5 mb-2 text-[10px] uppercase font-bold tracking-wider text-white/40">
+            <div className="mt-4 pt-4 border-t border-foreground/6">
+              <div className="flex items-center gap-1.5 mb-2 text-[10px] uppercase font-bold tracking-wider text-foreground/40">
                 <Target size={11} /> Sem meta definida
               </div>
               <div className="space-y-1">
@@ -324,12 +324,12 @@ export function AdminDashboard() {
                       key={r.id}
                       disabled={!canOpen}
                       onClick={() => canOpen && setOpenMember({ id: r.id, name: r.name, color: r.color, avatarUrl: r.avatarUrl })}
-                      className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-lg transition-colors text-left ${canOpen ? "hover:bg-white/[0.05] cursor-pointer" : "cursor-default"}`}
+                      className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-lg transition-colors text-left ${canOpen ? "hover:bg-foreground/[0.05] cursor-pointer" : "cursor-default"}`}
                     >
                       <div className="w-8" />
                       <Avatar name={r.name} color={r.color} avatarUrl={r.avatarUrl} size={24} />
-                      <span className="text-white/50 text-sm truncate flex-1">{r.name}</span>
-                      <span className="text-white/25 text-xs">—</span>
+                      <span className="text-foreground/50 text-sm truncate flex-1">{r.name}</span>
+                      <span className="text-foreground/25 text-xs">—</span>
                     </button>
                   );
                 })}
@@ -349,16 +349,16 @@ export function AdminDashboard() {
       )}
 
       {/* Clients table */}
-      <div className="rounded-xl bg-[#161616] border border-white/[0.07] overflow-hidden mb-6">
-        <div className="px-5 py-3.5 border-b border-white/[0.07] flex items-center justify-start gap-2">
+      <div className="rounded-xl bg-card border border-foreground/7 overflow-hidden mb-6">
+        <div className="px-5 py-3.5 border-b border-foreground/7 flex items-center justify-start gap-2">
           <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.lime }} />
-          <span className="text-[11px] uppercase tracking-wider text-white/70 font-bold">Clientes</span>
-          <span className="text-[11px] text-white/30">— {formatMonth(selectedMonthKey)}</span>
+          <span className="text-[11px] uppercase tracking-wider text-foreground/70 font-bold">Clientes</span>
+          <span className="text-[11px] text-foreground/30">— {formatMonth(selectedMonthKey)}</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-[10px] uppercase tracking-wider text-white/40">
+              <tr className="text-[10px] uppercase tracking-wider text-foreground/40">
                 <th className="text-left px-5 py-2 font-semibold">Cliente</th>
                 <th className="text-left md:text-center px-3 py-2 font-semibold">Posts</th>
                 <th className="text-left md:text-center px-3 py-2 font-semibold">Reels</th>
@@ -376,22 +376,22 @@ export function AdminDashboard() {
                   c.percent >= 100 ? "Meta batida" :
                   c.percent >= 80 ? "Em dia" : "Abaixo";
                 const statusColor =
-                  c.total === 0 ? { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" } :
-                  c.percent > 100 ? { bg: "rgba(var(--lz-brand-light-rgb),0.3)", color: "rgb(var(--lz-brand-rgb))" } :
-                  c.percent >= 100 ? { bg: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" } :
+                  c.total === 0 ? { bg: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 50%, transparent)" } :
+                  c.percent > 100 ? { bg: "rgba(var(--lz-brand-light-rgb),0.3)", color: "var(--lz-accent-ink)" } :
+                  c.percent >= 100 ? { bg: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" } :
                   c.percent >= 80 ? { bg: "rgba(74,158,255,0.15)", color: "#4A9EFF" } :
                                     { bg: "rgba(255,68,68,0.15)", color: "#FF4444" };
                 return (
-                  <tr key={c.id} className={`border-t border-white/[0.04] ${inactive ? "opacity-40" : ""}`}>
+                  <tr key={c.id} className={`border-t border-foreground/4 ${inactive ? "opacity-40" : ""}`}>
                     <td className="px-5 py-3 text-left">
                       <div className="flex items-center justify-start gap-3">
                         <Avatar name={c.name} color={c.color} avatarUrl={c.photoUrl} size={26} />
-                        <span className="text-white font-medium">{c.name}</span>
+                        <span className="text-foreground font-medium">{c.name}</span>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-left md:text-center text-white/80">{c.posts}</td>
-                    <td className="px-3 py-3 text-left md:text-center text-white/80">{c.reels}</td>
-                    <td className="px-3 py-3 text-left md:text-center text-white/80">{c.done}</td>
+                    <td className="px-3 py-3 text-left md:text-center text-foreground/80">{c.posts}</td>
+                    <td className="px-3 py-3 text-left md:text-center text-foreground/80">{c.reels}</td>
+                    <td className="px-3 py-3 text-left md:text-center text-foreground/80">{c.done}</td>
                     <td className="px-3 py-3 text-left md:text-center font-semibold" style={{ color: pctColor(c.percent) }}>
                       {c.percent}%
                     </td>
@@ -407,7 +407,7 @@ export function AdminDashboard() {
                 );
               })}
               {sortedClients.length === 0 && (
-                <tr><td colSpan={6} className="px-5 py-8 text-center text-white/40 text-sm">Nenhum cliente.</td></tr>
+                <tr><td colSpan={6} className="px-5 py-8 text-center text-foreground/40 text-sm">Nenhum cliente.</td></tr>
               )}
             </tbody>
           </table>
@@ -434,14 +434,14 @@ export function AdminDashboard() {
             const color = CAT_COLOR[c.name] ?? PALETTE.green;
             return (
               <button key={c.name} onClick={() => { setFilterMode("category"); setSelectedFilter(c.name); }}
-                className="relative overflow-hidden rounded-xl p-4 bg-[#161616] border border-white/[0.06] text-left hover:border-white/[0.12] transition-all hover:bg-[#1a1a1a] cursor-pointer">
+                className="relative overflow-hidden rounded-xl p-4 bg-card border border-foreground/6 text-left hover:border-foreground/12 transition-all hover:bg-card cursor-pointer">
                 <div className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-20 blur-2xl" style={{ background: color }} />
                 <div className="flex flex-row md:flex-row items-start md:items-center justify-between relative">
                   <div className="text-[11px] uppercase tracking-wider font-bold" style={{ color }}>{c.name}</div>
-                  <div className="text-white text-sm font-bold tabular-nums">{c.percent}%</div>
+                  <div className="text-foreground text-sm font-bold tabular-nums">{c.percent}%</div>
                 </div>
-                <div className="mt-2 text-white/60 text-xs">
-                  <span className="text-white font-semibold">{c.done}</span> de {c.total} entregues
+                <div className="mt-2 text-foreground/60 text-xs">
+                  <span className="text-foreground font-semibold">{c.done}</span> de {c.total} entregues
                 </div>
                 <div className="mt-3">
                   <GrowBar pct={c.percent} gradient={`linear-gradient(90deg, ${color}, ${PALETTE.lime})`} />
@@ -517,32 +517,32 @@ function MemberDetailPanel({
     <>
       <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px]" />
       <div ref={panelRef}
-        className="fixed z-50 bg-[#0D0D0D] border-white/10 flex flex-col lz-slide-in
+        className="fixed z-50 bg-background border-foreground/10 flex flex-col lz-slide-in
           inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl border-t
           md:rounded-none md:border-t-0 md:border-l md:right-0 md:top-0 md:bottom-0 md:left-auto md:w-[480px] md:max-h-none">
         {/* Header */}
-        <div className="px-6 pt-5 pb-4 border-b border-white/[0.08]">
+        <div className="px-6 pt-5 pb-4 border-b border-foreground/8">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <Avatar name={member.name} color={member.color} avatarUrl={member.avatarUrl} size={48} />
               <div className="min-w-0">
-                <div className="text-white font-bold text-[17px] truncate">{member.name}</div>
+                <div className="text-foreground font-bold text-[17px] truncate">{member.name}</div>
                 <div className="mt-1 inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded"
-                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
                   {roleLabel}
                 </div>
               </div>
             </div>
-            <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition">
+            <button onClick={onClose} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5 transition">
               <X size={16} />
             </button>
           </div>
-          <p className="text-[12px] text-white/60 mt-3">
-            <span className="text-white font-semibold">{list.length}</span> tarefa{list.length === 1 ? "" : "s"} finalizada{list.length === 1 ? "" : "s"} em <span className="text-white/80">{formatMonth(monthKey)}</span>
+          <p className="text-[12px] text-foreground/60 mt-3">
+            <span className="text-foreground font-semibold">{list.length}</span> tarefa{list.length === 1 ? "" : "s"} finalizada{list.length === 1 ? "" : "s"} em <span className="text-foreground/80">{formatMonth(monthKey)}</span>
           </p>
           {estimatedTimeLabel && (
-            <p className="text-[12px] text-white/60 mt-1 flex items-center gap-1">
-              ~<span className="text-white font-semibold">{estimatedTimeLabel}</span> trabalhados (estimado)
+            <p className="text-[12px] text-foreground/60 mt-1 flex items-center gap-1">
+              ~<span className="text-foreground font-semibold">{estimatedTimeLabel}</span> trabalhados (estimado)
               <InfoTip text="Estimativa com base no tempo médio configurado por tipo de conteúdo — não é apontamento real de horas." />
             </p>
           )}
@@ -562,8 +562,8 @@ function MemberDetailPanel({
             <button key={f.id} onClick={() => setFilter(f.id)}
               className="px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors"
               style={{
-                backgroundColor: filter === f.id ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
-                color: filter === f.id ? "#0D0D0D" : "rgba(255,255,255,0.7)",
+                backgroundColor: filter === f.id ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
+                color: filter === f.id ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 70%, transparent)",
               }}>
               {f.label}
             </button>
@@ -572,11 +572,11 @@ function MemberDetailPanel({
 
         {/* List */}
         <div className="flex-1 overflow-y-auto px-4 pb-4">
-          {q.isLoading && <div className="px-2 py-8 text-center text-white/40 text-xs">Carregando…</div>}
+          {q.isLoading && <div className="px-2 py-8 text-center text-foreground/40 text-xs">Carregando…</div>}
           {!q.isLoading && filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center py-14 text-center">
-              <Inbox size={28} className="text-white/20 mb-3" />
-              <p className="text-white/40 text-xs">Nenhuma tarefa finalizada neste período</p>
+              <Inbox size={28} className="text-foreground/20 mb-3" />
+              <p className="text-foreground/40 text-xs">Nenhuma tarefa finalizada neste período</p>
             </div>
           )}
           <ul className="space-y-1.5">
@@ -585,25 +585,25 @@ function MemberDetailPanel({
               const typeLabel = (CONTENT_TYPE_LABEL[t.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item").toUpperCase();
               return (
                 <li key={t.itemId + t.finalizedAt}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-foreground/[0.03] hover:bg-foreground/[0.06] transition-colors">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                       <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
                         style={{
                           backgroundColor: isAvulso ? "rgba(var(--lz-brand-light-rgb),0.15)" : `${t.clientColor}22`,
-                          color: isAvulso ? "rgb(var(--lz-brand-rgb))" : t.clientColor,
+                          color: isAvulso ? "var(--lz-accent-ink)" : t.clientColor,
                         }}>
                         {isAvulso ? "AVULSO" : t.clientName}
                       </span>
                       <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
-                        style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
+                        style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
                         {typeLabel}
                       </span>
                     </div>
-                    <div className="text-white text-sm truncate">{t.title}</div>
-                    <div className="text-[10px] text-white/40 mt-0.5">{formatFinalized(t.finalizedAt)}</div>
+                    <div className="text-foreground text-sm truncate">{t.title}</div>
+                    <div className="text-[10px] text-foreground/40 mt-0.5">{formatFinalized(t.finalizedAt)}</div>
                   </div>
-                  <CheckCircle2 size={18} style={{ color: "rgb(var(--lz-brand-rgb))" }} className="shrink-0" />
+                  <CheckCircle2 size={18} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />
                 </li>
               );
             })}
@@ -611,19 +611,19 @@ function MemberDetailPanel({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-white/[0.08] px-6 py-4 space-y-3 bg-[#0D0D0D]">
-          <div className="text-[11px] text-white/60">
-            <span className="text-white font-bold">{counts.post}</span> posts ·{" "}
-            <span className="text-white font-bold">{counts.reel}</span> reels ·{" "}
-            <span className="text-white font-bold">{counts.outros}</span> outros
+        <div className="border-t border-foreground/8 px-6 py-4 space-y-3 bg-background">
+          <div className="text-[11px] text-foreground/60">
+            <span className="text-foreground font-bold">{counts.post}</span> posts ·{" "}
+            <span className="text-foreground font-bold">{counts.reel}</span> reels ·{" "}
+            <span className="text-foreground font-bold">{counts.outros}</span> outros
           </div>
-          <div className="flex items-center gap-1 bg-[#161616] rounded-md p-1 text-[10px] flex-wrap">
+          <div className="flex items-center gap-1 bg-card rounded-md p-1 text-[10px] flex-wrap">
             {(Object.keys(PERIOD_LABEL) as Period[]).map((p) => (
               <button key={p} onClick={() => setPeriod(p)}
                 className="px-2.5 py-1.5 rounded transition flex-1"
                 style={{
                   backgroundColor: period === p ? "rgb(var(--lz-brand-rgb))" : "transparent",
-                  color: period === p ? "#0D0D0D" : "rgba(255,255,255,0.6)",
+                  color: period === p ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
                   fontWeight: period === p ? 700 : 500,
                 }}>
                 {PERIOD_LABEL[p]}
@@ -649,9 +649,9 @@ function MetricCard({
   const display = typeof value === "number" ? Math.round(animated) : value;
   return (
     <div onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
-      className={`relative overflow-hidden rounded-xl p-4 transition-transform hover:-translate-y-0.5 text-center md:text-left ${onClick ? "cursor-pointer hover:border-white/[0.3]" : ""}`}
+      className={`relative overflow-hidden rounded-xl p-4 transition-transform hover:-translate-y-0.5 text-center md:text-left ${onClick ? "cursor-pointer hover:border-foreground/30" : ""}`}
       style={{
-        background: `linear-gradient(160deg, ${hexA(tone, 0.16)} 0%, rgba(22,22,22,1) 70%)`,
+        background: `linear-gradient(160deg, ${hexA(tone, 0.16)} 0%, var(--card) 70%)`,
         border: `1px solid ${hexA(tone, 0.22)}`,
       }}>
       <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: tone }} />
@@ -663,7 +663,7 @@ function MetricCard({
         {info && <InfoTip text={info} />}
       </div>
       <div className="relative text-[34px] font-extrabold leading-none mb-1.5 tabular-nums"
-        style={{ color: valueColor ?? "#ffffff" }}>
+        style={{ color: valueColor ?? "var(--foreground)" }}>
         {display}
       </div>
       <div className="relative text-[10.5px] uppercase tracking-wider font-bold" style={{ color: hexA(tone, 0.9) }}>{label}</div>
@@ -674,7 +674,7 @@ function MetricCard({
 function GrowBar({ pct, gradient }: { pct: number; gradient: string }) {
   const grown = useGrowIn(pct);
   return (
-    <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px]">
+    <div className="h-1.5 rounded-full bg-foreground/[0.06] overflow-hidden max-w-[200px]">
       <div className="h-full rounded-full transition-all duration-500" style={{ width: `${grown}%`, background: gradient }} />
     </div>
   );
@@ -693,14 +693,14 @@ function BigDonut({ percent, done, total }: { percent: number; done: number; tot
             <stop offset="100%" stopColor="rgb(var(--lz-brand-light-rgb))" />
           </linearGradient>
         </defs>
-        <circle cx={size/2} cy={size/2} r={r} stroke="rgba(255,255,255,0.06)" strokeWidth={stroke} fill="none" />
+        <circle cx={size/2} cy={size/2} r={r} stroke="color-mix(in srgb, var(--foreground) 6%, transparent)" strokeWidth={stroke} fill="none" />
         <circle cx={size/2} cy={size/2} r={r} stroke="url(#bigdonut)" strokeWidth={stroke} fill="none"
           strokeDasharray={c} strokeDashoffset={c * (1 - animatedPercent/100)} strokeLinecap="round" />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-[44px] font-extrabold tabular-nums leading-none text-white">{Math.round(animatedPercent)}%</div>
-        <div className="text-[10px] uppercase tracking-wider text-white/50 font-bold mt-1">Entregue</div>
-        <div className="text-[11px] text-white/70 mt-0.5"><span className="font-bold text-[rgb(var(--lz-brand-rgb))]">{done}</span> / {total}</div>
+        <div className="text-[44px] font-extrabold tabular-nums leading-none text-foreground">{Math.round(animatedPercent)}%</div>
+        <div className="text-[10px] uppercase tracking-wider text-foreground/50 font-bold mt-1">Entregue</div>
+        <div className="text-[11px] text-foreground/70 mt-0.5"><span className="font-bold text-[var(--lz-accent-ink)]">{done}</span> / {total}</div>
       </div>
     </div>
   );
@@ -763,19 +763,19 @@ function FilteredItemsPanel({ filterMode, selectedFilter, monthKey, data, health
     <>
       <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px]" />
       <div ref={panelRef}
-        className="fixed z-50 bg-[#0D0D0D] border-white/10 flex flex-col lz-slide-in
+        className="fixed z-50 bg-background border-foreground/10 flex flex-col lz-slide-in
           inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl border-t
           md:rounded-none md:border-t-0 md:border-l md:right-0 md:top-0 md:bottom-0 md:left-auto md:w-[480px] md:max-h-none">
         {/* Header */}
-        <div className="px-6 pt-5 pb-4 border-b border-white/[0.08]">
+        <div className="px-6 pt-5 pb-4 border-b border-foreground/8">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-white font-bold text-[17px]">{title}</div>
-              <div className="mt-1 text-[12px] text-white/60">
-                <span className="text-white font-semibold">{items.length}</span> demanda{items.length === 1 ? "" : "s"}
+              <div className="text-foreground font-bold text-[17px]">{title}</div>
+              <div className="mt-1 text-[12px] text-foreground/60">
+                <span className="text-foreground font-semibold">{items.length}</span> demanda{items.length === 1 ? "" : "s"}
               </div>
             </div>
-            <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition">
+            <button onClick={onClose} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5 transition">
               <X size={16} />
             </button>
           </div>
@@ -785,14 +785,14 @@ function FilteredItemsPanel({ filterMode, selectedFilter, monthKey, data, health
         <div className="flex-1 overflow-y-auto px-4 pb-4">
           {items.length === 0 && (
             <div className="flex flex-col items-center justify-center py-14 text-center">
-              <Inbox size={28} className="text-white/20 mb-3" />
-              <p className="text-white/40 text-xs">Nenhuma demanda encontrada</p>
+              <Inbox size={28} className="text-foreground/20 mb-3" />
+              <p className="text-foreground/40 text-xs">Nenhuma demanda encontrada</p>
             </div>
           )}
           <ul className="space-y-1.5">
             {items.map((item: any) => (
               <li key={item.itemId || item.id}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-foreground/[0.03] hover:bg-foreground/[0.06] transition-colors">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                     {item.clientName && (
@@ -802,11 +802,11 @@ function FilteredItemsPanel({ filterMode, selectedFilter, monthKey, data, health
                       </span>
                     )}
                     <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
-                      style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
+                      style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
                       {item.type?.toUpperCase() ?? "ITEM"}
                     </span>
                   </div>
-                  <div className="text-white text-sm truncate">{item.title}</div>
+                  <div className="text-foreground text-sm truncate">{item.title}</div>
                 </div>
               </li>
             ))}
@@ -836,20 +836,20 @@ function OperationHealth({ data, onOpenBlocked, onOpenRework }: {
   }
 
   return (
-    <div className="rounded-xl bg-[#161616] border border-white/[0.07] p-5 mb-6 relative overflow-hidden">
+    <div className="rounded-xl bg-card border border-foreground/7 p-5 mb-6 relative overflow-hidden">
       <div className="flex items-center gap-2 mb-4">
-        <Activity size={16} className="text-[rgb(var(--lz-brand-rgb))]" />
-        <h2 className="text-white font-semibold">Saúde da operação</h2>
-        <span className="text-[10px] text-white/30 ml-1">— mês atual</span>
+        <Activity size={16} className="text-[var(--lz-accent-ink)]" />
+        <h2 className="text-foreground font-semibold">Saúde da operação</h2>
+        <span className="text-[10px] text-foreground/30 ml-1">— mês atual</span>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <HealthCard icon={<Clock size={14} />} tone="#4A9EFF" label="Lead time médio" value={formatHours(leadAvg)} sub={`${data?.leadTime.count ?? 0} entregas`}
           info="Tempo médio entre o item ser criado e ser finalizado, considerando as entregas do mês atual — mede a velocidade de entrega da equipe." />
-        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} label="Travados" value={blocked} sub={blocked > 0 ? "precisam de ação" : "tudo fluindo"} valueColor={blocked > 0 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))"} onClick={blocked > 0 ? onOpenBlocked : undefined}
+        <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "var(--lz-accent-ink)"} label="Travados" value={blocked} sub={blocked > 0 ? "precisam de ação" : "tudo fluindo"} valueColor={blocked > 0 ? "#FF6B6B" : "var(--lz-accent-ink)"} onClick={blocked > 0 ? onOpenBlocked : undefined}
           info="Itens marcados como travados agora, precisando de ação da equipe pra destravar. Clique pra ver a lista." />
-        <HealthCard icon={<RotateCcw size={14} />} tone={reworkRate > 15 ? "#FF8C42" : "rgb(var(--lz-brand-rgb))"} label="Taxa de retrabalho" value={`${reworkRate}%`} sub={`${data?.rework.total ?? 0} itens`} onClick={onOpenRework}
+        <HealthCard icon={<RotateCcw size={14} />} tone={reworkRate > 15 ? "#FF8C42" : "var(--lz-accent-ink)"} label="Taxa de retrabalho" value={`${reworkRate}%`} sub={`${data?.rework.total ?? 0} itens`} onClick={onOpenRework}
           info="Percentual de itens finalizados no mês que voltaram pra revisão pelo menos uma vez. Clique pra ver a lista." />
-        <HealthCard icon={<Trophy size={14} />} tone="rgb(var(--lz-brand-rgb))" label="Qualidade média" value={quality > 0 ? `${quality}/5` : "—"} sub={`${data?.quality.count ?? 0} avaliados`}
+        <HealthCard icon={<Trophy size={14} />} tone="var(--lz-accent-ink)" label="Qualidade média" value={quality > 0 ? `${quality}/5` : "—"} sub={`${data?.quality.count ?? 0} avaliados`}
           info="Nota média (1 a 5) dada aos itens finalizados que receberam avaliação de qualidade no mês." />
       </div>
     </div>
@@ -862,7 +862,7 @@ function HealthCard({ icon, tone, label, value, sub, valueColor, onClick, info }
   return (
     <div onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
-      className={`relative overflow-hidden rounded-lg bg-[#1C1C1C] border border-white/[0.06] p-4 text-left w-full transition-all ${onClick ? "hover:border-white/[0.12] hover:bg-[#232323] cursor-pointer" : ""}`}>
+      className={`relative overflow-hidden rounded-lg bg-card border border-foreground/6 p-4 text-left w-full transition-all ${onClick ? "hover:border-foreground/12 hover:bg-foreground/5 cursor-pointer" : ""}`}>
       <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: tone }} />
       <div className="relative">
         <div className="flex items-center justify-between gap-1.5">
@@ -871,8 +871,8 @@ function HealthCard({ icon, tone, label, value, sub, valueColor, onClick, info }
           </div>
           {info && <InfoTip text={info} />}
         </div>
-        <div className="text-2xl font-bold tabular-nums mt-1.5" style={{ color: valueColor ?? "#FFFFFF" }}>{value}</div>
-        <div className="text-[10px] text-white/40 mt-0.5">{sub}</div>
+        <div className="text-2xl font-bold tabular-nums mt-1.5" style={{ color: valueColor ?? "var(--foreground)" }}>{value}</div>
+        <div className="text-[10px] text-foreground/40 mt-0.5">{sub}</div>
       </div>
     </div>
   );

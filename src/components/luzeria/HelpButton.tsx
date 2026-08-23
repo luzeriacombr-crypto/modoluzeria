@@ -69,13 +69,13 @@ export function HelpButton() {
       <button
         onClick={() => setOpen(true)}
         title="Ajuda / Reportar erro"
-        className="flex items-center justify-center h-8 w-8 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+        className="flex items-center justify-center h-8 w-8 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors"
       >
         <CircleHelp size={18} />
       </button>
 
       <Modal open={open} onClose={close} title="Reportar um problema">
-        <label className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">
+        <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">
           O que aconteceu?
         </label>
         <textarea
@@ -84,23 +84,23 @@ export function HelpButton() {
           onChange={(e) => setMessage(e.target.value)}
           rows={4}
           placeholder="Descreva o que você esperava e o que aconteceu…"
-          className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
+          className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
         />
 
         <div className="mt-4">
-          <label className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">
+          <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">
             Seu WhatsApp (opcional)
           </label>
           <input
             value={whatsapp}
             onChange={(e) => setWhatsapp(e.target.value)}
             placeholder="Pra gente te chamar se precisar de mais detalhes"
-            className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+            className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
           />
         </div>
 
         <div className="mt-4">
-          <div className="text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">
+          <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">
             Print (opcional)
           </div>
           <input
@@ -109,16 +109,16 @@ export function HelpButton() {
           />
           {preview ? (
             <div className="relative inline-block">
-              <img src={preview} alt="Print anexado" className="max-h-32 rounded-md border border-white/10" />
+              <img src={preview} alt="Print anexado" className="max-h-32 rounded-md border border-foreground/10" />
               <button
                 onClick={() => { setFile(null); setPreview(null); }}
-                className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-black/80 text-white flex items-center justify-center"
+                className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-black/80 text-foreground flex items-center justify-center"
               ><X size={11} /></button>
             </div>
           ) : (
             <button
               onClick={() => inputRef.current?.click()}
-              className="w-full flex items-center justify-center gap-1.5 border border-dashed border-white/15 rounded-md py-3 text-xs text-white/50 hover:text-white hover:border-white/30 transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 border border-dashed border-foreground/15 rounded-md py-3 text-xs text-foreground/50 hover:text-foreground hover:border-foreground/30 transition-colors"
             >
               <Paperclip size={13} /> Anexar print
             </button>
@@ -126,7 +126,7 @@ export function HelpButton() {
         </div>
 
         <div className="flex items-center justify-end gap-2 mt-5">
-          <button onClick={close} className="px-3 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
+          <button onClick={close} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
           <button
             disabled={!message.trim() || sending}
             onClick={submit}

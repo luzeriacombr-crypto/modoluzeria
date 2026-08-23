@@ -43,21 +43,21 @@ function InstagramCallbackPage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] p-6">
-      <div className="max-w-sm w-full bg-[#1A1A1A] rounded-xl p-8 text-center border border-white/10">
+    <div className="min-h-screen flex items-center justify-center bg-background p-6">
+      <div className="max-w-sm w-full bg-card rounded-xl p-8 text-center border border-foreground/10">
         {status === "loading" && (
-          <p className="text-white/70 text-sm">Conectando ao Instagram…</p>
+          <p className="text-foreground/70 text-sm">Conectando ao Instagram…</p>
         )}
         {status === "success" && (
           <>
-            <p className="text-[rgb(var(--lz-brand-rgb))] font-semibold mb-2">Instagram conectado!</p>
-            <p className="text-white/60 text-sm">{message}</p>
+            <p className="text-[var(--lz-accent-ink)] font-semibold mb-2">Instagram conectado!</p>
+            <p className="text-foreground/60 text-sm">{message}</p>
           </>
         )}
         {status === "error" && (
           <>
             <p className="text-red-400 font-semibold mb-2">Não foi possível conectar</p>
-            <p className="text-white/60 text-sm">{message}</p>
+            <p className="text-foreground/60 text-sm">{message}</p>
           </>
         )}
         {status !== "loading" && (

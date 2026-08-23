@@ -153,19 +153,19 @@ export function DashboardGrid({
                 <div
                   className="absolute inset-0 rounded-xl z-10"
                   style={{
-                    outline: isDraggingThis ? `2px solid ${drag!.invalid ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}` : "2px dashed rgba(255,255,255,0.25)",
+                    outline: isDraggingThis ? `2px solid ${drag!.invalid ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}` : "2px dashed color-mix(in srgb, var(--foreground) 25%, transparent)",
                     outlineOffset: 2,
                     cursor: "grab",
                     background: isDraggingThis ? (drag!.invalid ? "rgba(255,68,68,0.08)" : "rgba(var(--lz-brand-rgb),0.08)") : "transparent",
                   }}
                   onPointerDown={(e) => startDrag(w, "move", e)}
                 >
-                  <div className="absolute top-1.5 left-1.5 h-6 w-6 rounded-md bg-black/60 backdrop-blur flex items-center justify-center text-white/70">
+                  <div className="absolute top-1.5 left-1.5 h-6 w-6 rounded-md bg-black/60 backdrop-blur flex items-center justify-center text-foreground/70">
                     <Move size={13} />
                   </div>
                   <div
                     className="absolute bottom-0 right-0 h-5 w-5 rounded-tl-md cursor-nwse-resize flex items-end justify-end p-0.5"
-                    style={{ background: isDraggingThis && drag!.mode === "resize" ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.35)" }}
+                    style={{ background: isDraggingThis && drag!.mode === "resize" ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 35%, transparent)" }}
                     onPointerDown={(e) => startDrag(w, "resize", e)}
                   />
                 </div>

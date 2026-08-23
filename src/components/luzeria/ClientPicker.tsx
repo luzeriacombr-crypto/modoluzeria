@@ -39,23 +39,23 @@ export function ClientPicker({
   return (
     <div ref={ref}
       style={{ position: "fixed", top, left, width: W }}
-      className="z-[1100] rounded-md bg-[#1C1C1C] border border-white/10 shadow-2xl p-2"
+      className="z-[1100] rounded-md bg-card border border-foreground/10 shadow-2xl p-2"
     >
       <input
         autoFocus value={q} onChange={(e) => setQ(e.target.value)}
         placeholder="Buscar cliente…"
-        className="w-full text-xs bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+        className="w-full text-xs bg-background border border-foreground/10 rounded px-2 py-1.5 text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
       />
       <div className="max-h-60 overflow-y-auto mt-1">
         {filtered.length === 0 && (
-          <p className="text-[11px] text-white/30 px-2 py-2">Nenhum cliente encontrado.</p>
+          <p className="text-[11px] text-foreground/30 px-2 py-2">Nenhum cliente encontrado.</p>
         )}
         {filtered.map((c) => (
           <button key={c.id}
             onClick={() => { onPick(c.id); onClose(); }}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/5 text-left">
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-foreground/5 text-left">
             <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
-            <span className="text-xs text-white truncate">{c.name}</span>
+            <span className="text-xs text-foreground truncate">{c.name}</span>
           </button>
         ))}
       </div>

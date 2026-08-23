@@ -17,7 +17,7 @@ export function ProfilePage() {
   const { data: clients = [] } = useQuery(clientsQO());
   const defaultLandingView = me?.defaultLanding?.view ?? "minhas-tarefas";
   const defaultLandingClientId = me?.defaultLanding?.clientId ?? "";
-  const [color, setColor] = useState<string>(me?.color ?? "rgb(var(--lz-brand-rgb))");
+  const [color, setColor] = useState<string>(me?.color ?? "var(--lz-accent-ink)");
   const [avatarPath, setAvatarPath] = useState<string | null>(me?.avatarPath ?? null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(me?.avatarUrl ?? null);
   const [uploading, setUploading] = useState(false);
@@ -63,20 +63,20 @@ export function ProfilePage() {
 
   return (
     <div className="px-5 md:px-10 py-8 md:py-12 max-w-2xl mx-auto">
-      <div className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
+      <div className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: "var(--lz-accent-ink)" }}>
         Meu perfil
       </div>
-      <h1 className="text-white text-[28px] md:text-[32px] font-bold tracking-tight">{me.name}</h1>
-      <p className="text-white/50 text-sm mt-1 flex items-center gap-1.5">
+      <h1 className="text-foreground text-[28px] md:text-[32px] font-bold tracking-tight">{me.name}</h1>
+      <p className="text-foreground/50 text-sm mt-1 flex items-center gap-1.5">
         <Mail size={13} /> {me.email}
       </p>
       <span className="inline-block text-[10px] uppercase font-bold mt-3 px-2 py-0.5 rounded"
-        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
         {roleLabel(me.role)}
       </span>
 
-      <div className="mt-8 bg-[#1C1C1C] rounded-lg p-6 md:p-8">
-        <div className="text-[10px] uppercase font-bold tracking-wider text-white/50 mb-5 text-center md:text-left">
+      <div className="mt-8 bg-card rounded-lg p-6 md:p-8">
+        <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-5 text-center md:text-left">
           Foto de perfil
         </div>
         <AvatarEditor
@@ -89,8 +89,8 @@ export function ProfilePage() {
         />
       </div>
 
-      <div className="mt-6 bg-[#1C1C1C] rounded-lg p-6 md:p-8">
-        <div className="text-[10px] uppercase font-bold tracking-wider text-white/50 mb-5 text-center md:text-left">
+      <div className="mt-6 bg-card rounded-lg p-6 md:p-8">
+        <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-5 text-center md:text-left">
           {avatarPreview ? "Cor de fallback" : "Cor do avatar"}
         </div>
         <ColorPicker
@@ -110,7 +110,7 @@ export function ProfilePage() {
         </button>
       </div>
 
-      <p className="text-[11px] text-white/30 mt-4 text-center md:text-right">
+      <p className="text-[11px] text-foreground/30 mt-4 text-center md:text-right">
         A foto e a cor são visuais. Para alterar nome, email ou senha, use a seção abaixo.
       </p>
 
@@ -132,16 +132,16 @@ export function ProfilePage() {
       <TwoFactorSection />
 
       {!(me.disabledFeatures ?? []).includes("google_calendar") && (
-        <div className="mt-6 bg-[#1C1C1C] rounded-lg p-6 md:p-8">
-          <div className="text-[10px] uppercase font-bold tracking-wider text-white/50 mb-5">
+        <div className="mt-6 bg-card rounded-lg p-6 md:p-8">
+          <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-5">
             Google Agenda
           </div>
           <GoogleCalendarSection />
         </div>
       )}
 
-      <div className="mt-8 bg-[#1C1C1C] rounded-lg p-6 md:p-8">
-        <div className="text-[10px] uppercase font-bold tracking-wider text-white/50 mb-5">
+      <div className="mt-8 bg-card rounded-lg p-6 md:p-8">
+        <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-5">
           Notificações
         </div>
         <PrefRow
@@ -155,7 +155,7 @@ export function ProfilePage() {
             { onSuccess: () => toast.success("Preferência salva."),
               onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
         />
-        <div className="h-px bg-white/[0.06] my-4" />
+        <div className="h-px bg-foreground/[0.06] my-4" />
         <PrefRow
           icon={<Bell size={16} />}
           title="Alertas de prazo"
@@ -167,8 +167,8 @@ export function ProfilePage() {
             { onSuccess: () => toast.success("Preferência salva."),
               onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
         />
-        <div className="h-px bg-white/[0.06] my-4" />
-        <div className="text-[10px] uppercase font-bold tracking-wider text-white/30 mb-4">
+        <div className="h-px bg-foreground/[0.06] my-4" />
+        <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/30 mb-4">
           Avisos no celular (push)
         </div>
         <PrefRow
@@ -182,7 +182,7 @@ export function ProfilePage() {
             { onSuccess: () => toast.success("Preferência salva."),
               onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
         />
-        <div className="h-px bg-white/[0.06] my-4" />
+        <div className="h-px bg-foreground/[0.06] my-4" />
         <PrefRow
           icon={<RefreshCw size={16} />}
           title="Mudança de status"
@@ -194,7 +194,7 @@ export function ProfilePage() {
             { onSuccess: () => toast.success("Preferência salva."),
               onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
         />
-        <div className="h-px bg-white/[0.06] my-4" />
+        <div className="h-px bg-foreground/[0.06] my-4" />
         <PrefRow
           icon={<MessageCircle size={16} />}
           title="Comentário"
@@ -206,7 +206,7 @@ export function ProfilePage() {
             { onSuccess: () => toast.success("Preferência salva."),
               onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
         />
-        <div className="h-px bg-white/[0.06] my-4" />
+        <div className="h-px bg-foreground/[0.06] my-4" />
         <PrefRow
           icon={<AtSign size={16} />}
           title="Menção"
@@ -218,7 +218,7 @@ export function ProfilePage() {
             { onSuccess: () => toast.success("Preferência salva."),
               onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
         />
-        <div className="h-px bg-white/[0.06] my-4" />
+        <div className="h-px bg-foreground/[0.06] my-4" />
         <PrefRow
           icon={<Star size={16} />}
           title="Feedback de cliente"
@@ -232,7 +232,7 @@ export function ProfilePage() {
         />
         {me?.role === "master" && (
           <>
-            <div className="h-px bg-white/[0.06] my-4" />
+            <div className="h-px bg-foreground/[0.06] my-4" />
             <PrefRow
               icon={<Bug size={16} />}
               title="Chamados técnicos"
@@ -248,9 +248,9 @@ export function ProfilePage() {
         )}
       </div>
 
-      <div className="mt-8 pt-6 border-t border-white/[0.06]">
-        <div className="text-sm font-semibold text-white">Ao entrar, abrir em</div>
-        <div className="text-[11px] text-white/50 mt-1 mb-3">Só pra você — não muda o que os outros da equipe veem.</div>
+      <div className="mt-8 pt-6 border-t border-foreground/6">
+        <div className="text-sm font-semibold text-foreground">Ao entrar, abrir em</div>
+        <div className="text-[11px] text-foreground/50 mt-1 mb-3">Só pra você — não muda o que os outros da equipe veem.</div>
         <div className="flex items-center gap-2 flex-wrap">
           <select
             value={defaultLandingView}
@@ -261,7 +261,7 @@ export function ProfilePage() {
                 { onSuccess: () => toast.success("Preferência salva."), onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") },
               );
             }}
-            className="bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+            className="bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
           >
             <option value="minhas-tarefas">Minhas Demandas</option>
             <option value="admin">Dashboard</option>
@@ -275,7 +275,7 @@ export function ProfilePage() {
                 { data: { defaultLanding: { view: "cliente", clientId: e.target.value } } },
                 { onSuccess: () => toast.success("Preferência salva."), onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") },
               )}
-              className="bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+              className="bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
             >
               {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -283,10 +283,10 @@ export function ProfilePage() {
         </div>
       </div>
 
-      <div className="mt-6 pt-6 border-t border-white/[0.06] flex items-center justify-between gap-4">
+      <div className="mt-6 pt-6 border-t border-foreground/6 flex items-center justify-between gap-4">
         <div>
-          <div className="text-sm font-semibold text-white">Tour guiado do app</div>
-          <div className="text-[11px] text-white/50 mt-1">Refaça o passo a passo de boas-vindas quando quiser.</div>
+          <div className="text-sm font-semibold text-foreground">Tour guiado do app</div>
+          <div className="text-[11px] text-foreground/50 mt-1">Refaça o passo a passo de boas-vindas quando quiser.</div>
         </div>
         <button
           onClick={() => window.dispatchEvent(new Event("lz:start-tour"))}
@@ -297,10 +297,10 @@ export function ProfilePage() {
         </button>
       </div>
 
-      <div className="mt-6 pt-6 border-t border-white/[0.06] flex items-center justify-between gap-4">
+      <div className="mt-6 pt-6 border-t border-foreground/6 flex items-center justify-between gap-4">
         <div>
-          <div className="text-sm font-semibold text-white">Sair da conta</div>
-          <div className="text-[11px] text-white/50 mt-1">Encerra sua sessão neste dispositivo.</div>
+          <div className="text-sm font-semibold text-foreground">Sair da conta</div>
+          <div className="text-[11px] text-foreground/50 mt-1">Encerra sua sessão neste dispositivo.</div>
         </div>
         <button
           onClick={async () => {
@@ -328,21 +328,21 @@ function PrefRow({ icon, title, description, value, disabled, onChange }: {
   return (
     <div className="flex items-start gap-4">
       <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
-        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-white">{title}</div>
-        <div className="text-[11px] text-white/50 mt-1">{description}</div>
+        <div className="text-sm font-semibold text-foreground">{title}</div>
+        <div className="text-[11px] text-foreground/50 mt-1">{description}</div>
       </div>
       <button
         type="button"
         disabled={disabled}
         onClick={() => onChange(!value)}
         className={`relative h-6 w-11 rounded-full transition-colors shrink-0 disabled:opacity-50 ${
-          value ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"
+          value ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-foreground/15"
         }`}>
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-foreground transition-all ${
           value ? "left-[22px]" : "left-0.5"
         }`} />
       </button>
@@ -394,14 +394,14 @@ function GoogleCalendarSection() {
       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
         <div className="flex items-start gap-4 flex-1 min-w-0">
           <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
-            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
             <CalendarClock size={16} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-white">
+            <div className="text-sm font-semibold text-foreground">
               {conn?.connected ? "Conectado" : "Não conectado"}
             </div>
-            <div className="text-[11px] text-white/50 mt-1">
+            <div className="text-[11px] text-foreground/50 mt-1">
               {conn?.connected
                 ? `Conectado como ${conn.email}. Seus compromissos de hoje aparecem em Minhas Demandas.`
                 : "Conecte sua Google Agenda pra ver seus compromissos de hoje em Minhas Demandas."}
@@ -425,7 +425,7 @@ function GoogleCalendarSection() {
               onClick={conn?.connected ? disconnect : connect}
               disabled={getGoogleCalendarAuthUrl.isPending || disconnectGoogleCalendar.isPending}
               className={`text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md disabled:opacity-50 whitespace-nowrap ${
-                conn?.connected ? "border border-white/15 text-white/80 hover:text-white hover:border-white/30" : "text-black"
+                conn?.connected ? "border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30" : "text-black"
               }`}
               style={conn?.connected ? undefined : { backgroundColor: "rgb(var(--lz-brand-rgb))" }}
             >
@@ -436,19 +436,19 @@ function GoogleCalendarSection() {
       </div>
 
       {showForm && conn?.connected && (
-        <form onSubmit={submitEvent} className="mt-5 pt-5 border-t border-white/[0.06] flex flex-wrap items-end gap-3">
+        <form onSubmit={submitEvent} className="mt-5 pt-5 border-t border-foreground/6 flex flex-wrap items-end gap-3">
           <label className="flex-1 min-w-[160px]">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">Título</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">Título</span>
             <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200}
               placeholder="Reunião com cliente" className="lz-input mt-1.5" required />
           </label>
           <label>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">Data</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">Data</span>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
               className="lz-input mt-1.5" required />
           </label>
           <label>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">Horário</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">Horário</span>
             <input type="time" value={time} onChange={(e) => setTime(e.target.value)}
               className="lz-input mt-1.5" required />
           </label>
@@ -497,8 +497,8 @@ function AccountSection({ initialName, initialEmail, loading, onSave }: {
   }
 
   return (
-    <form onSubmit={submit} className="mt-8 bg-[#1C1C1C] rounded-lg p-6 md:p-8 space-y-5">
-      <div className="text-[10px] uppercase font-bold tracking-wider text-white/50">
+    <form onSubmit={submit} className="mt-8 bg-card rounded-lg p-6 md:p-8 space-y-5">
+      <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">
         Dados da conta
       </div>
       <AccountField icon={<User size={14} />} label="Nome">
@@ -527,7 +527,7 @@ function AccountSection({ initialName, initialEmail, loading, onSave }: {
           {loading ? "Salvando…" : "Salvar conta"}
         </button>
       </div>
-      <p className="text-[11px] text-white/30">
+      <p className="text-[11px] text-foreground/30">
         Ao alterar email ou senha você continua logado nesta sessão, mas use os novos dados no próximo login.
       </p>
     </form>
@@ -613,22 +613,22 @@ function TwoFactorSection() {
   }
 
   return (
-    <div className="mt-6 bg-[#1C1C1C] rounded-lg p-6 md:p-8">
-      <div className="text-[10px] uppercase font-bold tracking-wider text-white/50 mb-5">
+    <div className="mt-6 bg-card rounded-lg p-6 md:p-8">
+      <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-5">
         Autenticação de dois fatores
       </div>
 
       {!enrolling ? (
         <div className="flex items-start gap-4">
           <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
-            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
             {status === "on" ? <ShieldCheck size={16} /> : <Shield size={16} />}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-white">
+            <div className="text-sm font-semibold text-foreground">
               {status === "loading" ? "Carregando…" : status === "on" ? "Ativada" : "Desativada"}
             </div>
-            <div className="text-[11px] text-white/50 mt-1">
+            <div className="text-[11px] text-foreground/50 mt-1">
               Pede um código do seu celular (Google Authenticator, Authy etc.) além da senha, toda vez que você entrar.
             </div>
           </div>
@@ -647,17 +647,17 @@ function TwoFactorSection() {
         </div>
       ) : (
         <form onSubmit={confirmEnroll} className="space-y-4">
-          <p className="text-[13px] text-white/70">
+          <p className="text-[13px] text-foreground/70">
             Escaneia esse QR code com o app autenticador (Google Authenticator, Authy, 1Password…) e digita o código de 6 dígitos que ele mostrar.
           </p>
           {qrCode && (
-            <div className="bg-white rounded-lg p-4 w-fit">
+            <div className="bg-foreground rounded-lg p-4 w-fit">
               <img src={qrCode} alt="QR code do autenticador" width={160} height={160} />
             </div>
           )}
           {secret && (
-            <p className="text-[11px] text-white/40">
-              Não consegue escanear? Digita esse código manualmente no app: <span className="font-mono text-white/70">{secret}</span>
+            <p className="text-[11px] text-foreground/40">
+              Não consegue escanear? Digita esse código manualmente no app: <span className="font-mono text-foreground/70">{secret}</span>
             </p>
           )}
           <input
@@ -672,7 +672,7 @@ function TwoFactorSection() {
               {busy ? "Confirmando…" : "Confirmar"}
             </button>
             <button type="button" onClick={cancelEnroll} disabled={busy}
-              className="text-sm font-semibold px-6 py-2.5 rounded-md text-white/60 hover:text-white disabled:opacity-40">
+              className="text-sm font-semibold px-6 py-2.5 rounded-md text-foreground/60 hover:text-foreground disabled:opacity-40">
               Cancelar
             </button>
           </div>
@@ -685,8 +685,8 @@ function TwoFactorSection() {
 function AccountField({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-[10px] uppercase font-bold tracking-wider text-white/50 inline-flex items-center gap-1.5">
-        <span style={{ color: "rgb(var(--lz-brand-rgb))" }}>{icon}</span> {label}
+      <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 inline-flex items-center gap-1.5">
+        <span style={{ color: "var(--lz-accent-ink)" }}>{icon}</span> {label}
       </span>
       <div className="mt-1.5">{children}</div>
     </label>

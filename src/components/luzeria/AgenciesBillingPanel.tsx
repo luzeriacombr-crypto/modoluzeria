@@ -63,7 +63,7 @@ export function AgenciesBillingPanel() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="animate-spin text-white/40" size={32} />
+        <Loader2 className="animate-spin text-foreground/40" size={32} />
       </div>
     );
   }
@@ -72,12 +72,12 @@ export function AgenciesBillingPanel() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <Building2 size={16} className="text-[rgb(var(--lz-brand-rgb))]" />
-          <h2 className="text-white font-semibold">Agências no Modo Criador</h2>
-          <span className="text-white/40 text-sm">— {visibleOrgs.length}</span>
+          <Building2 size={16} className="text-[var(--lz-accent-ink)]" />
+          <h2 className="text-foreground font-semibold">Agências no Modo Criador</h2>
+          <span className="text-foreground/40 text-sm">— {visibleOrgs.length}</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex items-center gap-1 bg-[#0D0D0D] rounded-md p-1 text-xs">
+          <div className="inline-flex items-center gap-1 bg-background rounded-md p-1 text-xs">
             {([
               ["all", "Todas"],
               ["resellers", "Revendedoras"],
@@ -86,7 +86,7 @@ export function AgenciesBillingPanel() {
               <button
                 key={key}
                 onClick={() => setResellerFilter(key)}
-                className={`px-2.5 py-1 rounded font-semibold transition ${resellerFilter === key ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"}`}
+                className={`px-2.5 py-1 rounded font-semibold transition ${resellerFilter === key ? "bg-foreground/10 text-foreground" : "text-foreground/40 hover:text-foreground/70"}`}
               >
                 {label}
               </button>
@@ -103,20 +103,20 @@ export function AgenciesBillingPanel() {
       </div>
 
       {visibleOrgs.length === 0 ? (
-        <div className="text-center py-12 px-6 bg-white/[0.03] border border-white/10 rounded-2xl">
-          <p className="text-white/50 text-sm">Nenhuma agência encontrada nesse filtro.</p>
+        <div className="text-center py-12 px-6 bg-foreground/[0.03] border border-foreground/10 rounded-2xl">
+          <p className="text-foreground/50 text-sm">Nenhuma agência encontrada nesse filtro.</p>
         </div>
       ) : (
-        <div className="bg-[#161616] border border-white/[0.07] rounded-xl overflow-hidden overflow-x-auto">
+        <div className="bg-card border border-foreground/7 rounded-xl overflow-hidden overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/[0.07]">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">Agência</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">Plano</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">Teste / cobrança</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">Clientes</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-white/60"></th>
+              <tr className="border-b border-foreground/7">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Agência</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Plano</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Teste / cobrança</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">Clientes</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-foreground/60"></th>
               </tr>
             </thead>
             <tbody>
@@ -127,31 +127,31 @@ export function AgenciesBillingPanel() {
                 const invoiceResult = invoiceForId === o.id ? fetchInvoice.data : undefined;
                 const invoiceError = invoiceForId === o.id ? fetchInvoice.error : undefined;
                 return (
-                  <tr key={o.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition">
+                  <tr key={o.id} className="border-b border-foreground/4 hover:bg-foreground/[0.02] transition">
                     <td className="px-4 py-3 text-sm">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setInfoTarget(o)}
-                          className="text-white font-medium hover:text-[rgb(var(--lz-brand-rgb))] transition underline decoration-white/20 hover:decoration-current underline-offset-2"
+                          className="text-foreground font-medium hover:text-[var(--lz-accent-ink)] transition underline decoration-white/20 hover:decoration-current underline-offset-2"
                         >
                           {o.name}
                         </button>
                         {o.isReseller && (
                           <span title={`${o.resoldCount} instância(s) revendida(s) — ${formatCents(o.resoldMonthlyCents)}/mês em preço de parceiro`}
                             className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0"
-                            style={{ backgroundColor: "rgba(var(--lz-brand-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+                            style={{ backgroundColor: "rgba(var(--lz-brand-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
                             <Crown size={10} /> Revenda{o.resoldCount > 0 ? ` · ${o.resoldCount}` : ""}
                           </span>
                         )}
                         {o.resellerOrgName && (
-                          <span className="text-[10px] text-white/35 shrink-0">via {o.resellerOrgName}</span>
+                          <span className="text-[10px] text-foreground/35 shrink-0">via {o.resellerOrgName}</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-white/70">
+                    <td className="px-4 py-3 text-sm text-foreground/70">
                       {o.planName}
                       {o.priceCents != null && (
-                        <span className="text-white/40"> · R$ {(o.priceCents / 100).toFixed(2)}/mês</span>
+                        <span className="text-foreground/40"> · R$ {(o.priceCents / 100).toFixed(2)}/mês</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -160,7 +160,7 @@ export function AgenciesBillingPanel() {
                         {status.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-white/60">
+                    <td className="px-4 py-3 text-sm text-foreground/60">
                       {trialDays != null
                         ? trialDays >= 0 ? `Teste acaba em ${trialDays}d` : `Teste expirou há ${-trialDays}d`
                         : o.hasAsaasSubscription
@@ -170,7 +170,7 @@ export function AgenciesBillingPanel() {
                                 <button
                                   onClick={() => { setInvoiceForId(o.id); fetchInvoice.mutate({ data: { orgId: o.id } }); }}
                                   disabled={isFetchingThis}
-                                  className="inline-flex items-center gap-1 text-[11px] font-bold text-white/60 hover:text-white transition disabled:opacity-50"
+                                  className="inline-flex items-center gap-1 text-[11px] font-bold text-foreground/60 hover:text-foreground transition disabled:opacity-50"
                                 >
                                   <Receipt size={12} />
                                   {isFetchingThis ? "Buscando…" : "Ver fatura"}
@@ -178,10 +178,10 @@ export function AgenciesBillingPanel() {
                               ) : invoiceError ? (
                                 <span className="text-[11px] text-red-400">Erro ao buscar</span>
                               ) : invoiceResult === null ? (
-                                <span className="text-[11px] text-white/40">Sem fatura pendente</span>
+                                <span className="text-[11px] text-foreground/40">Sem fatura pendente</span>
                               ) : (
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[11px] text-white/80">
+                                  <span className="text-[11px] text-foreground/80">
                                     R$ {(invoiceResult.valueCents / 100).toFixed(2)}
                                   </span>
                                   {invoiceResult.invoiceUrl && (
@@ -190,7 +190,7 @@ export function AgenciesBillingPanel() {
                                         navigator.clipboard.writeText(invoiceResult.invoiceUrl!);
                                         toast.success("Link copiado — manda pro cliente escolher PIX/boleto/cartão.");
                                       }}
-                                      className="text-[11px] font-bold text-white/60 hover:text-white transition underline"
+                                      className="text-[11px] font-bold text-foreground/60 hover:text-foreground transition underline"
                                     >
                                       Copiar link
                                     </button>
@@ -199,9 +199,9 @@ export function AgenciesBillingPanel() {
                               )}
                             </div>
                           )
-                          : <span className="text-white/30">—</span>}
+                          : <span className="text-foreground/30">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-white/70">{o.clientsUsed}</td>
+                    <td className="px-4 py-3 text-sm text-right text-foreground/70">{o.clientsUsed}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
                         {o.subscriptionStatus !== "active" && (
@@ -209,7 +209,7 @@ export function AgenciesBillingPanel() {
                             onClick={() => handleResetTrial(o)}
                             disabled={resettingId === o.id}
                             title="Dar mais 30 dias de teste"
-                            className="p-1.5 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5 transition disabled:opacity-40"
+                            className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition disabled:opacity-40"
                           >
                             {resettingId === o.id ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                           </button>
@@ -217,7 +217,7 @@ export function AgenciesBillingPanel() {
                         <button
                           onClick={() => setDeleteTarget({ id: o.id, name: o.name, hasAsaasSubscription: o.hasAsaasSubscription })}
                           title="Remover agência"
-                          className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition"
+                          className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -273,49 +273,49 @@ function CreateResellerModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#161616] border border-white/10 rounded-2xl p-6 max-w-sm w-full">
+      <div className="bg-card border border-foreground/10 rounded-2xl p-6 max-w-sm w-full">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Crown size={18} className="text-[rgb(var(--lz-brand-rgb))]" />
-            <h3 className="text-lg font-bold text-white">Nova revenda</h3>
+            <Crown size={18} className="text-[var(--lz-accent-ink)]" />
+            <h3 className="text-lg font-bold text-foreground">Nova revenda</h3>
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition">
+          <button onClick={onClose} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5 transition">
             <X size={16} />
           </button>
         </div>
-        <p className="text-xs text-white/45 mb-4">
+        <p className="text-xs text-foreground/45 mb-4">
           Cria a org da revenda do zero, já aprovada, e manda o convite de acesso pro responsável — pra quando alguém
           te chamar no WhatsApp e ainda não tiver conta nenhuma no Modo Criador.
         </p>
         <div className="space-y-3">
           <div>
-            <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">Nome da revenda</label>
+            <label className="block text-[10px] uppercase tracking-wide text-foreground/40 mb-1">Nome da revenda</label>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Agência Fulano"
-              className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+              className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">Plano da conta dela</label>
+            <label className="block text-[10px] uppercase tracking-wide text-foreground/40 mb-1">Plano da conta dela</label>
             <select value={planId} onChange={(e) => setPlanId(e.target.value)}
-              className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
+              className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
               <option value="">Selecione...</option>
               {plans.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">Desconto de parceiro (%)</label>
+            <label className="block text-[10px] uppercase tracking-wide text-foreground/40 mb-1">Desconto de parceiro (%)</label>
             <input type="number" min={0} max={95} value={discount} onChange={(e) => setDiscount(Number(e.target.value))}
-              className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
-            <p className="text-[11px] text-white/35 mt-1">Aplicado sobre o preço de tabela de cada plano — ela paga esse valor por cada instância que criar.</p>
+              className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+            <p className="text-[11px] text-foreground/35 mt-1">Aplicado sobre o preço de tabela de cada plano — ela paga esse valor por cada instância que criar.</p>
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">Nome do responsável</label>
+            <label className="block text-[10px] uppercase tracking-wide text-foreground/40 mb-1">Nome do responsável</label>
             <input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="ex: Maria Silva"
-              className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+              className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">E-mail de acesso</label>
+            <label className="block text-[10px] uppercase tracking-wide text-foreground/40 mb-1">E-mail de acesso</label>
             <input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} placeholder="maria@exemplo.com"
-              className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+              className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
           </div>
         </div>
         <button
@@ -364,13 +364,13 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#161616] border border-white/10 rounded-2xl p-6 max-w-sm w-full">
+      <div className="bg-card border border-foreground/10 rounded-2xl p-6 max-w-sm w-full">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Building2 size={18} className="text-[rgb(var(--lz-brand-rgb))]" />
-            <h3 className="text-lg font-bold text-white">{org.name}</h3>
+            <Building2 size={18} className="text-[var(--lz-accent-ink)]" />
+            <h3 className="text-lg font-bold text-foreground">{org.name}</h3>
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition">
+          <button onClick={onClose} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5 transition">
             <X size={16} />
           </button>
         </div>
@@ -378,28 +378,28 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
         <div className="space-y-3 text-sm">
           {org.ownerName && (
             <div>
-              <p className="text-[11px] font-bold uppercase text-white/40 tracking-wider mb-0.5">Responsável</p>
-              <p className="text-white">{org.ownerName}</p>
+              <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider mb-0.5">Responsável</p>
+              <p className="text-foreground">{org.ownerName}</p>
             </div>
           )}
           {org.ownerEmail && (
-            <div className="flex items-center gap-2 text-white/80">
-              <Mail size={13} className="text-white/40 shrink-0" />
-              <a href={`mailto:${org.ownerEmail}`} className="hover:text-white transition truncate">{org.ownerEmail}</a>
+            <div className="flex items-center gap-2 text-foreground/80">
+              <Mail size={13} className="text-foreground/40 shrink-0" />
+              <a href={`mailto:${org.ownerEmail}`} className="hover:text-foreground transition truncate">{org.ownerEmail}</a>
             </div>
           )}
           {org.taxId && (
             <div>
-              <p className="text-[11px] font-bold uppercase text-white/40 tracking-wider mb-0.5">CNPJ/CPF</p>
-              <p className="text-white/80">{org.taxId}</p>
+              <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider mb-0.5">CNPJ/CPF</p>
+              <p className="text-foreground/80">{org.taxId}</p>
             </div>
           )}
 
           <div>
             <div className="flex items-center justify-between mb-0.5">
-              <p className="text-[11px] font-bold uppercase text-white/40 tracking-wider">WhatsApp</p>
+              <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider">WhatsApp</p>
               {!editing && (
-                <button onClick={() => { setWhatsapp(org.whatsapp ?? ""); setEditing(true); }} className="text-white/40 hover:text-white transition">
+                <button onClick={() => { setWhatsapp(org.whatsapp ?? ""); setEditing(true); }} className="text-foreground/40 hover:text-foreground transition">
                   <Pencil size={12} />
                 </button>
               )}
@@ -412,7 +412,7 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
                   onChange={(e) => setWhatsapp(e.target.value)}
                   placeholder="(11) 91234-5678"
                   autoFocus
-                  className="flex-1 px-3 py-2 bg-white/[0.08] border border-white/15 rounded-lg text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition"
+                  className="flex-1 px-3 py-2 bg-foreground/[0.08] border border-foreground/15 rounded-lg text-foreground text-sm placeholder:text-foreground/30 focus:outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition"
                 />
                 <button
                   onClick={() => saveWhatsapp.mutate({ data: { orgId: org.id, whatsapp } })}
@@ -424,28 +424,28 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
                 </button>
               </div>
             ) : org.whatsapp ? (
-              <div className="flex items-center gap-2 text-white/80">
-                <Phone size={13} className="text-white/40 shrink-0" />
+              <div className="flex items-center gap-2 text-foreground/80">
+                <Phone size={13} className="text-foreground/40 shrink-0" />
                 {org.whatsapp}
               </div>
             ) : (
-              <p className="text-white/30 text-[13px]">Não cadastrado.</p>
+              <p className="text-foreground/30 text-[13px]">Não cadastrado.</p>
             )}
           </div>
 
           <div>
-            <p className="text-[11px] font-bold uppercase text-white/40 tracking-wider mb-0.5">Revenda</p>
+            <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider mb-0.5">Revenda</p>
             {org.resellerOrgName ? (
-              <p className="text-white/80">Instância revendida por <span className="text-white font-semibold">{org.resellerOrgName}</span>.</p>
+              <p className="text-foreground/80">Instância revendida por <span className="text-foreground font-semibold">{org.resellerOrgName}</span>.</p>
             ) : org.isReseller ? (
-              <p className="inline-flex items-center gap-1.5 text-[rgb(var(--lz-brand-rgb))] font-semibold">
+              <p className="inline-flex items-center gap-1.5 text-[var(--lz-accent-ink)] font-semibold">
                 <Check size={13} /> Aprovada como revendedora
               </p>
             ) : (
               <button
                 onClick={handleApproveReseller}
                 disabled={approveResellerMutation.isPending}
-                className="text-xs font-semibold text-white/60 hover:text-white border border-white/15 hover:border-white/30 rounded-md px-3 py-1.5 transition disabled:opacity-40"
+                className="text-xs font-semibold text-foreground/60 hover:text-foreground border border-foreground/15 hover:border-foreground/30 rounded-md px-3 py-1.5 transition disabled:opacity-40"
               >
                 {approveResellerMutation.isPending ? "Aprovando..." : "Aprovar como revendedora"}
               </button>
@@ -489,31 +489,31 @@ function DeleteOrgModal({ target, onClose }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#161616] border border-red-500/30 rounded-2xl p-6 max-w-md w-full">
+      <div className="bg-card border border-red-500/30 rounded-2xl p-6 max-w-md w-full">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2 text-red-400">
             <AlertTriangle size={18} />
-            <h3 className="text-lg font-bold text-white">Remover agência</h3>
+            <h3 className="text-lg font-bold text-foreground">Remover agência</h3>
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition">
+          <button onClick={onClose} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5 transition">
             <X size={16} />
           </button>
         </div>
 
-        <p className="text-sm text-white/70 mb-3">
-          Isso apaga <span className="text-white font-semibold">{target.name}</span> e tudo dela — clientes,
+        <p className="text-sm text-foreground/70 mb-3">
+          Isso apaga <span className="text-foreground font-semibold">{target.name}</span> e tudo dela — clientes,
           posts, arquivos, equipe — pra sempre. Não tem como desfazer.
           {target.hasAsaasSubscription && " A assinatura no Asaas também é cancelada."}
         </p>
 
-        <label className="block text-xs font-bold uppercase text-white/50 mb-2 tracking-wider">
+        <label className="block text-xs font-bold uppercase text-foreground/50 mb-2 tracking-wider">
           Digite "{target.name}" pra confirmar
         </label>
         <input
           type="text"
           value={confirmName}
           onChange={(e) => setConfirmName(e.target.value)}
-          className="w-full px-4 py-3 bg-white/[0.08] border border-white/15 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-red-500/60 transition mb-4"
+          className="w-full px-4 py-3 bg-foreground/[0.08] border border-foreground/15 rounded-xl text-foreground placeholder:text-foreground/30 focus:outline-none focus:border-red-500/60 transition mb-4"
           placeholder={target.name}
           autoFocus
         />
@@ -522,13 +522,13 @@ function DeleteOrgModal({ target, onClose }: {
           <button
             onClick={() => removeOrg.mutate({ data: { orgId: target.id, confirmName } })}
             disabled={!matches || removeOrg.isPending}
-            className="flex-1 px-6 py-3 bg-red-500/90 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl transition"
+            className="flex-1 px-6 py-3 bg-red-500/90 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-foreground font-bold rounded-xl transition"
           >
             {removeOrg.isPending ? "Removendo…" : "Remover pra sempre"}
           </button>
           <button
             onClick={onClose}
-            className="flex-1 px-6 py-3 bg-white/[0.08] hover:bg-white/[0.12] text-white font-bold rounded-xl transition border border-white/10"
+            className="flex-1 px-6 py-3 bg-foreground/[0.08] hover:bg-foreground/[0.12] text-foreground font-bold rounded-xl transition border border-foreground/10"
           >
             Cancelar
           </button>

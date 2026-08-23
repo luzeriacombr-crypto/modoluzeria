@@ -14,15 +14,15 @@ export function IncomingCallModal({ call }: { call: ReturnType<typeof useScreenS
 
   return createPortal(
     <div className="lz-overlay z-[400] flex items-center justify-center p-4">
-      <div className="bg-[#1C1C1C] rounded-2xl w-full max-w-sm border border-white/10 shadow-2xl lz-modal-in p-6 text-center">
+      <div className="bg-card rounded-2xl w-full max-w-sm border border-foreground/10 shadow-2xl lz-modal-in p-6 text-center">
         <div
           className="mx-auto mb-4 h-16 w-16 rounded-full flex items-center justify-center animate-pulse"
           style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)" }}
         >
           <Avatar name={caller.name} avatarUrl={caller.avatarUrl} size={56} />
         </div>
-        <p className="text-white font-bold text-base">{caller.name}</p>
-        <p className="text-white/50 text-xs mt-1">
+        <p className="text-foreground font-bold text-base">{caller.name}</p>
+        <p className="text-foreground/50 text-xs mt-1">
           {othersCount === 0
             ? "quer iniciar uma vídeo chamada com você"
             : `te chamou pra uma chamada em grupo, com mais ${othersCount} pessoa${othersCount === 1 ? "" : "s"}`}

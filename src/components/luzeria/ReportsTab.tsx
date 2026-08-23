@@ -23,9 +23,9 @@ const PRESET_LABEL: Record<Preset, string> = {
 };
 
 const ACTIVITY_KIND_META: Record<string, { label: string; bg: string; color: string }> = {
-  finalized: { label: "FINALIZOU", bg: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" },
+  finalized: { label: "FINALIZOU", bg: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" },
   status: { label: "STATUS", bg: "rgba(74,158,255,0.15)", color: "#4A9EFF" },
-  comment: { label: "COMENTÁRIO", bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" },
+  comment: { label: "COMENTÁRIO", bg: "color-mix(in srgb, var(--foreground) 8%, transparent)", color: "color-mix(in srgb, var(--foreground) 70%, transparent)" },
   file: { label: "ARQUIVO", bg: "rgba(255,140,66,0.15)", color: "#FF8C42" },
   created: { label: "CRIADO", bg: "rgba(184,132,252,0.15)", color: "#B884FC" },
   due_date: { label: "PRAZO", bg: "rgba(255,217,126,0.15)", color: "#FFD97E" },
@@ -109,10 +109,10 @@ export function ReportsTab() {
       <DeliveryTrendChart />
 
       {/* Filtros */}
-      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-6">
+      <div className="bg-card rounded-lg p-5 mb-6">
         <div className="flex items-center gap-2 mb-4">
-          <Filter size={14} className="text-[rgb(var(--lz-brand-rgb))]" />
-          <span className="text-xs uppercase font-bold tracking-wider text-white/70">Filtros</span>
+          <Filter size={14} className="text-[var(--lz-accent-ink)]" />
+          <span className="text-xs uppercase font-bold tracking-wider text-foreground/70">Filtros</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <FilterSelect label="Membro" value={pUser} onChange={setPUser}
@@ -136,15 +136,15 @@ export function ReportsTab() {
         </div>
         {pPreset === "custom" && (
           <div className="grid grid-cols-2 gap-3 mt-3">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-white/50">
+            <label className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">
               De
               <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
-                className="mt-1 w-full bg-[#0D0D0D] border border-white/10 rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+                className="mt-1 w-full bg-background border border-foreground/10 rounded-md px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
             </label>
-            <label className="text-[10px] uppercase font-bold tracking-wider text-white/50">
+            <label className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">
               Até
               <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
-                className="mt-1 w-full bg-[#0D0D0D] border border-white/10 rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+                className="mt-1 w-full bg-background border border-foreground/10 rounded-md px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
             </label>
           </div>
         )}
@@ -158,7 +158,7 @@ export function ReportsTab() {
             disabled={!report}
             onClick={() => report && exportReportXlsx(report, { from: filters.from, to: filters.to, label: presetLabel })}
             className="text-xs font-semibold px-4 py-2 rounded-md border inline-flex items-center gap-2 transition-colors disabled:opacity-30"
-            style={{ borderColor: "rgb(var(--lz-brand-rgb))", color: "rgb(var(--lz-brand-rgb))", backgroundColor: "transparent" }}
+            style={{ borderColor: "rgb(var(--lz-brand-rgb))", color: "var(--lz-accent-ink)", backgroundColor: "transparent" }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(var(--lz-brand-light-rgb),0.1)")}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}>
             <Download size={13} /> Exportar .xlsx
@@ -166,7 +166,7 @@ export function ReportsTab() {
         </div>
       </div>
 
-      {isLoading && <p className="text-white/50 text-sm">Carregando…</p>}
+      {isLoading && <p className="text-foreground/50 text-sm">Carregando…</p>}
 
       {/* Sub-tabs */}
       <div className="mb-6 flex items-center gap-1 overflow-x-auto pb-1">
@@ -174,8 +174,8 @@ export function ReportsTab() {
           <button key={t.id} onClick={() => setTab(t.id)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-colors"
             style={{
-              backgroundColor: tab === t.id ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.04)",
-              color: tab === t.id ? "#0D0D0D" : "rgba(255,255,255,0.7)",
+              backgroundColor: tab === t.id ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 4%, transparent)",
+              color: tab === t.id ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 70%, transparent)",
             }}>
             {t.icon} {t.label}
           </button>
@@ -196,7 +196,7 @@ export function ReportsTab() {
           <Section title="Breakdown por membro">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-[10px] uppercase tracking-wider text-white/50">
+                <tr className="text-[10px] uppercase tracking-wider text-foreground/50">
                   <th className="text-left px-3 py-2">Membro</th>
                   <th className="text-right px-2 py-2">Posts</th>
                   <th className="text-right px-2 py-2">Reels</th>
@@ -210,32 +210,32 @@ export function ReportsTab() {
               </thead>
               <tbody>
                 {report.byMember.length === 0 && (
-                  <tr><td colSpan={9} className="px-3 py-4 text-white/40 text-center">Sem entregas no período.</td></tr>
+                  <tr><td colSpan={9} className="px-3 py-4 text-foreground/40 text-center">Sem entregas no período.</td></tr>
                 )}
                 {report.byMember.map((m: any, i: number) => (
                   <tr key={m.userId}
                     onClick={() => setOpenMember(m)}
-                    className="border-t border-white/[0.05] hover:bg-white/[0.03] cursor-pointer transition-colors">
+                    className="border-t border-foreground/5 hover:bg-foreground/[0.03] cursor-pointer transition-colors">
                     <td className="px-3 py-2.5 flex items-center gap-2">
                       <Avatar profile={{ id: m.userId, name: m.name, color: m.color, icon: m.icon } as any} size={26} />
-                      <span className="font-semibold" style={{ color: i === 0 ? "rgb(var(--lz-brand-rgb))" : "#FFF" }}>{m.name}</span>
+                      <span className="font-semibold" style={{ color: i === 0 ? "var(--lz-accent-ink)" : "#FFF" }}>{m.name}</span>
                     </td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.posts}</td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.reels}</td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.outros}</td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.stories}</td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.cleaning}</td>
-                    <td className="text-right px-2 py-2.5 font-bold tabular-nums" style={{ color: i === 0 ? "rgb(var(--lz-brand-rgb))" : "#FFF" }}>{m.total}</td>
+                    <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{m.posts}</td>
+                    <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{m.reels}</td>
+                    <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{m.outros}</td>
+                    <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{m.stories}</td>
+                    <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{m.cleaning}</td>
+                    <td className="text-right px-2 py-2.5 font-bold tabular-nums" style={{ color: i === 0 ? "var(--lz-accent-ink)" : "#FFF" }}>{m.total}</td>
                     <td className="text-right px-2 py-2.5 tabular-nums">
                       {m.lateCount > 0 ? (
                         <span title={`Média de atraso: ${m.avgLateDays} dia(s)`} className="font-bold" style={{ color: "#FF6B6B" }}>
                           {m.lateCount}
                         </span>
                       ) : (
-                        <span className="text-white/30">0</span>
+                        <span className="text-foreground/30">0</span>
                       )}
                     </td>
-                    <td className="text-right px-3 py-2.5 text-white/60 tabular-nums">{m.pct}%</td>
+                    <td className="text-right px-3 py-2.5 text-foreground/60 tabular-nums">{m.pct}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -246,7 +246,7 @@ export function ReportsTab() {
           <Section title="Reels por formato (editor)">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-[10px] uppercase tracking-wider text-white/50">
+                <tr className="text-[10px] uppercase tracking-wider text-foreground/50">
                   <th className="text-left px-3 py-2">Editor</th>
                   <th className="text-right px-2 py-2">Lo-fi</th>
                   <th className="text-right px-2 py-2">Fácil</th>
@@ -257,7 +257,7 @@ export function ReportsTab() {
               </thead>
               <tbody>
                 {report.byEditorFormat.length === 0 && (
-                  <tr><td colSpan={6} className="px-3 py-4 text-white/40 text-center">Nenhum reel com editor no período.</td></tr>
+                  <tr><td colSpan={6} className="px-3 py-4 text-foreground/40 text-center">Nenhum reel com editor no período.</td></tr>
                 )}
                 {report.byEditorFormat.map((r: any) => {
                   const key = r.editorId ?? "none";
@@ -265,27 +265,27 @@ export function ReportsTab() {
                   const hasItems = (r.items?.length ?? 0) > 0;
                   return (
                     <Fragment key={key}>
-                      <tr className="border-t border-white/[0.05]">
-                        <td className="px-3 py-2.5 text-white/80">
+                      <tr className="border-t border-foreground/5">
+                        <td className="px-3 py-2.5 text-foreground/80">
                           <button
                             onClick={() => hasItems && setExpandedEditor(expanded ? null : key)}
                             disabled={!hasItems}
                             className="flex items-center gap-1.5 disabled:cursor-default"
                           >
                             {hasItems && (
-                              <ChevronDown size={12} className="text-white/40 transition-transform shrink-0" style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }} />
+                              <ChevronDown size={12} className="text-foreground/40 transition-transform shrink-0" style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }} />
                             )}
                             {r.name}
                           </button>
                         </td>
-                        <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{r.lofi}</td>
-                        <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{r.facil}</td>
-                        <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{r.basico}</td>
-                        <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{r.avancado}</td>
-                        <td className="text-right px-3 py-2.5 font-bold text-white tabular-nums">{r.total}</td>
+                        <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{r.lofi}</td>
+                        <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{r.facil}</td>
+                        <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{r.basico}</td>
+                        <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{r.avancado}</td>
+                        <td className="text-right px-3 py-2.5 font-bold text-foreground tabular-nums">{r.total}</td>
                       </tr>
                       {expanded && (
-                        <tr className="border-t border-white/[0.05] bg-white/[0.02]">
+                        <tr className="border-t border-foreground/5 bg-foreground/[0.02]">
                           <td colSpan={6} className="px-3 py-2">
                             <EditorItemsList items={r.items} profiles={profiles} />
                           </td>
@@ -314,7 +314,7 @@ export function ReportsTab() {
             </div>
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-[10px] uppercase tracking-wider text-white/50">
+                <tr className="text-[10px] uppercase tracking-wider text-foreground/50">
                   <th className="text-left px-3 py-2">Membro</th>
                   <th className="text-right px-2 py-2">Vídeos gravados</th>
                   <th className="text-right px-2 py-2">Roteiros</th>
@@ -325,19 +325,19 @@ export function ReportsTab() {
               </thead>
               <tbody>
                 {(!report.activityByMember || report.activityByMember.length === 0) && (
-                  <tr><td colSpan={6} className="px-3 py-4 text-white/40 text-center">Nenhuma atividade registrada no período.</td></tr>
+                  <tr><td colSpan={6} className="px-3 py-4 text-foreground/40 text-center">Nenhuma atividade registrada no período.</td></tr>
                 )}
                 {report.activityByMember?.map((m: any) => (
-                  <tr key={m.userId} className="border-t border-white/[0.05]">
+                  <tr key={m.userId} className="border-t border-foreground/5">
                     <td className="px-3 py-2.5 flex items-center gap-2">
                       <Avatar profile={{ id: m.userId, name: m.name, color: m.color, icon: m.icon } as any} size={26} />
-                      <span className="font-semibold text-white">{m.name}</span>
+                      <span className="font-semibold text-foreground">{m.name}</span>
                     </td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.gravacao}</td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.roteiro}</td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.sistema}</td>
-                    <td className="text-right px-2 py-2.5 text-white/70 tabular-nums">{m.outros}</td>
-                    <td className="text-right px-3 py-2.5 font-bold text-white tabular-nums">{m.total}</td>
+                    <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{m.gravacao}</td>
+                    <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{m.roteiro}</td>
+                    <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{m.sistema}</td>
+                    <td className="text-right px-2 py-2.5 text-foreground/70 tabular-nums">{m.outros}</td>
+                    <td className="text-right px-3 py-2.5 font-bold text-foreground tabular-nums">{m.total}</td>
                   </tr>
                 ))}
               </tbody>
@@ -347,14 +347,14 @@ export function ReportsTab() {
           {/* Seção 4 - Histórico */}
           <Section title={`Histórico (${histPage.total})`}>
             {histPage.rows.length === 0 ? (
-              <p className="text-white/40 text-sm px-3 py-4 text-center">Sem registros no período.</p>
+              <p className="text-foreground/40 text-sm px-3 py-4 text-center">Sem registros no período.</p>
             ) : histPage.rows.map((h: any, i: number) => {
-              const km = ACTIVITY_KIND_META[h.kind] ?? { label: h.kind?.toUpperCase() ?? "?", bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" };
+              const km = ACTIVITY_KIND_META[h.kind] ?? { label: h.kind?.toUpperCase() ?? "?", bg: "color-mix(in srgb, var(--foreground) 8%, transparent)", color: "color-mix(in srgb, var(--foreground) 70%, transparent)" };
               return (
-                <div key={i} className="flex items-center gap-3 px-3 py-2.5 border-t border-white/[0.05] text-xs">
-                  <span className="text-white/40 tabular-nums w-32 shrink-0">{new Date(h.at).toLocaleString("pt-BR")}</span>
+                <div key={i} className="flex items-center gap-3 px-3 py-2.5 border-t border-foreground/5 text-xs">
+                  <span className="text-foreground/40 tabular-nums w-32 shrink-0">{new Date(h.at).toLocaleString("pt-BR")}</span>
                   <Avatar profile={{ id: h.userId, name: h.userName, color: h.userColor } as any} size={22} />
-                  <span className="text-white/80 w-28 truncate">{h.userName}</span>
+                  <span className="text-foreground/80 w-28 truncate">{h.userName}</span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold shrink-0"
                     style={{ backgroundColor: (h.clientColor ?? "#444") + "33", color: h.clientColor ?? "#FFF" }}>
                     {h.clientName ?? "Removido"}
@@ -363,22 +363,22 @@ export function ReportsTab() {
                     style={{ backgroundColor: km.bg, color: km.color }}>
                     {km.label}
                   </span>
-                  <span className="text-white flex-1 truncate">
+                  <span className="text-foreground flex-1 truncate">
                     <span className="font-semibold">{h.itemTitle ?? "Item removido"}</span>
-                    <span className="text-white/50"> · {h.description}</span>
+                    <span className="text-foreground/50"> · {h.description}</span>
                   </span>
                 </div>
               );
             })}
             {histPage.total > PER && (
-              <div className="flex items-center justify-between mt-3 px-3 text-xs text-white/60">
+              <div className="flex items-center justify-between mt-3 px-3 text-xs text-foreground/60">
                 <button disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  className="px-3 py-1 rounded border border-white/10 hover:border-white/30 disabled:opacity-30">
+                  className="px-3 py-1 rounded border border-foreground/10 hover:border-foreground/30 disabled:opacity-30">
                   Anterior
                 </button>
                 <span>Página {page + 1} de {Math.ceil(histPage.total / PER)}</span>
                 <button disabled={(page + 1) * PER >= histPage.total} onClick={() => setPage((p) => p + 1)}
-                  className="px-3 py-1 rounded border border-white/10 hover:border-white/30 disabled:opacity-30">
+                  className="px-3 py-1 rounded border border-foreground/10 hover:border-foreground/30 disabled:opacity-30">
                   Próxima
                 </button>
               </div>
@@ -433,11 +433,11 @@ function LeadTimeView({ data }: { data: any }) {
 }
 
 function LeadTable({ rows, accent }: { rows: any[]; accent?: boolean }) {
-  if (!rows.length) return <p className="text-white/40 text-sm px-3 py-6 text-center">Sem dados.</p>;
+  if (!rows.length) return <p className="text-foreground/40 text-sm px-3 py-6 text-center">Sem dados.</p>;
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className="text-[10px] uppercase tracking-wider text-white/50">
+        <tr className="text-[10px] uppercase tracking-wider text-foreground/50">
           <th className="text-left px-3 py-2">Tarefa</th>
           <th className="text-left px-3 py-2">Cliente</th>
           <th className="text-right px-3 py-2">Tempo</th>
@@ -445,11 +445,11 @@ function LeadTable({ rows, accent }: { rows: any[]; accent?: boolean }) {
       </thead>
       <tbody>
         {rows.map((r) => (
-          <tr key={r.id} className="border-t border-white/[0.05]">
-            <td className="px-3 py-2.5 text-white/80 truncate max-w-[300px]">{r.title}</td>
-            <td className="px-3 py-2.5 text-white/60">{r.clientName}</td>
+          <tr key={r.id} className="border-t border-foreground/5">
+            <td className="px-3 py-2.5 text-foreground/80 truncate max-w-[300px]">{r.title}</td>
+            <td className="px-3 py-2.5 text-foreground/60">{r.clientName}</td>
             <td className="px-3 py-2.5 text-right tabular-nums font-bold"
-              style={{ color: accent ? "rgb(var(--lz-brand-rgb))" : "#FFFFFF" }}>{formatHours(r.hours)}</td>
+              style={{ color: accent ? "var(--lz-accent-ink)" : "#FFFFFF" }}>{formatHours(r.hours)}</td>
           </tr>
         ))}
       </tbody>
@@ -458,7 +458,7 @@ function LeadTable({ rows, accent }: { rows: any[]; accent?: boolean }) {
 }
 
 function StatusDurationView({ data }: { data: any[] }) {
-  if (!data.length) return <p className="text-white/40 text-sm px-3 py-8 text-center">Sem transições registradas.</p>;
+  if (!data.length) return <p className="text-foreground/40 text-sm px-3 py-8 text-center">Sem transições registradas.</p>;
   const max = Math.max(...data.map((d) => d.avgHours));
   return (
     <Section title="Tempo médio que cada status consome">
@@ -470,9 +470,9 @@ function StatusDurationView({ data }: { data: any[] }) {
             <div key={d.status}>
               <div className="flex items-center justify-between mb-1.5 text-xs">
                 <span className="font-semibold" style={{ color: meta?.color ?? "#FFF" }}>{meta?.label ?? d.status}</span>
-                <span className="text-white/60 tabular-nums">{formatHours(d.avgHours)} <span className="text-white/30">· {d.count} transições</span></span>
+                <span className="text-foreground/60 tabular-nums">{formatHours(d.avgHours)} <span className="text-foreground/30">· {d.count} transições</span></span>
               </div>
-              <div className="h-2 rounded-full bg-white/[0.05] overflow-hidden">
+              <div className="h-2 rounded-full bg-foreground/[0.05] overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${pct}%`, background: meta?.color ?? "rgb(var(--lz-brand-rgb))" }} />
               </div>
             </div>
@@ -492,11 +492,11 @@ function ReworkView({ data }: { data: any }) {
       </div>
       <Section title="Itens que mais voltaram">
         {data.items.length === 0 ? (
-          <p className="text-white/40 text-sm px-3 py-6 text-center">Nenhum retrabalho no período.</p>
+          <p className="text-foreground/40 text-sm px-3 py-6 text-center">Nenhum retrabalho no período.</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-[10px] uppercase tracking-wider text-white/50">
+              <tr className="text-[10px] uppercase tracking-wider text-foreground/50">
                 <th className="text-left px-3 py-2">Tarefa</th>
                 <th className="text-left px-3 py-2">Cliente</th>
                 <th className="text-left px-3 py-2">Tipo</th>
@@ -505,10 +505,10 @@ function ReworkView({ data }: { data: any }) {
             </thead>
             <tbody>
               {data.items.map((r: any) => (
-                <tr key={r.id} className="border-t border-white/[0.05]">
-                  <td className="px-3 py-2.5 text-white/80 truncate max-w-[280px]">{r.title}</td>
-                  <td className="px-3 py-2.5 text-white/60">{r.clientName}</td>
-                  <td className="px-3 py-2.5 text-white/60 uppercase text-[10px]">{r.type}</td>
+                <tr key={r.id} className="border-t border-foreground/5">
+                  <td className="px-3 py-2.5 text-foreground/80 truncate max-w-[280px]">{r.title}</td>
+                  <td className="px-3 py-2.5 text-foreground/60">{r.clientName}</td>
+                  <td className="px-3 py-2.5 text-foreground/60 uppercase text-[10px]">{r.type}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums font-bold" style={{ color: "#FF8C42" }}>×{r.count}</td>
                 </tr>
               ))}
@@ -538,13 +538,13 @@ function QualityView({ data }: { data: any }) {
               <div key={n} className="flex items-center gap-3">
                 <div className="inline-flex items-center gap-0.5 w-20">
                   {Array.from({ length: n }).map((_, i) => (
-                    <Star key={i} size={11} fill="rgb(var(--lz-brand-rgb))" color="rgb(var(--lz-brand-rgb))" />
+                    <Star key={i} size={11} fill="var(--lz-accent-ink)" color="var(--lz-accent-ink)" />
                   ))}
                 </div>
-                <div className="flex-1 h-2 rounded-full bg-white/[0.05] overflow-hidden">
+                <div className="flex-1 h-2 rounded-full bg-foreground/[0.05] overflow-hidden">
                   <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "rgb(var(--lz-brand-rgb))" }} />
                 </div>
-                <span className="text-xs text-white/60 tabular-nums w-12 text-right">{c}</span>
+                <span className="text-xs text-foreground/60 tabular-nums w-12 text-right">{c}</span>
               </div>
             );
           })}
@@ -558,15 +558,15 @@ function BlockedView({ data }: { data: any[] }) {
   return (
     <Section title={`Itens bloqueados agora (${data.length})`}>
       {data.length === 0 ? (
-        <p className="text-white/40 text-sm px-3 py-8 text-center">Nenhum item bloqueado no momento. 🎉</p>
+        <p className="text-foreground/40 text-sm px-3 py-8 text-center">Nenhum item bloqueado no momento. 🎉</p>
       ) : data.map((b) => (
-        <div key={b.id} className="flex items-center gap-3 px-4 py-3 border-t border-white/[0.05]">
+        <div key={b.id} className="flex items-center gap-3 px-4 py-3 border-t border-foreground/5">
           <AlertOctagon size={14} style={{ color: "#FF6B6B" }} />
           <span className="px-2 py-0.5 rounded text-[10px] font-bold"
             style={{ backgroundColor: (b.clientColor ?? "#444") + "33", color: b.clientColor ?? "#FFF" }}>
             {b.clientName}
           </span>
-          <span className="text-white text-sm flex-1 truncate">{b.title}</span>
+          <span className="text-foreground text-sm flex-1 truncate">{b.title}</span>
         </div>
       ))}
     </Section>
@@ -581,10 +581,10 @@ function EditorItemsList({ items, profiles }: {
   return (
     <ul className="space-y-1 py-1">
       {items.map((it) => (
-        <li key={it.itemId} className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-white/[0.03]">
+        <li key={it.itemId} className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-foreground/[0.03]">
           <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: it.clientColor ?? "#888" }} />
-          <span className="text-xs text-white/50 shrink-0">{it.clientName ?? "—"}</span>
-          <span className="text-xs text-white/80 truncate flex-1">{it.title}</span>
+          <span className="text-xs text-foreground/50 shrink-0">{it.clientName ?? "—"}</span>
+          <span className="text-xs text-foreground/80 truncate flex-1">{it.title}</span>
           <select
             defaultValue=""
             disabled={api.setItemEditor.isPending}
@@ -592,7 +592,7 @@ function EditorItemsList({ items, profiles }: {
               const editorId = e.target.value || null;
               api.setItemEditor.mutate({ data: { itemId: it.itemId, editorId } });
             }}
-            className="shrink-0 bg-[#0D0D0D] border border-white/10 rounded-md px-2 py-1 text-[11px] text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+            className="shrink-0 bg-background border border-foreground/10 rounded-md px-2 py-1 text-[11px] text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
           >
             <option value="" disabled>Atribuir editor...</option>
             {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -605,9 +605,9 @@ function EditorItemsList({ items, profiles }: {
 
 function MetricCard({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
-    <div className="bg-[#1C1C1C] rounded-lg p-4">
-      <div className="text-[10px] uppercase font-bold tracking-wider text-white/50">{label}</div>
-      <div className="text-[28px] font-bold tabular-nums mt-1" style={{ color: accent ? "rgb(var(--lz-brand-rgb))" : "#FFFFFF" }}>{value}</div>
+    <div className="bg-card rounded-lg p-4">
+      <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">{label}</div>
+      <div className="text-[28px] font-bold tabular-nums mt-1" style={{ color: accent ? "var(--lz-accent-ink)" : "#FFFFFF" }}>{value}</div>
     </div>
   );
 }
@@ -615,8 +615,8 @@ function MetricCard({ label, value, accent }: { label: string; value: number; ac
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-8">
-      <h2 className="text-xs uppercase font-bold tracking-wider text-white/50 mb-3">{title}</h2>
-      <div className="bg-[#1C1C1C] rounded-lg overflow-hidden lz-stagger">{children}</div>
+      <h2 className="text-xs uppercase font-bold tracking-wider text-foreground/50 mb-3">{title}</h2>
+      <div className="bg-card rounded-lg overflow-hidden lz-stagger">{children}</div>
     </div>
   );
 }
@@ -627,13 +627,13 @@ function FilterSelect({ label, value, onChange, options }: {
 }) {
   return (
     <label className="block">
-      <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">{label}</span>
+      <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">{label}</span>
       <div className="relative mt-1">
         <select value={value} onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none bg-[#0D0D0D] border border-white/10 rounded-md px-2 py-1.5 pr-7 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
+          className="w-full appearance-none bg-background border border-foreground/10 rounded-md px-2 py-1.5 pr-7 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
           {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+        <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground/40 pointer-events-none" />
       </div>
     </label>
   );
@@ -643,43 +643,43 @@ function FilterSelect({ label, value, onChange, options }: {
 function VelocityView({ from, to }: { from: string; to: string }) {
   const { data, isLoading } = useQuery(memberVelocityQO(from, to));
 
-  if (isLoading) return <div className="text-white/40 text-sm py-6 px-2">Calculando velocidade…</div>;
-  if (!data?.length) return <div className="text-white/30 text-sm py-6 px-2">Nenhum item finalizado no período.</div>;
+  if (isLoading) return <div className="text-foreground/40 text-sm py-6 px-2">Calculando velocidade…</div>;
+  if (!data?.length) return <div className="text-foreground/30 text-sm py-6 px-2">Nenhum item finalizado no período.</div>;
 
   const maxAvg = Math.max(...data.map((r) => r.avgLeadTimeDays ?? 0), 1);
 
   return (
     <div className="space-y-3 py-2">
-      <div className="text-[11px] text-white/40 mb-3 px-1">
+      <div className="text-[11px] text-foreground/40 mb-3 px-1">
         Lead time médio por membro — quanto tempo (em dias) um item fica em produção até ser finalizado. Menor = mais rápido.
       </div>
       {data.map((row) => {
         const avg = row.avgLeadTimeDays;
         const barPct = avg != null ? Math.round((avg / maxAvg) * 100) : 0;
-        const barColor = avg == null ? "#444" : avg <= 2 ? "rgb(var(--lz-brand-rgb))" : avg <= 5 ? "#FF8C42" : "#FF4444";
+        const barColor = avg == null ? "#444" : avg <= 2 ? "var(--lz-accent-ink)" : avg <= 5 ? "#FF8C42" : "#FF4444";
         return (
-          <div key={row.userId} className="rounded-xl bg-[#1C1C1C] border border-white/[0.06] p-4">
+          <div key={row.userId} className="rounded-xl bg-card border border-foreground/6 p-4">
             <div className="flex items-center gap-3 mb-3">
               {row.avatarUrl ? (
                 <img src={row.avatarUrl} alt={row.name} className="h-8 w-8 rounded-full object-cover shrink-0" />
               ) : (
-                <div className="h-8 w-8 rounded-full grid place-items-center text-xs font-bold text-white shrink-0"
+                <div className="h-8 w-8 rounded-full grid place-items-center text-xs font-bold text-foreground shrink-0"
                   style={{ background: row.color }}>
                   {row.name.charAt(0).toUpperCase()}
                 </div>
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-white text-sm font-medium truncate">{row.name}</span>
-                  <span className="text-white font-bold tabular-nums text-sm shrink-0" style={{ color: barColor }}>
+                  <span className="text-foreground text-sm font-medium truncate">{row.name}</span>
+                  <span className="text-foreground font-bold tabular-nums text-sm shrink-0" style={{ color: barColor }}>
                     {avg != null ? `${avg}d` : "—"}
                   </span>
                 </div>
-                <div className="text-[10px] text-white/40">{row.totalFinished} entr. no período</div>
+                <div className="text-[10px] text-foreground/40">{row.totalFinished} entr. no período</div>
               </div>
             </div>
             {/* Lead time bar */}
-            <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden mb-3">
+            <div className="h-1.5 rounded-full bg-foreground/[0.06] overflow-hidden mb-3">
               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${barPct}%`, background: barColor }} />
             </div>
             {/* By type */}
@@ -689,12 +689,12 @@ function VelocityView({ from, to }: { from: string; to: string }) {
                 { label: "Reel", d: row.byType.reel },
                 { label: "Outros", d: row.byType.outros },
               ].map(({ label, d }) => (
-                <div key={label} className="rounded bg-white/[0.04] py-1.5 px-1">
-                  <div className="text-[10px] text-white/40">{label}</div>
-                  <div className="text-xs text-white font-semibold tabular-nums">
+                <div key={label} className="rounded bg-foreground/[0.04] py-1.5 px-1">
+                  <div className="text-[10px] text-foreground/40">{label}</div>
+                  <div className="text-xs text-foreground font-semibold tabular-nums">
                     {d.count > 0 ? `${d.avgDays ?? "?"}d` : "—"}
                   </div>
-                  <div className="text-[10px] text-white/30">{d.count} entr.</div>
+                  <div className="text-[10px] text-foreground/30">{d.count} entr.</div>
                 </div>
               ))}
             </div>
@@ -717,7 +717,7 @@ function UploadsView() {
 
   return (
     <div className="py-2">
-      <div className="text-[11px] text-white/40 mb-4 px-1">
+      <div className="text-[11px] text-foreground/40 mb-4 px-1">
         Quem anexou arquivo (upload direto ou vindo do Drive) em cada item — útil pra conferir quem realmente mexeu num reel quando o editor esquece de se atribuir.
       </div>
       <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -726,8 +726,8 @@ function UploadsView() {
             <button key={d} onClick={() => setDays(d)}
               className="rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide transition-colors"
               style={{
-                backgroundColor: days === d ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
-                color: days === d ? "#0D0D0D" : "rgba(255,255,255,0.5)",
+                backgroundColor: days === d ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
+                color: days === d ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
               }}>
               Últimos {d} dias
             </button>
@@ -738,8 +738,8 @@ function UploadsView() {
             <button key={t} onClick={() => setType(t)}
               className="rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide transition-colors"
               style={{
-                backgroundColor: type === t ? "rgba(var(--lz-brand-light-rgb),0.15)" : "rgba(255,255,255,0.06)",
-                color: type === t ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.5)",
+                backgroundColor: type === t ? "rgba(var(--lz-brand-light-rgb),0.15)" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
+                color: type === t ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
               }}>
               {t === "all" ? "Todos" : CONTENT_TYPE_LABEL[t as keyof typeof CONTENT_TYPE_LABEL] ?? t}
             </button>
@@ -748,32 +748,32 @@ function UploadsView() {
       </div>
 
       {isLoading ? (
-        <div className="text-white/40 text-sm py-6 px-2">Carregando…</div>
+        <div className="text-foreground/40 text-sm py-6 px-2">Carregando…</div>
       ) : !data || data.rows.length === 0 ? (
-        <div className="text-white/30 text-sm py-6 px-2">Nenhum arquivo anexado nesse período.</div>
+        <div className="text-foreground/30 text-sm py-6 px-2">Nenhum arquivo anexado nesse período.</div>
       ) : (
         <>
           {data.byMember.length > 1 && (
             <div className="flex flex-wrap items-center gap-2 mb-4">
               {data.byMember.map((m) => (
-                <div key={m.userId} className="flex items-center gap-1.5 bg-[#1C1C1C] border border-white/[0.06] rounded-full pl-1.5 pr-3 py-1">
-                  <div className="h-5 w-5 rounded-full grid place-items-center text-[9px] font-bold text-white shrink-0" style={{ background: m.userColor }}>
+                <div key={m.userId} className="flex items-center gap-1.5 bg-card border border-foreground/6 rounded-full pl-1.5 pr-3 py-1">
+                  <div className="h-5 w-5 rounded-full grid place-items-center text-[9px] font-bold text-foreground shrink-0" style={{ background: m.userColor }}>
                     {m.userName.charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-xs text-white/80">{m.userName}</span>
-                  <span className="text-xs font-bold text-[rgb(var(--lz-brand-rgb))] tabular-nums">{m.count}</span>
+                  <span className="text-xs text-foreground/80">{m.userName}</span>
+                  <span className="text-xs font-bold text-[var(--lz-accent-ink)] tabular-nums">{m.count}</span>
                 </div>
               ))}
             </div>
           )}
-          <div className="rounded-xl bg-[#1C1C1C] border border-white/[0.06] overflow-hidden lz-stagger">
+          <div className="rounded-xl bg-card border border-foreground/6 overflow-hidden lz-stagger">
             {data.rows.map((r, i) => (
-              <div key={r.id} className={`flex items-center gap-3 px-3 py-2.5 text-xs ${i > 0 ? "border-t border-white/[0.05]" : ""}`}>
-                <span className="text-white/40 tabular-nums w-32 shrink-0">{new Date(r.createdAt).toLocaleString("pt-BR")}</span>
-                <div className="h-5 w-5 rounded-full grid place-items-center text-[9px] font-bold text-white shrink-0" style={{ background: r.userColor }}>
+              <div key={r.id} className={`flex items-center gap-3 px-3 py-2.5 text-xs ${i > 0 ? "border-t border-foreground/5" : ""}`}>
+                <span className="text-foreground/40 tabular-nums w-32 shrink-0">{new Date(r.createdAt).toLocaleString("pt-BR")}</span>
+                <div className="h-5 w-5 rounded-full grid place-items-center text-[9px] font-bold text-foreground shrink-0" style={{ background: r.userColor }}>
                   {r.userName.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-white/80 w-28 truncate shrink-0">{r.userName}</span>
+                <span className="text-foreground/80 w-28 truncate shrink-0">{r.userName}</span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold shrink-0"
                   style={{ backgroundColor: (r.clientColor ?? "#444") + "33", color: r.clientColor ?? "#FFF" }}>
                   {r.clientName ?? "Removido"}
@@ -782,9 +782,9 @@ function UploadsView() {
                   style={{ backgroundColor: r.fileKind === "briefing" ? "rgba(184,132,252,0.15)" : "rgba(74,158,255,0.15)", color: r.fileKind === "briefing" ? "#B884FC" : "#4A9EFF" }}>
                   {r.fileKind === "briefing" ? "REFERÊNCIA" : "ARQUIVO"}
                 </span>
-                <span className="text-white flex-1 truncate">
+                <span className="text-foreground flex-1 truncate">
                   <span className="font-semibold">{r.itemTitle ?? "Item removido"}</span>
-                  <span className="text-white/50"> · {r.fileName}</span>
+                  <span className="text-foreground/50"> · {r.fileName}</span>
                 </span>
               </div>
             ))}

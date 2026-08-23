@@ -145,24 +145,24 @@ export function MemberGoalsTab() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setMonthKey(shiftMonth(monthKey, -1))}
-            className="text-xs px-2.5 py-1.5 rounded-md border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition"
+            className="text-xs px-2.5 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/30 transition"
           >
             ←
           </button>
-          <div className="flex items-center gap-2 text-white">
-            <Target size={14} className="text-[rgb(var(--lz-brand-rgb))]" />
+          <div className="flex items-center gap-2 text-foreground">
+            <Target size={14} className="text-[var(--lz-accent-ink)]" />
             <span className="text-sm font-bold">{labelFor(monthKey)}</span>
           </div>
           <button
             onClick={() => setMonthKey(shiftMonth(monthKey, 1))}
-            className="text-xs px-2.5 py-1.5 rounded-md border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition"
+            className="text-xs px-2.5 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/30 transition"
           >
             →
           </button>
           {monthKey !== currentMonthKey() && (
             <button
               onClick={() => setMonthKey(currentMonthKey())}
-              className="text-[11px] text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] transition ml-1"
+              className="text-[11px] text-foreground/40 hover:text-[var(--lz-accent-ink)] transition ml-1"
             >
               Hoje
             </button>
@@ -171,7 +171,7 @@ export function MemberGoalsTab() {
         <div className="flex items-center gap-2">
           <button
             onClick={copyPrevious}
-            className="text-xs px-3 py-2 rounded-md border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition inline-flex items-center gap-1.5"
+            className="text-xs px-3 py-2 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/30 transition inline-flex items-center gap-1.5"
           >
             <Copy size={12} /> Copiar do mês anterior
           </button>
@@ -184,29 +184,29 @@ export function MemberGoalsTab() {
         </div>
       </div>
 
-      <p className="text-[11px] text-white/40 mb-3">
+      <p className="text-[11px] text-foreground/40 mb-3">
         Defina quantos posts, reels, dias de stories, gravações e outros conteúdos cada membro
-        precisa entregar neste mês. Use <span className="text-white/60">0</span> para não definir
+        precisa entregar neste mês. Use <span className="text-foreground/60">0</span> para não definir
         meta naquela categoria. Rotina não tem meta — só mostra quantas tarefas do dia a dia a
         pessoa já concluiu.
       </p>
 
       <div className="space-y-3">
         {activeMembers.length === 0 && (
-          <div className="px-5 py-6 text-sm text-white/40 bg-[#1C1C1C] rounded-lg">Sem membros ativos.</div>
+          <div className="px-5 py-6 text-sm text-foreground/40 bg-card rounded-lg">Sem membros ativos.</div>
         )}
         {activeMembers.map((p) => {
           const row = draft[p.id] ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0 };
           const prog: any = progressByUser.get(p.id);
           const dirty = isDirty(p.id, row);
           return (
-            <div key={p.id} className="bg-[#1C1C1C] rounded-lg p-4">
+            <div key={p.id} className="bg-card rounded-lg p-4">
               <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar profile={p} size={32} />
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white truncate">{p.name}</div>
-                    <div className="text-[10px] text-white/40 truncate">{p.email}</div>
+                    <div className="text-sm font-semibold text-foreground truncate">{p.name}</div>
+                    <div className="text-[10px] text-foreground/40 truncate">{p.email}</div>
                   </div>
                 </div>
                 <button
@@ -229,13 +229,13 @@ export function MemberGoalsTab() {
                   />
                 ))}
                 <div className="flex flex-col items-center gap-1 w-[76px]">
-                  <span className="text-[9px] uppercase font-bold tracking-wider text-white/40 inline-flex items-center gap-1">
+                  <span className="text-[9px] uppercase font-bold tracking-wider text-foreground/40 inline-flex items-center gap-1">
                     <Sparkles size={9} /> Rotina
                   </span>
-                  <div className="w-full h-[34px] rounded-md border border-white/[0.06] bg-[#0D0D0D]/40 flex items-center justify-center text-sm font-bold text-white/70 tabular-nums">
+                  <div className="w-full h-[34px] rounded-md border border-foreground/6 bg-background/40 flex items-center justify-center text-sm font-bold text-foreground/70 tabular-nums">
                     {prog?.rotinaDone ?? 0}
                   </div>
-                  <span className="text-[9px] text-white/30">concluídas</span>
+                  <span className="text-[9px] text-foreground/30">concluídas</span>
                 </div>
               </div>
             </div>
@@ -251,16 +251,16 @@ function GoalField({
 }: { label: string; value: number; done: number; onChange: (v: number) => void }) {
   return (
     <div className="flex flex-col items-center gap-1 w-[76px]">
-      <span className="text-[9px] uppercase font-bold tracking-wider text-white/40">{label}</span>
+      <span className="text-[9px] uppercase font-bold tracking-wider text-foreground/40">{label}</span>
       <input
         type="number"
         min={0}
         max={9999}
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value, 10) || 0)}
-        className="w-full bg-[#0D0D0D] border border-white/10 text-sm text-white rounded-md px-2 py-1.5 text-center outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+        className="w-full bg-background border border-foreground/10 text-sm text-foreground rounded-md px-2 py-1.5 text-center outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
       />
-      <span className="text-[9px] text-white/30 tabular-nums">
+      <span className="text-[9px] text-foreground/30 tabular-nums">
         {value > 0 ? `${done}/${value} feito` : "sem meta"}
       </span>
     </div>

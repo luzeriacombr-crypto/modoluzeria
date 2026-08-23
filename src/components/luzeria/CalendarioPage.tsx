@@ -111,39 +111,39 @@ export function CalendarioPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
         <div className="flex items-center gap-2">
-          <CalendarDays size={20} className="text-[rgb(var(--lz-brand-rgb))]" />
-          <h1 className="text-[28px] font-bold text-white tracking-tight">Calendário</h1>
+          <CalendarDays size={20} className="text-[var(--lz-accent-ink)]" />
+          <h1 className="text-[28px] font-bold text-foreground tracking-tight">Calendário</h1>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => selectMonth(currentMonthKey())}
-            className="px-3 py-1.5 rounded-md text-xs font-semibold text-white/70 hover:text-white hover:bg-white/5 border border-white/10 transition">
+            className="px-3 py-1.5 rounded-md text-xs font-semibold text-foreground/70 hover:text-foreground hover:bg-foreground/5 border border-foreground/10 transition">
             Hoje
           </button>
-          <div className="inline-flex items-center gap-1 rounded-full bg-[#161616] p-1 border border-white/10">
+          <div className="inline-flex items-center gap-1 rounded-full bg-card p-1 border border-foreground/10">
             <button onClick={() => selectMonth(shiftMonth(monthKey, -1))}
-              className="h-8 w-8 rounded-full hover:bg-white/10 text-white/70 flex items-center justify-center transition">
+              className="h-8 w-8 rounded-full hover:bg-foreground/10 text-foreground/70 flex items-center justify-center transition">
               <ChevronLeft size={15} />
             </button>
-            <div className="px-4 text-white text-sm font-semibold min-w-[140px] text-center capitalize">
+            <div className="px-4 text-foreground text-sm font-semibold min-w-[140px] text-center capitalize">
               {formatMonth(monthKey)}
             </div>
             <button onClick={() => selectMonth(shiftMonth(monthKey, +1))}
-              className="h-8 w-8 rounded-full hover:bg-white/10 text-white/70 flex items-center justify-center transition">
+              className="h-8 w-8 rounded-full hover:bg-foreground/10 text-foreground/70 flex items-center justify-center transition">
               <ChevronRight size={15} />
             </button>
           </div>
         </div>
       </div>
 
-      <p className="text-xs text-white/40 -mt-4 mb-5">
+      <p className="text-xs text-foreground/40 -mt-4 mb-5">
         Todos os posts com data de publicação definida, de todos os clientes — independente do status.
       </p>
 
       {/* Grid */}
-      <div className="rounded-xl border border-white/[0.07] overflow-hidden bg-[#161616]">
-        <div className="grid grid-cols-7 border-b border-white/[0.07]">
+      <div className="rounded-xl border border-foreground/7 overflow-hidden bg-card">
+        <div className="grid grid-cols-7 border-b border-foreground/7">
           {WEEKDAYS.map((w) => (
-            <div key={w} className="px-3 py-2.5 text-[10px] uppercase tracking-wider font-bold text-white/40 text-center md:text-left">
+            <div key={w} className="px-3 py-2.5 text-[10px] uppercase tracking-wider font-bold text-foreground/40 text-center md:text-left">
               {w}
             </div>
           ))}
@@ -158,9 +158,9 @@ export function CalendarioPage() {
             const overflow = dayItems.length - visible.length;
             return (
               <div key={key}
-                className={`min-h-[110px] border-b border-r border-white/[0.05] p-1.5 ${i % 7 === 6 ? "border-r-0" : ""} ${!inMonth ? "opacity-40" : ""}`}>
+                className={`min-h-[110px] border-b border-r border-foreground/5 p-1.5 ${i % 7 === 6 ? "border-r-0" : ""} ${!inMonth ? "opacity-40" : ""}`}>
                 <div className="flex items-center justify-end px-1 mb-1">
-                  <span className={`text-[11px] font-semibold tabular-nums ${isToday ? "h-5 w-5 rounded-full bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] flex items-center justify-center" : "text-white/50"}`}>
+                  <span className={`text-[11px] font-semibold tabular-nums ${isToday ? "h-5 w-5 rounded-full bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] flex items-center justify-center" : "text-foreground/50"}`}>
                     {d.getDate()}
                   </span>
                 </div>
@@ -183,7 +183,7 @@ export function CalendarioPage() {
                   {overflow > 0 && (
                     <button
                       onClick={() => setDayOpen(key)}
-                      className="w-full text-left px-1.5 py-0.5 text-[10.5px] font-semibold text-white/50 hover:text-white transition"
+                      className="w-full text-left px-1.5 py-0.5 text-[10.5px] font-semibold text-foreground/50 hover:text-foreground transition"
                     >
                       + mais {overflow}
                     </button>
@@ -196,34 +196,34 @@ export function CalendarioPage() {
       </div>
 
       {isLoading && (
-        <p className="text-xs text-white/30 text-center mt-4">Carregando…</p>
+        <p className="text-xs text-foreground/30 text-center mt-4">Carregando…</p>
       )}
 
       {/* Day overflow panel */}
       {dayOpen && (
         <>
           <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px]" onClick={() => setDayOpen(null)} />
-          <div className="fixed z-50 bg-[#0D0D0D] border-white/10 flex flex-col
+          <div className="fixed z-50 bg-background border-foreground/10 flex flex-col
             inset-x-0 bottom-0 max-h-[80vh] rounded-t-2xl border-t
             md:rounded-none md:border-t-0 md:border-l md:right-0 md:top-0 md:bottom-0 md:left-auto md:w-[420px] md:max-h-none">
-            <div className="px-6 pt-5 pb-4 border-b border-white/[0.08] flex items-start justify-between">
+            <div className="px-6 pt-5 pb-4 border-b border-foreground/8 flex items-start justify-between">
               <div>
-                <div className="text-white font-bold text-[17px]">
+                <div className="text-foreground font-bold text-[17px]">
                   {new Date(dayOpen + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
                 </div>
-                <div className="mt-1 text-[12px] text-white/60">
-                  <span className="text-white font-semibold">{dayList.length}</span> post{dayList.length === 1 ? "" : "s"}
+                <div className="mt-1 text-[12px] text-foreground/60">
+                  <span className="text-foreground font-semibold">{dayList.length}</span> post{dayList.length === 1 ? "" : "s"}
                 </div>
               </div>
-              <button onClick={() => setDayOpen(null)} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition">
+              <button onClick={() => setDayOpen(null)} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5 transition">
                 <X size={16} />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3">
               {dayList.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-14 text-center">
-                  <Inbox size={28} className="text-white/20 mb-3" />
-                  <p className="text-white/40 text-xs">Nenhum post neste dia</p>
+                  <Inbox size={28} className="text-foreground/20 mb-3" />
+                  <p className="text-foreground/40 text-xs">Nenhum post neste dia</p>
                 </div>
               )}
               <ul className="space-y-1.5">
@@ -233,7 +233,7 @@ export function CalendarioPage() {
                       onClick={() => { setDayOpen(null); goToItem(it.clientId, it.monthKey, it.id); }}
                       onMouseEnter={(e) => showHover(it, e.currentTarget)}
                       onMouseLeave={() => setHover(null)}
-                      className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                      className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg bg-foreground/[0.03] hover:bg-foreground/[0.06] transition-colors"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-1 flex-wrap">
@@ -242,12 +242,12 @@ export function CalendarioPage() {
                             {it.clientName}
                           </span>
                           <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
-                            style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
+                            style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
                             {CONTENT_TYPE_LABEL[it.type as keyof typeof CONTENT_TYPE_LABEL] ?? it.type}
                           </span>
                         </div>
-                        <div className="text-white text-sm truncate">{it.title}</div>
-                        <div className="text-[10px] text-white/40 mt-0.5">
+                        <div className="text-foreground text-sm truncate">{it.title}</div>
+                        <div className="text-[10px] text-foreground/40 mt-0.5">
                           {new Date(it.scheduledAt!).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                         </div>
                       </div>
@@ -263,7 +263,7 @@ export function CalendarioPage() {
       {/* Hover preview popup */}
       {hover && (
         <div
-          className="fixed z-[60] w-[220px] rounded-xl border border-white/15 bg-[#1C1C1C] shadow-2xl overflow-hidden pointer-events-none"
+          className="fixed z-[60] w-[220px] rounded-xl border border-foreground/15 bg-card shadow-2xl overflow-hidden pointer-events-none"
           style={{ top: hover.top, left: hover.left }}
         >
           <div className="relative w-full aspect-square bg-[#111]">
@@ -274,7 +274,7 @@ export function CalendarioPage() {
               style={{ backgroundColor: `${hover.item.clientColor}22`, color: hover.item.clientColor }}>
               {hover.item.clientName}
             </span>
-            <div className="text-white text-xs font-medium leading-snug line-clamp-3">{hover.item.title}</div>
+            <div className="text-foreground text-xs font-medium leading-snug line-clamp-3">{hover.item.title}</div>
           </div>
         </div>
       )}
@@ -291,7 +291,7 @@ function HoverThumb({ itemId, coverUrl }: { itemId: string; coverUrl: string | n
   if (!url) {
     return (
       <div className="absolute inset-0 flex items-center justify-center">
-        <ImageIcon size={28} style={{ color: "rgba(255,255,255,0.2)" }} />
+        <ImageIcon size={28} style={{ color: "color-mix(in srgb, var(--foreground) 20%, transparent)" }} />
       </div>
     );
   }

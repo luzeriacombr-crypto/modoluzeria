@@ -15,14 +15,14 @@ export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: s
     const isSelf = !userId || userId === me?.id;
     if (!isSelf) return null;
     return (
-      <div className="rounded-xl bg-[#1C1C1C] border border-white/[0.06] p-4 mb-6 flex items-center gap-3">
+      <div className="rounded-xl bg-card border border-foreground/6 p-4 mb-6 flex items-center gap-3">
         <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
-          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
           <Target size={16} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-white">Sem meta definida este mês</div>
-          <div className="text-[11px] text-white/50 mt-0.5">
+          <div className="text-sm font-semibold text-foreground">Sem meta definida este mês</div>
+          <div className="text-[11px] text-foreground/50 mt-0.5">
             {me?.role === "master"
               ? "Defina as metas da equipe em Configurações › Metas."
               : "Seu adm ainda não definiu suas metas do mês."}
@@ -50,8 +50,8 @@ export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: s
   ].filter((i) => i.goal > 0);
 
   return (
-    <div className="rounded-xl bg-[#1C1C1C] border border-white/[0.06] p-4 mb-6">
-      <div className="flex items-center gap-1.5 mb-3 text-[10px] uppercase font-bold tracking-wider text-[rgb(var(--lz-brand-rgb))]">
+    <div className="rounded-xl bg-card border border-foreground/6 p-4 mb-6">
+      <div className="flex items-center gap-1.5 mb-3 text-[10px] uppercase font-bold tracking-wider text-[var(--lz-accent-ink)]">
         <Target size={12} /> Meta do mês
       </div>
       <div className="space-y-3">
@@ -68,18 +68,18 @@ function Bar({ label, done, goal }: { label: string; done: number; goal: number 
   const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
   const expected = Math.round((dayOfMonth / daysInMonth) * goal);
   const behind = done < expected * 0.7;
-  const color = done >= goal ? "rgb(var(--lz-brand-rgb))" : behind ? "#FF8C42" : "#7EB3FF";
+  const color = done >= goal ? "var(--lz-accent-ink)" : behind ? "#FF8C42" : "#7EB3FF";
   const grown = useGrowIn(pct);
 
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5 text-xs">
-        <span className="font-semibold text-white/70 uppercase tracking-wider text-[10px]">{label}</span>
+        <span className="font-semibold text-foreground/70 uppercase tracking-wider text-[10px]">{label}</span>
         <span className="tabular-nums font-bold" style={{ color }}>
-          {done}<span className="text-white/40 font-normal">/{goal}</span>
+          {done}<span className="text-foreground/40 font-normal">/{goal}</span>
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="h-1.5 rounded-full bg-foreground/[0.06] overflow-hidden">
         <div className="h-full rounded-full transition-all duration-500" style={{ width: `${grown}%`, background: color }} />
       </div>
     </div>

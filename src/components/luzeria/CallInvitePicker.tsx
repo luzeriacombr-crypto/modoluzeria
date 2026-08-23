@@ -59,12 +59,12 @@ export function CallInvitePicker({ anchorRect, onClose }: { anchorRect: DOMRect;
   return (
     <div ref={ref}
       style={{ position: "fixed", top, left, width: W }}
-      className="z-[1100] rounded-md bg-[#1C1C1C] border border-white/10 shadow-2xl p-2"
+      className="z-[1100] rounded-md bg-card border border-foreground/10 shadow-2xl p-2"
     >
       <input
         autoFocus value={q} onChange={(e) => setQ(e.target.value)}
         placeholder="Buscar…"
-        className="w-full text-xs bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+        className="w-full text-xs bg-background border border-foreground/10 rounded px-2 py-1.5 text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
       />
       <div className="max-h-60 overflow-y-auto mt-1">
         {filtered.map((p) => {
@@ -72,25 +72,25 @@ export function CallInvitePicker({ anchorRect, onClose }: { anchorRect: DOMRect;
           return (
             <button key={p.id}
               onClick={() => (picked.size > 0 ? toggle(p.id) : callNow([p.id]))}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/5 text-left">
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-foreground/5 text-left">
               <span
                 onClick={(e) => { e.stopPropagation(); toggle(p.id); }}
                 className="shrink-0 h-4 w-4 rounded flex items-center justify-center border transition-colors"
                 style={{
                   backgroundColor: isPicked ? "rgb(var(--lz-brand-rgb))" : "transparent",
-                  borderColor: isPicked ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.25)",
+                  borderColor: isPicked ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 25%, transparent)",
                 }}
                 title="Selecionar pra chamada em grupo"
               >
                 {isPicked && <Check size={11} color="#0D0D0D" />}
               </span>
               <Avatar profile={p} size={22} />
-              <span className="text-xs text-white truncate">{p.name}</span>
+              <span className="text-xs text-foreground truncate">{p.name}</span>
             </button>
           );
         })}
         {filtered.length === 0 && (
-          <div className="px-2 py-3 text-[11px] text-white/30 text-center">
+          <div className="px-2 py-3 text-[11px] text-foreground/30 text-center">
             {term ? "Ninguém encontrado." : "Nenhum outro membro ativo."}
           </div>
         )}

@@ -32,23 +32,23 @@ export function MemberReportPanel({
     <>
       <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]" />
       <div ref={ref}
-        className="fixed z-50 bg-[#0D0D0D] border-l border-white/10 lz-slide-in overflow-y-auto
+        className="fixed z-50 bg-background border-l border-foreground/10 lz-slide-in overflow-y-auto
           inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl border-t
           md:rounded-none md:border-t-0 md:right-0 md:top-0 md:bottom-0 md:left-auto md:w-[480px] md:max-h-none">
-        <div className="px-6 pt-5 pb-4 border-b border-white/[0.08] flex items-start gap-3">
+        <div className="px-6 pt-5 pb-4 border-b border-foreground/8 flex items-start gap-3">
           <Avatar profile={profile as any} size={48} />
           <div className="flex-1 min-w-0">
-            <div className="text-[18px] font-bold text-white truncate">{member.name}</div>
-            <div className="text-[11px] uppercase font-bold tracking-wider text-white/50">
-              {roleLabel(member.role as any)} · <span className="text-[rgb(var(--lz-brand-rgb))]">{member.total} entregas</span>
+            <div className="text-[18px] font-bold text-foreground truncate">{member.name}</div>
+            <div className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">
+              {roleLabel(member.role as any)} · <span className="text-[var(--lz-accent-ink)]">{member.total} entregas</span>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5"><X size={16} /></button>
+          <button onClick={onClose} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5"><X size={16} /></button>
         </div>
 
         {/* Bar chart */}
-        <div className="px-6 py-5 border-b border-white/[0.08]">
-          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[rgb(var(--lz-brand-rgb))]">Últimos 6 meses</div>
+        <div className="px-6 py-5 border-b border-foreground/8">
+          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[var(--lz-accent-ink)]">Últimos 6 meses</div>
           <div className="flex items-end gap-2 h-32">
             {(data?.monthly ?? []).map((m) => {
               const top = Math.max(...(data?.monthly ?? []).map((x) => x.count));
@@ -60,8 +60,8 @@ export function MemberReportPanel({
                     <div className="w-full rounded-t-sm transition-all"
                       style={{ height: `${h}%`, backgroundColor: isMax ? "rgb(var(--lz-brand-rgb))" : "rgba(var(--lz-brand-light-rgb),0.25)" }} />
                   </div>
-                  <div className="text-[9px] text-white/50">{m.key.slice(5)}/{m.key.slice(2, 4)}</div>
-                  <div className="text-[10px] font-bold text-white">{m.count}</div>
+                  <div className="text-[9px] text-foreground/50">{m.key.slice(5)}/{m.key.slice(2, 4)}</div>
+                  <div className="text-[10px] font-bold text-foreground">{m.count}</div>
                 </div>
               );
             })}
@@ -70,33 +70,33 @@ export function MemberReportPanel({
 
         <ListBlock title="Posts finalizados" items={data?.posts ?? []} renderRight={(x) => null} />
         <ListBlock title="Reels finalizados" items={data?.reels ?? []} renderRight={(x: any) =>
-          x.reelType ? <span className="text-[10px] text-white/50">{REEL_TYPE_LABEL[x.reelType as ReelType]}</span> : null
+          x.reelType ? <span className="text-[10px] text-foreground/50">{REEL_TYPE_LABEL[x.reelType as ReelType]}</span> : null
         } />
         <ListBlock title="Reels editados" items={data?.editedReels ?? []} renderRight={(x: any) =>
-          x.reelType ? <span className="text-[10px] text-white/50">{REEL_TYPE_LABEL[x.reelType as ReelType]}</span> : null
+          x.reelType ? <span className="text-[10px] text-foreground/50">{REEL_TYPE_LABEL[x.reelType as ReelType]}</span> : null
         } />
         <ListBlock title="Outros" items={data?.outros ?? []} renderRight={() => null} />
 
-        <div className="px-6 py-5 border-b border-white/[0.08]">
-          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[rgb(var(--lz-brand-rgb))]">Stories</div>
+        <div className="px-6 py-5 border-b border-foreground/8">
+          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[var(--lz-accent-ink)]">Stories</div>
           {(data?.stories ?? []).length === 0 ? (
-            <p className="text-xs text-white/40">Nenhum.</p>
+            <p className="text-xs text-foreground/40">Nenhum.</p>
           ) : (data?.stories ?? []).map((s) => (
             <div key={s.day} className="flex items-center justify-between py-1.5 text-xs">
-              <span className="text-white/80">Stories · {new Date(s.day + "T12:00:00Z").toLocaleDateString("pt-BR")}</span>
-              <span className="text-white/40 text-[10px]">{new Date(s.finalizedAt).toLocaleDateString("pt-BR")}</span>
+              <span className="text-foreground/80">Stories · {new Date(s.day + "T12:00:00Z").toLocaleDateString("pt-BR")}</span>
+              <span className="text-foreground/40 text-[10px]">{new Date(s.finalizedAt).toLocaleDateString("pt-BR")}</span>
             </div>
           ))}
         </div>
 
         <div className="px-6 py-5">
-          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[rgb(var(--lz-brand-rgb))]">Rotina</div>
+          <div className="text-[10px] uppercase font-bold tracking-wider mb-3 text-[var(--lz-accent-ink)]">Rotina</div>
           {(data?.cleaning ?? []).length === 0 ? (
-            <p className="text-xs text-white/40">Nenhuma.</p>
+            <p className="text-xs text-foreground/40">Nenhuma.</p>
           ) : (data?.cleaning ?? []).map((c, i) => (
             <div key={i} className="flex items-center justify-between py-1.5 text-xs">
-              <span className="text-white/80">{WEEKDAY[c.weekday] ?? "—"} · {c.taskName || "tarefa"}</span>
-              <span className="text-white/40 text-[10px]">{new Date(c.finalizedAt).toLocaleDateString("pt-BR")}</span>
+              <span className="text-foreground/80">{WEEKDAY[c.weekday] ?? "—"} · {c.taskName || "tarefa"}</span>
+              <span className="text-foreground/40 text-[10px]">{new Date(c.finalizedAt).toLocaleDateString("pt-BR")}</span>
             </div>
           ))}
         </div>
@@ -111,13 +111,13 @@ function ListBlock({ title, items, renderRight }: {
   renderRight: (item: any) => React.ReactNode;
 }) {
   return (
-    <div className="px-6 py-5 border-b border-white/[0.08]">
+    <div className="px-6 py-5 border-b border-foreground/8">
       <div className="text-[10px] uppercase font-bold tracking-wider mb-3 flex items-center justify-between">
-        <span className="text-[rgb(var(--lz-brand-rgb))]">{title}</span>
-        <span className="text-white/40">{items.length}</span>
+        <span className="text-[var(--lz-accent-ink)]">{title}</span>
+        <span className="text-foreground/40">{items.length}</span>
       </div>
       {items.length === 0 ? (
-        <p className="text-xs text-white/40">Nenhum.</p>
+        <p className="text-xs text-foreground/40">Nenhum.</p>
       ) : (
         <div className="space-y-1.5">
           {items.map((it) => (
@@ -125,8 +125,8 @@ function ListBlock({ title, items, renderRight }: {
               {it.clientColor && (
                 <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: it.clientColor }} />
               )}
-              <span className="text-white/50 truncate w-24">{it.clientName ?? "—"}</span>
-              <span className="text-white/80 flex-1 truncate">{it.title}</span>
+              <span className="text-foreground/50 truncate w-24">{it.clientName ?? "—"}</span>
+              <span className="text-foreground/80 flex-1 truncate">{it.title}</span>
               {renderRight(it)}
               {it.lateDays > 0 && (
                 <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0"
@@ -134,7 +134,7 @@ function ListBlock({ title, items, renderRight }: {
                   Atraso {it.lateDays}d
                 </span>
               )}
-              <span className="text-white/40 text-[10px] shrink-0">{new Date(it.finalizedAt).toLocaleDateString("pt-BR")}</span>
+              <span className="text-foreground/40 text-[10px] shrink-0">{new Date(it.finalizedAt).toLocaleDateString("pt-BR")}</span>
             </div>
           ))}
         </div>

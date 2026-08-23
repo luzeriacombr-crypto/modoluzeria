@@ -48,7 +48,7 @@ export function AssigneePicker({
   return (
     <div ref={ref}
       style={{ position: "fixed", top, left, width: W }}
-      className="z-[1100] rounded-md bg-[#1C1C1C] border border-white/10 shadow-2xl p-2"
+      className="z-[1100] rounded-md bg-card border border-foreground/10 shadow-2xl p-2"
     >
       <input
         autoFocus value={q} onChange={(e) => setQ(e.target.value)}
@@ -58,21 +58,21 @@ export function AssigneePicker({
           }
         }}
         placeholder="Buscar ou digitar nome…"
-        className="w-full text-xs bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+        className="w-full text-xs bg-background border border-foreground/10 rounded px-2 py-1.5 text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
       />
       <div className="max-h-60 overflow-y-auto mt-1">
         {filtered.map((p) => (
           <button key={p.id}
             onClick={() => { onPick({ userId: p.id, label: null }); onClose(); }}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/5 text-left">
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-foreground/5 text-left">
             <Avatar profile={p} size={22} />
-            <span className="text-xs text-white truncate">{p.name}</span>
+            <span className="text-xs text-foreground truncate">{p.name}</span>
           </button>
         ))}
         {q.trim() && !filtered.some((p) => p.name.toLowerCase() === term) && (
           <button
             onClick={() => { onPick({ userId: null, label: q.trim() }); onClose(); }}
-            className="w-full text-left px-2 py-1.5 rounded hover:bg-white/5 text-xs text-[rgb(var(--lz-brand-rgb))]">
+            className="w-full text-left px-2 py-1.5 rounded hover:bg-foreground/5 text-xs text-[var(--lz-accent-ink)]">
             + Usar “{q.trim()}”
           </button>
         )}
@@ -88,7 +88,7 @@ export function AssigneePicker({
 
 /** Pick a stable color from a free-text label so cells are visually distinct. */
 const LABEL_PALETTE = [
-  "rgb(var(--lz-brand-rgb))", "#FF6B6B", "#4A9EFF", "#FF8C42", "#A855F7",
+  "var(--lz-accent-ink)", "#FF6B6B", "#4A9EFF", "#FF8C42", "#A855F7",
   "#10B981", "#F59E0B", "#EC4899", "#22D3EE", "#F472B6", "#84CC16",
 ];
 export function colorForLabel(label: string): string {

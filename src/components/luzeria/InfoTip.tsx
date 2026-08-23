@@ -33,14 +33,14 @@ export function InfoTip({ text }: { text: string }) {
         ref={btnRef}
         type="button"
         onClick={(e) => { e.stopPropagation(); coords ? setCoords(null) : computeAndShow(); }}
-        className="inline-flex items-center justify-center text-white/30 hover:text-[rgb(var(--lz-brand-rgb))] transition-colors"
+        className="inline-flex items-center justify-center text-foreground/30 hover:text-[var(--lz-accent-ink)] transition-colors"
       >
         <Info size={11} />
       </button>
       {coords && createPortal(
         <div
           style={{ position: "fixed", top: coords.top, left: coords.left, width: TOOLTIP_WIDTH }}
-          className="z-[999] rounded-md border border-white/10 bg-[#1C1C1C] px-3 py-2 text-[11px] font-normal leading-relaxed text-white/70 shadow-xl normal-case tracking-normal"
+          className="z-[999] rounded-md border border-foreground/10 bg-card px-3 py-2 text-[11px] font-normal leading-relaxed text-foreground/70 shadow-xl normal-case tracking-normal"
           onClick={(e) => e.stopPropagation()}
         >
           {text}

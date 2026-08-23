@@ -97,8 +97,8 @@ export function SalesPipelinePage() {
     <div className="p-4 md:p-6 h-full flex flex-col">
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-2">
-          <Handshake size={20} className="text-[rgb(var(--lz-brand-rgb))]" />
-          <h1 className="text-lg font-bold text-white">Vendas</h1>
+          <Handshake size={20} className="text-[var(--lz-accent-ink)]" />
+          <h1 className="text-lg font-bold text-foreground">Vendas</h1>
         </div>
         <button
           onClick={() => setNewLeadOpen(true)}
@@ -136,15 +136,15 @@ export function SalesPipelinePage() {
                 active={col.key === expanded} isOver={overCol === col.key}
                 onClick={() => setExpanded(col.key)} {...dropProps(col.key)} />
             ))}
-            <button onClick={() => setExpanded(null)} className="ml-1 p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 shrink-0" title="Voltar aos blocos">
+            <button onClick={() => setExpanded(null)} className="ml-1 p-2 rounded-lg text-foreground/40 hover:text-foreground hover:bg-foreground/5 shrink-0" title="Voltar aos blocos">
               <X size={16} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto rounded-lg border border-white/[0.06] bg-[#161616] p-3 space-y-1.5">
+          <div className="flex-1 overflow-y-auto rounded-lg border border-foreground/6 bg-card p-3 space-y-1.5">
             {expanded === "followup"
               ? <FollowupColumnBody leads={byStatus.followup} dragId={dragId} onDragStart={setDragId} onDragEnd={() => setDragId(null)} onOpen={setEditLead} />
               : byStatus[expanded].length === 0
-              ? <p className="text-[11px] text-white/25 text-center py-10">Nada por aqui.</p>
+              ? <p className="text-[11px] text-foreground/25 text-center py-10">Nada por aqui.</p>
               : byStatus[expanded].map((l) => (
                   <LeadCard key={l.id} lead={l} draggable={expanded !== "fechado" && expanded !== "perdido"}
                     dragging={dragId === l.id}
@@ -193,18 +193,18 @@ function FolderBlock({ col, leads, isOver, dragId, onDragStartLead, onDragEndLea
       className="h-full flex flex-col text-left rounded-xl p-4 transition-colors border cursor-pointer"
       style={{
         backgroundColor: isOver ? "rgba(var(--lz-brand-rgb),0.08)" : "#1C1C1C",
-        borderColor: isOver ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
+        borderColor: isOver ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
         borderTopColor: isOver ? "rgb(var(--lz-brand-rgb))" : col.accent,
         borderTopWidth: "2px",
       }}
     >
       <div className="flex items-center justify-between shrink-0">
         <Icon size={18} style={{ color: col.accent }} />
-        <span className="text-2xl font-bold text-white">{leads.length}</span>
+        <span className="text-2xl font-bold text-foreground">{leads.length}</span>
       </div>
-      <div className="text-xs text-white/50 mt-1 mb-2 shrink-0">{col.label}</div>
+      <div className="text-xs text-foreground/50 mt-1 mb-2 shrink-0">{col.label}</div>
       <div className="flex-1 overflow-y-auto min-h-0 -mx-1.5 space-y-0.5">
-        {recent.length === 0 && <p className="text-[11px] text-white/20 px-1.5 py-2">Nada por aqui.</p>}
+        {recent.length === 0 && <p className="text-[11px] text-foreground/20 px-1.5 py-2">Nada por aqui.</p>}
         {recent.map((l) => (
           <div
             key={l.id}
@@ -212,15 +212,15 @@ function FolderBlock({ col, leads, isOver, dragId, onDragStartLead, onDragEndLea
             onDragStart={draggableRows ? (e) => { e.stopPropagation(); onDragStartLead(l.id); } : undefined}
             onDragEnd={draggableRows ? (e) => { e.stopPropagation(); onDragEndLead(); } : undefined}
             onClick={(e) => { e.stopPropagation(); onOpenLead(l); }}
-            className="px-1.5 py-1 rounded hover:bg-white/[0.06] transition-colors"
+            className="px-1.5 py-1 rounded hover:bg-foreground/[0.06] transition-colors"
             style={{ opacity: dragId === l.id ? 0.4 : 1, cursor: draggableRows ? "grab" : "pointer" }}
           >
-            <div className="text-xs text-white font-medium truncate">{l.name}</div>
-            <div className="text-[10px] text-white/35 truncate">{leadPreviewSubtitle(col.key, l)}</div>
+            <div className="text-xs text-foreground font-medium truncate">{l.name}</div>
+            <div className="text-[10px] text-foreground/35 truncate">{leadPreviewSubtitle(col.key, l)}</div>
           </div>
         ))}
         {extra > 0 && (
-          <div className="px-1.5 py-1 text-[10.5px] text-white/30 hover:text-white/50">+{extra} mais — ver todos</div>
+          <div className="px-1.5 py-1 text-[10.5px] text-foreground/30 hover:text-foreground/50">+{extra} mais — ver todos</div>
         )}
       </div>
     </div>
@@ -239,13 +239,13 @@ function CompactChip({ col, count, active, isOver, onClick, onDragOver, onDragLe
       onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border shrink-0 transition-colors"
       style={{
-        backgroundColor: active ? "rgba(var(--lz-brand-rgb),0.1)" : isOver ? "rgba(255,255,255,0.06)" : "#1C1C1C",
-        borderColor: active ? "rgb(var(--lz-brand-rgb))" : isOver ? col.accent : "rgba(255,255,255,0.06)",
+        backgroundColor: active ? "rgba(var(--lz-brand-rgb),0.1)" : isOver ? "color-mix(in srgb, var(--foreground) 6%, transparent)" : "#1C1C1C",
+        borderColor: active ? "rgb(var(--lz-brand-rgb))" : isOver ? col.accent : "color-mix(in srgb, var(--foreground) 6%, transparent)",
       }}
     >
       <Icon size={14} style={{ color: col.accent }} />
-      <span className="text-xs font-semibold text-white/80 whitespace-nowrap">{col.label}</span>
-      <span className="text-[10px] text-white/30">{count}</span>
+      <span className="text-xs font-semibold text-foreground/80 whitespace-nowrap">{col.label}</span>
+      <span className="text-[10px] text-foreground/30">{count}</span>
     </button>
   );
 }
@@ -258,7 +258,7 @@ function FollowupColumnBody({ leads, dragId, onDragStart, onDragEnd, onOpen }: {
   const hoje = sorted.filter((l) => !l.nextFollowupAt || new Date(l.nextFollowupAt) <= endOfToday);
   const proximos = sorted.filter((l) => l.nextFollowupAt && new Date(l.nextFollowupAt) > endOfToday);
 
-  if (leads.length === 0) return <p className="text-[11px] text-white/25 text-center py-6">Nada por aqui.</p>;
+  if (leads.length === 0) return <p className="text-[11px] text-foreground/25 text-center py-6">Nada por aqui.</p>;
 
   return (
     <>
@@ -268,9 +268,9 @@ function FollowupColumnBody({ leads, dragId, onDragStart, onDragEnd, onOpen }: {
       ))}
       {proximos.length > 0 && (
         <div className="flex items-center gap-2 py-1">
-          <span className="flex-1 h-px bg-white/[0.06]" />
-          <span className="text-[9px] uppercase font-bold tracking-wide text-white/25">Próximos</span>
-          <span className="flex-1 h-px bg-white/[0.06]" />
+          <span className="flex-1 h-px bg-foreground/[0.06]" />
+          <span className="text-[9px] uppercase font-bold tracking-wide text-foreground/25">Próximos</span>
+          <span className="flex-1 h-px bg-foreground/[0.06]" />
         </div>
       )}
       {proximos.map((l) => (
@@ -295,22 +295,22 @@ function LeadCard({ lead, draggable, dragging, onDragStart, onDragEnd, onOpen }:
       onDragStart={draggable ? onDragStart : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
       onClick={onOpen}
-      className="rounded-md border border-white/[0.08] bg-[#1C1C1C] p-2.5 transition-opacity cursor-pointer"
+      className="rounded-md border border-foreground/8 bg-card p-2.5 transition-opacity cursor-pointer"
       style={{ opacity: dragging ? 0.4 : 1, cursor: draggable ? "grab" : "pointer" }}
     >
       <div className="flex items-start justify-between gap-1.5">
-        <span className="text-sm font-semibold text-white truncate">{lead.name}</span>
+        <span className="text-sm font-semibold text-foreground truncate">{lead.name}</span>
         <div className="flex items-center gap-1 shrink-0">
           {cold && <Snowflake size={11} className="text-[#7EB3FF]" />}
           {wa && (
             <a href={wa} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-              className="text-white/30 hover:text-[#5BA88A]" title="Abrir WhatsApp">
+              className="text-foreground/30 hover:text-[#5BA88A]" title="Abrir WhatsApp">
               <MessageCircle size={13} />
             </a>
           )}
         </div>
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px] text-white/40">
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px] text-foreground/40">
         {lead.contactPhone && <span>{lead.contactPhone}</span>}
         {value && <span>{value}</span>}
       </div>
@@ -320,7 +320,7 @@ function LeadCard({ lead, draggable, dragging, onDragStart, onDragEnd, onOpen }:
           {lead.followUpNote ? ` · ${lead.followUpNote}` : ""}
         </div>
       )}
-      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/25">
+      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-foreground/25">
         {lead.status !== "followup" && <span>há {timeSince(lead.lastContactAt ?? lead.updatedAt)}</span>}
         {lead.contactCount > 0 && (
           <span className="inline-flex items-center gap-0.5"><PhoneCall size={9} /> {lead.contactCount}</span>
@@ -363,7 +363,7 @@ function FollowupModal({ lead, onClose }: { lead: Lead | null; onClose: () => vo
         </F>
       </div>
       <div className="flex items-center justify-end gap-2 mt-5">
-        <button onClick={onClose} className="px-3 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
+        <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
         <button disabled={!date || api.scheduleLeadFollowup.isPending} onClick={save}
           className="px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50 transition-opacity hover:opacity-90"
           style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
@@ -380,10 +380,10 @@ function ContactHistory({ lead }: { lead: Lead }) {
   const { data: contacts = [] } = useQuery({ ...leadContactsQO(lead.id), enabled: expanded });
 
   return (
-    <div className="rounded-md border border-white/[0.06] bg-[#161616] p-3">
+    <div className="rounded-md border border-foreground/6 bg-card p-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="text-[11px] text-white/50">
-          <span className="font-semibold text-white">{lead.contactCount}</span> contato{lead.contactCount === 1 ? "" : "s"} registrado{lead.contactCount === 1 ? "" : "s"}
+        <div className="text-[11px] text-foreground/50">
+          <span className="font-semibold text-foreground">{lead.contactCount}</span> contato{lead.contactCount === 1 ? "" : "s"} registrado{lead.contactCount === 1 ? "" : "s"}
           {lead.lastContactAt && <span> · último em {formatDate(lead.lastContactAt)}</span>}
         </div>
         <button
@@ -396,18 +396,18 @@ function ContactHistory({ lead }: { lead: Lead }) {
         </button>
       </div>
       {lead.contactCount > 0 && (
-        <button onClick={() => setExpanded((v) => !v)} className="mt-1.5 text-[10.5px] text-white/30 hover:text-white/60">
+        <button onClick={() => setExpanded((v) => !v)} className="mt-1.5 text-[10.5px] text-foreground/30 hover:text-foreground/60">
           {expanded ? "Ocultar histórico" : "Ver histórico"}
         </button>
       )}
       {expanded && (
         <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
           {contacts.map((c) => (
-            <div key={c.id} className="text-[10.5px] text-white/40 flex items-center gap-1.5">
+            <div key={c.id} className="text-[10.5px] text-foreground/40 flex items-center gap-1.5">
               <PhoneCall size={10} className="shrink-0" />
               <span>{new Date(c.contactedAt).toLocaleString("pt-BR")}</span>
-              {c.byName && <span className="text-white/25">· {c.byName}</span>}
-              {c.note && <span className="text-white/25 truncate">· {c.note}</span>}
+              {c.byName && <span className="text-foreground/25">· {c.byName}</span>}
+              {c.note && <span className="text-foreground/25 truncate">· {c.note}</span>}
             </div>
           ))}
         </div>
@@ -497,13 +497,13 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
           ) : lead && isAdmin ? (
             <button
               onClick={async () => { if (await requestConfirm(`Excluir "${lead.name}" pra sempre?`, { danger: true })) { api.deleteLead.mutate({ data: { id: lead.id } }); onClose(); } }}
-              className="text-xs text-white/40 hover:text-red-400 inline-flex items-center gap-1"
+              className="text-xs text-foreground/40 hover:text-red-400 inline-flex items-center gap-1"
             >
               <Trash2 size={12} /> Excluir
             </button>
           ) : <span />}
           <div className="flex items-center gap-2">
-            <button onClick={onClose} className="px-3 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
+            <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
             <button
               disabled={!name.trim() || api.upsertLead.isPending}
               onClick={save}
@@ -545,7 +545,7 @@ function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onCl
 
   return (
     <Modal open={open} onClose={onClose} title="Marcar como ganho">
-      <p className="text-xs text-white/50 mb-3">Isso cria um cliente de verdade a partir dessa oportunidade.</p>
+      <p className="text-xs text-foreground/50 mb-3">Isso cria um cliente de verdade a partir dessa oportunidade.</p>
       <div className="space-y-3">
         <F label="Nome do cliente"><input value={clientName} onChange={(e) => setClientName(e.target.value)} autoFocus className={inp} /></F>
         <F label="Categoria">
@@ -554,7 +554,7 @@ function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onCl
           </select>
         </F>
         <div>
-          <div className="text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">Cor</div>
+          <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Cor</div>
           <div className="flex flex-wrap gap-1.5">
             {PRESET_COLORS.map((c) => (
               <button key={c} type="button" onClick={() => setColor(c)}
@@ -566,7 +566,7 @@ function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onCl
         <F label="Inicial / Emoji (opcional)"><input value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={2} className={inp} /></F>
       </div>
       <div className="flex items-center justify-end gap-2 mt-5">
-        <button onClick={onClose} className="px-3 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
+        <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
         <button
           disabled={!clientName.trim() || api.markLeadWon.isPending}
           onClick={save}
@@ -580,7 +580,7 @@ function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onCl
   );
 }
 
-const inp = "w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]";
+const inp = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]";
 function F({ label, children }: { label: string; children: React.ReactNode }) {
-  return (<label className="block"><span className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">{label}</span>{children}</label>);
+  return (<label className="block"><span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">{label}</span>{children}</label>);
 }

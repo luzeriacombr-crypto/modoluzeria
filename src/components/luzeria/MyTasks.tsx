@@ -35,9 +35,9 @@ function SectionHeader({ icon, iconBg, iconColor, label, count, open, onToggle }
   return (
     <button onClick={onToggle} className="w-full flex items-center gap-2 mb-2.5 text-left">
       <span className="rounded-md p-1" style={{ backgroundColor: iconBg, color: iconColor }}>{icon}</span>
-      <h2 className="text-[11.5px] uppercase font-semibold tracking-wide text-white/60">{label}</h2>
-      <span className="text-[11px] text-white/40">· {count}</span>
-      <span className="ml-auto text-white/40">
+      <h2 className="text-[11.5px] uppercase font-semibold tracking-wide text-foreground/60">{label}</h2>
+      <span className="text-[11px] text-foreground/40">· {count}</span>
+      <span className="ml-auto text-foreground/40">
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       </span>
     </button>
@@ -130,7 +130,7 @@ export function MyTasks() {
           style={{ backgroundColor: "rgba(74,158,255,0.12)", color: "#7EB3FF" }}>
           <Avatar profile={targetProfile} size={18} />
           <span className="font-semibold">Vendo como {targetProfile.name}</span>
-          <span className="text-white/40">— tudo abaixo é da perspectiva dele(a), não sua.</span>
+          <span className="text-foreground/40">— tudo abaixo é da perspectiva dele(a), não sua.</span>
           <button
             onClick={() => setViewAs("")}
             className="ml-auto font-bold uppercase tracking-wide text-[11px] hover:underline shrink-0"
@@ -141,7 +141,7 @@ export function MyTasks() {
       )}
       <div className="mb-4">
         <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[15px] font-semibold uppercase tracking-wide mb-1.5"
-          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
           Olá, {(() => {
             const raw = ((isMeView ? me?.name : targetProfile?.name) ?? "você").trim().split(" ")[0];
             return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
@@ -149,7 +149,7 @@ export function MyTasks() {
         </div>
         {!disabledFeatures.has("daily_verse") && (
           <div className="max-w-sm">
-            <p className="italic text-white/60 text-[13px] leading-relaxed text-balance">
+            <p className="italic text-foreground/60 text-[13px] leading-relaxed text-balance">
               "{dailyVerse.text}"
             </p>
             <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "rgba(var(--lz-brand-rgb), 0.7)" }}>
@@ -160,8 +160,8 @@ export function MyTasks() {
       </div>
       <div className="flex items-end justify-between mb-9">
         <div>
-          <h1 className="text-[24px] sm:text-[32px] font-semibold text-white leading-none tracking-tight whitespace-nowrap">Coisas para fazer</h1>
-          <p className="text-sm text-white/50 mt-2.5">
+          <h1 className="text-[24px] sm:text-[32px] font-semibold text-foreground leading-none tracking-tight whitespace-nowrap">Coisas para fazer</h1>
+          <p className="text-sm text-foreground/50 mt-2.5">
             {tasks.length} {tasks.length === 1 ? "tarefa atribuída" : "tarefas atribuídas"}
           </p>
         </div>
@@ -173,9 +173,9 @@ export function MyTasks() {
             >
               <Plus size={14} /> Nova demanda
             </button>
-            <span className="text-xs text-white/40">Ver como:</span>
+            <span className="text-xs text-foreground/40">Ver como:</span>
             <select value={viewAs} onChange={(e) => setViewAs(e.target.value)}
-              className="bg-[#1C1C1C] border border-white/10 text-sm text-white rounded-md px-3 py-1.5 outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
+              className="bg-card border border-foreground/10 text-sm text-foreground rounded-md px-3 py-1.5 outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
               <option value="">{me?.name} (eu)</option>
               {profiles.filter((p) => p.id !== me?.id).map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
@@ -198,12 +198,12 @@ export function MyTasks() {
         <div className="mb-6">
           <SectionHeader
             icon={<Instagram size={11} />}
-            iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="rgb(var(--lz-brand-rgb))"
+            iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="var(--lz-accent-ink)"
             label="Publicações de hoje" count={todayPublications.length}
             open={isSectionOpen("today-publications")} onToggle={() => toggleSection("today-publications")}
           />
           {isSectionOpen("today-publications") && (
-          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden lz-stagger">
+          <div className="bg-card rounded-lg overflow-hidden lz-stagger">
             {todayPublications.map((p) => (
               <button
                 key={p.id}
@@ -213,19 +213,19 @@ export function MyTasks() {
                   setTimeout(() => { openItem(p.id); flash(p.id); }, 30);
                   setTimeout(() => flash(null), 2050);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left border-b border-white/[0.05] last:border-b-0"
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-foreground/[0.03] transition-colors text-left border-b border-foreground/5 last:border-b-0"
               >
                 <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
                   style={{ backgroundColor: p.clientColor + "33", color: p.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : p.clientColor }}>
                   {p.clientName}
                 </span>
-                <span className="text-[11px] text-white/50 uppercase font-semibold shrink-0">
+                <span className="text-[11px] text-foreground/50 uppercase font-semibold shrink-0">
                   {p.type === "post" && p.postFormat
                     ? (POST_FORMAT_LABEL[p.postFormat as keyof typeof POST_FORMAT_LABEL] ?? p.postFormat)
                     : (CONTENT_TYPE_LABEL[p.type as keyof typeof CONTENT_TYPE_LABEL] ?? p.type)}
                 </span>
-                <span className="text-sm text-white/90 truncate flex-1">{p.title}</span>
-                <span className="text-[10px] text-white/40 shrink-0 tabular-nums">
+                <span className="text-sm text-foreground/90 truncate flex-1">{p.title}</span>
+                <span className="text-[10px] text-foreground/40 shrink-0 tabular-nums">
                   {new Date(p.scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </button>
@@ -244,9 +244,9 @@ export function MyTasks() {
             open={isSectionOpen("weekly-reminders")} onToggle={() => toggleSection("weekly-reminders")}
           />
           {isSectionOpen("weekly-reminders") && (
-          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden lz-stagger">
+          <div className="bg-card rounded-lg overflow-hidden lz-stagger">
             {weeklyReminders.map((r) => (
-              <div key={r.clientId} className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.05] last:border-b-0">
+              <div key={r.clientId} className="flex items-center gap-3 px-4 py-3 border-b border-foreground/5 last:border-b-0">
                 <button
                   onClick={() => { openFicha(r.clientId); openStageComposer(r.clientId); }}
                   className="flex-1 min-w-0 flex items-center gap-2 text-left hover:opacity-80 transition"
@@ -255,7 +255,7 @@ export function MyTasks() {
                     style={{ backgroundColor: r.clientColor + "33", color: r.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : r.clientColor }}>
                     {r.clientName}
                   </span>
-                  <span className="text-sm text-white/70 truncate">{r.stageName ?? "Sem etapa definida"}</span>
+                  <span className="text-sm text-foreground/70 truncate">{r.stageName ?? "Sem etapa definida"}</span>
                 </button>
                 <button
                   onClick={() => logClientStageUpdate.mutate({
@@ -285,21 +285,21 @@ export function MyTasks() {
             open={isSectionOpen("upcoming-payments")} onToggle={() => toggleSection("upcoming-payments")}
           />
           {isSectionOpen("upcoming-payments") && (
-          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden lz-stagger">
+          <div className="bg-card rounded-lg overflow-hidden lz-stagger">
             {upcomingPayments.map((p) => (
               <button
                 key={p.id}
                 onClick={() => navigate({ to: "/configuracoes", search: { tab: "pagamentos" } })}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left border-b border-white/[0.05] last:border-b-0"
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-foreground/[0.03] transition-colors text-left border-b border-foreground/5 last:border-b-0"
               >
                 <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
                   style={{ backgroundColor: p.color + "33", color: p.color.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : p.color }}>
                   {p.name}
                 </span>
-                <span className="text-sm text-white/70 flex-1">
+                <span className="text-sm text-foreground/70 flex-1">
                   {p.daysUntil < 0 ? `Atrasado há ${Math.abs(p.daysUntil)}d` : p.daysUntil === 0 ? "Vence hoje" : `Vence em ${p.daysUntil}d`}
                 </span>
-                <span className="text-[11px] text-white/40 shrink-0 tabular-nums">
+                <span className="text-[11px] text-foreground/40 shrink-0 tabular-nums">
                   {new Date(p.nextDueDate + "T00:00:00").toLocaleDateString("pt-BR")}
                 </span>
               </button>
@@ -313,12 +313,12 @@ export function MyTasks() {
         <div className="mb-6">
           <SectionHeader
             icon={<AtSign size={11} />}
-            iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="rgb(var(--lz-brand-rgb))"
+            iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="var(--lz-accent-ink)"
             label="Mencionado em" count={mentions.length}
             open={isSectionOpen("mentions")} onToggle={() => toggleSection("mentions")}
           />
           {isSectionOpen("mentions") && (
-          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden lz-stagger">
+          <div className="bg-card rounded-lg overflow-hidden lz-stagger">
             {mentions.map((m: any) => (
               <button
                 key={m.mentionId}
@@ -329,23 +329,23 @@ export function MyTasks() {
                   setTimeout(() => { openItem(m.itemId); flash(m.itemId); }, 30);
                   setTimeout(() => flash(null), 2050);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left border-b border-white/[0.05] last:border-b-0"
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-foreground/[0.03] transition-colors text-left border-b border-foreground/5 last:border-b-0"
               >
                 <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider shrink-0"
-                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
+                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
                   @MENÇÃO
                 </span>
                 <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
                   style={{ backgroundColor: m.clientColor + "33", color: m.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : m.clientColor }}>
                   {m.clientName}
                 </span>
-                <span className="text-[11px] text-white/50 uppercase font-semibold shrink-0">
+                <span className="text-[11px] text-foreground/50 uppercase font-semibold shrink-0">
                   {CONTENT_TYPE_LABEL[m.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item"} {String(m.idx).padStart(2, "0")}
                 </span>
-                <span className="text-sm text-white/90 truncate flex-1">
-                  {m.authorName ? <span className="text-white/50">{m.authorName}: </span> : null}{m.snippet || m.title}
+                <span className="text-sm text-foreground/90 truncate flex-1">
+                  {m.authorName ? <span className="text-foreground/50">{m.authorName}: </span> : null}{m.snippet || m.title}
                 </span>
-                <span className="text-[10px] text-white/40 shrink-0 tabular-nums">
+                <span className="text-[10px] text-foreground/40 shrink-0 tabular-nums">
                   {new Date(m.mentionedAt).toLocaleDateString("pt-BR")}
                 </span>
               </button>
@@ -355,14 +355,14 @@ export function MyTasks() {
         </div>
       )}
 
-      <div className="inline-flex bg-[#1C1C1C] border border-white/[0.06] rounded-lg p-1 mb-6" data-tour="my-week">
+      <div className="inline-flex bg-card border border-foreground/6 rounded-lg p-1 mb-6" data-tour="my-week">
         {[
           { id: "list" as const, label: "Lista", Icon: List },
           { id: "week" as const, label: "Minha Semana", Icon: CalendarDays },
         ].map((v) => (
           <button key={v.id} onClick={() => setView(v.id)}
             className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md transition-colors ${
-              view === v.id ? "bg-[rgb(var(--lz-brand-rgb))] text-black" : "text-white/60 hover:text-white"}`}>
+              view === v.id ? "bg-[rgb(var(--lz-brand-rgb))] text-black" : "text-foreground/60 hover:text-foreground"}`}>
             <v.Icon size={12} /> {v.label}
           </button>
         ))}
@@ -398,8 +398,8 @@ export function MyTasks() {
       {view === "week" ? (
         <MyWeekView userId={isAdmin && viewAs ? viewAs : undefined} />
       ) : tasks.length === 0 ? (
-        <div className="border border-dashed border-white/10 rounded-lg p-16 text-center">
-          <p className="text-white/50 text-sm">Sem tarefas no momento.</p>
+        <div className="border border-dashed border-foreground/10 rounded-lg p-16 text-center">
+          <p className="text-foreground/50 text-sm">Sem tarefas no momento.</p>
         </div>
       ) : (
         <div className="space-y-6 lz-stagger">
@@ -417,25 +417,25 @@ export function MyTasks() {
                   open={open} onToggle={() => toggleSection(sectionId)}
                 />
                 {open && (
-                <div className="bg-[#1C1C1C] rounded-lg overflow-hidden lz-stagger">
+                <div className="bg-card rounded-lg overflow-hidden lz-stagger">
                   {grouped[s].map((t) => (
                     <button key={t.id}
                       onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId } }); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left border-b border-white/[0.05] last:border-b-0">
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-foreground/[0.03] transition-colors text-left border-b border-foreground/5 last:border-b-0">
                       <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
                         style={{ backgroundColor: t.clientColor + "33", color: t.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : t.clientColor }}>
                         {t.clientName}
                       </span>
                       {t.clientCategory === "Avulsos" && (
                         <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
-                          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+                          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
                           Avulso
                         </span>
                       )}
-                      <span className="text-[11px] text-white/50 uppercase font-semibold">
+                      <span className="text-[11px] text-foreground/50 uppercase font-semibold">
                         {t.type === "post" ? "Post" : t.type === "reel" ? "Reels" : "Item"} {String(t.idx).padStart(2, "0")}
                       </span>
-                      <span className="text-sm text-white truncate flex-1">{t.title}</span>
+                      <span className="text-sm text-foreground truncate flex-1">{t.title}</span>
                       <DeadlinePill dueDate={(t as any).dueDate} status={t.status} />
                     </button>
                   ))}
@@ -448,7 +448,7 @@ export function MyTasks() {
       )}
 
       {prod && (
-        <Suspense fallback={<div className="mt-10 h-[290px] rounded-lg" style={{ background: "#1C1C1C", border: "1px solid rgba(var(--lz-brand-light-rgb),0.15)" }} />}>
+        <Suspense fallback={<div className="mt-10 h-[290px] rounded-lg" style={{ background: "var(--card)", border: "1px solid rgba(var(--lz-brand-light-rgb),0.15)" }} />}>
           <ProductivityBlock prod={prod} monthKey={monthKey} />
         </Suspense>
       )}
@@ -489,33 +489,33 @@ function NovaDemandaModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="w-full max-w-md bg-[#1C1C1C] border border-white/10 rounded-2xl p-6 max-h-[80vh] flex flex-col"
+        className="w-full max-w-md bg-card border border-foreground/10 rounded-2xl p-6 max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {!pickedClient ? (
           <>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-bold text-white">Pra qual cliente?</span>
-              <button onClick={onClose} className="text-white/40 hover:text-white"><X size={16} /></button>
+              <span className="text-sm font-bold text-foreground">Pra qual cliente?</span>
+              <button onClick={onClose} className="text-foreground/40 hover:text-foreground"><X size={16} /></button>
             </div>
             <input
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar cliente..."
-              className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-3 shrink-0"
+              className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-3 shrink-0"
             />
             <div className="overflow-y-auto flex-1 -mx-2 px-2 space-y-1">
               {activeClients.length === 0 ? (
-                <div className="text-center text-white/30 text-sm py-8">Nenhum cliente encontrado.</div>
+                <div className="text-center text-foreground/30 text-sm py-8">Nenhum cliente encontrado.</div>
               ) : activeClients.map((c) => (
                 <button
                   key={c.id}
                   onClick={() => setPickedClient({ id: c.id, name: c.name })}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/5 transition text-left"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-foreground/5 transition text-left"
                 >
                   <Avatar profile={{ name: c.name, color: c.color, icon: c.icon, avatarUrl: c.photoUrl }} size={28} />
-                  <span className="text-sm text-white truncate">{c.name}</span>
+                  <span className="text-sm text-foreground truncate">{c.name}</span>
                 </button>
               ))}
             </div>
@@ -523,18 +523,18 @@ function NovaDemandaModal({ onClose }: { onClose: () => void }) {
         ) : (
           <>
             <div className="flex items-center gap-2 mb-5">
-              <button onClick={() => setPickedClient(null)} className="text-white/40 hover:text-white p-1 -ml-1 rounded shrink-0">
+              <button onClick={() => setPickedClient(null)} className="text-foreground/40 hover:text-foreground p-1 -ml-1 rounded shrink-0">
                 <ChevronLeft size={16} />
               </button>
-              <span className="text-sm font-bold text-white flex-1 truncate">{pickedClient.name}</span>
-              <button onClick={onClose} className="text-white/40 hover:text-white shrink-0"><X size={16} /></button>
+              <span className="text-sm font-bold text-foreground flex-1 truncate">{pickedClient.name}</span>
+              <button onClick={onClose} className="text-foreground/40 hover:text-foreground shrink-0"><X size={16} /></button>
             </div>
-            <p className="text-xs text-white/40 mb-4">O que você quer criar?</p>
+            <p className="text-xs text-foreground/40 mb-4">O que você quer criar?</p>
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => create("post")}
                 disabled={addContentItem.isPending}
-                className="flex flex-col items-center justify-center gap-2 py-8 rounded-xl border border-dashed border-white/15 text-white/60 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
+                className="flex flex-col items-center justify-center gap-2 py-8 rounded-xl border border-dashed border-foreground/15 text-foreground/60 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
               >
                 <ImageIcon size={22} />
                 <span className="text-sm font-semibold">Post</span>
@@ -542,7 +542,7 @@ function NovaDemandaModal({ onClose }: { onClose: () => void }) {
               <button
                 onClick={() => create("reel")}
                 disabled={addContentItem.isPending}
-                className="flex flex-col items-center justify-center gap-2 py-8 rounded-xl border border-dashed border-white/15 text-white/60 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
+                className="flex flex-col items-center justify-center gap-2 py-8 rounded-xl border border-dashed border-foreground/15 text-foreground/60 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
               >
                 <Film size={22} />
                 <span className="text-sm font-semibold">Reel</span>
@@ -578,27 +578,27 @@ function TodayCalendarWidget() {
   const [openEvent, setOpenEvent] = useState<any | null>(null);
   if (!data?.connected || !data.events?.length) return null;
   return (
-    <div className="mb-6 bg-[#1C1C1C] rounded-lg overflow-hidden">
+    <div className="mb-6 bg-card rounded-lg overflow-hidden">
       <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-        <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
+        <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
           <CalendarClock size={11} />
         </span>
-        <h2 className="text-[11px] uppercase font-bold tracking-wider text-white/60">Hoje na agenda</h2>
+        <h2 className="text-[11px] uppercase font-bold tracking-wider text-foreground/60">Hoje na agenda</h2>
       </div>
       <div className="divide-y divide-white/[0.05] lz-stagger">
         {data.events.map((ev: any) => (
           <button
             key={ev.id}
             onClick={() => setOpenEvent(ev)}
-            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.03] transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-foreground/[0.03] transition-colors text-left"
           >
-            <span className="text-[11px] text-white/40 tabular-nums shrink-0">
+            <span className="text-[11px] text-foreground/40 tabular-nums shrink-0">
               {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="text-sm text-white/90 truncate block">{ev.title}</span>
+              <span className="text-sm text-foreground/90 truncate block">{ev.title}</span>
               {ev.attendees?.length > 0 && (
-                <span className="text-[11px] text-white/40 truncate block">com {ev.attendees.join(", ")}</span>
+                <span className="text-[11px] text-foreground/40 truncate block">com {ev.attendees.join(", ")}</span>
               )}
             </span>
           </button>
@@ -617,27 +617,27 @@ function CalendarEventModal({ event, onClose }: { event: any; onClose: () => voi
       }`;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-sm bg-[#1C1C1C] border border-white/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-sm bg-card border border-foreground/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 mb-1">
-          <h3 className="text-base font-semibold text-white">{event.title}</h3>
-          <button onClick={onClose} className="text-white/40 hover:text-white shrink-0"><X size={16} /></button>
+          <h3 className="text-base font-semibold text-foreground">{event.title}</h3>
+          <button onClick={onClose} className="text-foreground/40 hover:text-foreground shrink-0"><X size={16} /></button>
         </div>
-        <p className="text-[13px] text-white/60">{timeRange}</p>
+        <p className="text-[13px] text-foreground/60">{timeRange}</p>
         {event.attendees?.length > 0 && (
-          <p className="text-[13px] text-white/50 mt-2">👥 {event.attendees.join(", ")}</p>
+          <p className="text-[13px] text-foreground/50 mt-2">👥 {event.attendees.join(", ")}</p>
         )}
         {event.location && (
-          <p className="text-[13px] text-white/50 mt-2">📍 {event.location}</p>
+          <p className="text-[13px] text-foreground/50 mt-2">📍 {event.location}</p>
         )}
         {event.description && (
-          <p className="text-[13px] text-white/70 mt-4 leading-relaxed whitespace-pre-wrap">{event.description}</p>
+          <p className="text-[13px] text-foreground/70 mt-4 leading-relaxed whitespace-pre-wrap">{event.description}</p>
         )}
         {event.link && (
           <a
             href={event.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-6 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md border border-white/15 text-white/80 hover:text-white hover:border-white/30"
+            className="mt-6 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30"
           >
             <CalendarClock size={12} /> Abrir no Google Agenda
           </a>
@@ -670,12 +670,12 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
   }
 
   return (
-    <div className="mb-6 bg-[#1C1C1C] rounded-lg overflow-hidden" data-tour="activity-counts">
+    <div className="mb-6 bg-card rounded-lg overflow-hidden" data-tour="activity-counts">
       <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-        <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>
+        <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
           <List size={11} />
         </span>
-        <h2 className="text-[11.5px] uppercase font-semibold tracking-wide text-white/60">Atividades registradas em {formatMonth(monthKey)}</h2>
+        <h2 className="text-[11.5px] uppercase font-semibold tracking-wide text-foreground/60">Atividades registradas em {formatMonth(monthKey)}</h2>
       </div>
       <div className="flex flex-wrap gap-2 px-4 pb-3.5">
         {entries.map(([type, n]) => (
@@ -686,7 +686,7 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
             className="text-xs font-semibold px-2.5 py-1 rounded-full transition-colors"
             style={{
               backgroundColor: openType === type ? "rgba(var(--lz-brand-light-rgb),0.28)" : "rgba(var(--lz-brand-light-rgb),0.12)",
-              color: "rgb(var(--lz-brand-rgb))",
+              color: "var(--lz-accent-ink)",
             }}
           >
             {n} {ACTIVITY_LABELS[type] ?? type}
@@ -694,11 +694,11 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
         ))}
       </div>
       {openType && (
-        <div className="border-t border-white/[0.06] px-4 py-2">
+        <div className="border-t border-foreground/6 px-4 py-2">
           {itemsLoading ? (
-            <p className="text-xs text-white/40 py-1.5">Carregando...</p>
+            <p className="text-xs text-foreground/40 py-1.5">Carregando...</p>
           ) : items.length === 0 ? (
-            <p className="text-xs text-white/40 py-1.5">Nenhuma atividade encontrada.</p>
+            <p className="text-xs text-foreground/40 py-1.5">Nenhuma atividade encontrada.</p>
           ) : (
             <div className="flex flex-col divide-y divide-white/[0.05]">
               {items.map((f: any) => (
@@ -706,10 +706,10 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
                   key={f.itemId}
                   type="button"
                   onClick={() => openActivity(f.itemId, f.clientId, monthKey)}
-                  className="flex items-center justify-between gap-3 py-2 text-left hover:text-white text-white/70 transition-colors"
+                  className="flex items-center justify-between gap-3 py-2 text-left hover:text-foreground text-foreground/70 transition-colors"
                 >
                   <span className="text-[13px] truncate">{f.title || "(sem título)"}</span>
-                  <span className="text-[11px] text-white/40 shrink-0">{f.clientName}</span>
+                  <span className="text-[11px] text-foreground/40 shrink-0">{f.clientName}</span>
                 </button>
               ))}
             </div>
@@ -750,14 +750,14 @@ function DailyTaskCard({
         className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
         style={{
           backgroundColor: missed ? "rgba(255,68,68,0.2)" : "rgba(var(--lz-brand-light-rgb),0.2)",
-          color: missed ? "#FF4444" : "rgb(var(--lz-brand-rgb))",
+          color: missed ? "#FF4444" : "var(--lz-accent-ink)",
         }}
       >
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-bold text-white">{title}</div>
-        {subtitle && <div className="text-[11px] text-white/60">{subtitle}</div>}
+        <div className="text-sm font-bold text-foreground">{title}</div>
+        {subtitle && <div className="text-[11px] text-foreground/60">{subtitle}</div>}
       </div>
       {!missed && (
         <button

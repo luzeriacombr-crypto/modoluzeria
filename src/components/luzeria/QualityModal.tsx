@@ -17,32 +17,32 @@ export function QualityModal({ open, onClose, onConfirm, itemTitle }: Props) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={onClose}>
-      <div className="w-full max-w-sm bg-[#1C1C1C] border border-white/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-sm bg-card border border-foreground/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-2">
           <div>
-            <div className="text-[10px] uppercase font-bold tracking-wider text-[rgb(var(--lz-brand-rgb))] mb-1">Finalizar</div>
-            <h3 className="text-base font-semibold text-white">Avalie a entrega</h3>
+            <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--lz-accent-ink)] mb-1">Finalizar</div>
+            <h3 className="text-base font-semibold text-foreground">Avalie a entrega</h3>
           </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white"><X size={16} /></button>
+          <button onClick={onClose} className="text-foreground/40 hover:text-foreground"><X size={16} /></button>
         </div>
-        {itemTitle && <div className="text-[11px] text-white/40 mb-4 truncate">{itemTitle}</div>}
+        {itemTitle && <div className="text-[11px] text-foreground/40 mb-4 truncate">{itemTitle}</div>}
         <div className="flex items-center justify-center gap-1 my-4">
           {[1, 2, 3, 4, 5].map((n) => {
             const active = (hover || rating) >= n;
             return (
               <button key={n} onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(0)}
                 onClick={() => setRating(n)} className="p-1">
-                <Star size={28} fill={active ? "rgb(var(--lz-brand-rgb))" : "none"}
-                  className={active ? "text-[rgb(var(--lz-brand-rgb))]" : "text-white/20"} />
+                <Star size={28} fill={active ? "var(--lz-accent-ink)" : "none"}
+                  className={active ? "text-[var(--lz-accent-ink)]" : "text-foreground/20"} />
               </button>
             );
           })}
         </div>
         <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500}
           placeholder="Observações (opcional)..."
-          className="lz-input-dark w-full bg-[#0D0D0D] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 resize-none" />
+          className="lz-input-dark w-full bg-background border border-foreground/10 rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 resize-none" />
         <div className="flex gap-2 mt-4">
-          <button onClick={onClose} className="flex-1 px-3 py-2 rounded-lg text-sm text-white/70 hover:bg-white/5">
+          <button onClick={onClose} className="flex-1 px-3 py-2 rounded-lg text-sm text-foreground/70 hover:bg-foreground/5">
             Cancelar
           </button>
           <button onClick={() => rating > 0 && onConfirm(rating, note.trim() || undefined)}

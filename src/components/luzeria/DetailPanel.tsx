@@ -45,7 +45,7 @@ function renderLinkedText(text: string): React.ReactNode {
       <a key={i} href={part.startsWith("http") ? part : `https://${part}`}
         target="_blank" rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
-        className="text-[rgb(var(--lz-brand-rgb))] underline underline-offset-2 hover:brightness-110">
+        className="text-[var(--lz-accent-ink)] underline underline-offset-2 hover:brightness-110">
         {part}
       </a>
     ) : (
@@ -146,15 +146,15 @@ function CarouselThumb({
         type="button"
         onClick={(e) => { e.stopPropagation(); selectMode ? onToggleSelect() : onClick(); }}
         title={file.name}
-        className={`w-16 h-16 shrink-0 rounded-md overflow-hidden bg-[#141414] border flex items-center justify-center transition-colors ${
-          selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-white/[0.08]"}`}
+        className={`w-16 h-16 shrink-0 rounded-md overflow-hidden bg-card border flex items-center justify-center transition-colors ${
+          selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-foreground/8"}`}
       >
         {url ? (
           <img src={url} alt={file.name} className="w-full h-full object-cover" loading="lazy" />
         ) : isLoading ? (
-          <Loader2 size={12} className="animate-spin text-white/30" />
+          <Loader2 size={12} className="animate-spin text-foreground/30" />
         ) : (
-          <ImageIcon size={14} className="text-white/20" />
+          <ImageIcon size={14} className="text-foreground/20" />
         )}
       </button>
       {selectMode ? (
@@ -162,7 +162,7 @@ function CarouselThumb({
           className="absolute top-0.5 left-0.5 rounded p-0.5 pointer-events-none"
           style={{ backgroundColor: selected ? "rgb(var(--lz-brand-rgb))" : "rgba(0,0,0,0.6)" }}
         >
-          {selected ? <CheckSquare size={11} className="text-black" /> : <Square size={11} className="text-white" />}
+          {selected ? <CheckSquare size={11} className="text-black" /> : <Square size={11} className="text-foreground" />}
         </div>
       ) : (
         <FileActionsMenu
@@ -279,7 +279,7 @@ function MediaPreview({
                   type="button"
                   onClick={handleDownloadSelected}
                   disabled={downloadingAll || selectedIds.size === 0}
-                  className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-white/70 hover:text-white transition disabled:opacity-40"
+                  className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-foreground/70 hover:text-foreground transition disabled:opacity-40"
                 >
                   {downloadingAll ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
                   Baixar selecionadas ({selectedIds.size})
@@ -287,7 +287,7 @@ function MediaPreview({
                 <button
                   type="button"
                   onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
-                  className="text-[10.5px] text-white/40 hover:text-white transition"
+                  className="text-[10.5px] text-foreground/40 hover:text-foreground transition"
                 >
                   Cancelar
                 </button>
@@ -298,7 +298,7 @@ function MediaPreview({
                   type="button"
                   onClick={handleDownloadAllFiles}
                   disabled={downloadingAll}
-                  className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-white/70 hover:text-white transition disabled:opacity-40"
+                  className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-foreground/70 hover:text-foreground transition disabled:opacity-40"
                 >
                   {downloadingAll ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
                   Baixar todas
@@ -306,7 +306,7 @@ function MediaPreview({
                 <button
                   type="button"
                   onClick={() => setSelectMode(true)}
-                  className="text-[10.5px] text-white/40 hover:text-white transition"
+                  className="text-[10.5px] text-foreground/40 hover:text-foreground transition"
                 >
                   Selecionar
                 </button>
@@ -337,9 +337,9 @@ function MediaPreview({
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={busy}
-              className="w-16 h-16 shrink-0 rounded-md border border-dashed border-white/15 bg-[#141414] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors disabled:opacity-50"
+              className="w-16 h-16 shrink-0 rounded-md border border-dashed border-foreground/15 bg-card hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors disabled:opacity-50"
             >
-              {busy ? <Loader2 size={14} className="animate-spin text-white/40" /> : <Plus size={16} className="text-white/40" />}
+              {busy ? <Loader2 size={14} className="animate-spin text-foreground/40" /> : <Plus size={16} className="text-foreground/40" />}
             </button>
           )}
           {inputEl}
@@ -358,14 +358,14 @@ function MediaPreview({
           type="button"
           onClick={() => canEdit && fileRef.current?.click()}
           disabled={busy || !canEdit}
-          className="group w-24 h-24 rounded-[10px] border border-dashed border-white/15 bg-[#141414] hover:border-[rgb(var(--lz-brand-rgb))] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-default"
+          className="group w-24 h-24 rounded-[10px] border border-dashed border-foreground/15 bg-card hover:border-[rgb(var(--lz-brand-rgb))] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-default"
         >
           {busy ? (
-            <Loader2 size={16} className="animate-spin text-white/40" />
+            <Loader2 size={16} className="animate-spin text-foreground/40" />
           ) : dragOver ? (
-            <Upload size={16} className="text-[rgb(var(--lz-brand-rgb))]" />
+            <Upload size={16} className="text-[var(--lz-accent-ink)]" />
           ) : (
-            <Upload size={16} className="text-white/30 group-hover:text-[rgb(var(--lz-brand-rgb))] transition-colors" />
+            <Upload size={16} className="text-foreground/30 group-hover:text-[var(--lz-accent-ink)] transition-colors" />
           )}
         </button>
         {inputEl}
@@ -380,18 +380,18 @@ function MediaPreview({
         <img src={thumb} alt={first?.name ?? "Preview"} className="w-full h-full object-cover" loading="lazy" />
       ) : thumbLoading || filesLoading ? (
         <div className="w-full h-full flex items-center justify-center">
-          <Loader2 size={14} className="animate-spin text-white/30" />
+          <Loader2 size={14} className="animate-spin text-foreground/30" />
         </div>
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-white/40">
+        <div className="w-full h-full flex items-center justify-center text-foreground/40">
           {opensLightbox ? <Expand size={16} /> : <ExternalLink size={16} />}
         </div>
       )}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/55 transition-colors flex items-center justify-center">
         {opensLightbox ? (
-          <Expand size={18} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+          <Expand size={18} className="text-foreground opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
         ) : (
-          <ExternalLink size={18} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+          <ExternalLink size={18} className="text-foreground opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
         )}
       </div>
     </>
@@ -417,7 +417,7 @@ function MediaPreview({
             type="button"
             onClick={handleDownloadAllFiles}
             disabled={downloadingAll}
-            className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-white/70 hover:text-white transition disabled:opacity-40"
+            className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-foreground/70 hover:text-foreground transition disabled:opacity-40"
           >
             {downloadingAll ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
             Baixar todas
@@ -429,7 +429,7 @@ function MediaPreview({
           <button
             type="button"
             onClick={() => setLightboxIndex(0)}
-            className="block w-24 h-24 rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
+            className="block w-24 h-24 rounded-[10px] overflow-hidden bg-card border border-foreground/8"
             title={first?.name}
           >
             {thumbContent}
@@ -440,7 +440,7 @@ function MediaPreview({
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => { if (!href) e.preventDefault(); }}
-            className="block w-24 h-24 rounded-[10px] overflow-hidden bg-[#141414] border border-white/[0.08]"
+            className="block w-24 h-24 rounded-[10px] overflow-hidden bg-card border border-foreground/8"
             title={first?.name}
           >
             {thumbContent}
@@ -461,7 +461,7 @@ function MediaPreview({
         )}
         {dragOver && canEdit && (
           <div className="absolute inset-0 rounded-[10px] bg-black/60 flex items-center justify-center pointer-events-none">
-            <Upload size={18} className="text-[rgb(var(--lz-brand-rgb))]" />
+            <Upload size={18} className="text-[var(--lz-accent-ink)]" />
           </div>
         )}
       </div>
@@ -637,22 +637,22 @@ export function DetailPanel() {
       <div
         role="dialog"
         aria-modal="true"
-        className="relative w-full md:w-[760px] md:max-w-full bg-[#1A1A1A] border border-white/[0.08] shadow-2xl flex flex-col overflow-hidden
+        className="relative w-full md:w-[760px] md:max-w-full bg-card border border-foreground/8 shadow-2xl flex flex-col overflow-hidden
           max-h-[92vh] md:max-h-[90vh]
           rounded-t-2xl md:rounded-2xl
           lz-sheet-in md:lz-modal-in"
       >
         {/* Mobile handle */}
         <div className="md:hidden flex justify-center pt-2 pb-1 shrink-0">
-          <div className="h-1 w-10 rounded-full bg-white/20" />
+          <div className="h-1 w-10 rounded-full bg-foreground/20" />
         </div>
 
         {/* Header */}
-        <div className="px-5 md:px-6 pt-4 md:pt-5 pb-4 border-b border-white/[0.08] shrink-0">
+        <div className="px-5 md:px-6 pt-4 md:pt-5 pb-4 border-b border-foreground/8 shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] uppercase font-bold tracking-wider text-white/40">
-                <span className="text-[rgb(var(--lz-brand-rgb))]">
+              <div className="text-[11px] uppercase font-bold tracking-wider text-foreground/40">
+                <span className="text-[var(--lz-accent-ink)]">
                   {CONTENT_TYPE_LABEL[item.type] ?? "Item"} {String(item.idx).padStart(2, "0")}
                 </span>
                 {client && <span className="ml-1.5">· {client.name}</span>}
@@ -669,7 +669,7 @@ export function DetailPanel() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={() => { if (title.trim() && title !== item.title) updateItem.mutate({ data: { id: item.id, patch: { title: title.trim() } } }); }}
-                className="mt-1.5 w-full bg-transparent text-[22px] font-bold text-white outline-none placeholder:text-white/30 border-b border-transparent focus:border-[rgb(var(--lz-brand-rgb))] transition-colors pb-0.5"
+                className="mt-1.5 w-full bg-transparent text-[22px] font-bold text-foreground outline-none placeholder:text-foreground/30 border-b border-transparent focus:border-[rgb(var(--lz-brand-rgb))] transition-colors pb-0.5"
               />
             </div>
             {itemNavList && (
@@ -679,7 +679,7 @@ export function DetailPanel() {
                   disabled={!prevItemId}
                   aria-label="Item anterior"
                   title="Item anterior"
-                  className="text-white/50 hover:text-white p-1.5 rounded-md hover:bg-white/5 transition disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-white/50"
+                  className="text-foreground/50 hover:text-foreground p-1.5 rounded-md hover:bg-foreground/5 transition disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-foreground/50"
                 >
                   <ChevronLeft size={18} />
                 </button>
@@ -688,7 +688,7 @@ export function DetailPanel() {
                   disabled={!nextItemId}
                   aria-label="Próximo item"
                   title="Próximo item"
-                  className="text-white/50 hover:text-white p-1.5 rounded-md hover:bg-white/5 transition disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-white/50"
+                  className="text-foreground/50 hover:text-foreground p-1.5 rounded-md hover:bg-foreground/5 transition disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-foreground/50"
                 >
                   <ChevronRight size={18} />
                 </button>
@@ -697,7 +697,7 @@ export function DetailPanel() {
             <button
               onClick={() => openItem(null)}
               aria-label="Fechar"
-              className="shrink-0 text-white/50 hover:text-white p-1.5 rounded-md hover:bg-white/5 transition"
+              className="shrink-0 text-foreground/50 hover:text-foreground p-1.5 rounded-md hover:bg-foreground/5 transition"
             >
               <X size={18} />
             </button>
@@ -707,7 +707,7 @@ export function DetailPanel() {
         {/* Body — two columns on desktop, stacked on mobile */}
         <div className="flex-1 min-h-0 overflow-y-auto md:overflow-hidden md:grid md:grid-cols-[55fr_45fr]">
           {/* LEFT COLUMN */}
-          <div className="md:overflow-y-auto md:border-r md:border-white/[0.06]">
+          <div className="md:overflow-y-auto md:border-r md:border-foreground/6">
             {/* Drive preview */}
             <ModalSection label="Mídia">
               <MediaPreview
@@ -721,7 +721,7 @@ export function DetailPanel() {
                 <button
                   type="button"
                   onClick={() => setCoverOpen(true)}
-                  className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider text-white/80 hover:text-[#0D0D0D] bg-white/[0.04] hover:bg-[rgb(var(--lz-brand-rgb))] border border-white/10 hover:border-[rgb(var(--lz-brand-rgb))] transition-colors"
+                  className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider text-foreground/80 hover:text-[#0D0D0D] bg-foreground/[0.04] hover:bg-[rgb(var(--lz-brand-rgb))] border border-foreground/10 hover:border-[rgb(var(--lz-brand-rgb))] transition-colors"
                 >
                   <ImagePlus size={14} />
                   {item.coverPath ? "Trocar capa do Reel" : "Definir capa do Reel"}
@@ -742,15 +742,15 @@ export function DetailPanel() {
                     if (copy !== item.copy) updateItem.mutate({ data: { id: item.id, patch: { copy } } });
                   }}
                   placeholder={isActivity ? "Observações sobre essa atividade..." : "Descreva o briefing do conteúdo..."}
-                  className="w-full min-h-[110px] bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 resize-none overflow-hidden transition-colors"
+                  className="w-full min-h-[110px] bg-card border border-transparent rounded-lg px-3 py-2.5 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 resize-none overflow-hidden transition-colors"
                 />
               ) : (
                 <div
                   onClick={() => setEditingCopy(true)}
-                  className="w-full min-h-[110px] bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 text-sm text-white whitespace-pre-wrap break-words cursor-text hover:border-white/10 transition-colors"
+                  className="w-full min-h-[110px] bg-card border border-transparent rounded-lg px-3 py-2.5 text-sm text-foreground whitespace-pre-wrap break-words cursor-text hover:border-foreground/10 transition-colors"
                 >
                   {copy ? renderLinkedText(copy) : (
-                    <span className="text-white/30">{isActivity ? "Observações sobre essa atividade..." : "Descreva o briefing do conteúdo..."}</span>
+                    <span className="text-foreground/30">{isActivity ? "Observações sobre essa atividade..." : "Descreva o briefing do conteúdo..."}</span>
                   )}
                 </div>
               )}
@@ -774,19 +774,19 @@ export function DetailPanel() {
                         if (caption !== (item.caption ?? "")) updateItem.mutate({ data: { id: item.id, patch: { caption } } });
                       }}
                       placeholder="Digite a legenda que será publicada..."
-                      className="w-full min-h-[110px] bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 pb-6 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30 resize-none transition-colors"
+                      className="w-full min-h-[110px] bg-card border border-transparent rounded-lg px-3 py-2.5 pb-6 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 resize-none transition-colors"
                     />
-                    <div className="absolute bottom-2 right-3 text-[10px] text-white/40 pointer-events-none">
+                    <div className="absolute bottom-2 right-3 text-[10px] text-foreground/40 pointer-events-none">
                       {caption.length} caracteres
                     </div>
                   </div>
                 ) : (
                   <div
                     onClick={() => setEditingCaption(true)}
-                    className="w-full min-h-[110px] bg-[#252525] border border-transparent rounded-lg px-3 py-2.5 text-sm text-white whitespace-pre-wrap break-words cursor-text hover:border-white/10 transition-colors"
+                    className="w-full min-h-[110px] bg-card border border-transparent rounded-lg px-3 py-2.5 text-sm text-foreground whitespace-pre-wrap break-words cursor-text hover:border-foreground/10 transition-colors"
                   >
                     {caption ? renderLinkedText(caption) : (
-                      <span className="text-white/30">Digite a legenda que será publicada...</span>
+                      <span className="text-foreground/30">Digite a legenda que será publicada...</span>
                     )}
                   </div>
                 )}
@@ -796,14 +796,14 @@ export function DetailPanel() {
             {/* Comentários + Timeline */}
             <ModalSection label="Comentários" last>
               <div className="space-y-2.5 mb-3">
-                {item.comments.length === 0 && <p className="text-xs text-white/40">Sem comentários ainda.</p>}
+                {item.comments.length === 0 && <p className="text-xs text-foreground/40">Sem comentários ainda.</p>}
                 {item.comments.map((c) => {
                   const author = profiles.find((p) => p.id === c.authorId);
                   if (c.system) return (
                     <div key={c.id} className="rounded-md px-3 py-2 text-[11px] italic"
-                      style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.06)", borderLeft: "2px solid rgb(var(--lz-brand-rgb))", color: "rgba(255,255,255,0.7)" }}>
+                      style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.06)", borderLeft: "2px solid rgb(var(--lz-brand-rgb))", color: "color-mix(in srgb, var(--foreground) 70%, transparent)" }}>
                       <span>{c.text}</span>
-                      <span className="text-white/40 ml-2 not-italic">{relTime(c.createdAt)}</span>
+                      <span className="text-foreground/40 ml-2 not-italic">{relTime(c.createdAt)}</span>
                     </div>
                   );
                   const isOwn = c.authorId === me?.id;
@@ -813,13 +813,13 @@ export function DetailPanel() {
                       <Avatar profile={author ?? undefined} size={26} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2">
-                          <span className="text-xs font-semibold text-white">{author?.name ?? "Alguém"}</span>
-                          <span className="text-[10px] text-white/40">{relTime(c.createdAt)}</span>
-                          {c.editedAt && <span className="text-[10px] text-white/30 italic">(editado)</span>}
+                          <span className="text-xs font-semibold text-foreground">{author?.name ?? "Alguém"}</span>
+                          <span className="text-[10px] text-foreground/40">{relTime(c.createdAt)}</span>
+                          {c.editedAt && <span className="text-[10px] text-foreground/30 italic">(editado)</span>}
                           {isOwn && !isEditing && (
                             <button
                               onClick={() => { setEditingCommentId(c.id); setEditCommentText(c.text); }}
-                              className="text-white/30 hover:text-white opacity-0 group-hover:opacity-100 transition"
+                              className="text-foreground/30 hover:text-foreground opacity-0 group-hover:opacity-100 transition"
                               title="Editar comentário"
                             >
                               <Pencil size={11} />
@@ -844,7 +844,7 @@ export function DetailPanel() {
                               }}
                               rows={2}
                               autoFocus
-                              className="w-full text-xs bg-white/[0.06] border border-white/15 rounded-md px-2 py-1.5 text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
+                              className="w-full text-xs bg-foreground/[0.06] border border-foreground/15 rounded-md px-2 py-1.5 text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
                             />
                             <div className="flex gap-2 mt-1">
                               <button
@@ -853,20 +853,20 @@ export function DetailPanel() {
                                   updateComment.mutate({ data: { commentId: c.id, text: editCommentText.trim() } });
                                   setEditingCommentId(null);
                                 }}
-                                className="text-[10px] font-bold text-[rgb(var(--lz-brand-rgb))] disabled:opacity-40 hover:underline"
+                                className="text-[10px] font-bold text-[var(--lz-accent-ink)] disabled:opacity-40 hover:underline"
                               >
                                 Salvar
                               </button>
                               <button
                                 onClick={() => setEditingCommentId(null)}
-                                className="text-[10px] font-bold text-white/50 hover:text-white hover:underline"
+                                className="text-[10px] font-bold text-foreground/50 hover:text-foreground hover:underline"
                               >
                                 Cancelar
                               </button>
                             </div>
                           </div>
                         ) : (
-                          <div className="text-xs text-white/80 whitespace-pre-wrap mt-0.5">{renderMentions(c.text)}</div>
+                          <div className="text-xs text-foreground/80 whitespace-pre-wrap mt-0.5">{renderMentions(c.text)}</div>
                         )}
                       </div>
                     </div>
@@ -884,7 +884,7 @@ export function DetailPanel() {
                     }}
                     placeholder="Novo comentário... use @ para mencionar"
                     rows={2} />
-                  <div className="text-[10px] text-white/30 mt-1">Ctrl/⌘ + Enter envia · @ menciona</div>
+                  <div className="text-[10px] text-foreground/30 mt-1">Ctrl/⌘ + Enter envia · @ menciona</div>
                 </div>
                 <button disabled={!comment.trim()}
                   onClick={() => {
@@ -925,7 +925,7 @@ export function DetailPanel() {
                   <ChevronDown size={16} className={`transition-transform ${statusOpen ? "rotate-180" : ""}`} />
                 </button>
                 {statusOpen && (
-                  <div className="absolute z-50 left-0 right-0 mt-1 rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto">
+                  <div className="absolute z-50 left-0 right-0 mt-1 rounded-md bg-card border border-foreground/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto">
                     {statusOptionsFor(item.type)
                       .filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? canApproveFinalize : true))
                       .map((s) => {
@@ -947,7 +947,7 @@ export function DetailPanel() {
                           className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all"
                           style={{
                             backgroundColor: active ? m.bg : "transparent",
-                            color: active ? m.color : "rgba(255,255,255,0.6)",
+                            color: active ? m.color : "color-mix(in srgb, var(--foreground) 60%, transparent)",
                           }}>
                           <I size={16} /> {statusLabel(s, isAvulso)}
                         </button>
@@ -968,13 +968,13 @@ export function DetailPanel() {
                     const campaignId = e.target.value || null;
                     setItemCampaign.mutate({ data: { itemId: item.id, campaignId, campaignInternal: campaignId ? (item.campaignInternal ?? false) : false } });
                   }}
-                  className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                  className="w-full bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
                 >
                   <option value="">Nenhuma</option>
                   {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
                 {item.campaignId && (
-                  <label className="flex items-center gap-2 text-xs text-white/60 mt-2">
+                  <label className="flex items-center gap-2 text-xs text-foreground/60 mt-2">
                     <input type="checkbox" checked={item.campaignInternal ?? false}
                       onChange={(e) => setItemCampaign.mutate({ data: { itemId: item.id, campaignId: item.campaignId!, campaignInternal: e.target.checked } })} />
                     Interno — não aparece em Posts/Reels/Preview de Feed
@@ -987,20 +987,20 @@ export function DetailPanel() {
         <ModalSection label="Responsáveis">
           <div className="flex items-center gap-2 flex-wrap">
             {assignees.map((p) => (
-              <div key={p.id} className="flex items-center gap-1.5 bg-white/5 rounded-full pl-1 pr-2 py-1">
+              <div key={p.id} className="flex items-center gap-1.5 bg-foreground/5 rounded-full pl-1 pr-2 py-1">
                 <Avatar profile={p} size={22} />
-                <span className="text-xs text-white/80">{p.name}</span>
+                <span className="text-xs text-foreground/80">{p.name}</span>
                 <button onClick={() => removeAssignee.mutate({ data: { itemId: item.id, userId: p.id } })}
-                  className="text-white/40 hover:text-red-400 ml-0.5"><X size={12} /></button>
+                  className="text-foreground/40 hover:text-red-400 ml-0.5"><X size={12} /></button>
               </div>
             ))}
             <div className="relative">
               <button onClick={() => setAssignOpen((o) => !o)}
-                className="h-8 w-8 rounded-full border border-dashed border-white/20 text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors">
+                className="h-8 w-8 rounded-full border border-dashed border-foreground/20 text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors">
                 <Plus size={14} />
               </button>
               {assignOpen && (
-                <div className="absolute z-[60] mt-1 left-0 min-w-[200px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-72 overflow-y-auto">
+                <div className="absolute z-[60] mt-1 left-0 min-w-[200px] rounded-md bg-card border border-foreground/10 shadow-xl py-1 max-h-72 overflow-y-auto">
                   {profiles.map((p) => {
                     const has = item.assigneeIds.includes(p.id);
                     return (
@@ -1010,10 +1010,10 @@ export function DetailPanel() {
                           else addAssignee.mutate({ data: { itemId: item.id, userId: p.id } });
                           setAssignOpen(false);
                         }}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-left">
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-foreground/5 disabled:opacity-30 disabled:cursor-not-allowed text-left">
                         <Avatar profile={p} size={22} />
-                        <span className="text-white/80 flex-1">{p.name}</span>
-                        {has && <Check size={13} className="text-[rgb(var(--lz-brand-rgb))]" />}
+                        <span className="text-foreground/80 flex-1">{p.name}</span>
+                        {has && <Check size={13} className="text-[var(--lz-accent-ink)]" />}
                       </button>
                     );
                   })}
@@ -1030,7 +1030,7 @@ export function DetailPanel() {
               <button
                 disabled={!canSetEditor}
                 onClick={() => setEditorOpen((o) => !o)}
-                className="w-full flex items-center justify-between gap-2 rounded-md bg-[#252525] border border-white/[0.08] px-3 py-2.5 text-sm text-white hover:border-[rgb(var(--lz-brand-rgb))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-between gap-2 rounded-md bg-card border border-foreground/8 px-3 py-2.5 text-sm text-foreground hover:border-[rgb(var(--lz-brand-rgb))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="flex items-center gap-2 min-w-0">
                   {editor ? (
@@ -1039,20 +1039,20 @@ export function DetailPanel() {
                       <span className="truncate">{editor.name}</span>
                     </>
                   ) : (
-                    <span className="text-white/40">Selecionar editor…</span>
+                    <span className="text-foreground/40">Selecionar editor…</span>
                   )}
                 </span>
-                <ChevronDown size={14} className="text-white/40 shrink-0" />
+                <ChevronDown size={14} className="text-foreground/40 shrink-0" />
               </button>
               {editorOpen && (
-                <div className="absolute z-[60] mt-1 left-0 right-0 rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-72 overflow-y-auto">
+                <div className="absolute z-[60] mt-1 left-0 right-0 rounded-md bg-card border border-foreground/10 shadow-xl py-1 max-h-72 overflow-y-auto">
                   {editor && (
                     <button
                       onClick={() => {
                         setItemEditor.mutate({ data: { itemId: item.id, editorId: null } });
                         setEditorOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 text-left text-red-400"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-foreground/5 text-left text-red-400"
                     >
                       <X size={13} /> Remover editor
                     </button>
@@ -1065,11 +1065,11 @@ export function DetailPanel() {
                           setItemEditor.mutate({ data: { itemId: item.id, editorId: p.id } });
                           setEditorOpen(false);
                         }}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 text-left"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-foreground/5 text-left"
                       >
                         <Avatar profile={p} size={22} />
-                        <span className="text-white/80 flex-1">{p.name}</span>
-                        {sel && <Check size={13} className="text-[rgb(var(--lz-brand-rgb))]" />}
+                        <span className="text-foreground/80 flex-1">{p.name}</span>
+                        {sel && <Check size={13} className="text-[var(--lz-accent-ink)]" />}
                       </button>
                     );
                   })}
@@ -1077,7 +1077,7 @@ export function DetailPanel() {
               )}
             </div>
             {!canSetEditor && (
-              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores podem definir o editor.</p>
+              <p className="text-[10px] text-foreground/40 mt-1.5">Apenas administradores podem definir o editor.</p>
             )}
           </ModalSection>
         )}
@@ -1096,10 +1096,10 @@ export function DetailPanel() {
                     })}
                     className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-[1.05] hover:brightness-110 disabled:opacity-40 disabled:hover:scale-100 disabled:cursor-not-allowed"
                     style={{
-                      backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.08)",
+                      backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 8%, transparent)",
                       color: active ? "#0D0D0D" : "#FFFFFF",
                       fontWeight: active ? 700 : 500,
-                      border: active ? "1px solid rgb(var(--lz-brand-rgb))" : "1px solid rgba(255,255,255,0.08)",
+                      border: active ? "1px solid rgb(var(--lz-brand-rgb))" : "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)",
                     }}
                     onMouseEnter={(e) => {
                       if (!active) {
@@ -1109,8 +1109,8 @@ export function DetailPanel() {
                     }}
                     onMouseLeave={(e) => {
                       if (!active) {
-                        e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
-                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                        e.currentTarget.style.backgroundColor = "color-mix(in srgb, var(--foreground) 8%, transparent)";
+                        e.currentTarget.style.borderColor = "color-mix(in srgb, var(--foreground) 8%, transparent)";
                       }
                     }}>
                     {REEL_TYPE_LABEL[rt as ReelType]}
@@ -1119,7 +1119,7 @@ export function DetailPanel() {
               })}
             </div>
             {!canSetEditor && (
-              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores podem definir o formato.</p>
+              <p className="text-[10px] text-foreground/40 mt-1.5">Apenas administradores podem definir o formato.</p>
             )}
           </ModalSection>
         )}
@@ -1138,10 +1138,10 @@ export function DetailPanel() {
                     })}
                     className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-[1.05] hover:brightness-110 disabled:opacity-40 disabled:hover:scale-100 disabled:cursor-not-allowed"
                     style={{
-                      backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.08)",
+                      backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 8%, transparent)",
                       color: active ? "#0D0D0D" : "#FFFFFF",
                       fontWeight: active ? 700 : 500,
-                      border: active ? "1px solid rgb(var(--lz-brand-rgb))" : "1px solid rgba(255,255,255,0.08)",
+                      border: active ? "1px solid rgb(var(--lz-brand-rgb))" : "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)",
                     }}
                     onMouseEnter={(e) => {
                       if (!active) {
@@ -1151,8 +1151,8 @@ export function DetailPanel() {
                     }}
                     onMouseLeave={(e) => {
                       if (!active) {
-                        e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
-                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                        e.currentTarget.style.backgroundColor = "color-mix(in srgb, var(--foreground) 8%, transparent)";
+                        e.currentTarget.style.borderColor = "color-mix(in srgb, var(--foreground) 8%, transparent)";
                       }
                     }}>
                     {POST_FORMAT_LABEL[pf as PostFormat]}
@@ -1161,7 +1161,7 @@ export function DetailPanel() {
               })}
             </div>
             {!canSetEditor && (
-              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores podem definir o formato.</p>
+              <p className="text-[10px] text-foreground/40 mt-1.5">Apenas administradores podem definir o formato.</p>
             )}
           </ModalSection>
         )}
@@ -1196,7 +1196,7 @@ export function DetailPanel() {
                         });
                       }}
                       disabled={setInstagramAutoPublish.isPending}
-                      className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold border border-white/[0.08] text-white/70 hover:text-white disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold border border-foreground/8 text-foreground/70 hover:text-foreground disabled:opacity-50"
                     >
                       <Clock size={14} />
                       Cancelar programação
@@ -1211,7 +1211,7 @@ export function DetailPanel() {
                       }}
                       disabled={setInstagramAutoPublish.isPending || !item.scheduledAt}
                       title={!item.scheduledAt ? "Defina uma data e horário em Data de publicação primeiro" : undefined}
-                      className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold border border-white/[0.08] text-white/70 hover:text-white disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold border border-foreground/8 text-foreground/70 hover:text-foreground disabled:opacity-50"
                     >
                       <Clock size={14} />
                       Programar publicação
@@ -1219,11 +1219,11 @@ export function DetailPanel() {
                   )}
                 </div>
                 {item.igAutoPublish && item.scheduledAt && (
-                  <p className="text-[11px] mt-2" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
+                  <p className="text-[11px] mt-2" style={{ color: "var(--lz-accent-ink)" }}>
                     Programado pra publicar sozinho em {new Date(item.scheduledAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}.
                   </p>
                 )}
-                <p className="text-[11px] text-white/40 mt-2">
+                <p className="text-[11px] text-foreground/40 mt-2">
                   Publica direto na conta do cliente e marca o item como Finalizado. "Programar" usa a data e horário
                   definidos em "Data de publicação" abaixo.
                 </p>
@@ -1232,13 +1232,13 @@ export function DetailPanel() {
               <div className="flex flex-wrap items-center gap-2">
                 <button disabled
                   title="Esse cliente ainda não conectou o Instagram — conecte na Ficha do Cliente"
-                  className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold opacity-40 cursor-not-allowed border border-white/[0.08] text-white/60">
+                  className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold opacity-40 cursor-not-allowed border border-foreground/8 text-foreground/60">
                   <Instagram size={14} />
                   Publicar no Instagram agora
                 </button>
                 <button disabled
                   title="Esse cliente ainda não conectou o Instagram — conecte na Ficha do Cliente"
-                  className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold opacity-40 cursor-not-allowed border border-white/[0.08] text-white/60">
+                  className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold opacity-40 cursor-not-allowed border border-foreground/8 text-foreground/60">
                   <Clock size={14} />
                   Programar publicação
                 </button>
@@ -1250,7 +1250,7 @@ export function DetailPanel() {
         {/* Prazo — pra atividades vira a data em que a atividade aconteceu/acontece, não um deadline */}
         <ModalSection label={isActivity ? (ACTIVITY_DATE_LABEL[item.type] ?? "Data") : (isAvulso ? "Prazo de entrega" : "Prazo")}>
           <div className="flex items-center gap-2">
-            <Calendar size={15} style={{ color: isOverdue ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))" }} />
+            <Calendar size={15} style={{ color: isOverdue ? "#FF6B6B" : "var(--lz-accent-ink)" }} />
             <input
               type="date"
               value={dueDate}
@@ -1263,7 +1263,7 @@ export function DetailPanel() {
                     onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar data."); setDueDate(prev ?? ""); },
                   });
               }}
-              className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]"
+              className="flex-1 bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]"
             />
             {dueDate && (
               <button
@@ -1275,7 +1275,7 @@ export function DetailPanel() {
                     onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar data."); setDueDate(prev ?? ""); },
                   });
                 }}
-                className="text-[11px] text-white/40 hover:text-white px-2 py-1 rounded hover:bg-white/5"
+                className="text-[11px] text-foreground/40 hover:text-foreground px-2 py-1 rounded hover:bg-foreground/5"
               >Limpar</button>
             )}
           </div>
@@ -1283,7 +1283,7 @@ export function DetailPanel() {
             <p className="mt-1.5 text-[10px] font-semibold" style={{ color: "#FF6B6B" }}>Prazo vencido.</p>
           )}
           {item.startedAt && (
-            <p className="text-[10px] text-white/40 mt-1.5">
+            <p className="text-[10px] text-foreground/40 mt-1.5">
               Iniciado em {new Date(item.startedAt).toLocaleDateString("pt-BR")}
               {item.finishedAt && ` · ${isAvulso ? "Entregue" : "Publicado"} em ${new Date(item.finishedAt).toLocaleDateString("pt-BR")}`}
             </p>
@@ -1294,13 +1294,13 @@ export function DetailPanel() {
         {!isActivity && !isAvulso && (
           <ModalSection label="Data de publicação">
             <div className="flex items-center gap-2">
-              <Calendar size={15} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
+              <Calendar size={15} style={{ color: "var(--lz-accent-ink)" }} />
               <input
                 type="date"
                 value={scheduledDate}
                 onChange={(e) => setScheduledDate(e.target.value)}
                 onBlur={(e) => saveScheduledAt(e.currentTarget.value, scheduledTime)}
-                className="min-w-0 flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]"
+                className="min-w-0 flex-1 bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]"
               />
               <input
                 type="time"
@@ -1308,7 +1308,7 @@ export function DetailPanel() {
                 onChange={(e) => setScheduledTime(e.target.value)}
                 onBlur={(e) => saveScheduledAt(scheduledDate, e.currentTarget.value)}
                 disabled={!scheduledDate}
-                className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]"
+                className="flex-1 bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]"
               />
               {scheduledDate && (
                 <button
@@ -1325,11 +1325,11 @@ export function DetailPanel() {
                       },
                     });
                   }}
-                  className="text-[11px] text-white/40 hover:text-white px-2 py-1 rounded hover:bg-white/5"
+                  className="text-[11px] text-foreground/40 hover:text-foreground px-2 py-1 rounded hover:bg-foreground/5"
                 >Limpar</button>
               )}
             </div>
-            <p className="text-[10px] text-white/40 mt-1.5">Data e hora reais de publicação no Instagram. É isso que o cliente vê no preview — o Prazo acima é só interno.</p>
+            <p className="text-[10px] text-foreground/40 mt-1.5">Data e hora reais de publicação no Instagram. É isso que o cliente vê no preview — o Prazo acima é só interno.</p>
           </ModalSection>
         )}
 
@@ -1341,7 +1341,7 @@ export function DetailPanel() {
               onChange={(e) => setLocation(e.target.value)}
               onBlur={() => { if (location !== (item.location ?? "")) updateItem.mutate({ data: { id: item.id, patch: { activity_location: location || null } } }); }}
               placeholder="Ex: Clínica, estúdio, externo…"
-              className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
+              className="w-full bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30"
             />
           </ModalSection>
         )}
@@ -1360,7 +1360,7 @@ export function DetailPanel() {
                   updateItem.mutate({ data: { id: item.id, patch: { activity_quantity: n } } });
               }}
               placeholder="0"
-              className="w-full bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-white/30"
+              className="w-full bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30"
             />
           </ModalSection>
         )}
@@ -1379,7 +1379,7 @@ export function DetailPanel() {
                 }}
                 rows={2}
                 placeholder="Ex.: aguardando aprovação do cliente, falta de material…"
-                className="flex-1 bg-[#252525] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[#FF6B6B] focus:ring-1 focus:ring-[#FF6B6B] placeholder:text-white/30 resize-none"
+                className="flex-1 bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[#FF6B6B] focus:ring-1 focus:ring-[#FF6B6B] placeholder:text-foreground/30 resize-none"
               />
             </div>
           </ModalSection>
@@ -1397,7 +1397,7 @@ export function DetailPanel() {
                   }}
                   className="h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-colors"
                   style={{
-                    borderColor: c.done ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.25)",
+                    borderColor: c.done ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 25%, transparent)",
                     backgroundColor: c.done ? "rgb(var(--lz-brand-rgb))" : "transparent",
                   }}
                 >
@@ -1409,18 +1409,18 @@ export function DetailPanel() {
                     const next = checklist.map((x) => x.id === c.id ? { ...x, text: e.target.value } : x);
                     saveChecklist(next);
                   }}
-                  className={`flex-1 bg-transparent text-sm outline-none ${c.done ? "line-through text-white/40" : "text-white/90"}`}
+                  className={`flex-1 bg-transparent text-sm outline-none ${c.done ? "line-through text-foreground/40" : "text-foreground/90"}`}
                 />
                 <button
                   onClick={() => saveChecklist(checklist.filter((x) => x.id !== c.id))}
-                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5"
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5"
                 >
                   <Trash2 size={11} />
                 </button>
               </div>
             ))}
             <div className="flex items-center gap-2 mt-1">
-              <ListChecks size={13} className="text-white/30 shrink-0" />
+              <ListChecks size={13} className="text-foreground/30 shrink-0" />
               <input
                 value={newCheck}
                 onChange={(e) => setNewCheck(e.target.value)}
@@ -1434,7 +1434,7 @@ export function DetailPanel() {
                   }
                 }}
                 placeholder="Adicionar subtarefa e dar Enter…"
-                className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/30 border-b border-white/[0.06] focus:border-[rgb(var(--lz-brand-rgb))] py-1"
+                className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-foreground/30 border-b border-foreground/6 focus:border-[rgb(var(--lz-brand-rgb))] py-1"
               />
             </div>
           </div>
@@ -1453,16 +1453,16 @@ export function DetailPanel() {
                     onClick={() => rateItem.mutate({ data: { itemId: item.id, rating: item.qualityRating === n ? null : n } })}
                     className="p-0.5 disabled:cursor-not-allowed transition-transform hover:scale-110 disabled:hover:scale-100"
                   >
-                    <Star size={20} fill={filled ? "rgb(var(--lz-brand-rgb))" : "transparent"} color={filled ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.3)"} />
+                    <Star size={20} fill={filled ? "var(--lz-accent-ink)" : "transparent"} color={filled ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 30%, transparent)"} />
                   </button>
                 );
               })}
               {item.qualityRating != null && (
-                <span className="ml-2 text-xs font-bold text-[rgb(var(--lz-brand-rgb))]">{item.qualityRating}/5</span>
+                <span className="ml-2 text-xs font-bold text-[var(--lz-accent-ink)]">{item.qualityRating}/5</span>
               )}
             </div>
             {!isAdmin && (
-              <p className="text-[10px] text-white/40 mt-1.5">Apenas administradores avaliam a qualidade.</p>
+              <p className="text-[10px] text-foreground/40 mt-1.5">Apenas administradores avaliam a qualidade.</p>
             )}
           </ModalSection>
         )}
@@ -1505,8 +1505,8 @@ export function DetailPanel() {
 
 function ModalSection({ label, children, last }: { label: string; children: React.ReactNode; last?: boolean }) {
   return (
-    <div className={`px-5 md:px-6 py-4 ${last ? "" : "border-b border-white/[0.06]"}`}>
-      <div className="text-[10px] uppercase font-bold tracking-wider mb-2.5" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{label}</div>
+    <div className={`px-5 md:px-6 py-4 ${last ? "" : "border-b border-foreground/6"}`}>
+      <div className="text-[10px] uppercase font-bold tracking-wider mb-2.5" style={{ color: "var(--lz-accent-ink)" }}>{label}</div>
       {children}
     </div>
   );

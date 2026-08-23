@@ -103,13 +103,13 @@ export function StatusBadge({
       {open && pos && createPortal(
         <div
           ref={popRef}
-          className="fixed z-[200] min-w-[180px] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto"
+          className="fixed z-[200] min-w-[180px] rounded-md bg-card border border-foreground/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto"
           style={{ top: pos.top, bottom: pos.bottom, left: pos.left }}
         >
           {groups.map((g, gi) => (
             <div key={g.label ?? gi}>
               {g.label && (
-                <div className={`px-3 pb-1 text-[9.5px] font-bold uppercase tracking-wider text-white/35 ${gi > 0 ? "pt-2.5 mt-1 border-t border-white/[0.06]" : "pt-1.5"}`}>
+                <div className={`px-3 pb-1 text-[9.5px] font-bold uppercase tracking-wider text-foreground/35 ${gi > 0 ? "pt-2.5 mt-1 border-t border-foreground/6" : "pt-1.5"}`}>
                   {g.label}
                 </div>
               )}
@@ -126,7 +126,7 @@ export function StatusBadge({
                     <span className="rounded p-1" style={{ backgroundColor: m.bg, color: m.color }}>
                       <I size={11} />
                     </span>
-                    <span className="text-white/80">{statusLabel(s, isAvulso)}</span>
+                    <span className="text-foreground/80">{statusLabel(s, isAvulso)}</span>
                   </button>
                 );
               })}

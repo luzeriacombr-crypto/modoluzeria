@@ -63,7 +63,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
 
   return (
     <div
-      className={`group relative flex flex-col rounded-xl overflow-hidden border bg-[#161616] hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 cursor-pointer ${flashed ? "lz-flash" : ""} ${selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-white/[0.06] hover:border-white/15"}`}
+      className={`group relative flex flex-col rounded-xl overflow-hidden border bg-card hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 cursor-pointer ${flashed ? "lz-flash" : ""} ${selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-foreground/6 hover:border-foreground/15"}`}
       style={EASE}
       onClick={() => (selectMode ? onToggleSelect?.() : openItem(item.id, navList))}
     >
@@ -80,7 +80,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
             className="absolute top-2 right-2 h-5 w-5 rounded-md flex items-center justify-center border transition-colors"
             style={{
               backgroundColor: selected ? "rgb(var(--lz-brand-rgb))" : "rgba(0,0,0,0.55)",
-              borderColor: selected ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.3)",
+              borderColor: selected ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 30%, transparent)",
             }}
           >
             {selected && <Check size={13} color="#0D0D0D" />}
@@ -89,14 +89,14 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             title="Excluir item"
-            className="absolute top-2 right-2 p-1.5 rounded-md text-white/70 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity duration-200"
+            className="absolute top-2 right-2 p-1.5 rounded-md text-foreground/70 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity duration-200"
             style={{ backgroundColor: "rgba(0,0,0,0.55)", ...EASE }}
           ><Trash2 size={13} /></button>
         )}
         <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
           {item.driveLink && (
             <span className="flex items-center justify-center rounded-md p-1" style={{ backgroundColor: "rgba(0,0,0,0.55)" }}>
-              <LinkIcon size={12} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
+              <LinkIcon size={12} style={{ color: "var(--lz-accent-ink)" }} />
             </span>
           )}
           {item.comments.length > 0 && (
@@ -117,12 +117,12 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
             onBlur={commit}
             onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setTitle(item.title); setEditing(false); } }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-transparent text-[14px] font-medium text-white outline-none border-b border-[rgb(var(--lz-brand-rgb))] py-0.5"
+            className="bg-transparent text-[14px] font-medium text-foreground outline-none border-b border-[rgb(var(--lz-brand-rgb))] py-0.5"
           />
         ) : (
           <button
             onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-            className="text-left text-[14px] font-medium text-white truncate hover:text-[rgb(var(--lz-brand-rgb))] transition-colors"
+            className="text-left text-[14px] font-medium text-foreground truncate hover:text-[var(--lz-accent-ink)] transition-colors"
             title={item.title}
           >
             <span className="truncate">{item.title || "Sem título"}</span>
@@ -132,7 +132,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
         {item.campaignName && (
           <span
             className="self-start inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
           >
             <Megaphone size={10} /> {item.campaignName}
           </span>
@@ -140,7 +140,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
         {item.type === "post" && item.postFormat && (
           <span
             className="self-start rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-            style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}
+            style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
           >
             {POST_FORMAT_LABEL[item.postFormat as PostFormat]}
           </span>
@@ -148,7 +148,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
         {item.type === "reel" && item.reelType && (
           <span
             className="self-start rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-            style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}
+            style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
           >
             {REEL_TYPE_LABEL[item.reelType as ReelType]}
           </span>
@@ -169,7 +169,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
               <button
                 onClick={() => addAssignee.mutate({ data: { itemId: item.id, userId: me.id } })}
                 title="Atribuir-me"
-                className="h-6 w-6 rounded-full border border-dashed border-white/20 text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors"
+                className="h-6 w-6 rounded-full border border-dashed border-foreground/20 text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors"
               ><Plus size={12} /></button>
             ) : null}
           </div>
@@ -178,7 +178,7 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
             {(item.type === "reel" || item.type === "story") && editor && (
               <span
                 className="flex items-center gap-1 text-[10px] font-semibold tabular-nums"
-                style={{ color: "rgba(255,255,255,0.4)" }}
+                style={{ color: "color-mix(in srgb, var(--foreground) 40%, transparent)" }}
                 title={`Editor: ${editor.name}`}
               >
                 <Scissors size={12} />
@@ -242,7 +242,7 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
 
   return (
     <div
-      className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-[#161616] hover:bg-[#1A1A1A] transition-colors cursor-pointer ${flashed ? "lz-flash" : ""} ${selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-white/[0.06] hover:border-white/15"}`}
+      className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-card hover:bg-card transition-colors cursor-pointer ${flashed ? "lz-flash" : ""} ${selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-foreground/6 hover:border-foreground/15"}`}
       onClick={() => (selectMode ? onToggleSelect?.() : openItem(item.id, navList))}
     >
       {selectMode && (
@@ -250,13 +250,13 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
           className="shrink-0 h-5 w-5 rounded-md flex items-center justify-center border transition-colors"
           style={{
             backgroundColor: selected ? "rgb(var(--lz-brand-rgb))" : "transparent",
-            borderColor: selected ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.3)",
+            borderColor: selected ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 30%, transparent)",
           }}
         >
           {selected && <Check size={13} color="#0D0D0D" />}
         </span>
       )}
-      <span className="text-[11px] font-bold tabular-nums text-white/30 w-5 shrink-0">{String(idx).padStart(2, "0")}</span>
+      <span className="text-[11px] font-bold tabular-nums text-foreground/30 w-5 shrink-0">{String(idx).padStart(2, "0")}</span>
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
         {editing ? (
@@ -265,26 +265,26 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
             onBlur={commit}
             onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setTitle(item.title); setEditing(false); } }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-transparent text-[13px] font-medium text-white outline-none border-b border-[rgb(var(--lz-brand-rgb))] py-0.5 flex-1 min-w-0"
+            className="bg-transparent text-[13px] font-medium text-foreground outline-none border-b border-[rgb(var(--lz-brand-rgb))] py-0.5 flex-1 min-w-0"
           />
         ) : (
           <button
             onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-            className="text-left text-[13px] font-medium text-white truncate hover:text-[rgb(var(--lz-brand-rgb))] transition-colors min-w-0"
+            className="text-left text-[13px] font-medium text-foreground truncate hover:text-[var(--lz-accent-ink)] transition-colors min-w-0"
             title={item.title}
           >
             <span className="truncate">{item.title || "Sem título"}</span>
           </button>
         )}
         {formatBadge && (
-          <span className="shrink-0 rounded px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-white/50 bg-white/[0.06]">
+          <span className="shrink-0 rounded px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-foreground/50 bg-foreground/[0.06]">
             {formatBadge}
           </span>
         )}
         {item.campaignName && (
           <span
             className="shrink-0 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide"
-            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
           >
             <Megaphone size={9} /> {item.campaignName}
           </span>
@@ -309,7 +309,7 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
           <button
             onClick={() => addAssignee.mutate({ data: { itemId: item.id, userId: me.id } })}
             title="Atribuir-me"
-            className="h-6 w-6 rounded-full border border-dashed border-white/20 text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors"
+            className="h-6 w-6 rounded-full border border-dashed border-foreground/20 text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors"
           ><Plus size={11} /></button>
         ) : null}
       </div>
@@ -318,7 +318,7 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
           title="Excluir item"
-          className="shrink-0 p-1.5 rounded-md text-white/30 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity"
+          className="shrink-0 p-1.5 rounded-md text-foreground/30 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity"
         ><Trash2 size={13} /></button>
       )}
     </div>
@@ -367,7 +367,7 @@ function DueDateChip({ item, isOverdue, dueLabel, onSave }: {
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         title={isOverdue ? "Prazo vencido — clique pra mudar" : "Prazo — clique pra mudar"}
         className="flex items-center gap-1 text-[10px] font-semibold tabular-nums hover:opacity-80 transition-opacity"
-        style={{ color: isOverdue ? "#FF6B6B" : "rgba(255,255,255,0.5)" }}
+        style={{ color: isOverdue ? "#FF6B6B" : "color-mix(in srgb, var(--foreground) 50%, transparent)" }}
       >
         <Calendar size={12} />
         <span>{dueLabel}</span>
@@ -376,7 +376,7 @@ function DueDateChip({ item, isOverdue, dueLabel, onSave }: {
         <div
           ref={popRef}
           style={{ position: "fixed", top: pos.top, left: pos.left, width: 170 }}
-          className="z-[200] rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl p-2"
+          className="z-[200] rounded-md bg-card border border-foreground/10 shadow-xl p-2"
           onClick={(e) => e.stopPropagation()}
         >
           <input
@@ -384,11 +384,11 @@ function DueDateChip({ item, isOverdue, dueLabel, onSave }: {
             autoFocus
             defaultValue={item.dueDate ?? ""}
             onChange={(e) => { onSave(e.target.value || null); setOpen(false); }}
-            className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+            className="w-full bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
           />
           <button
             onClick={() => { onSave(null); setOpen(false); }}
-            className="mt-1.5 w-full text-[10px] text-white/40 hover:text-red-400 transition-colors"
+            className="mt-1.5 w-full text-[10px] text-foreground/40 hover:text-red-400 transition-colors"
           >
             Remover prazo
           </button>
@@ -409,12 +409,12 @@ function CardThumb({ itemId, coverUrl }: { itemId: string; coverUrl: string | nu
   return (
     <div
       className="absolute inset-0 flex items-center justify-center"
-      style={{ background: "#1C1C1C" }}
+      style={{ background: "var(--card)" }}
     >
       {url ? (
         <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
       ) : (
-        <ImageIcon size={32} style={{ color: "rgba(255,255,255,0.2)" }} />
+        <ImageIcon size={32} style={{ color: "color-mix(in srgb, var(--foreground) 20%, transparent)" }} />
       )}
     </div>
   );

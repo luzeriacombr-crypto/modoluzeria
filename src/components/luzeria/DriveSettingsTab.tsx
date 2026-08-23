@@ -84,11 +84,11 @@ export function DriveSettingsTab() {
 
   return (
     <div className="space-y-6">
-      <section className="bg-[#1C1C1C] rounded-lg p-6 border border-white/[0.06]">
-        <div className="flex items-center gap-2 text-white/60 text-[11px] uppercase tracking-wider font-bold mb-3">
+      <section className="bg-card rounded-lg p-6 border border-foreground/6">
+        <div className="flex items-center gap-2 text-foreground/60 text-[11px] uppercase tracking-wider font-bold mb-3">
           <HardDrive size={12} /> Conta do Google Drive
         </div>
-        <p className="text-xs text-white/50 mb-2 leading-relaxed">
+        <p className="text-xs text-foreground/50 mb-2 leading-relaxed">
           Cada agência conecta a própria conta do Google Drive. Os arquivos dessa agência
           ficam só nessa conta — nenhuma outra agência tem acesso a ela.
         </p>
@@ -97,19 +97,19 @@ export function DriveSettingsTab() {
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mb-4 text-xs font-semibold rounded-full transition-opacity hover:opacity-80"
-          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
         >
           <Video size={13} /> Precisa de ajuda? Assista o tutorial!
         </a>
         {connStatus.isLoading ? (
-          <div className="text-white/40 text-sm">Verificando…</div>
+          <div className="text-foreground/40 text-sm">Verificando…</div>
         ) : status?.connected ? (
           <div className="flex items-center justify-between">
-            <div className="text-sm text-[rgb(var(--lz-brand-rgb))] font-medium">
+            <div className="text-sm text-[var(--lz-accent-ink)] font-medium">
               ✓ Conectado{status.driveEmail ? ` — ${status.driveEmail}` : ""}
             </div>
             <button onClick={connectDrive} disabled={connecting}
-              className="text-[11px] text-white/50 hover:text-white transition disabled:opacity-50">
+              className="text-[11px] text-foreground/50 hover:text-foreground transition disabled:opacity-50">
               Trocar de conta
             </button>
           </div>
@@ -122,23 +122,23 @@ export function DriveSettingsTab() {
         )}
       </section>
 
-      <section className="bg-[#1C1C1C] rounded-lg p-6 border border-white/[0.06]">
-        <div className="flex items-center gap-2 text-white/60 text-[11px] uppercase tracking-wider font-bold mb-3">
+      <section className="bg-card rounded-lg p-6 border border-foreground/6">
+        <div className="flex items-center gap-2 text-foreground/60 text-[11px] uppercase tracking-wider font-bold mb-3">
           <FolderTree size={12} /> Pasta raiz dos clientes
         </div>
-        <p className="text-xs text-white/50 mb-4 leading-relaxed">
+        <p className="text-xs text-foreground/50 mb-4 leading-relaxed">
           Defina a pasta do Google Drive que contém uma subpasta por cliente.
-          A estrutura <span className="text-white">Entregas - &lt;Cliente&gt; / &lt;Mês&gt;</span> será criada automaticamente.
+          A estrutura <span className="text-foreground">Entregas - &lt;Cliente&gt; / &lt;Mês&gt;</span> será criada automaticamente.
         </p>
-        <div className="text-[11px] text-white/40 mb-2">
-          Atual: <span className="text-white/70 font-mono">{current || "—"}</span>
+        <div className="text-[11px] text-foreground/40 mb-2">
+          Atual: <span className="text-foreground/70 font-mono">{current || "—"}</span>
         </div>
         <div className="flex gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="ID ou link da pasta no Drive"
-            className="lz-input-dark flex-1 bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder:text-white/30"
+            className="lz-input-dark flex-1 bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground placeholder:text-foreground/30"
           />
           <button
             onClick={save}
@@ -151,11 +151,11 @@ export function DriveSettingsTab() {
         </div>
       </section>
 
-      <section className="bg-[#1C1C1C] rounded-lg p-6 border border-white/[0.06]">
-        <div className="flex items-center gap-2 text-white/60 text-[11px] uppercase tracking-wider font-bold mb-3">
+      <section className="bg-card rounded-lg p-6 border border-foreground/6">
+        <div className="flex items-center gap-2 text-foreground/60 text-[11px] uppercase tracking-wider font-bold mb-3">
           <RefreshCw size={12} /> Reorganizar arquivos existentes
         </div>
-        <p className="text-xs text-white/50 mb-4 leading-relaxed">
+        <p className="text-xs text-foreground/50 mb-4 leading-relaxed">
           Move todos os arquivos já anexados a tarefas para a estrutura organizada por cliente e mês.
           Novos uploads e novos anexos já caem direto no lugar certo.
         </p>
@@ -169,15 +169,15 @@ export function DriveSettingsTab() {
         </button>
 
         {report && (
-          <div className="mt-5 text-xs text-white/70 space-y-1">
-            <div>Movidos: <span className="text-[rgb(var(--lz-brand-rgb))] font-semibold">{report.moved}</span></div>
-            <div>Ignorados: <span className="text-white/50">{report.skipped}</span></div>
+          <div className="mt-5 text-xs text-foreground/70 space-y-1">
+            <div>Movidos: <span className="text-[var(--lz-accent-ink)] font-semibold">{report.moved}</span></div>
+            <div>Ignorados: <span className="text-foreground/50">{report.skipped}</span></div>
             {report.errors.length > 0 && (
               <details className="mt-2">
                 <summary className="cursor-pointer text-red-400">
                   {report.errors.length} erro(s)
                 </summary>
-                <ul className="mt-2 space-y-1 text-[11px] font-mono text-white/50">
+                <ul className="mt-2 space-y-1 text-[11px] font-mono text-foreground/50">
                   {report.errors.map((e, i) => <li key={i}>{e}</li>)}
                 </ul>
               </details>

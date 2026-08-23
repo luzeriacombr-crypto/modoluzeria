@@ -8,7 +8,7 @@ function MdInline({ text }: { text: string }) {
     <>
       {parts.map((part, i) =>
         part.startsWith("**") && part.endsWith("**")
-          ? <strong key={i} className="font-bold" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{part.slice(2, -2)}</strong>
+          ? <strong key={i} className="font-bold" style={{ color: "var(--lz-accent-ink)" }}>{part.slice(2, -2)}</strong>
           : <span key={i}>{part}</span>,
       )}
     </>
@@ -19,16 +19,16 @@ function BlockRenderer({ block }: { block: MdBlock }) {
   switch (block.kind) {
     case "h1": return null; // rendered separately as the doc title
     case "h2":
-      return <h3 className="text-white font-bold text-[15px] mt-6 mb-2 first:mt-0">{block.text}</h3>;
+      return <h3 className="text-foreground font-bold text-[15px] mt-6 mb-2 first:mt-0">{block.text}</h3>;
     case "h3":
-      return <h4 className="text-white/80 font-semibold text-[13px] mt-4 mb-1.5">{block.text}</h4>;
+      return <h4 className="text-foreground/80 font-semibold text-[13px] mt-4 mb-1.5">{block.text}</h4>;
     case "p":
-      return <p className="text-white/70 text-[13.5px] leading-relaxed mb-3"><MdInline text={block.text} /></p>;
+      return <p className="text-foreground/70 text-[13.5px] leading-relaxed mb-3"><MdInline text={block.text} /></p>;
     case "ul":
       return (
         <ul className="mb-3 space-y-1.5">
           {block.items.map((item, i) => (
-            <li key={i} className="flex items-start gap-2 text-white/70 text-[13.5px] leading-relaxed">
+            <li key={i} className="flex items-start gap-2 text-foreground/70 text-[13.5px] leading-relaxed">
               <span className="mt-1.5 h-1 w-1 rounded-full shrink-0" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />
               <span><MdInline text={item} /></span>
             </li>
@@ -72,10 +72,10 @@ function StatGrid({ items }: { items: StatItem[] }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-3">
       {items.map((s, i) => (
-        <div key={i} className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="font-extrabold text-xl leading-none tabular-nums" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{s.value}</div>
-          {s.suffix && <div className="text-white/45 text-[10.5px] font-semibold mt-1 leading-snug">{s.suffix}</div>}
-          <div className="text-white/50 text-[11px] mt-1.5 leading-snug">{s.label}</div>
+        <div key={i} className="rounded-lg p-3" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
+          <div className="font-extrabold text-xl leading-none tabular-nums" style={{ color: "var(--lz-accent-ink)" }}>{s.value}</div>
+          {s.suffix && <div className="text-foreground/45 text-[10.5px] font-semibold mt-1 leading-snug">{s.suffix}</div>}
+          <div className="text-foreground/50 text-[11px] mt-1.5 leading-snug">{s.label}</div>
         </div>
       ))}
     </div>
@@ -86,11 +86,11 @@ function ChecklistItems({ items }: { items: string[] }) {
   return (
     <div className="space-y-1.5 mb-3">
       {items.map((item, i) => (
-        <div key={i} className="flex items-start gap-2.5 rounded-lg px-3 py-2.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+        <div key={i} className="flex items-start gap-2.5 rounded-lg px-3 py-2.5" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 5%, transparent)" }}>
           <span className="shrink-0 mt-[3px] h-4 w-4 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)" }}>
-            <Check size={10} strokeWidth={3} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
+            <Check size={10} strokeWidth={3} style={{ color: "var(--lz-accent-ink)" }} />
           </span>
-          <span className="text-white/75 text-[13.5px] leading-relaxed"><MdInline text={item} /></span>
+          <span className="text-foreground/75 text-[13.5px] leading-relaxed"><MdInline text={item} /></span>
         </div>
       ))}
     </div>
@@ -111,7 +111,7 @@ function SectionBody({ blocks }: { blocks: MdBlock[] }) {
       const stats = b.items.map(parseStatItem);
       const allStats = stats.length >= 2 && stats.every((s): s is StatItem => s !== null);
       if (sawText && !dividerAdded) {
-        nodes.push(<div key={`div-${i}`} className="h-px my-3.5" style={{ background: "rgba(255,255,255,0.06)" }} />);
+        nodes.push(<div key={`div-${i}`} className="h-px my-3.5" style={{ background: "color-mix(in srgb, var(--foreground) 6%, transparent)" }} />);
         dividerAdded = true;
       }
       nodes.push(allStats ? <StatGrid key={i} items={stats as StatItem[]} /> : <ChecklistItems key={i} items={b.items} />);
@@ -124,7 +124,7 @@ function SectionBody({ blocks }: { blocks: MdBlock[] }) {
       nodes.push(
         <p
           key={i}
-          className={isLead ? "text-white/85 text-[15px] leading-relaxed mb-3 font-medium" : "text-white/70 text-[13.5px] leading-relaxed mb-3"}
+          className={isLead ? "text-foreground/85 text-[15px] leading-relaxed mb-3 font-medium" : "text-foreground/70 text-[13.5px] leading-relaxed mb-3"}
         >
           <MdInline text={b.text} />
         </p>,
@@ -148,15 +148,15 @@ export function PlanejamentoView({ blocks }: { blocks: MdBlock[] }) {
   return (
     <div className="space-y-3">
       {(title || lead.length > 0) && (
-        <div className="relative overflow-hidden rounded-xl p-5 md:p-6" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="relative overflow-hidden rounded-xl p-5 md:p-6" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
           <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: "linear-gradient(90deg, rgb(var(--lz-brand-rgb)), transparent)" }} />
           {title && (
             <>
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />
-                <span className="text-[10.5px] uppercase font-bold tracking-wider" style={{ color: "rgb(var(--lz-brand-rgb))" }}>Planejamento</span>
+                <span className="text-[10.5px] uppercase font-bold tracking-wider" style={{ color: "var(--lz-accent-ink)" }}>Planejamento</span>
               </div>
-              <h2 className="text-white font-extrabold text-xl md:text-2xl leading-tight">{title}</h2>
+              <h2 className="text-foreground font-extrabold text-xl md:text-2xl leading-tight">{title}</h2>
             </>
           )}
           {lead.length > 0 && (
@@ -169,15 +169,15 @@ export function PlanejamentoView({ blocks }: { blocks: MdBlock[] }) {
       {sections.map((s, i) => {
         const Icon = sectionIcon(s.title);
         return (
-          <div key={i} className="rounded-xl p-5 md:p-6" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div key={i} className="rounded-xl p-5 md:p-6" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
             <div className="flex items-center gap-2.5 mb-3">
               <span
                 className="shrink-0 h-8 w-8 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)" }}
               >
-                <Icon size={15} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
+                <Icon size={15} style={{ color: "var(--lz-accent-ink)" }} />
               </span>
-              <h3 className="text-white font-bold text-[15px]">{s.title}</h3>
+              <h3 className="text-foreground font-bold text-[15px]">{s.title}</h3>
             </div>
             <div className="pl-[42px] -mt-1">
               <SectionBody blocks={s.blocks} />
@@ -208,21 +208,21 @@ export function RoteirosView({
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
-        <Layers size={15} style={{ color: "rgb(var(--lz-brand-rgb))" }} />
-        <span className="text-white/60 text-[12px] font-semibold uppercase tracking-wide">
+        <Layers size={15} style={{ color: "var(--lz-accent-ink)" }} />
+        <span className="text-foreground/60 text-[12px] font-semibold uppercase tracking-wide">
           {groups.length} {groups.length === 1 ? "roteiro" : "roteiros"}
         </span>
       </div>
       <div className="space-y-3">
         {groups.map((g, i) => (
-          <div key={i} className="rounded-xl p-5" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div key={i} className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
             <div className="flex items-start gap-3">
               <span
                 className="shrink-0 h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-bold"
-                style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+                style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
               >{String(i + 1).padStart(2, "0")}</span>
               <div className="flex-1 min-w-0 pt-0.5">
-                <h3 className="text-white font-bold text-[14.5px] mb-2">{g.title}</h3>
+                <h3 className="text-foreground font-bold text-[14.5px] mb-2">{g.title}</h3>
                 {g.blocks.map((b, j) => <BlockRenderer key={j} block={b} />)}
                 {renderFooter?.(g, i)}
               </div>

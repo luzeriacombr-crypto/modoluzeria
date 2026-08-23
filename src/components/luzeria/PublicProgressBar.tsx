@@ -34,7 +34,7 @@ export function PublicProgressBar({ stageCounts, blockedCount }: {
               style={{
                 left: `${left}%`,
                 width: `${colWidth}%`,
-                background: s.count > 0 ? meta.color : "rgba(255,255,255,0.08)",
+                background: s.count > 0 ? meta.color : "color-mix(in srgb, var(--foreground) 8%, transparent)",
               }}
             />
           );
@@ -51,21 +51,21 @@ export function PublicProgressBar({ stageCounts, blockedCount }: {
                   className="size-9 rounded-full grid place-items-center transition-colors"
                   style={{
                     background: active ? meta.color : "#1C1C1C",
-                    color: active ? "#0D0D0D" : "rgba(255,255,255,0.3)",
-                    border: active ? "none" : "2px solid rgba(255,255,255,0.08)",
+                    color: active ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 30%, transparent)",
+                    border: active ? "none" : "2px solid color-mix(in srgb, var(--foreground) 8%, transparent)",
                   }}
                 >
                   <Icon size={16} />
                 </div>
                 <div
                   className="text-[10px] leading-tight font-semibold"
-                  style={{ color: active ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.3)" }}
+                  style={{ color: active ? "color-mix(in srgb, var(--foreground) 85%, transparent)" : "color-mix(in srgb, var(--foreground) 30%, transparent)" }}
                 >
                   {meta.label}
                 </div>
                 <div
                   className="text-[11px] font-bold"
-                  style={{ color: active ? meta.color : "rgba(255,255,255,0.25)" }}
+                  style={{ color: active ? meta.color : "color-mix(in srgb, var(--foreground) 25%, transparent)" }}
                 >
                   {s.count}
                 </div>

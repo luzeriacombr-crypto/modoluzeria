@@ -202,7 +202,7 @@ export function readableAccentRgbChannels(hex: string): string | null {
  * use `glassCardStyle` there instead. */
 export function tintedCardStyle(hex: string): { background: string; border: string } {
   return {
-    background: `linear-gradient(160deg, ${hexAlpha(hex, 0.18)} 0%, #161616 70%)`,
+    background: `linear-gradient(160deg, ${hexAlpha(hex, 0.18)} 0%, var(--card) 70%)`,
     border: `1px solid ${hexAlpha(hex, 0.32)}`,
   };
 }
@@ -212,10 +212,10 @@ export function tintedCardStyle(hex: string): { background: string; border: stri
  * different color per item reads as busy. `active` swaps the neutral white
  * wash for a faint brand-color one, for the selected/current item. */
 export function glassCardStyle(active = false): { background: string; border: string } {
-  const tint = active ? "rgba(var(--lz-brand-light-rgb),0.16)" : "rgba(255,255,255,0.05)";
-  const border = active ? "rgba(var(--lz-brand-light-rgb),0.35)" : "rgba(255,255,255,0.08)";
+  const tint = active ? "rgba(var(--lz-brand-light-rgb),0.16)" : "color-mix(in srgb, var(--foreground) 5%, transparent)";
+  const border = active ? "rgba(var(--lz-brand-light-rgb),0.35)" : "var(--border)";
   return {
-    background: `linear-gradient(160deg, ${tint} 0%, #161616 70%)`,
+    background: `linear-gradient(160deg, ${tint} 0%, var(--card) 70%)`,
     border: `1px solid ${border}`,
   };
 }

@@ -39,11 +39,11 @@ export function ClientReferenceLibraryTab({ clientId }: { clientId: string }) {
     <div>
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="relative flex-1 min-w-[180px] max-w-sm">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/30" />
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar…"
-            className="w-full bg-[#1A1A1A] border border-white/[0.08] rounded-md pl-9 pr-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition-colors placeholder:text-white/30"
+            className="w-full bg-card border border-foreground/8 rounded-md pl-9 pr-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition-colors placeholder:text-foreground/30"
           />
         </div>
         <button
@@ -56,7 +56,7 @@ export function ClientReferenceLibraryTab({ clientId }: { clientId: string }) {
       </div>
 
       {isLoading ? (
-        <div className="text-white/40 text-sm py-10 text-center">Carregando…</div>
+        <div className="text-foreground/40 text-sm py-10 text-center">Carregando…</div>
       ) : (
         <ReferenceBlockCards
           blocks={blocks}

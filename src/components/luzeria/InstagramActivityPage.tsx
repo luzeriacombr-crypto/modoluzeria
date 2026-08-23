@@ -25,10 +25,10 @@ export function InstagramActivityPage() {
     return (
       <div className="px-5 md:px-10 py-8 max-w-[1400px] mx-auto">
         <div className="flex items-center gap-2 mb-1">
-          <Instagram size={20} className="text-[rgb(var(--lz-brand-rgb))]" />
-          <h1 className="text-[28px] font-bold text-white tracking-tight">Instagram</h1>
+          <Instagram size={20} className="text-[var(--lz-accent-ink)]" />
+          <h1 className="text-[28px] font-bold text-foreground tracking-tight">Instagram</h1>
         </div>
-        <p className="text-sm text-white/40 mt-6">Essa tela é só pra Adm Master e Adm de Setor.</p>
+        <p className="text-sm text-foreground/40 mt-6">Essa tela é só pra Adm Master e Adm de Setor.</p>
       </div>
     );
   }
@@ -45,20 +45,20 @@ export function InstagramActivityPage() {
   return (
     <div className="px-5 md:px-10 py-8 max-w-[1400px] mx-auto">
       <div className="flex items-center gap-2 mb-1">
-        <Instagram size={20} className="text-[rgb(var(--lz-brand-rgb))]" />
-        <h1 className="text-[28px] font-bold text-white tracking-tight">Instagram</h1>
+        <Instagram size={20} className="text-[var(--lz-accent-ink)]" />
+        <h1 className="text-[28px] font-bold text-foreground tracking-tight">Instagram</h1>
       </div>
-      <p className="text-xs text-white/40 mb-8">
+      <p className="text-xs text-foreground/40 mb-8">
         Posts programados e já publicados pelo Modo Criador, de todos os clientes. Publicação feita direto no
         Instagram (fora do app) não aparece aqui.
       </p>
 
-      {isLoading && <p className="text-xs text-white/30 text-center mt-10">Carregando…</p>}
+      {isLoading && <p className="text-xs text-foreground/30 text-center mt-10">Carregando…</p>}
 
       {!isLoading && items.length === 0 && (
-        <div className="border border-dashed border-white/10 rounded-lg p-16 text-center">
-          <Instagram size={22} className="mx-auto mb-3 text-white/20" />
-          <p className="text-white/50 text-sm">Nenhuma publicação programada ou feita pelo app ainda.</p>
+        <div className="border border-dashed border-foreground/10 rounded-lg p-16 text-center">
+          <Instagram size={22} className="mx-auto mb-3 text-foreground/20" />
+          <p className="text-foreground/50 text-sm">Nenhuma publicação programada ou feita pelo app ainda.</p>
         </div>
       )}
 
@@ -107,24 +107,24 @@ function ActivitySection({ label, icon, items, thumbs, dateOf, datePrefix }: {
 
   return (
     <div className="mb-8">
-      <div className="flex items-center gap-1.5 mb-3 text-white/50">
+      <div className="flex items-center gap-1.5 mb-3 text-foreground/50">
         {icon}
         <span className="text-[11px] uppercase font-bold tracking-wider">{label}</span>
-        <span className="text-[11px] text-white/30">· {items.length}</span>
+        <span className="text-[11px] text-foreground/30">· {items.length}</span>
       </div>
       <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
         {items.map((item) => (
           <button
             key={item.id}
             onClick={() => goToItem(item)}
-            className="text-left group rounded-lg overflow-hidden bg-[#161616] border border-white/[0.07] hover:border-white/20 transition"
+            className="text-left group rounded-lg overflow-hidden bg-card border border-foreground/7 hover:border-foreground/20 transition"
           >
             <div className="relative aspect-square bg-[#111]">
               {thumbs?.[item.id]?.thumbUrl ? (
                 <img src={thumbs[item.id]!.thumbUrl!} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <ImageIcon size={22} className="text-white/15" />
+                  <ImageIcon size={22} className="text-foreground/15" />
                 </div>
               )}
               <span
@@ -141,8 +141,8 @@ function ActivitySection({ label, icon, items, thumbs, dateOf, datePrefix }: {
               >
                 {item.clientName}
               </span>
-              <div className="text-white text-xs truncate group-hover:text-white/80 transition">{item.title}</div>
-              <div className="text-[10px] text-white/35 mt-0.5">
+              <div className="text-foreground text-xs truncate group-hover:text-foreground/80 transition">{item.title}</div>
+              <div className="text-[10px] text-foreground/35 mt-0.5">
                 {datePrefix} {new Date(dateOf(item)).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
               </div>
             </div>

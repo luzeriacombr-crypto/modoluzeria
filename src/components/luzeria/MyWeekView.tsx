@@ -46,36 +46,36 @@ export function MyWeekView({ userId }: { userId?: string }) {
           const list = byDay[key];
           return (
             <div key={key} className={`rounded-xl border p-3 min-h-[120px] ${
-              isToday ? "" : "border-white/[0.06] bg-[#1C1C1C]"
+              isToday ? "" : "border-foreground/6 bg-card"
             }`}
               style={isToday ? { borderColor: "rgba(var(--lz-brand-rgb), 0.5)", backgroundColor: "rgba(var(--lz-brand-light-rgb), 0.04)" } : undefined}
             >
               <div className="flex items-baseline justify-between mb-2">
                 <div className={`text-[10px] uppercase font-bold tracking-wider ${
-                  isToday ? "text-[rgb(var(--lz-brand-rgb))]" : isPast ? "text-white/30" : "text-white/50"
+                  isToday ? "text-[var(--lz-accent-ink)]" : isPast ? "text-foreground/30" : "text-foreground/50"
                 }`}>{WEEKDAYS[d.getDay()]}</div>
                 <div className={`text-base font-bold tabular-nums ${
-                  isToday ? "text-white" : isPast ? "text-white/30" : "text-white/70"
+                  isToday ? "text-foreground" : isPast ? "text-foreground/30" : "text-foreground/70"
                 }`}>{String(d.getDate()).padStart(2, "0")}</div>
               </div>
               {list.length === 0 ? (
-                <div className="text-[10px] text-white/20 mt-3">—</div>
+                <div className="text-[10px] text-foreground/20 mt-3">—</div>
               ) : list.map((t) => (
                 <button key={t.id}
                   onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId } }); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
-                  className="w-full mb-1.5 text-left rounded-md p-2 bg-[#0D0D0D]/60 hover:bg-[#0D0D0D] transition-colors border border-white/[0.04]">
+                  className="w-full mb-1.5 text-left rounded-md p-2 bg-background/60 hover:bg-background transition-colors border border-foreground/4">
                   <div className="flex items-center gap-1.5 mb-1">
                     {(() => {
                       const di = deadlineInfo(t.dueDate, t.status);
                       return <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: di.level === "done" || di.level === "none" ? t.clientColor : di.color }} title={di.label || undefined} />;
                     })()}
-                    <span className="text-[9px] uppercase font-bold tracking-wider text-white/50 truncate">{t.clientName}</span>
+                    <span className="text-[9px] uppercase font-bold tracking-wider text-foreground/50 truncate">{t.clientName}</span>
                     <span className="ml-auto text-[8px] uppercase font-bold tracking-wider rounded px-1 py-px"
                       style={{ backgroundColor: STATUS_META[t.status as Status].bg, color: STATUS_META[t.status as Status].color }}>
                       {STATUS_META[t.status as Status].label.slice(0, 4)}
                     </span>
                   </div>
-                  <div className="text-[11px] text-white leading-tight truncate">{t.title || `${CONTENT_TYPE_LABEL[t.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item"} ${String(t.idx).padStart(2, "0")}`}</div>
+                  <div className="text-[11px] text-foreground leading-tight truncate">{t.title || `${CONTENT_TYPE_LABEL[t.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item"} ${String(t.idx).padStart(2, "0")}`}</div>
                 </button>
               ))}
             </div>
@@ -84,15 +84,15 @@ export function MyWeekView({ userId }: { userId?: string }) {
       </div>
       {noDate.length > 0 && (
         <div className="mt-6">
-          <div className="text-[10px] uppercase font-bold tracking-wider text-white/40 mb-2">Sem prazo definido ({noDate.length})</div>
-          <div className="bg-[#1C1C1C] rounded-lg divide-y divide-white/[0.04]">
+          <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-2">Sem prazo definido ({noDate.length})</div>
+          <div className="bg-card rounded-lg divide-y divide-white/[0.04]">
             {noDate.map((t) => (
               <button key={t.id}
                 onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId } }); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.03] text-left">
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-foreground/[0.03] text-left">
                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: t.clientColor }} />
-                <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">{t.clientName}</span>
-                <span className="text-sm text-white truncate flex-1">{t.title}</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">{t.clientName}</span>
+                <span className="text-sm text-foreground truncate flex-1">{t.title}</span>
                 <span className="text-[9px] uppercase font-bold tracking-wider rounded px-1.5 py-0.5"
                   style={{ backgroundColor: STATUS_META[t.status as Status].bg, color: STATUS_META[t.status as Status].color }}>
                   {STATUS_META[t.status as Status].label}

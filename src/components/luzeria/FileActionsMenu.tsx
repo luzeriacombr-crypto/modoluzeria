@@ -48,7 +48,7 @@ export function FileActionsMenu({
         type="button"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); }}
         title="Mais ações"
-        className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-black/80 text-white rounded p-0.5"
+        className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-black/80 text-foreground rounded p-0.5"
       >
         {downloading ? <Loader2 size={10} className="animate-spin" /> : <MoreVertical size={10} />}
       </button>
@@ -56,23 +56,23 @@ export function FileActionsMenu({
         <div
           ref={menuRef}
           style={{ position: "fixed", top: pos.top, left: pos.left, width: 200 }}
-          className="z-[200] rounded-md border border-white/10 bg-[#1C1C1C] shadow-lg py-1 text-[12px]"
+          className="z-[200] rounded-md border border-foreground/10 bg-card shadow-lg py-1 text-[12px]"
           onClick={(e) => e.stopPropagation()}
         >
           <button
             type="button"
             onClick={() => { setOpen(false); onDownload(); }}
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-white/80 hover:bg-white/5 hover:text-white transition"
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-foreground/80 hover:bg-foreground/5 hover:text-foreground transition"
           >
             <Download size={12} /> Baixar
           </button>
           {canEdit && (
             <>
-              <div className="my-1 border-t border-white/[0.06]" />
+              <div className="my-1 border-t border-foreground/6" />
               <button
                 type="button"
                 onClick={() => { setOpen(false); onRemoveAppOnly(); }}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-white/70 hover:bg-white/5 hover:text-white transition"
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-foreground/70 hover:bg-foreground/5 hover:text-foreground transition"
               >
                 <Trash2 size={12} /> Remover do Modo Criador
               </button>

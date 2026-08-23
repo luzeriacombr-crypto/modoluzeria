@@ -61,15 +61,15 @@ export function AutomationsTab() {
   return (
     <div className="space-y-8 max-w-3xl">
       <div>
-        <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+        <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
           <Sparkles size={12} /> Automações ativas
         </h2>
-        <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
+        <div className="bg-card rounded-lg overflow-hidden">
           {isLoading && (
-            <div className="px-5 py-6 text-sm text-white/40">Carregando…</div>
+            <div className="px-5 py-6 text-sm text-foreground/40">Carregando…</div>
           )}
           {!isLoading && jobs.length === 0 && (
-            <div className="px-5 py-6 text-sm text-white/40">Nenhuma automação encontrada.</div>
+            <div className="px-5 py-6 text-sm text-foreground/40">Nenhuma automação encontrada.</div>
           )}
           {jobs.map((j) => {
             const meta = JOB_META[j.jobname] ?? {
@@ -78,25 +78,25 @@ export function AutomationsTab() {
             const Icon = meta.icon;
             return (
               <div key={j.jobname}
-                className="flex items-start gap-4 px-5 py-4 border-b border-white/[0.05] last:border-b-0">
+                className="flex items-start gap-4 px-5 py-4 border-b border-foreground/5 last:border-b-0">
                 <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0 mt-0.5"
-                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
                   <Icon size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <div className="text-sm font-semibold text-white truncate">{meta.label}</div>
+                    <div className="text-sm font-semibold text-foreground truncate">{meta.label}</div>
                     {j.active ? (
                       <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded"
-                        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}>Ativa</span>
+                        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>Ativa</span>
                     ) : (
-                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-white/10 text-white/50">Pausada</span>
+                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-foreground/10 text-foreground/50">Pausada</span>
                     )}
                   </div>
                   {meta.description && (
-                    <div className="text-[11px] text-white/50 mt-1">{meta.description}</div>
+                    <div className="text-[11px] text-foreground/50 mt-1">{meta.description}</div>
                   )}
-                  <div className="text-[11px] text-white/40 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <div className="text-[11px] text-foreground/40 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span>⏱ {humanCron(j.schedule)}</span>
                     <span>Última execução: {relativeTime(j.lastStart)}{j.lastStatus ? ` · ${j.lastStatus}` : ""}</span>
                   </div>
@@ -110,10 +110,10 @@ export function AutomationsTab() {
       <AutomationRulesSection />
 
       <div>
-        <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+        <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
           <PlayCircle size={12} /> Disparar agora
         </h2>
-        <div className="bg-[#1C1C1C] rounded-lg p-5 grid sm:grid-cols-2 gap-3">
+        <div className="bg-card rounded-lg p-5 grid sm:grid-cols-2 gap-3">
           <button
             disabled={runDeadlineRemindersNow.isPending}
             onClick={() => runDeadlineRemindersNow.mutate({} as any, {
@@ -133,7 +133,7 @@ export function AutomationsTab() {
             {runDailyDigestNow.isPending ? "Enviando…" : "Rodar resumo diário"}
           </button>
         </div>
-        <p className="text-[11px] text-white/30 mt-3">
+        <p className="text-[11px] text-foreground/30 mt-3">
           Útil para testar. As notificações respeitam as preferências de cada colaborador (configuráveis no perfil).
         </p>
       </div>
@@ -155,16 +155,16 @@ function AutomationRulesSection() {
 
   return (
     <div>
-      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
         <Zap size={12} /> Minhas automações
       </h2>
-      <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
+      <div className="bg-card rounded-lg overflow-hidden">
         {rules.length === 0 && !adding && (
-          <div className="px-5 py-6 text-sm text-white/40">Nenhuma automação criada ainda.</div>
+          <div className="px-5 py-6 text-sm text-foreground/40">Nenhuma automação criada ainda.</div>
         )}
         {rules.map((r) => (
-          <div key={r.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.05] last:border-b-0">
-            <span className="text-sm text-white/85 flex-1 min-w-0">
+          <div key={r.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-foreground/5 last:border-b-0">
+            <span className="text-sm text-foreground/85 flex-1 min-w-0">
               {r.onCreate ? (
                 <>Quando o item for <strong>criado</strong></>
               ) : (
@@ -180,7 +180,7 @@ function AutomationRulesSection() {
             {isMaster && (
               <button
                 onClick={async () => { if (await requestConfirm("Excluir essa automação?", { danger: true })) deleteAutomationRule.mutate({ data: { id: r.id } }); }}
-                className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-white/5 shrink-0"
+                className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 shrink-0"
               ><Trash2 size={13} /></button>
             )}
           </div>
@@ -195,12 +195,12 @@ function AutomationRulesSection() {
           ) : (
             <button
               onClick={() => setAdding(true)}
-              className="w-full flex items-center justify-center gap-1.5 px-5 py-3.5 text-xs font-semibold text-white/60 hover:text-white hover:bg-white/[0.03] transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 px-5 py-3.5 text-xs font-semibold text-foreground/60 hover:text-foreground hover:bg-foreground/[0.03] transition-colors"
             ><Plus size={13} /> Nova automação</button>
           )
         )}
       </div>
-      <p className="text-[11px] text-white/30 mt-3">
+      <p className="text-[11px] text-foreground/30 mt-3">
         As automações rodam direto no sistema, mesmo que ninguém esteja com a tela aberta.
       </p>
     </div>
@@ -220,11 +220,11 @@ function NewRuleForm({
   const [actionStatus, setActionStatus] = useState<Status>(STATUS_OPTIONS[0]);
   const [actionUserId, setActionUserId] = useState(profiles[0]?.id ?? "");
 
-  const selectClass = "bg-[#0D0D0D] border border-white/10 rounded-md px-2.5 py-2 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
+  const selectClass = "bg-background border border-foreground/10 rounded-md px-2.5 py-2 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
 
   return (
-    <div className="px-5 py-4 border-t border-white/[0.06] space-y-3">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-white/70">
+    <div className="px-5 py-4 border-t border-foreground/6 space-y-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/70">
         <select value={triggerMode} onChange={(e) => setTriggerMode(e.target.value as any)} className={selectClass}>
           <option value="status">Quando o status virar</option>
           <option value="create">Quando o item for criado</option>
@@ -250,7 +250,7 @@ function NewRuleForm({
         )}
       </div>
       <div className="flex items-center justify-end gap-2">
-        <button onClick={onCancel} className="px-3 py-1.5 text-xs text-white/60 hover:text-white">Cancelar</button>
+        <button onClick={onCancel} className="px-3 py-1.5 text-xs text-foreground/60 hover:text-foreground">Cancelar</button>
         <button
           disabled={actionType === "assign_member" && !actionUserId}
           onClick={() => onSubmit({

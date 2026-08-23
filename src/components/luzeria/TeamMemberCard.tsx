@@ -39,17 +39,17 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
         <div className="relative">
           <Avatar profile={profile} size={56} />
           {!profile.active && (
-            <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#1C1C1C] flex items-center justify-center">
-              <span className="h-2 w-2 rounded-full bg-white/30" />
+            <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-card flex items-center justify-center">
+              <span className="h-2 w-2 rounded-full bg-foreground/30" />
             </span>
           )}
         </div>
-        <div className="text-sm font-semibold text-white truncate w-full">{profile.name}</div>
+        <div className="text-sm font-semibold text-foreground truncate w-full">{profile.name}</div>
         <span
           className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
           style={{
-            backgroundColor: profile.active ? "rgba(var(--lz-brand-light-rgb),0.15)" : "rgba(255,255,255,0.06)",
-            color: profile.active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.4)",
+            backgroundColor: profile.active ? "rgba(var(--lz-brand-light-rgb),0.15)" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
+            color: profile.active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 40%, transparent)",
           }}
         >
           {ROLE_LABEL[profile.role]}
@@ -185,29 +185,29 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
           onRemovePhoto={onRemovePhoto}
           size={72}
         />
-        <div className="text-[11px] text-white/40 truncate">{profile.email}</div>
+        <div className="text-[11px] text-foreground/40 truncate">{profile.email}</div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
         <div className="space-y-4">
           <div>
-            <label className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">Função</label>
+            <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Função</label>
             <select value={profile.role} disabled={isSelf}
               onChange={(e) => setUserRole.mutate({ data: { userId: profile.id, role: e.target.value as Role } })}
-              className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] disabled:opacity-50 disabled:cursor-not-allowed">
+              className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] disabled:opacity-50 disabled:cursor-not-allowed">
               <option value="member">Membro</option>
               <option value="setor">Adm Setor</option>
               <option value="master">Adm Master</option>
             </select>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-white/70">
+          <label className="flex items-center gap-2 text-sm text-foreground/70">
             <input type="checkbox" checked={profile.active} disabled={isSelf}
               onChange={(e) => setUserActive.mutate({ data: { userId: profile.id, active: e.target.checked } })} />
             Ativo
           </label>
 
-          <label className="flex items-center gap-2 text-sm text-white/70" title="Não conta pontos no ranking de Top Membros">
+          <label className="flex items-center gap-2 text-sm text-foreground/70" title="Não conta pontos no ranking de Top Membros">
             <input type="checkbox" checked={profile.excludeFromRanking ?? false}
               onChange={(e) => setExcludeFromRanking.mutate({ data: { userId: profile.id, excludeFromRanking: e.target.checked } })} />
             Excluir do ranking
@@ -216,7 +216,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
 
         {cargos.length > 0 && (
           <div>
-            <label className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1.5">
+            <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">
               Cargos (pode ter mais de um)
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -229,8 +229,8 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
                     onClick={() => toggleCargo(c.id)}
                     className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border"
                     style={on
-                      ? { backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))", borderColor: "rgb(var(--lz-brand-rgb))" }
-                      : { color: "rgba(255,255,255,0.5)", borderColor: "rgba(255,255,255,0.15)" }}
+                      ? { backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)", borderColor: "rgb(var(--lz-brand-rgb))" }
+                      : { color: "color-mix(in srgb, var(--foreground) 50%, transparent)", borderColor: "color-mix(in srgb, var(--foreground) 15%, transparent)" }}
                   >
                     {c.name}
                   </button>
@@ -241,8 +241,8 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
         )}
       </div>
 
-      <div className="pt-4 mt-4 border-t border-white/[0.06]">
-        <label className="flex items-center gap-2 text-sm text-white/70 mb-2" title="Quando ligado, essa pessoa só enxerga (em qualquer lugar do app) os clientes marcados abaixo">
+      <div className="pt-4 mt-4 border-t border-foreground/6">
+        <label className="flex items-center gap-2 text-sm text-foreground/70 mb-2" title="Quando ligado, essa pessoa só enxerga (em qualquer lugar do app) os clientes marcados abaixo">
           <input type="checkbox" checked={clientRestricted} disabled={isSelf} onChange={toggleClientRestricted} />
           Restringir a clientes específicos
         </label>
@@ -252,7 +252,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
               value={clientSearch} onChange={(e) => setClientSearch(e.target.value)}
               placeholder="Buscar cliente..."
               disabled={isSelf}
-              className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-2 disabled:opacity-50"
+              className="w-full bg-background border border-foreground/10 rounded-md px-3 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-2 disabled:opacity-50"
             />
             <div className="max-h-40 overflow-y-auto space-y-0.5 pr-1">
               {allClients
@@ -260,15 +260,15 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
                 .map((c) => {
                   const on = selectedClientIds.includes(c.id);
                   return (
-                    <label key={c.id} className="flex items-center gap-2 text-xs text-white/70 px-1 py-1 rounded hover:bg-white/5 cursor-pointer">
+                    <label key={c.id} className="flex items-center gap-2 text-xs text-foreground/70 px-1 py-1 rounded hover:bg-foreground/5 cursor-pointer">
                       <input type="checkbox" checked={on} disabled={isSelf} onChange={() => toggleClientAccess(c.id)} />
                       <span className="truncate">{c.name}</span>
                     </label>
                   );
                 })}
-              {allClients.length === 0 && <p className="text-[11px] text-white/30 px-1">Nenhum cliente cadastrado.</p>}
+              {allClients.length === 0 && <p className="text-[11px] text-foreground/30 px-1">Nenhum cliente cadastrado.</p>}
             </div>
-            <p className="text-[10.5px] text-white/30 mt-1.5">
+            <p className="text-[10.5px] text-foreground/30 mt-1.5">
               {selectedClientIds.length === 0
                 ? "Nenhum cliente selecionado — a pessoa não verá nenhum cliente."
                 : `${selectedClientIds.length} cliente${selectedClientIds.length === 1 ? "" : "s"} liberado${selectedClientIds.length === 1 ? "" : "s"}.`}
@@ -277,21 +277,21 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
         )}
       </div>
 
-      <div className="pt-4 mt-4 border-t border-white/[0.06]">
+      <div className="pt-4 mt-4 border-t border-foreground/6">
         <div className="flex items-center gap-1.5 mb-3">
-          <span className="text-[10px] uppercase font-semibold tracking-wider text-white/40">Remuneração</span>
+          <span className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40">Remuneração</span>
           <InfoTip text="Usado pra calcular o custo-hora dessa pessoa na Margem por cliente: salário mensal ÷ horas mensais estimadas da escala abaixo. Só master vê e edita isso." />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-x-6 gap-y-3">
           <div className="space-y-3">
             <div>
-              <label className="block text-[11px] text-white/50 mb-1">Salário mensal (R$)</label>
+              <label className="block text-[11px] text-foreground/50 mb-1">Salário mensal (R$)</label>
               <input type="number" min="0" step="0.01" value={salary} onChange={(e) => setSalary(e.target.value)}
                 placeholder="Não definido"
-                className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+                className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
             </div>
-            <div className="text-[11px] text-white/50">
-              Custo-hora estimado: <span className="text-white font-semibold">{money(previewHourlyCost)}</span>
+            <div className="text-[11px] text-foreground/50">
+              Custo-hora estimado: <span className="text-foreground font-semibold">{money(previewHourlyCost)}</span>
             </div>
             <button onClick={savePay} disabled={setMemberPay.isPending}
               className="w-full rounded-md px-3 py-1.5 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
@@ -300,16 +300,16 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
             </button>
           </div>
           <div>
-            <label className="block text-[11px] text-white/50 mb-1.5">Escala semanal</label>
+            <label className="block text-[11px] text-foreground/50 mb-1.5">Escala semanal</label>
             <div className="grid grid-cols-7 gap-1">
               {WEEK_DAYS.map((day) => (
                 <div key={day} className="flex flex-col items-center gap-1">
-                  <span className="text-[9px] text-white/40 font-semibold">{WEEK_DAY_LABEL[day]}</span>
+                  <span className="text-[9px] text-foreground/40 font-semibold">{WEEK_DAY_LABEL[day]}</span>
                   <select
                     value={schedule[day]}
                     onChange={(e) => setSchedule((s) => ({ ...s, [day]: Number(e.target.value) as 0 | 1 | 2 }))}
                     title={schedule[day] === 2 ? "Período integral (8h)" : schedule[day] === 1 ? "Meio período (4h)" : "Não trabalha"}
-                    className="w-full bg-[#0D0D0D] border border-white/10 rounded px-0.5 py-1.5 text-[10px] text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                    className="w-full bg-background border border-foreground/10 rounded px-0.5 py-1.5 text-[10px] text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
                   >
                     <option value={0}>—</option>
                     <option value={1}>½</option>
@@ -322,29 +322,29 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 pt-3 mt-3 border-t border-white/[0.06]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 pt-3 mt-3 border-t border-foreground/6">
         <div className="flex flex-col gap-1.5">
           <button
             onClick={() => { setViewAs(profile.id); onClose(); navigate({ to: "/minhas-tarefas" }); }}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-foreground/70 hover:text-foreground hover:bg-foreground/5 transition-colors text-left"
           ><ListChecks size={15} /> Ver demandas</button>
           <button
             onClick={handleResetPassword}
             disabled={adminSendPasswordReset.isPending}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left disabled:opacity-40"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-foreground/70 hover:text-foreground hover:bg-foreground/5 transition-colors text-left disabled:opacity-40"
           ><KeyRound size={15} /> Resetar senha (por e-mail)</button>
         </div>
         <div className="flex flex-col gap-1.5">
           <button
             onClick={() => setShowPasswordField((v) => !v)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-foreground/70 hover:text-foreground hover:bg-foreground/5 transition-colors text-left"
           ><KeyRound size={15} /> Definir senha diretamente</button>
           {showPasswordField && (
             <div className="flex items-center gap-2 px-3 pb-1">
               <input
                 type="text" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Nova senha (mín. 8 caracteres)"
-                className="flex-1 bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                className="flex-1 bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
               />
               <button
                 onClick={handleSetPassword}
@@ -356,7 +356,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
           <button
             onClick={handleRemove}
             disabled={isSelf}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-white/50 hover:text-red-400 hover:bg-red-500/10 transition-colors text-left disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors text-left disabled:opacity-30 disabled:cursor-not-allowed"
           ><Trash2 size={15} /> Remover</button>
         </div>
       </div>

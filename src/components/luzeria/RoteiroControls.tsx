@@ -66,7 +66,7 @@ export function RoteiroControls({
   const clientStatus = status?.clientStatus ?? "pending";
 
   return (
-    <div className="mt-3 pt-3 border-t border-white/[0.06]">
+    <div className="mt-3 pt-3 border-t border-foreground/6">
       {clientStatus !== "pending" && (
         <div
           className="mb-2.5 flex items-start gap-2 rounded-lg px-2.5 py-2"
@@ -76,11 +76,11 @@ export function RoteiroControls({
           }}
         >
           {clientStatus === "aprovado"
-            ? <CheckCircle2 size={13} className="mt-0.5 shrink-0" style={{ color: "rgb(var(--lz-brand-rgb))" }} />
+            ? <CheckCircle2 size={13} className="mt-0.5 shrink-0" style={{ color: "var(--lz-accent-ink)" }} />
             : <PencilLine size={13} className="mt-0.5 shrink-0 text-red-400" />}
-          <div className="text-[11.5px] leading-relaxed" style={{ color: clientStatus === "aprovado" ? "rgb(var(--lz-brand-rgb))" : "#f87171" }}>
+          <div className="text-[11.5px] leading-relaxed" style={{ color: clientStatus === "aprovado" ? "var(--lz-accent-ink)" : "#f87171" }}>
             <span className="font-semibold">{clientStatus === "aprovado" ? "Cliente aprovou" : "Cliente pediu ajuste"}</span>
-            {status?.clientNote && <span className="text-white/70"> — {status.clientNote}</span>}
+            {status?.clientNote && <span className="text-foreground/70"> — {status.clientNote}</span>}
           </div>
         </div>
       )}
@@ -90,8 +90,8 @@ export function RoteiroControls({
           onClick={() => setApprovalStatus("aprovado")}
           className={chipBase}
           style={{
-            backgroundColor: current === "aprovado" ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.05)",
-            color: current === "aprovado" ? "#0D0D0D" : "rgba(255,255,255,0.6)",
+            backgroundColor: current === "aprovado" ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 5%, transparent)",
+            color: current === "aprovado" ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
           }}
         >
           <CheckCircle2 size={12} /> Aprovado
@@ -101,16 +101,16 @@ export function RoteiroControls({
           onClick={() => setApprovalStatus("ajustar")}
           className={chipBase}
           style={{
-            backgroundColor: current === "ajustar" ? "rgba(248,113,113,0.18)" : "rgba(255,255,255,0.05)",
-            color: current === "ajustar" ? "#f87171" : "rgba(255,255,255,0.6)",
+            backgroundColor: current === "ajustar" ? "rgba(248,113,113,0.18)" : "color-mix(in srgb, var(--foreground) 5%, transparent)",
+            color: current === "ajustar" ? "#f87171" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
           }}
         >
           <PencilLine size={12} /> Ajustar
         </button>
         <button type="button" onClick={toggleGravado} className={chipBase}
           style={{
-            backgroundColor: gravado ? "rgba(var(--lz-brand-light-rgb),0.18)" : "rgba(255,255,255,0.05)",
-            color: gravado ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.6)",
+            backgroundColor: gravado ? "rgba(var(--lz-brand-light-rgb),0.18)" : "color-mix(in srgb, var(--foreground) 5%, transparent)",
+            color: gravado ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
           }}
         >
           <Video size={12} /> {gravado ? "Gravado" : "Marcar gravado"}
@@ -120,7 +120,7 @@ export function RoteiroControls({
             type="button"
             onClick={() => { openItem(contentItemId); flash(contentItemId); }}
             className={chipBase}
-            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "rgb(var(--lz-brand-rgb))" }}
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}
           >
             <CheckCircle2 size={12} /> Enviado pro Reels — abrir
           </button>
@@ -130,7 +130,7 @@ export function RoteiroControls({
             onClick={sendToReels}
             disabled={addContentItem.isPending}
             className={`${chipBase} disabled:opacity-50`}
-            style={{ backgroundColor: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)" }}
+            style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 5%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
           >
             <Send size={12} /> Enviar pro Reels ({formatMonth(selectedMonthKey)})
           </button>
@@ -144,7 +144,7 @@ export function RoteiroControls({
             onBlur={saveNote}
             placeholder="O que precisa ajustar nesse roteiro?"
             rows={2}
-            className="w-full bg-transparent text-[12.5px] text-white/80 outline-none resize-y placeholder:text-white/30"
+            className="w-full bg-transparent text-[12.5px] text-foreground/80 outline-none resize-y placeholder:text-foreground/30"
           />
         </div>
       )}

@@ -123,9 +123,9 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
     return (
       <div className="text-center">
         <div className="text-2xl mb-2">✅</div>
-        <p className="text-white font-semibold mb-1">{result.imported} cliente{result.imported === 1 ? "" : "s"} importado{result.imported === 1 ? "" : "s"}!</p>
+        <p className="text-foreground font-semibold mb-1">{result.imported} cliente{result.imported === 1 ? "" : "s"} importado{result.imported === 1 ? "" : "s"}!</p>
         {result.skipped > 0 && (
-          <p className="text-white/50 text-xs mb-4">{result.skipped} não coube{result.skipped === 1 ? "" : "ram"} no limite do seu plano — dá pra adicionar depois ou fazer upgrade.</p>
+          <p className="text-foreground/50 text-xs mb-4">{result.skipped} não coube{result.skipped === 1 ? "" : "ram"} no limite do seu plano — dá pra adicionar depois ou fazer upgrade.</p>
         )}
         <button onClick={onDone} className="lz-btn-primary text-sm px-5 py-2.5 rounded-md mt-3">Ir para o painel</button>
       </div>
@@ -135,7 +135,7 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
   if (names) {
     return (
       <div>
-        <p className="text-white/60 text-xs mb-3">Confere os nomes antes de importar (edite se precisar):</p>
+        <p className="text-foreground/60 text-xs mb-3">Confere os nomes antes de importar (edite se precisar):</p>
         <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
           {names.map((n, i) => (
             <input key={i} value={n} onChange={(e) => setNames((prev) => prev!.map((x, xi) => xi === i ? e.target.value : x))}
@@ -155,13 +155,13 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
   if (!provider) {
     return (
       <div>
-        <p className="text-white/60 text-sm mb-5">Já tem seus clientes organizados no Trello, ClickUp ou Notion? Importa de lá pra não digitar tudo de novo.</p>
+        <p className="text-foreground/60 text-sm mb-5">Já tem seus clientes organizados no Trello, ClickUp ou Notion? Importa de lá pra não digitar tudo de novo.</p>
         <div className="grid grid-cols-3 gap-3 mb-3">
-          <button onClick={() => setProvider("trello")} className="bg-white/5 border border-white/10 rounded-lg py-4 text-sm font-semibold hover:bg-white/10 transition">Trello</button>
-          <button onClick={() => setProvider("clickup")} className="bg-white/5 border border-white/10 rounded-lg py-4 text-sm font-semibold hover:bg-white/10 transition">ClickUp</button>
-          <button onClick={() => setProvider("notion")} className="bg-white/5 border border-white/10 rounded-lg py-4 text-sm font-semibold hover:bg-white/10 transition">Notion</button>
+          <button onClick={() => setProvider("trello")} className="bg-foreground/5 border border-foreground/10 rounded-lg py-4 text-sm font-semibold hover:bg-foreground/10 transition">Trello</button>
+          <button onClick={() => setProvider("clickup")} className="bg-foreground/5 border border-foreground/10 rounded-lg py-4 text-sm font-semibold hover:bg-foreground/10 transition">ClickUp</button>
+          <button onClick={() => setProvider("notion")} className="bg-foreground/5 border border-foreground/10 rounded-lg py-4 text-sm font-semibold hover:bg-foreground/10 transition">Notion</button>
         </div>
-        <button onClick={onSkip} className="text-white/40 text-xs hover:text-white/70 transition w-full text-center mt-2">Pular por agora →</button>
+        <button onClick={onSkip} className="text-foreground/40 text-xs hover:text-foreground/70 transition w-full text-center mt-2">Pular por agora →</button>
       </div>
     );
   }
@@ -171,18 +171,18 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
       <div>
         {provider === "trello" ? (
           <>
-            <p className="text-white/60 text-xs mb-3">
+            <p className="text-foreground/60 text-xs mb-3">
               1. Clica em "Conectar com Trello", autorize o acesso (somente leitura).<br />
               2. O Trello vai mostrar um código na tela — copia e cola aqui embaixo.
             </p>
             <button onClick={connectTrello} className="lz-btn-ghost text-xs px-4 py-2 rounded-md mb-3">Conectar com Trello →</button>
           </>
         ) : provider === "clickup" ? (
-          <p className="text-white/60 text-xs mb-3">
+          <p className="text-foreground/60 text-xs mb-3">
             No ClickUp, vai em Configurações → Apps → "Personal API Token" → Gerar, copia e cola aqui embaixo.
           </p>
         ) : (
-          <p className="text-white/60 text-xs mb-3">
+          <p className="text-foreground/60 text-xs mb-3">
             1. Vai em <b>notion.so/my-integrations</b>, cria uma integração interna e copia o "Internal Integration Secret".<br />
             2. Abre a página/database com sua lista de clientes no Notion, clica em "•••" → "Conectar a" → escolhe a integração que você criou (sem esse passo, o Notion não deixa a integração ver nada, mesmo com o token certo).<br />
             3. Cola o secret aqui embaixo.
@@ -203,10 +203,10 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
   if (provider === "clickup" && !teamId) {
     return (
       <div>
-        <p className="text-white/60 text-xs mb-3">Você tem mais de um workspace no ClickUp — escolhe qual:</p>
+        <p className="text-foreground/60 text-xs mb-3">Você tem mais de um workspace no ClickUp — escolhe qual:</p>
         <div className="space-y-2">
           {topItems.map((t) => (
-            <button key={t.id} onClick={() => pickTeam(t.id)} className="w-full text-left bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm hover:bg-white/10 transition">
+            <button key={t.id} onClick={() => pickTeam(t.id)} className="w-full text-left bg-foreground/5 border border-foreground/10 rounded-md px-3 py-2 text-sm hover:bg-foreground/10 transition">
               {t.name}
             </button>
           ))}
@@ -219,10 +219,10 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
     <div>
       {provider !== "notion" && (
         <div className="flex gap-2 mb-4 text-xs">
-          <button onClick={() => setMode("nested")} className={`px-3 py-1.5 rounded-full ${mode === "nested" ? "bg-white text-black" : "bg-white/10 text-white/60"}`}>
+          <button onClick={() => setMode("nested")} className={`px-3 py-1.5 rounded-full ${mode === "nested" ? "bg-foreground text-black" : "bg-foreground/10 text-foreground/60"}`}>
             Cada lista é um cliente
           </button>
-          <button onClick={() => setMode("top")} className={`px-3 py-1.5 rounded-full ${mode === "top" ? "bg-white text-black" : "bg-white/10 text-white/60"}`}>
+          <button onClick={() => setMode("top")} className={`px-3 py-1.5 rounded-full ${mode === "top" ? "bg-foreground text-black" : "bg-foreground/10 text-foreground/60"}`}>
             Cada {topLabel} é um cliente
           </button>
         </div>
@@ -231,7 +231,7 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
       {mode === "top" && provider !== "notion" ? (
         <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
           {topItems.map((item) => (
-            <label key={item.id} className="flex items-center gap-2 text-sm bg-white/5 rounded-md px-3 py-2 cursor-pointer">
+            <label key={item.id} className="flex items-center gap-2 text-sm bg-foreground/5 rounded-md px-3 py-2 cursor-pointer">
               <input type="checkbox" checked={selected[item.id] ?? true} onChange={(e) => setSelected((s) => ({ ...s, [item.id]: e.target.checked }))} />
               {item.name}
             </label>
@@ -239,19 +239,19 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
         </div>
       ) : !nestedParentId ? (
         <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
-          <p className="text-white/50 text-xs mb-2">Escolhe o {topLabel} com a lista de clientes:</p>
+          <p className="text-foreground/50 text-xs mb-2">Escolhe o {topLabel} com a lista de clientes:</p>
           {topItems.map((item) => (
-            <button key={item.id} onClick={() => pickNestedParent(item.id)} className="w-full text-left bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm hover:bg-white/10 transition">
+            <button key={item.id} onClick={() => pickNestedParent(item.id)} className="w-full text-left bg-foreground/5 border border-foreground/10 rounded-md px-3 py-2 text-sm hover:bg-foreground/10 transition">
               {item.name}
             </button>
           ))}
         </div>
       ) : loading ? (
-        <p className="text-white/40 text-sm mb-4">Buscando listas…</p>
+        <p className="text-foreground/40 text-sm mb-4">Buscando listas…</p>
       ) : (
         <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
           {nestedItems.map((item) => (
-            <label key={item.id} className="flex items-center gap-2 text-sm bg-white/5 rounded-md px-3 py-2 cursor-pointer">
+            <label key={item.id} className="flex items-center gap-2 text-sm bg-foreground/5 rounded-md px-3 py-2 cursor-pointer">
               <input type="checkbox" checked={selected[item.id] ?? true} onChange={(e) => setSelected((s) => ({ ...s, [item.id]: e.target.checked }))} />
               {item.name}
             </label>

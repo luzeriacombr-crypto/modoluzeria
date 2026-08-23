@@ -115,17 +115,17 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
 
   return (
     <div className={`p-10 mx-auto ${tab === "forum" ? "max-w-6xl" : "max-w-4xl"}`}>
-      <h1 className="text-[32px] font-bold text-white tracking-tight">Central de ajuda</h1>
-      <p className="text-sm text-white/50 mt-2">Dúvidas frequentes, tutoriais, o histórico do que você já reportou e o fórum entre agências.</p>
+      <h1 className="text-[32px] font-bold text-foreground tracking-tight">Central de ajuda</h1>
+      <p className="text-sm text-foreground/50 mt-2">Dúvidas frequentes, tutoriais, o histórico do que você já reportou e o fórum entre agências.</p>
 
-      <div className="flex items-center gap-1 border-b border-white/10 mt-6 mb-6 flex-wrap">
+      <div className="flex items-center gap-1 border-b border-foreground/10 mt-6 mb-6 flex-wrap">
         {tabs.map((t) => {
           const active = tab === t.id;
           return (
             <button key={t.id} onClick={() => setTab(t.id)}
               className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
               style={{
-                color: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.5)",
+                color: active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
                 borderColor: active ? "rgb(var(--lz-brand-rgb))" : "transparent",
               }}>
               {t.label}
@@ -138,7 +138,7 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
         <div className="space-y-8">
           {FAQ.map((group) => (
             <div key={group.category}>
-              <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3">{group.category}</h2>
+              <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3">{group.category}</h2>
               <div className="space-y-3">
                 {group.items.map((item) => <FaqItem key={item.q} question={item.q} answer={item.a} />)}
               </div>
@@ -150,11 +150,11 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
       {tab === "tutoriais" && (
         <div className="space-y-4">
           {TUTORIALS.map((t) => (
-            <div key={t.title} className="bg-[#1C1C1C] rounded-lg p-5">
-              <div className="font-bold text-white mb-3">{t.title}</div>
+            <div key={t.title} className="bg-card rounded-lg p-5">
+              <div className="font-bold text-foreground mb-3">{t.title}</div>
               <ol className="space-y-1.5 list-decimal list-inside">
                 {t.steps.map((s, i) => (
-                  <li key={i} className="text-sm text-white/60 leading-relaxed">{s}</li>
+                  <li key={i} className="text-sm text-foreground/60 leading-relaxed">{s}</li>
                 ))}
               </ol>
               {t.videoUrl && (
@@ -162,7 +162,7 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
                   href={t.videoUrl}
                   target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mt-4 text-xs font-semibold rounded-full transition-opacity hover:opacity-80"
-                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
                 >
                   <Video size={13} /> Vídeo: como conectar o Google Drive
                 </a>
@@ -170,7 +170,7 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
               {t.images && t.images.length > 0 && (
                 <div className={`mt-4 grid gap-3 ${t.images.length > 1 ? "sm:grid-cols-2" : ""}`}>
                   {t.images.map((img) => (
-                    <img key={img.src} src={img.src} alt={img.alt} className="w-full h-auto rounded-md border border-white/10" />
+                    <img key={img.src} src={img.src} alt={img.alt} className="w-full h-auto rounded-md border border-foreground/10" />
                   ))}
                 </div>
               )}
@@ -189,15 +189,15 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
+    <div className="bg-card rounded-lg overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between gap-3 text-left px-5 py-4"
       >
-        <span className="font-semibold text-sm text-white">{question}</span>
-        <ChevronDown size={16} className="shrink-0 text-white/50 transition-transform" style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
+        <span className="font-semibold text-sm text-foreground">{question}</span>
+        <ChevronDown size={16} className="shrink-0 text-foreground/50 transition-transform" style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
       </button>
-      {open && <p className="text-white/60 text-sm leading-relaxed px-5 pb-4">{answer}</p>}
+      {open && <p className="text-foreground/60 text-sm leading-relaxed px-5 pb-4">{answer}</p>}
     </div>
   );
 }
@@ -208,7 +208,7 @@ const STATUS_LABEL: Record<BugReportStatus, string> = {
   resolvido: "Resolvido",
 };
 const STATUS_STYLE: Record<BugReportStatus, { bg: string; color: string }> = {
-  novo: { bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" },
+  novo: { bg: "color-mix(in srgb, var(--foreground) 8%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" },
   em_andamento: { bg: "rgba(250,204,21,0.15)", color: "#FACC15" },
   resolvido: { bg: "rgba(74,222,128,0.15)", color: "#4ADE80" },
 };
@@ -239,26 +239,26 @@ function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugRepo
   }
 
   return (
-    <div className="bg-[#1C1C1C] rounded-lg p-5">
+    <div className="bg-card rounded-lg p-5">
       <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-        <div className="text-xs text-white/40">
+        <div className="text-xs text-foreground/40">
           {new Date(report.createdAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-          {showOrigin && asAll.orgName && <> · <span className="text-white/60 font-semibold">{asAll.orgName}</span> · {asAll.reporterName}</>}
+          {showOrigin && asAll.orgName && <> · <span className="text-foreground/60 font-semibold">{asAll.orgName}</span> · {asAll.reporterName}</>}
         </div>
         <div className="flex items-center gap-2">
           {!showOrigin && <StatusBadge status={report.status} />}
           {report.screenshotUrl && (
             <a href={report.screenshotUrl} target="_blank" rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-[rgb(var(--lz-brand-rgb))] hover:underline shrink-0">
+              className="inline-flex items-center gap-1 text-xs text-[var(--lz-accent-ink)] hover:underline shrink-0">
               <ImageIcon size={12} /> Ver print
             </a>
           )}
         </div>
       </div>
-      <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{report.message}</p>
+      <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{report.message}</p>
       <div className="flex items-center gap-3 mt-2 flex-wrap">
         {report.pageUrl && (
-          <a href={report.pageUrl} className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-white/60">
+          <a href={report.pageUrl} className="inline-flex items-center gap-1 text-xs text-foreground/40 hover:text-foreground/60">
             <ExternalLink size={11} /> {report.pageUrl}
           </a>
         )}
@@ -270,7 +270,7 @@ function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugRepo
         )}
       </div>
       {showOrigin && (
-        <div className="flex items-center gap-1.5 mt-4 pt-4 border-t border-white/[0.06]">
+        <div className="flex items-center gap-1.5 mt-4 pt-4 border-t border-foreground/6">
           {STATUS_ORDER.map((s) => {
             const active = report.status === s;
             return (
@@ -283,8 +283,8 @@ function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugRepo
                 )}
                 className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-all duration-200 disabled:cursor-default hover:brightness-110"
                 style={{
-                  backgroundColor: active ? STATUS_STYLE[s].bg : "rgba(255,255,255,0.04)",
-                  color: active ? STATUS_STYLE[s].color : "rgba(255,255,255,0.4)",
+                  backgroundColor: active ? STATUS_STYLE[s].bg : "color-mix(in srgb, var(--foreground) 4%, transparent)",
+                  color: active ? STATUS_STYLE[s].color : "color-mix(in srgb, var(--foreground) 40%, transparent)",
                 }}
               >
                 {STATUS_LABEL[s]}
@@ -301,7 +301,7 @@ function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugRepo
             onKeyDown={(e) => { if (e.key === "Enter") sendReply(); }}
             placeholder="Mandar uma mensagem pra quem reportou (aparece nas notificações dela)…"
             maxLength={500}
-            className="flex-1 bg-[#141414] border border-white/10 rounded-md px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+            className="flex-1 bg-card border border-foreground/10 rounded-md px-3 py-2 text-xs text-foreground placeholder:text-foreground/30 outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
           />
           <button
             onClick={sendReply}
@@ -319,14 +319,14 @@ function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugRepo
 
 function MinhasSolicitacoes() {
   const { data = [], isLoading } = useQuery(myBugReportsQO());
-  if (isLoading) return <div className="text-sm text-white/40">Carregando…</div>;
-  if (data.length === 0) return <div className="text-sm text-white/40 px-1">Você ainda não reportou nada por aqui.</div>;
+  if (isLoading) return <div className="text-sm text-foreground/40">Carregando…</div>;
+  if (data.length === 0) return <div className="text-sm text-foreground/40 px-1">Você ainda não reportou nada por aqui.</div>;
   return <div className="space-y-3">{data.map((r) => <BugReportRow key={r.id} report={r} />)}</div>;
 }
 
 function TodasSolicitacoes() {
   const { data = [], isLoading } = useQuery(allBugReportsQO());
-  if (isLoading) return <div className="text-sm text-white/40">Carregando…</div>;
-  if (data.length === 0) return <div className="text-sm text-white/40 px-1">Nenhuma solicitação de nenhuma agência ainda.</div>;
+  if (isLoading) return <div className="text-sm text-foreground/40">Carregando…</div>;
+  if (data.length === 0) return <div className="text-sm text-foreground/40 px-1">Nenhuma solicitação de nenhuma agência ainda.</div>;
   return <div className="space-y-3">{data.map((r) => <BugReportRow key={r.id} report={r} showOrigin />)}</div>;
 }

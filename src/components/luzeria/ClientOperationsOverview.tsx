@@ -32,7 +32,7 @@ export function ClientOperationsOverview() {
   if (!me) return null;
   const isAdmin = me.role === "master" || me.role === "setor";
   if (!isAdmin) {
-    return <div className="p-10 text-white/60 text-sm">Acesso restrito à equipe da agência.</div>;
+    return <div className="p-10 text-foreground/60 text-sm">Acesso restrito à equipe da agência.</div>;
   }
   return <ClientOperationsOverviewContent />;
 }
@@ -40,35 +40,35 @@ export function ClientOperationsOverview() {
 function IntroBanner() {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div className="text-xs text-white/60 leading-relaxed bg-white/[0.03] border border-white/10 rounded-lg px-4 py-3">
+    <div className="text-xs text-foreground/60 leading-relaxed bg-foreground/[0.03] border border-foreground/10 rounded-lg px-4 py-3">
       {expanded ? (
         <div className="space-y-2">
           <p>
             Essa tela junta, num só lugar, o ciclo operacional de cada cliente ativo com operação recorrente — clientes{" "}
-            <span className="text-white/80 font-medium">Avulsos</span> não entram aqui, já que são trabalhos pontuais sem
+            <span className="text-foreground/80 font-medium">Avulsos</span> não entram aqui, já que são trabalhos pontuais sem
             ciclo mensal de gravação.
           </p>
           <p>
-            A <span className="text-white/80 font-medium">última gravação</span> e a quantidade de{" "}
-            <span className="text-white/80 font-medium">vídeos gravados</span> são puxadas automaticamente da atividade de
-            Gravação mais recente registrada em <span className="text-white/80 font-medium">Mais Atividades</span> de cada
+            A <span className="text-foreground/80 font-medium">última gravação</span> e a quantidade de{" "}
+            <span className="text-foreground/80 font-medium">vídeos gravados</span> são puxadas automaticamente da atividade de
+            Gravação mais recente registrada em <span className="text-foreground/80 font-medium">Mais Atividades</span> de cada
             cliente — se um cliente aparece em branco, é só cadastrar a gravação dele por lá que a informação aparece aqui
-            sozinha. A <span className="text-white/80 font-medium">próxima gravação prevista</span> é calculada sozinha
+            sozinha. A <span className="text-foreground/80 font-medium">próxima gravação prevista</span> é calculada sozinha
             comparando isso com a meta mensal de vídeos do cliente (campo "Reels / mês" na Configuração do cliente, dentro da
             Ficha) — quem grava exatamente a meta volta em 30 dias; quem grava mais fica com mais folga, quem grava menos volta
             mais cedo.
           </p>
           <p>
-            Já a <span className="text-white/80 font-medium">última análise do mês</span> vem da{" "}
-            <span className="text-white/80 font-medium">Jornada do cliente</span> — pra isso funcionar, marque em{" "}
-            <span className="text-white/80 font-medium">Configurações → Jornada do cliente</span> qual etapa representa
+            Já a <span className="text-foreground/80 font-medium">última análise do mês</span> vem da{" "}
+            <span className="text-foreground/80 font-medium">Jornada do cliente</span> — pra isso funcionar, marque em{" "}
+            <span className="text-foreground/80 font-medium">Configurações → Jornada do cliente</span> qual etapa representa
             "Análise do mês" (passe o mouse ou toque no <Info size={10} className="inline -mt-0.5" /> de cada coluna abaixo
             pra entender o que ela mostra). Se não for útil pra sua agência, dá pra desligar em{" "}
-            <span className="text-white/80 font-medium">Configurações → Geral</span>, na seção de recursos opcionais.
+            <span className="text-foreground/80 font-medium">Configurações → Geral</span>, na seção de recursos opcionais.
           </p>
           <button
             onClick={() => setExpanded(false)}
-            className="text-[rgb(var(--lz-brand-rgb))] font-semibold hover:underline"
+            className="text-[var(--lz-accent-ink)] font-semibold hover:underline"
           >
             Ver menos
           </button>
@@ -80,7 +80,7 @@ function IntroBanner() {
           </p>
           <button
             onClick={() => setExpanded(true)}
-            className="shrink-0 text-[rgb(var(--lz-brand-rgb))] font-semibold hover:underline"
+            className="shrink-0 text-[var(--lz-accent-ink)] font-semibold hover:underline"
           >
             Ver mais
           </button>
@@ -97,55 +97,55 @@ function ClientOperationsOverviewContent() {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-4">
       <div className="flex items-center gap-2">
-        <LayoutGrid size={16} className="text-[rgb(var(--lz-brand-rgb))]" />
-        <h1 className="text-white font-semibold text-lg">Visão Geral</h1>
-        <span className="text-white/40 text-sm">— {rows.length} clientes</span>
+        <LayoutGrid size={16} className="text-[var(--lz-accent-ink)]" />
+        <h1 className="text-foreground font-semibold text-lg">Visão Geral</h1>
+        <span className="text-foreground/40 text-sm">— {rows.length} clientes</span>
       </div>
 
       <IntroBanner />
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-white/40" size={32} /></div>
+        <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-foreground/40" size={32} /></div>
       ) : rows.length === 0 ? (
-        <div className="text-center py-12 px-6 bg-white/[0.03] border border-white/10 rounded-2xl">
-          <p className="text-white/50 text-sm">Nenhum cliente ativo encontrado.</p>
+        <div className="text-center py-12 px-6 bg-foreground/[0.03] border border-foreground/10 rounded-2xl">
+          <p className="text-foreground/50 text-sm">Nenhum cliente ativo encontrado.</p>
         </div>
       ) : (
-        <div className="bg-[#161616] border border-white/[0.07] rounded-xl overflow-hidden overflow-x-auto">
+        <div className="bg-card border border-foreground/7 rounded-xl overflow-hidden overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/[0.07]">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">
+              <tr className="border-b border-foreground/7">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1">
                     Cliente
                     <InfoTip text="Nome do cliente. Clique pra abrir a ficha completa dele, com todos os detalhes." />
                   </span>
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1">
                     Etapa atual
                     <InfoTip text="Em qual etapa da Jornada do Cliente esse cliente está agora — a mesma configurada em Configurações → Jornada do cliente." />
                   </span>
                 </th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <InfoTip text="Data da atividade de Gravação mais recente registrada em Mais Atividades pra esse cliente. Puxada automaticamente — se estiver em branco, cadastre a gravação em Mais Atividades." />
                     Última gravação
                   </span>
                 </th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <InfoTip text="Soma da quantidade de vídeos registrados em Mais Atividades (seção Gravação) no mês da última gravação, sobre a meta mensal do cliente (campo 'Reels / mês' na ficha, ou 6 se não estiver configurado). Puxado automaticamente." />
                     Vídeos gravados
                   </span>
                 </th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <InfoTip text="Calculada a partir de quantos meses de meta os vídeos gravados cobrem: gravou exatamente a meta = 30 dias; gravou mais = prazo maior (banco de vídeos); gravou menos = prazo menor. Fica vermelho quando já passou do prazo." />
                     Próxima prevista
                   </span>
                 </th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <InfoTip text="Há quantos dias o cliente esteve, pela última vez, na etapa marcada como 'Análise do mês' na Jornada." />
                     Última análise
@@ -157,8 +157,8 @@ function ClientOperationsOverviewContent() {
               {rows.map((r) => {
                 const due = dueLabel(r.nextGravacaoDue);
                 return (
-                  <tr key={r.clientId} className="border-b border-white/[0.04] last:border-0">
-                    <td className="px-4 py-3 text-sm text-white">
+                  <tr key={r.clientId} className="border-b border-foreground/4 last:border-0">
+                    <td className="px-4 py-3 text-sm text-foreground">
                       <button onClick={() => openFicha(r.clientId)} className="flex items-center gap-2 hover:underline">
                         <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: r.clientColor }} />
                         {r.clientName}
@@ -167,21 +167,21 @@ function ClientOperationsOverviewContent() {
                     <td className="px-4 py-3 text-sm">
                       {r.stageName ? (
                         <span className="inline-flex items-center px-2 py-1 rounded text-[11px] font-semibold"
-                          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+                          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
                           {r.stageName}
                         </span>
-                      ) : <span className="text-white/30">—</span>}
+                      ) : <span className="text-foreground/30">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-sm text-white/70 text-right">
+                    <td className="px-4 py-3 text-sm text-foreground/70 text-right">
                       {r.lastGravacaoAt ? `${formatDateBR(r.lastGravacaoAt)} (${daysAgoLabel(r.lastGravacaoAt)})` : "—"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-white/70 text-right">
+                    <td className="px-4 py-3 text-sm text-foreground/70 text-right">
                       {r.lastGravacaoAt ? `${r.gravacaoVideoCount ?? 0} / ${r.gravacaoMonthlyTarget}` : "—"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold" style={{ color: due.overdue ? "#FF6B6B" : "rgba(255,255,255,0.7)" }}>
+                    <td className="px-4 py-3 text-sm text-right font-semibold" style={{ color: due.overdue ? "#FF6B6B" : "color-mix(in srgb, var(--foreground) 70%, transparent)" }}>
                       {due.text}
                     </td>
-                    <td className="px-4 py-3 text-sm text-white/70 text-right">{daysAgoLabel(r.lastAnaliseAt)}</td>
+                    <td className="px-4 py-3 text-sm text-foreground/70 text-right">{daysAgoLabel(r.lastAnaliseAt)}</td>
                   </tr>
                 );
               })}

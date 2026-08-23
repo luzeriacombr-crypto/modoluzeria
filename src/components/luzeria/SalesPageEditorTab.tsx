@@ -148,7 +148,7 @@ export function SalesPageEditorTab() {
   }
 
   if (isLoading) {
-    return <div className="flex items-center gap-2 text-sm text-white/40 py-10"><Loader2 size={14} className="animate-spin" /> Carregando...</div>;
+    return <div className="flex items-center gap-2 text-sm text-foreground/40 py-10"><Loader2 size={14} className="animate-spin" /> Carregando...</div>;
   }
 
   const previewHero = hero ? { content: drafts[hero.id] ?? hero.content } : undefined;
@@ -196,10 +196,10 @@ export function SalesPageEditorTab() {
         </div>
       ))}
 
-      <div className="px-5 sm:px-10 py-8 flex justify-center border-t border-white/10">
+      <div className="px-5 sm:px-10 py-8 flex justify-center border-t border-foreground/10">
         <button
           onClick={() => setAdding(true)}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-white/50 hover:text-white border-2 border-dashed border-white/15 hover:border-[rgb(var(--lz-brand-rgb))] rounded-xl px-6 py-3 transition"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-foreground/50 hover:text-foreground border-2 border-dashed border-foreground/15 hover:border-[rgb(var(--lz-brand-rgb))] rounded-xl px-6 py-3 transition"
         >
           <Plus size={16} /> Adicionar seção
         </button>
@@ -208,43 +208,43 @@ export function SalesPageEditorTab() {
   );
 
   return (
-    <div className={fullscreen ? "fixed inset-0 z-[400] bg-[#0D0D0D] overflow-y-auto p-4 md:p-6" : "max-w-[1200px]"}>
+    <div className={fullscreen ? "fixed inset-0 z-[400] bg-background overflow-y-auto p-4 md:p-6" : "max-w-[1200px]"}>
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <p className="text-sm text-white/50 max-w-md">
+        <p className="text-sm text-foreground/50 max-w-md">
           {previewMode
             ? "Prévia de como o site vai ficar depois de publicar — sem os controles de edição."
             : "Clique em qualquer texto ou imagem abaixo pra editar direto. Cabeçalho, planos, formulário, dúvidas frequentes e rodapé não entram aqui."}
         </p>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <a href="https://modocriador.com.br/assinar" target="_blank" rel="noopener noreferrer"
-            className="text-xs text-white/50 hover:text-white inline-flex items-center gap-1.5">
+            className="text-xs text-foreground/50 hover:text-foreground inline-flex items-center gap-1.5">
             Site no ar <ExternalLink size={12} />
           </a>
           {!previewMode && (
             <button onClick={() => setSectionsOpen(true)}
-              className="text-xs font-semibold text-white/70 hover:text-white inline-flex items-center gap-1.5 border border-white/15 hover:border-white/30 rounded-full px-3 py-1.5 transition">
+              className="text-xs font-semibold text-foreground/70 hover:text-foreground inline-flex items-center gap-1.5 border border-foreground/15 hover:border-foreground/30 rounded-full px-3 py-1.5 transition">
               <Layers size={13} /> Seções
             </button>
           )}
           <button
             onClick={() => setFullscreen((v) => !v)}
             title={fullscreen ? "Sair da tela cheia" : "Editar em tela cheia"}
-            className="h-7 w-7 rounded-full flex items-center justify-center text-white/60 hover:text-white border border-white/15 hover:border-white/30 transition shrink-0"
+            className="h-7 w-7 rounded-full flex items-center justify-center text-foreground/60 hover:text-foreground border border-foreground/15 hover:border-foreground/30 transition shrink-0"
           >
             {fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
           </button>
-          <div className="inline-flex items-center gap-1 rounded-full bg-[#1C1C1C] p-1 border border-white/10">
+          <div className="inline-flex items-center gap-1 rounded-full bg-card p-1 border border-foreground/10">
             <button
               onClick={() => setPreviewWidth("desktop")}
               title="Desktop"
               className="h-7 w-7 rounded-full flex items-center justify-center transition"
-              style={{ background: previewWidth === "desktop" ? "rgb(var(--lz-brand-rgb))" : "transparent", color: previewWidth === "desktop" ? "#0D0D0D" : "rgba(255,255,255,0.5)" }}
+              style={{ background: previewWidth === "desktop" ? "rgb(var(--lz-brand-rgb))" : "transparent", color: previewWidth === "desktop" ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 50%, transparent)" }}
             ><Monitor size={13} /></button>
             <button
               onClick={() => setPreviewWidth("mobile")}
               title="Celular"
               className="h-7 w-7 rounded-full flex items-center justify-center transition"
-              style={{ background: previewWidth === "mobile" ? "rgb(var(--lz-brand-rgb))" : "transparent", color: previewWidth === "mobile" ? "#0D0D0D" : "rgba(255,255,255,0.5)" }}
+              style={{ background: previewWidth === "mobile" ? "rgb(var(--lz-brand-rgb))" : "transparent", color: previewWidth === "mobile" ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 50%, transparent)" }}
             ><Smartphone size={13} /></button>
           </div>
           <button
@@ -252,7 +252,7 @@ export function SalesPageEditorTab() {
             className="text-xs font-semibold inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition border"
             style={previewMode
               ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D", borderColor: "rgb(var(--lz-brand-rgb))" }
-              : { background: "transparent", color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.15)" }}
+              : { background: "transparent", color: "color-mix(in srgb, var(--foreground) 70%, transparent)", borderColor: "color-mix(in srgb, var(--foreground) 15%, transparent)" }}
           >
             {previewMode ? <><Pencil size={13} /> Editar</> : <><Eye size={13} /> Visualizar</>}
           </button>
@@ -260,7 +260,7 @@ export function SalesPageEditorTab() {
             onClick={cancelEdit}
             disabled={pendingCount === 0 || api.discardSalesPageDraft.isPending}
             title="Descartar alterações não publicadas"
-            className="text-xs font-semibold inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition border border-white/15 text-white/60 hover:text-red-400 hover:border-red-400/40 disabled:opacity-30 disabled:hover:text-white/60 disabled:hover:border-white/15"
+            className="text-xs font-semibold inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition border border-foreground/15 text-foreground/60 hover:text-red-400 hover:border-red-400/40 disabled:opacity-30 disabled:hover:text-foreground/60 disabled:hover:border-foreground/15"
           >
             <Undo2 size={13} /> Cancelar edição
           </button>
@@ -276,18 +276,18 @@ export function SalesPageEditorTab() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/10 overflow-hidden">
+      <div className="rounded-xl border border-foreground/10 overflow-hidden">
         <div className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: fullscreen ? "calc(100vh - 120px)" : "85vh", background: BG_BLUE }}>
           {previewWidth === "mobile" ? (
             <div style={{ width: 390, margin: "0 auto" }}>
               <PreviewFrame width={390}>
-                <div className="text-white" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif", background: BG_BLUE }}>
+                <div className="text-foreground" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif", background: BG_BLUE }}>
                   {pageBody}
                 </div>
               </PreviewFrame>
             </div>
           ) : (
-            <div className="text-white" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+            <div className="text-foreground" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
               {pageBody}
             </div>
           )}
@@ -296,10 +296,10 @@ export function SalesPageEditorTab() {
 
       {adding && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setAdding(false)}>
-          <div className="w-full max-w-md bg-[#1C1C1C] border border-white/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md bg-card border border-foreground/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-bold text-white">Que tipo de seção?</span>
-              <button onClick={() => setAdding(false)} className="text-white/40 hover:text-white"><X size={16} /></button>
+              <span className="text-sm font-bold text-foreground">Que tipo de seção?</span>
+              <button onClick={() => setAdding(false)} className="text-foreground/40 hover:text-foreground"><X size={16} /></button>
             </div>
             <div className="space-y-2">
               {(Object.keys(TYPE_LABELS) as Exclude<SalesPageBlockType, "hero">[]).map((t) => (
@@ -307,10 +307,10 @@ export function SalesPageEditorTab() {
                   key={t}
                   onClick={() => addBlock(t)}
                   disabled={api.createSalesPageBlock.isPending}
-                  className="w-full text-left px-4 py-3 rounded-md bg-[#0D0D0D] border border-white/[0.08] hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
+                  className="w-full text-left px-4 py-3 rounded-md bg-background border border-foreground/8 hover:border-[rgb(var(--lz-brand-rgb))] transition disabled:opacity-50"
                 >
-                  <div className="text-sm font-semibold text-white">{TYPE_LABELS[t]}</div>
-                  <div className="text-xs text-white/40 mt-0.5">{TYPE_DESCRIPTIONS[t]}</div>
+                  <div className="text-sm font-semibold text-foreground">{TYPE_LABELS[t]}</div>
+                  <div className="text-xs text-foreground/40 mt-0.5">{TYPE_DESCRIPTIONS[t]}</div>
                 </button>
               ))}
             </div>
@@ -320,16 +320,16 @@ export function SalesPageEditorTab() {
 
       {sectionsOpen && (
         <div className="fixed inset-0 z-[280] flex" onClick={() => setSectionsOpen(false)}>
-          <div className="w-80 max-w-[85vw] bg-[#1C1C1C] border-r border-white/10 h-full overflow-y-auto p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="w-80 max-w-[85vw] bg-card border-r border-foreground/10 h-full overflow-y-auto p-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-bold text-white">Seções do site</span>
-              <button onClick={() => setSectionsOpen(false)} className="text-white/40 hover:text-white"><X size={16} /></button>
+              <span className="text-sm font-bold text-foreground">Seções do site</span>
+              <button onClick={() => setSectionsOpen(false)} className="text-foreground/40 hover:text-foreground"><X size={16} /></button>
             </div>
-            <p className="text-[11px] text-white/40 mb-3 leading-relaxed">
+            <p className="text-[11px] text-foreground/40 mb-3 leading-relaxed">
               Reordene, oculte ou clique pra ir direto numa seção — útil pra enxugar a página.
             </p>
             {hero && (
-              <button onClick={() => scrollTo(hero.id)} className="w-full text-left px-3 py-2.5 rounded-md text-xs text-white/60 bg-white/[0.03] mb-3 hover:bg-white/[0.06] transition">
+              <button onClick={() => scrollTo(hero.id)} className="w-full text-left px-3 py-2.5 rounded-md text-xs text-foreground/60 bg-foreground/[0.03] mb-3 hover:bg-foreground/[0.06] transition">
                 Topo (Hero) — fixo
               </button>
             )}
@@ -337,7 +337,7 @@ export function SalesPageEditorTab() {
               {rest.map((b, i) => (
                 <div
                   key={b.id}
-                  className={`flex items-center gap-1 bg-white/[0.03] rounded-md px-2 py-1.5 transition ${blockDrag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))]" : ""}`}
+                  className={`flex items-center gap-1 bg-foreground/[0.03] rounded-md px-2 py-1.5 transition ${blockDrag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))]" : ""}`}
                   style={{ opacity: b.isVisible ? 1 : 0.5 }}
                   onDragOver={(e) => blockDrag.onDragOverItem(e, i)}
                   onDrop={(e) => blockDrag.onDropItem(e, i)}
@@ -347,17 +347,17 @@ export function SalesPageEditorTab() {
                     onDragStart={() => blockDrag.onDragStart(i)}
                     onDragEnd={blockDrag.onDragEnd}
                     title="Arrastar pra reordenar"
-                    className="text-white/30 hover:text-white cursor-grab active:cursor-grabbing shrink-0 touch-none"
+                    className="text-foreground/30 hover:text-foreground cursor-grab active:cursor-grabbing shrink-0 touch-none"
                   >
                     <GripVertical size={13} />
                   </span>
-                  <button onClick={() => scrollTo(b.id)} className="flex-1 min-w-0 text-left text-xs text-white truncate flex items-center gap-1.5">
+                  <button onClick={() => scrollTo(b.id)} className="flex-1 min-w-0 text-left text-xs text-foreground truncate flex items-center gap-1.5">
                     {b.draftContent != null && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" title="Tem alteração não publicada" />}
                     <span className="truncate">{headingOf(drafts[b.id] ?? b.content)}</span>
                   </button>
-                  <button onClick={() => moveBy(b.id, -1)} disabled={i === 0} className="text-white/40 hover:text-white disabled:opacity-20 shrink-0"><ChevronUp size={13} /></button>
-                  <button onClick={() => moveBy(b.id, 1)} disabled={i === rest.length - 1} className="text-white/40 hover:text-white disabled:opacity-20 shrink-0"><ChevronDown size={13} /></button>
-                  <button onClick={() => toggleVisible(b)} className="text-white/40 hover:text-white shrink-0">
+                  <button onClick={() => moveBy(b.id, -1)} disabled={i === 0} className="text-foreground/40 hover:text-foreground disabled:opacity-20 shrink-0"><ChevronUp size={13} /></button>
+                  <button onClick={() => moveBy(b.id, 1)} disabled={i === rest.length - 1} className="text-foreground/40 hover:text-foreground disabled:opacity-20 shrink-0"><ChevronDown size={13} /></button>
+                  <button onClick={() => toggleVisible(b)} className="text-foreground/40 hover:text-foreground shrink-0">
                     {b.isVisible ? <Eye size={13} /> : <EyeOff size={13} />}
                   </button>
                 </div>
@@ -399,18 +399,18 @@ function BlockToolbar({
         onDragStart={onDragHandleStart}
         onDragEnd={onDragHandleEnd}
         title="Arrastar pra mover a seção"
-        className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10 cursor-grab active:cursor-grabbing touch-none"
+        className="p-1.5 rounded text-foreground/70 hover:text-foreground hover:bg-foreground/10 cursor-grab active:cursor-grabbing touch-none"
       >
         <GripVertical size={14} />
       </span>
-      <button onClick={onMoveUp} disabled={!canUp} title="Mover pra cima" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent"><ChevronUp size={14} /></button>
-      <button onClick={onMoveDown} disabled={!canDown} title="Mover pra baixo" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent"><ChevronDown size={14} /></button>
-      {onFlip && <button onClick={onFlip} title="Inverter lado da imagem" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10"><FlipHorizontal size={14} /></button>}
+      <button onClick={onMoveUp} disabled={!canUp} title="Mover pra cima" className="p-1.5 rounded text-foreground/70 hover:text-foreground hover:bg-foreground/10 disabled:opacity-20 disabled:hover:bg-transparent"><ChevronUp size={14} /></button>
+      <button onClick={onMoveDown} disabled={!canDown} title="Mover pra baixo" className="p-1.5 rounded text-foreground/70 hover:text-foreground hover:bg-foreground/10 disabled:opacity-20 disabled:hover:bg-transparent"><ChevronDown size={14} /></button>
+      {onFlip && <button onClick={onFlip} title="Inverter lado da imagem" className="p-1.5 rounded text-foreground/70 hover:text-foreground hover:bg-foreground/10"><FlipHorizontal size={14} /></button>}
       <div className="relative">
-        <button onClick={() => setColorOpen((v) => !v)} title="Fundo da seção" className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10"><Palette size={14} /></button>
+        <button onClick={() => setColorOpen((v) => !v)} title="Fundo da seção" className="p-1.5 rounded text-foreground/70 hover:text-foreground hover:bg-foreground/10"><Palette size={14} /></button>
         {colorOpen && (
-          <div className="absolute top-full right-0 mt-1 bg-[#1C1C1C] border border-white/10 rounded-lg p-2 shadow-xl w-[190px]">
-            <div className="text-[9px] uppercase tracking-wide text-white/30 mb-1.5 px-0.5">Cor de fundo</div>
+          <div className="absolute top-full right-0 mt-1 bg-card border border-foreground/10 rounded-lg p-2 shadow-xl w-[190px]">
+            <div className="text-[9px] uppercase tracking-wide text-foreground/30 mb-1.5 px-0.5">Cor de fundo</div>
             <div className="flex gap-1.5 mb-2.5">
               {BACKGROUND_SWATCHES.map((s) => (
                 <button
@@ -424,14 +424,14 @@ function BlockToolbar({
             </div>
             {!hideBackgroundImage && (
               <>
-                <div className="text-[9px] uppercase tracking-wide text-white/30 mb-1.5 px-0.5 border-t border-white/10 pt-2">Imagem de fundo</div>
+                <div className="text-[9px] uppercase tracking-wide text-foreground/30 mb-1.5 px-0.5 border-t border-foreground/10 pt-2">Imagem de fundo</div>
                 {backgroundImage ? (
                   <div className="flex items-center gap-2">
-                    <img src={backgroundImage} alt="" className="h-8 w-12 rounded object-cover border border-white/10 shrink-0" />
-                    <button onClick={() => onBackgroundImage(null)} className="text-[10px] text-white/50 hover:text-red-400">Remover</button>
+                    <img src={backgroundImage} alt="" className="h-8 w-12 rounded object-cover border border-foreground/10 shrink-0" />
+                    <button onClick={() => onBackgroundImage(null)} className="text-[10px] text-foreground/50 hover:text-red-400">Remover</button>
                   </div>
                 ) : (
-                  <label className="flex items-center justify-center gap-1.5 text-[11px] text-white/60 hover:text-white cursor-pointer border border-white/15 rounded-md px-2.5 py-1.5 w-full">
+                  <label className="flex items-center justify-center gap-1.5 text-[11px] text-foreground/60 hover:text-foreground cursor-pointer border border-foreground/15 rounded-md px-2.5 py-1.5 w-full">
                     {uploading ? <Loader2 size={12} className="animate-spin" /> : <ImagePlus size={12} />}
                     Enviar foto
                     <input type="file" accept="image/*" hidden onChange={handleBackgroundFile} />
@@ -442,10 +442,10 @@ function BlockToolbar({
           </div>
         )}
       </div>
-      <button onClick={onToggleVisible} title={isVisible ? "Ocultar do site" : "Mostrar no site"} className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10">
+      <button onClick={onToggleVisible} title={isVisible ? "Ocultar do site" : "Mostrar no site"} className="p-1.5 rounded text-foreground/70 hover:text-foreground hover:bg-foreground/10">
         {isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
       </button>
-      <button onClick={onDelete} title="Excluir" className="p-1.5 rounded text-white/70 hover:text-red-400 hover:bg-white/10"><Trash2 size={14} /></button>
+      <button onClick={onDelete} title="Excluir" className="p-1.5 rounded text-foreground/70 hover:text-red-400 hover:bg-foreground/10"><Trash2 size={14} /></button>
     </div>
   );
 }

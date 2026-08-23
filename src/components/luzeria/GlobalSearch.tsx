@@ -51,7 +51,7 @@ export function GlobalSearchButton({ variant, active }: { variant: "header" | "m
         onClick={() => setSearchOpen(true)}
         aria-label="Buscar"
         className="flex items-center justify-center h-12 w-14 transition-colors"
-        style={{ color: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.4)" }}
+        style={{ color: active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 40%, transparent)" }}
       >
         <Search size={20} />
       </button>
@@ -61,7 +61,7 @@ export function GlobalSearchButton({ variant, active }: { variant: "header" | "m
     <button
       onClick={() => setSearchOpen(true)}
       title="Buscar"
-      className="flex items-center justify-center h-8 w-8 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+      className="flex items-center justify-center h-8 w-8 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors"
     >
       <Search size={18} />
     </button>
@@ -108,11 +108,11 @@ export function GlobalSearchOverlay() {
   return createPortal(
     <div className="lz-overlay z-[200] flex items-start justify-center p-4 pt-[10vh]" onClick={() => setOpen(false)}>
       <div
-        className="bg-[#1C1C1C] rounded-2xl w-full max-w-lg border border-white/10 shadow-2xl lz-modal-in overflow-hidden"
+        className="bg-card rounded-2xl w-full max-w-lg border border-foreground/10 shadow-2xl lz-modal-in overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06]">
-          <Search size={17} className="text-white/40 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-foreground/6">
+          <Search size={17} className="text-foreground/40 shrink-0" />
           <input
             ref={inputRef}
             autoFocus
@@ -123,25 +123,25 @@ export function GlobalSearchOverlay() {
               if (e.key === "Enter" && results[0]) go(results[0]);
             }}
             placeholder="O que você está procurando?"
-            className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/30"
+            className="flex-1 bg-transparent text-foreground text-sm outline-none placeholder:text-foreground/30"
           />
-          <button onClick={() => setOpen(false)} className="text-white/40 hover:text-white shrink-0" aria-label="Fechar">
+          <button onClick={() => setOpen(false)} className="text-foreground/40 hover:text-foreground shrink-0" aria-label="Fechar">
             <X size={16} />
           </button>
         </div>
 
         <div className="max-h-[50vh] overflow-y-auto p-2">
           {results.length === 0 ? (
-            <p className="text-center text-white/40 text-sm py-8">Nada encontrado — tenta outra palavra.</p>
+            <p className="text-center text-foreground/40 text-sm py-8">Nada encontrado — tenta outra palavra.</p>
           ) : (
             results.map((entry) => (
               <button
                 key={entry.id}
                 onClick={() => go(entry)}
-                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors flex flex-col gap-0.5"
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-foreground/5 transition-colors flex flex-col gap-0.5"
               >
-                <span className="text-sm font-semibold text-white">{entry.label}</span>
-                <span className="text-xs text-white/45">{entry.description}</span>
+                <span className="text-sm font-semibold text-foreground">{entry.label}</span>
+                <span className="text-xs text-foreground/45">{entry.description}</span>
               </button>
             ))
           )}

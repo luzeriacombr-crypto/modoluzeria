@@ -21,8 +21,8 @@ function CallButton({ onClick, active, danger, disabled, title, children }: {
       title={title}
       className="h-9 w-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
       style={{
-        backgroundColor: danger ? "#E5484D" : active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.08)",
-        color: danger ? "#FFFFFF" : active ? "#0D0D0D" : "rgba(255,255,255,0.8)",
+        backgroundColor: danger ? "#E5484D" : active ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 8%, transparent)",
+        color: danger ? "#FFFFFF" : active ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 80%, transparent)",
       }}
     >
       {children}
@@ -46,17 +46,17 @@ function RemoteTile({ peer, stream, sharingScreen }: { peer: CallPeer; stream: M
     <div className="relative bg-black rounded-md overflow-hidden">
       <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover ${stream ? "" : "hidden"}`} />
       {!stream && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#1C1C1C]">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-card">
           <Avatar name={peer.name} avatarUrl={peer.avatarUrl} size={40} />
-          <Loader2 size={14} className="text-white/40 animate-spin" />
+          <Loader2 size={14} className="text-foreground/40 animate-spin" />
         </div>
       )}
       {stream && sharingScreen && (
-        <div className="absolute top-1.5 left-1.5 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-black/60 text-white">
+        <div className="absolute top-1.5 left-1.5 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-black/60 text-foreground">
           <ScreenShare size={10} /> compartilhando
         </div>
       )}
-      <div className="absolute bottom-1.5 left-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-black/55 text-white truncate max-w-[85%]">
+      <div className="absolute bottom-1.5 left-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-black/55 text-foreground truncate max-w-[85%]">
         {peer.name}
       </div>
     </div>
@@ -109,14 +109,14 @@ export function ActiveCallOverlay({ call }: { call: ReturnType<typeof useScreenS
   return createPortal(
     <div
       ref={panelRef}
-      className={isFullscreen ? "fixed inset-0 z-[350] bg-[#1C1C1C] flex flex-col" : "fixed bottom-4 right-4 z-[350]"}
+      className={isFullscreen ? "fixed inset-0 z-[350] bg-card flex flex-col" : "fixed bottom-4 right-4 z-[350]"}
       style={isFullscreen ? undefined : { width: `min(${isGroup ? 460 : 340}px, calc(100vw - 2rem))` }}
     >
       <div
         className={
           isFullscreen
             ? "flex flex-col h-full w-full"
-            : "bg-[#1C1C1C] rounded-xl border border-white/10 shadow-2xl overflow-hidden lz-modal-in"
+            : "bg-card rounded-xl border border-foreground/10 shadow-2xl overflow-hidden lz-modal-in"
         }
       >
         <div className={isFullscreen ? "relative flex-1 min-h-0 bg-black p-1.5" : "relative aspect-video bg-black p-1"}>
@@ -126,12 +126,12 @@ export function ActiveCallOverlay({ call }: { call: ReturnType<typeof useScreenS
             ))}
           </div>
           {!isActive && (
-            <div className="absolute top-1.5 left-1.5 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/55 text-[11px] text-white/70">
+            <div className="absolute top-1.5 left-1.5 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/55 text-[11px] text-foreground/70">
               <Loader2 size={11} className="animate-spin" /> {statusLabel(call.status)}
             </div>
           )}
           <div
-            className={`absolute bottom-2 right-2 h-16 w-24 rounded-md overflow-hidden bg-[#0D0D0D] border border-white/20 ${
+            className={`absolute bottom-2 right-2 h-16 w-24 rounded-md overflow-hidden bg-background border border-foreground/20 ${
               isActive && !hideOwnCamera ? "" : "hidden"
             }`}
           >
@@ -173,7 +173,7 @@ export function ActiveCallOverlay({ call }: { call: ReturnType<typeof useScreenS
               </CallButton>
             </div>
           ) : (
-            <span className="text-xs text-white/60 truncate">
+            <span className="text-xs text-foreground/60 truncate">
               {isGroup ? `${call.peers.length} pessoas` : call.peers[0]?.name}
             </span>
           )}

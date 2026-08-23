@@ -26,7 +26,7 @@ export function GlobalConfirmDialog() {
   return createPortal(
     <div className="lz-overlay z-[300] flex items-center justify-center p-4" onClick={() => close(kind === "prompt" ? null : false)}>
       <div
-        className="bg-[#1C1C1C] rounded-2xl w-full max-w-sm border border-white/10 shadow-2xl lz-modal-in p-5"
+        className="bg-card rounded-2xl w-full max-w-sm border border-foreground/10 shadow-2xl lz-modal-in p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3 mb-4">
@@ -34,11 +34,11 @@ export function GlobalConfirmDialog() {
             className="h-9 w-9 rounded-full flex items-center justify-center shrink-0"
             style={danger
               ? { backgroundColor: "rgba(229,72,77,0.15)", color: "#E5484D" }
-              : { backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}
+              : { backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
           >
             {danger ? <AlertTriangle size={17} /> : <HelpCircle size={17} />}
           </div>
-          <p className="text-sm text-white/85 leading-relaxed pt-1.5">{message}</p>
+          <p className="text-sm text-foreground/85 leading-relaxed pt-1.5">{message}</p>
         </div>
 
         {kind === "prompt" && (
@@ -51,14 +51,14 @@ export function GlobalConfirmDialog() {
               if (e.key === "Enter") close(value.trim() || null);
               if (e.key === "Escape") close(null);
             }}
-            className="w-full bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] mb-4"
+            className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] mb-4"
           />
         )}
 
         <div className="flex items-center justify-end gap-2">
           <button
             onClick={() => close(kind === "prompt" ? null : false)}
-            className="px-3.5 py-2 text-sm text-white/60 hover:text-white transition-colors"
+            className="px-3.5 py-2 text-sm text-foreground/60 hover:text-foreground transition-colors"
           >
             Cancelar
           </button>

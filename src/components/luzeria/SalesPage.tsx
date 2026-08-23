@@ -159,7 +159,7 @@ export function SalesPage() {
   const scrolled = useScrolled();
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#0A0E23", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+    <div className="min-h-screen text-foreground" style={{ background: "#0A0E23", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       {/* Header */}
       <header
         className="sticky top-0 z-40 flex items-center justify-between px-5 sm:px-10 py-5"
@@ -167,12 +167,12 @@ export function SalesPage() {
           transition: "background-color 300ms var(--ease-premium), backdrop-filter 300ms var(--ease-premium), border-color 300ms var(--ease-premium)",
           backgroundColor: scrolled ? "rgba(10,14,35,0.8)" : "transparent",
           backdropFilter: scrolled ? "blur(12px)" : "none",
-          borderBottom: scrolled ? "1px solid rgba(255,255,255,0.08)" : "1px solid transparent",
+          borderBottom: scrolled ? "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" : "1px solid transparent",
         }}
       >
         <div className="flex items-center justify-between max-w-[1100px] mx-auto w-full">
           <ModoCriadorLogo variant="brand" className="h-6 w-auto" />
-          <Link to="/auth" className="text-sm text-white/70 hover:text-white transition">
+          <Link to="/auth" className="text-sm text-foreground/70 hover:text-foreground transition">
             Já tem conta? Entrar →
           </Link>
         </div>
@@ -182,7 +182,7 @@ export function SalesPage() {
       <SalesPageBody hero={hero} blocks={restBlocks} onCtaClick={() => scrollToForm()} />
 
       {/* Planos */}
-      <section style={{ background: BG_BLUE_2 }} className="border-t border-white/10">
+      <section style={{ background: BG_BLUE_2 }} className="border-t border-foreground/10">
         <Reveal className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14">
           <div className="flex justify-center mb-3">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full"
@@ -191,13 +191,13 @@ export function SalesPage() {
             </span>
           </div>
           <h2 className="font-black uppercase text-2xl sm:text-3xl mb-2 text-center">Escolha seu plano</h2>
-          <p className="text-white/50 text-sm text-center mb-10">
+          <p className="text-foreground/50 text-sm text-center mb-10">
             Preço de estreia — o valor sobe assim que a oferta de lançamento acabar.
           </p>
           {plans.isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="rounded-xl p-6 border border-white/10 bg-white/5 animate-pulse h-[180px]" />
+                <div key={i} className="rounded-xl p-6 border border-foreground/10 bg-foreground/5 animate-pulse h-[180px]" />
               ))}
             </div>
           ) : (
@@ -207,8 +207,8 @@ export function SalesPage() {
                 return (
                   <div key={p.id} className={`relative rounded-xl p-6 flex flex-col ${LIFT}`}
                     style={{
-                      background: recommended ? "rgba(215,255,63,0.06)" : "rgba(255,255,255,0.05)",
-                      border: recommended ? `2px solid ${LIME}` : "1px solid rgba(255,255,255,0.1)",
+                      background: recommended ? "rgba(215,255,63,0.06)" : "color-mix(in srgb, var(--foreground) 5%, transparent)",
+                      border: recommended ? `2px solid ${LIME}` : "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
                       ...EASE,
                     }}>
                     {recommended && (
@@ -218,18 +218,18 @@ export function SalesPage() {
                       </span>
                     )}
                     <div className="font-black text-xl mb-1">{p.name}</div>
-                    <div className="text-white/40 text-xs mb-0.5">
+                    <div className="text-foreground/40 text-xs mb-0.5">
                       De: <span className="line-through">R$ {(Math.round(p.priceCents! * 1.3) / 100).toFixed(2).replace(".", ",")}</span>
                     </div>
                     <div className="text-3xl font-black mb-1">
                       R$ {(p.priceCents! / 100).toFixed(2).replace(".", ",")}
-                      <span className="text-sm font-normal text-white/50">/mês</span>
+                      <span className="text-sm font-normal text-foreground/50">/mês</span>
                     </div>
                     <div className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide px-2 py-1 rounded-full mb-4"
                       style={{ background: "rgba(215,255,63,0.15)", color: LIME }}>
                       🎟️ Cupom de estreia aplicado · -30%
                     </div>
-                    <div className="text-white/50 text-sm mb-6">
+                    <div className="text-foreground/50 text-sm mb-6">
                       até {p.maxClients} clientes · até {p.maxCollaborators} colaboradores
                     </div>
                     <button
@@ -238,7 +238,7 @@ export function SalesPage() {
                       style={{
                         ...(planId === p.id || recommended
                           ? { background: LIME, color: "#0A0E23" }
-                          : { background: "rgba(255,255,255,0.08)", color: "#fff" }),
+                          : { background: "color-mix(in srgb, var(--foreground) 8%, transparent)", color: "#fff" }),
                         ...EASE,
                       }}
                     >
@@ -372,7 +372,7 @@ export function SalesPage() {
 
             <button
               type="button" onClick={signUpWithGoogle} disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold border border-black/15 bg-white transition disabled:opacity-50 hover:bg-black/[0.03]"
+              className="w-full flex items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold border border-black/15 bg-foreground transition disabled:opacity-50 hover:bg-black/[0.03]"
             >
               <GoogleMark size={16} />
               {googleLoading ? "..." : "Continuar com Google"}
@@ -387,7 +387,7 @@ export function SalesPage() {
       </section>
 
       {/* FAQ */}
-      <section style={{ background: BG_GRAY }} className="border-t border-white/10">
+      <section style={{ background: BG_GRAY }} className="border-t border-foreground/10">
         <div className="px-5 sm:px-10 max-w-[720px] mx-auto py-14">
         <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">Dúvidas frequentes</h2>
         <div className="space-y-3">
@@ -406,10 +406,10 @@ export function SalesPage() {
         </div>
       </section>
 
-      <footer style={{ background: BG_BLUE }} className="px-5 sm:px-10 py-10 text-center text-white/30 text-xs">
+      <footer style={{ background: BG_BLUE }} className="px-5 sm:px-10 py-10 text-center text-foreground/30 text-xs">
         Modo <span className="font-criador-serif">Criador</span> — desenvolvido pela Luzeria Estúdio.
         {" · "}
-        <Link to="/privacidade" className="underline hover:text-white/50 transition">Política de Privacidade</Link>
+        <Link to="/privacidade" className="underline hover:text-foreground/50 transition">Política de Privacidade</Link>
       </footer>
 
       <a
@@ -433,16 +433,16 @@ export function SalesPage() {
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+    <div className="bg-foreground/5 rounded-lg border border-foreground/10 overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between gap-3 text-left px-4 py-4"
       >
         <span className="font-semibold text-sm">{question}</span>
-        <ChevronDown size={16} className="shrink-0 text-white/50 transition-transform" style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
+        <ChevronDown size={16} className="shrink-0 text-foreground/50 transition-transform" style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
       </button>
       {open && (
-        <p className="text-white/50 text-sm leading-relaxed px-4 pb-4">{answer}</p>
+        <p className="text-foreground/50 text-sm leading-relaxed px-4 pb-4">{answer}</p>
       )}
     </div>
   );

@@ -12,7 +12,7 @@ const DAYS_OPTIONS = [30, 90, 180] as const;
 const money = (v: number | null) =>
   v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const inp = "w-full bg-[#1C1C1C] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] transition-colors";
+const inp = "w-full bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] transition-colors";
 
 function CostSettingsForm() {
   const { data: settings, isLoading } = useQuery(orgCostSettingsQO());
@@ -27,7 +27,7 @@ function CostSettingsForm() {
   }, [settings]);
 
   if (isLoading || !settings) {
-    return <div className="flex items-center justify-center py-8"><Loader2 className="animate-spin text-white/40" size={24} /></div>;
+    return <div className="flex items-center justify-center py-8"><Loader2 className="animate-spin text-foreground/40" size={24} /></div>;
   }
 
   function save() {
@@ -42,11 +42,11 @@ function CostSettingsForm() {
   }
 
   return (
-    <div className="bg-[#161616] border border-white/[0.07] rounded-xl p-4 space-y-4">
-      <h3 className="text-sm font-semibold text-white">Custo-hora padrão</h3>
+    <div className="bg-card border border-foreground/7 rounded-xl p-4 space-y-4">
+      <h3 className="text-sm font-semibold text-foreground">Custo-hora padrão</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="text-xs text-white/50 mb-1 inline-flex items-center gap-1">
+          <label className="text-xs text-foreground/50 mb-1 inline-flex items-center gap-1">
             Custo-hora (R$)
             <InfoTip text="Cada colaborador pode ter seu próprio custo-hora, calculado a partir do salário e da escala cadastrados em Configurações → Equipe (clique no card da pessoa). Esse valor aqui é só a reserva: usado quando alguém ainda não tem remuneração cadastrada." />
           </label>
@@ -55,14 +55,14 @@ function CostSettingsForm() {
         </div>
       </div>
       <div>
-        <label className="text-xs text-white/50 mb-2 inline-flex items-center gap-1">
+        <label className="text-xs text-foreground/50 mb-2 inline-flex items-center gap-1">
           Média de horas por tipo de conteúdo
           <InfoTip text="Quantas horas, em média, sua equipe leva pra produzir cada tipo de item. Usado junto com os itens finalizados pra estimar quantas horas cada cliente consumiu." />
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {EFFORT_TYPES.map((t) => (
             <div key={t}>
-              <label className="text-[11px] text-white/40 block mb-1">{CONTENT_TYPE_LABEL[t]}</label>
+              <label className="text-[11px] text-foreground/40 block mb-1">{CONTENT_TYPE_LABEL[t]}</label>
               <input type="number" min="0" step="0.1" value={avgHours[t] ?? ""}
                 onChange={(e) => setAvgHours((prev) => ({ ...prev, [t]: e.target.value }))}
                 className={inp} />
@@ -88,13 +88,13 @@ export function ClientMarginPanel() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <TrendingDown size={16} className="text-[rgb(var(--lz-brand-rgb))]" />
-        <h2 className="text-white font-semibold">Margem por cliente</h2>
+        <TrendingDown size={16} className="text-[var(--lz-accent-ink)]" />
+        <h2 className="text-foreground font-semibold">Margem por cliente</h2>
       </div>
 
       <CostSettingsForm />
 
-      <div className="flex items-center gap-2 text-white/60 text-xs bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2">
+      <div className="flex items-center gap-2 text-foreground/60 text-xs bg-foreground/[0.03] border border-foreground/10 rounded-lg px-3 py-2">
         <Info size={14} className="shrink-0" />
         Custo é uma estimativa (itens finalizados × horas médias × custo-hora de quem finalizou, ou o padrão acima quando a pessoa não tem remuneração cadastrada) — não é apontamento real de horas nem contabilidade oficial.
       </div>
@@ -102,7 +102,7 @@ export function ClientMarginPanel() {
       <div className="flex items-center gap-1.5">
         {DAYS_OPTIONS.map((d) => (
           <button key={d} onClick={() => setDays(d)}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-colors ${days === d ? "text-[#0D0D0D]" : "text-white/60 hover:text-white bg-white/[0.05]"}`}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-colors ${days === d ? "text-[#0D0D0D]" : "text-foreground/60 hover:text-foreground bg-foreground/[0.05]"}`}
             style={days === d ? { backgroundColor: "rgb(var(--lz-brand-rgb))" } : undefined}>
             {d} dias
           </button>
@@ -110,47 +110,47 @@ export function ClientMarginPanel() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-white/40" size={32} /></div>
+        <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-foreground/40" size={32} /></div>
       ) : !data || data.rows.length === 0 ? (
-        <div className="text-center py-12 px-6 bg-white/[0.03] border border-white/10 rounded-2xl">
-          <p className="text-white/50 text-sm">Nenhum cliente ativo encontrado.</p>
+        <div className="text-center py-12 px-6 bg-foreground/[0.03] border border-foreground/10 rounded-2xl">
+          <p className="text-foreground/50 text-sm">Nenhum cliente ativo encontrado.</p>
         </div>
       ) : (
-        <div className="bg-[#161616] border border-white/[0.07] rounded-xl overflow-hidden overflow-x-auto">
+        <div className="bg-card border border-foreground/7 rounded-xl overflow-hidden overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/[0.07]">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/60">
+              <tr className="border-b border-foreground/7">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1">
                     Cliente
                     <InfoTip text="Nome do cliente. Clique pra abrir a ficha completa e preencher o valor do contrato, por exemplo." />
                   </span>
                 </th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <InfoTip text="Valor mensal do contrato, cadastrado na ficha do cliente. Aparece '—' quando ainda não foi preenchido." />
                     Contrato
                   </span>
                 </th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <InfoTip text="Quantidade de itens finalizados desse cliente no período escolhido (30/90/180 dias) — mesma contagem usada no ranking da equipe." />
                     Entregues
                   </span>
                 </th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <InfoTip text="Horas estimadas gastas com esse cliente no período: itens entregues × média de horas por tipo de conteúdo (configurada acima)." />
                     Horas est.
                   </span>
                 </th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <InfoTip text="Horas estimadas × custo-hora da equipe. É uma estimativa, não um apontamento real." />
                     Custo est.
                   </span>
                 </th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-white/60">
+                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <InfoTip text="Valor do contrato menos o custo estimado. Vermelho quando negativo, verde quando positivo. Aparece '—' quando o contrato não está preenchido." />
                     Margem
@@ -160,29 +160,29 @@ export function ClientMarginPanel() {
             </thead>
             <tbody>
               {data.rows.map((r) => (
-                <tr key={r.clientId} className="border-b border-white/[0.04] last:border-0">
-                  <td className="px-4 py-3 text-sm text-white">
+                <tr key={r.clientId} className="border-b border-foreground/4 last:border-0">
+                  <td className="px-4 py-3 text-sm text-foreground">
                     <button onClick={() => openFicha(r.clientId)} className="flex items-center gap-2 hover:underline">
                       <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: r.clientColor }} />
                       {r.clientName}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-white/70 text-right">{money(r.contractValue)}</td>
+                  <td className="px-4 py-3 text-sm text-foreground/70 text-right">{money(r.contractValue)}</td>
                   <td className="px-4 py-3 text-sm text-right">
                     <button onClick={() => setBreakdownFor({ clientId: r.clientId, clientName: r.clientName })}
-                      className="text-white/70 hover:text-[rgb(var(--lz-brand-rgb))] hover:underline transition">
+                      className="text-foreground/70 hover:text-[var(--lz-accent-ink)] hover:underline transition">
                       {r.deliveredCount}
                     </button>
                   </td>
                   <td className="px-4 py-3 text-sm text-right">
                     <button onClick={() => setBreakdownFor({ clientId: r.clientId, clientName: r.clientName })}
-                      className="text-white/70 hover:text-[rgb(var(--lz-brand-rgb))] hover:underline transition">
+                      className="text-foreground/70 hover:text-[var(--lz-accent-ink)] hover:underline transition">
                       {r.estimatedHours}h
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-white/70 text-right">{money(r.estimatedCost)}</td>
+                  <td className="px-4 py-3 text-sm text-foreground/70 text-right">{money(r.estimatedCost)}</td>
                   <td className="px-4 py-3 text-sm text-right font-semibold"
-                    style={{ color: r.margin == null ? "rgba(255,255,255,0.4)" : r.margin < 0 ? "#FF6B6B" : "#4ADE80" }}>
+                    style={{ color: r.margin == null ? "color-mix(in srgb, var(--foreground) 40%, transparent)" : r.margin < 0 ? "#FF6B6B" : "#4ADE80" }}>
                     {money(r.margin)}
                   </td>
                 </tr>
@@ -210,31 +210,31 @@ function MarginBreakdownModal({ clientId, clientName, days, onClose }: {
   const { data, isLoading } = useQuery(clientMarginBreakdownQO(clientId, days));
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg max-h-[80vh] flex flex-col bg-[#1C1C1C] border border-white/10 rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08] shrink-0">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg max-h-[80vh] flex flex-col bg-card border border-foreground/10 rounded-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-foreground/8 shrink-0">
           <div>
-            <h3 className="text-base font-semibold text-white">{clientName}</h3>
-            <p className="text-[11px] text-white/40">Detalhe dos últimos {days} dias</p>
+            <h3 className="text-base font-semibold text-foreground">{clientName}</h3>
+            <p className="text-[11px] text-foreground/40">Detalhe dos últimos {days} dias</p>
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white p-1 rounded hover:bg-white/5 transition shrink-0">
+          <button onClick={onClose} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5 transition shrink-0">
             <X size={16} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-white/40" size={24} /></div>
+            <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-foreground/40" size={24} /></div>
           ) : !data || data.length === 0 ? (
-            <div className="text-center py-10 px-6 text-white/40 text-sm">Nada finalizado nesse período.</div>
+            <div className="text-center py-10 px-6 text-foreground/40 text-sm">Nada finalizado nesse período.</div>
           ) : (
             <div className="divide-y divide-white/[0.05]">
               {data.map((row) => (
                 <div key={row.itemId} className="flex items-center gap-3 px-5 py-2.5">
-                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 bg-white/5 text-white/50">
+                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 bg-foreground/5 text-foreground/50">
                     {CONTENT_TYPE_LABEL[row.itemType as ContentType] ?? row.itemType}
                   </span>
-                  <span className="text-sm text-white truncate flex-1">{row.itemTitle}</span>
-                  <span className="text-xs text-white/60 shrink-0">{row.userName}</span>
-                  <span className="text-xs font-semibold text-white/80 tabular-nums shrink-0 w-10 text-right">{row.hours}h</span>
+                  <span className="text-sm text-foreground truncate flex-1">{row.itemTitle}</span>
+                  <span className="text-xs text-foreground/60 shrink-0">{row.userName}</span>
+                  <span className="text-xs font-semibold text-foreground/80 tabular-nums shrink-0 w-10 text-right">{row.hours}h</span>
                 </div>
               ))}
             </div>

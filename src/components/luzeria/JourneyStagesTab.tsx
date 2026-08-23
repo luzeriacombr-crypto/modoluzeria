@@ -33,15 +33,15 @@ function TrackColumn({ track, label, stages }: { track: JourneyTrack; label: str
 
   return (
     <div>
-      <div className="text-sm font-bold text-white mb-1">{label}</div>
-      <p className="text-[11px] text-white/40 mb-3">
+      <div className="text-sm font-bold text-foreground mb-1">{label}</div>
+      <p className="text-[11px] text-foreground/40 mb-3">
         {track === "onboarding"
           ? "Etapas que acontecem uma vez, do fechamento do contrato até o cliente estar rodando normal."
           : "Etapas que se repetem todo mês, uma vez que o cliente já está em operação."}
       </p>
       <div className="space-y-2">
         {stages.length === 0 && !adding && (
-          <p className="text-xs text-white/40">Nenhuma etapa cadastrada.</p>
+          <p className="text-xs text-foreground/40">Nenhuma etapa cadastrada.</p>
         )}
         {stages.map((s) => <StageRow key={s.id} stage={s} />)}
       </div>
@@ -55,7 +55,7 @@ function TrackColumn({ track, label, stages }: { track: JourneyTrack; label: str
         />
       ) : (
         <button onClick={() => setAdding(true)}
-          className="w-full mt-2 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 py-2 text-[11px] text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))]">
+          className="w-full mt-2 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-foreground/15 py-2 text-[11px] text-foreground/50 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))]">
           <Plus size={12} /> Adicionar etapa
         </button>
       )}
@@ -81,27 +81,27 @@ function StageRow({ stage }: { stage: JourneyStage }) {
   }
 
   return (
-    <div className="bg-[#1C1C1C] border border-white/[0.06] rounded-md px-3 py-2.5">
+    <div className="bg-card border border-foreground/6 rounded-md px-3 py-2.5">
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <div className="text-sm font-semibold text-white">{stage.name}</div>
+            <div className="text-sm font-semibold text-foreground">{stage.name}</div>
             {stage.milestoneType && (
               <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: "rgba(var(--lz-brand-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+                style={{ backgroundColor: "rgba(var(--lz-brand-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
                 {MILESTONE_LABEL[stage.milestoneType]}
               </span>
             )}
           </div>
-          {stage.description && <div className="mt-0.5 text-[11px] text-white/50 leading-relaxed">{stage.description}</div>}
+          {stage.description && <div className="mt-0.5 text-[11px] text-foreground/50 leading-relaxed">{stage.description}</div>}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => setEditing(true)} className="p-1 rounded text-white/40 hover:text-white hover:bg-white/5" title="Editar">
+          <button onClick={() => setEditing(true)} className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5" title="Editar">
             <Pencil size={13} />
           </button>
           <button
             onClick={async () => { if (await requestConfirm(`Excluir a etapa "${stage.name}"?`, { danger: true })) api.deleteJourneyStage.mutate({ data: { id: stage.id } }); }}
-            className="p-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5" title="Excluir"
+            className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5" title="Excluir"
           >
             <Trash2 size={13} />
           </button>
@@ -121,30 +121,30 @@ function StageEditForm({ initial, onCancel, onSave }: {
   const [milestoneType, setMilestoneType] = useState<StageMilestoneType | null>(initial?.milestoneType ?? null);
 
   return (
-    <div className="bg-[#1C1C1C] border border-white/[0.08] rounded-md p-3 space-y-2 mt-2">
+    <div className="bg-card border border-foreground/8 rounded-md p-3 space-y-2 mt-2">
       <input
         value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome da etapa"
-        className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2.5 py-1.5 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+        className="w-full bg-background border border-foreground/10 rounded px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
       />
       <textarea
         value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Descrição — vira a mensagem sugerida no WhatsApp"
-        className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
+        className="w-full bg-background border border-foreground/10 rounded px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
       />
       <label className="block">
-        <span className="block text-[10px] uppercase font-semibold tracking-wider text-white/40 mb-1">
+        <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1">
           Marcar como (aparece na Visão Geral)
         </span>
         <select
           value={milestoneType ?? ""}
           onChange={(e) => setMilestoneType((e.target.value || null) as StageMilestoneType | null)}
-          className="w-full bg-[#0D0D0D] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+          className="w-full bg-background border border-foreground/10 rounded px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
         >
           <option value="">— Nenhuma</option>
           <option value="analise">Análise do mês</option>
         </select>
       </label>
       <div className="flex items-center justify-end gap-2">
-        <button onClick={onCancel} className="inline-flex items-center gap-1 text-[11px] text-white/50 hover:text-white px-2 py-1">
+        <button onClick={onCancel} className="inline-flex items-center gap-1 text-[11px] text-foreground/50 hover:text-foreground px-2 py-1">
           <X size={12} /> Cancelar
         </button>
         <button

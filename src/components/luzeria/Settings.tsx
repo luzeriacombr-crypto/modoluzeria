@@ -31,7 +31,7 @@ const ClientPaymentsPanel = lazy(() => import("./ClientPaymentsPanel").then((m) 
 function TabLoadingFallback() {
   return (
     <div className="flex items-center justify-center py-16">
-      <Loader2 className="animate-spin text-white/30" size={22} />
+      <Loader2 className="animate-spin text-foreground/30" size={22} />
     </div>
   );
 }
@@ -55,7 +55,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
     ...(hasPermission(me, "manage_team") ? (["team"] as SettingsTab[]) : []),
   ];
   if (!isMaster && setorAllowedTabs.length === 0) {
-    return <div className="p-10 text-white/60 text-sm">Acesso restrito ao Administrador Master.</div>;
+    return <div className="p-10 text-foreground/60 text-sm">Acesso restrito ao Administrador Master.</div>;
   }
   const allowedTabs: SettingsTab[] = isMaster ? VALID_TABS : setorAllowedTabs;
   const tab: SettingsTab = (allowedTabs as string[]).includes(tabParam ?? "") ? (tabParam as SettingsTab) : allowedTabs[0];
@@ -76,8 +76,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
     <div className="p-10 max-w-6xl mx-auto">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-[32px] font-bold text-white tracking-tight">Configurações</h1>
-          <p className="text-sm text-white/50 mt-2">
+          <h1 className="text-[32px] font-bold text-foreground tracking-tight">Configurações</h1>
+          <p className="text-sm text-foreground/50 mt-2">
             {tab === "team"   ? "Gerencie acessos, funções e metas da equipe." :
              tab === "report" ? "Relatório consolidado de entregas." :
              tab === "automations" ? "Google Drive, lembretes automáticos e jobs do sistema." :
@@ -94,7 +94,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         </div>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-white/10 mb-6 overflow-x-auto overflow-y-hidden" data-tour="settings-tabs">
+      <div className="flex items-center gap-1 border-b border-foreground/10 mb-6 overflow-x-auto overflow-y-hidden" data-tour="settings-tabs">
         {[
           { id: "team", label: "Equipe" },
           { id: "report", label: "Relatório" },
@@ -114,7 +114,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             <button key={t.id} onClick={() => setTab(t.id as any)}
               className="shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
               style={{
-                color: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.5)",
+                color: active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
                 borderColor: active ? "rgb(var(--lz-brand-rgb))" : "transparent",
               }}>
               {t.label}
@@ -143,21 +143,21 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "cobranca" ? (
         <div className="space-y-10">
           <PlanCardSection />
-          <div className="pt-2 border-t border-white/10">
+          <div className="pt-2 border-t border-foreground/10">
             <BillingSection />
           </div>
           {me.isPlatformAdmin && (
-            <div className="pt-2 border-t border-white/10">
+            <div className="pt-2 border-t border-foreground/10">
               <AgenciesBillingPanel />
             </div>
           )}
           {me.isPlatformAdmin && (
-            <div className="pt-2 border-t border-white/10">
+            <div className="pt-2 border-t border-foreground/10">
               <DemoRequestsPanel />
             </div>
           )}
           {me.isPlatformAdmin && (
-            <div className="pt-2 border-t border-white/10">
+            <div className="pt-2 border-t border-foreground/10">
               <PromotionCodesPanel />
             </div>
           )}
@@ -174,11 +174,11 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         <div className="space-y-10">
           {!(me.disabledFeatures ?? []).includes("drive") && (
             <div>
-              <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3">Google Drive</h2>
+              <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3">Google Drive</h2>
               <DriveSettingsTab />
             </div>
           )}
-          <div className="pt-2 border-t border-white/10">
+          <div className="pt-2 border-t border-foreground/10">
             <AutomationsTab />
           </div>
         </div>
@@ -187,16 +187,16 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         <>
       {pending.length > 0 && (
         <>
-          <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3">
-            Aguardando aprovação <span className="text-[rgb(var(--lz-brand-rgb))]">({pending.length})</span>
+          <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3">
+            Aguardando aprovação <span className="text-[var(--lz-accent-ink)]">({pending.length})</span>
           </h2>
-          <div className="bg-[#1C1C1C] rounded-lg overflow-hidden mb-8">
+          <div className="bg-card rounded-lg overflow-hidden mb-8">
             {pending.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.05] last:border-b-0">
+              <div key={p.id} className="flex items-center gap-3 px-5 py-4 border-b border-foreground/5 last:border-b-0">
                 <Avatar profile={p} size={36} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-white truncate">{p.name}</div>
-                  <div className="text-[11px] text-white/40 truncate">{p.email}</div>
+                  <div className="text-sm font-semibold text-foreground truncate">{p.name}</div>
+                  <div className="text-[11px] text-foreground/40 truncate">{p.email}</div>
                 </div>
                 <button
                   onClick={() => setUserActive.mutate({ data: { userId: p.id, active: true } }, {
@@ -207,7 +207,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
                 </button>
                 <button
                   onClick={() => handleRemove(p.id, p.name)}
-                  className="text-xs px-3 py-1.5 rounded-md border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition">
+                  className="text-xs px-3 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/30 transition">
                   Recusar
                 </button>
               </div>
@@ -216,33 +216,33 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         </>
       )}
 
-      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3">
-        Equipe ativa <span className="text-white/30">({active.length})</span>
+      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3">
+        Equipe ativa <span className="text-foreground/30">({active.length})</span>
       </h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 lz-stagger">
         {active.map((p) => <TeamMemberCard key={p.id} profile={p} />)}
       </div>
 
-      <p className="text-[11px] text-white/30 mt-4">
+      <p className="text-[11px] text-foreground/30 mt-4">
         Clique num membro pra ver mais opções (resetar senha, ver demandas, ativo/inativo, remover). Novos cadastros ficam pendentes até a aprovação de um Administrador Master. E-mails pré-cadastrados na equipe inicial entram já aprovados com a função correta.
       </p>
 
-      <div className="mt-10 pt-6 border-t border-white/[0.06]">
-        <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-4">
+      <div className="mt-10 pt-6 border-t border-foreground/6">
+        <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-4">
           Metas da equipe
         </h2>
         <MemberGoalsTab />
       </div>
 
-      <div className="mt-8 pt-6 border-t border-white/[0.06]">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--lz-brand-rgb))] mb-4">
+      <div className="mt-8 pt-6 border-t border-foreground/6">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--lz-accent-ink)] mb-4">
           Diferença entre funções
         </div>
         <TeamPermissionsPanel me={me} />
       </div>
 
-      <div className="mt-8 pt-6 border-t border-white/[0.06]">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--lz-brand-rgb))] mb-4">
+      <div className="mt-8 pt-6 border-t border-foreground/6">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--lz-accent-ink)] mb-4">
           Cargos
         </div>
         <CargosPanel />
@@ -293,11 +293,11 @@ function AddMemberModal({ onClose, onSubmit, loading }: {
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 lz-overlay-in"
       onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-7 lz-modal-in"
+        className="w-full max-w-sm bg-card rounded-xl p-7 lz-modal-in"
         style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.2)" }}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-white font-semibold">Adicionar membro</h2>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition"><X size={18} /></button>
+          <h2 className="text-foreground font-semibold">Adicionar membro</h2>
+          <button onClick={onClose} className="text-foreground/40 hover:text-foreground transition"><X size={18} /></button>
         </div>
         <form onSubmit={(e) => { e.preventDefault(); onSubmit({ name, email, password, role }); }} className="space-y-3">
           <Field label="Nome">
@@ -323,7 +323,7 @@ function AddMemberModal({ onClose, onSubmit, loading }: {
             className="lz-btn-primary w-full rounded-md py-2.5 mt-2 text-sm disabled:opacity-50">
             {loading ? "Criando…" : "Criar membro"}
           </button>
-          <p className="text-[10px] text-white/40 text-center mt-2">
+          <p className="text-[10px] text-foreground/40 text-center mt-2">
             O membro já entra ativo. Compartilhe email e senha para o primeiro acesso.
           </p>
         </form>
@@ -345,11 +345,11 @@ function CreateAgencyModal({ onClose, onSubmit, loading }: {
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 lz-overlay-in"
       onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm bg-[#1A1A1A] rounded-xl p-7 lz-modal-in"
+        className="w-full max-w-sm bg-card rounded-xl p-7 lz-modal-in"
         style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.2)" }}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-white font-semibold">Criar nova agência</h2>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition"><X size={18} /></button>
+          <h2 className="text-foreground font-semibold">Criar nova agência</h2>
+          <button onClick={onClose} className="text-foreground/40 hover:text-foreground transition"><X size={18} /></button>
         </div>
         <form onSubmit={(e) => { e.preventDefault(); onSubmit({ orgName, name, email, password }); }} className="space-y-3">
           <Field label="Nome da agência">
@@ -372,7 +372,7 @@ function CreateAgencyModal({ onClose, onSubmit, loading }: {
             className="lz-btn-primary w-full rounded-md py-2.5 mt-2 text-sm disabled:opacity-50">
             {loading ? "Criando…" : "Criar agência"}
           </button>
-          <p className="text-[10px] text-white/40 text-center mt-2">
+          <p className="text-[10px] text-foreground/40 text-center mt-2">
             Cria uma organização isolada com esse email como Adm Master dela — sem acesso aos dados da Luzeria.
           </p>
         </form>
@@ -384,7 +384,7 @@ function CreateAgencyModal({ onClose, onSubmit, loading }: {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-[10px] uppercase font-bold tracking-wider text-white/50">{label}</span>
+      <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">{label}</span>
       <div className="mt-1.5">{children}</div>
     </label>
   );
@@ -394,7 +394,7 @@ function GeneralSettings() {
   const { data: settings } = useQuery(appSettingsQO());
   const { updateAppSettings } = useApi();
   const me = useMe().data;
-  if (!settings) return <div className="text-white/40 text-sm">Carregando…</div>;
+  if (!settings) return <div className="text-foreground/40 text-sm">Carregando…</div>;
 
   const toggle = (next: boolean) =>
     updateAppSettings.mutate({ data: { requireRatingOnFinalize: next } }, {
@@ -421,41 +421,41 @@ function GeneralSettings() {
         />
       )}
 
-      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
         <SettingsIcon size={12} /> Operação
       </h2>
-      <div className="bg-[#1C1C1C] rounded-lg p-5 flex items-start gap-4">
+      <div className="bg-card rounded-lg p-5 flex items-start gap-4">
         <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
-          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
           <Star size={16} />
         </div>
         <div className="flex-1">
-          <div className="text-sm font-semibold text-white">Exigir avaliação ao finalizar</div>
-          <div className="text-[11px] text-white/50 mt-1">
-            Ao mudar status de uma tarefa para <span className="text-[rgb(var(--lz-brand-rgb))] font-semibold">Pronto para publicar</span>,
+          <div className="text-sm font-semibold text-foreground">Exigir avaliação ao finalizar</div>
+          <div className="text-[11px] text-foreground/50 mt-1">
+            Ao mudar status de uma tarefa para <span className="text-[var(--lz-accent-ink)] font-semibold">Pronto para publicar</span>,
             o responsável é obrigado a dar uma nota de qualidade (1–5 estrelas).
           </div>
         </div>
         <button onClick={() => toggle(!settings.requireRatingOnFinalize)}
           className={`relative h-6 w-11 rounded-full transition-colors ${
-            settings.requireRatingOnFinalize ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`}>
-          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
+            settings.requireRatingOnFinalize ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-foreground/15"}`}>
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-foreground transition-all ${
             settings.requireRatingOnFinalize ? "left-[22px]" : "left-0.5"}`} />
         </button>
       </div>
 
-      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
+      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
         <SettingsIcon size={12} /> Recursos
       </h2>
       <FeatureTogglesSection disabledFeatures={me?.disabledFeatures ?? []} />
 
-      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
+      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
         <SettingsIcon size={12} /> Ajuda
       </h2>
-      <div className="bg-[#1C1C1C] rounded-lg p-5 flex items-center gap-4">
+      <div className="bg-card rounded-lg p-5 flex items-center gap-4">
         <div className="flex-1">
-          <div className="text-sm font-semibold text-white">Tour guiado do app</div>
-          <div className="text-[11px] text-white/50 mt-1">
+          <div className="text-sm font-semibold text-foreground">Tour guiado do app</div>
+          <div className="text-[11px] text-foreground/50 mt-1">
             Refaça o passo a passo de boas-vindas mostrando as principais áreas da plataforma.
           </div>
         </div>
@@ -485,20 +485,20 @@ function FeatureTogglesSection({ disabledFeatures }: { disabledFeatures: string[
   }
 
   return (
-    <div className="bg-[#1C1C1C] rounded-lg divide-y divide-white/[0.06]">
+    <div className="bg-card rounded-lg divide-y divide-white/[0.06]">
       {OPTIONAL_FEATURE_KEYS.map((key) => {
         const meta = OPTIONAL_FEATURE_LABEL[key];
         const visible = !disabledSet.has(key);
         return (
           <div key={key} className="p-5 flex items-start gap-4">
             <div className="flex-1">
-              <div className="text-sm font-semibold text-white">{meta.label}</div>
-              <div className="text-[11px] text-white/50 mt-1">{meta.description}</div>
+              <div className="text-sm font-semibold text-foreground">{meta.label}</div>
+              <div className="text-[11px] text-foreground/50 mt-1">{meta.description}</div>
             </div>
             <button onClick={() => toggle(key, visible)}
               className={`relative h-6 w-11 rounded-full transition-colors shrink-0 ${
-                visible ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`}>
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
+                visible ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-foreground/15"}`}>
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-foreground transition-all ${
                 visible ? "left-[22px]" : "left-0.5"}`} />
             </button>
           </div>
@@ -521,7 +521,7 @@ const FIXED_CAPABILITIES: FixedCapabilityRow[] = [
 function CapabilityDot({ on }: { on: boolean }) {
   return (
     <div className="w-14 flex justify-center shrink-0">
-      <span className={`h-1.5 w-1.5 rounded-full ${on ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${on ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-foreground/15"}`} />
     </div>
   );
 }
@@ -551,16 +551,16 @@ function TeamPermissionsPanel({ me }: { me: Profile }) {
 
   return (
     <div>
-      <div className="bg-[#1C1C1C] rounded-lg overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] text-[10px] font-bold uppercase tracking-wider text-white/40">
+      <div className="bg-card rounded-lg overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-foreground/6 text-[10px] font-bold uppercase tracking-wider text-foreground/40">
           <div className="flex-1">Capacidade</div>
           <div className="w-14 text-center shrink-0">Membro</div>
           <div className="w-14 text-center shrink-0">Setor</div>
           <div className="w-14 text-center shrink-0">Master</div>
         </div>
         {FIXED_CAPABILITIES.map((row) => (
-          <div key={row.label} className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] last:border-b-0">
-            <div className="flex-1 text-[12.5px] text-white/70">{row.label}</div>
+          <div key={row.label} className="flex items-center gap-3 px-5 py-3 border-b border-foreground/6 last:border-b-0">
+            <div className="flex-1 text-[12.5px] text-foreground/70">{row.label}</div>
             <CapabilityDot on={row.member} />
             <CapabilityDot on={row.setor} />
             <CapabilityDot on={row.master} />
@@ -570,38 +570,38 @@ function TeamPermissionsPanel({ me }: { me: Profile }) {
           const meta = SETOR_PERMISSION_LABEL[key];
           const on = granted.has(key);
           return (
-            <div key={key} className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] last:border-b-0">
+            <div key={key} className="flex items-center gap-3 px-5 py-3 border-b border-foreground/6 last:border-b-0">
               <div className="flex-1">
-                <div className="text-[12.5px] text-white/70">{meta.label}</div>
-                <div className="text-[10.5px] text-white/35 mt-0.5">{meta.description}</div>
+                <div className="text-[12.5px] text-foreground/70">{meta.label}</div>
+                <div className="text-[10.5px] text-foreground/35 mt-0.5">{meta.description}</div>
               </div>
               <CapabilityDot on={false} />
               <div className="w-14 flex justify-center shrink-0">
                 <button onClick={() => toggle(key, !on)}
-                  className={`relative h-5 w-9 rounded-full transition-colors shrink-0 ${on ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`}>
-                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${on ? "left-[18px]" : "left-0.5"}`} />
+                  className={`relative h-5 w-9 rounded-full transition-colors shrink-0 ${on ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-foreground/15"}`}>
+                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-foreground transition-all ${on ? "left-[18px]" : "left-0.5"}`} />
                 </button>
               </div>
               <CapabilityDot on={true} />
             </div>
           );
         })}
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] last:border-b-0">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-foreground/6 last:border-b-0">
           <div className="flex-1">
-            <div className="text-[12.5px] text-white/70">Escolher editor e formato (posts/reels)</div>
-            <div className="text-[10.5px] text-white/35 mt-0.5">Se atribuir como editor e definir o tipo de vídeo (reel) ou formato (post), sem precisar de um admin.</div>
+            <div className="text-[12.5px] text-foreground/70">Escolher editor e formato (posts/reels)</div>
+            <div className="text-[10.5px] text-foreground/35 mt-0.5">Se atribuir como editor e definir o tipo de vídeo (reel) ou formato (post), sem precisar de um admin.</div>
           </div>
           <div className="w-14 flex justify-center shrink-0">
             <button onClick={() => toggleMembersEditorFormat(!membersEditorFormat)}
-              className={`relative h-5 w-9 rounded-full transition-colors shrink-0 ${membersEditorFormat ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-white/15"}`}>
-              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${membersEditorFormat ? "left-[18px]" : "left-0.5"}`} />
+              className={`relative h-5 w-9 rounded-full transition-colors shrink-0 ${membersEditorFormat ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-foreground/15"}`}>
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-foreground transition-all ${membersEditorFormat ? "left-[18px]" : "left-0.5"}`} />
             </button>
           </div>
           <CapabilityDot on={true} />
           <CapabilityDot on={true} />
         </div>
       </div>
-      <p className="text-[11px] text-white/30 mt-3">
+      <p className="text-[11px] text-foreground/30 mt-3">
         O Adm Master sempre tem acesso total e não pode ser restringido. As permissões configuráveis acima valem pra
         todo mundo com a função Adm Setor nesta agência.
       </p>
@@ -638,15 +638,15 @@ function CargosPanel() {
     upsertCargo.mutate({ data: { id: cargo.id, name: cargo.name, permissions: next as any } });
   }
 
-  if (isLoading) return <Loader2 className="animate-spin text-white/40" size={20} />;
+  if (isLoading) return <Loader2 className="animate-spin text-foreground/40" size={20} />;
 
   return (
     <div className="space-y-3">
       {cargos.map((c) => (
-        <div key={c.id} className="bg-[#1C1C1C] rounded-lg p-4">
+        <div key={c.id} className="bg-card rounded-lg p-4">
           <div className="flex items-center justify-between gap-2 mb-3">
-            <span className="text-sm font-semibold text-white">{c.name}</span>
-            <button onClick={() => handleDelete(c.id, c.name)} className="text-white/30 hover:text-red-400 transition-colors">
+            <span className="text-sm font-semibold text-foreground">{c.name}</span>
+            <button onClick={() => handleDelete(c.id, c.name)} className="text-foreground/30 hover:text-red-400 transition-colors">
               <Trash2 size={14} />
             </button>
           </div>
@@ -660,8 +660,8 @@ function CargosPanel() {
                   title={PERMISSION_LABEL[key].description}
                   className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border"
                   style={on
-                    ? { backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))", borderColor: "rgb(var(--lz-brand-rgb))" }
-                    : { color: "rgba(255,255,255,0.5)", borderColor: "rgba(255,255,255,0.15)" }}
+                    ? { backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)", borderColor: "rgb(var(--lz-brand-rgb))" }
+                    : { color: "color-mix(in srgb, var(--foreground) 50%, transparent)", borderColor: "color-mix(in srgb, var(--foreground) 15%, transparent)" }}
                 >
                   {PERMISSION_LABEL[key].label}
                 </button>
@@ -677,23 +677,23 @@ function CargosPanel() {
             autoFocus value={newName} onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") createCargo(); if (e.key === "Escape") setCreating(false); }}
             placeholder="Nome do cargo" maxLength={60}
-            className="flex-1 bg-[#0D0D0D] border border-white/10 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+            className="flex-1 bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
           />
           <button onClick={createCargo} disabled={upsertCargo.isPending || !newName.trim()}
             className="px-3 py-2 rounded-md text-sm font-semibold bg-[rgb(var(--lz-brand-rgb))] text-black disabled:opacity-40 shrink-0">
             Criar
           </button>
-          <button onClick={() => setCreating(false)} className="text-white/40 hover:text-white p-2"><X size={16} /></button>
+          <button onClick={() => setCreating(false)} className="text-foreground/40 hover:text-foreground p-2"><X size={16} /></button>
         </div>
       ) : (
         <button
           onClick={() => setCreating(true)}
-          className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border border-white/15 text-white/60 hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border border-foreground/15 text-foreground/60 hover:text-foreground transition-colors"
         >
           <Plus size={12} /> Novo cargo
         </button>
       )}
-      <p className="text-[11px] text-white/30 mt-1">
+      <p className="text-[11px] text-foreground/30 mt-1">
         Cada pessoa pode ter mais de um cargo ao mesmo tempo (atribua em Equipe, no perfil de cada um).
       </p>
     </div>
@@ -733,7 +733,10 @@ function ColorPickerField({ label, value, onChange, presets }: {
         ))}
       </div>
       <div className="flex items-center gap-2">
-        <span className="h-8 w-8 rounded-md border border-white/10 shrink-0" style={{ backgroundColor: isValidHex(hexInput) ? hexInput : "transparent" }} />
+        <input type="color" value={isValidHex(hexInput) ? hexInput : value}
+          onChange={(e) => { setHexInput(e.target.value); onChange(e.target.value); }}
+          className="lz-color-swatch h-8 w-8 rounded-md border border-foreground/10 shrink-0"
+          title="Escolher na roda de cores" />
         <input value={hexInput} onChange={(e) => setHexInput(e.target.value)}
           onBlur={() => { if (isValidHex(hexInput)) onChange(hexInput.trim()); else setHexInput(value); }}
           maxLength={7} className="lz-input font-mono" placeholder="#C8D44E" />
@@ -752,13 +755,16 @@ function HeroColorField({ label, value, fallback, onChange }: {
   return (
     <Field label={label}>
       <div className="flex items-center gap-2">
-        <span className="h-8 w-8 rounded-md border border-white/10 shrink-0" style={{ backgroundColor: isValidHex(hexInput) ? hexInput : "transparent" }} />
+        <input type="color" value={isValidHex(hexInput) ? hexInput : effective}
+          onChange={(e) => { setHexInput(e.target.value); onChange(e.target.value); }}
+          className="lz-color-swatch h-8 w-8 rounded-md border border-foreground/10 shrink-0"
+          title="Escolher na roda de cores" />
         <input value={hexInput} onChange={(e) => setHexInput(e.target.value)}
           onBlur={() => { if (isValidHex(hexInput)) onChange(hexInput.trim()); else setHexInput(effective); }}
           maxLength={7} className="lz-input font-mono" placeholder={fallback} />
         {value != null && (
           <button type="button" onClick={() => onChange(null)}
-            className="text-[10px] text-white/40 hover:text-white transition shrink-0 whitespace-nowrap">
+            className="text-[10px] text-foreground/40 hover:text-foreground transition shrink-0 whitespace-nowrap">
             Automático
           </button>
         )}
@@ -770,12 +776,12 @@ function HeroColorField({ label, value, fallback, onChange }: {
 function UsageBar({ label, used, max, pct }: { label: string; used: number; max: number | null; pct: number }) {
   return (
     <div>
-      <div className="flex items-center justify-between text-[11px] text-white/60 mb-1">
+      <div className="flex items-center justify-between text-[11px] text-foreground/60 mb-1">
         <span>{label}</span>
         <span>{used}{max != null ? ` / ${max}` : " (ilimitado)"}</span>
       </div>
       {max != null && (
-        <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+        <div className="h-1.5 rounded-full bg-foreground/[0.06] overflow-hidden">
           <div className="h-full rounded-full transition-all duration-500"
             style={{ width: `${pct}%`, background: pct >= 100 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))" }} />
         </div>
@@ -807,18 +813,18 @@ function PlanCardSection() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
         <Star size={12} /> Seu plano
       </h2>
-      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-4">
+      <div className="bg-card rounded-lg p-5 mb-8 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-lg font-bold text-white">{status.planName}</div>
-            <div className="text-[11px] text-white/50">{priceLabel}</div>
+            <div className="text-lg font-bold text-foreground">{status.planName}</div>
+            <div className="text-[11px] text-foreground/50">{priceLabel}</div>
           </div>
           {status.subscriptionStatus === "trialing" && trialDaysLeft !== null ? (
             <span className="text-[10px] font-bold uppercase px-2 py-1 rounded"
-              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))" }}>
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
               {trialDaysLeft > 0 ? `${trialDaysLeft} dias de teste` : "Teste expirado"}
             </span>
           ) : statusInfo ? (
@@ -866,10 +872,10 @@ function BillingSection() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
         <Star size={12} /> Assinatura e cobrança
       </h2>
-      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-4">
+      <div className="bg-card rounded-lg p-5 mb-8 space-y-4">
         <Field label="CNPJ ou CPF da agência (necessário para assinar um plano)">
           <div className="flex gap-2">
             <input value={taxId} onChange={(e) => setTaxId(e.target.value)} maxLength={18} className="lz-input"
@@ -881,18 +887,18 @@ function BillingSection() {
           </div>
         </Field>
 
-        <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+        <div className="space-y-2 pt-2 border-t border-foreground/6">
           {(plans ?? []).map((plan) => (
             <div key={plan.id} className="flex items-center justify-between bg-black/20 rounded-md px-3 py-2.5">
               <div>
-                <div className="text-sm text-white font-semibold">{plan.name}</div>
-                <div className="text-[11px] text-white/50">
+                <div className="text-sm text-foreground font-semibold">{plan.name}</div>
+                <div className="text-[11px] text-foreground/50">
                   {plan.priceCents != null ? `R$ ${(plan.priceCents / 100).toFixed(2).replace(".", ",")}/mês` : "Sob consulta"}
                   {" · "}até {plan.maxClients} clientes · até {plan.maxCollaborators} colaboradores
                 </div>
               </div>
               {plan.id === status.planId && status.hasAsaasSubscription ? (
-                <span className="text-[10px] uppercase font-bold text-white/40 px-2">Plano atual</span>
+                <span className="text-[10px] uppercase font-bold text-foreground/40 px-2">Plano atual</span>
               ) : plan.priceCents == null ? (
                 <a href="https://wa.me/" target="_blank" rel="noreferrer"
                   className="lz-btn-ghost text-xs px-3 py-1.5 rounded-md whitespace-nowrap">Fale conosco</a>
@@ -1051,21 +1057,21 @@ function OrgBrandingSection({
 
   return (
     <>
-      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
         <Star size={12} /> Marca da agência
       </h2>
-      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-4">
-        <p className="text-[11px] text-white/50 leading-relaxed">
+      <div className="bg-card rounded-lg p-5 mb-8 space-y-4">
+        <p className="text-[11px] text-foreground/50 leading-relaxed">
           Aparece na barra lateral e no título da aba, depois que sua equipe faz login.
           A tela de login em si continua igual pra todas as agências.
         </p>
 
         <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-md bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+          <div className="h-14 w-14 rounded-md bg-black/30 border border-foreground/10 flex items-center justify-center overflow-hidden shrink-0">
             {orgLogoUrl ? (
               <img src={orgLogoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
             ) : (
-              <span className="text-[10px] text-white/30 text-center px-1">Sem logo</span>
+              <span className="text-[10px] text-foreground/30 text-center px-1">Sem logo</span>
             )}
           </div>
           <div className="flex gap-2">
@@ -1075,7 +1081,7 @@ function OrgBrandingSection({
             </label>
             {orgLogoUrl && (
               <button onClick={removeLogo} disabled={updateMyOrg.isPending}
-                className="text-[11px] text-white/50 hover:text-red-400 transition disabled:opacity-50">
+                className="text-[11px] text-foreground/50 hover:text-red-400 transition disabled:opacity-50">
                 Remover
               </button>
             )}
@@ -1090,33 +1096,33 @@ function OrgBrandingSection({
             placeholder="Ex: Conteúdo que conecta" />
         </Field>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/[0.06]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-foreground/6">
           <ColorPickerField label="Cor principal" value={colorPrimary} onChange={setColorPrimary} presets={BRAND_PRESETS} />
           <ColorPickerField label="Cor clara (fundos suaves)" value={colorPrimaryLight} onChange={setColorPrimaryLight} presets={BRAND_LIGHT_PRESETS} />
           <ColorPickerField label="Cor da barra lateral" value={colorSidebar} onChange={setColorSidebar} presets={SIDEBAR_PRESETS} />
         </div>
 
-        <div className="pt-2 border-t border-white/[0.06]">
-          <label className="block text-[11px] uppercase tracking-wide text-white/40 mb-2">
+        <div className="pt-2 border-t border-foreground/6">
+          <label className="block text-[11px] uppercase tracking-wide text-foreground/40 mb-2">
             Cantos dos cards e painéis — {radius}px
           </label>
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-white/30 shrink-0">Retos</span>
+            <span className="text-[10px] text-foreground/30 shrink-0">Retos</span>
             <input
               type="range" min={0} max={24} step={2} value={radius}
               onChange={(e) => setRadius(Number(e.target.value))}
               className="flex-1 accent-[rgb(var(--lz-brand-rgb))]"
             />
-            <span className="text-[10px] text-white/30 shrink-0">Arredondados</span>
+            <span className="text-[10px] text-foreground/30 shrink-0">Arredondados</span>
           </div>
-          <div className="mt-3 h-12 w-full max-w-[180px]" style={{ background: "rgba(255,255,255,0.06)", borderRadius: `${radius}px` }} />
+          <div className="mt-3 h-12 w-full max-w-[180px]" style={{ background: "color-mix(in srgb, var(--foreground) 6%, transparent)", borderRadius: `${radius}px` }} />
         </div>
 
-        <div className="pt-2 border-t border-white/[0.06]">
-          <label className="block text-[11px] uppercase tracking-wide text-white/40 mb-2">
+        <div className="pt-2 border-t border-foreground/6">
+          <label className="block text-[11px] uppercase tracking-wide text-foreground/40 mb-2">
             Degradê do cabeçalho do Dashboard
           </label>
-          <p className="text-[11px] text-white/40 mb-3">
+          <p className="text-[11px] text-foreground/40 mb-3">
             Por padrão usa a cor clara e a cor da barra lateral. Escolha as suas se quiser outra combinação.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1133,16 +1139,16 @@ function OrgBrandingSection({
         </button>
       </div>
 
-      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
         <Star size={12} /> Preview de feed
       </h2>
-      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-4">
-        <p className="text-[11px] text-white/50 leading-relaxed">
+      <div className="bg-card rounded-lg p-5 mb-8 space-y-4">
+        <p className="text-[11px] text-foreground/50 leading-relaxed">
           Imagem que aparece quando você manda o link de preview do feed pro cliente (WhatsApp, etc).
           Por padrão é a imagem do Modo Criador — troque pra aparecer uma imagem da sua agência.
         </p>
 
-        <div className="rounded-md overflow-hidden bg-black/30 border border-white/10 max-w-sm">
+        <div className="rounded-md overflow-hidden bg-black/30 border border-foreground/10 max-w-sm">
           <img
             src={orgFeedPreviewImageUrl ?? "/og-preview.jpg"}
             alt="Preview do feed"
@@ -1157,27 +1163,27 @@ function OrgBrandingSection({
           </label>
           {orgFeedPreviewImageUrl && (
             <button onClick={resetFeedPreviewImage} disabled={updateMyOrg.isPending}
-              className="text-[11px] text-white/50 hover:text-red-400 transition disabled:opacity-50">
+              className="text-[11px] text-foreground/50 hover:text-red-400 transition disabled:opacity-50">
               Voltar pra imagem padrão
             </button>
           )}
         </div>
-        <p className="text-[11px] text-white/35">
+        <p className="text-[11px] text-foreground/35">
           Tamanho recomendado: 1200 x 630px (formato horizontal) · até 3 MB.
         </p>
       </div>
 
-      <h2 className="text-xs uppercase font-bold text-white/50 tracking-wider mb-3 flex items-center gap-1.5">
+      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
         <Star size={12} /> Ícone (favicon)
       </h2>
-      <div className="bg-[#1C1C1C] rounded-lg p-5 mb-8 space-y-4">
-        <p className="text-[11px] text-white/50 leading-relaxed">
+      <div className="bg-card rounded-lg p-5 mb-8 space-y-4">
+        <p className="text-[11px] text-foreground/50 leading-relaxed">
           Ícone que aparece na aba do navegador, e como ícone do app quando alguém adiciona o
           Modo Criador à tela inicial pelo iPhone. Por padrão é o ícone do Modo Criador.
         </p>
 
         <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-md bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+          <div className="h-14 w-14 rounded-md bg-black/30 border border-foreground/10 flex items-center justify-center overflow-hidden shrink-0">
             <img src={orgFaviconUrl ?? "/icon-192.png"} alt="Ícone" className="max-h-full max-w-full object-contain" />
           </div>
           <div className="flex gap-2">
@@ -1187,13 +1193,13 @@ function OrgBrandingSection({
             </label>
             {orgFaviconUrl && (
               <button onClick={resetFavicon} disabled={updateMyOrg.isPending}
-                className="text-[11px] text-white/50 hover:text-red-400 transition disabled:opacity-50">
+                className="text-[11px] text-foreground/50 hover:text-red-400 transition disabled:opacity-50">
                 Voltar pro ícone padrão
               </button>
             )}
           </div>
         </div>
-        <p className="text-[11px] text-white/35">
+        <p className="text-[11px] text-foreground/35">
           Tamanho recomendado: 512 x 512px (PNG, quadrado, fundo sólido) · até 3 MB.
         </p>
       </div>

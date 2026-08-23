@@ -149,26 +149,26 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         <Avatar name={client.name} color={client.color} size={40} avatarUrl={client.photoUrl} />
         <div className="flex items-center gap-2">
           <div>
-          <h1 className="text-[24px] font-bold text-white leading-tight">{client.name}</h1>
+          <h1 className="text-[24px] font-bold text-foreground leading-tight">{client.name}</h1>
           {client.customFields.niche && (
-            <div className="text-[13px] font-semibold mt-0.5" style={{ color: "rgb(var(--lz-brand-rgb))" }}>{client.customFields.niche}</div>
+            <div className="text-[13px] font-semibold mt-0.5" style={{ color: "var(--lz-accent-ink)" }}>{client.customFields.niche}</div>
           )}
           </div>
           <button
             onClick={() => setTab("ficha")}
             title="Ficha do cliente"
-            className="ml-1 p-1.5 rounded-md text-white/50 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5 transition"
+            className="ml-1 p-1.5 rounded-md text-foreground/50 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition"
           >
             <Info size={15} />
           </button>
         </div>
         <div className="ml-auto flex items-center gap-2">
           {!isAvulso && <button onClick={() => go(-1)} disabled={idx <= 0}
-            className="h-8 w-8 flex items-center justify-center rounded-md text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-30 transition">
+            className="h-8 w-8 flex items-center justify-center rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 disabled:opacity-30 transition">
             <ChevronLeft size={16} />
           </button>}
           {isAvulso ? (
-            <span className="rounded-md px-3 py-1 text-[10px] font-bold uppercase tracking-wider" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "rgb(var(--lz-brand-rgb))", border: "1px solid rgba(var(--lz-brand-light-rgb),0.3)" }}>
+            <span className="rounded-md px-3 py-1 text-[10px] font-bold uppercase tracking-wider" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)", border: "1px solid rgba(var(--lz-brand-light-rgb),0.3)" }}>
               Avulso
             </span>
           ) : (
@@ -177,12 +177,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             </span>
           )}
           {!isAvulso && <button onClick={() => go(1)} disabled={idx >= sortedKeys.length - 1}
-            className="h-8 w-8 flex items-center justify-center rounded-md text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-30 transition">
+            className="h-8 w-8 flex items-center justify-center rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 disabled:opacity-30 transition">
             <ChevronRight size={16} />
           </button>}
           {isAdmin && !isAvulso && (
             <button onClick={() => duplicateMonth.mutate({ data: { clientId, fromKey: selectedMonthKey } })}
-              className="inline-flex items-center gap-1.5 ml-2 rounded-md px-3 py-1.5 text-xs font-semibold text-white/80 border border-white/10 hover:border-[rgb(var(--lz-brand-rgb))] hover:text-[rgb(var(--lz-brand-rgb))] transition">
+              className="inline-flex items-center gap-1.5 ml-2 rounded-md px-3 py-1.5 text-xs font-semibold text-foreground/80 border border-foreground/10 hover:border-[rgb(var(--lz-brand-rgb))] hover:text-[var(--lz-accent-ink)] transition">
               <Copy size={13} /> Duplicar mês
             </button>
           )}
@@ -192,12 +192,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
       {/* Tabs — horizontally scrollable on its own (touch swipe), scrollbar
        * hidden, so the rest of the page never shifts sideways on mobile
        * when there are more tabs than fit the viewport width. */}
-      <div className="flex items-center gap-2 mt-8 border-b border-white/[0.06]">
+      <div className="flex items-center gap-2 mt-8 border-b border-foreground/6">
         <div className="flex items-center gap-6 overflow-x-auto overflow-y-hidden lz-no-scrollbar flex-1 min-w-0">
           {tabs.map((t) => (
             <button key={t} onClick={() => setTab(t as any)}
               className="relative py-3 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap"
-              style={{ color: tab === t ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}>
+              style={{ color: tab === t ? "#FFFFFF" : "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>
               {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : t === "finalizados" ? "Finalizados" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
               {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
             </button>
@@ -205,7 +205,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         </div>
         {isAdmin && (
           <button onClick={() => setCustomizingTabs(true)} title="Personalizar abas"
-            className="shrink-0 p-1.5 mb-1 rounded-md text-white/40 hover:text-white hover:bg-white/5 transition">
+            className="shrink-0 p-1.5 mb-1 rounded-md text-foreground/40 hover:text-foreground hover:bg-foreground/5 transition">
             <Settings2 size={15} />
           </button>
         )}
@@ -232,7 +232,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             <>
               {selectMode ? (
                 <div className="flex items-center justify-between gap-2 mb-3 rounded-lg px-3 py-2" style={{ background: "rgba(var(--lz-brand-rgb),0.1)", border: "1px solid rgba(var(--lz-brand-rgb),0.3)" }}>
-                  <span className="text-xs font-semibold text-white">
+                  <span className="text-xs font-semibold text-foreground">
                     {selectedIds.size === 0 ? "Selecione os itens" : `${selectedIds.size} selecionado${selectedIds.size === 1 ? "" : "s"}`}
                   </span>
                   <div className="flex items-center gap-2">
@@ -243,7 +243,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                     >
                       <Trash2 size={13} /> Excluir selecionados
                     </button>
-                    <button onClick={exitSelectMode} className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition">
+                    <button onClick={exitSelectMode} className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition">
                       <X size={13} /> Cancelar
                     </button>
                   </div>
@@ -254,17 +254,17 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   <button
                     onClick={() => setSelectMode(true)}
                     title="Selecionar vários"
-                    className="h-6 w-6 rounded-full flex items-center justify-center transition-colors text-white/50 hover:text-white hover:bg-white/[0.08] mr-1"
+                    className="h-6 w-6 rounded-full flex items-center justify-center transition-colors text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] mr-1"
                   ><CheckSquare size={13} /></button>
                 )}
-                <div className="inline-flex items-center gap-0.5 rounded-full bg-white/[0.05] p-0.5 mr-2">
+                <div className="inline-flex items-center gap-0.5 rounded-full bg-foreground/[0.05] p-0.5 mr-2">
                   <button
                     onClick={() => changeViewMode("grade")}
                     title="Grade"
                     className="h-6 w-6 rounded-full flex items-center justify-center transition-colors"
                     style={{
                       backgroundColor: viewMode === "grade" ? "rgb(var(--lz-brand-rgb))" : "transparent",
-                      color: viewMode === "grade" ? "#0D0D0D" : "rgba(255,255,255,0.5)",
+                      color: viewMode === "grade" ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
                     }}
                   ><LayoutGrid size={12} /></button>
                   <button
@@ -273,11 +273,11 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                     className="h-6 w-6 rounded-full flex items-center justify-center transition-colors"
                     style={{
                       backgroundColor: viewMode === "lista" ? "rgb(var(--lz-brand-rgb))" : "transparent",
-                      color: viewMode === "lista" ? "#0D0D0D" : "rgba(255,255,255,0.5)",
+                      color: viewMode === "lista" ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
                     }}
                   ><List size={12} /></button>
                 </div>
-                <span className="text-[10px] uppercase font-semibold text-white/30 tracking-wider mr-1">Ordem</span>
+                <span className="text-[10px] uppercase font-semibold text-foreground/30 tracking-wider mr-1">Ordem</span>
                 {(["personalizada", "cronologica"] as const).map((m) => {
                   const active = orderMode === m;
                   return (
@@ -286,8 +286,8 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       onClick={() => changeOrderMode(m)}
                       className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors"
                       style={{
-                        backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
-                        color: active ? "#0D0D0D" : "rgba(255,255,255,0.5)",
+                        backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
+                        color: active ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
                       }}
                     >
                       {m === "personalizada" ? "Personalizada" : "Cronológica"}
@@ -298,10 +298,10 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   <select
                     value={orderDirection}
                     onChange={(e) => changeOrderDirection(e.target.value as OrderDirection)}
-                    className="ml-1 bg-transparent border border-white/10 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white/50 outline-none cursor-pointer hover:text-white/70 hover:border-white/20 transition-colors"
+                    className="ml-1 bg-transparent border border-foreground/10 rounded-full px-2.5 py-1 text-[10px] font-semibold text-foreground/50 outline-none cursor-pointer hover:text-foreground/70 hover:border-foreground/20 transition-colors"
                   >
-                    <option value="desc" className="bg-[#1C1C1C] text-white">Recentes primeiro</option>
-                    <option value="asc" className="bg-[#1C1C1C] text-white">Antigas primeiro</option>
+                    <option value="desc" className="bg-card text-foreground">Recentes primeiro</option>
+                    <option value="asc" className="bg-card text-foreground">Antigas primeiro</option>
                   </select>
                 )}
               </div>
@@ -328,7 +328,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       onClick={() => addContentItem.mutate({
                         data: { clientId, key: selectedMonthKey, type: cfg.type },
                       })}
-                      className="flex flex-col items-center justify-center gap-2 min-h-[200px] rounded-xl border border-dashed border-white/15 text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
+                      className="flex flex-col items-center justify-center gap-2 min-h-[200px] rounded-xl border border-dashed border-foreground/15 text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
                       style={{ transitionTimingFunction: "var(--ease-premium)" }}>
                       <Plus size={20} />
                       <span className="text-xs font-semibold">Adicionar {cfg.label}</span>
@@ -357,7 +357,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       onClick={() => addContentItem.mutate({
                         data: { clientId, key: selectedMonthKey, type: cfg.type },
                       })}
-                      className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-white/15 text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:border-[rgb(var(--lz-brand-rgb))] transition-colors"
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-foreground/15 text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] transition-colors"
                     >
                       <Plus size={14} />
                       <span className="text-xs font-semibold">Adicionar {cfg.label}</span>
@@ -366,7 +366,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                 </div>
               )}
               {cfg.items.length === 0 && (!isAdmin || tab === "finalizados") && (
-                <div className="px-4 py-10 text-center text-sm text-white/40">Sem itens nesta aba.</div>
+                <div className="px-4 py-10 text-center text-sm text-foreground/40">Sem itens nesta aba.</div>
               )}
             </>
           );
@@ -403,7 +403,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           </div>
         )}
         {tab === "ficha" && (
-          <div className="mt-2 -mx-4 sm:-mx-6 md:mx-0 md:rounded-lg md:overflow-hidden md:border md:border-white/[0.06]">
+          <div className="mt-2 -mx-4 sm:-mx-6 md:mx-0 md:rounded-lg md:overflow-hidden md:border md:border-foreground/6">
             <ClientFichaContent clientId={client.id} />
           </div>
         )}
@@ -418,8 +418,8 @@ function MaisSubTabPill({ active, onClick, children }: { active: boolean; onClic
     <button onClick={onClick}
       className="rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors"
       style={{
-        backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.06)",
-        color: active ? "#0D0D0D" : "rgba(255,255,255,0.6)",
+        backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
+        color: active ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
       }}>
       {children}
     </button>
@@ -451,10 +451,10 @@ function CustomizeTabsModal({ client, disabledFeatures, onClose, onSaveOrgDefaul
 
   return (
     <Modal open onClose={onClose} title="Personalizar abas">
-      <p className="text-xs text-white/50 mb-4">Escolha quais abas ficam visíveis. Salve como padrão pra todos os clientes, ou só pra {client.name}.</p>
+      <p className="text-xs text-foreground/50 mb-4">Escolha quais abas ficam visíveis. Salve como padrão pra todos os clientes, ou só pra {client.name}.</p>
       <div className="space-y-2 mb-5">
         {HIDEABLE_TABS.map((t) => (
-          <label key={t} className="flex items-center gap-2.5 text-sm text-white/80">
+          <label key={t} className="flex items-center gap-2.5 text-sm text-foreground/80">
             <input type="checkbox" checked={!hidden.has(t)} onChange={() => toggle(t)} />
             {HIDEABLE_TAB_LABEL[t]}
           </label>
@@ -463,16 +463,16 @@ function CustomizeTabsModal({ client, disabledFeatures, onClose, onSaveOrgDefaul
       {hasOverride && (
         <button
           onClick={() => { onClearClientOverride(); onClose(); }}
-          className="text-[11px] text-white/40 hover:text-white mb-4 underline"
+          className="text-[11px] text-foreground/40 hover:text-foreground mb-4 underline"
         >
           Remover exceção — voltar a usar o padrão da agência pra {client.name}
         </button>
       )}
       <div className="flex items-center justify-end gap-2">
-        <button onClick={onClose} className="px-3 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
+        <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
         <button
           onClick={() => { onSaveClientOverride([...hidden]); onClose(); }}
-          className="px-3 py-2 rounded-md text-xs font-bold border border-white/15 text-white/80 hover:border-[rgb(var(--lz-brand-rgb))] hover:text-[rgb(var(--lz-brand-rgb))] transition"
+          className="px-3 py-2 rounded-md text-xs font-bold border border-foreground/15 text-foreground/80 hover:border-[rgb(var(--lz-brand-rgb))] hover:text-[var(--lz-accent-ink)] transition"
         >
           Salvar só pra {client.name}
         </button>

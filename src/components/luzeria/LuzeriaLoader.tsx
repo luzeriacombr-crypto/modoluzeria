@@ -1,5 +1,6 @@
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { hexToRgbChannels } from "@/lib/luzeria/utils";
+import { useTheme } from "@/lib/luzeria/theme-store";
 
 /** Reads the org logo + brand colors cached by App.tsx on a previous
  * successful load — this component renders before the profile fetch
@@ -17,12 +18,13 @@ function readCachedBranding(): { logoUrl: string | null; name: string | null; co
 
 export function LuzeriaLoader({ fullScreen = true }: { fullScreen?: boolean }) {
   const cached = readCachedBranding();
+  const { theme } = useTheme();
   const barRgb = cached?.colorPrimary ? hexToRgbChannels(cached.colorPrimary) : null;
   const trackRgb = cached?.colorPrimaryLight ? hexToRgbChannels(cached.colorPrimaryLight) : barRgb;
   return (
     <div
       className={fullScreen ? "fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-6" : "flex flex-col items-center justify-center w-full h-full min-h-40 gap-6"}
-      style={{ background: "#0D0D0D" }}
+      style={{ background: "var(--background)" }}
     >
       <style>{`
         @keyframes lz-bar {

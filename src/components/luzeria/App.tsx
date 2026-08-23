@@ -5,12 +5,14 @@ import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
+import { useTheme } from "@/lib/luzeria/theme-store";
 import { useCallStore } from "@/lib/luzeria/call-store";
 import type { Client } from "@/lib/luzeria/types";
 import { Sidebar } from "./Sidebar";
 import { DetailPanel } from "./DetailPanel";
 import { NotificationsBell } from "./Notifications";
 import { HelpButton } from "./HelpButton";
+import { ThemeToggle } from "./ThemeToggle";
 import { NewClientModal, CustomFieldsModal } from "./Modals";
 import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
@@ -36,6 +38,7 @@ export function App() {
   const me = useMe();
   const qc = useQueryClient();
   const { sidebarHidden, toggleSidebar } = useUI();
+  const { theme } = useTheme();
   // Matched route's static id (not the resolved path) — switching between
   // clients/months stays the same id, so it doesn't remount/reset that
   // page; jumping to a genuinely different section does, which is what
@@ -154,17 +157,17 @@ export function App() {
 
   if (me.data && !me.data.active) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] px-4">
-        <div className="max-w-sm w-full bg-[#1A1A1A] rounded-xl p-8 text-center"
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="max-w-sm w-full bg-card rounded-xl p-8 text-center"
           style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.2)" }}>
-          <div className="text-[rgb(var(--lz-brand-rgb))] text-xs uppercase tracking-wider font-bold mb-3">Aguardando aprovação</div>
-          <h1 className="text-white text-lg font-semibold mb-2">Sua conta está em análise</h1>
-          <p className="text-white/50 text-sm leading-relaxed mb-6">
+          <div className="text-[var(--lz-accent-ink)] text-xs uppercase tracking-wider font-bold mb-3">Aguardando aprovação</div>
+          <h1 className="text-foreground text-lg font-semibold mb-2">Sua conta está em análise</h1>
+          <p className="text-foreground/50 text-sm leading-relaxed mb-6">
             Um Administrador precisa autorizar seu acesso antes que você possa usar o sistema. Você receberá acesso assim que for aprovado.
           </p>
           <button
             onClick={async () => { await clearOneSignalUserId(); await supabase.auth.signOut(); window.location.href = "/auth"; }}
-            className="text-xs text-white/60 hover:text-white transition">
+            className="text-xs text-foreground/60 hover:text-foreground transition">
             Sair
           </button>
         </div>
@@ -177,8 +180,8 @@ export function App() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0D0D0D]" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
-      <Toaster theme="dark" position="bottom-right" />
+    <div className="flex h-screen overflow-hidden bg-background" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+      <Toaster theme={theme} position="bottom-right" />
       <div
         className="hidden md:flex overflow-hidden self-start"
         style={{
@@ -211,7 +214,7 @@ export function App() {
         <button
           onClick={toggleSidebar}
           aria-label="Mostrar sidebar"
-          className="hidden md:flex fixed top-3 left-3 z-[9999] items-center gap-1.5 px-3 py-2 rounded-md text-white text-xs font-semibold transition-colors"
+          className="hidden md:flex fixed top-3 left-3 z-[9999] items-center gap-1.5 px-3 py-2 rounded-md text-foreground text-xs font-semibold transition-colors"
           style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
         >
           <PanelLeftOpen size={16} /> Menu
@@ -245,7 +248,7 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
       <button
         onClick={onToggleSidebar}
         aria-label={sidebarHidden ? "Mostrar sidebar" : "Ocultar sidebar"}
-        className="hidden md:flex items-center justify-center h-8 w-8 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+        className="hidden md:flex items-center justify-center h-8 w-8 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors"
       >
         {sidebarHidden ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
       </button>
@@ -254,7 +257,7 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
           <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="h-full max-w-full object-contain object-left" />
         </div>
       ) : (
-        <span className="md:hidden text-white font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px]">
+        <span className="md:hidden text-foreground font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px]">
           {me?.orgName ?? "Modo Criador"}
         </span>
       )}
@@ -264,7 +267,7 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
         <button
           onClick={() => navigate({ to: "/configuracoes" })}
           title="Configurações"
-          className="flex items-center justify-center h-8 w-8 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+          className="flex items-center justify-center h-8 w-8 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors"
         >
           <SettingsIcon size={18} />
         </button>
@@ -279,7 +282,7 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
             }}
             disabled={!canCall || callStatus !== "idle"}
             title={!canCall ? "Câmera indisponível neste navegador" : callStatus !== "idle" ? "Você já está em uma chamada" : "Vídeo chamada"}
-            className="flex items-center justify-center h-8 w-8 rounded-md text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex items-center justify-center h-8 w-8 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Video size={18} />
           </button>
@@ -289,6 +292,7 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
           )}
         </div>
       )}
+      <ThemeToggle />
       <HelpButton />
       <NotificationsBell />
       {me && (
@@ -301,7 +305,7 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
           <div className="rounded-full p-[2px]" style={{ border: "2px solid rgb(var(--lz-brand-rgb))" }}>
             <Avatar profile={me} size={26} />
           </div>
-          <span className="hidden md:inline text-xs text-white/70">{me.name}</span>
+          <span className="hidden md:inline text-xs text-foreground/70">{me.name}</span>
         </button>
       )}
     </header>

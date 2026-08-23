@@ -79,10 +79,10 @@ export function ImageCropModal({
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={onCancel}
     >
-      <div className="w-full max-w-sm bg-[#1C1C1C] border border-white/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-sm bg-card border border-foreground/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
-          <h3 className="text-base font-semibold text-white">Ajustar foto</h3>
-          <button onClick={onCancel} className="text-white/40 hover:text-white"><X size={16} /></button>
+          <h3 className="text-base font-semibold text-foreground">Ajustar foto</h3>
+          <button onClick={onCancel} className="text-foreground/40 hover:text-foreground"><X size={16} /></button>
         </div>
 
         <div className="relative w-full h-72 rounded-lg overflow-hidden bg-black">
@@ -102,14 +102,14 @@ export function ImageCropModal({
         </div>
 
         <div className="flex items-center gap-3 mt-4">
-          <ZoomIn size={14} className="text-white/40 shrink-0" />
+          <ZoomIn size={14} className="text-foreground/40 shrink-0" />
           <input
             type="range" min={1} max={3} step={0.01} value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
             className="flex-1 accent-[rgb(var(--lz-brand-rgb))]"
           />
         </div>
-        <p className="text-[10px] text-white/40 mt-2">
+        <p className="text-[10px] text-foreground/40 mt-2">
           Arraste pra reposicionar, use o controle pra dar zoom. A foto final sai em até {MAX_OUTPUT_SIZE}×{MAX_OUTPUT_SIZE}px.
         </p>
 
@@ -117,7 +117,7 @@ export function ImageCropModal({
           <button
             onClick={onCancel}
             disabled={processing}
-            className="flex-1 px-3 py-2 rounded-lg text-sm text-white/70 hover:bg-white/5 disabled:opacity-40"
+            className="flex-1 px-3 py-2 rounded-lg text-sm text-foreground/70 hover:bg-foreground/5 disabled:opacity-40"
           >
             Cancelar
           </button>

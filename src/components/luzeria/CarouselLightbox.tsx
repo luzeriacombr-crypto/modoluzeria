@@ -29,9 +29,9 @@ function LightboxImage({ file }: { file: LightboxFile }) {
       {url ? (
         <img src={url} alt={file.name} className="max-w-full max-h-full object-contain" />
       ) : isLoading ? (
-        <Loader2 size={28} className="animate-spin text-white/40" />
+        <Loader2 size={28} className="animate-spin text-foreground/40" />
       ) : (
-        <ImageIcon size={40} className="text-white/20" />
+        <ImageIcon size={40} className="text-foreground/20" />
       )}
     </div>
   );
@@ -71,7 +71,7 @@ export function CarouselLightbox({
     <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-4" onClick={onClose}>
       <button
         onClick={onClose}
-        className="absolute right-3 top-3 z-20 size-9 grid place-items-center rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+        className="absolute right-3 top-3 z-20 size-9 grid place-items-center rounded-full bg-foreground/10 hover:bg-foreground/20 text-foreground transition"
         aria-label="Fechar"
       >
         <X size={18} />
@@ -83,7 +83,7 @@ export function CarouselLightbox({
             {index > 0 && (
               <button
                 onClick={() => setIndex((i) => i - 1)}
-                className="absolute left-2 top-1/2 -translate-y-1/2 size-9 rounded-full bg-white/90 hover:bg-white grid place-items-center text-neutral-900 shadow transition"
+                className="absolute left-2 top-1/2 -translate-y-1/2 size-9 rounded-full bg-foreground/90 hover:bg-foreground grid place-items-center text-foreground shadow transition"
                 aria-label="Anterior"
               >
                 <ChevronLeft size={18} />
@@ -92,18 +92,18 @@ export function CarouselLightbox({
             {index < total - 1 && (
               <button
                 onClick={() => setIndex((i) => i + 1)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 size-9 rounded-full bg-white/90 hover:bg-white grid place-items-center text-neutral-900 shadow transition"
+                className="absolute right-2 top-1/2 -translate-y-1/2 size-9 rounded-full bg-foreground/90 hover:bg-foreground grid place-items-center text-foreground shadow transition"
                 aria-label="Próximo"
               >
                 <ChevronRight size={18} />
               </button>
             )}
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 text-[11px] font-semibold text-white bg-black/55 rounded-full px-2.5 py-1">
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 text-[11px] font-semibold text-foreground bg-black/55 rounded-full px-2.5 py-1">
               {index + 1}/{total}
             </div>
             <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
               {files.map((_, i) => (
-                <div key={i} className={`size-1.5 rounded-full transition ${i === index ? "bg-white" : "bg-white/40"}`} />
+                <div key={i} className={`size-1.5 rounded-full transition ${i === index ? "bg-foreground" : "bg-foreground/40"}`} />
               ))}
             </div>
           </>
@@ -114,7 +114,7 @@ export function CarouselLightbox({
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-white bg-black/55 hover:bg-black/70 rounded-full px-3 py-1.5 transition"
+            className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-foreground bg-black/55 hover:bg-black/70 rounded-full px-3 py-1.5 transition"
           >
             <ExternalLink size={12} /> Abrir no Drive
           </a>

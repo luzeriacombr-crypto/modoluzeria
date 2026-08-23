@@ -162,22 +162,22 @@ export function ReelCoverEditor({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative w-full md:w-[680px] md:max-w-full bg-[#1A1A1A] border border-white/[0.08] shadow-2xl flex flex-col overflow-hidden max-h-[92vh] rounded-t-2xl md:rounded-2xl"
+        className="relative w-full md:w-[680px] md:max-w-full bg-card border border-foreground/8 shadow-2xl flex flex-col overflow-hidden max-h-[92vh] rounded-t-2xl md:rounded-2xl"
       >
         {/* Header */}
-        <div className="px-5 md:px-6 pt-4 md:pt-5 pb-3 border-b border-white/[0.08] flex items-center justify-between shrink-0">
+        <div className="px-5 md:px-6 pt-4 md:pt-5 pb-3 border-b border-foreground/8 flex items-center justify-between shrink-0">
           <div className="min-w-0">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-[rgb(var(--lz-brand-rgb))]">Reel</div>
-            <div className="text-base md:text-lg font-bold text-white">Capa do Reel</div>
+            <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--lz-accent-ink)]">Reel</div>
+            <div className="text-base md:text-lg font-bold text-foreground">Capa do Reel</div>
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white p-1.5 rounded-md hover:bg-white/5">
+          <button onClick={onClose} className="text-foreground/50 hover:text-foreground p-1.5 rounded-md hover:bg-foreground/5">
             <X size={18} />
           </button>
         </div>
 
         {/* Tabs */}
         <div className="px-5 md:px-6 pt-3 shrink-0">
-          <div className="flex gap-1 p-1 rounded-md bg-white/[0.04] w-fit">
+          <div className="flex gap-1 p-1 rounded-md bg-foreground/[0.04] w-fit">
             {(["frame", "upload"] as const).map((m) => (
               <button
                 key={m}
@@ -185,7 +185,7 @@ export function ReelCoverEditor({
                 className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded transition-colors"
                 style={{
                   backgroundColor: mode === m ? "rgb(var(--lz-brand-rgb))" : "transparent",
-                  color: mode === m ? "#0D0D0D" : "rgba(255,255,255,0.6)",
+                  color: mode === m ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
                 }}
               >
                 {m === "frame" ? "Frame do vídeo" : "Enviar imagem"}
@@ -205,19 +205,19 @@ export function ReelCoverEditor({
           {mode === "frame" && (
             <>
               {!videoFile?.driveFileId && (
-                <p className="text-xs text-white/50">
+                <p className="text-xs text-foreground/50">
                   Anexe um vídeo nos arquivos do Reel para escolher um frame como capa.
                 </p>
               )}
               {videoLoading && (
-                <div className="flex items-center gap-2 text-xs text-white/60">
-                  <Loader2 size={14} className="animate-spin text-[rgb(var(--lz-brand-rgb))]" />
+                <div className="flex items-center gap-2 text-xs text-foreground/60">
+                  <Loader2 size={14} className="animate-spin text-[var(--lz-accent-ink)]" />
                   Carregando vídeo do Drive… (pode demorar para vídeos grandes)
                 </div>
               )}
               {videoSrc && (
                 <div className="space-y-3">
-                  <div className="rounded-lg overflow-hidden bg-black border border-white/[0.06]">
+                  <div className="rounded-lg overflow-hidden bg-black border border-foreground/6">
                     <video
                       ref={videoRef}
                       src={videoSrc}
@@ -230,7 +230,7 @@ export function ReelCoverEditor({
                   <button
                     type="button"
                     onClick={captureFrame}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-bold uppercase tracking-wider bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/10"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-bold uppercase tracking-wider bg-foreground/[0.06] hover:bg-foreground/[0.1] text-foreground border border-foreground/10"
                   >
                     <Scissors size={14} />
                     Usar frame atual como capa
@@ -242,12 +242,12 @@ export function ReelCoverEditor({
 
           {mode === "upload" && (
             <label className="block w-full cursor-pointer">
-              <div className="w-full aspect-[4/5] max-h-[55vh] rounded-lg border border-dashed border-white/15 bg-[#141414] hover:border-[rgb(var(--lz-brand-rgb))] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-2">
-                <Upload size={22} className="text-white/40" />
-                <span className="text-xs text-white/60">
+              <div className="w-full aspect-[4/5] max-h-[55vh] rounded-lg border border-dashed border-foreground/15 bg-card hover:border-[rgb(var(--lz-brand-rgb))] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-2">
+                <Upload size={22} className="text-foreground/40" />
+                <span className="text-xs text-foreground/60">
                   {uploadFile ? uploadFile.name : "Clique para enviar uma imagem (JPG, PNG, WEBP)"}
                 </span>
-                <span className="text-[10px] text-white/30">Recomendado: 1080×1350 (4:5)</span>
+                <span className="text-[10px] text-foreground/30">Recomendado: 1080×1350 (4:5)</span>
               </div>
               <input
                 type="file"
@@ -260,21 +260,21 @@ export function ReelCoverEditor({
 
           {/* Preview */}
           <div>
-            <div className="text-[10px] uppercase font-bold tracking-wider text-white/40 mb-2">Pré-visualização</div>
-            <div className="w-full max-w-[260px] aspect-[4/5] rounded-lg overflow-hidden bg-[#141414] border border-white/[0.08] flex items-center justify-center">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-2">Pré-visualização</div>
+            <div className="w-full max-w-[260px] aspect-[4/5] rounded-lg overflow-hidden bg-card border border-foreground/8 flex items-center justify-center">
               {previewDataUrl ? (
                 <img src={previewDataUrl} alt="Pré-visualização da capa" className="w-full h-full object-cover" />
               ) : currentCoverUrl ? (
                 <img src={currentCoverUrl} alt="Capa atual" className="w-full h-full object-cover opacity-60" />
               ) : (
-                <div className="flex flex-col items-center gap-1 text-white/30">
+                <div className="flex flex-col items-center gap-1 text-foreground/30">
                   <Film size={28} />
                   <span className="text-[10px] uppercase tracking-wider">Sem capa</span>
                 </div>
               )}
             </div>
             {!previewDataUrl && currentCoverUrl && (
-              <p className="text-[10px] text-white/40 mt-2">Capa atual mostrada esmaecida. Selecione um frame ou envie uma nova imagem para substituir.</p>
+              <p className="text-[10px] text-foreground/40 mt-2">Capa atual mostrada esmaecida. Selecione um frame ou envie uma nova imagem para substituir.</p>
             )}
           </div>
 
@@ -282,7 +282,7 @@ export function ReelCoverEditor({
         </div>
 
         {/* Footer */}
-        <div className="px-5 md:px-6 py-3 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="px-5 md:px-6 py-3 border-t border-foreground/8 flex flex-wrap items-center justify-between gap-2 shrink-0">
           <button
             type="button"
             onClick={removeCover}
@@ -296,7 +296,7 @@ export function ReelCoverEditor({
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider text-white/70 hover:bg-white/5"
+              className="px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider text-foreground/70 hover:bg-foreground/5"
             >
               Cancelar
             </button>

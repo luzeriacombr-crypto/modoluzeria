@@ -40,14 +40,14 @@ export function ClientRoteiroApproval({
 
   if (status === "aprovado") {
     return (
-      <div className="mt-3 pt-3 border-t border-white/[0.06]">
-        <div className="flex items-center gap-2 text-[12.5px] font-semibold" style={{ color: "rgb(var(--lz-brand-rgb))" }}>
+      <div className="mt-3 pt-3 border-t border-foreground/6">
+        <div className="flex items-center gap-2 text-[12.5px] font-semibold" style={{ color: "var(--lz-accent-ink)" }}>
           <CheckCircle2 size={14} /> Você aprovou este roteiro
         </div>
         <button
           type="button"
           onClick={() => setAsking(true)}
-          className="text-[11px] text-white/40 hover:text-white/60 transition mt-1.5"
+          className="text-[11px] text-foreground/40 hover:text-foreground/60 transition mt-1.5"
         >
           Mudar de ideia? Pedir ajuste
         </button>
@@ -58,10 +58,10 @@ export function ClientRoteiroApproval({
               onChange={(e) => setNote(e.target.value)}
               placeholder="O que você gostaria de ajustar nesse roteiro?"
               rows={2}
-              className="w-full bg-transparent text-[12.5px] text-white/80 outline-none resize-y placeholder:text-white/30"
+              className="w-full bg-transparent text-[12.5px] text-foreground/80 outline-none resize-y placeholder:text-foreground/30"
             />
             <div className="flex justify-end gap-2 mt-1.5">
-              <button type="button" onClick={() => setAsking(false)} className="text-[11px] text-white/40 hover:text-white/60 px-2 py-1">Cancelar</button>
+              <button type="button" onClick={() => setAsking(false)} className="text-[11px] text-foreground/40 hover:text-foreground/60 px-2 py-1">Cancelar</button>
               <button
                 type="button"
                 disabled={!note.trim() || saving}
@@ -80,11 +80,11 @@ export function ClientRoteiroApproval({
 
   if (status === "ajustar") {
     return (
-      <div className="mt-3 pt-3 border-t border-white/[0.06]">
+      <div className="mt-3 pt-3 border-t border-foreground/6">
         <div className="flex items-start gap-2 text-[12.5px] font-semibold text-red-400">
           <PencilLine size={14} className="mt-0.5 shrink-0" /> Você pediu ajuste neste roteiro
         </div>
-        {current?.clientNote && <p className="text-[12px] text-white/60 mt-1 ml-[22px]">{current.clientNote}</p>}
+        {current?.clientNote && <p className="text-[12px] text-foreground/60 mt-1 ml-[22px]">{current.clientNote}</p>}
         <button
           type="button"
           disabled={saving}
@@ -99,7 +99,7 @@ export function ClientRoteiroApproval({
   }
 
   return (
-    <div className="mt-3 pt-3 border-t border-white/[0.06]">
+    <div className="mt-3 pt-3 border-t border-foreground/6">
       {!asking ? (
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -115,7 +115,7 @@ export function ClientRoteiroApproval({
             type="button"
             onClick={() => setAsking(true)}
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors"
-            style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)" }}
+            style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 70%, transparent)" }}
           >
             <PencilLine size={13} /> Sugerir alteração
           </button>
@@ -128,10 +128,10 @@ export function ClientRoteiroApproval({
             placeholder="O que você gostaria de ajustar nesse roteiro?"
             rows={2}
             autoFocus
-            className="w-full bg-transparent text-[12.5px] text-white/80 outline-none resize-y placeholder:text-white/30"
+            className="w-full bg-transparent text-[12.5px] text-foreground/80 outline-none resize-y placeholder:text-foreground/30"
           />
           <div className="flex justify-end gap-2 mt-1.5">
-            <button type="button" onClick={() => setAsking(false)} className="text-[11px] text-white/40 hover:text-white/60 px-2 py-1">Cancelar</button>
+            <button type="button" onClick={() => setAsking(false)} className="text-[11px] text-foreground/40 hover:text-foreground/60 px-2 py-1">Cancelar</button>
             <button
               type="button"
               disabled={!note.trim() || saving}

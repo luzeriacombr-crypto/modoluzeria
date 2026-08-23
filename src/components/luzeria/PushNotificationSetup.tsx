@@ -5,7 +5,7 @@ import {
 } from "@/lib/luzeria/push-notifications";
 
 function StepList({ children }: { children: React.ReactNode }) {
-  return <ol className="space-y-2 text-[12.5px] text-white/70 leading-relaxed list-decimal list-inside">{children}</ol>;
+  return <ol className="space-y-2 text-[12.5px] text-foreground/70 leading-relaxed list-decimal list-inside">{children}</ol>;
 }
 
 export function PushNotificationButton() {
@@ -26,7 +26,7 @@ export function PushNotificationButton() {
         onClick={() => setOpen(true)}
         title={granted ? "Notificações no celular ativadas" : "Ativar notificações no celular"}
         className={`inline-flex items-center gap-1 text-[11px] font-semibold transition ${
-          granted ? "text-[rgb(var(--lz-brand-rgb))]" : denied ? "text-red-300 hover:text-red-200" : "text-white/50 hover:text-white"
+          granted ? "text-[var(--lz-accent-ink)]" : denied ? "text-red-300 hover:text-red-200" : "text-foreground/50 hover:text-foreground"
         }`}
       >
         {granted ? <BellRing size={12} /> : denied ? <BellOff size={12} /> : <Bell size={12} />}
@@ -65,23 +65,23 @@ function PushNotificationModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="w-full max-w-md bg-[#1C1C1C] border border-white/10 rounded-2xl p-6 max-h-[85vh] overflow-y-auto"
+        className="w-full max-w-md bg-card border border-foreground/10 rounded-2xl p-6 max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-1">
           <div>
-            <div className="text-[10px] uppercase font-bold tracking-wider text-[rgb(var(--lz-brand-rgb))] mb-1">Notificações</div>
-            <h3 className="text-base font-semibold text-white">Ativar no celular</h3>
+            <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--lz-accent-ink)] mb-1">Notificações</div>
+            <h3 className="text-base font-semibold text-foreground">Ativar no celular</h3>
           </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white"><X size={16} /></button>
+          <button onClick={onClose} className="text-foreground/40 hover:text-foreground"><X size={16} /></button>
         </div>
-        <p className="text-[12.5px] text-white/50 mb-4 leading-relaxed">
+        <p className="text-[12.5px] text-foreground/50 mb-4 leading-relaxed">
           Receba um aviso no seu celular sempre que alguém te marcar, comentar ou mudar o status de uma tarefa sua.
         </p>
 
         {perm === "granted" ? (
           <div className="flex items-center gap-2 rounded-lg px-3 py-2.5 mb-4 text-[12.5px] font-medium"
-            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.1)", color: "rgb(var(--lz-brand-rgb))" }}>
+            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.1)", color: "var(--lz-accent-ink)" }}>
             <Check size={15} className="shrink-0" /> Notificações ativadas neste aparelho.
           </div>
         ) : perm === "denied" ? (
@@ -109,33 +109,33 @@ function PushNotificationModal({ onClose }: { onClose: () => void }) {
         )}
 
         <div className="space-y-4">
-          <div className="rounded-xl bg-[#141414] border border-white/[0.06] p-3.5">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2.5">
+          <div className="rounded-xl bg-card border border-foreground/6 p-3.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-foreground mb-2.5">
               📱 No iPhone (Safari)
             </div>
             <StepList>
               <li>Toque no botão de compartilhar <Share size={11} className="inline align-text-top" /> na barra do Safari.</li>
-              <li>Role para baixo e toque em <strong className="text-white/85">"Adicionar à Tela de Início"</strong>.</li>
-              <li>Toque em <strong className="text-white/85">Adicionar</strong>, no canto superior direito.</li>
+              <li>Role para baixo e toque em <strong className="text-foreground/85">"Adicionar à Tela de Início"</strong>.</li>
+              <li>Toque em <strong className="text-foreground/85">Adicionar</strong>, no canto superior direito.</li>
               <li>Feche o Safari e abra o Modo Criador pelo novo ícone que apareceu na tela inicial.</li>
               <li>Dentro do app, volte aqui em Notificações e toque em "Ativar agora".</li>
             </StepList>
           </div>
 
-          <div className="rounded-xl bg-[#141414] border border-white/[0.06] p-3.5">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2.5">
+          <div className="rounded-xl bg-card border border-foreground/6 p-3.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-foreground mb-2.5">
               🤖 No Android (Chrome)
             </div>
             <StepList>
               <li>Toque no menu <MoreVertical size={11} className="inline align-text-top" /> no canto superior direito do Chrome.</li>
-              <li>Toque em <strong className="text-white/85">"Instalar aplicativo"</strong> ou <strong className="text-white/85">"Adicionar à tela inicial"</strong> <Plus size={11} className="inline align-text-top" />.</li>
+              <li>Toque em <strong className="text-foreground/85">"Instalar aplicativo"</strong> ou <strong className="text-foreground/85">"Adicionar à tela inicial"</strong> <Plus size={11} className="inline align-text-top" />.</li>
               <li>Abra o Modo Criador pelo ícone que aparece na tela inicial.</li>
               <li>Toque em "Ativar agora" acima e confirme a permissão que o Android vai pedir.</li>
             </StepList>
           </div>
         </div>
 
-        <p className="text-[10.5px] text-white/30 mt-4 leading-relaxed">
+        <p className="text-[10.5px] text-foreground/30 mt-4 leading-relaxed">
           Isso ativa as notificações só neste aparelho e navegador. Se você usa mais de um celular, repita os passos em cada um.
         </p>
       </div>
