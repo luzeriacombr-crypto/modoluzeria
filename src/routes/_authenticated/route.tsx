@@ -2,6 +2,21 @@ import { createFileRoute, isRedirect, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { App } from "@/components/luzeria/App";
 import { markSignedInDevice } from "@/lib/luzeria/device-flag";
+import { useTheme } from "@/lib/luzeria/theme-store";
+
+/** A classe .light só entra aqui — nunca no <html> — pra não vazar pro site
+ * de vendas, pro link público de preview do feed, nem pra nenhuma outra
+ * página fora do app logado, nenhuma das quais foi feita pra suportar o
+ * claro. "contents" faz esse div não existir pro layout (sem afetar o
+ * h-screen/flex do App logo abaixo), só participando do cascade de CSS. */
+function AuthenticatedLayout() {
+  const { theme } = useTheme();
+  return (
+    <div className={theme === "light" ? "contents light" : "contents"}>
+      <App />
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -24,5 +39,5 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: "/auth" });
     }
   },
-  component: App,
+  component: AuthenticatedLayout,
 });

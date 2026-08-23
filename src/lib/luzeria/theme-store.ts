@@ -13,28 +13,22 @@ function readTheme(): Theme {
   }
 }
 
-function applyTheme(theme: Theme) {
-  if (typeof document === "undefined") return;
-  document.documentElement.classList.toggle("light", theme === "light");
-}
-
 interface ThemeStore {
   theme: Theme;
   setTheme: (t: Theme) => void;
   toggleTheme: () => void;
 }
 
+// A classe .light NUNCA vai no <html> — isso vazaria pro site de vendas, pro
+// link público de preview e pra qualquer outra página fora do app logado,
+// que não foram feitas pra suportar o claro. Em vez disso, App.tsx aplica a
+// classe só no elemento raiz do próprio app (ver App.tsx), então o resto do
+// site sempre renderiza com a paleta escura de :root, intocada.
 export const useTheme = create<ThemeStore>((set, get) => ({
   theme: readTheme(),
   setTheme: (t) => {
     try { window.localStorage.setItem(THEME_KEY, t); } catch { /* noop */ }
-    applyTheme(t);
     set({ theme: t });
   },
   toggleTheme: () => get().setTheme(get().theme === "dark" ? "light" : "dark"),
 }));
-
-/** Script inline injetado no <head>, antes da hidratação — lê o tema salvo e
- * já aplica a classe .light síncrono, pra ninguém ver um flash claro/escuro
- * errado antes do React montar. */
-export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("${THEME_KEY}");if(t==="light")document.documentElement.classList.add("light");}catch(e){}})();`;

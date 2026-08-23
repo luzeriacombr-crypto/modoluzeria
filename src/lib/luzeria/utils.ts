@@ -95,10 +95,10 @@ export interface DeadlineInfo {
 
 export function deadlineInfo(dueDate?: string | null, status?: string): DeadlineInfo {
   if (status === "PRONTO_PARA_PUBLICAR" || status === "FINALIZADO" || status === "CONCLUIDO") {
-    return { level: "done", label: "", color: "rgba(255,255,255,0.3)", bg: "rgba(255,255,255,0.05)", days: null };
+    return { level: "done", label: "", color: "color-mix(in srgb, var(--foreground) 30%, transparent)", bg: "color-mix(in srgb, var(--foreground) 5%, transparent)", days: null };
   }
   if (!dueDate) {
-    return { level: "none", label: "Sem prazo", color: "rgba(255,255,255,0.4)", bg: "rgba(255,255,255,0.04)", days: null };
+    return { level: "none", label: "Sem prazo", color: "color-mix(in srgb, var(--foreground) 40%, transparent)", bg: "color-mix(in srgb, var(--foreground) 4%, transparent)", days: null };
   }
   const [y, m, d] = dueDate.split("-").map(Number);
   const due = new Date(y, (m ?? 1) - 1, d ?? 1); due.setHours(0, 0, 0, 0);
@@ -112,7 +112,7 @@ export function deadlineInfo(dueDate?: string | null, status?: string): Deadline
   if (days === 0) return { level: "urgent", label: "Vence hoje", color: "#FF4444", bg: "rgba(255,68,68,0.12)", days };
   if (days === 1) return { level: "urgent", label: "Vence amanhã", color: "#FF4444", bg: "rgba(255,68,68,0.12)", days };
   if (days <= 3) return { level: "soon", label: `Em ${days} dias`, color: "#F5A623", bg: "rgba(245,166,35,0.12)", days };
-  return { level: "ok", label: `Em ${days} dias`, color: "rgb(var(--lz-brand-rgb))", bg: "rgba(var(--lz-brand-light-rgb),0.12)", days };
+  return { level: "ok", label: `Em ${days} dias`, color: "var(--lz-accent-ink)", bg: "rgba(var(--lz-brand-light-rgb),0.12)", days };
 }
 
 /** "#RRGGBB" -> "R, G, B" for use inside a CSS custom property that's later

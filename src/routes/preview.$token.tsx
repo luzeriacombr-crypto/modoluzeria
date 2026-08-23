@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { publicFeedQO } from "@/lib/luzeria/queries";
 import { addPublicFeedback, approvePublicFeed, approvePublicItem, getPublicItemFiles, getPublicDriveVideoToken } from "@/lib/luzeria/feed-share.functions";
 import { downloadDriveFiles } from "@/lib/luzeria/drive-download";
@@ -119,6 +120,7 @@ function PublicPreviewPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#0D0D0D" }}>
+      <Toaster theme="dark" position="bottom-right" />
       {/* Header */}
       <div className="px-4 pt-8 pb-6 max-w-[640px] mx-auto">
         <div className="flex items-center gap-4">
@@ -254,7 +256,7 @@ function PublicPreviewPage() {
       {igModalItem && (
         <InstagramPostModal
           item={igModalItem}
-          client={{ name: client.name, color: client.color }}
+          client={{ name: client.name, color: client.color, photoUrl: client.photoUrl }}
           mode={{ kind: "public", token }}
           canComment
           initialAuthorName={savedName || undefined}
