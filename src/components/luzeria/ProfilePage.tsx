@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield, UserPlus, RefreshCw, MessageCircle, AtSign, Star, Bug, LogOut, CalendarClock } from "lucide-react";
+import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield, UserPlus, RefreshCw, MessageCircle, AtSign, Star, Bug, LogOut, CalendarClock, Sun, Moon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useMe, useApi, notificationPrefsQO, myCalendarConnectionQO, clientsQO } from "@/lib/luzeria/queries";
+import { useTheme } from "@/lib/luzeria/theme-store";
 import { withOAuthState } from "@/lib/luzeria/google-calendar-connect";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { AvatarEditor, ColorPicker, showAvatarError, uploadAvatar } from "./AvatarEditor";
+import { AvatarEditor, showAvatarError, uploadAvatar } from "./AvatarEditor";
 import { roleLabel } from "./Sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 
 export function ProfilePage() {
   const me = useMe().data;
+  const { theme, setTheme } = useTheme();
   const { updateMyProfile, setMyNotificationPreferences, updateMyAccount, updateMyDefaultLanding } = useApi();
   const { data: prefs } = useQuery(notificationPrefsQO());
   const { data: clients = [] } = useQuery(clientsQO());
@@ -89,16 +91,6 @@ export function ProfilePage() {
         />
       </div>
 
-      <div className="mt-6 bg-card rounded-lg p-6 md:p-8">
-        <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-5 text-center md:text-left">
-          {avatarPreview ? "Cor de fallback" : "Cor do avatar"}
-        </div>
-        <ColorPicker
-          value={color}
-          onChange={(c) => { setColor(c); setDirty(true); }}
-        />
-      </div>
-
       <div className="mt-8 flex items-center justify-end gap-3">
         <button
           onClick={save}
@@ -111,7 +103,7 @@ export function ProfilePage() {
       </div>
 
       <p className="text-[11px] text-foreground/30 mt-4 text-center md:text-right">
-        A foto e a cor são visuais. Para alterar nome, email ou senha, use a seção abaixo.
+        A foto é só visual. Para alterar nome, email ou senha, use a seção abaixo.
       </p>
 
       <AccountSection
@@ -130,6 +122,28 @@ export function ProfilePage() {
       />
 
       <TwoFactorSection />
+
+      <div className="mt-6 bg-card rounded-lg p-6 md:p-8">
+        <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-5">
+          Aparência
+        </div>
+        <div className="flex items-start gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-foreground">Tema do app</div>
+            <div className="text-[11px] text-foreground/50 mt-1">Escolha como o Modo Criador aparece pra você — a preferência fica salva nesse aparelho.</div>
+          </div>
+          <div className="flex items-center gap-1 rounded-full bg-foreground/[0.06] p-1 shrink-0">
+            <button type="button" onClick={() => setTheme("dark")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${theme === "dark" ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "text-foreground/50 hover:text-foreground"}`}>
+              <Moon size={13} /> Escuro
+            </button>
+            <button type="button" onClick={() => setTheme("light")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${theme === "light" ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "text-foreground/50 hover:text-foreground"}`}>
+              <Sun size={13} /> Claro
+            </button>
+          </div>
+        </div>
+      </div>
 
       {!(me.disabledFeatures ?? []).includes("google_calendar") && (
         <div className="mt-6 bg-card rounded-lg p-6 md:p-8">

@@ -12,7 +12,6 @@ import { Sidebar } from "./Sidebar";
 import { DetailPanel } from "./DetailPanel";
 import { NotificationsBell } from "./Notifications";
 import { HelpButton } from "./HelpButton";
-import { ThemeToggle } from "./ThemeToggle";
 import { NewClientModal, CustomFieldsModal } from "./Modals";
 import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
@@ -292,7 +291,6 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
           )}
         </div>
       )}
-      <ThemeToggle />
       <HelpButton />
       <NotificationsBell />
       {me && (

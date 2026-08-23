@@ -1006,7 +1006,7 @@ function OrgBrandingSection({
     setUploadingLight(true);
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-      const path = `org-logos-light/${orgId}/logo-${Date.now()}.${ext}`;
+      const path = `org-logos/${orgId}/logo-light-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
         contentType: file.type, upsert: true,
       });

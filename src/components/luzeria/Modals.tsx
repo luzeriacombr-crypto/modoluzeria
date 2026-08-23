@@ -28,9 +28,8 @@ export function Modal({ open, onClose, title, children, maxWidthClass = "max-w-m
 export function NewClientModal({ open, onClose, category }: { open: boolean; onClose: () => void; category?: string }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState<string>(PRESET_COLORS[0]);
-  const [icon, setIcon] = useState("");
   const { createClient } = useApi();
-  useEffect(() => { if (open) { setName(""); setColor(PRESET_COLORS[0]); setIcon(""); } }, [open]);
+  useEffect(() => { if (open) { setName(""); setColor(PRESET_COLORS[0]); } }, [open]);
   const isAvulso = category === "Avulsos";
   return (
     <Modal open={open} onClose={onClose} title={isAvulso ? "Nova demanda avulsa" : "Novo cliente"}>
@@ -50,18 +49,11 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
         </div>
       </div>
 
-      <div className="mt-4">
-        <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Inicial / Emoji (opcional)</div>
-        <input value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={2}
-          placeholder="(automático)"
-          className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
-      </div>
-
       <div className="flex items-center justify-end gap-2 mt-5">
         <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
         <button disabled={!name.trim() || createClient.isPending}
           onClick={() => createClient.mutateAsync({
-            data: { name: name.trim(), category, color, icon: icon.trim() || null },
+            data: { name: name.trim(), category, color, icon: null },
           }).then(onClose)}
           className="px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50 transition-opacity hover:opacity-90"
           style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
