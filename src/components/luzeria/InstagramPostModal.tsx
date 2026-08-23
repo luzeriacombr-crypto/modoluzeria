@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Heart, MessageCircle, Pause, Play, Send, Sha
 import { driveThumbnailQO, publicDriveThumbQO } from "@/lib/luzeria/queries";
 import { listItemFiles, getDriveVideoToken } from "@/lib/luzeria/drive.functions";
 import { getPublicItemFiles, getPublicDriveVideoToken } from "@/lib/luzeria/feed-share.functions";
-import { downloadDriveFiles } from "@/lib/luzeria/drive-download";
+import { downloadDriveFile, downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
 
 /* ------------ Shared types ------------ */
 export type IGModalFile = {
@@ -163,7 +163,11 @@ export function InstagramPostModal({
       const fetchToken = isPublic && shareToken
         ? (opts: { data: { fileId: string } }) => fetchPublicTokenRaw({ data: { token: shareToken, fileId: opts.data.fileId } })
         : fetchInternalToken;
-      await downloadDriveFiles(fetchToken, allFiles);
+      if (allFiles.length === 1) {
+        await downloadDriveFile(fetchToken, allFiles[0].driveFileId, allFiles[0].name);
+      } else {
+        await downloadDriveFilesAsZip(fetchToken, allFiles, `${item.title || "post"}.zip`);
+      }
       toast.success(`${allFiles.length} arquivo${allFiles.length === 1 ? "" : "s"} baixado${allFiles.length === 1 ? "" : "s"}.`);
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao baixar arquivo.");

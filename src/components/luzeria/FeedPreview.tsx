@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Check, CheckCircle2, Copy as CopyIcon, Download, Film, Image as ImageIcon, Layers, Loader2, MessageSquare, RefreshCw, Share2 } from "lucide-react";
 import { itemFilesQO, gridThumbnailsQO, feedApprovalSummaryQO, activeFeedMonthQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { listItemFiles, getDriveVideoToken } from "@/lib/luzeria/drive.functions";
-import { downloadDriveFiles } from "@/lib/luzeria/drive-download";
+import { downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
 import type { Client, ContentItem, MonthData } from "@/lib/luzeria/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { InstagramPostModal, type IGModalItem } from "./InstagramPostModal";
@@ -117,7 +117,7 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
           {isAdmin && (
             <div className="flex items-center gap-2">
               <ActiveMonthToggle clientId={client.id} monthId={month.id} />
-              {cells.items.length > 0 && <DownloadAllButton items={cells.items} />}
+              {cells.items.length > 0 && <DownloadAllButton items={cells.items} zipName={`${client.name} - ${month.key}.zip`} />}
               <ShareButton clientId={client.id} monthId={month.id} />
             </div>
           )}
@@ -336,7 +336,7 @@ function FeedCell({
 }
 
 /* ============ Download all (high quality, from Drive) ============ */
-function DownloadAllButton({ items }: { items: FeedItem[] }) {
+function DownloadAllButton({ items, zipName }: { items: FeedItem[]; zipName: string }) {
   const [downloading, setDownloading] = useState(false);
   const fetchDriveToken = useServerFn(getDriveVideoToken);
   const fetchItemFiles = useServerFn(listItemFiles);
@@ -347,8 +347,8 @@ function DownloadAllButton({ items }: { items: FeedItem[] }) {
       const fileLists = await Promise.all(items.map((i) => fetchItemFiles({ data: { itemId: i.id } })));
       const allFiles = fileLists.flat().map((f: any) => ({ driveFileId: f.driveFileId, name: f.name }));
       if (allFiles.length === 0) { toast.error("Nenhum arquivo pra baixar ainda."); return; }
-      await downloadDriveFiles(fetchDriveToken, allFiles);
-      toast.success(`${allFiles.length} arquivo${allFiles.length === 1 ? "" : "s"} baixado${allFiles.length === 1 ? "" : "s"}.`);
+      await downloadDriveFilesAsZip(fetchDriveToken, allFiles, zipName);
+      toast.success(`${allFiles.length} arquivo${allFiles.length === 1 ? "" : "s"} baixado${allFiles.length === 1 ? "" : "s"} num .zip.`);
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao baixar arquivos.");
     } finally {
