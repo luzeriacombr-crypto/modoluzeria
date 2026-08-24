@@ -184,9 +184,13 @@ export const getTodayCalendarEvents = createServerFn({ method: "GET" })
     const accessToken = await getValidCalendarAccessToken(context.supabase, targetUserId);
     if (!accessToken) return { connected: false, events: [] as any[] };
 
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    // "Hoje" tem que ser o dia no horário de Brasília, não no fuso do
+    // servidor (UTC na Vercel) — sem isso, entre 21h e meia-noite (Brasília)
+    // o servidor já está no dia seguinte em UTC e a janela pega parte de
+    // ontem/amanhã em vez do dia local de verdade.
+    const todayInBrazil = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+    const startOfDay = new Date(`${todayInBrazil}T00:00:00-03:00`);
+    const endOfDay = new Date(`${todayInBrazil}T23:59:59-03:00`);
     const params = new URLSearchParams({
       timeMin: startOfDay.toISOString(),
       timeMax: endOfDay.toISOString(),
