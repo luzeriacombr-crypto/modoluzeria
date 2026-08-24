@@ -13,8 +13,9 @@ export type Lead = {
   source: string | null;
   notes: string | null;
   valueEstimateCents: number | null;
-  responsibleId: string | null;
-  responsibleName: string | null;
+  responsibleIds: string[];
+  responsibleNames: string[];
+  product: string | null;
   status: LeadStatus;
   archived: boolean;
   wonClientId: string | null;
@@ -40,7 +41,7 @@ export const listLeads = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("leads")
-      .select("id, name, contact_phone, contact_email, source, notes, value_estimate_cents, responsible_id, status, archived, won_client_id, next_followup_at, follow_up_note, created_at, updated_at, profiles(name)")
+      .select("id, name, contact_phone, contact_email, source, notes, value_estimate_cents, responsible_ids, product, status, archived, won_client_id, next_followup_at, follow_up_note, created_at, updated_at")
       .eq("org_id", context.orgId)
       .order("created_at", { ascending: false });
     if (!data.includeArchived) q = q.eq("archived", false);
@@ -63,10 +64,19 @@ export const listLeads = createServerFn({ method: "GET" })
       }
     }
 
+    const profileIds = [...new Set((rows ?? []).flatMap((r: any) => r.responsible_ids ?? []))];
+    const nameById = new Map<string, string>();
+    if (profileIds.length > 0) {
+      const { data: profs } = await context.supabase.from("profiles").select("id, name").in("id", profileIds);
+      for (const p of profs ?? []) nameById.set(p.id, p.name);
+    }
+
     return (rows ?? []).map((r: any) => ({
       id: r.id, name: r.name, contactPhone: r.contact_phone, contactEmail: r.contact_email,
       source: r.source, notes: r.notes, valueEstimateCents: r.value_estimate_cents,
-      responsibleId: r.responsible_id, responsibleName: r.profiles?.name ?? null,
+      responsibleIds: r.responsible_ids ?? [],
+      responsibleNames: (r.responsible_ids ?? []).map((id: string) => nameById.get(id)).filter(Boolean),
+      product: r.product,
       status: r.status, archived: r.archived, wonClientId: r.won_client_id,
       nextFollowupAt: r.next_followup_at, followUpNote: r.follow_up_note,
       contactCount: countByLead.get(r.id) ?? 0,
@@ -111,7 +121,7 @@ export const upsertLead = createServerFn({ method: "POST" })
   .inputValidator((d: {
     id?: string; name: string; contactPhone?: string | null; contactEmail?: string | null;
     source?: string | null; notes?: string | null; valueEstimateCents?: number | null;
-    responsibleId?: string | null;
+    responsibleIds?: string[]; product?: string | null;
   }) =>
     z.object({
       id: z.string().uuid().optional(),
@@ -121,7 +131,8 @@ export const upsertLead = createServerFn({ method: "POST" })
       source: z.string().trim().max(80).nullable().optional(),
       notes: z.string().trim().max(2000).nullable().optional(),
       valueEstimateCents: z.number().int().min(0).nullable().optional(),
-      responsibleId: z.string().uuid().nullable().optional(),
+      responsibleIds: z.array(z.string().uuid()).optional(),
+      product: z.string().trim().max(40).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const db: any = context.supabase;
@@ -132,7 +143,8 @@ export const upsertLead = createServerFn({ method: "POST" })
     if (data.source !== undefined) patch.source = data.source;
     if (data.notes !== undefined) patch.notes = data.notes;
     if (data.valueEstimateCents !== undefined) patch.value_estimate_cents = data.valueEstimateCents;
-    if (data.responsibleId !== undefined) patch.responsible_id = data.responsibleId;
+    if (data.responsibleIds !== undefined) patch.responsible_ids = data.responsibleIds;
+    if (data.product !== undefined) patch.product = data.product;
     if (data.id) {
       patch.updated_at = new Date().toISOString();
       const { error } = await db.from("leads").update(patch).eq("id", data.id);

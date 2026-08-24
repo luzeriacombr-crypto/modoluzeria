@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Trash2, Handshake, MessageCircle, Snowflake, PhoneCall, Check, UserPlus, Phone, CalendarClock, CheckCircle2, XCircle, X } from "lucide-react";
+import { Plus, Trash2, Handshake, MessageCircle, Snowflake, PhoneCall, Check, UserPlus, Phone, CalendarClock, CheckCircle2, XCircle, X, Info } from "lucide-react";
 import { leadsQO, leadContactsQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { Modal } from "./Modals";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
@@ -42,13 +42,68 @@ function waLink(phone: string | null, text?: string): string | null {
   return `https://wa.me/${withCountry}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 }
 
-const COLUMNS: { key: LeadStatus; label: string; accent: string; icon: typeof UserPlus }[] = [
-  { key: "novo", label: "Novos", accent: "#888780", icon: UserPlus },
-  { key: "responder", label: "Responder agora", accent: "#E76F51", icon: Phone },
-  { key: "followup", label: "Follow-up", accent: "#4A9EFF", icon: CalendarClock },
-  { key: "fechado", label: "Fechado", accent: "#5BA88A", icon: CheckCircle2 },
-  { key: "perdido", label: "Perdido", accent: "#E24B4A", icon: XCircle },
+const COLUMNS: { key: LeadStatus; label: string; accent: string; icon: typeof UserPlus; help: string }[] = [
+  { key: "novo", label: "Novos", accent: "#888780", icon: UserPlus,
+    help: "Leads que acabaram de entrar, sem contato ainda. Arraste o card pra 'Responder agora' assim que começar a atender." },
+  { key: "responder", label: "Responder agora", accent: "#E76F51", icon: Phone,
+    help: "Já teve contato e está esperando um retorno seu — clique em 'Marquei contato' toda vez que falar com a pessoa." },
+  { key: "followup", label: "Follow-up", accent: "#4A9EFF", icon: CalendarClock,
+    help: "Tem um retorno agendado pra uma data e horário específicos. Arrastar um card pra cá (ou clicar em 'Agendar' dentro dele) pede a data." },
+  { key: "fechado", label: "Fechado", accent: "#5BA88A", icon: CheckCircle2,
+    help: "Virou cliente de verdade. Arrastar um card pra cá (ou clicar em 'Ganho') cria o cliente automaticamente na lista de Clientes." },
+  { key: "perdido", label: "Perdido", accent: "#E24B4A", icon: XCircle,
+    help: "Não vai fechar — sai do quadro ativo, mas fica guardado (dá pra conferir marcando 'ver arquivados', se precisar)." },
 ];
+
+/** Pequeno "i" clicável — abre uma explicação curta embaixo, fecha ao
+ * clicar fora. Usado nos botões/áreas que não são autoexplicativas pra
+ * quem tá vendo o funil de vendas pela primeira vez. */
+function InfoTip({ text, align = "left" }: { text: string; align?: "left" | "right" | "center" }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  const alignClass = align === "right" ? "right-0" : align === "center" ? "left-1/2 -translate-x-1/2" : "left-0";
+
+  return (
+    <div ref={ref} className="relative inline-flex shrink-0" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center justify-center h-4 w-4 rounded-full shrink-0 transition-colors hover:opacity-80"
+        style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 12%, transparent)", color: "color-mix(in srgb, var(--foreground) 55%, transparent)" }}
+      >
+        <Info size={11} />
+      </button>
+      {open && (
+        <div className={`absolute z-50 top-full ${alignClass} mt-1.5 w-56 rounded-md border border-foreground/10 bg-card p-2.5 text-[11px] leading-snug text-foreground/70 shadow-xl`}>
+          {text}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PillButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="px-2.5 py-1 rounded-full text-xs font-medium border transition-colors"
+      style={active
+        ? { backgroundColor: "rgba(var(--lz-brand-rgb),0.15)", borderColor: "rgb(var(--lz-brand-rgb))", color: "var(--foreground)" }
+        : { backgroundColor: "transparent", borderColor: "color-mix(in srgb, var(--foreground) 15%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
+    >
+      {label}
+    </button>
+  );
+}
 
 export function SalesPipelinePage() {
   const [newLeadOpen, setNewLeadOpen] = useState(false);
@@ -103,6 +158,7 @@ export function SalesPipelinePage() {
         <div className="flex items-center gap-2">
           <Handshake size={20} className="text-[var(--lz-accent-ink)]" />
           <h1 className="text-lg font-bold text-foreground">Vendas</h1>
+          <InfoTip text="Cada bloco é uma etapa do funil. Arraste os cards entre eles pra mudar o estágio de um lead, ou clique num card pra ver/editar os detalhes." />
         </div>
         <button
           onClick={() => setNewLeadOpen(true)}
@@ -174,7 +230,7 @@ function leadPreviewSubtitle(col: LeadStatus, lead: Lead): string {
 }
 
 function FolderBlock({ col, leads, isOver, dragId, onDragStartLead, onDragEndLead, onExpand, onOpenLead, onDragOver, onDragLeave, onDrop }: {
-  col: { key: LeadStatus; label: string; accent: string; icon: typeof UserPlus };
+  col: { key: LeadStatus; label: string; accent: string; icon: typeof UserPlus; help: string };
   leads: Lead[]; isOver: boolean; dragId: string | null;
   onDragStartLead: (id: string) => void; onDragEndLead: () => void;
   onExpand: () => void; onOpenLead: (l: Lead) => void;
@@ -206,7 +262,10 @@ function FolderBlock({ col, leads, isOver, dragId, onDragStartLead, onDragEndLea
         <Icon size={18} style={{ color: col.accent }} />
         <span className="text-2xl font-bold text-foreground">{leads.length}</span>
       </div>
-      <div className="text-xs text-foreground/50 mt-1 mb-2 shrink-0">{col.label}</div>
+      <div className="flex items-center gap-1 mt-1 mb-2 shrink-0">
+        <span className="text-xs text-foreground/50">{col.label}</span>
+        <InfoTip text={col.help} />
+      </div>
       <div className="flex-1 overflow-y-auto min-h-0 -mx-1.5 space-y-0.5">
         {recent.length === 0 && <p className="text-[11px] text-foreground/20 px-1.5 py-2">Nada por aqui.</p>}
         {recent.map((l) => (
@@ -305,7 +364,7 @@ function LeadCard({ lead, draggable, dragging, onDragStart, onDragEnd, onOpen }:
       <div className="flex items-start justify-between gap-1.5">
         <span className="text-sm font-semibold text-foreground truncate">{lead.name}</span>
         <div className="flex items-center gap-1 shrink-0">
-          {cold && <Snowflake size={11} className="text-[#7EB3FF]" />}
+          {cold && <span title="Sem contato registrado há mais de 3 dias"><Snowflake size={11} className="text-[#7EB3FF]" /></span>}
           {wa && (
             <a href={wa} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
               className="text-foreground/30 hover:text-[#5BA88A]" title="Abrir WhatsApp">
@@ -393,9 +452,10 @@ function ContactHistory({ lead }: { lead: Lead }) {
   return (
     <div className="rounded-md border border-foreground/6 bg-card p-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="text-[11px] text-foreground/50">
-          <span className="font-semibold text-foreground">{lead.contactCount}</span> contato{lead.contactCount === 1 ? "" : "s"} registrado{lead.contactCount === 1 ? "" : "s"}
-          {lead.lastContactAt && <span> · último em {formatDate(lead.lastContactAt)}</span>}
+        <div className="text-[11px] text-foreground/50 inline-flex items-center gap-1">
+          <span><span className="font-semibold text-foreground">{lead.contactCount}</span> contato{lead.contactCount === 1 ? "" : "s"} registrado{lead.contactCount === 1 ? "" : "s"}
+          {lead.lastContactAt && <span> · último em {formatDate(lead.lastContactAt)}</span>}</span>
+          <InfoTip text="Cada clique em 'Marquei contato' vira uma linha no histórico abaixo, com data e hora — é o que conta os dias e marca o lead como 'frio' (ícone de floco de neve) depois de 3 dias sem nenhum." />
         </div>
         <button
           onClick={() => api.logLeadContact.mutate({ data: { leadId: lead.id } })}
@@ -427,10 +487,13 @@ function ContactHistory({ lead }: { lead: Lead }) {
   );
 }
 
-function StatTile({ label, value, accent }: { label: string; value: string; accent?: string }) {
+function StatTile({ label, value, accent, info }: { label: string; value: string; accent?: string; info?: string }) {
   return (
     <div className="rounded-md border border-foreground/6 bg-card px-3 py-2">
-      <div className="text-[9.5px] uppercase font-semibold tracking-wider text-foreground/40">{label}</div>
+      <div className="text-[9.5px] uppercase font-semibold tracking-wider text-foreground/40 flex items-center gap-1">
+        {label}
+        {info && <InfoTip text={info} />}
+      </div>
       <div className="text-sm font-bold mt-0.5 truncate" style={accent ? { color: accent } : undefined}>{value}</div>
     </div>
   );
@@ -460,6 +523,7 @@ function FollowupScheduler({ lead }: { lead: Lead }) {
     <div className="rounded-md border border-foreground/6 bg-card p-3 space-y-2">
       <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40 flex items-center gap-1.5">
         <CalendarClock size={12} /> Próximo follow-up
+        <InfoTip text="Ao agendar, esse lead muda pra coluna 'Follow-up' e some das outras — volta a aparecer no seu radar na data e horário marcados." />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inp + " text-xs"} />
@@ -486,7 +550,8 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
   const [source, setSource] = useState("");
   const [notes, setNotes] = useState("");
   const [valueReais, setValueReais] = useState("");
-  const [responsibleId, setResponsibleId] = useState("");
+  const [responsibleIds, setResponsibleIds] = useState<string[]>([]);
+  const [product, setProduct] = useState("");
   const [wonOpen, setWonOpen] = useState(false);
 
   useEffect(() => {
@@ -497,8 +562,13 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
     setSource(lead?.source ?? "");
     setNotes(lead?.notes ?? "");
     setValueReais(lead?.valueEstimateCents != null ? String(lead.valueEstimateCents / 100) : "");
-    setResponsibleId(lead?.responsibleId ?? "");
+    setResponsibleIds(lead?.responsibleIds ?? []);
+    setProduct(lead?.product ?? "");
   }, [open, lead?.id]);
+
+  function toggleResponsible(id: string) {
+    setResponsibleIds((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
+  }
 
   function save() {
     const valueEstimateCents = valueReais.trim() ? Math.round(parseFloat(valueReais.replace(",", ".")) * 100) : null;
@@ -511,7 +581,8 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
         source: source.trim() || null,
         notes: notes.trim() || null,
         valueEstimateCents,
-        responsibleId: responsibleId || null,
+        responsibleIds,
+        product: product || null,
       },
     }).then(onClose);
   }
@@ -544,18 +615,28 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
               <F label="Origem"><input value={source} onChange={(e) => setSource(e.target.value)} placeholder="Indicação, Instagram..." className={inp} /></F>
               <F label="Valor estimado (R$)"><input value={valueReais} onChange={(e) => setValueReais(e.target.value)} placeholder="0,00" className={inp} /></F>
             </div>
-            <F label="Responsável">
-              <select value={responsibleId} onChange={(e) => setResponsibleId(e.target.value)} className={inp}>
-                <option value="">—</option>
-                {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+            <F label="Responsáveis">
+              <div className="flex flex-wrap gap-1.5">
+                {profiles.length === 0 && <span className="text-xs text-foreground/30">Nenhum membro na equipe ainda.</span>}
+                {profiles.map((p) => (
+                  <PillButton key={p.id} label={p.name} active={responsibleIds.includes(p.id)} onClick={() => toggleResponsible(p.id)} />
+                ))}
+              </div>
+            </F>
+            <F label="Produto de interesse">
+              <div className="flex flex-wrap gap-1.5">
+                {CLIENT_CATEGORIES.map((c) => (
+                  <PillButton key={c} label={c} active={product === c} onClick={() => setProduct((p) => p === c ? "" : c)} />
+                ))}
+              </div>
             </F>
             <F label="Observações"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} /></F>
           </div>
           {lead && (
             <div className="space-y-3 min-w-0">
               <div className="grid grid-cols-2 gap-2">
-                <StatTile label="Dias no funil" value={`${daysSince(lead.createdAt)}d`} />
+                <StatTile label="Dias no funil" value={`${daysSince(lead.createdAt)}d`}
+                  info="Conta sozinho, um dia a mais a cada dia que o lead fica sem virar cliente ou ser marcado como perdido — desde a data em que foi criado." />
                 <StatTile label="Primeiro contato" value={lead.firstContactAt ? formatDate(lead.firstContactAt) : "ainda não"} />
               </div>
               <FollowupScheduler lead={lead} />
@@ -575,6 +656,7 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
                 className="text-[11px] font-bold uppercase px-2.5 py-1.5 rounded" style={{ backgroundColor: "rgba(231,111,81,0.15)", color: "#E76F51" }}>
                 Perdido
               </button>
+              <InfoTip align="right" text="Ganho cria um cliente de verdade (pede nome, categoria e cor) e move essa oportunidade pra 'Fechado'. Perdido só arquiva — sai do quadro ativo, sem criar nada." />
             </div>
           ) : lead && isAdmin ? (
             <button
@@ -614,7 +696,7 @@ function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onCl
   useEffect(() => {
     if (!open) return;
     setClientName(lead.name);
-    setCategory("Social Media");
+    setCategory(lead.product && CLIENT_CATEGORIES.includes(lead.product) ? lead.product : "Social Media");
     setColor(PRESET_COLORS[0]);
     setIcon("");
   }, [open, lead.id]);
