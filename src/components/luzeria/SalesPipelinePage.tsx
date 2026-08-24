@@ -379,7 +379,7 @@ function LeadCard({ lead, draggable, dragging, onDragStart, onDragEnd, onOpen }:
         </div>
       </div>
       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px] text-foreground/40">
-        {lead.contactPhone && <span>{lead.contactPhone}</span>}
+        {lead.product && <span className="text-foreground/50">{lead.product}</span>}
         {value && <span>{value}</span>}
       </div>
       {lead.status === "followup" && (
