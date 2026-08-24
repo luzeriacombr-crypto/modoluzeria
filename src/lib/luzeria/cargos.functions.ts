@@ -17,6 +17,7 @@ export type Cargo = {
 export const DEFAULT_CARGOS: { name: string; permissions: PermissionKey[] }[] = [
   { name: "Editor", permissions: [] },
   { name: "Videomaker", permissions: [] },
+  { name: "Designer", permissions: [] },
   { name: "Redator(a)", permissions: [] },
   { name: "Social Media", permissions: ["instagram_publish", "approve_finalize"] },
   { name: "Financeiro", permissions: ["view_financeiro"] },
