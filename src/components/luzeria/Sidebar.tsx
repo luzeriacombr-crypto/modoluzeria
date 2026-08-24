@@ -21,7 +21,7 @@ export const DEFAULT_NAV_LABELS: Record<string, string> = {
   instagram: "Instagram", financeiro: "Plano e Cobrança", equipe: "Equipe", ajuda: "Ajuda",
   cobranca: "Plano e Cobrança", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda",
   rotina: "Rotina", membros: "Membros", relatorio: "Relatório", jornada: "Jornada do cliente",
-  vendas: "Vendas", pagamentos: "Pagamentos", cliente: "Cliente", "cliente-overview": "Visão Geral",
+  vendas: "Vendas", pagamentos: "Pagamentos", cliente: "Visão Geral", "cliente-overview": "Visão Geral",
 };
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
@@ -252,9 +252,9 @@ export function Sidebar({
                 <NavButton icon={<Handshake size={15} />} label={navLabel("vendas", "Vendas")} active={pathname === "/vendas"} onClick={() => navigate({ to: "/vendas" })} />
               </div>
             ) }] : []),
-            ...((isAdmin || canJourney || canFinanceiro) ? [{ id: "cliente", label: navLabel("cliente", "Cliente"), node: (
+            ...((isAdmin || canJourney || canFinanceiro) ? [{ id: "cliente", label: navLabel("cliente", "Visão Geral"), node: (
               <div key="cliente" data-tour="nav-cliente">
-                <NavGroup icon={<IdCard size={15} />} label={navLabel("cliente", "Cliente")}
+                <NavGroup icon={<IdCard size={15} />} label={navLabel("cliente", "Visão Geral")}
                   active={configTabActive("cliente") || configTabActive("journey") || configTabActive("margem") || configTabActive("pagamentos")}>
                   {clienteItems.map((it) => it.node)}
                 </NavGroup>
