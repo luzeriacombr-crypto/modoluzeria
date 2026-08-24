@@ -21,6 +21,10 @@ function timeSince(iso: string): string {
   return `${days}d`;
 }
 
+function daysSince(iso: string): number {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+}
+
 function isCold(lead: Lead): boolean {
   const ref = lead.lastContactAt ?? lead.updatedAt;
   return Date.now() - new Date(ref).getTime() > 3 * 24 * 3600 * 1000;
@@ -333,12 +337,14 @@ function LeadCard({ lead, draggable, dragging, onDragStart, onDragEnd, onOpen }:
 function FollowupModal({ lead, onClose }: { lead: Lead | null; onClose: () => void }) {
   const api = useApi();
   const [date, setDate] = useState("");
+  const [time, setTime] = useState("09:00");
   const [note, setNote] = useState("");
 
   useEffect(() => {
     if (!lead) return;
     const d = lead.nextFollowupAt ? new Date(lead.nextFollowupAt) : new Date(Date.now() + 24 * 3600 * 1000);
     setDate(d.toISOString().slice(0, 10));
+    setTime(lead.nextFollowupAt ? d.toTimeString().slice(0, 5) : "09:00");
     setNote(lead.followUpNote ?? "");
   }, [lead?.id]);
 
@@ -347,16 +353,21 @@ function FollowupModal({ lead, onClose }: { lead: Lead | null; onClose: () => vo
   function save() {
     if (!date) return;
     api.scheduleLeadFollowup.mutateAsync({
-      data: { id: lead!.id, followUpAt: new Date(`${date}T09:00:00`).toISOString(), note: note.trim() || null },
+      data: { id: lead!.id, followUpAt: new Date(`${date}T${time || "09:00"}:00`).toISOString(), note: note.trim() || null },
     }).then(onClose);
   }
 
   return (
     <Modal open={!!lead} onClose={onClose} title={`Agendar follow-up · ${lead.name}`}>
       <div className="space-y-3">
-        <F label="Data">
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inp} />
-        </F>
+        <div className="grid grid-cols-2 gap-3">
+          <F label="Data">
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inp} />
+          </F>
+          <F label="Horário">
+            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inp} />
+          </F>
+        </div>
         <F label="Nota (opcional — vira a mensagem pronta)">
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Ex: Confirmar se recebeu a proposta"
             className={inp + " resize-none"} />
@@ -416,6 +427,54 @@ function ContactHistory({ lead }: { lead: Lead }) {
   );
 }
 
+function StatTile({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div className="rounded-md border border-foreground/6 bg-card px-3 py-2">
+      <div className="text-[9.5px] uppercase font-semibold tracking-wider text-foreground/40">{label}</div>
+      <div className="text-sm font-bold mt-0.5 truncate" style={accent ? { color: accent } : undefined}>{value}</div>
+    </div>
+  );
+}
+
+function FollowupScheduler({ lead }: { lead: Lead }) {
+  const api = useApi();
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("09:00");
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    const d = lead.nextFollowupAt ? new Date(lead.nextFollowupAt) : new Date(Date.now() + 24 * 3600 * 1000);
+    setDate(d.toISOString().slice(0, 10));
+    setTime(lead.nextFollowupAt ? d.toTimeString().slice(0, 5) : "09:00");
+    setNote(lead.followUpNote ?? "");
+  }, [lead.id]);
+
+  function save() {
+    if (!date) return;
+    api.scheduleLeadFollowup.mutate({
+      data: { id: lead.id, followUpAt: new Date(`${date}T${time || "09:00"}:00`).toISOString(), note: note.trim() || null },
+    });
+  }
+
+  return (
+    <div className="rounded-md border border-foreground/6 bg-card p-3 space-y-2">
+      <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40 flex items-center gap-1.5">
+        <CalendarClock size={12} /> Próximo follow-up
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inp + " text-xs"} />
+        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inp + " text-xs"} />
+      </div>
+      <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nota (ex: confirmar proposta)" className={inp + " text-xs"} />
+      <button onClick={save} disabled={!date || api.scheduleLeadFollowup.isPending}
+        className="w-full text-[11px] font-bold uppercase px-2.5 py-1.5 rounded disabled:opacity-50"
+        style={{ backgroundColor: "rgba(74,158,255,0.15)", color: "#4A9EFF" }}>
+        {lead.nextFollowupAt ? "Reagendar" : "Agendar"}
+      </button>
+    </div>
+  );
+}
+
 function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => void; lead?: Lead }) {
   const { data: profiles = [] } = useQuery(profilesQO());
   const api = useApi();
@@ -458,28 +517,51 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
   }
 
   const isTerminal = lead && (lead.status === "fechado" || lead.status === "perdido");
+  const wa = waLink(contactPhone, lead?.followUpNote ?? undefined);
 
   return (
     <>
-      <Modal open={open} onClose={onClose} title={lead ? "Editar oportunidade" : "Nova oportunidade"}>
-        <div className="space-y-3">
-          <F label="Nome"><input value={name} onChange={(e) => setName(e.target.value)} autoFocus className={inp} /></F>
-          <div className="grid grid-cols-2 gap-3">
-            <F label="Telefone"><input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inp} /></F>
-            <F label="E-mail"><input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inp} /></F>
+      <Modal open={open} onClose={onClose} title={lead ? "Editar oportunidade" : "Nova oportunidade"} maxWidthClass="max-w-3xl">
+        <div className={lead ? "grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-5" : ""}>
+          <div className="space-y-3 min-w-0">
+            <F label="Nome"><input value={name} onChange={(e) => setName(e.target.value)} autoFocus className={inp} /></F>
+            <div className="grid grid-cols-2 gap-3">
+              <F label="Telefone">
+                <div className="flex items-center gap-1.5">
+                  <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inp} />
+                  {wa && (
+                    <a href={wa} target="_blank" rel="noopener noreferrer" title="Abrir WhatsApp"
+                      className="shrink-0 grid place-items-center h-[34px] w-[34px] rounded-md transition-opacity hover:opacity-80"
+                      style={{ backgroundColor: "rgba(91,168,138,0.15)", color: "#5BA88A" }}>
+                      <MessageCircle size={15} />
+                    </a>
+                  )}
+                </div>
+              </F>
+              <F label="E-mail"><input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inp} /></F>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <F label="Origem"><input value={source} onChange={(e) => setSource(e.target.value)} placeholder="Indicação, Instagram..." className={inp} /></F>
+              <F label="Valor estimado (R$)"><input value={valueReais} onChange={(e) => setValueReais(e.target.value)} placeholder="0,00" className={inp} /></F>
+            </div>
+            <F label="Responsável">
+              <select value={responsibleId} onChange={(e) => setResponsibleId(e.target.value)} className={inp}>
+                <option value="">—</option>
+                {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </F>
+            <F label="Observações"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} /></F>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <F label="Origem"><input value={source} onChange={(e) => setSource(e.target.value)} placeholder="Indicação, Instagram..." className={inp} /></F>
-            <F label="Valor estimado (R$)"><input value={valueReais} onChange={(e) => setValueReais(e.target.value)} placeholder="0,00" className={inp} /></F>
-          </div>
-          <F label="Responsável">
-            <select value={responsibleId} onChange={(e) => setResponsibleId(e.target.value)} className={inp}>
-              <option value="">—</option>
-              {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </F>
-          <F label="Observações"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} /></F>
-          {lead && <ContactHistory lead={lead} />}
+          {lead && (
+            <div className="space-y-3 min-w-0">
+              <div className="grid grid-cols-2 gap-2">
+                <StatTile label="Dias no funil" value={`${daysSince(lead.createdAt)}d`} />
+                <StatTile label="Primeiro contato" value={lead.firstContactAt ? formatDate(lead.firstContactAt) : "ainda não"} />
+              </div>
+              <FollowupScheduler lead={lead} />
+              <ContactHistory lead={lead} />
+            </div>
+          )}
         </div>
         <div className="flex items-center justify-between mt-5">
           {lead && !isTerminal ? (

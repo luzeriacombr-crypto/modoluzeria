@@ -21,6 +21,7 @@ export type Lead = {
   nextFollowupAt: string | null;
   followUpNote: string | null;
   contactCount: number;
+  firstContactAt: string | null;
   lastContactAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -49,13 +50,16 @@ export const listLeads = createServerFn({ method: "GET" })
     const leadIds = (rows ?? []).map((r: any) => r.id);
     const countByLead = new Map<string, number>();
     const lastByLead = new Map<string, string>();
+    const firstByLead = new Map<string, string>();
     if (leadIds.length > 0) {
       const { data: contacts } = await context.supabase
         .from("lead_contacts").select("lead_id, contacted_at").in("lead_id", leadIds);
       for (const c of contacts ?? []) {
         countByLead.set(c.lead_id, (countByLead.get(c.lead_id) ?? 0) + 1);
-        const prev = lastByLead.get(c.lead_id);
-        if (!prev || c.contacted_at > prev) lastByLead.set(c.lead_id, c.contacted_at);
+        const prevLast = lastByLead.get(c.lead_id);
+        if (!prevLast || c.contacted_at > prevLast) lastByLead.set(c.lead_id, c.contacted_at);
+        const prevFirst = firstByLead.get(c.lead_id);
+        if (!prevFirst || c.contacted_at < prevFirst) firstByLead.set(c.lead_id, c.contacted_at);
       }
     }
 
@@ -65,7 +69,8 @@ export const listLeads = createServerFn({ method: "GET" })
       responsibleId: r.responsible_id, responsibleName: r.profiles?.name ?? null,
       status: r.status, archived: r.archived, wonClientId: r.won_client_id,
       nextFollowupAt: r.next_followup_at, followUpNote: r.follow_up_note,
-      contactCount: countByLead.get(r.id) ?? 0, lastContactAt: lastByLead.get(r.id) ?? null,
+      contactCount: countByLead.get(r.id) ?? 0,
+      firstContactAt: firstByLead.get(r.id) ?? null, lastContactAt: lastByLead.get(r.id) ?? null,
       createdAt: r.created_at, updatedAt: r.updated_at,
     })) as Lead[];
   });
