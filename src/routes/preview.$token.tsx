@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { publicFeedQO } from "@/lib/luzeria/queries";
 import { addPublicFeedback, approvePublicFeed, approvePublicItem, getPublicItemFiles, getPublicDriveVideoToken } from "@/lib/luzeria/feed-share.functions";
-import { downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
-import { Film, Layers, AlertTriangle, Download, Loader2, type LucideIcon } from "lucide-react";
+import { downloadDriveFile, downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
+import { Film, Layers, AlertTriangle, Download, Loader2, X, type LucideIcon } from "lucide-react";
 import { Hammer, ClipboardCheck, Rocket, CheckCheck } from "lucide-react";
 import { InstagramPostModal, type IGModalItem } from "@/components/luzeria/InstagramPostModal";
 import { PublicProgressBar } from "@/components/luzeria/PublicProgressBar";
@@ -63,7 +63,8 @@ function PublicPreviewPage() {
   const { token } = Route.useParams();
   const q = useQuery(publicFeedQO(token));
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"feed" | "roteiro" | "planejamento">("feed");
+  const [activeTab, setActiveTab] = useState<"feed" | "stories" | "roteiro" | "planejamento">("feed");
+  const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
   const [savedName, setSavedName] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem("lz_public_author") ?? "";
@@ -90,7 +91,7 @@ function PublicPreviewPage() {
     );
   }
 
-  const { client, items, orgName, orgLogoUrl, stageCounts, docs, roteiroClientStatuses } = q.data;
+  const { client, items, stories, orgName, orgLogoUrl, stageCounts, docs, roteiroClientStatuses } = q.data;
   const initial = client.name.charAt(0).toUpperCase();
   const activeItem = items.find((i) => i.id === activeId) ?? null;
   const blockedCount = items.filter((it) => it.stage === "blocked").length;
@@ -100,7 +101,7 @@ function PublicPreviewPage() {
   const roteiroDocs = docs.filter((d) => d.type === "roteiro");
   const planejamentoDocs = docs.filter((d) => d.type === "planejamento");
   const roteiroBlocks = roteiroDocs.length > 0 ? parseMarkdownLite(roteiroDocs.map((d) => d.content).join("\n\n")) : [];
-  const hasExtraTabs = roteiroDocs.length > 0 || planejamentoDocs.length > 0;
+  const hasExtraTabs = roteiroDocs.length > 0 || planejamentoDocs.length > 0 || stories.length > 0;
   // Multiple roteiro docs get merged into one block stream above, so their
   // groups can't be traced back to a specific doc — approval targets the
   // first roteiro doc's id, which covers the common case of one doc per client.
@@ -157,6 +158,9 @@ function PublicPreviewPage() {
         {hasExtraTabs && (
           <div className="flex items-center gap-2 mb-5">
             <PreviewTabPill active={activeTab === "feed"} onClick={() => setActiveTab("feed")}>Feed</PreviewTabPill>
+            {stories.length > 0 && (
+              <PreviewTabPill active={activeTab === "stories"} onClick={() => setActiveTab("stories")}>Stories</PreviewTabPill>
+            )}
             {roteiroDocs.length > 0 && (
               <PreviewTabPill active={activeTab === "roteiro"} onClick={() => setActiveTab("roteiro")}>Roteiros</PreviewTabPill>
             )}
@@ -222,6 +226,10 @@ function PublicPreviewPage() {
         </>
         )}
 
+        {activeTab === "stories" && (
+          <PublicStoriesTray stories={stories} onOpen={(i) => setActiveStoryIndex(i)} />
+        )}
+
         {activeTab === "roteiro" && (
           <RoteirosView
             blocks={roteiroBlocks}
@@ -252,6 +260,17 @@ function PublicPreviewPage() {
           </div>
         </div>
       </div>
+
+      {activeStoryIndex != null && stories[activeStoryIndex] && (
+        <PublicStoryViewer
+          token={token}
+          client={client}
+          stories={stories}
+          index={activeStoryIndex}
+          onClose={() => setActiveStoryIndex(null)}
+          onNavigate={(i) => setActiveStoryIndex(i)}
+        />
+      )}
 
       {igModalItem && (
         <InstagramPostModal
@@ -373,6 +392,150 @@ function PublicDownloadAllButton({ token, items, zipName }: { token: string; ite
       {downloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
       {downloading ? "Baixando…" : "Baixar tudo em alta qualidade"}
     </button>
+  );
+}
+
+function formatStoryDate(iso: string) {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  const time = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return `${date} às ${time}`;
+}
+
+const IG_STORY_RING = "linear-gradient(45deg, #FEDA75, #FA7E1E, #D62976, #962FBF, #4F5BD5)";
+
+function PublicStoriesTray({ stories, onOpen }: {
+  stories: { id: string; gridThumb: string | null; scheduledAt: string | null; title: string }[];
+  onOpen: (index: number) => void;
+}) {
+  return (
+    <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: "none" }}>
+      {stories.map((s, i) => (
+        <button key={s.id} type="button" onClick={() => onOpen(i)} className="flex flex-col items-center gap-1.5 shrink-0 w-16">
+          <div className="size-16 rounded-full p-[2.5px] shrink-0" style={{ background: IG_STORY_RING }}>
+            <div className="w-full h-full rounded-full p-[2px]" style={{ background: "#0D0D0D" }}>
+              {s.gridThumb ? (
+                <img src={s.gridThumb} alt="" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: "#1C1C1C" }}>
+                  <span className="text-white/30 text-[9px] font-semibold uppercase">Story</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <span className="text-white/50 text-[10px] font-medium truncate w-full text-center">
+            {s.scheduledAt ? new Date(s.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "—"}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PublicStoryViewer({ token, client, stories, index, onClose, onNavigate }: {
+  token: string;
+  client: { name: string; color: string; photoUrl: string | null };
+  stories: { id: string; title: string; scheduledAt: string | null; files: { driveFileId: string; mimeType: string | null; thumbUrl: string | null }[] }[];
+  index: number;
+  onClose: () => void;
+  onNavigate: (index: number) => void;
+}) {
+  const [downloading, setDownloading] = useState(false);
+  const fetchItemFiles = useServerFn(getPublicItemFiles);
+  const fetchDriveTokenRaw = useServerFn(getPublicDriveVideoToken);
+  const fetchDriveToken = (opts: { data: { fileId: string } }) =>
+    fetchDriveTokenRaw({ data: { token, fileId: opts.data.fileId } });
+
+  const story = stories[index];
+  const file = story?.files[0] ?? null;
+  const isVideo = (file?.mimeType ?? "").startsWith("video");
+
+  function next() {
+    if (index + 1 < stories.length) onNavigate(index + 1);
+    else onClose();
+  }
+  function prev() {
+    if (index > 0) onNavigate(index - 1);
+  }
+
+  async function handleDownload() {
+    setDownloading(true);
+    try {
+      const files = await fetchItemFiles({ data: { token, itemId: story.id } });
+      if (files.length === 0) { toast.error("Nenhum arquivo pra baixar ainda."); return; }
+      if (files.length === 1) {
+        await downloadDriveFile(fetchDriveToken, files[0].driveFileId, files[0].name);
+      } else {
+        await downloadDriveFilesAsZip(fetchDriveToken, files, `${story.title || "story"}.zip`);
+      }
+      toast.success("Baixado.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao baixar arquivo.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  if (!story) return null;
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center" onClick={onClose}>
+      <div className="relative w-full h-full sm:h-[92vh] sm:max-h-[860px] sm:w-auto sm:aspect-[9/16] sm:rounded-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Progress segments */}
+        <div className="absolute top-2 left-2 right-2 z-20 flex gap-1">
+          {stories.map((s, i) => (
+            <span key={s.id} className="h-[2.5px] flex-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.3)" }}>
+              <span className="block h-full rounded-full" style={{ background: "#fff", width: i <= index ? "100%" : "0%" }} />
+            </span>
+          ))}
+        </div>
+
+        {/* Header */}
+        <div className="absolute top-6 left-3 right-3 z-20 flex items-center gap-2">
+          {client.photoUrl ? (
+            <img src={client.photoUrl} alt={client.name} className="size-8 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="size-8 rounded-full grid place-items-center text-xs font-bold text-white shrink-0" style={{ background: client.color }}>
+              {client.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="text-white text-[13px] font-semibold truncate">{client.name}</div>
+            {story.scheduledAt && <div className="text-white/60 text-[11px]">{formatStoryDate(story.scheduledAt)}</div>}
+          </div>
+          <button type="button" onClick={handleDownload} disabled={downloading}
+            className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition disabled:opacity-50" title="Baixar em alta qualidade">
+            {downloading ? <Loader2 size={17} className="animate-spin" /> : <Download size={17} />}
+          </button>
+          <button type="button" onClick={onClose} className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition" title="Fechar">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Media */}
+        <div className="absolute inset-0 grid place-items-center bg-[#0D0D0D]">
+          {file ? (
+            isVideo ? (
+              <iframe
+                key={file.driveFileId}
+                src={`https://drive.google.com/file/d/${file.driveFileId}/preview`}
+                allow="autoplay"
+                allowFullScreen
+                className="w-full h-full border-0"
+              />
+            ) : (
+              <img key={file.driveFileId} src={file.thumbUrl ?? undefined} alt="" className="max-w-full max-h-full object-contain" />
+            )
+          ) : (
+            <div className="text-white/30 text-sm">Sem prévia disponível ainda.</div>
+          )}
+        </div>
+
+        {/* Tap zones */}
+        <button type="button" onClick={prev} className="absolute left-0 top-0 bottom-0 w-1/3 z-10" aria-label="Anterior" />
+        <button type="button" onClick={next} className="absolute right-0 top-0 bottom-0 w-1/3 z-10" aria-label="Próximo" />
+      </div>
+    </div>
   );
 }
 

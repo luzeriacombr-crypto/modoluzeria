@@ -216,7 +216,7 @@ export type PublicFeedFile = {
 };
 export type PublicFeedItem = {
   id: string;
-  type: "post" | "reel";
+  type: "post" | "reel" | "story";
   idx: number;
   title: string;
   caption: string;
@@ -248,6 +248,7 @@ export type PublicFeedPayload = {
   client: { name: string; color: string; description: string | null; photoUrl: string | null };
   month: { key: string };
   items: PublicFeedItem[];
+  stories: PublicFeedItem[];
   stageCounts: { stage: ClientStage; label: string; count: number }[];
   orgName: string | null;
   feedPreviewImageUrl: string | null;
@@ -309,7 +310,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     }
 
     const r = result as any;
-    const { client, month, items: rawItems, files: rawFiles, feedback: rawFeedback } = r;
+    const { client, month, items: rawItems, stories: rawStories, files: rawFiles, feedback: rawFeedback } = r;
     if (!client || !month) return null;
 
     // The "avatars" bucket only allows reads from authenticated users (client
@@ -356,7 +357,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     });
 
     // If files were nested inside items, extract them
-    (rawItems ?? []).forEach((it: any) => {
+    [...(rawItems ?? []), ...(rawStories ?? [])].forEach((it: any) => {
       if (Array.isArray(it.files) && it.files.length > 0 && !filesByItem.has(it.id)) {
         filesByItem.set(it.id, it.files);
       }
@@ -374,10 +375,13 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       if (a.type !== b.type) return a.type === "reel" ? 1 : -1;
       return a.idx - b.idx;
     });
+    // Stories already come pre-ordered by scheduled_at from the RPC — just
+    // drop the blocked ones, same rule as posts/reels.
+    const sortedStories = (rawStories ?? []).filter((it: any) => it.status !== "TRAVADO");
 
     // Collect all unique Drive file IDs and fetch thumbnail URLs in parallel
     const allDriveIds = new Set<string>();
-    for (const it of sorted) {
+    for (const it of [...sorted, ...sortedStories]) {
       for (const f of (filesByItem.get(it.id) ?? [])) {
         const id = f.drive_file_id ?? f.driveFileId;
         if (id) allDriveIds.add(id);
@@ -435,7 +439,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       );
     }
 
-    const mappedItems: PublicFeedItem[] = sorted.map((it: any) => {
+    function mapItem(it: any): PublicFeedItem {
       const files = (filesByItem.get(it.id) ?? []).map((f: any) => ({
         id: f.id,
         driveFileId: f.drive_file_id ?? f.driveFileId,
@@ -471,7 +475,10 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         stageLabel,
         blockedReason,
       };
-    });
+    }
+
+    const mappedItems: PublicFeedItem[] = sorted.map(mapItem);
+    const mappedStories: PublicFeedItem[] = sortedStories.map(mapItem);
 
     const stageCounts = CLIENT_STAGE_ORDER.map((stage) => ({
       stage,
@@ -488,6 +495,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       },
       month: { key: month.key as string },
       items: mappedItems,
+      stories: mappedStories,
       stageCounts,
       orgName,
       feedPreviewImageUrl,
