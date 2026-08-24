@@ -114,6 +114,7 @@ function extractDriveFileId(url: string): string | null {
  * jumping to Google Drive. */
 function CarouselThumb({
   file, onClick, canEdit, selectMode, selected, onToggleSelect, onRemoveAppOnly, onRemoveEverywhere,
+  draggable, dragging, onReorderDragStart, onReorderDragOver, onReorderDrop, onReorderDragEnd,
 }: {
   file: { id: string; driveFileId: string; name: string; webViewUrl: string };
   onClick: () => void;
@@ -123,6 +124,12 @@ function CarouselThumb({
   onToggleSelect: () => void;
   onRemoveAppOnly: () => void;
   onRemoveEverywhere: () => void;
+  draggable: boolean;
+  dragging: boolean;
+  onReorderDragStart: () => void;
+  onReorderDragOver: (e: React.DragEvent) => void;
+  onReorderDrop: (e: React.DragEvent) => void;
+  onReorderDragEnd: () => void;
 }) {
   const { data, isLoading } = useQuery(driveThumbnailQO(file.driveFileId, true));
   const url = data?.dataUrl ?? null;
@@ -141,16 +148,28 @@ function CarouselThumb({
   }
 
   return (
-    <div className="group relative w-16 h-16 shrink-0">
+    <div
+      className={`group relative w-16 h-16 shrink-0 ${dragging ? "opacity-40" : ""}`}
+      draggable={draggable}
+      onDragStart={(e) => {
+        if (!draggable) return;
+        e.dataTransfer.effectAllowed = "move";
+        onReorderDragStart();
+      }}
+      onDragOver={(e) => { if (draggable) onReorderDragOver(e); }}
+      onDrop={(e) => { if (draggable) onReorderDrop(e); }}
+      onDragEnd={onReorderDragEnd}
+      title={draggable ? "Arraste para reordenar" : undefined}
+    >
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); selectMode ? onToggleSelect() : onClick(); }}
         title={file.name}
         className={`w-16 h-16 shrink-0 rounded-md overflow-hidden bg-card border flex items-center justify-center transition-colors ${
-          selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-foreground/8"}`}
+          selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-foreground/8"} ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
       >
         {url ? (
-          <img src={url} alt={file.name} className="w-full h-full object-cover" loading="lazy" />
+          <img src={url} alt={file.name} className="w-full h-full object-cover pointer-events-none" loading="lazy" draggable={false} />
         ) : isLoading ? (
           <Loader2 size={12} className="animate-spin text-foreground/30" />
         ) : (
@@ -184,7 +203,7 @@ function MediaPreview({
 }) {
   const { data: files = [], isLoading: filesLoading } = useQuery(itemFilesQO(itemId));
   const { upload, busy, error, missingClientId } = useItemFileUpload(itemId, "media");
-  const { detachItemFile, deleteItemFileAndDrive } = useApi();
+  const { detachItemFile, deleteItemFileAndDrive, reorderItemFiles } = useApi();
   const fetchDriveToken = useServerFn(getDriveVideoToken);
   const fileRef = useRef<HTMLInputElement>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -195,10 +214,41 @@ function MediaPreview({
   const [dragOver, setDragOver] = useState(false);
   const isCarrossel = itemType === "post" && postFormat === "carrossel";
 
+  // Local optimistic slide order, kept in sync with FilesSection's list via
+  // the shared item-files query/mutation — reordering here or there updates
+  // the same `sort_order` column, so both views stay in sync.
+  const [order, setOrder] = useState<string[]>([]);
+  const serverOrderKey = useMemo(() => files.map((f) => f.id).join("|"), [files]);
+  useEffect(() => { setOrder(files.map((f) => f.id)); }, [serverOrderKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const filesById = useMemo(() => new Map(files.map((f) => [f.id, f] as const)), [files]);
+  const orderedFiles = useMemo(
+    () => order.map((id) => filesById.get(id)).filter(Boolean) as typeof files,
+    [order, filesById],
+  );
+  const reorderDragId = useRef<string | null>(null);
+  const [reorderDragging, setReorderDragging] = useState<string | null>(null);
+
+  function persistOrder(next: string[]) {
+    setOrder(next);
+    reorderItemFiles.mutate({ data: { itemId, orderedIds: next } });
+  }
+  function handleThumbReorderDrop(targetId: string) {
+    const sourceId = reorderDragId.current;
+    if (!sourceId || sourceId === targetId) return;
+    const next = order.slice();
+    const from = next.indexOf(sourceId);
+    const to = next.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    next.splice(from, 1);
+    next.splice(to, 0, sourceId);
+    persistOrder(next);
+  }
+
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
     if (!canEdit) return;
+    if (reorderDragId.current) return; // internal slide-reorder drag, not a file upload
     const dropped = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/") || f.type.startsWith("video/"));
     if (dropped.length === 0) { toast.error("Solte uma imagem ou vídeo."); return; }
     upload(dropped);
@@ -323,7 +373,7 @@ function MediaPreview({
           </div>
         )}
         <div className="flex flex-wrap gap-1.5">
-          {files.map((f, i) => (
+          {orderedFiles.map((f, i) => (
             <CarouselThumb
               key={f.id}
               file={f}
@@ -337,6 +387,22 @@ function MediaPreview({
                 if (await requestConfirm(`Remover "${f.name}" do Modo Criador e mover pra lixeira do Google Drive?`, { danger: true })) {
                   deleteItemFileAndDrive.mutate({ data: { id: f.id } });
                 }
+              }}
+              draggable={canEdit && !selectMode}
+              dragging={reorderDragging === f.id}
+              onReorderDragStart={() => {
+                reorderDragId.current = f.id;
+                setReorderDragging(f.id);
+              }}
+              onReorderDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "move"; }}
+              onReorderDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleThumbReorderDrop(f.id);
+              }}
+              onReorderDragEnd={() => {
+                reorderDragId.current = null;
+                setReorderDragging(null);
               }}
             />
           ))}
@@ -353,7 +419,7 @@ function MediaPreview({
           {inputEl}
         </div>
         {lightboxIndex !== null && (
-          <CarouselLightbox files={files} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
+          <CarouselLightbox files={orderedFiles} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
         )}
       </div>
     );

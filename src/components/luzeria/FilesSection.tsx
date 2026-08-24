@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ExternalLink, Upload, Link2, Trash2, Loader2, FileText, Image as ImageIcon,
-  Film, FolderOpen, Plus, Check, GripVertical, ChevronUp, ChevronDown,
+  Film, FolderOpen, Plus, Check, GripVertical, ChevronUp, ChevronDown, ArrowDownAZ,
 } from "lucide-react";
 import { itemFilesQO, driveThumbnailQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useItemFileUpload, parseDriveError } from "@/lib/luzeria/use-item-file-upload";
@@ -83,6 +83,14 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
     reorderItemFiles.mutate({ data: { itemId, orderedIds: next } });
   }
 
+  function sortAlphabetically() {
+    const next = orderedFiles
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { numeric: true, sensitivity: "base" }))
+      .map((f) => f.id);
+    persistOrder(next);
+  }
+
   function moveBy(id: string, delta: number) {
     const idx = order.indexOf(id);
     if (idx < 0) return;
@@ -132,6 +140,20 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
 
   return (
     <div>
+      {canEdit && orderedFiles.length > 1 && (
+        <div className="flex justify-end mb-1.5">
+          <button
+            type="button"
+            onClick={sortAlphabetically}
+            disabled={reorderItemFiles.isPending}
+            className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-foreground/70 hover:text-foreground transition disabled:opacity-40"
+            title="Ordenar arquivos por nome"
+          >
+            <ArrowDownAZ size={11} />
+            Ordenar A-Z
+          </button>
+        </div>
+      )}
       {/* List */}
       <div className="space-y-1.5">
         {isLoading && (
