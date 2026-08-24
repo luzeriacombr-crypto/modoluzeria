@@ -68,7 +68,7 @@ import {
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
 import { setProfileClientAccess } from "./client-access.functions";
-import { listClientPayments, setOrgPixKey, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
+import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
 import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
 import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
@@ -905,6 +905,11 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["client-payments"] });
       },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar chave Pix."),
+    }),
+    setPaymentMessageTemplate: useMutation({
+      mutationFn: useServerFn(setPaymentMessageTemplate),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-payments"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar mensagem."),
     }),
     markClientPaymentReceived: useMutation({
       mutationFn: useServerFn(markClientPaymentReceived),

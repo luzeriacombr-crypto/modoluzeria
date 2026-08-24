@@ -48,7 +48,7 @@ export const listClientPayments = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
 
-    const { data: org } = await context.supabase.from("orgs").select("pix_key").eq("id", context.orgId).maybeSingle();
+    const { data: org } = await context.supabase.from("orgs").select("pix_key, payment_message_template").eq("id", context.orgId).maybeSingle();
 
     const { data: clients } = await context.supabase
       .from("clients")
@@ -58,7 +58,7 @@ export const listClientPayments = createServerFn({ method: "GET" })
       .not("payment_due_day", "is", null)
       .order("name");
     const clientIds = (clients ?? []).map((c: any) => c.id);
-    if (clientIds.length === 0) return { pixKey: org?.pix_key ?? null, clients: [] as ClientPaymentRow[] };
+    if (clientIds.length === 0) return { pixKey: org?.pix_key ?? null, messageTemplate: org?.payment_message_template ?? null, clients: [] as ClientPaymentRow[] };
 
     const now = new Date();
     const period = monthKey(now);
@@ -106,7 +106,7 @@ export const listClientPayments = createServerFn({ method: "GET" })
       };
     });
 
-    return { pixKey: org?.pix_key ?? null, clients: rows };
+    return { pixKey: org?.pix_key ?? null, messageTemplate: org?.payment_message_template ?? null, clients: rows };
   });
 
 export type ClientPaymentHistoryRow = {
@@ -153,6 +153,21 @@ export const setOrgPixKey = createServerFn({ method: "POST" })
     if (!isMaster) throw new Error("Forbidden");
     const { error } = await context.supabase.from("orgs")
       .update({ pix_key: data.pixKey?.trim() || null }).eq("id", context.orgId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Null volta a cair no texto padrão embutido no front (buildPaymentMessage
+ * em ClientPaymentsPanel.tsx) — aqui só guarda o override, sem template
+ * engine nenhum: o front troca {data}/{valor}/{posts}/{pix} por texto puro. */
+export const setPaymentMessageTemplate = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { template: string | null }) => z.object({ template: z.string().trim().max(2000).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("orgs")
+      .update({ payment_message_template: data.template?.trim() || null }).eq("id", context.orgId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

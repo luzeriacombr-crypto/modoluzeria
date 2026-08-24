@@ -1246,7 +1246,7 @@ export const setItemEditor = createServerFn({ method: "POST" })
     z.object({ itemId: z.string().uuid(), editorId: z.string().uuid().nullable() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
-      .rpc("set_item_editor", { _item_id: data.itemId, _editor_id: data.editorId });
+      .rpc("set_item_editor", { _item_id: data.itemId, _editor_id: data.editorId as any });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1257,7 +1257,7 @@ export const setItemReelType = createServerFn({ method: "POST" })
     z.object({ itemId: z.string().uuid(), reelType: z.enum(["lofi", "facil", "basico", "avancado"]).nullable() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
-      .rpc("set_item_reel_type", { _item_id: data.itemId, _reel_type: data.reelType });
+      .rpc("set_item_reel_type", { _item_id: data.itemId, _reel_type: data.reelType as any });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1268,7 +1268,7 @@ export const setItemPostFormat = createServerFn({ method: "POST" })
     z.object({ itemId: z.string().uuid(), postFormat: z.enum(["estatico", "carrossel"]).nullable() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
-      .rpc("set_item_post_format", { _item_id: data.itemId, _post_format: data.postFormat });
+      .rpc("set_item_post_format", { _item_id: data.itemId, _post_format: data.postFormat as any });
     if (error) throw new Error(error.message);
     return { ok: true };
   });

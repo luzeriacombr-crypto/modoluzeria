@@ -44,13 +44,32 @@ function waLink(phone: string | null, text: string): string | null {
   return `https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`;
 }
 
-function buildPaymentMessage(row: ClientPaymentRow, pixKey: string | null): string {
+const DEFAULT_MESSAGE_TEMPLATE =
+`Olá! Passando pra lembrar do pagamento referente a esse mês, com vencimento em {data}.
+
+\u{1F4CB} Resumo do mês: {posts}.
+
+\u{1F4B0} Valor: {valor}
+
+{pix}`;
+
+function buildPaymentMessage(row: ClientPaymentRow, pixKey: string | null, template: string | null): string {
+  const postsPhrase = `${row.postsDoneThisMonth} publicaç${row.postsDoneThisMonth === 1 ? "ão feita" : "ões feitas"}`;
+  if (template) {
+    return template
+      .replaceAll("{data}", formatDate(row.nextDueDate))
+      .replaceAll("{valor}", row.contractValue != null ? money(row.contractValue) : "")
+      .replaceAll("{posts}", postsPhrase)
+      .replaceAll("{pix}", pixKey ? `Chave Pix pra pagamento: ${pixKey}` : "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
   const lines = [
     `Olá! Passando pra lembrar do pagamento referente a esse mês, com vencimento em ${formatDate(row.nextDueDate)}.`,
     "",
-    `📋 Resumo do mês: ${row.postsDoneThisMonth} publicaç${row.postsDoneThisMonth === 1 ? "ão feita" : "ões feitas"}.`,
+    `\u{1F4CB} Resumo do mês: ${postsPhrase}.`,
   ];
-  if (row.contractValue != null) lines.push("", `💰 Valor: ${money(row.contractValue)}`);
+  if (row.contractValue != null) lines.push("", `\u{1F4B0} Valor: ${money(row.contractValue)}`);
   if (pixKey) lines.push("", `Chave Pix pra pagamento: ${pixKey}`);
   return lines.join("\n");
 }
@@ -72,6 +91,36 @@ function PixKeyForm({ pixKey, isMaster }: { pixKey: string | null; isMaster: boo
           style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
         >
           {api.setOrgPixKey.isPending ? "Salvando…" : "Salvar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MessageTemplateForm({ template, isMaster }: { template: string | null; isMaster: boolean }) {
+  const api = useApi();
+  const [value, setValue] = useState(template ?? DEFAULT_MESSAGE_TEMPLATE);
+  useEffect(() => setValue(template ?? DEFAULT_MESSAGE_TEMPLATE), [template]);
+  if (!isMaster) return null;
+  return (
+    <div className="bg-card border border-foreground/7 rounded-xl p-4">
+      <label className="text-xs text-foreground/50 mb-1.5 block">Mensagem de cobrança pelo WhatsApp</label>
+      <p className="text-[11px] text-foreground/35 mb-2 leading-relaxed">
+        Use <code className="text-foreground/50">{"{data}"}</code>, <code className="text-foreground/50">{"{valor}"}</code>, <code className="text-foreground/50">{"{posts}"}</code> e <code className="text-foreground/50">{"{pix}"}</code> onde quiser
+        — a chave Pix some sozinha da mensagem se você não tiver uma cadastrada.
+      </p>
+      <textarea value={value} onChange={(e) => setValue(e.target.value)} rows={7} className={inp + " resize-none font-mono text-xs"} />
+      <div className="flex items-center justify-end gap-2 mt-2">
+        <button onClick={() => setValue(DEFAULT_MESSAGE_TEMPLATE)} className="text-xs text-foreground/40 hover:text-foreground transition">
+          Restaurar padrão
+        </button>
+        <button
+          onClick={() => api.setPaymentMessageTemplate.mutate({ data: { template: value } })}
+          disabled={api.setPaymentMessageTemplate.isPending || !value.trim()}
+          className="shrink-0 rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >
+          {api.setPaymentMessageTemplate.isPending ? "Salvando…" : "Salvar"}
         </button>
       </div>
     </div>
@@ -166,6 +215,7 @@ export function ClientPaymentsPanel() {
   return (
     <div className="space-y-4">
       <PixKeyForm pixKey={data.pixKey} isMaster={isMaster} />
+      <MessageTemplateForm template={data.messageTemplate} isMaster={isMaster} />
 
       {rows.length === 0 ? (
         <div className="text-center py-12 text-sm text-foreground/40">
@@ -189,7 +239,7 @@ export function ClientPaymentsPanel() {
                 const days = daysUntil(r.nextDueDate);
                 const overdue = days < 0 && !r.paidThisPeriod;
                 const dueSoon = days >= 0 && days <= 7 && !r.paidThisPeriod;
-                const wa = waLink(r.whatsappPhone, buildPaymentMessage(r, data.pixKey));
+                const wa = waLink(r.whatsappPhone, buildPaymentMessage(r, data.pixKey, data.messageTemplate));
                 const expanded = expandedId === r.id;
                 return (
                   <Fragment key={r.id}>

@@ -62,7 +62,7 @@ export const getForumPosts = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<ForumPost[]> => {
     await assertMaster(context.supabase, context.userId);
     const { data: rows, error } = await context.supabase.rpc("list_forum_posts", {
-      _category_id: data.categoryId ?? null,
+      _category_id: (data.categoryId ?? null) as any,
     });
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
