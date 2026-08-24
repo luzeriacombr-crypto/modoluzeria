@@ -93,7 +93,7 @@ export function AdminDashboard() {
   const message = useMemo(() => {
     const p = t?.percent ?? 0;
     if (p >= 90) return "Equipe incrível! 🔥 Meta quase batida.";
-    if (p >= 70) return "Bom ritmo! Vamos fechar forte.";
+    if (p >= 70) return "Bom ritmo, vamos fechar o mês com tudo!";
     return "Atenção: precisamos acelerar o mês.";
   }, [t?.percent]);
 
