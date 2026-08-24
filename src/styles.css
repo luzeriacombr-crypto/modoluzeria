@@ -285,11 +285,11 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   --chart-3: #E07A2E;
   --chart-4: #8B5FC9;
   --chart-5: #4B5563;
-  --lz-accent-ink: color-mix(in srgb, rgb(var(--lz-brand-rgb)) 55%, black);
+  --lz-accent-ink: var(--lz-accent-ink-override, color-mix(in srgb, rgb(var(--lz-brand-rgb)) 55%, black));
   --lz-hero-pill-bg: transparent;
   --lz-hero-badge-bg: transparent;
-  --lz-donut-stop1: color-mix(in srgb, rgb(var(--lz-brand-rgb)) 55%, black);
-  --lz-donut-stop2: color-mix(in srgb, rgb(var(--lz-brand-light-rgb)) 55%, black);
+  --lz-donut-stop1: var(--lz-accent-ink-override, color-mix(in srgb, rgb(var(--lz-brand-rgb)) 55%, black));
+  --lz-donut-stop2: var(--lz-accent-ink-override, color-mix(in srgb, rgb(var(--lz-brand-light-rgb)) 55%, black));
   --lz-surface-raised: #FCFCFB;
   --lz-border-soft: rgba(22, 23, 27, 0.06);
   --lz-border-strong: rgba(22, 23, 27, 0.16);

@@ -150,7 +150,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -196,6 +196,7 @@ export const getMe = createServerFn({ method: "GET" })
       orgColorPrimary: (org as any)?.color_primary ?? null,
       orgColorPrimaryLight: (org as any)?.color_primary_light ?? null,
       orgColorSidebar: (org as any)?.color_sidebar ?? null,
+      orgColorAccentLight: (org as any)?.color_accent_light ?? null,
       orgLogoUrl,
       orgLogoUrlLight,
       orgFeedPreviewImageUrl,
@@ -238,6 +239,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
   .inputValidator((d: {
     name?: string; tagline?: string | null; logoPath?: string | null; logoPathLight?: string | null;
     colorPrimary?: string | null; colorPrimaryLight?: string | null; colorSidebar?: string | null;
+    colorAccentLight?: string | null;
     taxId?: string | null; feedPreviewImagePath?: string | null; faviconPath?: string | null;
     disabledFeatures?: string[];
     membersCanSetEditorFormat?: boolean;
@@ -256,6 +258,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       colorPrimary: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       colorPrimaryLight: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       colorSidebar: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+      colorAccentLight: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/).nullable().optional(),
       feedPreviewImagePath: z.string().max(300).nullable().optional(),
       faviconPath: z.string().max(300).nullable().optional(),
@@ -284,6 +287,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.colorPrimary !== undefined) patch.color_primary = data.colorPrimary;
     if (data.colorPrimaryLight !== undefined) patch.color_primary_light = data.colorPrimaryLight;
     if (data.colorSidebar !== undefined) patch.color_sidebar = data.colorSidebar;
+    if (data.colorAccentLight !== undefined) patch.color_accent_light = data.colorAccentLight;
     if (data.taxId !== undefined) patch.tax_id = data.taxId;
     if (data.feedPreviewImagePath !== undefined) patch.feed_preview_image_path = data.feedPreviewImagePath;
     if (data.faviconPath !== undefined) patch.favicon_path = data.faviconPath;

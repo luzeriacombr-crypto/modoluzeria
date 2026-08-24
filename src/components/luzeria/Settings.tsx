@@ -427,6 +427,7 @@ function GeneralSettings() {
           orgColorPrimary={me.orgColorPrimary ?? "#C8D44E"}
           orgColorPrimaryLight={me.orgColorPrimaryLight ?? "#C8D44E"}
           orgColorSidebar={me.orgColorSidebar ?? "#1A3A2E"}
+          orgColorAccentLight={me.orgColorAccentLight ?? null}
           orgFeedPreviewImageUrl={me.orgFeedPreviewImageUrl ?? null}
           orgFaviconUrl={me.orgFaviconUrl ?? null}
           borderRadius={me.borderRadius ?? 12}
@@ -730,6 +731,19 @@ function isValidHex(v: string): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(v.trim());
 }
 
+/** Reproduz o escurecimento automático que os gráficos aplicam sozinhos no
+ * modo claro (color-mix 55% com preto) — usado só pra mostrar, no campo de
+ * "Cor de destaque", qual seria o valor "Automático" caso a agência nunca
+ * tenha escolhido um. */
+function darkenHex(hex: string, ratio: number): string {
+  if (!isValidHex(hex)) return hex;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const mix = (c: number) => Math.round(c * ratio).toString(16).padStart(2, "0");
+  return `#${mix(r)}${mix(g)}${mix(b)}`;
+}
+
 function ColorPickerField({ label, value, onChange, presets }: {
   label: string; value: string; onChange: (hex: string) => void; presets: string[];
 }) {
@@ -990,10 +1004,10 @@ function GanheComModoCriadorSection({ initiallyOpen, isPlatformAdmin }: { initia
 
 function OrgBrandingSection({
   orgId, orgName, orgTagline, orgLogoUrl, orgLogoUrlLight, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar,
-  orgFeedPreviewImageUrl, orgFaviconUrl, borderRadius, heroGradientFrom, heroGradientTo,
+  orgColorAccentLight, orgFeedPreviewImageUrl, orgFaviconUrl, borderRadius, heroGradientFrom, heroGradientTo,
 }: {
   orgId: string; orgName: string; orgTagline: string; orgLogoUrl: string | null; orgLogoUrlLight: string | null;
-  orgColorPrimary: string; orgColorPrimaryLight: string; orgColorSidebar: string;
+  orgColorPrimary: string; orgColorPrimaryLight: string; orgColorSidebar: string; orgColorAccentLight: string | null;
   orgFeedPreviewImageUrl: string | null; orgFaviconUrl: string | null; borderRadius: number;
   heroGradientFrom: string | null; heroGradientTo: string | null;
 }) {
@@ -1003,6 +1017,7 @@ function OrgBrandingSection({
   const [colorPrimary, setColorPrimary] = useState(orgColorPrimary);
   const [colorPrimaryLight, setColorPrimaryLight] = useState(orgColorPrimaryLight);
   const [colorSidebar, setColorSidebar] = useState(orgColorSidebar);
+  const [colorAccentLight, setColorAccentLight] = useState(orgColorAccentLight);
   const [radius, setRadius] = useState(borderRadius);
   const [heroFrom, setHeroFrom] = useState(heroGradientFrom);
   const [heroTo, setHeroTo] = useState(heroGradientTo);
@@ -1016,6 +1031,7 @@ function OrgBrandingSection({
   useEffect(() => { setColorPrimary(orgColorPrimary); }, [orgColorPrimary]);
   useEffect(() => { setColorPrimaryLight(orgColorPrimaryLight); }, [orgColorPrimaryLight]);
   useEffect(() => { setColorSidebar(orgColorSidebar); }, [orgColorSidebar]);
+  useEffect(() => { setColorAccentLight(orgColorAccentLight); }, [orgColorAccentLight]);
   useEffect(() => { setRadius(borderRadius); }, [borderRadius]);
   useEffect(() => { setHeroFrom(heroGradientFrom); }, [heroGradientFrom]);
   useEffect(() => { setHeroTo(heroGradientTo); }, [heroGradientTo]);
@@ -1028,6 +1044,7 @@ function OrgBrandingSection({
         colorPrimary: colorPrimary || null,
         colorPrimaryLight: colorPrimaryLight || null,
         colorSidebar: colorSidebar || null,
+        colorAccentLight: colorAccentLight || null,
         borderRadius: radius,
         heroGradientFrom: heroFrom || null,
         heroGradientTo: heroTo || null,
@@ -1236,6 +1253,17 @@ function OrgBrandingSection({
           <ColorPickerField label="Cor principal" value={colorPrimary} onChange={setColorPrimary} presets={BRAND_PRESETS} />
           <ColorPickerField label="Cor clara (fundos suaves)" value={colorPrimaryLight} onChange={setColorPrimaryLight} presets={BRAND_LIGHT_PRESETS} />
           <ColorPickerField label="Cor da barra lateral" value={colorSidebar} onChange={setColorSidebar} presets={SIDEBAR_PRESETS} />
+        </div>
+
+        <div className="pt-2 border-t border-foreground/6">
+          <label className="block text-[11px] uppercase tracking-wide text-foreground/40 mb-2">
+            Cor de destaque nos gráficos (modo claro)
+          </label>
+          <p className="text-[11px] text-foreground/40 mb-3">
+            No modo claro, o gráfico do Dashboard e a linha de "Como estou indo?" escurecem a cor principal
+            sozinhos, pra manter contraste no fundo claro. Escolha a sua própria cor aqui se preferir.
+          </p>
+          <HeroColorField label="Cor de destaque" value={colorAccentLight} fallback={darkenHex(colorPrimary, 0.55)} onChange={setColorAccentLight} />
         </div>
 
         <div className="pt-2 border-t border-foreground/6">

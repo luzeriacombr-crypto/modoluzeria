@@ -250,6 +250,12 @@ export interface Profile {
   orgColorPrimary?: string | null;
   orgColorPrimaryLight?: string | null;
   orgColorSidebar?: string | null;
+  /** Cor de destaque usada em gráficos (donut do dashboard, linha de
+   * tendência) especificamente no modo claro — por padrão o app escurece
+   * a cor principal automaticamente pra manter contraste no fundo claro;
+   * definir isso deixa a agência escolher a cor final em vez do tom
+   * derivado automaticamente. */
+  orgColorAccentLight?: string | null;
   /** Imagem própria da agência usada no og:image do link público de preview
    * de feed, ou null pra usar a imagem padrão do Modo Criador. */
   orgFeedPreviewImageUrl?: string | null;

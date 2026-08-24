@@ -90,11 +90,19 @@ export function App() {
     // era usado antes (cor clara da marca + cor da barra lateral).
     const heroA = me.data?.heroGradientFrom ? hexToRgbChannels(me.data.heroGradientFrom) : light;
     const heroB = me.data?.heroGradientTo ? hexToRgbChannels(me.data.heroGradientTo) : sidebar;
+    // Gráficos no modo claro (donut do dashboard, linha de tendência) por
+    // padrão escurecem a cor principal sozinhos pra manter contraste no
+    // fundo claro (ver --lz-accent-ink em styles.css) — se a agência
+    // escolheu uma cor própria pra isso, essa var some por cima desse
+    // padrão via var(--lz-accent-ink-override, <escurecido automático>).
+    const accentLight = me.data?.orgColorAccentLight ? hexToRgbChannels(me.data.orgColorAccentLight) : null;
     if (primary) root.setProperty("--lz-brand-rgb", primary);
     if (light) root.setProperty("--lz-brand-light-rgb", light);
     if (sidebar) root.setProperty("--lz-sidebar-rgb", sidebar);
     if (heroA) root.setProperty("--lz-hero-a-rgb", heroA);
     if (heroB) root.setProperty("--lz-hero-b-rgb", heroB);
+    if (accentLight) root.setProperty("--lz-accent-ink-override", `rgb(${accentLight})`);
+    else root.removeProperty("--lz-accent-ink-override");
     if (me.data?.borderRadius != null) root.setProperty("--lz-radius", `${me.data.borderRadius}px`);
     return () => {
       root.removeProperty("--lz-brand-rgb");
@@ -103,9 +111,10 @@ export function App() {
       root.removeProperty("--lz-brand-text-rgb");
       root.removeProperty("--lz-hero-a-rgb");
       root.removeProperty("--lz-hero-b-rgb");
+      root.removeProperty("--lz-accent-ink-override");
       root.removeProperty("--lz-radius");
     };
-  }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight, me.data?.orgColorSidebar, me.data?.borderRadius, me.data?.heroGradientFrom, me.data?.heroGradientTo]);
+  }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight, me.data?.orgColorSidebar, me.data?.orgColorAccentLight, me.data?.borderRadius, me.data?.heroGradientFrom, me.data?.heroGradientTo]);
 
   // Same idea for the tab icon: swap the favicon + apple-touch-icon (used
   // when the client adds the app to their iOS home screen) whenever the org
