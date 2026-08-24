@@ -503,8 +503,9 @@ export const resetOrgTrial = createServerFn({ method: "POST" })
     return { trialEndsAt };
   });
 
-/** Platform-admin only: sets the WhatsApp number recorded for an agency —
- * not collected at signup, so it's filled in manually as Junior gets it. */
+/** Platform-admin only: corrects/updates the WhatsApp number an agency gave
+ * at signup (collected there since 2026-08-23; older agencies may still
+ * have it null, filled in manually as Junior gets it). */
 export const updateOrgWhatsapp = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { orgId: string; whatsapp: string }) =>

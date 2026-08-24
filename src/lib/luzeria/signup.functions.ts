@@ -27,7 +27,7 @@ export const TRIAL_DAYS = 30;
 export const publicSignup = createServerFn({ method: "POST" })
   .inputValidator((d: {
     agencyName: string; name: string; email: string; password: string;
-    planId: string; taxId: string; website?: string; promoCode?: string; affiliateCode?: string;
+    planId: string; taxId: string; whatsapp: string; website?: string; promoCode?: string; affiliateCode?: string;
     billingType?: "CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY";
   }) =>
     z.object({
@@ -37,6 +37,7 @@ export const publicSignup = createServerFn({ method: "POST" })
       password: z.string().min(8).max(72),
       planId: z.string().min(1),
       taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/, "CNPJ ou CPF inválido."),
+      whatsapp: z.string().trim().min(8, "WhatsApp inválido.").max(30),
       website: z.string().max(0).optional().or(z.literal("")), // honeypot — must stay empty
       promoCode: z.string().optional(),
       affiliateCode: z.string().optional(),
@@ -92,6 +93,7 @@ export const publicSignup = createServerFn({ method: "POST" })
         subscription_status: "trialing",
         trial_ends_at: trialEndsAt.toISOString(),
         tax_id: data.taxId,
+        whatsapp: data.whatsapp,
       })
       .select("id").single();
     if (orgErr) throw new Error(orgErr.message);
@@ -219,11 +221,12 @@ export const publicSignup = createServerFn({ method: "POST" })
  * activates that existing profile into it instead of creating a new user. */
 export const completeGoogleSignup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { agencyName: string; name: string; taxId: string; planId: string; promoCode?: string; affiliateCode?: string; billingType?: "CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY" }) =>
+  .inputValidator((d: { agencyName: string; name: string; taxId: string; whatsapp: string; planId: string; promoCode?: string; affiliateCode?: string; billingType?: "CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY" }) =>
     z.object({
       agencyName: z.string().trim().min(2).max(80),
       name: z.string().trim().min(2).max(80),
       taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/, "CNPJ ou CPF inválido."),
+      whatsapp: z.string().trim().min(8, "WhatsApp inválido.").max(30),
       planId: z.string().min(1),
       promoCode: z.string().optional(),
       affiliateCode: z.string().optional(),
@@ -266,6 +269,7 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
         subscription_status: "trialing",
         trial_ends_at: trialEndsAt.toISOString(),
         tax_id: data.taxId,
+        whatsapp: data.whatsapp,
       })
       .select("id").single();
     if (orgErr) throw new Error(orgErr.message);

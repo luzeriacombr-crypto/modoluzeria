@@ -40,6 +40,7 @@ export function SalesPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [taxId, setTaxId] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [billingType, setBillingType] = useState<"CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY">("CREDIT_CARD");
   const [website, setWebsite] = useState(""); // honeypot
   const [consent, setConsent] = useState(false);
@@ -67,7 +68,7 @@ export function SalesPage() {
     try {
       const r = await signup({
         data: {
-          agencyName, name, email, password, planId, taxId: taxId.replace(/\D/g, ""), website,
+          agencyName, name, email, password, planId, taxId: taxId.replace(/\D/g, ""), whatsapp, website,
           promoCode,
           affiliateCode,
           billingType,
@@ -83,8 +84,8 @@ export function SalesPage() {
   }
 
   async function signUpWithGoogle() {
-    if (!agencyName.trim() || !name.trim() || !taxId.trim()) {
-      setError("Preenche o nome da agência, seu nome e o CNPJ/CPF antes de continuar com o Google.");
+    if (!agencyName.trim() || !name.trim() || !taxId.trim() || !whatsapp.trim()) {
+      setError("Preenche o nome da agência, seu nome, o CNPJ/CPF e o WhatsApp antes de continuar com o Google.");
       return;
     }
     if (!planId) { setError("Escolha um plano antes de continuar."); return; }
@@ -93,7 +94,7 @@ export function SalesPage() {
     setGoogleLoading(true);
     try {
       sessionStorage.setItem(PENDING_GOOGLE_SIGNUP_KEY, JSON.stringify({
-        agencyName, name, taxId: taxId.replace(/\D/g, ""), planId,
+        agencyName, name, taxId: taxId.replace(/\D/g, ""), whatsapp, planId,
         promoCode,
         affiliateCode,
         billingType,
@@ -301,6 +302,9 @@ export function SalesPage() {
             </Field>
             <Field label="Seu e-mail">
               <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="lz-input-onlight" />
+            </Field>
+            <Field label="Seu WhatsApp">
+              <input required type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="lz-input-onlight" placeholder="(99) 99999-9999" maxLength={30} />
             </Field>
             <Field label="Crie uma senha">
               <input required type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="lz-input-onlight" />
