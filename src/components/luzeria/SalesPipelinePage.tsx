@@ -229,9 +229,10 @@ export function SalesPipelinePage() {
 }
 
 function leadPreviewSubtitle(col: LeadStatus, lead: Lead): string {
-  if (col === "followup") return lead.nextFollowupAt ? formatDate(lead.nextFollowupAt) : "sem data";
-  if (col === "novo") return `há ${timeSince(lead.createdAt)}`;
-  return `há ${timeSince(lead.lastContactAt ?? lead.updatedAt)}`;
+  const base = col === "followup" ? (lead.nextFollowupAt ? formatDate(lead.nextFollowupAt) : "sem data")
+    : col === "novo" ? `há ${timeSince(lead.createdAt)}`
+    : `há ${timeSince(lead.lastContactAt ?? lead.updatedAt)}`;
+  return lead.product ? `${base} · ${lead.product}` : base;
 }
 
 function FolderBlock({ col, leads, isOver, dragId, onDragStartLead, onDragEndLead, onExpand, onOpenLead, onDragOver, onDragLeave, onDrop }: {
