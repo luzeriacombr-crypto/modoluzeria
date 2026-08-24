@@ -42,6 +42,11 @@ function waLink(phone: string | null, text?: string): string | null {
   return `https://wa.me/${withCountry}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 }
 
+const LEAD_PRODUCTS = [
+  "Social Media", "Pack Digital", "Avulsos", "Ensaio", "Cobertura Evento",
+  "Pack de vídeo", "Imersão VIP", "Educação", "Resgatando Clássicos",
+];
+
 const COLUMNS: { key: LeadStatus; label: string; accent: string; icon: typeof UserPlus; help: string }[] = [
   { key: "novo", label: "Novos", accent: "#888780", icon: UserPlus,
     help: "Leads que acabaram de entrar, sem contato ainda. Arraste o card pra 'Responder agora' assim que começar a atender." },
@@ -552,6 +557,7 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
   const [valueReais, setValueReais] = useState("");
   const [responsibleIds, setResponsibleIds] = useState<string[]>([]);
   const [product, setProduct] = useState("");
+  const [customProduct, setCustomProduct] = useState("");
   const [wonOpen, setWonOpen] = useState(false);
 
   useEffect(() => {
@@ -563,7 +569,13 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
     setNotes(lead?.notes ?? "");
     setValueReais(lead?.valueEstimateCents != null ? String(lead.valueEstimateCents / 100) : "");
     setResponsibleIds(lead?.responsibleIds ?? []);
-    setProduct(lead?.product ?? "");
+    if (lead?.product && !LEAD_PRODUCTS.includes(lead.product)) {
+      setProduct("outros");
+      setCustomProduct(lead.product);
+    } else {
+      setProduct(lead?.product ?? "");
+      setCustomProduct("");
+    }
   }, [open, lead?.id]);
 
   function toggleResponsible(id: string) {
@@ -582,7 +594,7 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
         notes: notes.trim() || null,
         valueEstimateCents,
         responsibleIds,
-        product: product || null,
+        product: product === "outros" ? (customProduct.trim() || null) : (product || null),
       },
     }).then(onClose);
   }
@@ -625,10 +637,15 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
             </F>
             <F label="Produto de interesse">
               <div className="flex flex-wrap gap-1.5">
-                {CLIENT_CATEGORIES.map((c) => (
+                {LEAD_PRODUCTS.map((c) => (
                   <PillButton key={c} label={c} active={product === c} onClick={() => setProduct((p) => p === c ? "" : c)} />
                 ))}
+                <PillButton label="Outros" active={product === "outros"} onClick={() => setProduct((p) => p === "outros" ? "" : "outros")} />
               </div>
+              {product === "outros" && (
+                <input value={customProduct} onChange={(e) => setCustomProduct(e.target.value)} autoFocus
+                  placeholder="Qual?" className={inp + " mt-1.5"} />
+              )}
             </F>
             <F label="Observações"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} /></F>
           </div>
