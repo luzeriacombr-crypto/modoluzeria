@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, MessageCircle, Check, Undo2, Pencil, History, ChevronDown } from "lucide-react";
+import { Loader2, MessageCircle, Check, Undo2, Pencil, History, ChevronDown, X } from "lucide-react";
 import { clientPaymentsQO, clientPaymentHistoryQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { useUI } from "@/lib/luzeria/ui-store";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
 
 const money = (v: number | null) =>
@@ -77,18 +78,30 @@ function PixKeyForm({ pixKey, isMaster }: { pixKey: string | null; isMaster: boo
   );
 }
 
-function DueDayEditor({ clientId, day, isMaster }: { clientId: string; day: number; isMaster: boolean }) {
+function DueDayEditor({ clientId, clientName, day, isMaster }: { clientId: string; clientName: string; day: number; isMaster: boolean }) {
   const api = useApi();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(String(day));
   useEffect(() => setValue(String(day)), [day]);
 
+  async function clear() {
+    if (await requestConfirm(`Parar de cobrar "${clientName}" automaticamente? O cliente sai dessa lista até você definir um dia de vencimento de novo.`, { danger: true })) {
+      api.updateClient.mutate({ data: { id: clientId, patch: { payment_due_day: null } } });
+    }
+  }
+
   if (!isMaster) return <span className="text-[11px] text-foreground/40">dia {day}</span>;
   if (!editing) {
     return (
-      <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-[11px] text-foreground/40 hover:text-foreground transition">
-        dia {day} <Pencil size={10} />
-      </button>
+      <span className="inline-flex items-center gap-1">
+        <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-[11px] text-foreground/40 hover:text-foreground transition">
+          dia {day} <Pencil size={10} />
+        </button>
+        <button onClick={clear} title="Parar de cobrar esse cliente (remove o dia de vencimento)"
+          className="text-foreground/25 hover:text-red-400 transition">
+          <X size={10} />
+        </button>
+      </span>
     );
   }
   return (
@@ -140,6 +153,7 @@ export function ClientPaymentsPanel() {
   const isMaster = me?.role === "master";
   const { data, isLoading } = useQuery(clientPaymentsQO());
   const api = useApi();
+  const openFicha = useUI((s) => s.openFicha);
   const period = currentPeriod();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -180,12 +194,17 @@ export function ClientPaymentsPanel() {
                 return (
                   <Fragment key={r.id}>
                   <tr className={expanded ? "" : "border-b border-foreground/4 last:border-0"}>
-                    <td className="px-4 py-3 text-foreground font-medium">{r.name}</td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => openFicha(r.id)}
+                        className="text-foreground font-medium hover:underline underline-offset-2 text-left" title="Ver ficha do cliente">
+                        {r.name}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-foreground/70">
                       {formatDate(r.nextDueDate)}
                       {overdue && <span className="ml-1.5 text-[10px] font-bold text-red-400">ATRASADO</span>}
                       {dueSoon && <span className="ml-1.5 text-[10px] font-bold" style={{ color: "#F5A623" }}>EM {days}D</span>}
-                      <div className="mt-0.5"><DueDayEditor clientId={r.id} day={r.paymentDueDay} isMaster={isMaster} /></div>
+                      <div className="mt-0.5"><DueDayEditor clientId={r.id} clientName={r.name} day={r.paymentDueDay} isMaster={isMaster} /></div>
                     </td>
                     <td className="px-4 py-3 text-foreground/70">{money(r.contractValue)}</td>
                     <td className="px-4 py-3 text-foreground/70">{r.postsDoneThisMonth}</td>
@@ -210,11 +229,16 @@ export function ClientPaymentsPanel() {
                         >
                           <History size={15} /> <ChevronDown size={11} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
                         </button>
-                        {wa && (
+                        {wa ? (
                           <a href={wa} target="_blank" rel="noopener noreferrer"
                             className="p-1.5 rounded text-foreground/40 hover:text-[#5BA88A] hover:bg-foreground/5" title="Enviar cobrança pelo WhatsApp">
                             <MessageCircle size={15} />
                           </a>
+                        ) : (
+                          <button onClick={() => openFicha(r.id)}
+                            className="p-1.5 rounded text-foreground/15 hover:text-foreground/40 hover:bg-foreground/5" title="Sem telefone cadastrado — clique pra adicionar na ficha do cliente">
+                            <MessageCircle size={15} />
+                          </button>
                         )}
                         {r.paidThisPeriod ? (
                           <button
