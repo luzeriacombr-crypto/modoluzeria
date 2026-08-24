@@ -104,15 +104,13 @@ export function Sidebar({
       {/* Logo */}
       <div className="px-5 pt-5 pb-4">
         {me?.orgLogoUrl ? (
-          <div className="h-14 max-w-[170px]">
-            <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="h-full max-w-full object-contain object-left" />
-          </div>
+          <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="block max-h-10 max-w-[170px] w-auto object-contain object-left" />
         ) : (
           <div className="text-white font-extrabold text-lg uppercase tracking-wide truncate" title={me?.orgName ?? ""}>
             {me?.orgName ?? "Modo Criador"}
           </div>
         )}
-        <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-2">
+        <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-1.5">
           {me?.orgTagline || "Gestão de conteúdo e criação"}
         </p>
       </div>
