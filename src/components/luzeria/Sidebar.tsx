@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Plus, Info, CircleHelp, CalendarDays, Instagram, Users, LayoutGrid, Wallet, UserCog, BookMarked,
-  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake,
+  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -18,10 +18,10 @@ import { hasSetorPermission, hasPermission, type Client } from "@/lib/luzeria/ty
 export const DEFAULT_NAV_LABELS: Record<string, string> = {
   "minhas-demandas": "Minhas demandas", dashboard: "Dashboard", clientes: "Clientes",
   calendario: "Calendário", biblioteca: "Biblioteca", "visao-geral": "Visão Geral",
-  instagram: "Instagram", financeiro: "Financeiro", equipe: "Equipe", ajuda: "Ajuda",
+  instagram: "Instagram", financeiro: "Plano e Cobrança", equipe: "Equipe", ajuda: "Ajuda",
   cobranca: "Plano e Cobrança", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda",
   rotina: "Rotina", membros: "Membros", relatorio: "Relatório", jornada: "Jornada do cliente",
-  vendas: "Vendas",
+  vendas: "Vendas", pagamentos: "Pagamentos", cliente: "Cliente", "cliente-overview": "Visão Geral",
 };
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
@@ -119,9 +119,15 @@ export function Sidebar({
       {/* Nav — single scrollable list so Clientes sits inline with everything else */}
       <div className="px-3 pt-4 pb-3 flex-1 overflow-y-auto space-y-0.5">
         {(() => {
+          const clienteItems = orderSection("cliente", [
+            ...(isAdmin ? [{ id: "cliente-overview", label: navLabel("cliente-overview", "Visão Geral"), node: <NavSubButton key="cliente-overview" label={navLabel("cliente-overview", "Visão Geral")} active={configTabActive("cliente")} onClick={() => goToConfigTab("cliente")} /> }] : []),
+            ...(canJourney ? [{ id: "jornada", label: navLabel("jornada", "Jornada do cliente"), node: <NavSubButton key="jornada" label={navLabel("jornada", "Jornada do cliente")} active={configTabActive("journey")} onClick={() => goToConfigTab("journey")} /> }] : []),
+            ...(canFinanceiro ? [{ id: "margem", label: navLabel("margem", "Margem por cliente"), node: <NavSubButton key="margem" label={navLabel("margem", "Margem por cliente")} active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} /> }] : []),
+            ...(canFinanceiro ? [{ id: "pagamentos", label: navLabel("pagamentos", "Pagamentos"), node: <NavSubButton key="pagamentos" label={navLabel("pagamentos", "Pagamentos")} active={configTabActive("pagamentos")} onClick={() => goToConfigTab("pagamentos")} /> }] : []),
+          ]);
+
           const financeiroItems = canFinanceiro ? orderSection("financeiro", [
             { id: "cobranca", label: navLabel("cobranca", "Plano e Cobrança"), node: <NavSubButton key="cobranca" label={navLabel("cobranca", "Plano e Cobrança")} active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} /> },
-            { id: "margem", label: navLabel("margem", "Margem por cliente"), node: <NavSubButton key="margem" label={navLabel("margem", "Margem por cliente")} active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} /> },
             { id: "afiliados", label: navLabel("afiliados", "Afiliados"), node: <NavSubButton key="afiliados" label={navLabel("afiliados", "Afiliados")} active={configTabActive("afiliados")} onClick={() => goToConfigTab("afiliados")} /> },
             { id: "revenda", label: navLabel("revenda", "Revenda"), node: <NavSubButton key="revenda" label={navLabel("revenda", "Revenda")} active={configTabActive("revenda")} onClick={() => goToConfigTab("revenda")} /> },
           ]) : [];
@@ -130,7 +136,6 @@ export function Sidebar({
             ...(rotinaEnabled ? [{ id: "rotina", label: navLabel("rotina", "Rotina"), node: <div key="rotina" data-tour="nav-rotina"><NavSubButton label={navLabel("rotina", "Rotina")} active={pathname === "/rotina"} onClick={() => navigate({ to: "/rotina" })} /></div> }] : []),
             ...(canTeam ? [{ id: "membros", label: navLabel("membros", "Membros"), node: <NavSubButton key="membros" label={navLabel("membros", "Membros")} active={configTabActive("team")} onClick={() => goToConfigTab("team")} /> }] : []),
             ...(canReport ? [{ id: "relatorio", label: navLabel("relatorio", "Relatório"), node: <NavSubButton key="relatorio" label={navLabel("relatorio", "Relatório")} active={configTabActive("report")} onClick={() => goToConfigTab("report")} /> }] : []),
-            ...(canJourney ? [{ id: "jornada", label: navLabel("jornada", "Jornada do cliente"), node: <NavSubButton key="jornada" label={navLabel("jornada", "Jornada do cliente")} active={configTabActive("journey")} onClick={() => goToConfigTab("journey")} /> }] : []),
           ]);
 
           const mainItems = orderSection("main", [
@@ -247,18 +252,26 @@ export function Sidebar({
                 <NavButton icon={<Handshake size={15} />} label={navLabel("vendas", "Vendas")} active={pathname === "/vendas"} onClick={() => navigate({ to: "/vendas" })} />
               </div>
             ) }] : []),
-            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Financeiro"), node: (
+            ...((isAdmin || canJourney || canFinanceiro) ? [{ id: "cliente", label: navLabel("cliente", "Cliente"), node: (
+              <div key="cliente" data-tour="nav-cliente">
+                <NavGroup icon={<IdCard size={15} />} label={navLabel("cliente", "Cliente")}
+                  active={configTabActive("cliente") || configTabActive("journey") || configTabActive("margem") || configTabActive("pagamentos")}>
+                  {clienteItems.map((it) => it.node)}
+                </NavGroup>
+              </div>
+            ) }] : []),
+            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Plano e Cobrança"), node: (
               <div key="financeiro" data-tour="nav-financeiro">
-                <NavGroup icon={<Wallet size={15} />} label={navLabel("financeiro", "Financeiro")}
-                  active={configTabActive("cobranca") || configTabActive("margem") || configTabActive("afiliados") || configTabActive("revenda")}>
+                <NavGroup icon={<Wallet size={15} />} label={navLabel("financeiro", "Plano e Cobrança")}
+                  active={configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda")}>
                   {financeiroItems.map((it) => it.node)}
                 </NavGroup>
               </div>
             ) }] : []),
-            ...((canTeam || canReport || canJourney || rotinaEnabled) ? [{ id: "equipe", label: navLabel("equipe", "Equipe"), node: (
+            ...((canTeam || canReport || rotinaEnabled) ? [{ id: "equipe", label: navLabel("equipe", "Equipe"), node: (
               <div key="equipe" data-tour="nav-equipe">
                 <NavGroup icon={<UserCog size={15} />} label={navLabel("equipe", "Equipe")}
-                  active={configTabActive("team") || configTabActive("report") || configTabActive("journey") || pathname === "/rotina"}>
+                  active={configTabActive("team") || configTabActive("report") || pathname === "/rotina"}>
                   {equipeItems.map((it) => it.node)}
                 </NavGroup>
               </div>

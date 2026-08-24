@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, LayoutGrid, Wallet, UserCog, Handshake } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, LayoutGrid, Wallet, UserCog, Handshake, IdCard } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -175,22 +175,30 @@ export function MobileNav() {
               />
             )}
 
+            {(isAdmin || canJourney || canFinanceiro) && (
+              <>
+                <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-foreground/30">{navLabel("cliente", DEFAULT_NAV_LABELS.cliente)}</p>
+                {isAdmin && <MenuLink icon={<IdCard size={17} />} label={navLabel("cliente-overview", DEFAULT_NAV_LABELS["cliente-overview"])} onClick={() => goToConfigTab("cliente")} />}
+                {canJourney && <MenuLink icon={<IdCard size={17} />} label={navLabel("jornada", DEFAULT_NAV_LABELS.jornada)} onClick={() => goToConfigTab("journey")} />}
+                {canFinanceiro && <MenuLink icon={<IdCard size={17} />} label={navLabel("margem", DEFAULT_NAV_LABELS.margem)} onClick={() => goToConfigTab("margem")} />}
+                {canFinanceiro && <MenuLink icon={<IdCard size={17} />} label={navLabel("pagamentos", DEFAULT_NAV_LABELS.pagamentos)} onClick={() => goToConfigTab("pagamentos")} />}
+              </>
+            )}
+
             {canFinanceiro && (
               <>
                 <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-foreground/30">{navLabel("financeiro", DEFAULT_NAV_LABELS.financeiro)}</p>
                 <MenuLink icon={<Wallet size={17} />} label={navLabel("cobranca", DEFAULT_NAV_LABELS.cobranca)} onClick={() => goToConfigTab("cobranca")} />
-                <MenuLink icon={<Wallet size={17} />} label={navLabel("margem", DEFAULT_NAV_LABELS.margem)} onClick={() => goToConfigTab("margem")} />
                 <MenuLink icon={<Wallet size={17} />} label={navLabel("afiliados", DEFAULT_NAV_LABELS.afiliados)} onClick={() => goToConfigTab("afiliados")} />
                 <MenuLink icon={<Wallet size={17} />} label={navLabel("revenda", DEFAULT_NAV_LABELS.revenda)} onClick={() => goToConfigTab("revenda")} />
               </>
             )}
 
-            {(canTeam || canReport || canJourney) && (
+            {(canTeam || canReport) && (
               <>
                 <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-foreground/30">{navLabel("equipe", DEFAULT_NAV_LABELS.equipe)}</p>
                 {canTeam && <MenuLink icon={<UserCog size={17} />} label={navLabel("membros", DEFAULT_NAV_LABELS.membros)} onClick={() => goToConfigTab("team")} />}
                 {canReport && <MenuLink icon={<UserCog size={17} />} label={navLabel("relatorio", DEFAULT_NAV_LABELS.relatorio)} onClick={() => goToConfigTab("report")} />}
-                {canJourney && <MenuLink icon={<UserCog size={17} />} label={navLabel("jornada", DEFAULT_NAV_LABELS.jornada)} onClick={() => goToConfigTab("journey")} />}
               </>
             )}
 
