@@ -2943,23 +2943,27 @@ export const getReport = createServerFn({ method: "GET" })
     }).sort((a, b) => b.total - a.total);
 
     // ---- by editor / format ----
+    // Um item pode gerar várias linhas em `finalizations` — uma por
+    // retrabalho (reaprovado de novo no mês) e também uma por cada
+    // item_assignees daquele item (o trigger record_finalizations credita
+    // todo mundo atribuído, não só o editor). Contar por linha inflava o
+    // total de um editor pelo número de vezes que o item foi reaprovado
+    // MULTIPLICADO pelo número de pessoas atribuídas — um reel com 3
+    // atribuídos e reaprovado 1x já virava 3 no total. Cada item entra uma
+    // única vez por editor, não uma vez por linha de finalização.
     const fmtAgg = new Map<string, { lofi: number; facil: number; basico: number; avancado: number }>();
     const itemsByEditor = new Map<string, { itemId: string; title: string; clientName: string | null; clientColor: string | null }[]>();
     contentHist.forEach((h) => {
-      if (h.type !== "reel") return;
+      if (h.type !== "reel" || !h.itemId) return;
       const eid = h.editorId ?? "__none__";
+      const list = itemsByEditor.get(eid) ?? [];
+      if (list.some((it) => it.itemId === h.itemId)) return;
+      list.push({ itemId: h.itemId, title: h.title, clientName: h.clientName, clientColor: h.clientColor });
+      itemsByEditor.set(eid, list);
       const row = fmtAgg.get(eid) ?? { lofi: 0, facil: 0, basico: 0, avancado: 0 };
       const rt = (h.reelType as any) as "lofi" | "facil" | "basico" | "avancado" | null;
       if (rt && row[rt] !== undefined) row[rt]++;
       fmtAgg.set(eid, row);
-      if (h.itemId) {
-        const list = itemsByEditor.get(eid) ?? [];
-        // um item pode ter várias finalizações (retrabalho) — não repetir na lista
-        if (!list.some((it) => it.itemId === h.itemId)) {
-          list.push({ itemId: h.itemId, title: h.title, clientName: h.clientName, clientColor: h.clientColor });
-        }
-        itemsByEditor.set(eid, list);
-      }
     });
     const byEditorFormat = [...fmtAgg.entries()].map(([editorId, v]) => {
       const p = editorId === "__none__" ? null : profileById.get(editorId);
