@@ -23,6 +23,7 @@ import { ClientFichaPanel } from "./ClientFichaPanel";
 import { AppTour } from "./AppTour";
 import { LuzeriaLoader } from "./LuzeriaLoader";
 import { TrialEndingBanner } from "./TrialEndingBanner";
+import { PastDueBanner } from "./PastDueBanner";
 import { GlobalConfirmDialog } from "./GlobalConfirmDialog";
 import { IncomingCallModal } from "./IncomingCallModal";
 import { ActiveCallOverlay } from "./ActiveCallOverlay";
@@ -203,6 +204,7 @@ export function App() {
       <div className="flex-1 flex flex-col min-w-0">
         <Header sidebarHidden={sidebarHidden} onToggleSidebar={toggleSidebar} />
         <TrialEndingBanner isMaster={me.data?.role === "master"} />
+        <PastDueBanner isMaster={me.data?.role === "master"} />
         <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0">
           <PullToRefresh containerRef={mainRef}>
             <div key={routeId} className="lz-page-in">
