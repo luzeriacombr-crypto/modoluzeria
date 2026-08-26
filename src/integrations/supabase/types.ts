@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   graphql_public: {
     Tables: {
@@ -2361,6 +2361,7 @@ export type Database = {
           is_reseller: boolean
           logo_path: string | null
           logo_path_light: string | null
+          max_collaborators_override: number | null
           members_can_set_editor_format: boolean
           name: string
           nav_labels: Json
@@ -2400,6 +2401,7 @@ export type Database = {
           is_reseller?: boolean
           logo_path?: string | null
           logo_path_light?: string | null
+          max_collaborators_override?: number | null
           members_can_set_editor_format?: boolean
           name: string
           nav_labels?: Json
@@ -2439,6 +2441,7 @@ export type Database = {
           is_reseller?: boolean
           logo_path?: string | null
           logo_path_light?: string | null
+          max_collaborators_override?: number | null
           members_can_set_editor_format?: boolean
           name?: string
           nav_labels?: Json

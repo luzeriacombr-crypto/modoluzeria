@@ -370,7 +370,7 @@ export const getOrgPlanStatus = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const { data: org } = await context.supabase
-      .from("orgs").select("plan_id, subscription_status, trial_ends_at, tax_id, asaas_subscription_id").eq("id", context.orgId).maybeSingle();
+      .from("orgs").select("plan_id, subscription_status, trial_ends_at, tax_id, asaas_subscription_id, max_collaborators_override").eq("id", context.orgId).maybeSingle();
     const planId = (org as any)?.plan_id ?? "solo";
     const { data: plan } = await context.supabase.from("plans").select("*").eq("id", planId).maybeSingle();
     const { count: clientsUsed } = await context.supabase
@@ -382,7 +382,7 @@ export const getOrgPlanStatus = createServerFn({ method: "GET" })
       planName: (plan as any)?.name ?? "Solo",
       priceCents: (plan as any)?.price_cents ?? null,
       maxClients: (plan as any)?.max_clients ?? null,
-      maxCollaborators: (plan as any)?.max_collaborators ?? null,
+      maxCollaborators: (org as any)?.max_collaborators_override ?? (plan as any)?.max_collaborators ?? null,
       features: ((plan as any)?.features ?? {}) as Record<string, boolean | string | number | null>,
       subscriptionStatus: (org as any)?.subscription_status ?? "trialing",
       trialEndsAt: (org as any)?.trial_ends_at ?? null,
@@ -645,15 +645,19 @@ export async function assertClientLimit(supabase: any, orgId: string) {
   }
 }
 
-/** Same idea for collaborators — used before creating a new team member. */
+/** Mesma ideia, mas para colaboradores — chamado antes de criar um novo
+ * membro da equipe. `max_collaborators_override` permite dar a uma agência
+ * específica um limite de vagas diferente do seu plano, sem mudar o plano
+ * em si (o limite de clientes continua sempre vindo do plano). */
 async function assertCollaboratorLimit(supabase: any, orgId: string) {
   if (orgId === LUZERIA_ORG_ID) return;
-  const { data: org } = await supabase.from("orgs").select("plan_id").eq("id", orgId).maybeSingle();
+  const { data: org } = await supabase.from("orgs").select("plan_id, max_collaborators_override").eq("id", orgId).maybeSingle();
   const { data: plan } = await supabase.from("plans").select("max_collaborators, name").eq("id", org?.plan_id ?? "solo").maybeSingle();
-  if (plan?.max_collaborators == null) return;
+  const effectiveMax = (org as any)?.max_collaborators_override ?? plan?.max_collaborators;
+  if (effectiveMax == null) return;
   const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("active", true);
-  if ((count ?? 0) >= plan.max_collaborators) {
-    throw new Error(`Limite de ${plan.max_collaborators} colaboradores do plano ${plan.name} atingido. Faça upgrade para adicionar mais.`);
+  if ((count ?? 0) >= effectiveMax) {
+    throw new Error(`Limite de ${effectiveMax} colaboradores atingido. Faça upgrade para adicionar mais.`);
   }
 }
 
