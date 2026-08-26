@@ -39,9 +39,9 @@ function byScheduledAt(direction: OrderDirection) {
 type ClientTab = "posts" | "reels" | "stories" | "finalizados" | "mais" | "feed" | "ficha";
 const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizados", "mais", "feed", "ficha"];
 /** Abas que dá pra ocultar (por padrão da agência ou só pra um cliente) —
- * Posts, Ficha e Stories ficam de fora (Stories já tem seu próprio toggle
- * de sempre, "posts"/"ficha" são o mínimo de navegação garantido). */
-const HIDEABLE_TABS = ["reels", "finalizados", "mais", "feed"] as const;
+ * Ficha e Stories ficam de fora (Stories já tem seu próprio toggle de
+ * sempre, "ficha" é o mínimo de navegação garantido). */
+const HIDEABLE_TABS = ["posts", "reels", "finalizados", "mais", "feed"] as const;
 type MaisSubTab = "atividades" | "campanhas" | "docs" | "biblioteca";
 
 export function ClientView({ clientId, tab: tabParam, onTabChange }: {
@@ -53,7 +53,6 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   const { selectedMonthKey, selectMonth } = useUI();
   const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
-  const tab: ClientTab = (VALID_CLIENT_TABS as string[]).includes(tabParam ?? "") ? (tabParam as ClientTab) : "posts";
   const setTab = onTabChange;
   const [orderMode, setOrderMode] = useState<OrderMode>(
     () => (typeof window !== "undefined" && (localStorage.getItem(ORDER_MODE_KEY) as OrderMode)) || "personalizada",
@@ -78,6 +77,17 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   }
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
+  const disabledFeatures = new Set(me?.disabledFeatures ?? []);
+  const hiddenTabs = client?.hiddenTabs != null ? new Set(client.hiddenTabs) : disabledFeatures;
+  // "posts" agora pode ser oculta, então o fallback (sem ?tab= na URL) não
+  // pode mais ser fixo em "posts" — cai na primeira aba visível pra esse
+  // cliente, senão a grade de conteúdo renderiza sem nenhuma aba destacada.
+  const visibleTabs = VALID_CLIENT_TABS
+    .filter((t) => t !== "stories" || !disabledFeatures.has("stories"))
+    .filter((t) => !(HIDEABLE_TABS as readonly string[]).includes(t) || !hiddenTabs.has(t));
+  const tab: ClientTab = tabParam && (visibleTabs as string[]).includes(tabParam)
+    ? (tabParam as ClientTab)
+    : (visibleTabs[0] ?? "posts");
   const [maisSubTab, setMaisSubTab] = useState<MaisSubTab>("atividades");
   const [customizingTabs, setCustomizingTabs] = useState(false);
   const { duplicateMonth, addContentItem, deleteItem, deleteContentItems, updateMyOrg, updateClient } = useApi();
@@ -126,13 +136,9 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
     },
   } as const;
 
-  const disabledFeatures = new Set(me?.disabledFeatures ?? []);
-  const hiddenTabs = client.hiddenTabs != null ? new Set(client.hiddenTabs) : disabledFeatures;
   const showDocsSubTab = isAdmin;
   const showBibliotecaSubTab = !disabledFeatures.has("reference_library");
-  const tabs = VALID_CLIENT_TABS
-    .filter((t) => t !== "stories" || !disabledFeatures.has("stories"))
-    .filter((t) => !(HIDEABLE_TABS as readonly string[]).includes(t) || !hiddenTabs.has(t));
+  const tabs = visibleTabs;
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
   const idx = sortedKeys.indexOf(selectedMonthKey);
@@ -427,7 +433,7 @@ function MaisSubTabPill({ active, onClick, children }: { active: boolean; onClic
 }
 
 const HIDEABLE_TAB_LABEL: Record<(typeof HIDEABLE_TABS)[number], string> = {
-  reels: "Reels", finalizados: "Finalizados", mais: "Mais", feed: "Preview de Feed",
+  posts: "Posts", reels: "Reels", finalizados: "Finalizados", mais: "Mais", feed: "Preview de Feed",
 };
 
 function CustomizeTabsModal({ client, disabledFeatures, onClose, onSaveOrgDefault, onSaveClientOverride, onClearClientOverride }: {

@@ -154,7 +154,7 @@ export function MentionInput({ value, onChange, placeholder, className, onSubmit
             else if (e.key === "ArrowUp") { e.preventDefault(); setHi((h) => (h - 1 + matches.length) % matches.length); }
             else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); pickMember(matches[hi]); }
             else if (e.key === "Escape") setOpen(false);
-          } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && onSubmit) {
+          } else if (e.key === "Enter" && !e.shiftKey && onSubmit) {
             e.preventDefault(); onSubmit();
           }
         }}

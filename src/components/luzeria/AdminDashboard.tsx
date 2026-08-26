@@ -445,7 +445,7 @@ export function AdminDashboard() {
                   <span className="text-foreground font-semibold">{c.done}</span> de {c.total} entregues
                 </div>
                 <div className="mt-3">
-                  <GrowBar pct={c.percent} gradient={`linear-gradient(90deg, ${color}, ${PALETTE.lime})`} />
+                  <GrowBar pct={c.percent} gradient={`linear-gradient(90deg, ${color}, ${PALETTE.lime})`} className="max-w-[200px]" />
                 </div>
               </button>
             );
@@ -672,10 +672,10 @@ function MetricCard({
   );
 }
 
-function GrowBar({ pct, gradient }: { pct: number; gradient: string }) {
+function GrowBar({ pct, gradient, className = "" }: { pct: number; gradient: string; className?: string }) {
   const grown = useGrowIn(pct);
   return (
-    <div className="h-1.5 rounded-full bg-foreground/[0.06] overflow-hidden max-w-[200px]">
+    <div className={`h-1.5 rounded-full bg-foreground/[0.06] overflow-hidden ${className}`}>
       <div className="h-full rounded-full transition-all duration-500" style={{ width: `${grown}%`, background: gradient }} />
     </div>
   );

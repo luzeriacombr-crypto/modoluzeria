@@ -958,7 +958,7 @@ export function DetailPanel() {
                     }}
                     placeholder="Novo comentário... use @ para mencionar"
                     rows={2} />
-                  <div className="text-[10px] text-foreground/30 mt-1">Ctrl/⌘ + Enter envia · @ menciona</div>
+                  <div className="text-[10px] text-foreground/30 mt-1">Enter envia · Shift+Enter quebra linha · @ menciona</div>
                 </div>
                 <button disabled={!comment.trim()}
                   onClick={() => {
