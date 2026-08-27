@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Trash2, Handshake, MessageCircle, Snowflake, PhoneCall, Check, UserPlus, Phone, CalendarClock, CheckCircle2, XCircle, X, Info } from "lucide-react";
-import { leadsQO, leadContactsQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { Plus, Trash2, Handshake, MessageCircle, Snowflake, PhoneCall, Check, UserPlus, Users, Phone, CalendarClock, CheckCircle2, XCircle, X, Info } from "lucide-react";
+import { leadsQO, leadContactsQO, profilesQO, clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { Modal } from "./Modals";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -115,6 +115,7 @@ export function SalesPipelinePage() {
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [followupLead, setFollowupLead] = useState<Lead | null>(null);
   const [wonLead, setWonLead] = useState<Lead | null>(null);
+  const [lostLead, setLostLead] = useState<Lead | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<LeadStatus | null>(null);
   const [expanded, setExpanded] = useState<LeadStatus | null>(null);
@@ -138,9 +139,7 @@ export function SalesPipelinePage() {
     } else if (status === "fechado") {
       setWonLead(lead);
     } else if (status === "perdido") {
-      requestConfirm(`Marcar "${lead.name}" como perdido?`, { danger: true }).then((ok) => {
-        if (ok) api.markLeadLost.mutate({ data: { id: lead.id } });
-      });
+      setLostLead(lead);
     }
   }
 
@@ -224,6 +223,7 @@ export function SalesPipelinePage() {
       <LeadFormModal open={!!editLead} onClose={() => setEditLead(null)} lead={editLead ?? undefined} />
       <FollowupModal lead={followupLead} onClose={() => setFollowupLead(null)} />
       {wonLead && <WonLeadModal open={!!wonLead} lead={wonLead} onClose={() => setWonLead(null)} />}
+      {lostLead && <LostLeadModal open={!!lostLead} lead={lostLead} onClose={() => setLostLead(null)} />}
     </div>
   );
 }
@@ -560,6 +560,7 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
   const [product, setProduct] = useState("");
   const [customProduct, setCustomProduct] = useState("");
   const [wonOpen, setWonOpen] = useState(false);
+  const [lostOpen, setLostOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -670,11 +671,11 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
                 Ganho
               </button>
               <button
-                onClick={async () => { if (await requestConfirm(`Marcar "${lead.name}" como perdido?`, { danger: true })) { api.markLeadLost.mutate({ data: { id: lead.id } }); onClose(); } }}
+                onClick={() => setLostOpen(true)}
                 className="text-[11px] font-bold uppercase px-2.5 py-1.5 rounded" style={{ backgroundColor: "rgba(231,111,81,0.15)", color: "#E76F51" }}>
                 Perdido
               </button>
-              <InfoTip align="right" text="Ganho cria um cliente de verdade (pede nome, categoria e cor) e move essa oportunidade pra 'Fechado'. Perdido só arquiva — sai do quadro ativo, sem criar nada." />
+              <InfoTip align="right" text="Ganho cria um cliente de verdade (pede nome, categoria e cor) e move essa oportunidade pra 'Fechado'. Perdido arquiva e pede o motivo — sai do quadro ativo, sem criar nada." />
             </div>
           ) : lead && isAdmin ? (
             <button
@@ -698,31 +699,125 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
         </div>
       </Modal>
       {lead && <WonLeadModal open={wonOpen} lead={lead} onClose={() => { setWonOpen(false); onClose(); }} />}
+      {lead && <LostLeadModal open={lostOpen} lead={lead} onClose={() => { setLostOpen(false); onClose(); }} />}
     </>
   );
 }
 
 const CLIENT_CATEGORIES = ["Social Media", "Pack Digital", "Avulsos"];
+type WonStep = "choice" | "new" | "existing";
 
 function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onClose: () => void }) {
   const api = useApi();
+  const { data: clients = [] } = useQuery({ ...clientsQO(), enabled: open });
+  const [step, setStep] = useState<WonStep>("choice");
   const [clientName, setClientName] = useState("");
-  const [category, setCategory] = useState("Social Media");
+  const [category, setCategory] = useState("Avulsos");
   const [color, setColor] = useState<string>(PRESET_COLORS[0]);
   const [icon, setIcon] = useState("");
+  const [existingClientId, setExistingClientId] = useState("");
+
+  const activeClients = useMemo(
+    () => clients.filter((c) => !c.archived).sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
+    [clients],
+  );
 
   useEffect(() => {
     if (!open) return;
+    setStep("choice");
     setClientName(lead.name);
-    setCategory(lead.product && CLIENT_CATEGORIES.includes(lead.product) ? lead.product : "Social Media");
+    setCategory(lead.product && CLIENT_CATEGORIES.includes(lead.product) ? lead.product : "Avulsos");
     setColor(PRESET_COLORS[0]);
     setIcon("");
+    setExistingClientId("");
   }, [open, lead.id]);
 
-  function save() {
+  function saveNew() {
     api.markLeadWon.mutateAsync({
       data: { id: lead.id, clientName: clientName.trim(), category, color, icon: icon.trim() || null },
     }).then(onClose);
+  }
+
+  function saveExisting() {
+    if (!existingClientId) return;
+    api.linkLeadToClient.mutateAsync({ data: { id: lead.id, clientId: existingClientId } }).then(onClose);
+  }
+
+  function saveNoClient() {
+    api.markLeadWonNoClient.mutateAsync({ data: { id: lead.id } }).then(onClose);
+  }
+
+  if (step === "choice") {
+    return (
+      <Modal open={open} onClose={onClose} title="Marcar como ganho">
+        <p className="text-xs text-foreground/50 mb-4">O que você quer fazer com "{lead.name}"?</p>
+        <div className="space-y-2">
+          <button
+            onClick={() => setStep("new")}
+            className="w-full flex items-center gap-3 rounded-lg border border-foreground/10 px-3 py-3 text-left hover:border-[rgb(var(--lz-brand-rgb))] transition-colors"
+          >
+            <UserPlus size={16} className="text-[var(--lz-accent-ink)] shrink-0" />
+            <span>
+              <span className="block text-sm font-semibold text-foreground">Criar novo cliente avulso</span>
+              <span className="block text-xs text-foreground/50">Vira um cliente de verdade no sistema.</span>
+            </span>
+          </button>
+          <button
+            onClick={() => setStep("existing")}
+            disabled={activeClients.length === 0}
+            className="w-full flex items-center gap-3 rounded-lg border border-foreground/10 px-3 py-3 text-left hover:border-[rgb(var(--lz-brand-rgb))] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Users size={16} className="text-[var(--lz-accent-ink)] shrink-0" />
+            <span>
+              <span className="block text-sm font-semibold text-foreground">Atribuir a um cliente já existente</span>
+              <span className="block text-xs text-foreground/50">Vincula essa oportunidade a um cliente que já tem.</span>
+            </span>
+          </button>
+          <button
+            disabled={api.markLeadWonNoClient.isPending}
+            onClick={saveNoClient}
+            className="w-full flex items-center gap-3 rounded-lg border border-foreground/10 px-3 py-3 text-left hover:border-foreground/25 transition-colors disabled:opacity-50"
+          >
+            <X size={16} className="text-foreground/40 shrink-0" />
+            <span>
+              <span className="block text-sm font-semibold text-foreground">Não fazer nada</span>
+              <span className="block text-xs text-foreground/50">Só marca como ganho, sem criar ou vincular cliente.</span>
+            </span>
+          </button>
+        </div>
+        <div className="flex items-center justify-end mt-5">
+          <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
+        </div>
+      </Modal>
+    );
+  }
+
+  if (step === "existing") {
+    return (
+      <Modal open={open} onClose={onClose} title="Marcar como ganho">
+        <p className="text-xs text-foreground/50 mb-3">Qual cliente já existente é esse lead?</p>
+        <F label="Cliente">
+          <select value={existingClientId} onChange={(e) => setExistingClientId(e.target.value)} autoFocus className={inp}>
+            <option value="">Selecione...</option>
+            {activeClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </F>
+        <div className="flex items-center justify-between mt-5">
+          <button onClick={() => setStep("choice")} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Voltar</button>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
+            <button
+              disabled={!existingClientId || api.linkLeadToClient.isPending}
+              onClick={saveExisting}
+              className="px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50 transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "#5BA88A", color: "#0D0D0D" }}
+            >
+              Vincular
+            </button>
+          </div>
+        </div>
+      </Modal>
+    );
   }
 
   return (
@@ -747,15 +842,58 @@ function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onCl
         </div>
         <F label="Inicial / Emoji (opcional)"><input value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={2} className={inp} /></F>
       </div>
+      <div className="flex items-center justify-between mt-5">
+        <button onClick={() => setStep("choice")} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Voltar</button>
+        <div className="flex items-center gap-2">
+          <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
+          <button
+            disabled={!clientName.trim() || api.markLeadWon.isPending}
+            onClick={saveNew}
+            className="px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50 transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "#5BA88A", color: "#0D0D0D" }}
+          >
+            Criar cliente
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function LostLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onClose: () => void }) {
+  const api = useApi();
+  const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setReason("");
+  }, [open, lead.id]);
+
+  function save() {
+    api.markLeadLost.mutateAsync({ data: { id: lead.id, reason: reason.trim() || null } }).then(onClose);
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Marcar como perdido">
+      <F label="Motivo (opcional)">
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          autoFocus
+          rows={3}
+          placeholder="Preço, timing, escolheu concorrente..."
+          className={inp + " resize-none"}
+        />
+      </F>
       <div className="flex items-center justify-end gap-2 mt-5">
         <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
         <button
-          disabled={!clientName.trim() || api.markLeadWon.isPending}
+          disabled={api.markLeadLost.isPending}
           onClick={save}
           className="px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50 transition-opacity hover:opacity-90"
-          style={{ backgroundColor: "#5BA88A", color: "#0D0D0D" }}
+          style={{ backgroundColor: "#E76F51", color: "#0D0D0D" }}
         >
-          Criar cliente
+          Marcar como perdido
         </button>
       </div>
     </Modal>

@@ -49,10 +49,17 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
 }) {
   const { data: clients = [] } = useQuery(clientsQO());
   const client = clients.find((c) => c.id === clientId);
+  const isAvulso = client?.category === "Avulsos";
   const { data: profiles = [] } = useQuery(profilesQO());
   const { selectedMonthKey, selectMonth } = useUI();
-  const { data: month } = useQuery(monthQO(clientId, selectedMonthKey));
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
+  // Avulso não tem seletor de mês na tela (não existe pra onde trocar) — é
+  // sempre o único month_key que já existe pra ele, nunca o mês "atual"
+  // selecionado globalmente pro resto do app. Sem isso, o conteúdo de um
+  // avulso criado num mês passado simplesmente some assim que o calendário
+  // vira, e adicionar conteúdo novo criaria um segundo mês fantasma.
+  const effectiveMonthKey = isAvulso && monthKeys.length > 0 ? monthKeys[0] : selectedMonthKey;
+  const { data: month } = useQuery(monthQO(clientId, effectiveMonthKey));
   const setTab = onTabChange;
   const [orderMode, setOrderMode] = useState<OrderMode>(
     () => (typeof window !== "undefined" && (localStorage.getItem(ORDER_MODE_KEY) as OrderMode)) || "personalizada",
@@ -110,10 +117,9 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
     deleteContentItems.mutate({ data: { ids: [...selectedIds] } }, { onSuccess: exitSelectMode });
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { exitSelectMode(); }, [tab, selectedMonthKey]);
+  useEffect(() => { exitSelectMode(); }, [tab, effectiveMonthKey]);
 
   if (!client) return null;
-  const isAvulso = client.category === "Avulsos";
 
   // Itens "Finalizado" saem da grade de trabalho (fica limpa pro time), mas
   // continuam existindo e visíveis no Preview de Feed — ver FeedPreview.tsx —
@@ -332,7 +338,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   {!selectMode && isAdmin && tab !== "finalizados" && (
                     <button
                       onClick={() => addContentItem.mutate({
-                        data: { clientId, key: selectedMonthKey, type: cfg.type },
+                        data: { clientId, key: effectiveMonthKey, type: cfg.type },
                       })}
                       className="flex flex-col items-center justify-center gap-2 min-h-[200px] rounded-xl border border-dashed border-foreground/15 text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
                       style={{ transitionTimingFunction: "var(--ease-premium)" }}>
@@ -361,7 +367,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   {!selectMode && isAdmin && tab !== "finalizados" && (
                     <button
                       onClick={() => addContentItem.mutate({
-                        data: { clientId, key: selectedMonthKey, type: cfg.type },
+                        data: { clientId, key: effectiveMonthKey, type: cfg.type },
                       })}
                       className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-foreground/15 text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] transition-colors"
                     >
@@ -392,7 +398,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             {maisSubTab === "atividades" && month && (
               <MaisAtividadesTab
                 clientId={clientId}
-                monthKey={selectedMonthKey}
+                monthKey={effectiveMonthKey}
                 gravacoes={month.gravacoes ?? []}
                 roteiros={month.roteiros ?? []}
                 sistemas={month.sistemas ?? []}
@@ -402,7 +408,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
               />
             )}
             {maisSubTab === "campanhas" && (
-              <CampanhasTab clientId={client.id} monthKey={selectedMonthKey} isAdmin={isAdmin} />
+              <CampanhasTab clientId={client.id} monthKey={effectiveMonthKey} isAdmin={isAdmin} />
             )}
             {maisSubTab === "docs" && showDocsSubTab && <ClientDocsTab clientId={client.id} />}
             {maisSubTab === "biblioteca" && showBibliotecaSubTab && <ClientReferenceLibraryTab clientId={client.id} />}

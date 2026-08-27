@@ -56,9 +56,9 @@ export const FEATURE_INDEX: FeatureEntry[] = [
     label: "Visão Geral",
     description: "Todos os clientes lado a lado — etapa da jornada, última gravação e análise.",
     keywords: ["visão geral", "clientes", "jornada", "gravação", "atrasado"],
-    to: "/visao-geral",
+    to: "/configuracoes",
+    toSearch: { tab: "cliente" },
     roles: ["master", "setor"],
-    hideIfDisabled: "client_overview",
   },
   {
     id: "instagram",

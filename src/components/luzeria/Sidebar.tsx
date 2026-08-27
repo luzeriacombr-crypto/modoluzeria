@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Plus, Info, CircleHelp, CalendarDays, Instagram, Users, LayoutGrid, Wallet, UserCog, BookMarked,
+  Plus, Info, CircleHelp, CalendarDays, Instagram, Users, Wallet, UserCog, BookMarked,
   Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
@@ -17,7 +17,7 @@ import { hasSetorPermission, hasPermission, type Client } from "@/lib/luzeria/ty
 
 export const DEFAULT_NAV_LABELS: Record<string, string> = {
   "minhas-demandas": "Minhas demandas", dashboard: "Dashboard", clientes: "Clientes",
-  calendario: "Calendário", biblioteca: "Biblioteca", "visao-geral": "Visão Geral",
+  calendario: "Calendário", biblioteca: "Biblioteca",
   instagram: "Instagram", financeiro: "Plano e Cobrança", equipe: "Equipe", ajuda: "Ajuda",
   cobranca: "Plano e Cobrança", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda",
   rotina: "Rotina", membros: "Membros", relatorio: "Relatório", jornada: "Jornada do cliente",
@@ -235,11 +235,6 @@ export function Sidebar({
             ...(!disabled.has("reference_library") ? [{ id: "biblioteca", label: navLabel("biblioteca", "Biblioteca"), node: (
               <div key="biblioteca" data-tour="nav-biblioteca">
                 <NavButton icon={<BookMarked size={15} />} label={navLabel("biblioteca", "Biblioteca")} active={pathname === "/biblioteca"} onClick={() => navigate({ to: "/biblioteca" })} />
-              </div>
-            ) }] : []),
-            ...(isAdmin && !disabled.has("client_overview") ? [{ id: "visao-geral", label: navLabel("visao-geral", "Visão Geral"), node: (
-              <div key="visao-geral" data-tour="nav-visao-geral">
-                <NavButton icon={<LayoutGrid size={15} />} label={navLabel("visao-geral", "Visão Geral")} active={pathname === "/visao-geral"} onClick={() => navigate({ to: "/visao-geral" })} />
               </div>
             ) }] : []),
             ...(isAdmin && !disabled.has("instagram") ? [{ id: "instagram", label: navLabel("instagram", "Instagram"), node: (

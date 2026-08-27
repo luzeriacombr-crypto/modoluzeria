@@ -70,7 +70,7 @@ import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos
 import { setProfileClientAccess } from "./client-access.functions";
 import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
 import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
-import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
+import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
 import { listDemoRequests } from "./demo-request.functions";
@@ -975,6 +975,16 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["clients"] });
         qc.invalidateQueries({ queryKey: ["client-operations-overview"] });
       },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar como ganho."),
+    }),
+    linkLeadToClient: useMutation({
+      mutationFn: useServerFn(linkLeadToClient),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao vincular ao cliente."),
+    }),
+    markLeadWonNoClient: useMutation({
+      mutationFn: useServerFn(markLeadWonNoClient),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar como ganho."),
     }),
     deleteLead: useMutation({

@@ -1929,6 +1929,7 @@ export type Database = {
           created_at: string
           follow_up_note: string | null
           id: string
+          lost_reason: string | null
           name: string
           next_followup_at: string | null
           notes: string | null
@@ -1948,6 +1949,7 @@ export type Database = {
           created_at?: string
           follow_up_note?: string | null
           id?: string
+          lost_reason?: string | null
           name: string
           next_followup_at?: string | null
           notes?: string | null
@@ -1967,6 +1969,7 @@ export type Database = {
           created_at?: string
           follow_up_note?: string | null
           id?: string
+          lost_reason?: string | null
           name?: string
           next_followup_at?: string | null
           notes?: string | null

@@ -19,6 +19,7 @@ export type Lead = {
   status: LeadStatus;
   archived: boolean;
   wonClientId: string | null;
+  lostReason: string | null;
   nextFollowupAt: string | null;
   followUpNote: string | null;
   contactCount: number;
@@ -41,7 +42,7 @@ export const listLeads = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("leads")
-      .select("id, name, contact_phone, contact_email, source, notes, value_estimate_cents, responsible_ids, product, status, archived, won_client_id, next_followup_at, follow_up_note, created_at, updated_at")
+      .select("id, name, contact_phone, contact_email, source, notes, value_estimate_cents, responsible_ids, product, status, archived, won_client_id, lost_reason, next_followup_at, follow_up_note, created_at, updated_at")
       .eq("org_id", context.orgId)
       .order("created_at", { ascending: false });
     if (!data.includeArchived) q = q.eq("archived", false);
@@ -77,7 +78,7 @@ export const listLeads = createServerFn({ method: "GET" })
       responsibleIds: r.responsible_ids ?? [],
       responsibleNames: (r.responsible_ids ?? []).map((id: string) => nameById.get(id)).filter(Boolean),
       product: r.product,
-      status: r.status, archived: r.archived, wonClientId: r.won_client_id,
+      status: r.status, archived: r.archived, wonClientId: r.won_client_id, lostReason: r.lost_reason,
       nextFollowupAt: r.next_followup_at, followUpNote: r.follow_up_note,
       contactCount: countByLead.get(r.id) ?? 0,
       firstContactAt: firstByLead.get(r.id) ?? null, lastContactAt: lastByLead.get(r.id) ?? null,
@@ -184,13 +185,14 @@ export const scheduleLeadFollowup = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Arrastar pro Perdido — só confirmação, sem motivo (mantido simples). */
+/** Arrastar pro Perdido — pede o motivo (opcional) antes de confirmar. */
 export const markLeadLost = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: { id: string; reason?: string | null }) =>
+    z.object({ id: z.string().uuid(), reason: z.string().trim().max(500).nullable().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
-      .from("leads").update({ status: "perdido", archived: true, updated_at: new Date().toISOString() }).eq("id", data.id);
+      .from("leads").update({ status: "perdido", archived: true, lost_reason: data.reason || null, updated_at: new Date().toISOString() }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -206,8 +208,9 @@ export const deleteLead = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Arrastar pro Fechado abre o formulário de criar cliente — confirmar
- * aqui cria o cliente de verdade, reaproveitando a mesma lógica de
+/** Arrastar pro Fechado pergunta o que fazer: criar cliente novo, vincular
+ * a um já existente, ou não fazer nada — ver WonLeadModal. Esta função é
+ * só o caminho "criar cliente novo": reaproveita a mesma lógica de
  * createClient (api.functions.ts): assertClientLimit, seedMonth pro
  * primeiro mês. Reaproveita essas funções (exportadas de lá
  * especialmente pra isso) em vez de chamar createClient diretamente —
@@ -253,4 +256,43 @@ export const markLeadWon = createServerFn({ method: "POST" })
       .from("leads").update({ status: "fechado", won_client_id: client.id, archived: true, updated_at: new Date().toISOString() }).eq("id", data.id);
     if (updErr) throw new Error(updErr.message);
     return { clientId: client.id as string };
+  });
+
+/** Caminho "atribuir a um cliente já existente" do WonLeadModal — vincula
+ * o lead a um cliente que já existe, sem criar nada novo. */
+export const linkLeadToClient = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string; clientId: string }) =>
+    z.object({ id: z.string().uuid(), clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { data: lead, error: leadErr } = await context.supabase
+      .from("leads").select("id, won_client_id").eq("id", data.id).maybeSingle();
+    if (leadErr || !lead) throw new Error("Lead não encontrado.");
+    if (lead.won_client_id) throw new Error("Esse lead já virou cliente.");
+
+    const { data: client, error: clientErr } = await context.supabase
+      .from("clients").select("id").eq("id", data.clientId).maybeSingle();
+    if (clientErr || !client) throw new Error("Cliente não encontrado.");
+
+    const { error: updErr } = await context.supabase
+      .from("leads").update({ status: "fechado", won_client_id: data.clientId, archived: true, updated_at: new Date().toISOString() }).eq("id", data.id);
+    if (updErr) throw new Error(updErr.message);
+    return { clientId: data.clientId };
+  });
+
+/** Caminho "não fazer nada" do WonLeadModal — só marca o lead como
+ * fechado/ganho, sem criar nem vincular nenhum cliente. */
+export const markLeadWonNoClient = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await context.supabase
+      .from("leads").update({ status: "fechado", archived: true, updated_at: new Date().toISOString() }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

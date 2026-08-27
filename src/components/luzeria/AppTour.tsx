@@ -75,16 +75,6 @@ const STEPS: Step[] = [
     hideIfDisabled: "reference_library",
   },
   {
-    id: "visao-geral",
-    title: "Visão Geral",
-    desc: "Todos os clientes ativos lado a lado: etapa atual da jornada, última gravação e última análise do mês — pra saber quem tá atrasado sem abrir cliente por cliente.",
-    descMobile: "Todos os clientes ativos lado a lado: etapa da jornada, última gravação e última análise. No celular, é só tocar no menu (☰) aqui embaixo e escolher Visão Geral.",
-    target: '[data-tour="nav-visao-geral"]',
-    mobileTarget: '[data-tour="mobile-menu-btn"]',
-    roles: ["master", "setor"],
-    hideIfDisabled: "client_overview",
-  },
-  {
     id: "instagram",
     title: "Instagram",
     desc: "Conecte a conta do Instagram da agência e publique posts, reels e stories direto pelo Modo Criador, sem precisar abrir o app do Instagram.",

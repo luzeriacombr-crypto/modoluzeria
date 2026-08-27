@@ -23,7 +23,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as PromoSlugRouteImport } from './routes/promo/$slug'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
-import { Route as AuthenticatedVisaoGeralRouteImport } from './routes/_authenticated/visao-geral'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated/rotina'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
@@ -110,11 +109,6 @@ const AssinarCompletarRoute = AssinarCompletarRouteImport.update({
   id: '/completar',
   path: '/completar',
   getParentRoute: () => AssinarRoute,
-} as any)
-const AuthenticatedVisaoGeralRoute = AuthenticatedVisaoGeralRouteImport.update({
-  id: '/visao-geral',
-  path: '/visao-geral',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedVendasRoute = AuthenticatedVendasRouteImport.update({
   id: '/vendas',
@@ -231,7 +225,6 @@ export interface FileRoutesByFullPath {
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
   '/vendas': typeof AuthenticatedVendasRoute
-  '/visao-geral': typeof AuthenticatedVisaoGeralRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
@@ -264,7 +257,6 @@ export interface FileRoutesByTo {
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
   '/vendas': typeof AuthenticatedVendasRoute
-  '/visao-geral': typeof AuthenticatedVisaoGeralRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
@@ -299,7 +291,6 @@ export interface FileRoutesById {
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/rotina': typeof AuthenticatedRotinaRoute
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
-  '/_authenticated/visao-geral': typeof AuthenticatedVisaoGeralRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
@@ -334,7 +325,6 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/rotina'
     | '/vendas'
-    | '/visao-geral'
     | '/assinar/completar'
     | '/preview/$token'
     | '/promo/$slug'
@@ -367,7 +357,6 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/rotina'
     | '/vendas'
-    | '/visao-geral'
     | '/assinar/completar'
     | '/preview/$token'
     | '/promo/$slug'
@@ -401,7 +390,6 @@ export interface FileRouteTypes {
     | '/_authenticated/perfil'
     | '/_authenticated/rotina'
     | '/_authenticated/vendas'
-    | '/_authenticated/visao-geral'
     | '/assinar/completar'
     | '/preview/$token'
     | '/promo/$slug'
@@ -531,13 +519,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/assinar/completar'
       preLoaderRoute: typeof AssinarCompletarRouteImport
       parentRoute: typeof AssinarRoute
-    }
-    '/_authenticated/visao-geral': {
-      id: '/_authenticated/visao-geral'
-      path: '/visao-geral'
-      fullPath: '/visao-geral'
-      preLoaderRoute: typeof AuthenticatedVisaoGeralRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/vendas': {
       id: '/_authenticated/vendas'
@@ -672,7 +653,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedRotinaRoute: typeof AuthenticatedRotinaRoute
   AuthenticatedVendasRoute: typeof AuthenticatedVendasRoute
-  AuthenticatedVisaoGeralRoute: typeof AuthenticatedVisaoGeralRoute
   AuthenticatedAfiliadoDashboardRoute: typeof AuthenticatedAfiliadoDashboardRoute
   AuthenticatedClienteClientIdRoute: typeof AuthenticatedClienteClientIdRoute
   AuthenticatedOauthDriveCallbackRoute: typeof AuthenticatedOauthDriveCallbackRoute
@@ -691,7 +671,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedRotinaRoute: AuthenticatedRotinaRoute,
   AuthenticatedVendasRoute: AuthenticatedVendasRoute,
-  AuthenticatedVisaoGeralRoute: AuthenticatedVisaoGeralRoute,
   AuthenticatedAfiliadoDashboardRoute: AuthenticatedAfiliadoDashboardRoute,
   AuthenticatedClienteClientIdRoute: AuthenticatedClienteClientIdRoute,
   AuthenticatedOauthDriveCallbackRoute: AuthenticatedOauthDriveCallbackRoute,

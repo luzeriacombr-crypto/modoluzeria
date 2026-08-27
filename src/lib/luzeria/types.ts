@@ -417,7 +417,7 @@ export function hasPermission(
 }
 
 export const OPTIONAL_FEATURE_KEYS = [
-  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call", "google_calendar", "client_overview", "forum", "reference_library", "sales_pipeline",
+  "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call", "google_calendar", "forum", "reference_library", "sales_pipeline",
   "reels", "finalizados", "mais", "feed",
 ] as const;
 export type OptionalFeatureKey = (typeof OPTIONAL_FEATURE_KEYS)[number];
@@ -461,10 +461,6 @@ export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string;
   google_calendar: {
     label: "Google Agenda",
     description: "Cada membro pode conectar sua própria Google Agenda no Perfil e ver os compromissos de hoje em Minhas Demandas.",
-  },
-  client_overview: {
-    label: "Visão Geral",
-    description: "Item de menu com uma tabela de todos os clientes ativos mostrando etapa atual da jornada, última gravação, próxima gravação prevista e última análise do mês anterior, além do painel de margem por cliente.",
   },
   forum: {
     label: "Fórum entre agências",

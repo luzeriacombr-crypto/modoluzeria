@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, LayoutGrid, Wallet, UserCog, Handshake, IdCard } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -143,13 +143,6 @@ export function MobileNav() {
                 icon={<BookMarked size={17} />}
                 label={navLabel("biblioteca", "Biblioteca")}
                 onClick={() => { navigate({ to: "/biblioteca" }); closeAllSheets(); }}
-              />
-            )}
-            {isAdmin && !disabledFeatures.has("client_overview") && (
-              <MenuLink
-                icon={<LayoutGrid size={17} />}
-                label={navLabel("visao-geral", "Visão Geral")}
-                onClick={() => { navigate({ to: "/visao-geral" }); closeAllSheets(); }}
               />
             )}
             {isAdmin && !disabledFeatures.has("instagram") && (
