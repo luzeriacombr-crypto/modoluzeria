@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square } from "lucide-react";
-import { clientsQO, monthQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO } from "@/lib/luzeria/queries";
+import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getInstagramConnectionStatus } from "@/lib/luzeria/instagram.functions";
@@ -549,9 +549,18 @@ function MediaPreview({
 
 export function DetailPanel() {
   const { selectedItemId, itemNavList, openItem, selectedClientId, selectedMonthKey, flash } = useUI();
-  const { data: month } = useQuery({ ...monthQO(selectedClientId ?? "", selectedMonthKey), enabled: !!selectedClientId && !!selectedItemId });
   const { data: profiles = [] } = useQuery(profilesQO());
   const { data: clients = [] } = useQuery(clientsQO());
+  const client = clients.find((c) => c.id === selectedClientId);
+  const isAvulso = client?.category === "Avulsos";
+  // Avulso não tem seletor de mês (só existe um mês de verdade pra ele) —
+  // o selectedMonthKey global é o mês "atual" do calendário, que não bate
+  // com o mês real do avulso assim que o mês vira. Sem isso, o item existe
+  // mas a busca por ele num mês vazio nunca encontra nada e o clique não
+  // abre o painel — mesma causa raiz do bug já corrigido em ClientView.
+  const { data: monthKeys = [] } = useQuery({ ...monthKeysQO(selectedClientId ?? ""), enabled: !!selectedClientId && isAvulso });
+  const effectiveMonthKey = isAvulso && monthKeys.length > 0 ? monthKeys[0] : selectedMonthKey;
+  const { data: month } = useQuery({ ...monthQO(selectedClientId ?? "", effectiveMonthKey), enabled: !!selectedClientId && !!selectedItemId });
   const me = useMe().data;
   const { setItemStatus, updateItem, setItemEditor, setItemReelType, setItemPostFormat, addAssignee, removeAssignee, addCommentWithMentions, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish, setItemCampaign } = useApi();
   const { data: appSettings } = useQuery(appSettingsQO());
@@ -561,11 +570,9 @@ export function DetailPanel() {
   const navIndex = itemNavList && selectedItemId ? itemNavList.indexOf(selectedItemId) : -1;
   const prevItemId = navIndex > 0 ? itemNavList![navIndex - 1] : null;
   const nextItemId = navIndex >= 0 && itemNavList && navIndex < itemNavList.length - 1 ? itemNavList[navIndex + 1] : null;
-  const client = clients.find((c) => c.id === selectedClientId);
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const canApproveFinalize = hasSetorPermission(me, "approve_finalize");
   const canPublishInstagram = hasSetorPermission(me, "instagram_publish");
-  const isAvulso = client?.category === "Avulsos";
 
   const getInstagramStatus = useServerFn(getInstagramConnectionStatus);
   const instagramStatus = useQuery({
