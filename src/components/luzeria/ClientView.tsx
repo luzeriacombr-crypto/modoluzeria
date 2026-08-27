@@ -9,7 +9,7 @@ import { Avatar } from "./Avatar";
 import { ContentCard, ContentListRow } from "./ContentCard";
 import { FeedPreview } from "./FeedPreview";
 import { ClientFichaContent } from "./ClientFichaPanel";
-import { formatMonth } from "@/lib/luzeria/utils";
+import { formatMonth, nextMonthKey } from "@/lib/luzeria/utils";
 import { useMe } from "@/lib/luzeria/queries";
 import { MaisAtividadesTab } from "./MaisAtividadesTab";
 import { ClientDocsTab } from "./ClientDocsTab";
@@ -97,9 +97,38 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
     : (visibleTabs[0] ?? "posts");
   const [maisSubTab, setMaisSubTab] = useState<MaisSubTab>("atividades");
   const [customizingTabs, setCustomizingTabs] = useState(false);
-  const { duplicateMonth, addContentItem, deleteItem, deleteContentItems, updateMyOrg, updateClient } = useApi();
+  const { duplicateMonth, addContentItem, deleteItem, deleteContentItems, updateMyOrg, updateClient, reorderContentItems, moveItemToMonth } = useApi();
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const [localOrder, setLocalOrder] = useState<string[] | null>(null);
+  const [movingItem, setMovingItem] = useState<ContentItem | null>(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setLocalOrder(null); }, [tab, effectiveMonthKey, orderMode]);
+  const canDragReorder = isAdmin && !selectMode && orderMode === "personalizada" && (tab === "posts" || tab === "reels");
+  function applyLocalOrder(baseItems: readonly ContentItem[]): ContentItem[] {
+    if (!localOrder) return [...baseItems];
+    const byId = new Map(baseItems.map((i) => [i.id, i]));
+    const seen = new Set<string>();
+    const result: ContentItem[] = [];
+    for (const id of localOrder) { const it = byId.get(id); if (it && !seen.has(id)) { result.push(it); seen.add(id); } }
+    for (const it of baseItems) if (!seen.has(it.id)) result.push(it);
+    return result;
+  }
+  function onDropReorder(targetId: string, currentItems: ContentItem[], monthId: string, type: "post" | "reel") {
+    if (!dragId || dragId === targetId) { setDragId(null); setOverId(null); return; }
+    const ids = currentItems.map((i) => i.id);
+    const from = ids.indexOf(dragId);
+    const to = ids.indexOf(targetId);
+    if (from < 0 || to < 0) { setDragId(null); setOverId(null); return; }
+    ids.splice(from, 1);
+    ids.splice(to, 0, dragId);
+    setLocalOrder(ids);
+    reorderContentItems.mutate({ data: { monthId, type, orderedItemIds: ids } });
+    setDragId(null);
+    setOverId(null);
+  }
   function toggleSelected(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -238,7 +267,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
       <div className="mt-2">
         {(tab in TAB_CONFIG) && (() => {
           const cfg = TAB_CONFIG[tab as keyof typeof TAB_CONFIG];
-          const items = orderMode === "cronologica" ? [...cfg.items].sort(byScheduledAt(orderDirection)) : cfg.items;
+          const items = orderMode === "cronologica" ? [...cfg.items].sort(byScheduledAt(orderDirection)) : applyLocalOrder(cfg.items);
           const navList = items.map((it) => it.id);
           return (
             <>
@@ -289,7 +318,10 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                     }}
                   ><List size={12} /></button>
                 </div>
-                <span className="text-[10px] uppercase font-semibold text-foreground/30 tracking-wider mr-1">Ordem</span>
+                <span className="text-[10px] uppercase font-semibold text-foreground/30 tracking-wider mr-1">
+                  Ordem
+                  {canDragReorder && <span className="normal-case tracking-normal ml-1.5 text-foreground/25">— arraste pra reordenar</span>}
+                </span>
                 {(["personalizada", "cronologica"] as const).map((m) => {
                   const active = orderMode === m;
                   return (
@@ -330,9 +362,18 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       isAdmin={isAdmin}
                       navList={navList}
                       onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
+                      onMove={!isAvulso ? () => setMovingItem(item) : undefined}
                       selectMode={selectMode}
                       selected={selectedIds.has(item.id)}
                       onToggleSelect={() => toggleSelected(item.id)}
+                      draggable={canDragReorder}
+                      isDragging={dragId === item.id}
+                      isOver={overId === item.id}
+                      onDragStart={() => setDragId(item.id)}
+                      onDragOver={(e) => { e.preventDefault(); if (dragId && dragId !== item.id) setOverId(item.id); }}
+                      onDragLeave={() => { if (overId === item.id) setOverId(null); }}
+                      onDrop={() => onDropReorder(item.id, items, month!.id, cfg.type as "post" | "reel")}
+                      onDragEnd={() => { setDragId(null); setOverId(null); }}
                     />
                   ))}
                   {!selectMode && isAdmin && tab !== "finalizados" && (
@@ -359,9 +400,18 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       isAdmin={isAdmin}
                       navList={navList}
                       onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
+                      onMove={!isAvulso ? () => setMovingItem(item) : undefined}
                       selectMode={selectMode}
                       selected={selectedIds.has(item.id)}
                       onToggleSelect={() => toggleSelected(item.id)}
+                      draggable={canDragReorder}
+                      isDragging={dragId === item.id}
+                      isOver={overId === item.id}
+                      onDragStart={() => setDragId(item.id)}
+                      onDragOver={(e) => { e.preventDefault(); if (dragId && dragId !== item.id) setOverId(item.id); }}
+                      onDragLeave={() => { if (overId === item.id) setOverId(null); }}
+                      onDrop={() => onDropReorder(item.id, items, month!.id, cfg.type as "post" | "reel")}
+                      onDragEnd={() => { setDragId(null); setOverId(null); }}
                     />
                   ))}
                   {!selectMode && isAdmin && tab !== "finalizados" && (
@@ -421,7 +471,64 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         )}
         {tab === "feed" && month && <FeedPreview month={month} client={client} />}
       </div>
+      {movingItem && (
+        <MoveItemModal
+          item={movingItem}
+          clientId={clientId}
+          currentKey={effectiveMonthKey}
+          onClose={() => setMovingItem(null)}
+          onMove={(targetKey) => {
+            moveItemToMonth.mutate({ data: { itemId: movingItem.id, targetKey } });
+            setMovingItem(null);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function MoveItemModal({ item, clientId, currentKey, onClose, onMove }: {
+  item: ContentItem; clientId: string; currentKey: string; onClose: () => void; onMove: (targetKey: string) => void;
+}) {
+  const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
+  const [customKey, setCustomKey] = useState("");
+  const upcoming: string[] = [];
+  let k = currentKey;
+  for (let i = 0; i < 6; i++) { k = nextMonthKey(k); upcoming.push(k); }
+  const options = [...new Set([...monthKeys.filter((mk) => mk !== currentKey), ...upcoming])].sort();
+
+  return (
+    <Modal open onClose={onClose} title={`Mover "${item.title || "item sem título"}"`}>
+      <p className="text-xs text-foreground/50 mb-3">Escolha pra qual mês mover este {item.type === "reel" ? "reel" : "post"}. Está em {formatMonth(currentKey)}.</p>
+      <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+        {options.map((key) => (
+          <button
+            key={key}
+            onClick={() => onMove(key)}
+            className="text-left px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-foreground/[0.06] transition-colors"
+          >
+            {formatMonth(key)}
+            {!monthKeys.includes(key) && <span className="ml-2 text-[10px] uppercase font-bold text-foreground/30">Novo mês</span>}
+          </button>
+        ))}
+      </div>
+      <div className="mt-3 pt-3 border-t border-foreground/6 flex items-center gap-2">
+        <input
+          type="month"
+          value={customKey}
+          onChange={(e) => setCustomKey(e.target.value)}
+          className="flex-1 bg-transparent border border-foreground/10 rounded-md px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition-colors"
+        />
+        <button
+          onClick={() => customKey && onMove(customKey)}
+          disabled={!customKey}
+          className="rounded-md px-3 py-1.5 text-xs font-bold uppercase disabled:opacity-30 transition"
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >
+          Mover
+        </button>
+      </div>
+    </Modal>
   );
 }
 

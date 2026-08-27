@@ -3327,6 +3327,7 @@ export type Database = {
         Returns: Json
       }
       update_feed_order: { Args: { p_updates: Json }; Returns: undefined }
+      update_item_idx: { Args: { p_updates: Json }; Returns: undefined }
       verify_public_token_file: {
         Args: { _file_id: string; _token: string }
         Returns: boolean

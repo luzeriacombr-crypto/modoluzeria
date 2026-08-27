@@ -1727,6 +1727,74 @@ export const addContentItem = createServerFn({ method: "POST" })
     return { id: inserted.id };
   });
 
+/** Reordenar arrastando dentro da própria grade (posts ou reels de um
+ * mesmo mês). Só faz sentido em "ordem personalizada" — em cronológica a
+ * ordem já vem da data agendada. */
+export const reorderContentItems = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { monthId: string; type: ContentType; orderedItemIds: string[] }) =>
+    z.object({
+      monthId: z.string().uuid(),
+      type: z.enum(["post", "reel", "story", "outros", "gravacao", "roteiro", "sistema"]),
+      orderedItemIds: z.array(z.string().uuid()).max(500),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { data: existing } = await context.supabase
+      .from("content_items").select("id").eq("month_id", data.monthId).eq("type", data.type);
+    const allIds = new Set((existing ?? []).map((x: any) => x.id));
+    const rows = data.orderedItemIds
+      .filter((id) => allIds.has(id))
+      .map((id, pos) => ({ id, idx: pos + 1 }));
+    if (rows.length) {
+      const { error } = await context.supabase.rpc("update_item_idx", { p_updates: rows });
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+/** Move um post/reel pra outro mês do mesmo cliente — cria o mês de
+ * destino se ainda não existir (mesmo fallback do addContentItem), e o
+ * item entra no fim da fila desse mês/tipo. */
+export const moveItemToMonth = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; targetKey: string }) =>
+    z.object({
+      itemId: z.string().uuid(),
+      targetKey: z.string().regex(/^\d{4}-\d{2}$/),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { data: item, error: itemErr } = await context.supabase
+      .from("content_items")
+      .select("id, type, month_id, months!inner(client_id, key)")
+      .eq("id", data.itemId).single();
+    if (itemErr || !item) throw new Error(itemErr?.message ?? "Item não encontrado.");
+    const clientId = (item as any).months.client_id as string;
+    const currentKey = (item as any).months.key as string;
+    if (currentKey === data.targetKey) return { ok: true };
+    let { data: targetMonth } = await context.supabase
+      .from("months").select("id").eq("client_id", clientId).eq("key", data.targetKey).maybeSingle();
+    if (!targetMonth) {
+      const { data: m, error } = await context.supabase
+        .from("months").insert({ client_id: clientId, key: data.targetKey, org_id: context.orgId }).select("id").single();
+      if (error) throw new Error(error.message);
+      targetMonth = m;
+    }
+    const { data: maxRow } = await context.supabase
+      .from("content_items").select("idx").eq("month_id", targetMonth.id).eq("type", item.type)
+      .order("idx", { ascending: false }).limit(1).maybeSingle();
+    const nextIdx = ((maxRow as any)?.idx ?? 0) + 1;
+    const { error: updErr } = await context.supabase
+      .from("content_items")
+      .update({ month_id: targetMonth.id, idx: nextIdx, feed_order: null })
+      .eq("id", data.itemId);
+    if (updErr) throw new Error(updErr.message);
+    return { ok: true };
+  });
+
 /** "Excluir" não apaga de verdade — só marca deleted_at/deleted_by
  * (soft delete). O item some de toda tela normal (a política de RLS já
  * filtra deleted_at is null pra todo mundo), mas continua existindo

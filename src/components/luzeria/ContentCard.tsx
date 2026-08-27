@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar, Image as ImageIcon, Trash2, Check, Megaphone } from "lucide-react";
+import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar, Image as ImageIcon, Trash2, Check, Megaphone, FolderInput } from "lucide-react";
 import { isDoneStatus, hasSetorPermission, type ContentItem, type Profile } from "@/lib/luzeria/types";
 import {
   statusOptionsFor, REEL_TYPE_LABEL, POST_FORMAT_LABEL,
@@ -14,7 +14,10 @@ import { useUI } from "@/lib/luzeria/ui-store";
 
 const EASE = { transitionTimingFunction: "var(--ease-premium)" as const };
 
-export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, navList, selectMode, selected, onToggleSelect }: {
+export function ContentCard({
+  item, profiles, idx, isAvulso, isAdmin, onDelete, navList, selectMode, selected, onToggleSelect,
+  onMove, draggable, isDragging, isOver, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
+}: {
   item: ContentItem;
   profiles: Profile[];
   idx: number;
@@ -25,6 +28,15 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
   selectMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  onMove?: () => void;
+  draggable?: boolean;
+  isDragging?: boolean;
+  isOver?: boolean;
+  onDragStart?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDragLeave?: () => void;
+  onDrop?: () => void;
+  onDragEnd?: () => void;
 }) {
   const { setItemStatus, updateItem, addAssignee } = useApi();
   const me = useMe().data;
@@ -63,8 +75,14 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
 
   return (
     <div
+      draggable={draggable}
+      onDragStart={draggable ? onDragStart : undefined}
+      onDragOver={draggable ? onDragOver : undefined}
+      onDragLeave={draggable ? onDragLeave : undefined}
+      onDrop={draggable ? onDrop : undefined}
+      onDragEnd={draggable ? onDragEnd : undefined}
       className={`group relative flex flex-col rounded-xl overflow-hidden border bg-card hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 cursor-pointer ${flashed ? "lz-flash" : ""} ${selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-foreground/6 hover:border-foreground/15"}`}
-      style={EASE}
+      style={{ ...EASE, cursor: draggable ? "grab" : "pointer", opacity: isDragging ? 0.4 : 1, outline: isOver ? "2px solid rgb(var(--lz-brand-rgb))" : "none", outlineOffset: isOver ? "-2px" : 0 }}
       onClick={() => (selectMode ? onToggleSelect?.() : openItem(item.id, navList))}
     >
       <div className="relative w-full aspect-[4/5] shrink-0">
@@ -85,13 +103,25 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
           >
             {selected && <Check size={13} color="#0D0D0D" />}
           </span>
-        ) : isAdmin && onDelete && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            title="Excluir item"
-            className="absolute top-2 right-2 p-1.5 rounded-md text-foreground/70 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity duration-200"
-            style={{ backgroundColor: "rgba(0,0,0,0.55)", ...EASE }}
-          ><Trash2 size={13} /></button>
+        ) : isAdmin && (onDelete || onMove) && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            {onMove && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onMove(); }}
+                title="Mover para outro mês"
+                className="p-1.5 rounded-md text-foreground/70 hover:text-[var(--lz-accent-ink)]"
+                style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
+              ><FolderInput size={13} /></button>
+            )}
+            {onDelete && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                title="Excluir item"
+                className="p-1.5 rounded-md text-foreground/70 hover:text-red-400"
+                style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
+              ><Trash2 size={13} /></button>
+            )}
+          </div>
         )}
         <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
           {item.driveLink && (
@@ -196,7 +226,10 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
 /** Linha compacta — mesma informação e edição inline do ContentCard (título,
  * status, prazo), só que numa lista em vez de grade de cards. Pensada pra
  * escanear/editar um board grande rapidamente, sem depender de miniatura. */
-export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelete, navList, selectMode, selected, onToggleSelect }: {
+export function ContentListRow({
+  item, profiles, idx, isAvulso, isAdmin, onDelete, navList, selectMode, selected, onToggleSelect,
+  onMove, draggable, isDragging, isOver, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
+}: {
   item: ContentItem;
   profiles: Profile[];
   idx: number;
@@ -207,6 +240,15 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
   selectMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  onMove?: () => void;
+  draggable?: boolean;
+  isDragging?: boolean;
+  isOver?: boolean;
+  onDragStart?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDragLeave?: () => void;
+  onDrop?: () => void;
+  onDragEnd?: () => void;
 }) {
   const { setItemStatus, updateItem, addAssignee } = useApi();
   const me = useMe().data;
@@ -242,7 +284,14 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
 
   return (
     <div
+      draggable={draggable}
+      onDragStart={draggable ? onDragStart : undefined}
+      onDragOver={draggable ? onDragOver : undefined}
+      onDragLeave={draggable ? onDragLeave : undefined}
+      onDrop={draggable ? onDrop : undefined}
+      onDragEnd={draggable ? onDragEnd : undefined}
       className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-card hover:bg-card transition-colors cursor-pointer ${flashed ? "lz-flash" : ""} ${selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-foreground/6 hover:border-foreground/15"}`}
+      style={{ cursor: draggable ? "grab" : "pointer", opacity: isDragging ? 0.4 : 1, outline: isOver ? "2px solid rgb(var(--lz-brand-rgb))" : "none", outlineOffset: isOver ? "-2px" : 0 }}
       onClick={() => (selectMode ? onToggleSelect?.() : openItem(item.id, navList))}
     >
       {selectMode && (
@@ -314,6 +363,13 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
         ) : null}
       </div>
 
+      {!selectMode && isAdmin && onMove && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onMove(); }}
+          title="Mover para outro mês"
+          className="shrink-0 p-1.5 rounded-md text-foreground/30 opacity-0 group-hover:opacity-100 hover:text-[var(--lz-accent-ink)] transition-opacity"
+        ><FolderInput size={13} /></button>
+      )}
       {!selectMode && isAdmin && onDelete && (
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
