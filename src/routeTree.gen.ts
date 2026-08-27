@@ -27,6 +27,7 @@ import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated/rotina'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
+import { Route as AuthenticatedLixeiraRouteImport } from './routes/_authenticated/lixeira'
 import { Route as AuthenticatedInstagramRouteImport } from './routes/_authenticated/instagram'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
@@ -131,6 +132,11 @@ const AuthenticatedMinhasTarefasRoute =
     path: '/minhas-tarefas',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedLixeiraRoute = AuthenticatedLixeiraRouteImport.update({
+  id: '/lixeira',
+  path: '/lixeira',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedInstagramRoute = AuthenticatedInstagramRouteImport.update({
   id: '/instagram',
   path: '/instagram',
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/instagram': typeof AuthenticatedInstagramRoute
+  '/lixeira': typeof AuthenticatedLixeiraRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
@@ -253,6 +260,7 @@ export interface FileRoutesByTo {
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/instagram': typeof AuthenticatedInstagramRoute
+  '/lixeira': typeof AuthenticatedLixeiraRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
@@ -287,6 +295,7 @@ export interface FileRoutesById {
   '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/instagram': typeof AuthenticatedInstagramRoute
+  '/_authenticated/lixeira': typeof AuthenticatedLixeiraRoute
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/rotina': typeof AuthenticatedRotinaRoute
@@ -321,6 +330,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/configuracoes'
     | '/instagram'
+    | '/lixeira'
     | '/minhas-tarefas'
     | '/perfil'
     | '/rotina'
@@ -353,6 +363,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/configuracoes'
     | '/instagram'
+    | '/lixeira'
     | '/minhas-tarefas'
     | '/perfil'
     | '/rotina'
@@ -386,6 +397,7 @@ export interface FileRouteTypes {
     | '/_authenticated/calendario'
     | '/_authenticated/configuracoes'
     | '/_authenticated/instagram'
+    | '/_authenticated/lixeira'
     | '/_authenticated/minhas-tarefas'
     | '/_authenticated/perfil'
     | '/_authenticated/rotina'
@@ -548,6 +560,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMinhasTarefasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/lixeira': {
+      id: '/_authenticated/lixeira'
+      path: '/lixeira'
+      fullPath: '/lixeira'
+      preLoaderRoute: typeof AuthenticatedLixeiraRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/instagram': {
       id: '/_authenticated/instagram'
       path: '/instagram'
@@ -649,6 +668,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedInstagramRoute: typeof AuthenticatedInstagramRoute
+  AuthenticatedLixeiraRoute: typeof AuthenticatedLixeiraRoute
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedRotinaRoute: typeof AuthenticatedRotinaRoute
@@ -667,6 +687,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedInstagramRoute: AuthenticatedInstagramRoute,
+  AuthenticatedLixeiraRoute: AuthenticatedLixeiraRoute,
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedRotinaRoute: AuthenticatedRotinaRoute,

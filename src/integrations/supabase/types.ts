@@ -1344,6 +1344,8 @@ export type Database = {
           copy: string
           cover_path: string | null
           cover_source: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           drive_link: string
           due_date: string | null
           editor_id: string | null
@@ -1380,6 +1382,8 @@ export type Database = {
           copy?: string
           cover_path?: string | null
           cover_source?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           drive_link?: string
           due_date?: string | null
           editor_id?: string | null
@@ -1416,6 +1420,8 @@ export type Database = {
           copy?: string
           cover_path?: string | null
           cover_source?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           drive_link?: string
           due_date?: string | null
           editor_id?: string | null
@@ -1447,6 +1453,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {

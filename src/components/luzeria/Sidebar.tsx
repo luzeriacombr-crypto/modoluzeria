@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Plus, Info, CircleHelp, CalendarDays, Instagram, Users, Wallet, UserCog, BookMarked,
-  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard,
+  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -21,7 +21,7 @@ export const DEFAULT_NAV_LABELS: Record<string, string> = {
   instagram: "Instagram", financeiro: "Plano e Cobrança", equipe: "Equipe", ajuda: "Ajuda",
   cobranca: "Plano e Cobrança", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda",
   rotina: "Rotina", membros: "Membros", relatorio: "Relatório", jornada: "Jornada do cliente",
-  vendas: "Vendas", pagamentos: "Pagamentos", cliente: "Visão Geral", "cliente-overview": "Visão Geral",
+  vendas: "Vendas", lixeira: "Lixeira", pagamentos: "Pagamentos", cliente: "Visão Geral", "cliente-overview": "Visão Geral",
 };
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
@@ -245,6 +245,11 @@ export function Sidebar({
             ...(canSales ? [{ id: "vendas", label: navLabel("vendas", "Vendas"), node: (
               <div key="vendas" data-tour="nav-vendas">
                 <NavButton icon={<Handshake size={15} />} label={navLabel("vendas", "Vendas")} active={pathname === "/vendas"} onClick={() => navigate({ to: "/vendas" })} />
+              </div>
+            ) }] : []),
+            ...(isAdmin ? [{ id: "lixeira", label: navLabel("lixeira", "Lixeira"), node: (
+              <div key="lixeira" data-tour="nav-lixeira">
+                <NavButton icon={<Trash2 size={15} />} label={navLabel("lixeira", "Lixeira")} active={pathname === "/lixeira"} onClick={() => navigate({ to: "/lixeira" })} />
               </div>
             ) }] : []),
             ...((isAdmin || canJourney || canFinanceiro) ? [{ id: "cliente", label: navLabel("cliente", "Visão Geral"), node: (

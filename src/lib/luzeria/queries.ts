@@ -71,6 +71,7 @@ import { setProfileClientAccess } from "./client-access.functions";
 import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
 import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
 import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
+import { listTrash, restoreItem, purgeItem } from "./trash.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
 import { listDemoRequests } from "./demo-request.functions";
@@ -221,6 +222,8 @@ export const leadsQO = (includeArchived?: boolean) =>
     queryKey: ["leads", includeArchived ?? false],
     queryFn: () => listLeads({ data: { includeArchived } }),
   });
+
+export const trashQO = () => queryOptions({ queryKey: ["trash"], queryFn: () => listTrash() });
 
 export const leadContactsQO = (leadId: string | null) =>
   queryOptions({
@@ -697,6 +700,16 @@ export function useApi() {
     addContentItem: useMutation({ mutationFn: useServerFn(addContentItem), onSuccess: invalidateAll }),
     deleteItem: useMutation({ mutationFn: useServerFn(deleteItem), onSuccess: invalidateAll }),
     deleteContentItems: useMutation({ mutationFn: useServerFn(deleteContentItems), onSuccess: invalidateAll }),
+    restoreItem: useMutation({
+      mutationFn: useServerFn(restoreItem),
+      onSuccess: () => { invalidateAll(); qc.invalidateQueries({ queryKey: ["trash"] }); },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao restaurar."),
+    }),
+    purgeItem: useMutation({
+      mutationFn: useServerFn(purgeItem),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["trash"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao excluir para sempre."),
+    }),
     updateFeedOrder: useMutation({
       mutationFn: useServerFn(updateFeedOrder),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),

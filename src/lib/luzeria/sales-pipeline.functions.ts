@@ -171,7 +171,11 @@ export const moveLeadStatus = createServerFn({ method: "POST" })
   });
 
 /** Arrastar pro Follow-up abre o calendário no front — isso aqui grava a
- * data escolhida (qualquer dia, não só hoje) junto com a nota. */
+ * data escolhida (qualquer dia, não só hoje) junto com a nota. Também é o
+ * caminho usado pra reabrir um lead "perdido" (o agendador continua
+ * visível mesmo pra leads terminais) — por isso sempre desarquiva e
+ * limpa o motivo de perda, mesmo quando o lead já estava ativo antes
+ * (não tem efeito nesse caso). */
 export const scheduleLeadFollowup = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string; followUpAt: string; note?: string | null }) =>
@@ -179,7 +183,10 @@ export const scheduleLeadFollowup = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("leads")
-      .update({ status: "followup", next_followup_at: data.followUpAt, follow_up_note: data.note ?? null, updated_at: new Date().toISOString() })
+      .update({
+        status: "followup", next_followup_at: data.followUpAt, follow_up_note: data.note ?? null,
+        archived: false, lost_reason: null, updated_at: new Date().toISOString(),
+      })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -253,7 +260,7 @@ export const markLeadWon = createServerFn({ method: "POST" })
     }
 
     const { error: updErr } = await context.supabase
-      .from("leads").update({ status: "fechado", won_client_id: client.id, archived: true, updated_at: new Date().toISOString() }).eq("id", data.id);
+      .from("leads").update({ status: "fechado", won_client_id: client.id, archived: true, lost_reason: null, updated_at: new Date().toISOString() }).eq("id", data.id);
     if (updErr) throw new Error(updErr.message);
     return { clientId: client.id as string };
   });
@@ -278,7 +285,7 @@ export const linkLeadToClient = createServerFn({ method: "POST" })
     if (clientErr || !client) throw new Error("Cliente não encontrado.");
 
     const { error: updErr } = await context.supabase
-      .from("leads").update({ status: "fechado", won_client_id: data.clientId, archived: true, updated_at: new Date().toISOString() }).eq("id", data.id);
+      .from("leads").update({ status: "fechado", won_client_id: data.clientId, archived: true, lost_reason: null, updated_at: new Date().toISOString() }).eq("id", data.id);
     if (updErr) throw new Error(updErr.message);
     return { clientId: data.clientId };
   });
@@ -292,7 +299,7 @@ export const markLeadWonNoClient = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
     const { error } = await context.supabase
-      .from("leads").update({ status: "fechado", archived: true, updated_at: new Date().toISOString() }).eq("id", data.id);
+      .from("leads").update({ status: "fechado", archived: true, lost_reason: null, updated_at: new Date().toISOString() }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

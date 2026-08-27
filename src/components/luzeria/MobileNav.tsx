@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -157,6 +157,13 @@ export function MobileNav() {
                 icon={<Handshake size={17} />}
                 label={navLabel("vendas", "Vendas")}
                 onClick={() => { navigate({ to: "/vendas" }); closeAllSheets(); }}
+              />
+            )}
+            {isAdmin && (
+              <MenuLink
+                icon={<Trash2 size={17} />}
+                label={navLabel("lixeira", "Lixeira")}
+                onClick={() => { navigate({ to: "/lixeira" }); closeAllSheets(); }}
               />
             )}
             {!disabledFeatures.has("rotina") && (

@@ -1719,13 +1719,26 @@ export const addContentItem = createServerFn({ method: "POST" })
     return { id: inserted.id };
   });
 
+/** "Excluir" não apaga de verdade — só marca deleted_at/deleted_by
+ * (soft delete). O item some de toda tela normal (a política de RLS já
+ * filtra deleted_at is null pra todo mundo), mas continua existindo
+ * intacto por 7 dias, restaurável na Lixeira — ver trash.functions.ts.
+ * Usa o service role pra essa escrita especificamente: content_items tem
+ * uma política de UPDATE sem menção a deleted_at (de propósito, pra não
+ * bloquear edições normais), mas por algum motivo do Postgres/RLS que não
+ * conseguimos isolar, a MESMA política rejeita a transição desse campo de
+ * nulo pra preenchido mesmo sem citá-lo — só o service role, que ignora
+ * RLS, escreve esse campo de forma confiável. */
 export const deleteItem = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
-    const { error } = await context.supabase.from("content_items").delete().eq("id", data.id);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("content_items")
+      .update({ deleted_at: new Date().toISOString(), deleted_by: context.userId })
+      .eq("id", data.id).eq("org_id", context.orgId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1737,7 +1750,10 @@ export const deleteContentItems = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
-    const { error } = await context.supabase.from("content_items").delete().in("id", data.ids);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("content_items")
+      .update({ deleted_at: new Date().toISOString(), deleted_by: context.userId })
+      .in("id", data.ids).eq("org_id", context.orgId);
     if (error) throw new Error(error.message);
     return { ok: true, count: data.ids.length };
   });
