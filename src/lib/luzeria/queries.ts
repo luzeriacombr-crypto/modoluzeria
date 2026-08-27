@@ -32,7 +32,7 @@ import {
   listRecurring, upsertRecurring, deleteRecurring, generateRecurring,
   listActivity, getReportExtras, getMemberStatusDuration,
   getAppSettings, updateAppSettings,
-  getMyWeek, getWorkload, getItemTimeline, addCommentWithMentions, updateComment,
+  getMyWeek, getWorkload, getItemTimeline, addCommentWithMentions, addAudioComment, updateComment,
 } from "./roadmap.functions";
 import {
   listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, startDriveUploadSession, uploadDriveChunk, finalizeDriveUpload, detachItemFile, deleteItemFileAndDrive,
@@ -1172,6 +1172,14 @@ export function useApi() {
     updateComment: useMutation({
       mutationFn: useServerFn(updateComment),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
+    }),
+    addAudioComment: useMutation({
+      mutationFn: useServerFn(addAudioComment),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["month"] });
+        qc.invalidateQueries({ queryKey: ["notifications"] });
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao enviar áudio."),
     }),
     /* ===== DRIVE FILES ===== */
     attachDriveFile: useMutation({

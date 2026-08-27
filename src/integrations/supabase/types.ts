@@ -1289,6 +1289,8 @@ export type Database = {
       }
       comments: {
         Row: {
+          audio_duration_seconds: number | null
+          audio_path: string | null
           author_id: string | null
           created_at: string
           edited_at: string | null
@@ -1298,6 +1300,8 @@ export type Database = {
           text: string
         }
         Insert: {
+          audio_duration_seconds?: number | null
+          audio_path?: string | null
           author_id?: string | null
           created_at?: string
           edited_at?: string | null
@@ -1307,6 +1311,8 @@ export type Database = {
           text: string
         }
         Update: {
+          audio_duration_seconds?: number | null
+          audio_path?: string | null
           author_id?: string | null
           created_at?: string
           edited_at?: string | null

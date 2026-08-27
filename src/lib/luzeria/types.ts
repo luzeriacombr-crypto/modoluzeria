@@ -104,6 +104,8 @@ export interface Comment {
   createdAt: string;
   editedAt?: string | null;
   system?: boolean;
+  audioUrl?: string | null;
+  audioDurationSeconds?: number | null;
 }
 
 export interface ContentItem {

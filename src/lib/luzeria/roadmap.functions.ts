@@ -834,6 +834,47 @@ export const addCommentWithMentions = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Comentário em áudio — grava no navegador (MediaRecorder), sobe pro
+ * bucket privado "comment-audio" (caminho <item_id>/<timestamp>.webm,
+ * visível pra quem já pode ver o item, via RLS do bucket) e cria um
+ * comentário normal com audio_path preenchido. `text` fica com uma
+ * legenda fixa — é só o que aparece pra quem não conseguir tocar o
+ * áudio, ou nas notificações. */
+export const addAudioComment = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; audioBase64: string; durationSeconds: number; mentionedUserIds?: string[] }) =>
+    z.object({
+      itemId: z.string().uuid(),
+      audioBase64: z.string().min(1).max(3_000_000),
+      durationSeconds: z.number().int().min(1).max(180),
+      mentionedUserIds: z.array(z.string().uuid()).max(20).optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const path = `${data.itemId}/${Date.now()}.webm`;
+    const bin = Buffer.from(data.audioBase64, "base64");
+    const { error: upErr } = await context.supabase.storage
+      .from("comment-audio").upload(path, bin, { contentType: "audio/webm", upsert: false });
+    if (upErr) throw new Error(upErr.message);
+
+    const { data: inserted, error } = await context.supabase.from("comments")
+      .insert({
+        item_id: data.itemId, author_id: context.userId, text: "🎤 Mensagem de voz", is_system: false,
+        audio_path: path, audio_duration_seconds: data.durationSeconds,
+      })
+      .select("id").single();
+    if (error) throw new Error(error.message);
+
+    const mentions = (data.mentionedUserIds ?? []).filter((u) => u !== context.userId);
+    if (mentions.length) {
+      const db: any = context.supabase;
+      const { error: mentionsError } = await db.from("mentions").insert(
+        mentions.map((uid) => ({ comment_id: inserted.id, mentioned_user_id: uid, item_id: data.itemId }))
+      );
+      if (mentionsError) throw new Error(mentionsError.message);
+    }
+    return { ok: true };
+  });
+
 export const updateComment = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { commentId: string; text: string }) =>

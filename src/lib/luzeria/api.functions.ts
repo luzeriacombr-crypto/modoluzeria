@@ -1148,17 +1148,27 @@ export const getMonth = createServerFn({ method: "GET" })
     const itemIds = (items ?? []).map((it: any) => it.id);
     const [{ data: assignees }, { data: comments }] = await Promise.all([
       context.supabase.from("item_assignees").select("item_id, user_id").in("item_id", itemIds),
-      context.supabase.from("comments").select("id, item_id, author_id, text, is_system, created_at, edited_at").in("item_id", itemIds).order("created_at"),
+      context.supabase.from("comments").select("id, item_id, author_id, text, is_system, created_at, edited_at, audio_path, audio_duration_seconds").in("item_id", itemIds).order("created_at"),
     ]);
     const itemAssignees = new Map<string, string[]>();
     (assignees ?? []).forEach((a) => {
       const arr = itemAssignees.get(a.item_id) ?? [];
       arr.push(a.user_id); itemAssignees.set(a.item_id, arr);
     });
+    const audioPaths = [...new Set((comments ?? []).map((c: any) => c.audio_path).filter(Boolean))];
+    const audioUrlByPath = new Map<string, string>();
+    if (audioPaths.length > 0) {
+      const { data: signedAudio } = await context.supabase.storage.from("comment-audio").createSignedUrls(audioPaths, 60 * 60 * 24);
+      (signedAudio ?? []).forEach((r: any) => { if (r?.path && r?.signedUrl) audioUrlByPath.set(r.path, r.signedUrl); });
+    }
     const itemComments = new Map<string, ContentItem["comments"]>();
-    (comments ?? []).forEach((c) => {
+    (comments ?? []).forEach((c: any) => {
       const arr = itemComments.get(c.item_id) ?? [];
-      arr.push({ id: c.id, text: c.text, authorId: c.author_id, createdAt: c.created_at, editedAt: c.edited_at, system: c.is_system });
+      arr.push({
+        id: c.id, text: c.text, authorId: c.author_id, createdAt: c.created_at, editedAt: c.edited_at, system: c.is_system,
+        audioUrl: c.audio_path ? (audioUrlByPath.get(c.audio_path) ?? null) : null,
+        audioDurationSeconds: c.audio_duration_seconds ?? null,
+      });
       itemComments.set(c.item_id, arr);
     });
     const campaignIds = [...new Set((items ?? []).map((it: any) => it.campaign_id).filter(Boolean))];

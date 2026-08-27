@@ -14,6 +14,7 @@ import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS } from "./icons";
 import { MentionInput, renderMentions } from "./MentionInput";
+import { AudioCommentRecorder } from "./AudioCommentRecorder";
 import { ItemTimeline } from "./ItemTimeline";
 import { QualityModal } from "./QualityModal";
 import { FilesSection } from "./FilesSection";
@@ -562,7 +563,7 @@ export function DetailPanel() {
   const effectiveMonthKey = isAvulso && monthKeys.length > 0 ? monthKeys[0] : selectedMonthKey;
   const { data: month } = useQuery({ ...monthQO(selectedClientId ?? "", effectiveMonthKey), enabled: !!selectedClientId && !!selectedItemId });
   const me = useMe().data;
-  const { setItemStatus, updateItem, setItemEditor, setItemReelType, setItemPostFormat, addAssignee, removeAssignee, addCommentWithMentions, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish, setItemCampaign } = useApi();
+  const { setItemStatus, updateItem, setItemEditor, setItemReelType, setItemPostFormat, addAssignee, removeAssignee, addCommentWithMentions, addAudioComment, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish, setItemCampaign } = useApi();
   const { data: appSettings } = useQuery(appSettingsQO());
   const { data: campaigns = [] } = useQuery({ ...campaignsQO(selectedClientId ?? ""), enabled: !!selectedClientId });
 
@@ -897,7 +898,7 @@ export function DetailPanel() {
                           <span className="text-xs font-semibold text-foreground">{author?.name ?? "Alguém"}</span>
                           <span className="text-[10px] text-foreground/40">{relTime(c.createdAt)}</span>
                           {c.editedAt && <span className="text-[10px] text-foreground/30 italic">(editado)</span>}
-                          {isOwn && !isEditing && (
+                          {isOwn && !isEditing && !c.audioUrl && (
                             <button
                               onClick={() => { setEditingCommentId(c.id); setEditCommentText(c.text); }}
                               className="text-foreground/30 hover:text-foreground opacity-0 group-hover:opacity-100 transition"
@@ -907,7 +908,9 @@ export function DetailPanel() {
                             </button>
                           )}
                         </div>
-                        {isEditing ? (
+                        {c.audioUrl ? (
+                          <audio controls preload="none" src={c.audioUrl} className="mt-1 h-9 max-w-[260px]" />
+                        ) : isEditing ? (
                           <div className="mt-1">
                             <textarea
                               value={editCommentText}
@@ -967,6 +970,12 @@ export function DetailPanel() {
                     rows={2} />
                   <div className="text-[10px] text-foreground/30 mt-1">Enter envia · Shift+Enter quebra linha · @ menciona</div>
                 </div>
+                <AudioCommentRecorder
+                  sending={addAudioComment.isPending}
+                  onSend={(base64, durationSeconds) => {
+                    addAudioComment.mutate({ data: { itemId: item.id, audioBase64: base64, durationSeconds, mentionedUserIds: commentMentions } });
+                  }}
+                />
                 <button disabled={!comment.trim()}
                   onClick={() => {
                     addCommentWithMentions.mutate({ data: { itemId: item.id, text: comment.trim(), mentionedUserIds: commentMentions } });
