@@ -751,7 +751,8 @@ export function DetailPanel() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={() => { if (title.trim() && title !== item.title) updateItem.mutate({ data: { id: item.id, patch: { title: title.trim() } } }); }}
-                className="mt-1.5 w-full bg-transparent text-[22px] font-bold text-foreground outline-none placeholder:text-foreground/30 border-b border-transparent focus:border-[rgb(var(--lz-brand-rgb))] transition-colors pb-0.5"
+                placeholder="Clique para inserir um título"
+                className="mt-1.5 w-full bg-transparent text-[22px] font-bold text-foreground outline-none placeholder:text-foreground/30 placeholder:italic placeholder:font-normal border-b border-transparent focus:border-[rgb(var(--lz-brand-rgb))] transition-colors pb-0.5"
               />
             </div>
             {itemNavList && (

@@ -122,10 +122,10 @@ export function ContentCard({ item, profiles, idx, isAvulso, isAdmin, onDelete, 
         ) : (
           <button
             onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-            className="text-left text-[14px] font-medium text-foreground truncate hover:text-[var(--lz-accent-ink)] transition-colors"
-            title={item.title}
+            className={`text-left text-[14px] font-medium truncate hover:text-[var(--lz-accent-ink)] transition-colors ${item.title ? "text-foreground" : "text-foreground/40 italic"}`}
+            title={item.title || "Clique para inserir um título"}
           >
-            <span className="truncate">{item.title || "Sem título"}</span>
+            <span className="truncate">{item.title || "Clique para inserir um título"}</span>
           </button>
         )}
 
@@ -270,10 +270,10 @@ export function ContentListRow({ item, profiles, idx, isAvulso, isAdmin, onDelet
         ) : (
           <button
             onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-            className="text-left text-[13px] font-medium text-foreground truncate hover:text-[var(--lz-accent-ink)] transition-colors min-w-0"
-            title={item.title}
+            className={`text-left text-[13px] font-medium truncate hover:text-[var(--lz-accent-ink)] transition-colors min-w-0 ${item.title ? "text-foreground" : "text-foreground/40 italic"}`}
+            title={item.title || "Clique para inserir um título"}
           >
-            <span className="truncate">{item.title || "Sem título"}</span>
+            <span className="truncate">{item.title || "Clique para inserir um título"}</span>
           </button>
         )}
         {formatBadge && (

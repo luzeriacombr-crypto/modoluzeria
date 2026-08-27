@@ -1708,11 +1708,9 @@ export const addContentItem = createServerFn({ method: "POST" })
       .from("content_items").select("idx").eq("month_id", month.id).eq("type", data.type)
       .order("idx", { ascending: false }).limit(1).maybeSingle();
     const nextIdx = ((maxRow as any)?.idx ?? 0) + 1;
-    const typeLabels: Record<string, string> = { post: "Post", reel: "Reel", story: "Story", outros: "Item", gravacao: "Gravação", roteiro: "Roteiro", sistema: "Sistema" };
-    const fallback = `${typeLabels[data.type] ?? "Item"} ${nextIdx}`;
     const insertRow: Record<string, any> = {
       month_id: month.id, type: data.type, idx: nextIdx,
-      title: (data.title?.trim() || fallback),
+      title: (data.title?.trim() || ""),
     };
     if (isActivityType(data.type)) insertRow.status = "PENDENTE";
     if (data.dueDate) insertRow.due_date = data.dueDate;
