@@ -190,7 +190,7 @@ export function MyTasks() {
 
       {showNovaDemanda && <NovaDemandaModal onClose={() => setShowNovaDemanda(false)} />}
 
-      {targetId && <div data-tour="goals"><GoalsWidget monthKey={monthKey} userId={targetId} /></div>}
+      {targetId && !targetProfile?.hideGoalsWidget && <div data-tour="goals"><GoalsWidget monthKey={monthKey} userId={targetId} /></div>}
 
       {targetId && <ActivityCountsWidget monthKey={monthKey} userId={targetId} />}
 

@@ -62,7 +62,7 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
 
 function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
   const me = useMe().data;
-  const { setUserRole, setUserActive, setExcludeFromRanking, deleteUser, adminSendPasswordReset, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay, setProfileCargos, setProfileClientAccess } = useApi();
+  const { setUserRole, setUserActive, setExcludeFromRanking, setHideGoalsWidget, deleteUser, adminSendPasswordReset, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay, setProfileCargos, setProfileClientAccess } = useApi();
   const { data: cargos = [] } = useQuery(cargosQO());
   const [selectedCargoIds, setSelectedCargoIds] = useState<string[]>(profile.cargoIds ?? []);
   useEffect(() => { setSelectedCargoIds(profile.cargoIds ?? []); }, [profile.cargoIds]);
@@ -211,6 +211,12 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
             <input type="checkbox" checked={profile.excludeFromRanking ?? false}
               onChange={(e) => setExcludeFromRanking.mutate({ data: { userId: profile.id, excludeFromRanking: e.target.checked } })} />
             Excluir do ranking
+          </label>
+
+          <label className="flex items-center gap-2 text-sm text-foreground/70" title="Não mostra a barra 'Meta do mês' na home de Minhas Demandas desse membro">
+            <input type="checkbox" checked={profile.hideGoalsWidget ?? false}
+              onChange={(e) => setHideGoalsWidget.mutate({ data: { userId: profile.id, hideGoalsWidget: e.target.checked } })} />
+            Ocultar barra de metas
           </label>
         </div>
 

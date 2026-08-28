@@ -233,6 +233,9 @@ export interface Profile {
   /** Admin opted this member out of the "Top Membros" ranking (e.g. an
    * automation-only account that shouldn't compete in the internal bonus). */
   excludeFromRanking?: boolean;
+  /** Admin ocultou a barra "Meta do mês" na home de Minhas Demandas
+   * desse membro (ex: alguém que não tem meta e acha a barra poluição). */
+  hideGoalsWidget?: boolean;
   /** Public/signed URL of the uploaded avatar image, or null. */
   avatarUrl?: string | null;
   /** Path inside the `avatars` bucket (raw value stored in DB). */

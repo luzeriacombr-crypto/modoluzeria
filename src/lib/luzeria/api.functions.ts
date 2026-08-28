@@ -79,7 +79,7 @@ export const listProfiles = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: profiles, error } = await context.supabase
       .from("profiles")
-      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, exclude_from_ranking, client_access_restricted")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, exclude_from_ranking, client_access_restricted, hide_goals_widget")
       .order("name");
     if (error) throw new Error(error.message);
     const { data: roles } = await context.supabase.from("user_roles").select("user_id, role");
@@ -119,6 +119,7 @@ export const listProfiles = createServerFn({ method: "GET" })
       onboardedAt: p.onboarded_at ?? null,
       tourCompletedAt: p.tour_completed_at ?? null,
       excludeFromRanking: p.exclude_from_ranking ?? false,
+      hideGoalsWidget: p.hide_goals_widget ?? false,
       cargoIds: cargoIdsByProfile.get(p.id) ?? [],
       clientAccessRestricted: p.client_access_restricted ?? false,
       clientAccessIds: clientAccessByProfile.get(p.id) ?? [],
@@ -141,7 +142,7 @@ export const getMe = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: profile } = await context.supabase
       .from("profiles")
-      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, org_id, exclude_from_ranking, default_landing")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, org_id, exclude_from_ranking, hide_goals_widget, default_landing")
       .eq("id", context.userId).maybeSingle();
     const { data: roleRow } = await context.supabase
       .from("user_roles").select("role").eq("user_id", context.userId).maybeSingle();
@@ -183,6 +184,7 @@ export const getMe = createServerFn({ method: "GET" })
       id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
       excludeFromRanking: (profile as any).exclude_from_ranking ?? false,
+      hideGoalsWidget: (profile as any).hide_goals_widget ?? false,
       role,
       avatarPath: profile.avatar_url ?? null,
       avatarUrl: profile.avatar_url ? signed.get(profile.avatar_url) ?? null : null,
@@ -724,6 +726,18 @@ export const setExcludeFromRanking = createServerFn({ method: "POST" })
     if (!isMaster) throw new Error("Forbidden");
     const { error } = await context.supabase.from("profiles")
       .update({ exclude_from_ranking: data.excludeFromRanking }).eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setHideGoalsWidget = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId: string; hideGoalsWidget: boolean }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { error } = await context.supabase.from("profiles")
+      .update({ hide_goals_widget: data.hideGoalsWidget }).eq("id", data.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

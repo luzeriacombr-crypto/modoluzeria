@@ -2614,6 +2614,7 @@ export type Database = {
           default_landing: Json | null
           email: string
           exclude_from_ranking: boolean
+          hide_goals_widget: boolean
           icon: string | null
           id: string
           name: string
@@ -2630,6 +2631,7 @@ export type Database = {
           default_landing?: Json | null
           email: string
           exclude_from_ranking?: boolean
+          hide_goals_widget?: boolean
           icon?: string | null
           id: string
           name: string
@@ -2646,6 +2648,7 @@ export type Database = {
           default_landing?: Json | null
           email?: string
           exclude_from_ranking?: boolean
+          hide_goals_widget?: boolean
           icon?: string | null
           id?: string
           name?: string
