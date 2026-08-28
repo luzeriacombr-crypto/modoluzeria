@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
+import { isDoneStatus } from "./types";
 import type {
   ChecklistItem, MemberGoalProgress, ClientOnboarding, RecurringTemplate, ActivityEntry,
   StatusDurationStat, Status, AppSettings, WeekItem, WorkloadSummary, TimelineEntry,
@@ -129,14 +130,19 @@ export const getGoalProgress = createServerFn({ method: "GET" })
     let postsDone = 0, reelsDone = 0, gravacaoDone = 0, outrosDone = 0;
     if (ids.length) {
       const { data: done } = await context.supabase
-        .from("content_items").select("type")
-        .in("id", ids).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
+        .from("content_items").select("type, status, activity_quantity")
+        .in("id", ids)
         .gte("updated_at", start).lt("updated_at", end);
-      (done ?? []).forEach((it: any) => {
+      // Atividades (gravação, outros) terminam em CONCLUIDO, não em
+      // PRONTO_PARA_PUBLICAR/FINALIZADO como posts/reels — isDoneStatus()
+      // já cobre os três, evitando que elas fiquem perpetuamente em 0.
+      (done ?? []).filter((it: any) => isDoneStatus(it.status)).forEach((it: any) => {
         if (it.type === "post") postsDone++;
         if (it.type === "reel") reelsDone++;
-        if (it.type === "gravacao") gravacaoDone++;
-        if (it.type === "outros") outrosDone++;
+        // Meta de gravação/outros é em quantidade de vídeos, não de
+        // sessões — soma activity_quantity, igual ranking/relatórios já fazem.
+        if (it.type === "gravacao") gravacaoDone += it.activity_quantity ?? 1;
+        if (it.type === "outros") outrosDone += it.activity_quantity ?? 1;
       });
     }
 
@@ -208,30 +214,36 @@ export const getGoalProgressForOrg = createServerFn({ method: "GET" })
     ]);
 
     const itemIds = [...new Set((assignRows ?? []).map((a: any) => a.item_id))];
-    const doneByItem = new Map<string, string>(); // itemId -> type, só dos que bateram o critério de "feito"
+    // itemId -> {type, qty}, só dos que bateram o critério de "feito" (isDoneStatus
+    // cobre CONCLUIDO também — atividades como gravação/outros terminam ali, não em
+    // PRONTO_PARA_PUBLICAR/FINALIZADO como posts/reels).
+    const doneByItem = new Map<string, { type: string; qty: number }>();
     if (itemIds.length) {
       const chunks: string[][] = [];
       for (let i = 0; i < itemIds.length; i += 150) chunks.push(itemIds.slice(i, i + 150));
       const results = await Promise.all(chunks.map((chunk) =>
-        context.supabase.from("content_items").select("id, type")
-          .in("id", chunk).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
+        context.supabase.from("content_items").select("id, type, status, activity_quantity")
+          .in("id", chunk)
           .gte("updated_at", start).lt("updated_at", end)
       ));
       results.forEach(({ data: rows, error }) => {
         if (error) { console.error("getGoalProgressForOrg content_items batch:", error.message); return; }
-        (rows ?? []).forEach((it: any) => doneByItem.set(it.id, it.type));
+        (rows ?? []).filter((it: any) => isDoneStatus(it.status))
+          .forEach((it: any) => doneByItem.set(it.id, { type: it.type, qty: it.activity_quantity ?? 1 }));
       });
     }
 
     const done: Record<string, { posts: number; reels: number; gravacao: number; outros: number; stories: number; rotina: number }> = {};
     userIds.forEach((uid: string) => { done[uid] = { posts: 0, reels: 0, gravacao: 0, outros: 0, stories: 0, rotina: 0 }; });
     (assignRows ?? []).forEach((a: any) => {
-      const type = doneByItem.get(a.item_id);
-      if (!type || !done[a.user_id]) return;
-      if (type === "post") done[a.user_id].posts++;
-      if (type === "reel") done[a.user_id].reels++;
-      if (type === "gravacao") done[a.user_id].gravacao++;
-      if (type === "outros") done[a.user_id].outros++;
+      const item = doneByItem.get(a.item_id);
+      if (!item || !done[a.user_id]) return;
+      if (item.type === "post") done[a.user_id].posts++;
+      if (item.type === "reel") done[a.user_id].reels++;
+      // Meta de gravação/outros é em quantidade de vídeos, não de
+      // sessões — soma activity_quantity, igual ranking/relatórios já fazem.
+      if (item.type === "gravacao") done[a.user_id].gravacao += item.qty;
+      if (item.type === "outros") done[a.user_id].outros += item.qty;
     });
     (storyRows ?? []).forEach((s: any) => { if (done[s.user_id]) done[s.user_id].stories++; });
     (logRows ?? []).forEach((l: any) => { if (done[l.done_by]) done[l.done_by].rotina++; });
