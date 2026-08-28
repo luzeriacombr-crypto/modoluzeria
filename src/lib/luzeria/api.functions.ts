@@ -3141,7 +3141,13 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
       lateDays: computeLateDays(r.content_items.due_date, r.finalized_at),
     }));
 
-    // Reels edited by this user (editor_id)
+    // Reels edited by this user (editor_id) — exclui os que ele também é
+    // responsável (já contam em "reels" acima, pra não listar a mesma
+    // entrega duas vezes) e deduplica por item: um reel com vários
+    // responsáveis gera uma linha de finalizations por responsável, e
+    // todas batem com o filtro de editor_id do mesmo jeito.
+    const ownReelIds = new Set(baseList.filter((x) => x.type === "reel").map((x) => x.itemId));
+    const seenEditedIds = new Set<string>();
     const { data: editedRows } = await context.supabase
       .from("finalizations")
       .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(clients!months_client_id_fkey!inner(id, name, color)))")
@@ -3150,6 +3156,12 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
       .lt("finalized_at", toISO);
     const editedReels = (editedRows ?? [])
       .filter((r: any) => r.content_items?.type === "reel")
+      .filter((r: any) => !ownReelIds.has(r.content_items.id))
+      .filter((r: any) => {
+        if (seenEditedIds.has(r.content_items.id)) return false;
+        seenEditedIds.add(r.content_items.id);
+        return true;
+      })
       .map((r: any) => ({
         finalizedAt: r.finalized_at,
         itemId: r.content_items.id,
