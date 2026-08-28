@@ -19,6 +19,17 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+/** Prefere mp4/aac quando o navegador sabe gravar nesse formato — é o
+ * único que Chrome, Safari e Firefox sempre souberam TOCAR de volta de
+ * forma confiável. Safari recente passou a saber GRAVAR webm/opus
+ * também, mas nada garante que o <audio> dele já decodifica isso direito
+ * — sem isso, um áudio gravado no Safari fica mudo mesmo salvo certo. */
+function pickMimeType(): string | undefined {
+  if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) return undefined;
+  const candidates = ["audio/mp4", "audio/mp4;codecs=mp4a.40.2", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"];
+  return candidates.find((c) => MediaRecorder.isTypeSupported(c));
+}
+
 /** Botão de microfone ao lado do campo de comentário — grava direto do
  * navegador (MediaRecorder), sem app nenhum. Clica pra gravar, clica de
  * novo pra parar, confirma pra enviar. Corta sozinho em 3 minutos. */
@@ -44,7 +55,8 @@ export function AudioCommentRecorder({ onSend, sending }: { onSend: (base64: str
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      const recorder = new MediaRecorder(stream);
+      const mimeType = pickMimeType();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       chunksRef.current = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
@@ -148,11 +160,11 @@ export function AudioCommentPlayer({ src, durationSeconds }: { src: string; dura
     try {
       audio.play()?.catch((err) => {
         console.error("Erro ao tocar áudio do comentário:", err);
-        toast.error("Não consegui tocar esse áudio.");
+        toast.error(`Não consegui tocar esse áudio (${err?.name ?? "erro"}: ${err?.message ?? "desconhecido"}).`);
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao tocar áudio do comentário:", err);
-      toast.error("Não consegui tocar esse áudio.");
+      toast.error(`Não consegui tocar esse áudio (${err?.name ?? "erro"}: ${err?.message ?? "desconhecido"}).`);
     }
   }
 
@@ -181,6 +193,12 @@ export function AudioCommentPlayer({ src, durationSeconds }: { src: string; dura
         onLoadedMetadata={(e) => {
           const d = e.currentTarget.duration;
           if (!total && isFinite(d)) setTotal(d);
+        }}
+        onError={(e) => {
+          const err = e.currentTarget.error;
+          const codes: Record<number, string> = { 1: "abortado", 2: "falha de rede", 3: "erro ao decodificar", 4: "formato não suportado" };
+          console.error("Erro no elemento de áudio:", err);
+          toast.error(`Não consegui tocar esse áudio (${codes[err?.code ?? 0] ?? "erro desconhecido"}).`);
         }}
       />
       <button
