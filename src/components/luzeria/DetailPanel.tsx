@@ -973,8 +973,8 @@ export function DetailPanel() {
                 </div>
                 <AudioCommentRecorder
                   sending={addAudioComment.isPending}
-                  onSend={(base64, durationSeconds) => {
-                    addAudioComment.mutate({ data: { itemId: item.id, audioBase64: base64, durationSeconds, mentionedUserIds: commentMentions } });
+                  onSend={(base64, durationSeconds, mimeType) => {
+                    addAudioComment.mutate({ data: { itemId: item.id, audioBase64: base64, durationSeconds, mimeType, mentionedUserIds: commentMentions } });
                   }}
                 />
                 <button disabled={!comment.trim()}

@@ -22,7 +22,7 @@ function blobToBase64(blob: Blob): Promise<string> {
 /** Botão de microfone ao lado do campo de comentário — grava direto do
  * navegador (MediaRecorder), sem app nenhum. Clica pra gravar, clica de
  * novo pra parar, confirma pra enviar. Corta sozinho em 3 minutos. */
-export function AudioCommentRecorder({ onSend, sending }: { onSend: (base64: string, durationSeconds: number) => void; sending: boolean }) {
+export function AudioCommentRecorder({ onSend, sending }: { onSend: (base64: string, durationSeconds: number, mimeType: string) => void; sending: boolean }) {
   const [state, setState] = useState<"idle" | "recording" | "recorded">("idle");
   const [seconds, setSeconds] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -84,7 +84,7 @@ export function AudioCommentRecorder({ onSend, sending }: { onSend: (base64: str
   async function send() {
     if (!blobRef.current) return;
     const base64 = await blobToBase64(blobRef.current);
-    onSend(base64, seconds || 1);
+    onSend(base64, seconds || 1, blobRef.current.type || "audio/webm");
     cancel();
   }
 

@@ -834,26 +834,45 @@ export const addCommentWithMentions = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Extensão de arquivo pra cada mimeType real que o MediaRecorder do
+ * navegador produz — Chrome grava webm/opus, Safari grava mp4/aac. Sem
+ * isso, salvar tudo com ".webm" faz o Safari gravar normal mas o áudio
+ * nunca tocar de volta (bytes são MP4, rótulo dizia webm). */
+function audioExtFor(mimeType: string): string {
+  const m = mimeType.toLowerCase();
+  if (m.includes("mp4") || m.includes("m4a")) return "m4a";
+  if (m.includes("ogg")) return "ogg";
+  if (m.includes("mpeg") || m.includes("mp3")) return "mp3";
+  if (m.includes("wav")) return "wav";
+  return "webm";
+}
+
 /** Comentário em áudio — grava no navegador (MediaRecorder), sobe pro
- * bucket privado "comment-audio" (caminho <item_id>/<timestamp>.webm,
+ * bucket privado "comment-audio" (caminho <item_id>/<timestamp>.<ext>,
  * visível pra quem já pode ver o item, via RLS do bucket) e cria um
  * comentário normal com audio_path preenchido. `text` fica com uma
  * legenda fixa — é só o que aparece pra quem não conseguir tocar o
  * áudio, ou nas notificações. */
 export const addAudioComment = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { itemId: string; audioBase64: string; durationSeconds: number; mentionedUserIds?: string[] }) =>
+  .inputValidator((d: { itemId: string; audioBase64: string; durationSeconds: number; mimeType: string; mentionedUserIds?: string[] }) =>
     z.object({
       itemId: z.string().uuid(),
       audioBase64: z.string().min(1).max(3_000_000),
       durationSeconds: z.number().int().min(1).max(180),
+      // Safari às vezes reporta o mimeType da gravação de áudio como
+      // "video/mp4" (o container MP4 é o mesmo) — aceita os dois prefixos.
+      mimeType: z.string().trim().regex(/^(audio|video)\/[a-zA-Z0-9.+-]+(;.*)?$/).max(100),
       mentionedUserIds: z.array(z.string().uuid()).max(20).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    const path = `${data.itemId}/${Date.now()}.webm`;
+    const path = `${data.itemId}/${Date.now()}.${audioExtFor(data.mimeType)}`;
     const bin = Buffer.from(data.audioBase64, "base64");
+    // Alguns Safaris reportam "video/mp4" pra uma gravação só de áudio —
+    // guarda sempre com Content-Type audio/, o container é o mesmo.
+    const contentType = data.mimeType.replace(/^video\//, "audio/");
     const { error: upErr } = await context.supabase.storage
-      .from("comment-audio").upload(path, bin, { contentType: "audio/webm", upsert: false });
+      .from("comment-audio").upload(path, bin, { contentType, upsert: false });
     if (upErr) throw new Error(upErr.message);
 
     const { data: inserted, error } = await context.supabase.from("comments")
