@@ -141,7 +141,19 @@ export function AudioCommentPlayer({ src, durationSeconds }: { src: string; dura
   function toggle() {
     const audio = audioRef.current;
     if (!audio) return;
-    if (playing) audio.pause(); else audio.play();
+    if (playing) {
+      audio.pause();
+      return;
+    }
+    try {
+      audio.play()?.catch((err) => {
+        console.error("Erro ao tocar áudio do comentário:", err);
+        toast.error("Não consegui tocar esse áudio.");
+      });
+    } catch (err) {
+      console.error("Erro ao tocar áudio do comentário:", err);
+      toast.error("Não consegui tocar esse áudio.");
+    }
   }
 
   function seek(e: React.MouseEvent<HTMLDivElement>) {
@@ -161,7 +173,7 @@ export function AudioCommentPlayer({ src, durationSeconds }: { src: string; dura
         ref={audioRef}
         src={src}
         preload="metadata"
-        className="hidden"
+        style={{ width: 0, height: 0, position: "absolute" }}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => { setPlaying(false); setCurrentTime(0); }}
