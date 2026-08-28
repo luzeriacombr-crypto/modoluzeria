@@ -14,7 +14,7 @@ import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL
 import { Avatar } from "./Avatar";
 import { STATUS_ICONS } from "./icons";
 import { MentionInput, renderMentions } from "./MentionInput";
-import { AudioCommentRecorder } from "./AudioCommentRecorder";
+import { AudioCommentRecorder, AudioCommentPlayer } from "./AudioCommentRecorder";
 import { ItemTimeline } from "./ItemTimeline";
 import { QualityModal } from "./QualityModal";
 import { FilesSection } from "./FilesSection";
@@ -910,7 +910,7 @@ export function DetailPanel() {
                           )}
                         </div>
                         {c.audioUrl ? (
-                          <audio controls preload="none" src={c.audioUrl} className="mt-1 h-9 max-w-[260px]" />
+                          <AudioCommentPlayer src={c.audioUrl} durationSeconds={c.audioDurationSeconds} />
                         ) : isEditing ? (
                           <div className="mt-1">
                             <textarea

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Mic, Square, X, Loader2, Send } from "lucide-react";
+import { Mic, Square, X, Loader2, Send, Play, Pause } from "lucide-react";
 import { toast } from "sonner";
 
 const MAX_SECONDS = 180;
@@ -123,6 +123,66 @@ export function AudioCommentRecorder({ onSend, sending }: { onSend: (base64: str
       <button type="button" onClick={send} disabled={sending} title="Enviar" className="text-[var(--lz-accent-ink)] hover:opacity-80 disabled:opacity-40">
         {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
       </button>
+    </div>
+  );
+}
+
+/** Player próprio pro áudio de comentário — não dá pra confiar no
+ * <audio controls> nativo aqui: um blob gravado direto do MediaRecorder
+ * (webm no Chrome, mp4 no Safari) não tem a duração real no cabeçalho,
+ * então o scrubber nativo trava em "0:00/0:00" mesmo tocando. Usa a
+ * duração que a gente já capturou no momento da gravação. */
+export function AudioCommentPlayer({ src, durationSeconds }: { src: string; durationSeconds?: number | null }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [total, setTotal] = useState(durationSeconds && durationSeconds > 0 ? durationSeconds : 0);
+
+  function toggle() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) audio.pause(); else audio.play();
+  }
+
+  function seek(e: React.MouseEvent<HTMLDivElement>) {
+    const audio = audioRef.current;
+    if (!audio || !total) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    audio.currentTime = ratio * total;
+    setCurrentTime(ratio * total);
+  }
+
+  const pct = total > 0 ? Math.min(100, (currentTime / total) * 100) : 0;
+
+  return (
+    <div className="mt-1 flex items-center gap-2 bg-foreground/[0.06] rounded-full pl-1 pr-2.5 py-1 max-w-[260px]">
+      <audio
+        ref={audioRef}
+        src={src}
+        preload="metadata"
+        className="hidden"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => { setPlaying(false); setCurrentTime(0); }}
+        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+        onLoadedMetadata={(e) => {
+          const d = e.currentTarget.duration;
+          if (!total && isFinite(d)) setTotal(d);
+        }}
+      />
+      <button
+        type="button" onClick={toggle}
+        className="shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-[var(--lz-accent-ink)] hover:opacity-80 transition"
+      >
+        {playing ? <Pause size={13} /> : <Play size={13} fill="currentColor" />}
+      </button>
+      <div onClick={seek} className="flex-1 h-1.5 rounded-full bg-foreground/15 cursor-pointer">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: "rgb(var(--lz-brand-rgb))" }} />
+      </div>
+      <span className="text-[10px] tabular-nums text-foreground/50 shrink-0">
+        {formatTime(Math.round(currentTime))} / {formatTime(Math.round(total))}
+      </span>
     </div>
   );
 }
