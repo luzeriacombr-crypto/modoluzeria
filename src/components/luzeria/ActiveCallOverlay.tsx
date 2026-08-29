@@ -109,7 +109,7 @@ export function ActiveCallOverlay({ call }: { call: ReturnType<typeof useScreenS
   return createPortal(
     <div
       ref={panelRef}
-      className={isFullscreen ? "fixed inset-0 z-[350] bg-card flex flex-col" : "fixed bottom-4 right-4 z-[350]"}
+      className={isFullscreen ? "fixed inset-0 z-[350] bg-card flex flex-col" : "fixed bottom-20 md:bottom-4 right-4 z-[350]"}
       style={isFullscreen ? undefined : { width: `min(${isGroup ? 460 : 340}px, calc(100vw - 2rem))` }}
     >
       <div

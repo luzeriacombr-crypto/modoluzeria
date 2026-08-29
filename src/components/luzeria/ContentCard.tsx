@@ -104,7 +104,7 @@ export function ContentCard({
             {selected && <Check size={13} color="#0D0D0D" />}
           </span>
         ) : isAdmin && (onDelete || onMove) && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity duration-200">
             {onMove && (
               <button
                 onClick={(e) => { e.stopPropagation(); onMove(); }}
@@ -367,14 +367,14 @@ export function ContentListRow({
         <button
           onClick={(e) => { e.stopPropagation(); onMove(); }}
           title="Mover para outro mês"
-          className="shrink-0 p-1.5 rounded-md text-foreground/30 opacity-0 group-hover:opacity-100 hover:text-[var(--lz-accent-ink)] transition-opacity"
+          className="shrink-0 p-1.5 rounded-md text-foreground/30 opacity-40 group-hover:opacity-100 hover:text-[var(--lz-accent-ink)] transition-opacity"
         ><FolderInput size={13} /></button>
       )}
       {!selectMode && isAdmin && onDelete && (
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
           title="Excluir item"
-          className="shrink-0 p-1.5 rounded-md text-foreground/30 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity"
+          className="shrink-0 p-1.5 rounded-md text-foreground/30 opacity-40 group-hover:opacity-100 hover:text-red-400 transition-opacity"
         ><Trash2 size={13} /></button>
       )}
     </div>

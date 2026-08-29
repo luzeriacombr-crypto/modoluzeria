@@ -140,7 +140,7 @@ export function CleaningView() {
                         <span className="text-foreground/40 text-[11px] mr-1 shrink-0">{String(ti + 1).padStart(2, "0")}</span>
                         <span className="flex-1 min-w-0">{task.name}</span>
                         {isMaster && (
-                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                          <div className="flex items-center gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity shrink-0">
                             <button onClick={() => startEdit(task.id, task.name)} title="Editar tarefa"
                               className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5"><Pencil size={12} /></button>
                             <button

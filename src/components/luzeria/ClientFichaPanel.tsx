@@ -52,7 +52,7 @@ export function ClientFichaPanel() {
       <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]" onClick={() => openFicha(null)} />
       <div
         ref={panelRef}
-        className="fixed z-50 bg-background border-foreground/10 flex flex-col lz-slide-in overflow-y-auto
+        className="fixed z-[60] bg-background border-foreground/10 flex flex-col lz-slide-in overflow-y-auto
           inset-x-0 bottom-0 max-h-[92vh] rounded-t-2xl border-t
           md:rounded-none md:border-t-0 md:border-l md:right-0 md:top-0 md:bottom-0 md:left-auto md:w-[480px] md:max-h-none"
       >
@@ -1004,7 +1004,7 @@ function OnboardingBlock({ clientId }: { clientId: string }) {
             />
             <button
               onClick={() => save(list.filter((x) => x.id !== c.id))}
-              className="opacity-0 group-hover:opacity-100 p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5"
+              className="opacity-40 group-hover:opacity-100 p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5"
             ><Trash2 size={11} /></button>
           </div>
         ))}

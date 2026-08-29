@@ -616,7 +616,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div className="mb-8">
       <h2 className="text-xs uppercase font-bold tracking-wider text-foreground/50 mb-3">{title}</h2>
-      <div className="bg-card rounded-lg overflow-hidden lz-stagger">{children}</div>
+      <div className="bg-card rounded-lg overflow-hidden lz-stagger"><div className="overflow-x-auto">{children}</div></div>
     </div>
   );
 }

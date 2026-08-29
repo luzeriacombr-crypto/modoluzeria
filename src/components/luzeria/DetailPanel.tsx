@@ -464,9 +464,9 @@ function MediaPreview({
       )}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/55 transition-colors flex items-center justify-center">
         {opensLightbox ? (
-          <Expand size={18} className="text-foreground opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+          <Expand size={18} className="text-foreground opacity-40 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
         ) : (
-          <ExternalLink size={18} className="text-foreground opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+          <ExternalLink size={18} className="text-foreground opacity-40 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
         )}
       </div>
     </>
@@ -713,7 +713,7 @@ export function DetailPanel() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-6 bg-black/75 backdrop-blur-[8px] lz-overlay-in"
+      className="fixed inset-0 z-[60] flex items-end md:items-center justify-center md:p-6 bg-black/75 backdrop-blur-[8px] lz-overlay-in"
       onMouseDown={(e) => { if (e.target === e.currentTarget) openItem(null); }}
     >
       <div
@@ -902,7 +902,7 @@ export function DetailPanel() {
                           {isOwn && !isEditing && !c.audioUrl && (
                             <button
                               onClick={() => { setEditingCommentId(c.id); setEditCommentText(c.text); }}
-                              className="text-foreground/30 hover:text-foreground opacity-0 group-hover:opacity-100 transition"
+                              className="text-foreground/30 hover:text-foreground opacity-40 group-hover:opacity-100 transition"
                               title="Editar comentário"
                             >
                               <Pencil size={11} />
@@ -1504,7 +1504,7 @@ export function DetailPanel() {
                 />
                 <button
                   onClick={() => saveChecklist(checklist.filter((x) => x.id !== c.id))}
-                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5"
+                  className="opacity-40 group-hover:opacity-100 p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5"
                 >
                   <Trash2 size={11} />
                 </button>

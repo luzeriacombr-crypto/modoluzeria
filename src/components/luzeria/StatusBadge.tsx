@@ -49,10 +49,15 @@ export function StatusBadge({
       // the end of the page.
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
+      // Havia trava vertical mas nenhuma horizontal: numa tela estreita o
+      // menu abria pra fora da direita e as opções ficavam inalcançáveis
+      // (é fixed, então não dá nem pra rolar até elas).
+      const MENU_W = 188;
+      const left = Math.max(4, Math.min(rect.left, window.innerWidth - MENU_W - 4));
       if (spaceBelow < 240 && spaceAbove > spaceBelow) {
-        setPos({ bottom: window.innerHeight - rect.top + 4, left: rect.left });
+        setPos({ bottom: window.innerHeight - rect.top + 4, left });
       } else {
-        setPos({ top: rect.bottom + 4, left: rect.left });
+        setPos({ top: rect.bottom + 4, left });
       }
     }
     place();

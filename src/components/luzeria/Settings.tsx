@@ -76,7 +76,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
   };
 
   return (
-    <div className="p-10 max-w-6xl mx-auto">
+    <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-6xl mx-auto">
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-[32px] font-bold text-foreground tracking-tight">Configurações</h1>

@@ -124,7 +124,7 @@ export function MyTasks() {
   const dailyVerse = getDailyVerse();
 
   return (
-    <div className="p-10 max-w-5xl mx-auto" data-tour="my-tasks">
+    <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-5xl mx-auto" data-tour="my-tasks">
       {!isMeView && targetProfile && (
         <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg text-[12.5px]"
           style={{ backgroundColor: "rgba(74,158,255,0.12)", color: "#7EB3FF" }}>

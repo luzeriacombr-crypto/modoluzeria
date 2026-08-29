@@ -223,7 +223,8 @@ export function ClientPaymentsPanel() {
         </div>
       ) : (
         <div className="bg-card border border-foreground/7 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[36rem]">
             <thead>
               <tr className="text-left text-[10px] uppercase tracking-wider text-foreground/40 border-b border-foreground/7">
                 <th className="px-4 py-3 font-semibold">Cliente</th>
@@ -320,6 +321,7 @@ export function ClientPaymentsPanel() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

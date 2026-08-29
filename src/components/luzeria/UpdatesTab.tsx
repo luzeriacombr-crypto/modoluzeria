@@ -107,7 +107,7 @@ export function UpdatesTab() {
               {me?.isPlatformAdmin && (
                 <button
                   onClick={async () => { if (await requestConfirm(`Excluir a atualização "${u.title}"?`, { danger: true })) api.deletePlatformUpdate.mutate({ data: { id: u.id } }); }}
-                  className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 transition"
+                  className="absolute top-4 right-4 opacity-40 group-hover:opacity-100 p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 transition"
                 ><Trash2 size={13} /></button>
               )}
             </div>

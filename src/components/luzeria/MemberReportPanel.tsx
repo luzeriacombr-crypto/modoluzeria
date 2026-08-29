@@ -32,7 +32,7 @@ export function MemberReportPanel({
     <>
       <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]" />
       <div ref={ref}
-        className="fixed z-50 bg-background border-l border-foreground/10 lz-slide-in overflow-y-auto
+        className="fixed z-[60] bg-background border-l border-foreground/10 lz-slide-in overflow-y-auto
           inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl border-t
           md:rounded-none md:border-t-0 md:right-0 md:top-0 md:bottom-0 md:left-auto md:w-[480px] md:max-h-none">
         <div className="px-6 pt-5 pb-4 border-b border-foreground/8 flex items-start gap-3">

@@ -48,7 +48,7 @@ export function FileActionsMenu({
         type="button"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); }}
         title="Mais ações"
-        className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-black/80 text-foreground rounded p-0.5"
+        className="absolute top-0.5 right-0.5 opacity-40 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-black/80 text-foreground rounded p-0.5"
       >
         {downloading ? <Loader2 size={10} className="animate-spin" /> : <MoreVertical size={10} />}
       </button>

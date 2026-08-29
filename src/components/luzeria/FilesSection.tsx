@@ -240,7 +240,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
                   }
                 }}
                 title="Desvincular"
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-foreground/40 hover:text-red-400 p-1 rounded hover:bg-foreground/5"
+                className="opacity-40 group-hover:opacity-100 transition-opacity text-foreground/40 hover:text-red-400 p-1 rounded hover:bg-foreground/5"
               >
                 <Trash2 size={13} />
               </button>
