@@ -55,6 +55,11 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
     ...(hasSetorPermission(me, "team_reports") ? (["report"] as SettingsTab[]) : []),
     ...(hasPermission(me, "view_financeiro") ? (["cobranca", "margem", "pagamentos", "cliente"] as SettingsTab[]) : []),
     ...(hasPermission(me, "manage_team") ? (["team"] as SettingsTab[]) : []),
+    // Estas duas permissões apareciam no editor de cargos com rótulo e
+    // descrição, mas nunca eram conferidas em lugar nenhum: o master
+    // marcava, salvava, e nada mudava. Agora valem de verdade.
+    ...(hasPermission(me, "manage_automations") ? (["automations"] as SettingsTab[]) : []),
+    ...(hasPermission(me, "view_client_overview") ? (["cliente"] as SettingsTab[]) : []),
     ...(isAdmin ? (["cliente"] as SettingsTab[]) : []),
   ];
   if (!isMaster && setorAllowedTabs.length === 0) {

@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
+import { GlobalSearchButton, GlobalSearchOverlay } from "./GlobalSearch";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PullToRefresh } from "./PullToRefresh";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
@@ -242,6 +243,7 @@ export function App() {
           <PanelLeftOpen size={16} /> Menu
         </button>
       )}
+      <GlobalSearchOverlay />
       <DetailPanel />
       <ClientFichaPanel />
       <MobileNav onCreateClient={(category) => setCreating({ category })} />
@@ -326,6 +328,7 @@ function Header({ sidebarHidden, onToggleSidebar, sidebarCollapsed, onToggleColl
           )}
         </div>
       )}
+      <GlobalSearchButton variant="header" />
       <HelpButton />
       <NotificationsBell />
       {me && (

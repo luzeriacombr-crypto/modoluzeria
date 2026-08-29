@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { glassCardStyle } from "@/lib/luzeria/utils";
 import { hasSetorPermission, hasPermission } from "@/lib/luzeria/types";
 import { DEFAULT_NAV_LABELS } from "./Sidebar";
+import { GlobalSearchButton } from "./GlobalSearch";
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
@@ -263,6 +264,9 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
         <NavBtn icon={<Users size={20} />} active={tab === "clients" || (isClientPath && tab === "home")}
           dataTour="mobile-clients-btn"
           onClick={() => { setShowClients((v) => !v); setShowMenu(false); }} />
+        {/* O botão de busca foi desenhado exatamente pra caber aqui — é onde
+         * mais ajuda, já que no celular achar uma função é mais difícil. */}
+        <GlobalSearchButton variant="mobile" />
         <NavBtn icon={<Menu size={20} />} active={tab === "menu"}
           dataTour="mobile-menu-btn"
           onClick={() => { setShowMenu((v) => !v); setShowClients(false); }} />

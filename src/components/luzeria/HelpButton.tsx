@@ -1,9 +1,22 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CircleHelp, Paperclip, X } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { CircleHelp, Paperclip, X, BookOpen, Compass, Bug } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "./Modals";
+import { startTour } from "./AppTour";
 import { reportBug } from "@/lib/luzeria/bug-reports.functions";
+
+function HelpMenuItem({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs text-foreground/80 hover:bg-foreground/5 transition-colors"
+    >
+      <span className="text-foreground/50">{icon}</span>{label}
+    </button>
+  );
+}
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const ACCEPT = ["image/png", "image/jpeg", "image/webp"];
@@ -15,8 +28,20 @@ export function HelpButton() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const submitReport = useServerFn(reportBug);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const h = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [menuOpen]);
 
   function pickFile(f: File) {
     if (f.size > MAX_SIZE) { toast.error("Print maior que 5MB."); return; }
@@ -66,13 +91,38 @@ export function HelpButton() {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        title="Ajuda / Reportar erro"
-        className="flex items-center justify-center h-8 w-8 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors"
-      >
-        <CircleHelp size={18} />
-      </button>
+      {/* O "?" é o ponto de ajuda mais visível do app (aparece em toda
+       * tela), mas abria direto o formulário de bug — quem clicava
+       * esperando ajuda caía numa caixa de reclamação. Agora é um menu. */}
+      <div className="relative" ref={menuRef}>
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          title="Ajuda"
+          className="flex items-center justify-center h-8 w-8 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors"
+        >
+          <CircleHelp size={18} />
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 mt-1.5 w-52 rounded-md bg-card border border-foreground/10 shadow-xl py-1 z-[200]">
+            <HelpMenuItem
+              icon={<BookOpen size={13} />}
+              label="Tutoriais e dúvidas"
+              onClick={() => { setMenuOpen(false); navigate({ to: "/ajuda" }); }}
+            />
+            <HelpMenuItem
+              icon={<Compass size={13} />}
+              label="Refazer o tour"
+              onClick={() => { setMenuOpen(false); startTour(); }}
+            />
+            <div className="h-px bg-foreground/8 my-1" />
+            <HelpMenuItem
+              icon={<Bug size={13} />}
+              label="Reportar um problema"
+              onClick={() => { setMenuOpen(false); setOpen(true); }}
+            />
+          </div>
+        )}
+      </div>
 
       <Modal open={open} onClose={close} title="Reportar um problema">
         <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">
