@@ -16,7 +16,7 @@ const EASE = { transitionTimingFunction: "var(--ease-premium)" as const };
 
 export function ContentCard({
   item, profiles, idx, isAvulso, isAdmin, onDelete, navList, selectMode, selected, onToggleSelect,
-  onMove, draggable, isDragging, isOver, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
+  onMove, batchedThumbUrl, batched, draggable, isDragging, isOver, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
 }: {
   item: ContentItem;
   profiles: Profile[];
@@ -29,6 +29,11 @@ export function ContentCard({
   selected?: boolean;
   onToggleSelect?: () => void;
   onMove?: () => void;
+  /** Miniatura resolvida em lote pela grade — quando `batched` é true
+   * o card NÃO busca sozinho (eram 2 queries em série por card, cada
+   * uma batendo na API do Drive: ~104 idas ao abrir um mês cheio). */
+  batchedThumbUrl?: string | null;
+  batched?: boolean;
   draggable?: boolean;
   isDragging?: boolean;
   isOver?: boolean;
@@ -86,7 +91,7 @@ export function ContentCard({
       onClick={() => (selectMode ? onToggleSelect?.() : openItem(item.id, navList))}
     >
       <div className="relative w-full aspect-[4/5] shrink-0">
-        <CardThumb itemId={item.id} coverUrl={item.coverUrl ?? null} />
+        <CardThumb itemId={item.id} coverUrl={item.coverUrl ?? null} batchedThumbUrl={batchedThumbUrl} batched={batched} />
         <span
           className="absolute top-2 left-2 rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums"
           style={{ backgroundColor: "rgba(0,0,0,0.55)", color: "rgb(var(--lz-brand-rgb))" }}
@@ -455,12 +460,18 @@ function DueDateChip({ item, isOverdue, dueLabel, onSave }: {
   );
 }
 
-function CardThumb({ itemId, coverUrl }: { itemId: string; coverUrl: string | null }) {
-  const filesQ = useQuery({ ...itemFilesQO(itemId), enabled: !coverUrl });
+function CardThumb({ itemId, coverUrl, batchedThumbUrl, batched }: {
+  itemId: string; coverUrl: string | null; batchedThumbUrl?: string | null; batched?: boolean;
+}) {
+  // Quando a grade resolve as miniaturas em lote (getGridThumbnails), o card
+  // não dispara nada — antes eram duas queries EM SÉRIE por card, e cada
+  // getDriveThumbnail fazia 2 chamadas ao Drive devolvendo base64 inline.
+  const selfFetch = !coverUrl && !batched;
+  const filesQ = useQuery({ ...itemFilesQO(itemId), enabled: selfFetch });
   const first = filesQ.data?.[0];
   const fileId = first?.driveFileId ?? null;
-  const thumbQ = useQuery(driveThumbnailQO(fileId, !!fileId && !coverUrl));
-  const url = coverUrl ?? thumbQ.data?.dataUrl ?? null;
+  const thumbQ = useQuery(driveThumbnailQO(fileId, !!fileId && selfFetch));
+  const url = coverUrl ?? batchedThumbUrl ?? thumbQ.data?.dataUrl ?? null;
 
   return (
     <div

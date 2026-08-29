@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List, CheckSquare, Trash2, X, Settings2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { clientsQO, monthKeysQO, monthQO, profilesQO, useApi } from "@/lib/luzeria/queries";
+import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { ContentItem } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
@@ -60,6 +60,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   // vira, e adicionar conteúdo novo criaria um segundo mês fantasma.
   const effectiveMonthKey = isAvulso && monthKeys.length > 0 ? monthKeys[0] : selectedMonthKey;
   const { data: month, isLoading: monthLoading } = useQuery(monthQO(clientId, effectiveMonthKey));
+  // Uma busca em lote pras miniaturas de TODOS os itens do mês, em vez de
+  // duas queries em série por card (que batiam na API do Drive uma vez cada).
+  const monthItemIds = useMemo(() => [
+    ...(month?.posts ?? []), ...(month?.reels ?? []), ...(month?.stories ?? []),
+  ].map((i) => i.id), [month]);
+  const { data: gridThumbs } = useQuery(gridThumbnailsQO(monthItemIds));
   const setTab = onTabChange;
   const [orderMode, setOrderMode] = useState<OrderMode>(
     () => (typeof window !== "undefined" && (localStorage.getItem(ORDER_MODE_KEY) as OrderMode)) || "personalizada",
@@ -362,6 +368,8 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       isAvulso={isAvulso}
                       isAdmin={isAdmin}
                       navList={navList}
+                      batchedThumbUrl={gridThumbs?.[item.id]?.thumbUrl ?? null}
+                      batched
                       onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
                       onMove={!isAvulso ? () => setMovingItem(item) : undefined}
                       selectMode={selectMode}
