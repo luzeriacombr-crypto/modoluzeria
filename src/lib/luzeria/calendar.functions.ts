@@ -141,14 +141,12 @@ async function getValidCalendarAccessToken(supabase: any, userId: string): Promi
   const expiresAt = row.access_token_expires_at ? new Date(row.access_token_expires_at).getTime() : 0;
   if (row.access_token && expiresAt > Date.now() + 300_000) {
     // eslint-disable-next-line no-console
-    console.debug("[gcal] reusing cached access token, expires", row.access_token_expires_at);
     return row.access_token;
   }
 
   const { clientId, clientSecret } = googleCredentials();
   try {
     // eslint-disable-next-line no-console
-    console.debug("[gcal] refreshing access token for user", userId);
     const { accessToken, expiresIn } = await refreshGoogleAccessToken({
       clientId, clientSecret, refreshToken: row.refresh_token,
     });
@@ -199,7 +197,6 @@ export const getTodayCalendarEvents = createServerFn({ method: "GET" })
       maxResults: "20",
     });
     // eslint-disable-next-line no-console
-    console.debug("[gcal] fetching today's events", { timeMin: startOfDay.toISOString(), timeMax: endOfDay.toISOString() });
     const res = await fetch(`${GCAL_EVENTS_URL}?${params.toString()}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
@@ -211,7 +208,6 @@ export const getTodayCalendarEvents = createServerFn({ method: "GET" })
     }
     const json: any = await res.json();
     // eslint-disable-next-line no-console
-    console.debug("[gcal] raw items from Google:", json.items?.length ?? 0);
 
     // O Google quase nunca manda displayName pros convidados (só o e-mail)
     // — "claudio.silva23" antes do @ fica feio. Troca pelo nome de

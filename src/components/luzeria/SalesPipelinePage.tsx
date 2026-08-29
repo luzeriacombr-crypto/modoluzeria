@@ -5,6 +5,7 @@ import { leadsQO, leadContactsQO, profilesQO, clientsQO, useApi, useMe } from "@
 import { Modal } from "./Modals";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { hasPermission } from "@/lib/luzeria/types";
 import type { Lead, LeadStatus } from "@/lib/luzeria/sales-pipeline.functions";
 
 const formatBRL = (v: number | null) =>
@@ -120,7 +121,11 @@ export function SalesPipelinePage() {
   const [overCol, setOverCol] = useState<LeadStatus | null>(null);
   const [expanded, setExpanded] = useState<LeadStatus | null>(null);
 
-  const { data: leads = [] } = useQuery(leadsQO(true));
+  // Igual à Lixeira: o item some do menu, mas a rota abria por link direto.
+  const me = useMe().data;
+  const canSales = !new Set(me?.disabledFeatures ?? []).has("sales_pipeline")
+    && hasPermission(me, "sales_pipeline");
+  const { data: leads = [] } = useQuery({ ...leadsQO(true), enabled: canSales });
   const api = useApi();
 
   const byStatus = useMemo(() => {
@@ -156,8 +161,12 @@ export function SalesPipelinePage() {
     };
   }
 
+  if (me && !canSales) {
+    return <div className="px-4 sm:px-6 md:px-10 py-10 text-foreground/60 text-sm">Você não tem acesso à área de Vendas.</div>;
+  }
+
   return (
-    <div className="p-4 md:p-6 h-full flex flex-col">
+    <div className="p-4 md:p-6 min-h-[70vh] flex flex-col">
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-2">
           <Handshake size={20} className="text-[var(--lz-accent-ink)]" />
@@ -175,7 +184,7 @@ export function SalesPipelinePage() {
 
       {!expanded ? (
         <div className="flex-1 flex flex-col gap-3 min-h-0">
-          <div className="grid grid-cols-3 gap-3 flex-1 min-h-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 flex-1 min-h-0">
             {COLUMNS.slice(0, 3).map((col) => (
               <FolderBlock key={col.key} col={col} leads={byStatus[col.key]} {...dropProps(col.key)}
                 isOver={overCol === col.key} dragId={dragId}
@@ -183,7 +192,7 @@ export function SalesPipelinePage() {
                 onExpand={() => setExpanded(col.key)} onOpenLead={setEditLead} />
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 min-h-0">
             {COLUMNS.slice(3, 5).map((col) => (
               <FolderBlock key={col.key} col={col} leads={byStatus[col.key]} {...dropProps(col.key)}
                 isOver={overCol === col.key} dragId={dragId}
@@ -658,6 +667,32 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
                   info="Conta sozinho, um dia a mais a cada dia que o lead fica sem virar cliente ou ser marcado como perdido — desde a data em que foi criado." />
                 <StatTile label="Primeiro contato" value={lead.firstContactAt ? formatDate(lead.firstContactAt) : "ainda não"} />
               </div>
+              {/* Mover de etapa só existia arrastando o card, e arrastar não
+               * funciona no toque — no celular era impossível tirar um lead
+               * de "Novo". Aqui dá pra mudar em qualquer aparelho. */}
+              {!isTerminal && (
+                <F label="Etapa">
+                  <div className="flex flex-wrap gap-1.5">
+                    {(["novo", "responder"] as const).map((s) => {
+                      const col = COLUMNS.find((c) => c.key === s)!;
+                      return (
+                        <PillButton
+                          key={s}
+                          label={col.label}
+                          active={lead.status === s}
+                          onClick={() => { if (lead.status !== s) api.moveLeadStatus.mutate({ data: { id: lead.id, status: s } }); }}
+                        />
+                      );
+                    })}
+                    {lead.status === "followup" && (
+                      <PillButton label="Follow-up" active onClick={() => { /* já está — reagende abaixo */ }} />
+                    )}
+                  </div>
+                  <p className="text-[10.5px] text-foreground/35 mt-1.5">
+                    Pra mandar pro Follow-up, agende o retorno logo abaixo.
+                  </p>
+                </F>
+              )}
               <FollowupScheduler lead={lead} />
               <ContactHistory lead={lead} />
             </div>

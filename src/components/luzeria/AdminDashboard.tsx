@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, Trophy, Sparkles, Flame, Crown, Medal,
   X, CheckCircle2, Inbox, Tag, Activity, AlertOctagon, RotateCcw,
 } from "lucide-react";
-import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoalQO, useMe, reportExtrasQO, orgCostSettingsQO } from "@/lib/luzeria/queries";
+import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoalQO, useMe, reportExtrasQO, orgCostSettingsQO, profilesQO } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
@@ -467,10 +467,14 @@ function MemberDetailPanel({
   onClose: () => void;
 }) {
   const me = useMe().data;
-  const role = me?.role;
+  // O crachá saía do papel de QUEM ESTAVA OLHANDO, não do membro exibido:
+  // um master abrindo o card de um colaborador via "Adm Master" embaixo do
+  // nome dele. Agora vem do perfil de verdade da pessoa.
+  const { data: allProfiles = [] } = useQuery(profilesQO());
+  const memberRole = allProfiles.find((p) => p.id === member.id)?.role;
   const roleLabel =
-    role === "master" ? "Adm Master" :
-    role === "setor" ? "Adm de Setor" : "Membro";
+    memberRole === "master" ? "Adm Master" :
+    memberRole === "setor" ? "Adm de Setor" : "Membro";
 
   const [period, setPeriod] = useState<Period>(initialPeriod);
   const [filter, setFilter] = useState<"all" | "post" | "reel" | "outros" | "gravacao" | "roteiro" | "sistema">("all");

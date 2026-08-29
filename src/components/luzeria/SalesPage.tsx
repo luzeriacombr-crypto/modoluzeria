@@ -414,6 +414,8 @@ export function SalesPage() {
         Modo <span className="font-criador-serif">Criador</span> — desenvolvido pela Luzeria Estúdio.
         {" · "}
         <Link to="/privacidade" className="underline hover:text-foreground/50 transition">Política de Privacidade</Link>
+        {" · "}
+        <Link to="/termos" className="underline hover:text-foreground/50 transition">Termos de Uso</Link>
       </footer>
 
       <a

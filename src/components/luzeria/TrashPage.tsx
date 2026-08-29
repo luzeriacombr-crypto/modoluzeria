@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Trash2, RotateCcw, FileText, Film, Clapperboard } from "lucide-react";
-import { trashQO, useApi } from "@/lib/luzeria/queries";
+import { trashQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { Avatar } from "./Avatar";
 import { InfoTip } from "./InfoTip";
@@ -25,8 +25,17 @@ const TYPE_ICON: Record<TrashedItem["type"], React.ReactNode> = {
 const TYPE_LABEL: Record<TrashedItem["type"], string> = { post: "Post", reel: "Reel", story: "Story" };
 
 export function TrashPage() {
-  const { data: items = [], isLoading } = useQuery(trashQO());
+  // O item some do menu pra quem não é admin, mas a rota abria assim mesmo
+  // (link direto, histórico do navegador, PWA). O dado já é protegido por
+  // RLS, mas a tela não devia nem montar.
+  const me = useMe().data;
+  const isAdmin = me?.role === "master" || me?.role === "setor";
+  const { data: items = [], isLoading } = useQuery({ ...trashQO(), enabled: isAdmin });
   const { restoreItem, purgeItem } = useApi();
+
+  if (me && !isAdmin) {
+    return <div className="px-4 sm:px-6 md:px-10 py-10 text-foreground/60 text-sm">Acesso restrito à administração da agência.</div>;
+  }
 
   async function purge(item: TrashedItem) {
     if (await requestConfirm(`Excluir "${item.title}" para sempre? Não tem como desfazer.`, { danger: true })) {

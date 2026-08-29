@@ -137,7 +137,6 @@ export function useScreenShareCall() {
       if (e.candidate) {
         if (e.candidate.type === "relay") sawRelayCandidate = true;
         // eslint-disable-next-line no-console
-        console.debug("[call]", peerId, "local ICE candidate", e.candidate.type, e.candidate.protocol, e.candidate.address);
         sessionCh.send({ type: "broadcast", event: "ice-candidate", payload: { from: me?.id, to: peerId, candidate: e.candidate.toJSON() } });
       }
     };
@@ -150,7 +149,6 @@ export function useScreenShareCall() {
     pc.oniceconnectionstatechange = () => {
       const s = pc.iceConnectionState;
       // eslint-disable-next-line no-console
-      console.debug("[call]", peerId, "iceConnectionState ->", s);
       if (s === "connected" || s === "completed") {
         const t = iceFailTimerMapRef.current.get(peerId);
         if (t) { clearTimeout(t); iceFailTimerMapRef.current.delete(peerId); }
@@ -229,7 +227,6 @@ export function useScreenShareCall() {
     pc.ontrack = (e) => {
       const stream = e.streams[0] ?? null;
       // eslint-disable-next-line no-console
-      console.debug("[call]", peerId, "ontrack", { kind: e.track.kind, streamId: stream?.id });
       if (stream) setRemoteStreams((prev) => ({ ...prev, [peerId]: stream }));
     };
     const audioTrack = localStreamRef.current.getAudioTracks()[0];
