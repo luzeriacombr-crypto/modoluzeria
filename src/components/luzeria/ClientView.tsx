@@ -59,7 +59,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   // avulso criado num mês passado simplesmente some assim que o calendário
   // vira, e adicionar conteúdo novo criaria um segundo mês fantasma.
   const effectiveMonthKey = isAvulso && monthKeys.length > 0 ? monthKeys[0] : selectedMonthKey;
-  const { data: month } = useQuery(monthQO(clientId, effectiveMonthKey));
+  const { data: month, isLoading: monthLoading } = useQuery(monthQO(clientId, effectiveMonthKey));
   const setTab = onTabChange;
   const [orderMode, setOrderMode] = useState<OrderMode>(
     () => (typeof window !== "undefined" && (localStorage.getItem(ORDER_MODE_KEY) as OrderMode)) || "personalizada",
@@ -428,7 +428,14 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   )}
                 </div>
               )}
-              {cfg.items.length === 0 && (!isAdmin || tab === "finalizados") && (
+              {monthLoading && cfg.items.length === 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" aria-label="Carregando conteúdo">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="min-h-[200px] rounded-xl bg-foreground/[0.04] animate-pulse" />
+                  ))}
+                </div>
+              )}
+              {!monthLoading && cfg.items.length === 0 && (!isAdmin || tab === "finalizados") && (
                 <div className="px-4 py-10 text-center text-sm text-foreground/40">Sem itens nesta aba.</div>
               )}
             </>

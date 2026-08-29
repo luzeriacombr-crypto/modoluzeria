@@ -51,7 +51,7 @@ export function MyTasks() {
   const { setCleaningDone, markMentionRead, logClientStageUpdate } = useApi();
   const [viewAs, setViewAs] = useState<string>("");
   const targetId = isAdmin && viewAs ? viewAs : me?.id;
-  const { data: allTasks = [] } = useQuery({
+  const { data: allTasks = [], isLoading: tasksLoading } = useQuery({
     ...myTasksQO(targetId),
     enabled: !!targetId,
   });
@@ -399,9 +399,15 @@ export function MyTasks() {
 
       {view === "week" ? (
         <MyWeekView userId={isAdmin && viewAs ? viewAs : undefined} />
+      ) : tasksLoading ? (
+        <div className="space-y-2.5" aria-label="Carregando demandas">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-14 rounded-lg bg-foreground/[0.04] animate-pulse" />
+          ))}
+        </div>
       ) : tasks.length === 0 ? (
         <div className="border border-dashed border-foreground/10 rounded-lg p-16 text-center">
-          <p className="text-foreground/50 text-sm">Sem tarefas no momento.</p>
+          <p className="text-foreground/50 text-sm">Tudo em dia — nenhuma demanda aberta pra você.</p>
         </div>
       ) : (
         <div className="space-y-6 lz-stagger">

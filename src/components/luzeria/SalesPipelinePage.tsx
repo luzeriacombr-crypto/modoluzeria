@@ -217,7 +217,7 @@ export function SalesPipelinePage() {
             {expanded === "followup"
               ? <FollowupColumnBody leads={byStatus.followup} dragId={dragId} onDragStart={setDragId} onDragEnd={() => setDragId(null)} onOpen={setEditLead} />
               : byStatus[expanded].length === 0
-              ? <p className="text-[11px] text-foreground/25 text-center py-10">Nada por aqui.</p>
+              ? <p className="text-[11px] text-foreground/25 text-center py-10">Nenhuma oportunidade aqui ainda.</p>
               : byStatus[expanded].map((l) => (
                   <LeadCard key={l.id} lead={l} draggable={expanded !== "fechado" && expanded !== "perdido"}
                     dragging={dragId === l.id}

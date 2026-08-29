@@ -14,7 +14,7 @@ export function CleaningView() {
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const isMaster = me?.role === "master";
-  const { data } = useQuery(cleaningQO());
+  const { data, isLoading: cleaningLoading } = useQuery(cleaningQO());
   const { data: profiles = [] } = useQuery(profilesQO());
   const { upsertCleaningCell, updateCleaningNote, setCleaningDone, addCleaningTask, renameCleaningTask, deleteCleaningTask } = useApi();
   const [picker, setPicker] = useState<{ rect: DOMRect; taskId: string; weekday: number } | null>(null);
@@ -116,7 +116,9 @@ export function CleaningView() {
               {tasks.length === 0 && (
                 <tr>
                   <td colSpan={CLEANING_DAYS.length + 1} className="px-4 py-8 text-center text-foreground/40 text-xs">
-                    Nenhuma tarefa cadastrada{isMaster ? " — adicione uma abaixo." : "."}
+                    {cleaningLoading
+                      ? "Carregando..."
+                      : `Nenhuma tarefa cadastrada${isMaster ? " — adicione uma abaixo." : "."}`}
                   </td>
                 </tr>
               )}
