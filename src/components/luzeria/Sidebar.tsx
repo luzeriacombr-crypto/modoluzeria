@@ -46,7 +46,7 @@ export function Sidebar({
   onCreateClient,
 }: { collapsed?: boolean; onOpenCustomFields: (c: Client) => void; onCreateClient: (category?: string) => void }) {
   const me = useMe().data;
-  const { data: clients = [], isLoading: clientsLoading } = useQuery(clientsQO());
+  const { data: clients = [], isLoading: clientsLoading, isError: clientsError } = useQuery(clientsQO());
   const [search, setSearch] = useState("");
   const [clientsOpen, setClientsOpen] = useState(true);
   const { selectedClientId } = useUI();
@@ -227,6 +227,7 @@ export function Sidebar({
                       isAdmin={isAdmin} allCategories={allCategories} pathname={pathname}
                       onCreateClient={onCreateClient} onOpenCustomFields={onOpenCustomFields}
                       loading={clientsLoading}
+                      error={clientsError}
                     />
                   </div>
                 )}
@@ -332,6 +333,7 @@ export function Sidebar({
                       isAdmin={isAdmin} allCategories={allCategories} pathname={pathname}
                       onCreateClient={onCreateClient} onOpenCustomFields={onOpenCustomFields}
                       loading={clientsLoading}
+                      error={clientsError}
                     />
                   ) : (
                     <div className="px-1 space-y-0.5">{groupItemsById[openFlyout]}</div>
@@ -416,12 +418,12 @@ function SidebarFlyout({ anchor, title, children, panelRef }: {
 /** Busca + grupos por categoria + lista de clientes — conteúdo compartilhado
  * entre o modo expandido (inline, sob o botão "Clientes") e o painel
  * flutuante do modo reduzido. */
-function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCategories, pathname, onCreateClient, onOpenCustomFields, loading }: {
+function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCategories, pathname, onCreateClient, onOpenCustomFields, loading, error }: {
   search: string; setSearch: (v: string) => void;
   grouped: Array<readonly [string, Client[]]>; filtered: Client[];
   isAdmin: boolean; allCategories: string[]; pathname: string;
   onCreateClient: (category?: string) => void; onOpenCustomFields: (c: Client) => void;
-  loading?: boolean;
+  loading?: boolean; error?: boolean;
 }) {
   return (
     <>
@@ -476,7 +478,12 @@ function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCa
           ))}
         </div>
       )}
-      {!loading && filtered.length === 0 && (
+      {error && (
+        <div className="text-xs text-center mt-6 px-3" style={{ color: "#E76F51" }}>
+          Não consegui carregar os clientes. Confira sua conexão.
+        </div>
+      )}
+      {!loading && !error && filtered.length === 0 && (
         <div className="text-xs text-white/30 text-center mt-6 px-3">
           {search ? "Nenhum cliente encontrado." : "Nenhum cliente ainda. Use o + para criar o primeiro."}
         </div>

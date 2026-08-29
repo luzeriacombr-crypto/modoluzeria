@@ -51,7 +51,7 @@ export function MyTasks() {
   const { setCleaningDone, markMentionRead, logClientStageUpdate } = useApi();
   const [viewAs, setViewAs] = useState<string>("");
   const targetId = isAdmin && viewAs ? viewAs : me?.id;
-  const { data: allTasks = [], isLoading: tasksLoading } = useQuery({
+  const { data: allTasks = [], isLoading: tasksLoading, isError: tasksError } = useQuery({
     ...myTasksQO(targetId),
     enabled: !!targetId,
   });
@@ -399,6 +399,10 @@ export function MyTasks() {
 
       {view === "week" ? (
         <MyWeekView userId={isAdmin && viewAs ? viewAs : undefined} />
+      ) : tasksError ? (
+        <div className="border border-dashed rounded-lg p-16 text-center" style={{ borderColor: "rgba(231,111,81,0.35)" }}>
+          <p className="text-sm" style={{ color: "#E76F51" }}>Não consegui carregar suas demandas. Confira sua conexão.</p>
+        </div>
       ) : tasksLoading ? (
         <div className="space-y-2.5" aria-label="Carregando demandas">
           {[0, 1, 2, 3].map((i) => (

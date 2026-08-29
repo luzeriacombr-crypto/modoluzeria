@@ -175,6 +175,38 @@ export function App() {
     return <LuzeriaLoader />;
   }
 
+  // meQO tem retry:false — se getMe falhava, isLoading virava false com
+  // me.data indefinido e o app renderizava a estrutura inteira (sidebar,
+  // cabeçalho, conteúdo) sem identidade, sem erro e sem saída: a pessoa
+  // ficava presa numa casca vazia.
+  if (me.isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="max-w-sm w-full bg-card rounded-xl p-8 text-center border border-foreground/10">
+          <h1 className="text-foreground text-lg font-semibold mb-2">Não consegui carregar seu perfil</h1>
+          <p className="text-foreground/50 text-sm leading-relaxed mb-6">
+            Pode ter sido a conexão. Tenta de novo — se continuar, saia e entre novamente.
+          </p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => me.refetch()}
+              className="w-full font-bold uppercase text-sm px-5 py-3 rounded-md transition"
+              style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+            >
+              Tentar de novo
+            </button>
+            <button
+              onClick={async () => { await clearOneSignalUserId(); await supabase.auth.signOut(); window.location.href = "/"; }}
+              className="w-full text-xs text-foreground/50 hover:text-foreground py-2 transition-colors"
+            >
+              Sair da conta
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (me.data && !me.data.active) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">

@@ -59,7 +59,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   // avulso criado num mês passado simplesmente some assim que o calendário
   // vira, e adicionar conteúdo novo criaria um segundo mês fantasma.
   const effectiveMonthKey = isAvulso && monthKeys.length > 0 ? monthKeys[0] : selectedMonthKey;
-  const { data: month, isLoading: monthLoading } = useQuery(monthQO(clientId, effectiveMonthKey));
+  const { data: month, isLoading: monthLoading, isError: monthError } = useQuery(monthQO(clientId, effectiveMonthKey));
   // Uma busca em lote pras miniaturas de TODOS os itens do mês, em vez de
   // duas queries em série por card (que batiam na API do Drive uma vez cada).
   const monthItemIds = useMemo(() => [
@@ -436,14 +436,19 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   )}
                 </div>
               )}
-              {monthLoading && cfg.items.length === 0 && (
+              {monthError && (
+                <div className="px-4 py-10 text-center text-sm" style={{ color: "#E76F51" }}>
+                  Não consegui carregar o conteúdo deste mês. Confira sua conexão e tente de novo.
+                </div>
+              )}
+              {!monthError && monthLoading && cfg.items.length === 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" aria-label="Carregando conteúdo">
                   {[0, 1, 2, 3].map((i) => (
                     <div key={i} className="min-h-[200px] rounded-xl bg-foreground/[0.04] animate-pulse" />
                   ))}
                 </div>
               )}
-              {!monthLoading && cfg.items.length === 0 && (!isAdmin || tab === "finalizados") && (
+              {!monthError && !monthLoading && cfg.items.length === 0 && (!isAdmin || tab === "finalizados") && (
                 <div className="px-4 py-10 text-center text-sm text-foreground/40">Sem itens nesta aba.</div>
               )}
             </>
