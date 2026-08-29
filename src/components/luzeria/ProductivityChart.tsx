@@ -9,11 +9,11 @@ function WeekTooltip({ active, payload }: any) {
   return (
     <div className="bg-background border border-foreground/10 rounded-md p-2 text-[10px] text-foreground/80 w-48 shadow-xl">
       <div className="font-semibold text-[var(--lz-accent-ink)] mb-1">
-        {p.label} · {p.count} tarefa{p.count === 1 ? "" : "s"}
+        {p.label} · {p.count} demanda{p.count === 1 ? "" : "s"}
       </div>
       {p.items.slice(0, 5).map((t: string, j: number) => <div key={j} className="truncate">• {t}</div>)}
       {p.items.length > 5 && <div className="text-foreground/40">+{p.items.length - 5}</div>}
-      {p.items.length === 0 && <div className="text-foreground/40">Nenhuma tarefa finalizada</div>}
+      {p.items.length === 0 && <div className="text-foreground/40">Nenhuma demanda finalizada</div>}
     </div>
   );
 }
@@ -43,7 +43,7 @@ export function ProductivityBlock({ prod, monthKey }: { prod: { weeks: number[];
         <span className="text-xs text-foreground/40">{formatMonth(monthKey)}</span>
       </div>
       <p className="text-xs text-foreground/50 mb-6">
-        <span className="text-[var(--lz-accent-ink)] font-bold">{prod.total}</span> tarefa{prod.total === 1 ? "" : "s"} finalizada{prod.total === 1 ? "" : "s"} em {formatMonth(monthKey)}
+        <span className="text-[var(--lz-accent-ink)] font-bold">{prod.total}</span> demanda{prod.total === 1 ? "" : "s"} finalizada{prod.total === 1 ? "" : "s"} em {formatMonth(monthKey)}
       </p>
 
       <div className="h-44 -mx-2">
@@ -72,7 +72,7 @@ export function ProductivityBlock({ prod, monthKey }: { prod: { weeks: number[];
 
       <div className="flex items-center justify-between mt-5 text-xs">
         <span className="text-[var(--lz-accent-ink)] font-semibold">
-          {prod.weeks[bestIdx] > 0 ? `Melhor: Semana ${bestIdx + 1} com ${prod.weeks[bestIdx]} tarefa${prod.weeks[bestIdx] === 1 ? "" : "s"}` : "Sem tarefas finalizadas ainda"}
+          {prod.weeks[bestIdx] > 0 ? `Melhor: Semana ${bestIdx + 1} com ${prod.weeks[bestIdx]} demanda${prod.weeks[bestIdx] === 1 ? "" : "s"}` : "Sem demandas finalizadas ainda"}
         </span>
         <span className="text-foreground/50">Média: {avg}/semana</span>
       </div>

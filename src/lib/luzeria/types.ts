@@ -423,7 +423,7 @@ export function hasPermission(
 
 export const OPTIONAL_FEATURE_KEYS = [
   "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call", "google_calendar", "forum", "reference_library", "sales_pipeline",
-  "reels", "finalizados", "mais", "feed",
+  "posts", "reels", "finalizados", "mais", "feed",
 ] as const;
 export type OptionalFeatureKey = (typeof OPTIONAL_FEATURE_KEYS)[number];
 export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string; description: string }> = {
@@ -478,6 +478,10 @@ export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string;
   sales_pipeline: {
     label: "Vendas",
     description: "Item de menu com um quadro kanban de leads/oportunidades, com conversão direta em cliente ao fechar uma venda.",
+  },
+  posts: {
+    label: "Aba Posts (na página do cliente)",
+    description: "Aba \"Posts\" dentro de cada cliente. Pode ser ocultada por cliente em Personalizar abas.",
   },
   reels: {
     label: "Aba Reels (na página do cliente)",

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Trash2, Edit2, Copy, Loader2, AlertCircle, Percent, Link2, Calendar, Users, Gift } from "lucide-react";
 import { PromotionCode } from "@/lib/luzeria/types";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import {
   listPromotionCodes,
   createPromotionCode,
@@ -333,7 +334,7 @@ export function PromotionCodesPanel() {
                       <Edit2 size={16} />
                     </button>
                     <button
-                      onClick={() => deleteMutation.mutate({ data: { id: code.id } })}
+                      onClick={async () => { if (await requestConfirm(`Excluir o cupom "${code.code}"?`, { danger: true })) deleteMutation.mutate({ data: { id: code.id } }); }}
                       disabled={deleteMutation.isPending}
                       className="p-2 text-foreground/60 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition disabled:opacity-50"
                       title="Deletar"

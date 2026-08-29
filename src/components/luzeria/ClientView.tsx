@@ -223,6 +223,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           </button>}
           {isAdmin && !isAvulso && (
             <button onClick={() => duplicateMonth.mutate({ data: { clientId, fromKey: selectedMonthKey } })}
+              disabled={duplicateMonth.isPending}
               className="inline-flex items-center gap-1.5 ml-2 rounded-md px-3 py-1.5 text-xs font-semibold text-foreground/80 border border-foreground/10 hover:border-[rgb(var(--lz-brand-rgb))] hover:text-[var(--lz-accent-ink)] transition">
               <Copy size={13} /> Duplicar mês
             </button>

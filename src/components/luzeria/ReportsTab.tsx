@@ -186,7 +186,7 @@ export function ReportsTab() {
         <>
           {/* Seção 1 - Visão geral */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-            <MetricCard label="Tarefas finalizadas" value={report.summary.total} accent />
+            <MetricCard label="Demandas finalizadas" value={report.summary.total} accent />
             <MetricCard label="Posts finalizados" value={report.summary.posts} />
             <MetricCard label="Reels finalizados" value={report.summary.reels} />
             <MetricCard label="Outros finalizados" value={report.summary.outros} />

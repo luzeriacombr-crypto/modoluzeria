@@ -543,7 +543,7 @@ function MemberDetailPanel({
             </button>
           </div>
           <p className="text-[12px] text-foreground/60 mt-3">
-            <span className="text-foreground font-semibold">{list.length}</span> tarefa{list.length === 1 ? "" : "s"} finalizada{list.length === 1 ? "" : "s"} em <span className="text-foreground/80">{formatMonth(monthKey)}</span>
+            <span className="text-foreground font-semibold">{list.length}</span> demanda{list.length === 1 ? "" : "s"} finalizada{list.length === 1 ? "" : "s"} em <span className="text-foreground/80">{formatMonth(monthKey)}</span>
           </p>
           {estimatedTimeLabel && (
             <p className="text-[12px] text-foreground/60 mt-1 flex items-center gap-1">
@@ -581,7 +581,7 @@ function MemberDetailPanel({
           {!q.isLoading && filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center py-14 text-center">
               <Inbox size={28} className="text-foreground/20 mb-3" />
-              <p className="text-foreground/40 text-xs">Nenhuma tarefa finalizada neste período</p>
+              <p className="text-foreground/40 text-xs">Nenhuma demanda finalizada neste período</p>
             </div>
           )}
           <ul className="space-y-1.5">

@@ -256,8 +256,10 @@ function PostDetail({ postId, category, categories, isPlatformAdmin, onClose }: 
                       <span className="text-[10.5px] text-foreground/30">{r.orgName}</span>
                       <span className="ml-auto text-[10px] font-mono text-foreground/30">{relTime(r.createdAt)}</span>
                       {isPlatformAdmin && (
-                        <button onClick={() => api.moderateForumReply.mutate({ data: { replyId: r.id } })}
-                          className="p-0.5 rounded text-foreground/30 hover:text-red-400"><Trash2 size={11} /></button>
+                        <button
+                          onClick={async () => { if (await requestConfirm("Apagar esta resposta?", { danger: true })) api.moderateForumReply.mutate({ data: { replyId: r.id } }); }}
+                          disabled={api.moderateForumReply.isPending}
+                          className="p-0.5 rounded text-foreground/30 hover:text-red-400 disabled:opacity-40"><Trash2 size={11} /></button>
                       )}
                     </div>
                     <p className="text-[12.5px] text-foreground/70 leading-relaxed mt-0.5">{r.body}</p>

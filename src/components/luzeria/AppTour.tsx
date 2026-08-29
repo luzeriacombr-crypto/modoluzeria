@@ -30,7 +30,7 @@ const STEPS: Step[] = [
   },
   {
     id: "tasks",
-    title: "Coisas para fazer",
+    title: "Minhas demandas",
     desc: "Tudo o que está atribuído a você aparece aqui, agrupado por status. A pílula colorida mostra a urgência do prazo (🔴 urgente, 🟡 atenção, 🟢 tranquilo).",
     view: "my",
     target: '[data-tour="my-tasks"]',

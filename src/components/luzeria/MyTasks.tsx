@@ -160,9 +160,9 @@ export function MyTasks() {
       </div>
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-9">
         <div>
-          <h1 className="text-[24px] sm:text-[32px] font-semibold text-foreground leading-none tracking-tight whitespace-nowrap">Coisas para fazer</h1>
+          <h1 className="text-[24px] sm:text-[32px] font-semibold text-foreground leading-none tracking-tight whitespace-nowrap">Minhas demandas</h1>
           <p className="text-sm text-foreground/50 mt-2.5">
-            {tasks.length} {tasks.length === 1 ? "tarefa atribuída" : "tarefas atribuídas"}
+            {tasks.length} {tasks.length === 1 ? "demanda atribuída" : "demandas atribuídas"}
           </p>
         </div>
         {isAdmin && (
