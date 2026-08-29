@@ -13,6 +13,14 @@ import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 import { reportAppError } from "../lib/error-reporting";
+import { initErrorMonitoring } from "@/lib/luzeria/error-monitoring";
+
+// Inicializa cedo, antes de qualquer tela montar, pra pegar erro que
+// acontece no carregamento. Só roda no navegador e só faz alguma coisa se
+// VITE_SENTRY_DSN existir — sem a variável, é uma função vazia.
+if (typeof window !== "undefined") {
+  initErrorMonitoring();
+}
 
 function NotFoundComponent() {
   return (

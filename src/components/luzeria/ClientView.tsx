@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List, CheckSquare, Trash2, X, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { reportAppError } from "@/lib/error-reporting";
 import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { ContentItem } from "@/lib/luzeria/types";
@@ -59,7 +60,10 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   // avulso criado num mês passado simplesmente some assim que o calendário
   // vira, e adicionar conteúdo novo criaria um segundo mês fantasma.
   const effectiveMonthKey = isAvulso && monthKeys.length > 0 ? monthKeys[0] : selectedMonthKey;
-  const { data: month, isLoading: monthLoading, isError: monthError } = useQuery(monthQO(clientId, effectiveMonthKey));
+  const { data: month, isLoading: monthLoading, isError: monthError, error: monthErrObj } = useQuery(monthQO(clientId, effectiveMonthKey));
+  useEffect(() => {
+    if (monthError) reportAppError(monthErrObj, { consulta: "getMonth", clientId, mes: effectiveMonthKey });
+  }, [monthError, monthErrObj, clientId, effectiveMonthKey]);
   // Uma busca em lote pras miniaturas de TODOS os itens do mês, em vez de
   // duas queries em série por card (que batiam na API do Drive uma vez cada).
   const monthItemIds = useMemo(() => [

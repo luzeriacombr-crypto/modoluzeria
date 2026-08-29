@@ -12,6 +12,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { PRESET_COLORS, glassCardStyle, formatMonth } from "@/lib/luzeria/utils";
 import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
+import { reportAppError } from "@/lib/error-reporting";
 import { toast } from "sonner";
 import { hasSetorPermission, hasPermission, type Client } from "@/lib/luzeria/types";
 
@@ -46,7 +47,10 @@ export function Sidebar({
   onCreateClient,
 }: { collapsed?: boolean; onOpenCustomFields: (c: Client) => void; onCreateClient: (category?: string) => void }) {
   const me = useMe().data;
-  const { data: clients = [], isLoading: clientsLoading, isError: clientsError } = useQuery(clientsQO());
+  const { data: clients = [], isLoading: clientsLoading, isError: clientsError, error: clientsErrObj } = useQuery(clientsQO());
+  useEffect(() => {
+    if (clientsError) reportAppError(clientsErrObj, { consulta: "listClients" });
+  }, [clientsError, clientsErrObj]);
   const [search, setSearch] = useState("");
   const [clientsOpen, setClientsOpen] = useState(true);
   const { selectedClientId } = useUI();

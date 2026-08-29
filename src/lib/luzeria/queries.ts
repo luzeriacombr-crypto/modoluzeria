@@ -1,6 +1,7 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { reportHandledError } from "./error-monitoring";
 import {
   addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, deleteContentItems, duplicateMonth, setNotifyStoriesInTasks, setWhatsappGroupLink,
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
@@ -562,7 +563,10 @@ export function useApi() {
   // aqui era 100% silencioso — a pessoa clicava, nada acontecia, e não
   // havia como saber se tinha salvo. Só usar em mutation SEM onError no
   // ponto de chamada, senão o aviso aparece duas vezes.
-  const fail = (msg: string) => (e: any) => toast.error(e?.message ?? msg);
+  const fail = (msg: string) => (e: any) => {
+    toast.error(e?.message ?? msg);
+    reportHandledError(e, { origem: "mutation", aviso: msg });
+  };
   // Ação rápida que muda UM campo de um item (editor, formato, checklist,
   // atribuição, nota): o patch otimista logo abaixo já deixou a tela certa,
   // então recarregar as 7 chaves do invalidateAll era desperdício puro —

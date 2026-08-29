@@ -19,6 +19,7 @@ import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
 import { GlobalSearchButton, GlobalSearchOverlay } from "./GlobalSearch";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { identifyForMonitoring } from "@/lib/luzeria/error-monitoring";
 import { PullToRefresh } from "./PullToRefresh";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ClientFichaPanel } from "./ClientFichaPanel";
@@ -78,6 +79,16 @@ export function App() {
       supabase.removeChannel(channel);
     };
   }, [qc, orgId]);
+
+  // Marca quem está usando no monitoramento de erro — sem nome nem e-mail,
+  // só o id (dá pra cruzar com o banco quando precisar) mais agência e
+  // papel. É o que permite responder "isso trava a agência inteira ou só
+  // uma pessoa?" quando um erro aparecer.
+  useEffect(() => {
+    identifyForMonitoring(
+      me.data ? { id: me.data.id, orgId: me.data.orgId, role: me.data.role } : null,
+    );
+  }, [me.data?.id, me.data?.orgId, me.data?.role]);
 
   // Personalize the browser tab title once we know which org is logged in
   // (the pre-login splash/login screen stays generic — org is unknown then).
