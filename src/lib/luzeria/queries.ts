@@ -3,14 +3,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { reportHandledError } from "./error-monitoring";
 import {
-  addAssignee, addComment, addContentItem, createClient, deleteClient, deleteItem, deleteContentItems, duplicateMonth, setNotifyStoriesInTasks, setWhatsappGroupLink,
+  addAssignee, addContentItem, createClient, deleteClient, deleteItem, deleteContentItems, duplicateMonth, setNotifyStoriesInTasks, setWhatsappGroupLink,
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
   setUserActive, setUserRole, setExcludeFromRanking, setHideGoalsWidget, deleteUser, updateClient, updateItem, updateMyProfile, adminUpdateMemberAvatar,
   listMemberPay, setMemberPay,
   setItemEditor, setItemReelType, setItemPostFormat,
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
-  listCleaningTasks, addCleaningTask, renameCleaningTask, deleteCleaningTask,
+  addCleaningTask, renameCleaningTask, deleteCleaningTask,
   adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations,
   listOrgsBilling, getOrgNextInvoice,
   updateMyAccount,
@@ -33,12 +33,11 @@ import {
   listGoals, setGoals, getGoalProgress, getGoalProgressForOrg,
   getClientOnboarding, updateClientOnboarding, setOnboardingDefaults,
   listRecurring, upsertRecurring, deleteRecurring, generateRecurring,
-  listActivity, getReportExtras, getMemberStatusDuration,
-  getAppSettings, updateAppSettings,
-  getMyWeek, getWorkload, getItemTimeline, addCommentWithMentions, addAudioComment, updateComment,
+  getReportExtras,   getAppSettings, updateAppSettings,
+  getMyWeek, getItemTimeline, addCommentWithMentions, addAudioComment, updateComment,
 } from "./roadmap.functions";
 import {
-  listItemFiles, searchDriveFiles, attachDriveFile, uploadDriveFile, startDriveUploadSession, uploadDriveChunk, finalizeDriveUpload, detachItemFile, deleteItemFileAndDrive,
+  listItemFiles, attachDriveFile, startDriveUploadSession, uploadDriveChunk, finalizeDriveUpload, detachItemFile, deleteItemFileAndDrive,
   getDriveThumbnail, getDriveFileBytes, reorderItemFiles, getGridThumbnails,
   getClientDeliveriesFolder, setClientDeliveriesFolder, clearClientDeliveriesFolder,
 } from "./drive.functions";
@@ -65,7 +64,7 @@ import {
 } from "./sales-page.functions";
 import {
   listJourneyStages, upsertJourneyStage, deleteJourneyStage,
-  setClientStage, logClientStageUpdate, getClientStageHistory, getWeeklyClientReminders,
+  setClientStage, logClientStageUpdate, getWeeklyClientReminders,
   getClientOperationsOverview,
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
@@ -136,8 +135,6 @@ export const myActivityCountsQO = (monthKey: string, userId?: string) =>
 
 export const cleaningQO = () =>
   queryOptions({ queryKey: ["cleaning"], queryFn: () => getCleaning() });
-export const cleaningTasksQO = () =>
-  queryOptions({ queryKey: ["cleaning-tasks"], queryFn: () => listCleaningTasks() });
 export const myTodayQO = (today: string, weekday: number, userId?: string) =>
   queryOptions({
     queryKey: ["my-today", userId ?? "self", today],
@@ -278,13 +275,6 @@ export const roteiroStatusesQO = (docId: string | null) =>
     enabled: !!docId,
   });
 
-export const clientStageHistoryQO = (clientId: string | null) =>
-  queryOptions({
-    queryKey: ["client-stage-history", clientId],
-    queryFn: () => getClientStageHistory({ data: { clientId: clientId! } }),
-    enabled: !!clientId,
-  });
-
 export const weeklyClientRemindersQO = () =>
   queryOptions({ queryKey: ["weekly-client-reminders"], queryFn: () => getWeeklyClientReminders() });
 
@@ -332,12 +322,6 @@ export const recurringQO = (clientId: string | null) =>
     enabled: !!clientId,
   });
 
-export const activityQO = (entityType?: string, entityId?: string, limit?: number) =>
-  queryOptions({
-    queryKey: ["activity", entityType ?? "*", entityId ?? "*", limit ?? 50],
-    queryFn: () => listActivity({ data: { entityType, entityId, limit } }),
-  });
-
 export const reportExtrasQO = (filters: ReportFilters) =>
   queryOptions({
     queryKey: ["report-extras", filters],
@@ -349,13 +333,6 @@ export const reportExtrasQO = (filters: ReportFilters) =>
       },
     }),
     enabled: !!filters.from && !!filters.to,
-  });
-
-export const memberStatusDurationQO = (userId: string) =>
-  queryOptions({
-    queryKey: ["member-status-duration", userId],
-    queryFn: () => getMemberStatusDuration({ data: { userId } }),
-    enabled: !!userId,
   });
 
 export const memberVelocityQO = (from: string, to: string) =>
@@ -413,13 +390,6 @@ export const myWeekQO = (from: string, to: string, userId?: string) =>
     enabled: !!from && !!to,
   });
 
-export const workloadQO = (userId: string) =>
-  queryOptions({
-    queryKey: ["workload", userId],
-    queryFn: () => getWorkload({ data: { userId } }),
-    enabled: !!userId,
-  });
-
 export const itemTimelineQO = (itemId: string | null) =>
   queryOptions({
     queryKey: ["item-timeline", itemId],
@@ -432,14 +402,6 @@ export const itemFilesQO = (itemId: string | null, kind: "media" | "briefing" = 
     queryKey: ["item-files", itemId, kind],
     queryFn: () => listItemFiles({ data: { itemId: itemId!, kind } }),
     enabled: !!itemId,
-  });
-
-export const driveSearchQO = (query: string, enabled: boolean) =>
-  queryOptions({
-    queryKey: ["drive-search", query],
-    queryFn: () => searchDriveFiles({ data: { query } }),
-    enabled,
-    staleTime: 30_000,
   });
 
 export const driveThumbnailQO = (fileId: string | null | undefined, enabled = true, size?: number) =>
@@ -718,7 +680,6 @@ export function useApi() {
       onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao remover responsável."); },
       onSuccess: invalidateItemAndTasks,
     }),
-    addComment: useMutation({ mutationFn: useServerFn(addComment), onSuccess: invalidateAll }),
     addContentItem: useMutation({ mutationFn: useServerFn(addContentItem), onSuccess: invalidateAll, onError: fail("Não consegui criar o item.") }),
     deleteItem: useMutation({ mutationFn: useServerFn(deleteItem), onSuccess: invalidateAll, onError: fail("Não consegui excluir o item.") }),
     deleteContentItems: useMutation({ mutationFn: useServerFn(deleteContentItems), onSuccess: invalidateAll, onError: fail("Não consegui excluir os itens.") }),
@@ -1224,13 +1185,6 @@ export function useApi() {
     /* ===== DRIVE FILES ===== */
     attachDriveFile: useMutation({
       mutationFn: useServerFn(attachDriveFile),
-      onSuccess: (_d, vars: any) => {
-        qc.invalidateQueries({ queryKey: ["item-files", vars?.data?.itemId] });
-        qc.invalidateQueries({ queryKey: ["month"] });
-      },
-    }),
-    uploadDriveFile: useMutation({
-      mutationFn: useServerFn(uploadDriveFile),
       onSuccess: (_d, vars: any) => {
         qc.invalidateQueries({ queryKey: ["item-files", vars?.data?.itemId] });
         qc.invalidateQueries({ queryKey: ["month"] });

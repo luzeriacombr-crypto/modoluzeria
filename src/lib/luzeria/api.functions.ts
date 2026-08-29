@@ -1056,7 +1056,7 @@ export const createClient = createServerFn({ method: "POST" })
       await seedMonth(context.supabase, client.id, key);
     } else {
       // Avulsos: create empty month container so items can be added.
-      await context.supabase.from("months").insert({ client_id: client.id, key: monthKey(new Date()) });
+      await context.supabase.from("months").insert({ client_id: client.id, key: monthKey(new Date()), org_id: context.orgId });
     }
     return { id: client.id };
   });
@@ -1107,7 +1107,7 @@ export const duplicateMonth = createServerFn({ method: "POST" })
     const { data: fromMonth } = await context.supabase
       .from("months").select("id").eq("client_id", data.clientId).eq("key", data.fromKey).maybeSingle();
     const { data: newMonth, error: mErr } = await context.supabase
-      .from("months").insert({ client_id: data.clientId, key: newKey }).select().single();
+      .from("months").insert({ client_id: data.clientId, key: newKey, org_id: context.orgId }).select().single();
     if (mErr) throw new Error(mErr.message);
     if (fromMonth) {
       const { data: oldItems } = await context.supabase
@@ -1714,7 +1714,7 @@ export const addContentItem = createServerFn({ method: "POST" })
       .from("months").select("id").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
     if (!month) {
       const { data: m, error } = await context.supabase
-        .from("months").insert({ client_id: data.clientId, key: data.key }).select("id").single();
+        .from("months").insert({ client_id: data.clientId, key: data.key, org_id: context.orgId }).select("id").single();
       if (error) throw new Error(error.message);
       month = m;
     }

@@ -43,17 +43,28 @@ function mapAffiliateProgram(a: any): AffiliateProgram {
 
 export const createPromotionCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
+  .inputValidator((d: {
+    name: string;
+    code: string;
+    slug: string;
+    discountPercent: number;
+    description?: string;
+    validFrom?: string;
+    validUntil?: string;
+    maxUses?: number;
+  }) =>
+    z.object({
+      name: z.string(),
+      code: z.string(),
+      slug: z.string(),
+      discountPercent: z.number(),
+      description: z.string().optional(),
+      validFrom: z.string().optional(),
+      validUntil: z.string().optional(),
+      maxUses: z.number().optional(),
+    }).parse(d))
   .handler(async (event) => {
-    const data = event.data as {
-      name: string;
-      code: string;
-      slug: string;
-      discountPercent: number;
-      description?: string;
-      validFrom?: string;
-      validUntil?: string;
-      maxUses?: number;
-    };
+    const { data } = event;
     const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
@@ -95,17 +106,28 @@ export const createPromotionCode = createServerFn({ method: "POST" })
 
 export const updatePromotionCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
+  .inputValidator((d: {
+    id: string;
+    name?: string;
+    discountPercent?: number;
+    description?: string;
+    validFrom?: string;
+    validUntil?: string;
+    maxUses?: number | null;
+    active?: boolean;
+  }) =>
+    z.object({
+      id: z.string(),
+      name: z.string().optional(),
+      discountPercent: z.number().optional(),
+      description: z.string().optional(),
+      validFrom: z.string().optional(),
+      validUntil: z.string().optional(),
+      maxUses: z.number().nullable().optional(),
+      active: z.boolean().optional(),
+    }).parse(d))
   .handler(async (event) => {
-    const data = event.data as {
-      id: string;
-      name?: string;
-      discountPercent?: number;
-      description?: string;
-      validFrom?: string;
-      validUntil?: string;
-      maxUses?: number | null;
-      active?: boolean;
-    };
+    const { data } = event;
     const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
@@ -200,8 +222,9 @@ export const getPromotionCodeBySlug = createServerFn({ method: "POST" })
 
 export const deletePromotionCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string() }).parse(d))
   .handler(async (event) => {
-    const data = event.data as { id: string };
+    const { data } = event;
     const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
@@ -223,12 +246,18 @@ export const deletePromotionCode = createServerFn({ method: "POST" })
 
 export const createAffiliateProgram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
+  .inputValidator((d: {
+    referralCode: string;
+    commissionPercent?: number;
+    commissionValidMonths?: number;
+  }) =>
+    z.object({
+      referralCode: z.string(),
+      commissionPercent: z.number().optional(),
+      commissionValidMonths: z.number().optional(),
+    }).parse(d))
   .handler(async (event) => {
-    const data = event.data as {
-      referralCode: string;
-      commissionPercent?: number;
-      commissionValidMonths?: number;
-    };
+    const { data } = event;
     const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
@@ -389,8 +418,9 @@ export const getAffiliateReferrals = createServerFn({ method: "GET" })
 
 export const markAffiliateCommissionAsPaid = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
+  .inputValidator((d: { referralId: string }) => z.object({ referralId: z.string() }).parse(d))
   .handler(async (event) => {
-    const data = event.data as { referralId: string };
+    const { data } = event;
     const { orgId, userId } = event.context as any;
     const { supabase } = event.context;
 
@@ -485,14 +515,22 @@ export const getAffiliateByReferralCode = createServerFn({ method: "POST" })
 
 export const recordPurchaseEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    orgId: string;
+    planId: string;
+    promotionCodeId?: string;
+    affiliateReferralId?: string;
+    amountCents?: number;
+  }) =>
+    z.object({
+      orgId: z.string(),
+      planId: z.string(),
+      promotionCodeId: z.string().optional(),
+      affiliateReferralId: z.string().optional(),
+      amountCents: z.number().optional(),
+    }).parse(d))
   .handler(async (event) => {
-    const data = event.data as {
-      orgId: string;
-      planId: string;
-      promotionCodeId?: string;
-      affiliateReferralId?: string;
-      amountCents?: number;
-    };
+    const { data } = event;
     const { supabase } = event.context;
 
     const { data: purchase, error } = await supabase
@@ -529,11 +567,16 @@ export async function notifyOrgMasters(orgId: string, message: string, type = "p
 
 export const applyPromotionCodeToOrg = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireActiveProfile])
+  .inputValidator((d: {
+    promotionCodeId: string;
+    orgId: string;
+  }) =>
+    z.object({
+      promotionCodeId: z.string(),
+      orgId: z.string(),
+    }).parse(d))
   .handler(async (event) => {
-    const data = event.data as {
-      promotionCodeId: string;
-      orgId: string;
-    };
+    const { data } = event;
     const { userId } = event.context as any;
     const { supabase } = event.context;
 

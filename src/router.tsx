@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
+import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { routeTree } from "./routeTree.gen";
 import { LuzeriaLoader } from "./components/luzeria/LuzeriaLoader";
 
@@ -22,6 +23,8 @@ export const getRouter = () => {
     defaultPendingComponent: () => <LuzeriaLoader fullScreen={false} />,
     defaultPendingMs: 300,
   });
+
+  setupRouterSsrQueryIntegration({ router, queryClient });
 
   return router;
 };

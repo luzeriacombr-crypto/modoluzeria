@@ -67,20 +67,6 @@ export const PRESET_COLORS = [
   "#FFFFFF",
 ];
 
-export const PRESET_ICONS = [
-  "✨",
-  "💎",
-  "🌿",
-  "🔥",
-  "⚡",
-  "🌙",
-  "☀️",
-  "🎯",
-  "📸",
-  "🎬",
-  "💼",
-  "🌸",
-];
 
 /* ============== DEADLINE INDICATOR ============== */
 export type DeadlineLevel = "overdue" | "urgent" | "soon" | "ok" | "none" | "done";
@@ -127,11 +113,6 @@ export function hexToRgbChannels(hex: string): string | null {
 
 /** "#RRGGBB" + alpha -> "rgba(r, g, b, alpha)". Falls back to a mid-gray if
  * the hex is malformed, so a bad client/member color never renders `NaN`. */
-export function hexAlpha(hex: string, alpha: number): string {
-  const channels = hexToRgbChannels(hex) ?? "160, 160, 160";
-  return `rgba(${channels}, ${alpha})`;
-}
-
 function hexToHSL(hex: string): { h: number; s: number; l: number } {
   const channels = hexToRgbChannels(hex) ?? "200, 212, 78";
   const [r, g, b] = channels.split(",").map((s) => parseInt(s.trim(), 10) / 255);
@@ -195,22 +176,10 @@ export function readableAccentRgbChannels(hex: string): string | null {
   return yiq >= 130 ? channels : "255, 255, 255";
 }
 
-/** Shared "tinted card" background — a subtle top-left glow of `hex` fading
- * into the app's dark surface, same formula as the dashboard's MetricCard.
- * Best for a handful of cards with distinct meanings (metric tiles); a long
- * repeated list (clients, members) reads as noisy with one color per row —
- * use `glassCardStyle` there instead. */
-export function tintedCardStyle(hex: string): { background: string; border: string } {
-  return {
-    background: `linear-gradient(160deg, ${hexAlpha(hex, 0.18)} 0%, var(--card) 70%)`,
-    border: `1px solid ${hexAlpha(hex, 0.32)}`,
-  };
-}
-
-/** Same soft gradient-sheen "glass" surface as `tintedCardStyle`, but
- * color-neutral — for repeated rows/cards (client list, team grid) where a
- * different color per item reads as busy. `active` swaps the neutral white
- * wash for a faint brand-color one, for the selected/current item. */
+/** Superfície "de vidro" — brilho suave e neutro pra linhas/cards repetidos
+ * (lista de clientes, grade da equipe), onde uma cor diferente por item
+ * ficaria poluído. `active` troca o brilho branco neutro por um leve tom da
+ * marca, pro item selecionado. */
 export function glassCardStyle(active = false, surface = "var(--card)"): { background: string; border: string } {
   const tint = active ? "rgba(var(--lz-brand-light-rgb),0.16)" : "color-mix(in srgb, var(--foreground) 5%, transparent)";
   const border = active ? "rgba(var(--lz-brand-light-rgb),0.35)" : "var(--border)";
