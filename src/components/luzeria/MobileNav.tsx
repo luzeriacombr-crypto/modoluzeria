@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2 } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2, Plus, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -18,14 +18,15 @@ const CATEGORY_COLOR: Record<string, string> = {
   "Ex-clientes": "#E76F51",
 };
 
-export function MobileNav() {
+export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: string) => void }) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const me = useMe().data;
-  const { data: clients = [] } = useQuery(clientsQO());
+  const { data: clients = [], isLoading: clientsLoading } = useQuery(clientsQO());
   const [showClients, setShowClients] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [clientSearch, setClientSearch] = useState("");
   const sheetRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = me?.role === "master" || me?.role === "setor";
@@ -50,7 +51,10 @@ export function MobileNav() {
     setShowMenu(false);
   }
 
-  const activeClients = useMemo(() => clients.filter((c) => !c.archived), [clients]);
+  const activeClients = useMemo(() => {
+    const term = clientSearch.trim().toLowerCase();
+    return clients.filter((c) => !c.archived && (!term || c.name.toLowerCase().includes(term)));
+  }, [clients, clientSearch]);
   const grouped = useMemo(() => {
     const byCat = new Map<string, typeof activeClients>();
     for (const c of activeClients) {
@@ -72,13 +76,52 @@ export function MobileNav() {
     <>
       {showClients && !isClientPath && (
         <div className="fixed inset-0 z-40 bg-background pt-14 pb-20 flex flex-col">
-          <div className="px-5 py-4 border-b border-border bg-background flex items-end justify-between shrink-0">
-            <h2 className="text-lg font-bold text-foreground">Clientes</h2>
-            <span className="text-xs text-foreground/40">{activeClients.length}</span>
+          <div className="px-5 py-4 border-b border-border bg-background shrink-0">
+            <div className="flex items-end justify-between">
+              <h2 className="text-lg font-bold text-foreground">Clientes</h2>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-foreground/40">{activeClients.length}</span>
+                {isAdmin && onCreateClient && (
+                  <button
+                    onClick={() => { onCreateClient(); closeAllSheets(); }}
+                    aria-label="Novo cliente"
+                    className="h-11 w-11 -mr-2 flex items-center justify-center rounded-full text-[var(--lz-accent-ink)] active:scale-95 transition-transform"
+                    style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.14)" }}
+                  >
+                    <Plus size={20} />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg bg-foreground/[0.06]">
+              <Search size={14} className="text-foreground/40 shrink-0" />
+              <input
+                value={clientSearch}
+                onChange={(e) => setClientSearch(e.target.value)}
+                placeholder="Buscar cliente..."
+                className="bg-transparent text-sm flex-1 min-w-0 outline-none text-foreground placeholder:text-foreground/30"
+              />
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-6">
-            {activeClients.length === 0 && (
-              <p className="text-xs text-foreground/40 py-10 text-center">Sem clientes ainda.</p>
+            {clientsLoading && (
+              <p className="text-xs text-foreground/40 py-10 text-center">Carregando...</p>
+            )}
+            {!clientsLoading && activeClients.length === 0 && (
+              <div className="py-10 text-center">
+                <p className="text-xs text-foreground/40">
+                  {clientSearch.trim() ? "Nenhum cliente encontrado." : "Nenhum cliente ainda."}
+                </p>
+                {!clientSearch.trim() && isAdmin && onCreateClient && (
+                  <button
+                    onClick={() => { onCreateClient(); closeAllSheets(); }}
+                    className="mt-3 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-md text-xs font-bold"
+                    style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+                  >
+                    <Plus size={14} /> Criar o primeiro cliente
+                  </button>
+                )}
+              </div>
             )}
             {grouped.map(([cat, list]) => {
               const color = CATEGORY_COLOR[cat] ?? "#5BA88A";

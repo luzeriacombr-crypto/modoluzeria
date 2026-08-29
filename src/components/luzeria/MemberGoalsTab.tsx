@@ -127,16 +127,23 @@ export function MemberGoalsTab() {
     }
   };
 
-  const saveAll = () => {
-    let n = 0;
-    activeMembers.forEach((p) => {
+  // Antes isso disparava N mutations sem esperar e já anunciava sucesso —
+  // se alguma falhasse, ninguém ficava sabendo. Agora espera todas e conta
+  // quantas realmente salvaram.
+  const saveAll = async () => {
+    const pending = activeMembers.filter((p) => {
       const row = draft[p.id];
-      if (!row || !isDirty(p.id, row)) return;
-      n++;
-      setGoals.mutate({ data: rowPayload(p.id, row) });
+      return row && isDirty(p.id, row);
     });
-    if (n === 0) toast.info("Nada para salvar.");
-    else toast.success(`Salvando ${n} meta(s)…`);
+    if (pending.length === 0) { toast.info("Nada para salvar."); return; }
+    const results = await Promise.allSettled(
+      pending.map((p) => setGoals.mutateAsync({ data: rowPayload(p.id, draft[p.id]) })),
+    );
+    const falhas = results.filter((r) => r.status === "rejected").length;
+    const ok = results.length - falhas;
+    if (falhas === 0) toast.success(`${ok} meta(s) salva(s).`);
+    else if (ok === 0) toast.error("Não consegui salvar nenhuma meta.");
+    else toast.error(`${ok} meta(s) salva(s), mas ${falhas} falhou(aram).`);
   };
 
   return (
@@ -177,9 +184,10 @@ export function MemberGoalsTab() {
           </button>
           <button
             onClick={saveAll}
-            className="lz-btn-primary text-xs px-3 py-2 rounded-md inline-flex items-center gap-1.5"
+            disabled={setGoals.isPending}
+            className="lz-btn-primary text-xs px-3 py-2 rounded-md inline-flex items-center gap-1.5 disabled:opacity-50"
           >
-            <Save size={12} /> Salvar tudo
+            <Save size={12} /> {setGoals.isPending ? "Salvando..." : "Salvar tudo"}
           </button>
         </div>
       </div>

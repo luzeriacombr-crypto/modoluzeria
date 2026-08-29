@@ -558,6 +558,11 @@ const MONTH_ITEM_CATEGORIES = ["posts", "reels", "outros", "gravacoes", "roteiro
 export function useApi() {
   const qc = useQueryClient();
   const me = useMe().data;
+  // Aviso padrão pra mutation que não trata o próprio erro. Antes, falhar
+  // aqui era 100% silencioso — a pessoa clicava, nada acontecia, e não
+  // havia como saber se tinha salvo. Só usar em mutation SEM onError no
+  // ponto de chamada, senão o aviso aparece duas vezes.
+  const fail = (msg: string) => (e: any) => toast.error(e?.message ?? msg);
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["month"] });
     qc.invalidateQueries({ queryKey: ["clients"] });
@@ -596,7 +601,7 @@ export function useApi() {
       qc.invalidateQueries({ queryKey: ["clients"] });
       qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
       qc.invalidateQueries({ queryKey: ["client-payments"] });
-    } }),
+    }, onError: fail("Não consegui salvar o cliente.") }),
     setNotifyStoriesInTasks: useMutation({
       mutationFn: useServerFn(setNotifyStoriesInTasks),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["clients"] }); qc.invalidateQueries({ queryKey: ["my-tasks"] }); },
@@ -606,13 +611,14 @@ export function useApi() {
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar link do grupo."),
     }),
-    deleteClient: useMutation({ mutationFn: useServerFn(deleteClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) }),
+    deleteClient: useMutation({ mutationFn: useServerFn(deleteClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }), onError: fail("Não consegui excluir o cliente.") }),
     duplicateMonth: useMutation({
       mutationFn: useServerFn(duplicateMonth),
       onSuccess: (_d, vars: any) => {
         qc.invalidateQueries({ queryKey: ["monthKeys", vars?.data?.clientId] });
         qc.invalidateQueries({ queryKey: ["month"] });
       },
+      onError: fail("Não consegui duplicar o mês."),
     }),
     updateItem: useMutation({ mutationFn: useServerFn(updateItem), onSuccess: invalidateAll }),
     setItemEditor: useMutation({
@@ -699,9 +705,9 @@ export function useApi() {
       onSuccess: invalidateAll,
     }),
     addComment: useMutation({ mutationFn: useServerFn(addComment), onSuccess: invalidateAll }),
-    addContentItem: useMutation({ mutationFn: useServerFn(addContentItem), onSuccess: invalidateAll }),
-    deleteItem: useMutation({ mutationFn: useServerFn(deleteItem), onSuccess: invalidateAll }),
-    deleteContentItems: useMutation({ mutationFn: useServerFn(deleteContentItems), onSuccess: invalidateAll }),
+    addContentItem: useMutation({ mutationFn: useServerFn(addContentItem), onSuccess: invalidateAll, onError: fail("Não consegui criar o item.") }),
+    deleteItem: useMutation({ mutationFn: useServerFn(deleteItem), onSuccess: invalidateAll, onError: fail("Não consegui excluir o item.") }),
+    deleteContentItems: useMutation({ mutationFn: useServerFn(deleteContentItems), onSuccess: invalidateAll, onError: fail("Não consegui excluir os itens.") }),
     restoreItem: useMutation({
       mutationFn: useServerFn(restoreItem),
       onSuccess: () => { invalidateAll(); qc.invalidateQueries({ queryKey: ["trash"] }); },
@@ -749,8 +755,8 @@ export function useApi() {
       mutationFn: useServerFn(setInstagramAutoPublish),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
     }),
-    setUserRole: useMutation({ mutationFn: useServerFn(setUserRole), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
-    setUserActive: useMutation({ mutationFn: useServerFn(setUserActive), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
+    setUserRole: useMutation({ mutationFn: useServerFn(setUserRole), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }), onError: fail("Não consegui mudar a função.") }),
+    setUserActive: useMutation({ mutationFn: useServerFn(setUserActive), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }), onError: fail("Não consegui mudar o status do membro.") }),
     setExcludeFromRanking: useMutation({ mutationFn: useServerFn(setExcludeFromRanking), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     setHideGoalsWidget: useMutation({ mutationFn: useServerFn(setHideGoalsWidget), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     setMemberPay: useMutation({
@@ -813,6 +819,7 @@ export function useApi() {
     upsertCleaningCell: useMutation({
       mutationFn: useServerFn(upsertCleaningCell),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
+      onError: fail("Não consegui salvar a escala."),
     }),
     setCleaningDone: useMutation({
       mutationFn: useServerFn(setCleaningDone),
@@ -841,18 +848,22 @@ export function useApi() {
     addCleaningTask: useMutation({
       mutationFn: useServerFn(addCleaningTask),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning-tasks"] }); qc.invalidateQueries({ queryKey: ["cleaning"] }); },
+      onError: fail("Não consegui adicionar a tarefa."),
     }),
     renameCleaningTask: useMutation({
       mutationFn: useServerFn(renameCleaningTask),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning-tasks"] }); qc.invalidateQueries({ queryKey: ["cleaning"] }); },
+      onError: fail("Não consegui renomear a tarefa."),
     }),
     deleteCleaningTask: useMutation({
       mutationFn: useServerFn(deleteCleaningTask),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning-tasks"] }); qc.invalidateQueries({ queryKey: ["cleaning"] }); },
+      onError: fail("Não consegui excluir a tarefa."),
     }),
     updateCleaningNote: useMutation({
       mutationFn: useServerFn(updateCleaningNote),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["cleaning"] }),
+      onError: fail("Não consegui salvar a observação."),
     }),
     upsertClientLink: useMutation({
       mutationFn: useServerFn(upsertClientLink),
@@ -1081,6 +1092,8 @@ export function useApi() {
       onSuccess: invalidateAll,
     }),
     setGoals: useMutation({
+      // Erro tratado nos dois pontos de chamada (salvar individual e
+      // "Salvar tudo" em MemberGoalsTab) — não duplicar aqui.
       mutationFn: useServerFn(setGoals),
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["goals"] });
@@ -1150,6 +1163,7 @@ export function useApi() {
     upsertRecurring: useMutation({
       mutationFn: useServerFn(upsertRecurring),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["recurring"] }),
+      onError: fail("Não consegui salvar a recorrência."),
     }),
     deleteRecurring: useMutation({
       mutationFn: useServerFn(deleteRecurring),
@@ -1223,6 +1237,7 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["item-files"] });
         qc.invalidateQueries({ queryKey: ["month"] });
       },
+      onError: fail("Não consegui desvincular o arquivo."),
     }),
     deleteItemFileAndDrive: useMutation({
       mutationFn: useServerFn(deleteItemFileAndDrive),

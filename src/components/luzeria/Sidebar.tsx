@@ -10,7 +10,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
+import { PRESET_COLORS, glassCardStyle, formatMonth } from "@/lib/luzeria/utils";
 import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { toast } from "sonner";
 import { hasSetorPermission, hasPermission, type Client } from "@/lib/luzeria/types";
@@ -46,7 +46,7 @@ export function Sidebar({
   onCreateClient,
 }: { collapsed?: boolean; onOpenCustomFields: (c: Client) => void; onCreateClient: (category?: string) => void }) {
   const me = useMe().data;
-  const { data: clients = [] } = useQuery(clientsQO());
+  const { data: clients = [], isLoading: clientsLoading } = useQuery(clientsQO());
   const [search, setSearch] = useState("");
   const [clientsOpen, setClientsOpen] = useState(true);
   const { selectedClientId } = useUI();
@@ -226,6 +226,7 @@ export function Sidebar({
                       search={search} setSearch={setSearch} grouped={grouped} filtered={filtered}
                       isAdmin={isAdmin} allCategories={allCategories} pathname={pathname}
                       onCreateClient={onCreateClient} onOpenCustomFields={onOpenCustomFields}
+                      loading={clientsLoading}
                     />
                   </div>
                 )}
@@ -330,6 +331,7 @@ export function Sidebar({
                       search={search} setSearch={setSearch} grouped={grouped} filtered={filtered}
                       isAdmin={isAdmin} allCategories={allCategories} pathname={pathname}
                       onCreateClient={onCreateClient} onOpenCustomFields={onOpenCustomFields}
+                      loading={clientsLoading}
                     />
                   ) : (
                     <div className="px-1 space-y-0.5">{groupItemsById[openFlyout]}</div>
@@ -414,11 +416,12 @@ function SidebarFlyout({ anchor, title, children, panelRef }: {
 /** Busca + grupos por categoria + lista de clientes — conteúdo compartilhado
  * entre o modo expandido (inline, sob o botão "Clientes") e o painel
  * flutuante do modo reduzido. */
-function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCategories, pathname, onCreateClient, onOpenCustomFields }: {
+function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCategories, pathname, onCreateClient, onOpenCustomFields, loading }: {
   search: string; setSearch: (v: string) => void;
   grouped: Array<readonly [string, Client[]]>; filtered: Client[];
   isAdmin: boolean; allCategories: string[]; pathname: string;
   onCreateClient: (category?: string) => void; onOpenCustomFields: (c: Client) => void;
+  loading?: boolean;
 }) {
   return (
     <>
@@ -460,9 +463,22 @@ function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCa
           )}
         </CategoryGroup>
       ))}
-      {filtered.length === 0 && (
+      {/* Sem o gate de loading, a lista renderizava "Sem clientes ainda"
+       * enquanto ainda estava carregando — quem entrava pela primeira vez
+       * via um app que parecia vazio. */}
+      {loading && filtered.length === 0 && (
+        <div className="px-2 mt-2 space-y-1.5" aria-label="Carregando clientes">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-2.5 px-1 py-2">
+              <span className="h-[26px] w-[26px] rounded-full bg-white/[0.07] animate-pulse" />
+              <span className="h-2.5 rounded bg-white/[0.07] animate-pulse" style={{ width: `${68 - i * 9}%` }} />
+            </div>
+          ))}
+        </div>
+      )}
+      {!loading && filtered.length === 0 && (
         <div className="text-xs text-white/30 text-center mt-6 px-3">
-          {search ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
+          {search ? "Nenhum cliente encontrado." : "Nenhum cliente ainda. Use o + para criar o primeiro."}
         </div>
       )}
     </>
@@ -807,8 +823,12 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
             />
           </div>
           <MenuItem onClick={() => {
-            duplicateMonth.mutate({ data: { clientId: client.id, fromKey: monthKey } });
-            toast.success("Mês duplicado");
+            // O aviso ficava FORA do onSuccess: falhando ou não, avisava
+            // que tinha duplicado. Agora só fala depois de confirmar.
+            duplicateMonth.mutate(
+              { data: { clientId: client.id, fromKey: monthKey } },
+              { onSuccess: () => toast.success(`Mês de ${formatMonth(monthKey)} duplicado.`) },
+            );
             setMenuOpen(false);
           }}>Duplicar mês</MenuItem>
           <MenuItem onClick={() => { onOpenCustomFields(); setMenuOpen(false); }}>Campos personalizados</MenuItem>

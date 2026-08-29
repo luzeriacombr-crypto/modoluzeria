@@ -5,6 +5,7 @@ import type { Client } from "@/lib/luzeria/types";
 import { useQuery } from "@tanstack/react-query";
 import { profilesQO, useApi } from "@/lib/luzeria/queries";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
+import { toast } from "sonner";
 
 export function Modal({ open, onClose, title, children, maxWidthClass = "max-w-md" }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; maxWidthClass?: string }) {
   if (!open) return null;
@@ -54,7 +55,9 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
         <button disabled={!name.trim() || createClient.isPending}
           onClick={() => createClient.mutateAsync({
             data: { name: name.trim(), category, color, icon: null },
-          }).then(onClose)}
+          })
+            .then(() => { toast.success(`Cliente "${name.trim()}" criado.`); onClose(); })
+            .catch((e: any) => toast.error(e?.message ?? "Não consegui criar o cliente. Tenta de novo?"))}
           className="px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50 transition-opacity hover:opacity-90"
           style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
           Criar
@@ -87,6 +90,8 @@ export function CustomFieldsModal({ client, onClose }: { client: Client | null; 
   if (!client) return null;
 
   function save() {
+    // Fecha só depois de confirmar que salvou — antes o modal fechava
+    // sempre, dando certo ou não, e a pessoa achava que tinha gravado.
     updateClient.mutate({
       data: {
         id: client!.id,
@@ -97,8 +102,10 @@ export function CustomFieldsModal({ client, onClose }: { client: Client | null; 
           review_day: reviewDay, notes,
         },
       },
+    }, {
+      // Erro é tratado no useApi().updateClient (queries.ts) — não duplicar aqui.
+      onSuccess: () => { toast.success("Campos salvos."); onClose(); },
     });
-    onClose();
   }
 
   return (
@@ -120,8 +127,11 @@ export function CustomFieldsModal({ client, onClose }: { client: Client | null; 
       </div>
       <div className="flex items-center justify-end gap-2 mt-5">
         <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
-        <button onClick={save} className="px-4 py-2 rounded-md text-sm font-bold transition-opacity hover:opacity-90"
-          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>Salvar</button>
+        <button onClick={save} disabled={updateClient.isPending}
+          className="px-4 py-2 rounded-md text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+          {updateClient.isPending ? "Salvando..." : "Salvar"}
+        </button>
       </div>
     </Modal>
   );

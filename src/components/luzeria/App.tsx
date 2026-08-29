@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { PullToRefresh } from "./PullToRefresh";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ClientFichaPanel } from "./ClientFichaPanel";
@@ -37,6 +38,7 @@ export function App() {
   const me = useMe();
   const qc = useQueryClient();
   const { sidebarHidden, toggleSidebar, sidebarCollapsed, toggleSidebarCollapsed } = useUI();
+  const isMobile = useIsMobile();
   const { theme } = useTheme();
   // Matched route's static id (not the resolved path) — switching between
   // clients/months stays the same id, so it doesn't remount/reset that
@@ -184,7 +186,9 @@ export function App() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
-      <Toaster theme={theme} position="bottom-right" />
+      {/* No celular o aviso nasceria dentro da faixa da barra de navegação
+       * (64px) e bloquearia os botões "Clientes" e "Menu" a cada ação. */}
+      <Toaster theme={theme} position={isMobile ? "top-center" : "bottom-right"} />
       <div
         className="hidden md:flex overflow-hidden self-start"
         style={{
@@ -226,7 +230,7 @@ export function App() {
       )}
       <DetailPanel />
       <ClientFichaPanel />
-      <MobileNav />
+      <MobileNav onCreateClient={(category) => setCreating({ category })} />
       <AppTour />
       <GlobalConfirmDialog />
       <IncomingCallModal call={call} />
