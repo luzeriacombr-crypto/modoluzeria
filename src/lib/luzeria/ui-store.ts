@@ -10,6 +10,19 @@ function writeSidebarHidden(v: boolean) {
   try { window.localStorage.setItem(SIDEBAR_KEY, v ? "1" : "0"); } catch { /* noop */ }
 }
 
+// Diferente de "ocultar" (sidebar some de vez): "reduzida" mantém uma
+// barrinha só com ícones — cada um mostra o nome num tooltip ao passar o
+// mouse, e Clientes/grupos com submenu abrem um painel flutuante ao lado.
+const SIDEBAR_COLLAPSED_KEY = "lz.sidebarCollapsed";
+function readSidebarCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  try { return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1"; } catch { return false; }
+}
+function writeSidebarCollapsed(v: boolean) {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, v ? "1" : "0"); } catch { /* noop */ }
+}
+
 interface UI {
   selectedClientId: string | null;
   selectedMonthKey: string;
@@ -19,6 +32,7 @@ interface UI {
   view: "client" | "my" | "settings" | "cleaning" | "admin" | "profile";
   viewAsUserId: string | null;
   sidebarHidden: boolean;
+  sidebarCollapsed: boolean;
   fichaClientId: string | null;
   stageComposerClientId: string | null;
   searchOpen: boolean;
@@ -31,6 +45,8 @@ interface UI {
   setViewAs: (id: string | null) => void;
   toggleSidebar: () => void;
   setSidebarHidden: (v: boolean) => void;
+  toggleSidebarCollapsed: () => void;
+  setSidebarCollapsed: (v: boolean) => void;
   openFicha: (id: string | null) => void;
   openStageComposer: (id: string | null) => void;
 }
@@ -49,6 +65,7 @@ export const useUI = create<UI>((set) => ({
   view: "my",
   viewAsUserId: null,
   sidebarHidden: readSidebarHidden(),
+  sidebarCollapsed: readSidebarCollapsed(),
   fichaClientId: null,
   stageComposerClientId: null,
   searchOpen: false,
@@ -62,6 +79,8 @@ export const useUI = create<UI>((set) => ({
   setViewAs: (id) => set({ viewAsUserId: id }),
   toggleSidebar: () => set((s) => { const next = !s.sidebarHidden; writeSidebarHidden(next); return { sidebarHidden: next }; }),
   setSidebarHidden: (v) => { writeSidebarHidden(v); set({ sidebarHidden: v }); },
+  toggleSidebarCollapsed: () => set((s) => { const next = !s.sidebarCollapsed; writeSidebarCollapsed(next); return { sidebarCollapsed: next }; }),
+  setSidebarCollapsed: (v) => { writeSidebarCollapsed(v); set({ sidebarCollapsed: v }); },
   openFicha: (id) => set({ fichaClientId: id }),
   openStageComposer: (id) => set({ stageComposerClientId: id }),
 }));

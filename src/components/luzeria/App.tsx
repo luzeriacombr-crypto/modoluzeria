@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon, Video } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, ChevronsLeft, ChevronsRight, Settings as SettingsIcon, Video } from "lucide-react";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { useMe } from "@/lib/luzeria/queries";
@@ -36,7 +36,7 @@ import { hexToRgbChannels, readableAccentRgbChannels, deriveSecondaryHex } from 
 export function App() {
   const me = useMe();
   const qc = useQueryClient();
-  const { sidebarHidden, toggleSidebar } = useUI();
+  const { sidebarHidden, toggleSidebar, sidebarCollapsed, toggleSidebarCollapsed } = useUI();
   const { theme } = useTheme();
   // Matched route's static id (not the resolved path) — switching between
   // clients/months stays the same id, so it doesn't remount/reset that
@@ -188,8 +188,8 @@ export function App() {
       <div
         className="hidden md:flex overflow-hidden self-start"
         style={{
-          width: sidebarHidden ? 0 : 220,
-          transition: "width 250ms ease",
+          width: sidebarHidden ? 0 : sidebarCollapsed ? 64 : 220,
+          transition: "width 200ms ease",
         }}
       >
         <div
@@ -198,11 +198,11 @@ export function App() {
             transition: "transform 250ms ease",
           }}
         >
-          <Sidebar onOpenCustomFields={setCustomFor} onCreateClient={(category) => setCreating({ category })} />
+          <Sidebar collapsed={sidebarCollapsed} onOpenCustomFields={setCustomFor} onCreateClient={(category) => setCreating({ category })} />
         </div>
       </div>
       <div className="flex-1 flex flex-col min-w-0">
-        <Header sidebarHidden={sidebarHidden} onToggleSidebar={toggleSidebar} />
+        <Header sidebarHidden={sidebarHidden} onToggleSidebar={toggleSidebar} sidebarCollapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebarCollapsed} />
         <TrialEndingBanner isMaster={me.data?.role === "master"} />
         <PastDueBanner isMaster={me.data?.role === "master"} />
         <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0">
@@ -237,7 +237,9 @@ export function App() {
   );
 }
 
-function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; onToggleSidebar: () => void }) {
+function Header({ sidebarHidden, onToggleSidebar, sidebarCollapsed, onToggleCollapsed }: {
+  sidebarHidden: boolean; onToggleSidebar: () => void; sidebarCollapsed: boolean; onToggleCollapsed: () => void;
+}) {
   const me = useMe().data;
   const { theme } = useTheme();
   const headerLogoUrl = (theme === "light" && me?.orgLogoUrlLight) || me?.orgLogoUrl;
@@ -257,12 +259,22 @@ function Header({ sidebarHidden, onToggleSidebar }: { sidebarHidden: boolean; on
       >
         {sidebarHidden ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
       </button>
+      {!sidebarHidden && (
+        <button
+          onClick={onToggleCollapsed}
+          aria-label={sidebarCollapsed ? "Expandir sidebar" : "Reduzir sidebar"}
+          title={sidebarCollapsed ? "Expandir sidebar" : "Reduzir sidebar (só ícones)"}
+          className="hidden md:flex items-center justify-center h-8 w-8 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors"
+        >
+          {sidebarCollapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
+        </button>
+      )}
       {headerLogoUrl ? (
-        <div className="md:hidden h-10 max-w-[140px]">
+        <div className={`h-10 max-w-[140px] ${sidebarCollapsed ? "" : "md:hidden"}`}>
           <img src={headerLogoUrl} alt={me.orgName ?? "Logo"} className="h-full max-w-full object-contain object-left" />
         </div>
       ) : (
-        <span className="md:hidden text-foreground font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px]">
+        <span className={`text-foreground font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px] ${sidebarCollapsed ? "" : "md:hidden"}`}>
           {me?.orgName ?? "Modo Criador"}
         </span>
       )}

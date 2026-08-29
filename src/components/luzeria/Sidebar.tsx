@@ -32,10 +32,19 @@ const CATEGORY_COLOR: Record<string, string> = {
   "Ex-clientes": "#E76F51",
 };
 
+type CollapsedMeta = {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  kind: "button" | "flyout";
+  onClick?: () => void;
+};
+
 export function Sidebar({
+  collapsed,
   onOpenCustomFields,
   onCreateClient,
-}: { onOpenCustomFields: (c: Client) => void; onCreateClient: (category?: string) => void }) {
+}: { collapsed?: boolean; onOpenCustomFields: (c: Client) => void; onCreateClient: (category?: string) => void }) {
   const me = useMe().data;
   const { data: clients = [] } = useQuery(clientsQO());
   const [search, setSearch] = useState("");
@@ -44,6 +53,37 @@ export function Sidebar({
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const routerSearch = useRouterState({ select: (s) => s.location.search as { tab?: string } });
+
+  // Modo reduzido: só ícones, com tooltip do nome ao passar o mouse. Clientes
+  // e os grupos com submenu (Visão Geral, Plano e Cobrança, Equipe) não cabem
+  // como ícone sozinho — clicar neles abre um painel flutuante ao lado com o
+  // mesmo conteúdo que apareceria expandido.
+  const [openFlyout, setOpenFlyout] = useState<string | null>(null);
+  const [flyoutAnchor, setFlyoutAnchor] = useState<DOMRect | null>(null);
+  const flyoutPanelRef = useRef<HTMLDivElement | null>(null);
+  const flyoutTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  function toggleFlyout(id: string, el: HTMLButtonElement) {
+    if (openFlyout === id) { setOpenFlyout(null); setFlyoutAnchor(null); return; }
+    flyoutTriggerRef.current = el;
+    setFlyoutAnchor(el.getBoundingClientRect());
+    setOpenFlyout(id);
+  }
+
+  useEffect(() => {
+    if (!openFlyout) return;
+    function handler(e: MouseEvent) {
+      const t = e.target as Node;
+      if (flyoutPanelRef.current?.contains(t)) return;
+      if (flyoutTriggerRef.current?.contains(t)) return;
+      setOpenFlyout(null);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openFlyout]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setOpenFlyout(null); }, [pathname, routerSearch?.tab, collapsed]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -90,7 +130,7 @@ export function Sidebar({
   const navLabels = me?.navLabels ?? {};
   const navOrder = me?.navOrder ?? {};
   const navLabel = (id: string, fallback: string) => navLabels[id] || fallback;
-  function orderSection(sectionKey: string, items: { id: string; label: string; node: React.ReactNode }[]) {
+  function orderSection<T extends { id: string; label: string; node: React.ReactNode }>(sectionKey: string, items: T[]): T[] {
     const order = navOrder[sectionKey];
     if (!order || order.length === 0) return items;
     const byId = new Map(items.map((it) => [it.id, it]));
@@ -100,24 +140,26 @@ export function Sidebar({
   }
 
   return (
-    <aside data-tour="sidebar" className="sidebar-gradient w-[240px] h-screen flex flex-col text-white shrink-0 overflow-hidden">
-      {/* Logo */}
-      <div className="px-5 pt-5 pb-4">
-        {me?.orgLogoUrl ? (
-          <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="block max-h-10 max-w-[170px] w-auto object-contain object-left" />
-        ) : (
-          <div className="text-white font-extrabold text-lg uppercase tracking-wide truncate" title={me?.orgName ?? ""}>
-            {me?.orgName ?? "Modo Criador"}
-          </div>
-        )}
-        <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-1.5">
-          {me?.orgTagline || "Gestão de conteúdo e criação"}
-        </p>
-      </div>
-      <div className="mx-5 h-px" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)" }} />
+    <aside data-tour="sidebar" className={`sidebar-gradient ${collapsed ? "w-[64px]" : "w-[240px]"} h-screen flex flex-col text-white shrink-0 overflow-hidden`}>
+      {/* Logo — some no modo reduzido, a logo aparece no cabeçalho nesse caso (App.tsx) */}
+      {!collapsed && (
+        <div className="px-5 pt-5 pb-4">
+          {me?.orgLogoUrl ? (
+            <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="block max-h-10 max-w-[170px] w-auto object-contain object-left" />
+          ) : (
+            <div className="text-white font-extrabold text-lg uppercase tracking-wide truncate" title={me?.orgName ?? ""}>
+              {me?.orgName ?? "Modo Criador"}
+            </div>
+          )}
+          <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-1.5">
+            {me?.orgTagline || "Gestão de conteúdo e criação"}
+          </p>
+        </div>
+      )}
+      <div className={collapsed ? "mx-3 h-px mt-5" : "mx-5 h-px"} style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)" }} />
 
       {/* Nav — single scrollable list so Clientes sits inline with everything else */}
-      <div className="px-3 pt-4 pb-3 flex-1 overflow-y-auto space-y-0.5">
+      <div className={collapsed ? "px-2 pt-4 pb-3 flex-1 overflow-y-auto space-y-1.5 flex flex-col items-center" : "px-3 pt-4 pb-3 flex-1 overflow-y-auto space-y-0.5"}>
         {(() => {
           const clienteItems = orderSection("cliente", [
             ...(isAdmin ? [{ id: "cliente-overview", label: navLabel("cliente-overview", "Visão Geral"), node: <NavSubButton key="cliente-overview" label={navLabel("cliente-overview", "Visão Geral")} active={configTabActive("cliente")} onClick={() => goToConfigTab("cliente")} /> }] : []),
@@ -138,16 +180,16 @@ export function Sidebar({
             ...(canReport ? [{ id: "relatorio", label: navLabel("relatorio", "Relatório"), node: <NavSubButton key="relatorio" label={navLabel("relatorio", "Relatório")} active={configTabActive("report")} onClick={() => goToConfigTab("report")} /> }] : []),
           ]);
 
-          const mainItems = orderSection("main", [
+          const mainItems: { id: string; label: string; node: React.ReactNode; meta: CollapsedMeta }[] = orderSection("main", [
             { id: "minhas-demandas", label: navLabel("minhas-demandas", "Minhas demandas"), node: (
               <NavButton key="minhas-demandas" icon={<LayoutDashboard size={15} />} label={navLabel("minhas-demandas", "Minhas demandas")}
                 active={pathname === "/minhas-tarefas"} onClick={() => navigate({ to: "/minhas-tarefas" })} />
-            ) },
+            ), meta: { icon: <LayoutDashboard size={17} />, label: navLabel("minhas-demandas", "Minhas demandas"), active: pathname === "/minhas-tarefas", kind: "button", onClick: () => navigate({ to: "/minhas-tarefas" }) } },
             { id: "dashboard", label: navLabel("dashboard", "Dashboard"), node: (
               <NavButton key="dashboard" icon={<BarChart2 size={15} />} label={navLabel("dashboard", "Dashboard")}
                 active={pathname === "/admin"} onClick={() => navigate({ to: "/admin" })} />
-            ) },
-            { id: "clientes", label: navLabel("clientes", "Clientes"), node: (
+            ), meta: { icon: <BarChart2 size={17} />, label: navLabel("dashboard", "Dashboard"), active: pathname === "/admin", kind: "button", onClick: () => navigate({ to: "/admin" }) } },
+            { id: "clientes", label: navLabel("clientes", "Clientes"), meta: { icon: <Users size={17} />, label: navLabel("clientes", "Clientes"), active: clientsActive, kind: "flyout" }, node: (
               <div key="clientes">
                 <button
                   onClick={() => setClientsOpen((o) => !o)}
@@ -180,79 +222,41 @@ export function Sidebar({
                 </button>
                 {clientsOpen && (
                   <div className="mt-1">
-                    <div className="px-1 pb-2">
-                      <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/5">
-                        <Search size={13} className="text-white/40" />
-                        <input
-                          value={search} onChange={(e) => setSearch(e.target.value)}
-                          placeholder="Buscar..."
-                          className="bg-transparent text-xs flex-1 outline-none placeholder:text-white/30 text-white"
-                        />
-                      </div>
-                    </div>
-                    {grouped.map(([cat, list]) => (
-                      <CategoryGroup
-                        key={cat}
-                        name={cat}
-                        color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
-                        defaultOpen={cat !== "Ex-clientes"}
-                        forceOpen={search.trim().length > 0}
-                        count={list.length}
-                        onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
-                        addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
-                      >
-                        {list.map((c) => (
-                          <ClientRow
-                            key={c.id}
-                            client={c}
-                            active={pathname === `/cliente/${c.id}`}
-                            onOpenCustomFields={() => onOpenCustomFields(c)}
-                            canManage={isAdmin}
-                            categories={allCategories}
-                          />
-                        ))}
-                        {cat === "Avulsos" && list.length === 0 && (
-                          <div className="px-3 py-2 text-[11px] text-white/30">
-                            {isAdmin ? "Nenhuma demanda avulsa. Use o + para criar." : "Sem demandas avulsas."}
-                          </div>
-                        )}
-                      </CategoryGroup>
-                    ))}
-                    {filtered.length === 0 && (
-                      <div className="text-xs text-white/30 text-center mt-6 px-3">
-                        {search ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
-                      </div>
-                    )}
+                    <ClientesListBody
+                      search={search} setSearch={setSearch} grouped={grouped} filtered={filtered}
+                      isAdmin={isAdmin} allCategories={allCategories} pathname={pathname}
+                      onCreateClient={onCreateClient} onOpenCustomFields={onOpenCustomFields}
+                    />
                   </div>
                 )}
               </div>
             ) },
-            ...(!disabled.has("calendar") ? [{ id: "calendario", label: navLabel("calendario", "Calendário"), node: (
+            ...(!disabled.has("calendar") ? [{ id: "calendario", label: navLabel("calendario", "Calendário"), meta: { icon: <CalendarDays size={17} />, label: navLabel("calendario", "Calendário"), active: pathname === "/calendario", kind: "button" as const, onClick: () => navigate({ to: "/calendario" }) }, node: (
               <div key="calendario" data-tour="nav-calendario">
                 <NavButton icon={<CalendarDays size={15} />} label={navLabel("calendario", "Calendário")} active={pathname === "/calendario"} onClick={() => navigate({ to: "/calendario" })} />
               </div>
             ) }] : []),
-            ...(!disabled.has("reference_library") ? [{ id: "biblioteca", label: navLabel("biblioteca", "Biblioteca"), node: (
+            ...(!disabled.has("reference_library") ? [{ id: "biblioteca", label: navLabel("biblioteca", "Biblioteca"), meta: { icon: <BookMarked size={17} />, label: navLabel("biblioteca", "Biblioteca"), active: pathname === "/biblioteca", kind: "button" as const, onClick: () => navigate({ to: "/biblioteca" }) }, node: (
               <div key="biblioteca" data-tour="nav-biblioteca">
                 <NavButton icon={<BookMarked size={15} />} label={navLabel("biblioteca", "Biblioteca")} active={pathname === "/biblioteca"} onClick={() => navigate({ to: "/biblioteca" })} />
               </div>
             ) }] : []),
-            ...(isAdmin && !disabled.has("instagram") ? [{ id: "instagram", label: navLabel("instagram", "Instagram"), node: (
+            ...(isAdmin && !disabled.has("instagram") ? [{ id: "instagram", label: navLabel("instagram", "Instagram"), meta: { icon: <Instagram size={17} />, label: navLabel("instagram", "Instagram"), active: pathname === "/instagram", kind: "button" as const, onClick: () => navigate({ to: "/instagram" }) }, node: (
               <div key="instagram" data-tour="nav-instagram">
                 <NavButton icon={<Instagram size={15} />} label={navLabel("instagram", "Instagram")} active={pathname === "/instagram"} onClick={() => navigate({ to: "/instagram" })} />
               </div>
             ) }] : []),
-            ...(canSales ? [{ id: "vendas", label: navLabel("vendas", "Vendas"), node: (
+            ...(canSales ? [{ id: "vendas", label: navLabel("vendas", "Vendas"), meta: { icon: <Handshake size={17} />, label: navLabel("vendas", "Vendas"), active: pathname === "/vendas", kind: "button" as const, onClick: () => navigate({ to: "/vendas" }) }, node: (
               <div key="vendas" data-tour="nav-vendas">
                 <NavButton icon={<Handshake size={15} />} label={navLabel("vendas", "Vendas")} active={pathname === "/vendas"} onClick={() => navigate({ to: "/vendas" })} />
               </div>
             ) }] : []),
-            ...(isAdmin ? [{ id: "lixeira", label: navLabel("lixeira", "Lixeira"), node: (
+            ...(isAdmin ? [{ id: "lixeira", label: navLabel("lixeira", "Lixeira"), meta: { icon: <Trash2 size={17} />, label: navLabel("lixeira", "Lixeira"), active: pathname === "/lixeira", kind: "button" as const, onClick: () => navigate({ to: "/lixeira" }) }, node: (
               <div key="lixeira" data-tour="nav-lixeira">
                 <NavButton icon={<Trash2 size={15} />} label={navLabel("lixeira", "Lixeira")} active={pathname === "/lixeira"} onClick={() => navigate({ to: "/lixeira" })} />
               </div>
             ) }] : []),
-            ...((isAdmin || canJourney || canFinanceiro) ? [{ id: "cliente", label: navLabel("cliente", "Visão Geral"), node: (
+            ...((isAdmin || canJourney || canFinanceiro) ? [{ id: "cliente", label: navLabel("cliente", "Visão Geral"), meta: { icon: <IdCard size={17} />, label: navLabel("cliente", "Visão Geral"), active: configTabActive("cliente") || configTabActive("journey") || configTabActive("margem") || configTabActive("pagamentos"), kind: "flyout" as const }, node: (
               <div key="cliente" data-tour="nav-cliente">
                 <NavGroup icon={<IdCard size={15} />} label={navLabel("cliente", "Visão Geral")}
                   active={configTabActive("cliente") || configTabActive("journey") || configTabActive("margem") || configTabActive("pagamentos")}>
@@ -260,7 +264,7 @@ export function Sidebar({
                 </NavGroup>
               </div>
             ) }] : []),
-            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Plano e Cobrança"), node: (
+            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Plano e Cobrança"), meta: { icon: <Wallet size={17} />, label: navLabel("financeiro", "Plano e Cobrança"), active: configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda"), kind: "flyout" as const }, node: (
               <div key="financeiro" data-tour="nav-financeiro">
                 <NavGroup icon={<Wallet size={15} />} label={navLabel("financeiro", "Plano e Cobrança")}
                   active={configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda")}>
@@ -268,7 +272,7 @@ export function Sidebar({
                 </NavGroup>
               </div>
             ) }] : []),
-            ...((canTeam || canReport || rotinaEnabled) ? [{ id: "equipe", label: navLabel("equipe", "Equipe"), node: (
+            ...((canTeam || canReport || rotinaEnabled) ? [{ id: "equipe", label: navLabel("equipe", "Equipe"), meta: { icon: <UserCog size={17} />, label: navLabel("equipe", "Equipe"), active: configTabActive("team") || configTabActive("report") || pathname === "/rotina", kind: "flyout" as const }, node: (
               <div key="equipe" data-tour="nav-equipe">
                 <NavGroup icon={<UserCog size={15} />} label={navLabel("equipe", "Equipe")}
                   active={configTabActive("team") || configTabActive("report") || pathname === "/rotina"}>
@@ -276,17 +280,32 @@ export function Sidebar({
                 </NavGroup>
               </div>
             ) }] : []),
-            { id: "ajuda", label: navLabel("ajuda", "Ajuda"), node: (
+            { id: "ajuda", label: navLabel("ajuda", "Ajuda"), meta: { icon: <CircleHelp size={17} />, label: navLabel("ajuda", "Ajuda"), active: pathname === "/ajuda", kind: "button", onClick: () => navigate({ to: "/ajuda" }) }, node: (
               <div key="ajuda" data-tour="nav-ajuda">
                 <NavButton icon={<CircleHelp size={15} />} label={navLabel("ajuda", "Ajuda")} active={pathname === "/ajuda"} onClick={() => navigate({ to: "/ajuda" })} />
               </div>
             ) },
           ]);
 
+          const groupItemsById: Record<string, React.ReactNode> = {
+            cliente: clienteItems.map((it) => it.node),
+            financeiro: financeiroItems.map((it) => it.node),
+            equipe: equipeItems.map((it) => it.node),
+          };
+          const openItem = mainItems.find((it) => it.id === openFlyout);
+
           return (
             <>
-              {mainItems.map((it) => it.node)}
-              {isMaster && (
+              {mainItems.map((it) => collapsed ? (
+                <CollapsedIconButton
+                  key={it.id}
+                  icon={it.meta.icon}
+                  label={it.meta.label}
+                  active={it.meta.active || openFlyout === it.id}
+                  onClick={(el) => (it.meta.kind === "button" ? it.meta.onClick?.() : toggleFlyout(it.id, el))}
+                />
+              ) : it.node)}
+              {isMaster && !collapsed && (
                 <button
                   onClick={() => setCustomizingNav(true)}
                   className="w-full flex items-center gap-2.5 pl-3 pr-2 py-2 rounded-md text-xs text-white/35 hover:text-white/70 hover:bg-white/5 transition-colors mt-1"
@@ -304,11 +323,149 @@ export function Sidebar({
                   navOrder={navOrder}
                 />
               )}
+              {collapsed && openFlyout && flyoutAnchor && openItem && (
+                <SidebarFlyout anchor={flyoutAnchor} title={openItem.label} panelRef={flyoutPanelRef}>
+                  {openFlyout === "clientes" ? (
+                    <ClientesListBody
+                      search={search} setSearch={setSearch} grouped={grouped} filtered={filtered}
+                      isAdmin={isAdmin} allCategories={allCategories} pathname={pathname}
+                      onCreateClient={onCreateClient} onOpenCustomFields={onOpenCustomFields}
+                    />
+                  ) : (
+                    <div className="px-1 space-y-0.5">{groupItemsById[openFlyout]}</div>
+                  )}
+                </SidebarFlyout>
+              )}
             </>
           );
         })()}
       </div>
     </aside>
+  );
+}
+
+/** Ícone sozinho do modo reduzido — mostra o nome num tooltip flutuante ao
+ * passar o mouse (a sidebar tem overflow-hidden, então o tooltip precisa
+ * escapar via portal pra não ficar cortado). */
+function CollapsedIconButton({ icon, label, active, onClick }: {
+  icon: React.ReactNode; label: string; active: boolean; onClick: (el: HTMLButtonElement) => void;
+}) {
+  const [hover, setHover] = useState(false);
+  const ref = useRef<HTMLButtonElement>(null);
+  const [tipPos, setTipPos] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!hover) { setTipPos(null); return; }
+    const r = ref.current?.getBoundingClientRect();
+    if (r) setTipPos({ top: r.top + r.height / 2, left: r.right + 10 });
+  }, [hover]);
+
+  return (
+    <div className="w-full flex justify-center">
+      <button
+        ref={ref}
+        onClick={() => ref.current && onClick(ref.current)}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        title={label}
+        className="relative h-9 w-9 flex items-center justify-center rounded-md transition-colors"
+        style={{
+          backgroundColor: active ? "rgba(var(--lz-brand-light-rgb),0.14)" : "transparent",
+          color: active ? "#FFFFFF" : "rgba(255,255,255,0.7)",
+        }}
+      >
+        {active && <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
+        <span className={active ? "text-[rgb(var(--lz-brand-rgb))]" : "text-white/60"}>{icon}</span>
+      </button>
+      {hover && tipPos && createPortal(
+        <div
+          style={{ position: "fixed", top: tipPos.top, left: tipPos.left, transform: "translateY(-50%)" }}
+          className="z-[999] px-2.5 py-1.5 rounded-md bg-[#1C1C1C] border border-white/10 shadow-xl text-xs font-medium text-white whitespace-nowrap pointer-events-none"
+        >
+          {label}
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
+
+/** Painel flutuante do modo reduzido, ancorado ao lado do ícone clicado —
+ * usado pra "Clientes" e pros grupos com submenu (Visão Geral, Plano e
+ * Cobrança, Equipe), que têm conteúdo demais pra caber num tooltip. */
+function SidebarFlyout({ anchor, title, children, panelRef }: {
+  anchor: DOMRect; title: string; children: React.ReactNode; panelRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const top = Math.min(anchor.top, Math.max(8, window.innerHeight - 420));
+  const left = anchor.right + 10;
+  return createPortal(
+    <div
+      ref={panelRef}
+      style={{ position: "fixed", top, left, width: 260, maxHeight: "75vh" }}
+      className="z-[999] rounded-lg bg-[#1C1C1C] border border-white/10 shadow-2xl overflow-y-auto py-2 lz-modal-in"
+    >
+      <div className="px-3 pb-2 mb-1 border-b border-white/10 text-[11px] font-bold uppercase tracking-wide text-white/50">{title}</div>
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
+/** Busca + grupos por categoria + lista de clientes — conteúdo compartilhado
+ * entre o modo expandido (inline, sob o botão "Clientes") e o painel
+ * flutuante do modo reduzido. */
+function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCategories, pathname, onCreateClient, onOpenCustomFields }: {
+  search: string; setSearch: (v: string) => void;
+  grouped: Array<readonly [string, Client[]]>; filtered: Client[];
+  isAdmin: boolean; allCategories: string[]; pathname: string;
+  onCreateClient: (category?: string) => void; onOpenCustomFields: (c: Client) => void;
+}) {
+  return (
+    <>
+      <div className="px-1 pb-2">
+        <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/5">
+          <Search size={13} className="text-white/40" />
+          <input
+            value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar..."
+            className="bg-transparent text-xs flex-1 outline-none placeholder:text-white/30 text-white"
+          />
+        </div>
+      </div>
+      {grouped.map(([cat, list]) => (
+        <CategoryGroup
+          key={cat}
+          name={cat}
+          color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
+          defaultOpen={cat !== "Ex-clientes"}
+          forceOpen={search.trim().length > 0}
+          count={list.length}
+          onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
+          addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
+        >
+          {list.map((c) => (
+            <ClientRow
+              key={c.id}
+              client={c}
+              active={pathname === `/cliente/${c.id}`}
+              onOpenCustomFields={() => onOpenCustomFields(c)}
+              canManage={isAdmin}
+              categories={allCategories}
+            />
+          ))}
+          {cat === "Avulsos" && list.length === 0 && (
+            <div className="px-3 py-2 text-[11px] text-white/30">
+              {isAdmin ? "Nenhuma demanda avulsa. Use o + para criar." : "Sem demandas avulsas."}
+            </div>
+          )}
+        </CategoryGroup>
+      ))}
+      {filtered.length === 0 && (
+        <div className="text-xs text-white/30 text-center mt-6 px-3">
+          {search ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
+        </div>
+      )}
+    </>
   );
 }
 
