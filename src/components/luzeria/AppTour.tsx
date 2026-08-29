@@ -143,7 +143,7 @@ const STEPS: Step[] = [
   {
     id: "dashboard",
     title: "Dashboard",
-    desc: "Métricas do mês, ranking de produtividade e saúde da operação — clique num número (Entregues/Falta) pra ver a lista de itens por trás dele. Atualiza automaticamente em Modo TV.",
+    desc: "Métricas do mês, ranking de produtividade e saúde da operação — clique num número (Entregues/Falta) pra ver a lista de itens por trás dele. Escondendo a barra lateral, a tela passa a se atualizar sozinha — boa pra deixar num telão.",
     view: "admin",
     target: '[data-tour="dashboard-hero"]',
     roles: ["master", "setor"],

@@ -126,7 +126,7 @@ export function MyTasks() {
   return (
     <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-5xl mx-auto" data-tour="my-tasks">
       {!isMeView && targetProfile && (
-        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg text-[12.5px]"
+        <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-4 px-3 py-2 rounded-lg text-[12.5px]"
           style={{ backgroundColor: "rgba(74,158,255,0.12)", color: "#7EB3FF" }}>
           <Avatar profile={targetProfile} size={18} />
           <span className="font-semibold">Vendo como {targetProfile.name}</span>
@@ -629,7 +629,7 @@ function CalendarEventModal({ event, onClose }: { event: any; onClose: () => voi
       }`;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-sm bg-card border border-foreground/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-sm bg-card border border-foreground/10 rounded-2xl p-6 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 mb-1">
           <h3 className="text-base font-semibold text-foreground">{event.title}</h3>
           <button onClick={onClose} className="text-foreground/40 hover:text-foreground shrink-0"><X size={16} /></button>

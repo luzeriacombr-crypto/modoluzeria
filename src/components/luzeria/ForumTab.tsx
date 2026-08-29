@@ -310,7 +310,7 @@ function NewPostModal({ categories, onClose, onCreated }: {
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-card border border-foreground/10 rounded-xl w-full max-w-lg p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card border border-foreground/10 rounded-xl w-full max-w-lg p-5 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-foreground font-semibold">Novo post</h3>
           <button onClick={onClose} className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5"><X size={16} /></button>

@@ -87,7 +87,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           <h1 className="text-[32px] font-bold text-foreground tracking-tight">Configurações</h1>
           <p className="text-sm text-foreground/50 mt-2">
             {tab === "team" || tab === "report" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
-             tab === "automations" ? "Google Drive, lembretes automáticos e jobs do sistema." :
+             tab === "automations" ? "Google Drive, lembretes automáticos e rotinas que o sistema executa sozinho." :
              tab === "cobranca" || tab === "afiliados" || tab === "revenda" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
              tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? "Visão geral, jornada, margem e pagamentos de cada cliente." :
              tab === "updates" ? "O que mudou no Modo Criador." :
@@ -311,7 +311,7 @@ function AddMemberModal({ onClose, onSubmit, loading }: {
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 lz-overlay-in"
       onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm bg-card rounded-xl p-7 lz-modal-in"
+        className="w-full max-w-sm bg-card rounded-xl p-7 lz-modal-in max-h-[85vh] overflow-y-auto"
         style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.2)" }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-foreground font-semibold">Adicionar membro</h2>
@@ -363,7 +363,7 @@ function CreateAgencyModal({ onClose, onSubmit, loading }: {
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 lz-overlay-in"
       onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm bg-card rounded-xl p-7 lz-modal-in"
+        className="w-full max-w-sm bg-card rounded-xl p-7 lz-modal-in max-h-[85vh] overflow-y-auto"
         style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.2)" }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-foreground font-semibold">Criar nova agência</h2>

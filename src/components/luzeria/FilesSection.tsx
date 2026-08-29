@@ -268,7 +268,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
                 ? uploadProgress.phase === "syncing"
                   ? (uploadProgress.total > 1
                     ? `Sincronizando ${uploadProgress.done + 1}/${uploadProgress.total} com o Drive...`
-                    : "Sincronizando com o Drive...")
+                    : "Salvando no seu Drive...")
                   : (uploadProgress.total > 1
                     ? `Enviando ${uploadProgress.done + 1}/${uploadProgress.total} (${uploadProgress.pct}%)...`
                     : `Enviando... ${uploadProgress.pct}%`)

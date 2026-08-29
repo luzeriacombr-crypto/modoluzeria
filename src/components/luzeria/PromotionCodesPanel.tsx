@@ -414,7 +414,7 @@ export function PromotionCodesPanel() {
       {/* Apply Promo Modal */}
       {applyingPromoId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-white/[0.1] to-white/[0.05] border border-foreground/20 rounded-2xl p-8 max-w-md w-full backdrop-blur-xl">
+          <div className="bg-gradient-to-br from-white/[0.1] to-white/[0.05] border border-foreground/20 rounded-2xl p-8 max-w-md w-full backdrop-blur-xl max-h-[85vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-foreground mb-6">Aplicar Cupom a Agência</h3>
 
             <div className="space-y-4">
