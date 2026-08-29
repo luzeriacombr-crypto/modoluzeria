@@ -35,6 +35,7 @@ import { Route as AuthenticatedBibliotecaRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/ajuda'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as ApiCronSendPushNotificationsRouteImport } from './routes/api.cron.send-push-notifications'
+import { Route as ApiCronRetentionCleanupRouteImport } from './routes/api.cron.retention-cleanup'
 import { Route as ApiCronPublishInstagramRouteImport } from './routes/api.cron.publish-instagram'
 import { Route as AuthenticatedOauthInstagramCallbackRouteImport } from './routes/_authenticated/oauth.instagram-callback'
 import { Route as AuthenticatedOauthGoogleCalendarCallbackRouteImport } from './routes/_authenticated/oauth.google-calendar-callback'
@@ -174,6 +175,11 @@ const ApiCronSendPushNotificationsRoute =
     path: '/api/cron/send-push-notifications',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiCronRetentionCleanupRoute = ApiCronRetentionCleanupRouteImport.update({
+  id: '/api/cron/retention-cleanup',
+  path: '/api/cron/retention-cleanup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCronPublishInstagramRoute = ApiCronPublishInstagramRouteImport.update({
   id: '/api/cron/publish-instagram',
   path: '/api/cron/publish-instagram',
@@ -241,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
+  '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
 }
 export interface FileRoutesByTo {
@@ -274,6 +281,7 @@ export interface FileRoutesByTo {
   '/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
+  '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
 }
 export interface FileRoutesById {
@@ -309,6 +317,7 @@ export interface FileRoutesById {
   '/_authenticated/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/_authenticated/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
+  '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
 }
 export interface FileRouteTypes {
@@ -344,6 +353,7 @@ export interface FileRouteTypes {
     | '/oauth/google-calendar-callback'
     | '/oauth/instagram-callback'
     | '/api/cron/publish-instagram'
+    | '/api/cron/retention-cleanup'
     | '/api/cron/send-push-notifications'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -377,6 +387,7 @@ export interface FileRouteTypes {
     | '/oauth/google-calendar-callback'
     | '/oauth/instagram-callback'
     | '/api/cron/publish-instagram'
+    | '/api/cron/retention-cleanup'
     | '/api/cron/send-push-notifications'
   id:
     | '__root__'
@@ -411,6 +422,7 @@ export interface FileRouteTypes {
     | '/_authenticated/oauth/google-calendar-callback'
     | '/_authenticated/oauth/instagram-callback'
     | '/api/cron/publish-instagram'
+    | '/api/cron/retention-cleanup'
     | '/api/cron/send-push-notifications'
   fileRoutesById: FileRoutesById
 }
@@ -429,6 +441,7 @@ export interface RootRouteChildren {
   PreviewTokenRoute: typeof PreviewTokenRoute
   PromoSlugRoute: typeof PromoSlugRoute
   ApiCronPublishInstagramRoute: typeof ApiCronPublishInstagramRoute
+  ApiCronRetentionCleanupRoute: typeof ApiCronRetentionCleanupRoute
   ApiCronSendPushNotificationsRoute: typeof ApiCronSendPushNotificationsRoute
 }
 
@@ -616,6 +629,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronSendPushNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/retention-cleanup': {
+      id: '/api/cron/retention-cleanup'
+      path: '/api/cron/retention-cleanup'
+      fullPath: '/api/cron/retention-cleanup'
+      preLoaderRoute: typeof ApiCronRetentionCleanupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/publish-instagram': {
       id: '/api/cron/publish-instagram'
       path: '/api/cron/publish-instagram'
@@ -730,6 +750,7 @@ const rootRouteChildren: RootRouteChildren = {
   PreviewTokenRoute: PreviewTokenRoute,
   PromoSlugRoute: PromoSlugRoute,
   ApiCronPublishInstagramRoute: ApiCronPublishInstagramRoute,
+  ApiCronRetentionCleanupRoute: ApiCronRetentionCleanupRoute,
   ApiCronSendPushNotificationsRoute: ApiCronSendPushNotificationsRoute,
 }
 export const routeTree = rootRouteImport

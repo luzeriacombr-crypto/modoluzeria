@@ -1,0 +1,17 @@
+name: Retention cleanup
+
+on:
+  schedule:
+    # Uma vez por dia, 04:10 UTC (madrugada no Brasil).
+    - cron: "10 4 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call retention cleanup endpoint
+        run: |
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.modocriador.com.br/api/cron/retention-cleanup

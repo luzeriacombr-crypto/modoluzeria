@@ -563,6 +563,16 @@ export function useApi() {
   // havia como saber se tinha salvo. Só usar em mutation SEM onError no
   // ponto de chamada, senão o aviso aparece duas vezes.
   const fail = (msg: string) => (e: any) => toast.error(e?.message ?? msg);
+  // Ação rápida que muda UM campo de um item (editor, formato, checklist,
+  // atribuição, nota): o patch otimista logo abaixo já deixou a tela certa,
+  // então recarregar as 7 chaves do invalidateAll era desperdício puro —
+  // marcar 5 itens de checklist disparava ~35 refetches, incluindo getMonth,
+  // que é a query mais cara do app.
+  const invalidateItemOnly = () => { qc.invalidateQueries({ queryKey: ["month"] }); };
+  const invalidateItemAndTasks = () => {
+    qc.invalidateQueries({ queryKey: ["month"] });
+    qc.invalidateQueries({ queryKey: ["my-tasks"] });
+  };
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["month"] });
     qc.invalidateQueries({ queryKey: ["clients"] });
@@ -629,7 +639,7 @@ export function useApi() {
         return optimisticPatchMonthItem(itemId, (item) => ({ ...item, editorId }));
       },
       onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao definir o editor."); },
-      onSuccess: invalidateAll,
+      onSuccess: invalidateItemOnly,
     }),
     setItemReelType: useMutation({
       mutationFn: useServerFn(setItemReelType),
@@ -639,7 +649,7 @@ export function useApi() {
         return optimisticPatchMonthItem(itemId, (item) => ({ ...item, reelType }));
       },
       onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao definir o formato."); },
-      onSuccess: invalidateAll,
+      onSuccess: invalidateItemOnly,
     }),
     setItemPostFormat: useMutation({
       mutationFn: useServerFn(setItemPostFormat),
@@ -649,7 +659,7 @@ export function useApi() {
         return optimisticPatchMonthItem(itemId, (item) => ({ ...item, postFormat }));
       },
       onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao definir o formato."); },
-      onSuccess: invalidateAll,
+      onSuccess: invalidateItemOnly,
     }),
     setItemStatus: useMutation({
       mutationFn: useServerFn(setItemStatus),
@@ -690,7 +700,7 @@ export function useApi() {
         );
       },
       onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao atribuir responsável."); },
-      onSuccess: invalidateAll,
+      onSuccess: invalidateItemAndTasks,
     }),
     removeAssignee: useMutation({
       mutationFn: useServerFn(removeAssignee),
@@ -702,7 +712,7 @@ export function useApi() {
         );
       },
       onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao remover responsável."); },
-      onSuccess: invalidateAll,
+      onSuccess: invalidateItemAndTasks,
     }),
     addComment: useMutation({ mutationFn: useServerFn(addComment), onSuccess: invalidateAll }),
     addContentItem: useMutation({ mutationFn: useServerFn(addContentItem), onSuccess: invalidateAll, onError: fail("Não consegui criar o item.") }),
@@ -1079,7 +1089,7 @@ export function useApi() {
         return optimisticPatchMonthItem(itemId, (item) => ({ ...item, checklist }));
       },
       onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao salvar checklist."); },
-      onSuccess: invalidateAll,
+      onSuccess: invalidateItemOnly,
     }),
     rateItem: useMutation({
       mutationFn: useServerFn(rateItem),
@@ -1089,7 +1099,7 @@ export function useApi() {
         return optimisticPatchMonthItem(itemId, (item) => ({ ...item, qualityRating: rating }));
       },
       onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao avaliar."); },
-      onSuccess: invalidateAll,
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["month"] }); qc.invalidateQueries({ queryKey: ["report"] }); },
     }),
     setGoals: useMutation({
       // Erro tratado nos dois pontos de chamada (salvar individual e

@@ -50,19 +50,33 @@ export function App() {
   const mainRef = useRef<HTMLElement>(null);
   const call = useScreenShareCall();
 
-  // Supabase Realtime — invalidate month cache when team edits content items
+  // Supabase Realtime — recarrega o mês quando alguém da equipe mexe no
+  // conteúdo. Duas coisas importam aqui:
+  //  - filtro por org_id: sem ele, o servidor precisava avaliar a política
+  //    de RLS pra cada assinante de TODAS as agências a cada mudança (o RLS
+  //    impedia o vazamento, mas o custo era O(agências × usuários)).
+  //  - debounce: reordenar o feed gera um evento por item (até 52 de uma
+  //    vez), e cada um mandava todo mundo recarregar. Agora agrupa.
+  const orgId = me.data?.orgId;
   useEffect(() => {
+    if (!orgId) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const invalidateSoon = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => qc.invalidateQueries({ queryKey: ["month"] }), 400);
+    };
     const channel = supabase
-      .channel("content-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "content_items" }, () => {
-        qc.invalidateQueries({ queryKey: ["month"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "comments" }, () => {
-        qc.invalidateQueries({ queryKey: ["month"] });
-      })
+      .channel(`content-realtime-${orgId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "content_items", filter: `org_id=eq.${orgId}` }, invalidateSoon)
+      // comments não tem org_id — segue sem filtro (o RLS protege o dado),
+      // mas ao menos passa pelo mesmo debounce.
+      .on("postgres_changes", { event: "*", schema: "public", table: "comments" }, invalidateSoon)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [qc]);
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, [qc, orgId]);
 
   // Personalize the browser tab title once we know which org is logged in
   // (the pre-login splash/login screen stays generic — org is unknown then).
