@@ -5,7 +5,7 @@ import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { reportAppError } from "@/lib/error-reporting";
 import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import type { ContentItem } from "@/lib/luzeria/types";
+import { CONTENT_TYPE_LABEL, type ContentItem } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { ContentCard, ContentListRow } from "./ContentCard";
 import { FeedPreview } from "./FeedPreview";
@@ -480,6 +480,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                 outros={month.outros ?? []}
                 profiles={profiles}
                 isAdmin={isAdmin}
+                isAvulso={isAvulso}
               />
             )}
             {maisSubTab === "campanhas" && (
@@ -512,7 +513,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   );
 }
 
-function MoveItemModal({ item, clientId, currentKey, onClose, onMove }: {
+export function MoveItemModal({ item, clientId, currentKey, onClose, onMove }: {
   item: ContentItem; clientId: string; currentKey: string; onClose: () => void; onMove: (targetKey: string) => void;
 }) {
   const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
@@ -524,7 +525,7 @@ function MoveItemModal({ item, clientId, currentKey, onClose, onMove }: {
 
   return (
     <Modal open onClose={onClose} title={`Mover "${item.title || "item sem título"}"`}>
-      <p className="text-xs text-foreground/50 mb-3">Escolha pra qual mês mover este {item.type === "reel" ? "reel" : "post"}. Está em {formatMonth(currentKey)}.</p>
+      <p className="text-xs text-foreground/50 mb-3">Escolha pra qual mês mover {["post","reel"].includes(item.type) ? "este" : "esta"} {CONTENT_TYPE_LABEL[item.type].toLowerCase()}. Está em {formatMonth(currentKey)}.</p>
       <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
         {options.map((key) => (
           <button

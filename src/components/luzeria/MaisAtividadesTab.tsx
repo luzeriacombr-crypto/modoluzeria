@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock, FolderInput } from "lucide-react";
 import { toast } from "sonner";
 import { useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { ACTIVITY_QUANTITY_LABEL, type ContentItem, type Profile } from "@/lib/luzeria/types";
+import { MoveItemModal } from "./ClientView";
 
 type ActivityType = "gravacao" | "roteiro" | "sistema" | "outros";
 
@@ -31,12 +32,14 @@ interface Props {
   outros: ContentItem[];
   profiles: Profile[];
   isAdmin: boolean;
+  isAvulso: boolean;
 }
 
-export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sistemas, outros, profiles, isAdmin }: Props) {
-  const { addContentItem, addAssignee, deleteItem, setItemStatus } = useApi();
+export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sistemas, outros, profiles, isAdmin, isAvulso }: Props) {
+  const { addContentItem, addAssignee, deleteItem, setItemStatus, moveItemToMonth } = useApi();
   const { openItem } = useUI();
   const [openForm, setOpenForm] = useState<GroupKey | null>(null);
+  const [movingItem, setMovingItem] = useState<ContentItem | null>(null);
   const [collapsed, setCollapsed] = useState<Record<GroupKey, boolean>>({
     gravacao: false, outras: false,
   });
@@ -156,6 +159,11 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                       <button onClick={() => openItem(item.id)} title="Editar" className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition">
                         <Pencil size={13} />
                       </button>
+                      {isAdmin && !isAvulso && (
+                        <button onClick={() => setMovingItem(item)} title="Mover para outro mês" className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition">
+                          <FolderInput size={13} />
+                        </button>
+                      )}
                       {isAdmin && (
                         <button onClick={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }} title="Excluir" className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition">
                           <Trash2 size={13} />
@@ -173,6 +181,19 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
           </section>
         );
       })}
+
+      {movingItem && (
+        <MoveItemModal
+          item={movingItem}
+          clientId={clientId}
+          currentKey={monthKey}
+          onClose={() => setMovingItem(null)}
+          onMove={(targetKey) => {
+            moveItemToMonth.mutate({ data: { itemId: movingItem.id, targetKey } });
+            setMovingItem(null);
+          }}
+        />
+      )}
     </div>
   );
 }
