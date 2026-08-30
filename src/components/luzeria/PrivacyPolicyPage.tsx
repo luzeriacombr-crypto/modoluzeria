@@ -17,7 +17,7 @@ export function PrivacyPolicyPage() {
 
       <main className="max-w-[720px] mx-auto px-5 sm:px-10 py-14">
         <h1 className="text-3xl font-black mb-2">Política de Privacidade</h1>
-        <p className="text-foreground/50 text-sm mb-10">Última atualização: 12 de agosto de 2026</p>
+        <p className="text-foreground/50 text-sm mb-10">Última atualização: 30 de agosto de 2026</p>
 
         <div className="space-y-8 text-foreground/80 text-sm leading-relaxed">
           <section>
@@ -82,7 +82,21 @@ export function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">7. Seus direitos</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">7. Extensão do Chrome</h2>
+            <p>
+              A extensão "Modo Criador — Salvar referência" fala diretamente com o mesmo banco de dados
+              da plataforma, sem servidor próprio. Ela usa seu e-mail e senha para autenticar sua conta —
+              essas credenciais são enviadas apenas ao Supabase (nosso provedor de banco de dados) e não
+              ficam guardadas na extensão; apenas o token de sessão resultante fica salvo localmente no
+              seu navegador, pra você não precisar entrar de novo toda vez. Quando você salva uma
+              referência, a extensão lê o título e o link da aba aberta e grava, junto com a observação
+              que você escrever, na Biblioteca de Referências do Modo Criador. Ela não lê nem armazena
+              nenhum outro conteúdo das páginas que você visita, e não monitora sua navegação.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-foreground mb-2">8. Seus direitos</h2>
             <p>
               Você pode solicitar, a qualquer momento, a confirmação, correção, exportação ou exclusão dos
               seus dados pessoais, conforme previsto na LGPD. Para isso, entre em contato pelo e-mail
@@ -91,7 +105,7 @@ export function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">8. Contato</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">9. Contato</h2>
             <p>
               Dúvidas sobre esta política ou solicitações relacionadas aos seus dados podem ser enviadas
               para{" "}
