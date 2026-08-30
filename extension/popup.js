@@ -119,7 +119,12 @@ async function api(caminho, sessao, opcoes = {}) {
     const t = await res.text().catch(() => "");
     throw new Error(t || `Erro ${res.status}`);
   }
-  return res.status === 204 ? null : res.json();
+  // O insert manda "Prefer: return=minimal", e o Supabase responde 201 (não
+  // 204) com corpo vazio nesse caso — checar só o status 204 não bastava, e
+  // chamar res.json() num corpo vazio é o que gerava o "Unexpected end of
+  // JSON input".
+  const texto = await res.text();
+  return texto ? JSON.parse(texto) : null;
 }
 
 /** Perfil da pessoa: precisa do org_id pra gravar, e de active pra saber se
