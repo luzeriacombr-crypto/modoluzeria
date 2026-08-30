@@ -155,13 +155,36 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
   if (!provider) {
     return (
       <div>
-        <p className="text-foreground/60 text-sm mb-5">Já tem seus clientes organizados no Trello, ClickUp ou Notion? Importa de lá pra não digitar tudo de novo.</p>
-        <div className="grid grid-cols-3 gap-3 mb-3">
-          <button onClick={() => setProvider("trello")} className="bg-foreground/5 border border-foreground/10 rounded-lg py-4 text-sm font-semibold hover:bg-foreground/10 transition">Trello</button>
-          <button onClick={() => setProvider("clickup")} className="bg-foreground/5 border border-foreground/10 rounded-lg py-4 text-sm font-semibold hover:bg-foreground/10 transition">ClickUp</button>
-          <button onClick={() => setProvider("notion")} className="bg-foreground/5 border border-foreground/10 rounded-lg py-4 text-sm font-semibold hover:bg-foreground/10 transition">Notion</button>
-        </div>
-        <button onClick={onSkip} className="text-foreground/40 text-xs hover:text-foreground/70 transition w-full text-center mt-2">Pular por agora →</button>
+        <p className="text-foreground/60 text-sm mb-5">Já tem seus clientes organizados em outro lugar? Importa de lá pra não digitar tudo de novo — ou pula e cadastra depois, leva 10 segundos por cliente.</p>
+        {/* Trello conecta por OAuth (um clique). ClickUp e Notion exigem gerar
+         * um token de API, que é a maior barreira possível pra quem não é
+         * técnico logo no primeiro acesso — ficam como opção secundária. */}
+        <button
+          onClick={() => setProvider("trello")}
+          className="w-full bg-foreground/5 border border-foreground/15 rounded-lg py-4 px-4 text-left hover:bg-foreground/10 transition mb-3"
+        >
+          <span className="block text-sm font-semibold text-foreground">Importar do Trello</span>
+          <span className="block text-xs text-foreground/45 mt-0.5">Conecta em um clique, sem configurar nada.</span>
+        </button>
+        <button
+          onClick={onSkip}
+          className="w-full lz-btn-primary text-sm px-4 py-3 rounded-md mb-4"
+        >
+          Pular e cadastrar depois
+        </button>
+        <details className="group">
+          <summary className="text-xs text-foreground/40 hover:text-foreground/70 transition cursor-pointer list-none">
+            Uso ClickUp ou Notion →
+          </summary>
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <button onClick={() => setProvider("clickup")} className="bg-foreground/5 border border-foreground/10 rounded-lg py-3 text-xs font-semibold hover:bg-foreground/10 transition">ClickUp</button>
+            <button onClick={() => setProvider("notion")} className="bg-foreground/5 border border-foreground/10 rounded-lg py-3 text-xs font-semibold hover:bg-foreground/10 transition">Notion</button>
+          </div>
+          <p className="text-[11px] text-foreground/35 mt-2 leading-relaxed">
+            Os dois pedem que você gere um token de acesso na conta deles — dá
+            um pouco mais de trabalho que o Trello.
+          </p>
+        </details>
       </div>
     );
   }

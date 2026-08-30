@@ -39,6 +39,7 @@ export function GlobalSearchButton({ variant, active }: { variant: "header" | "m
       <button
         onClick={() => setSearchOpen(true)}
         aria-label="Buscar"
+        data-tour="global-search-mobile"
         className="flex items-center justify-center h-12 w-14 transition-colors"
         style={{ color: active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 40%, transparent)" }}
       >
@@ -50,6 +51,7 @@ export function GlobalSearchButton({ variant, active }: { variant: "header" | "m
     <button
       onClick={() => setSearchOpen(true)}
       title="Buscar"
+      data-tour="global-search"
       className="flex items-center justify-center h-8 w-8 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors"
     >
       <Search size={18} />
