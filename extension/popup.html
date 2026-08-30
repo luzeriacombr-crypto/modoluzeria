@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- Carregando: enquanto confere se já tem sessão salva -->
+  <div id="tela-carregando" class="tela">
+    <div class="spinner" aria-label="Carregando"></div>
+  </div>
+
+  <!-- Login: só aparece na primeira vez (a sessão fica salva depois) -->
+  <form id="tela-login" class="tela oculto" autocomplete="on">
+    <div class="marca">
+      <span class="marca-quadro"></span>
+      <span class="marca-nome">Modo <b>Criador</b></span>
+    </div>
+    <p class="ajuda">Entre com a mesma conta que você usa no Modo Criador.</p>
+    <label class="campo">
+      <span>E-mail</span>
+      <input id="email" type="email" autocomplete="username" required>
+    </label>
+    <label class="campo">
+      <span>Senha</span>
+      <input id="senha" type="password" autocomplete="current-password" required>
+    </label>
+    <p id="erro-login" class="erro oculto" role="alert"></p>
+    <button id="btn-entrar" type="submit" class="primario">Entrar</button>
+  </form>
+
+  <!-- Salvar: a tela principal -->
+  <form id="tela-salvar" class="tela oculto">
+    <div class="topo">
+      <span class="marca-quadro pequeno"></span>
+      <span class="topo-titulo">Salvar referência</span>
+      <button id="btn-sair" type="button" class="link" title="Sair da conta">Sair</button>
+    </div>
+
+    <label class="campo">
+      <span>Título</span>
+      <input id="titulo" type="text" maxlength="160" required>
+    </label>
+
+    <label class="campo">
+      <span>Link</span>
+      <input id="link" type="url" required>
+    </label>
+
+    <label class="campo">
+      <span>Salvar em</span>
+      <select id="destino"></select>
+    </label>
+
+    <label class="campo">
+      <span>Observação <i>(opcional)</i></span>
+      <textarea id="notas" rows="2" maxlength="2000" placeholder="Por que essa referência é boa?"></textarea>
+    </label>
+
+    <p id="erro-salvar" class="erro oculto" role="alert"></p>
+    <button id="btn-salvar" type="submit" class="primario">Salvar na biblioteca</button>
+  </form>
+
+  <!-- Sucesso -->
+  <div id="tela-ok" class="tela oculto">
+    <div class="ok-marca">✓</div>
+    <p class="ok-texto">Salvo na biblioteca!</p>
+    <p id="ok-destino" class="ajuda centro"></p>
+    <button id="btn-outro" type="button" class="secundario">Salvar outra</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

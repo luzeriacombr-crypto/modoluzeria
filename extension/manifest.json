@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Modo Criador — Salvar referência",
+  "version": "1.0.0",
+  "description": "Salva a página que você está vendo na Biblioteca de Referências do Modo Criador, geral ou em um cliente.",
+  "default_locale": "pt_BR",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Salvar na Biblioteca de Referências"
+  },
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://grmayzeeemilvhjeninh.supabase.co/*"]
+}
