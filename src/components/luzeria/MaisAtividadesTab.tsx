@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock, FolderInput } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock, FolderInput, CheckSquare, X } from "lucide-react";
 import { toast } from "sonner";
 import { useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -36,18 +36,39 @@ interface Props {
 }
 
 export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sistemas, outros, profiles, isAdmin, isAvulso }: Props) {
-  const { addContentItem, addAssignee, deleteItem, setItemStatus, moveItemToMonth } = useApi();
+  const { addContentItem, addAssignee, deleteItem, deleteContentItems, setItemStatus, moveItemToMonth } = useApi();
   const { openItem } = useUI();
   const [openForm, setOpenForm] = useState<GroupKey | null>(null);
   const [movingItem, setMovingItem] = useState<ContentItem | null>(null);
   const [collapsed, setCollapsed] = useState<Record<GroupKey, boolean>>({
     gravacao: false, outras: false,
   });
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const groups: { key: GroupKey; label: string; cfg: typeof ACTIVITY_CONFIG[ActivityType]; items: ContentItem[]; registerType: ActivityType }[] = [
     { key: "gravacao", label: ACTIVITY_CONFIG.gravacao.label, cfg: ACTIVITY_CONFIG.gravacao, items: gravacoes, registerType: "gravacao" },
     { key: "outras", label: "Outras atividades", cfg: ACTIVITY_CONFIG.outros, items: [...roteiros, ...sistemas, ...outros], registerType: "outros" },
   ];
+  const allItems = [...gravacoes, ...roteiros, ...sistemas, ...outros];
+  const allSelected = allItems.length > 0 && allItems.every((it) => selectedIds.has(it.id));
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+  async function bulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!(await requestConfirm(`Excluir ${selectedIds.size} ${selectedIds.size === 1 ? "item" : "itens"} selecionado${selectedIds.size === 1 ? "" : "s"}?`, { danger: true }))) return;
+    deleteContentItems.mutate({ data: { ids: [...selectedIds] } }, { onSuccess: exitSelectMode });
+  }
 
   const totalItems = gravacoes.length + roteiros.length + sistemas.length + outros.length;
 
@@ -55,6 +76,42 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
     <div className="mt-4 space-y-6">
       {totalItems === 0 && !isAdmin && (
         <div className="py-14 text-center text-sm text-foreground/40">Nenhuma atividade registrada neste mês.</div>
+      )}
+
+      {isAdmin && totalItems > 0 && (
+        selectMode ? (
+          <div className="flex items-center justify-between gap-2 rounded-lg px-3 py-2" style={{ background: "rgba(var(--lz-brand-rgb),0.1)", border: "1px solid rgba(var(--lz-brand-rgb),0.3)" }}>
+            <span className="text-xs font-semibold text-foreground">
+              {selectedIds.size === 0 ? "Selecione os itens" : `${selectedIds.size} selecionado${selectedIds.size === 1 ? "" : "s"}`}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedIds(allSelected ? new Set() : new Set(allItems.map((it) => it.id)))}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition"
+              >
+                <CheckSquare size={13} /> {allSelected ? "Limpar seleção" : "Selecionar tudo"}
+              </button>
+              <button
+                onClick={bulkDelete}
+                disabled={selectedIds.size === 0 || deleteContentItems.isPending}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-red-400 hover:bg-red-500/10 disabled:opacity-30 transition"
+              >
+                <Trash2 size={13} /> Excluir selecionados
+              </button>
+              <button onClick={exitSelectMode} className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition">
+                <X size={13} /> Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-end -mb-2">
+            <button
+              onClick={() => setSelectMode(true)}
+              title="Selecionar vários"
+              className="h-6 w-6 rounded-full flex items-center justify-center transition-colors text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08]"
+            ><CheckSquare size={13} /></button>
+          </div>
+        )
       )}
 
       {groups.map((group) => {
@@ -136,8 +193,22 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
             {!isCollapsed && items.length > 0 && (
               <div className="space-y-0.5">
                 {items.map((item, i) => (
-                  <div key={item.id} className="group/row flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-foreground/[0.03] transition cursor-pointer" onClick={() => openItem(item.id)}>
-                    <span className="text-[11px] font-bold text-foreground/30 w-5 text-right shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                  <div
+                    key={item.id}
+                    className="group/row flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-foreground/[0.03] transition cursor-pointer"
+                    onClick={() => (selectMode ? toggleSelected(item.id) : openItem(item.id))}
+                  >
+                    {selectMode ? (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(item.id)}
+                        onChange={() => toggleSelected(item.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 shrink-0 accent-[rgb(var(--lz-brand-rgb))]"
+                      />
+                    ) : (
+                      <span className="text-[11px] font-bold text-foreground/30 w-5 text-right shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                    )}
                     <span className="flex-1 text-sm text-foreground truncate">{item.title}</span>
                     {typeof item.activityQuantity === "number" && (
                       <span className="flex items-center gap-1 text-[11px] text-foreground/40 shrink-0">
@@ -155,21 +226,23 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                         <Calendar size={11} /> {new Date(item.dueDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
                       </span>
                     )}
-                    <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => openItem(item.id)} title="Editar" className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition">
-                        <Pencil size={13} />
-                      </button>
-                      {isAdmin && !isAvulso && (
-                        <button onClick={() => setMovingItem(item)} title="Mover para outro mês" className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition">
-                          <FolderInput size={13} />
+                    {!selectMode && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => openItem(item.id)} title="Editar" className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition">
+                          <Pencil size={13} />
                         </button>
-                      )}
-                      {isAdmin && (
-                        <button onClick={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }} title="Excluir" className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition">
-                          <Trash2 size={13} />
-                        </button>
-                      )}
-                    </div>
+                        {isAdmin && !isAvulso && (
+                          <button onClick={() => setMovingItem(item)} title="Mover para outro mês" className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition">
+                            <FolderInput size={13} />
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button onClick={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }} title="Excluir" className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition">
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
