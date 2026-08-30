@@ -203,7 +203,7 @@ function MediaPreview({
   itemId: string; coverUrl: string | null; postFormat: PostFormat | null | undefined; itemType: string; canEdit: boolean;
 }) {
   const { data: files = [], isLoading: filesLoading } = useQuery(itemFilesQO(itemId));
-  const { upload, busy, error, missingClientId } = useItemFileUpload(itemId, "media");
+  const { upload, uploadProgress, busy, error, missingClientId } = useItemFileUpload(itemId, "media");
   const { detachItemFile, deleteItemFileAndDrive, reorderItemFiles } = useApi();
   const fetchDriveToken = useServerFn(getDriveVideoToken);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -214,6 +214,11 @@ function MediaPreview({
   const [downloadingFirst, setDownloadingFirst] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const isCarrossel = itemType === "post" && postFormat === "carrossel";
+  // Rótulo compacto pro quadradinho de mídia — mesma ideia do "Enviando...
+  // X%" que "Arquivos" já mostra, só que cabendo num espaço bem menor.
+  const progressLabel = uploadProgress
+    ? uploadProgress.phase === "syncing" ? "Salvando..." : `${uploadProgress.pct}%`
+    : null;
 
   // Local optimistic slide order, kept in sync with FilesSection's list via
   // the shared item-files query/mutation — reordering here or there updates
@@ -414,7 +419,12 @@ function MediaPreview({
               disabled={busy}
               className="w-16 h-16 shrink-0 rounded-md border border-dashed border-foreground/15 bg-card hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors disabled:opacity-50"
             >
-              {busy ? <Loader2 size={14} className="animate-spin text-foreground/40" /> : <Plus size={16} className="text-foreground/40" />}
+              {busy ? (
+                <div className="flex flex-col items-center gap-0.5">
+                  <Loader2 size={13} className="animate-spin text-foreground/40" />
+                  {progressLabel && <span className="text-[8.5px] font-bold text-foreground/50 leading-none">{progressLabel}</span>}
+                </div>
+              ) : <Plus size={16} className="text-foreground/40" />}
             </button>
           )}
           {inputEl}
@@ -436,7 +446,10 @@ function MediaPreview({
           className="group w-24 h-24 rounded-[10px] border border-dashed border-foreground/15 bg-card hover:border-[rgb(var(--lz-brand-rgb))] hover:bg-[#171717] transition-colors flex flex-col items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-default"
         >
           {busy ? (
-            <Loader2 size={16} className="animate-spin text-foreground/40" />
+            <div className="flex flex-col items-center gap-1">
+              <Loader2 size={16} className="animate-spin text-foreground/40" />
+              {progressLabel && <span className="text-[10px] font-bold text-foreground/60">{progressLabel}</span>}
+            </div>
           ) : dragOver ? (
             <Upload size={16} className="text-[var(--lz-accent-ink)]" />
           ) : (
@@ -534,7 +547,13 @@ function MediaPreview({
             }}
           />
         )}
-        {dragOver && canEdit && (
+        {busy && (
+          <div className="absolute inset-0 rounded-[10px] bg-black/70 flex flex-col items-center justify-center gap-1 pointer-events-none">
+            <Loader2 size={16} className="animate-spin text-[var(--lz-accent-ink)]" />
+            {progressLabel && <span className="text-[11px] font-bold text-foreground">{progressLabel}</span>}
+          </div>
+        )}
+        {dragOver && canEdit && !busy && (
           <div className="absolute inset-0 rounded-[10px] bg-black/60 flex items-center justify-center pointer-events-none">
             <Upload size={18} className="text-[var(--lz-accent-ink)]" />
           </div>
