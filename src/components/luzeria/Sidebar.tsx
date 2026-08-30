@@ -19,7 +19,7 @@ import { hasSetorPermission, hasPermission, type Client } from "@/lib/luzeria/ty
 export const DEFAULT_NAV_LABELS: Record<string, string> = {
   "minhas-demandas": "Minhas demandas", dashboard: "Dashboard", clientes: "Clientes",
   calendario: "Calendário", biblioteca: "Biblioteca",
-  instagram: "Instagram", financeiro: "Plano e Cobrança", equipe: "Equipe", ajuda: "Ajuda",
+  instagram: "Instagram", financeiro: "Financeiro", equipe: "Equipe", ajuda: "Ajuda",
   cobranca: "Plano e Cobrança", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda",
   rotina: "Rotina", membros: "Membros", relatorio: "Relatório", jornada: "Jornada do cliente",
   vendas: "Vendas", lixeira: "Lixeira", pagamentos: "Pagamentos", cliente: "Visão Geral", "cliente-overview": "Visão Geral",
@@ -270,9 +270,9 @@ export function Sidebar({
                 </NavGroup>
               </div>
             ) }] : []),
-            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Plano e Cobrança"), meta: { icon: <Wallet size={17} />, label: navLabel("financeiro", "Plano e Cobrança"), active: configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda"), kind: "flyout" as const }, node: (
+            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Financeiro"), meta: { icon: <Wallet size={17} />, label: navLabel("financeiro", "Financeiro"), active: configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda"), kind: "flyout" as const }, node: (
               <div key="financeiro" data-tour="nav-financeiro">
-                <NavGroup icon={<Wallet size={15} />} label={navLabel("financeiro", "Plano e Cobrança")}
+                <NavGroup icon={<Wallet size={15} />} label={navLabel("financeiro", "Financeiro")}
                   active={configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda")}>
                   {financeiroItems.map((it) => it.node)}
                 </NavGroup>

@@ -1,42 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Search, X } from "lucide-react";
-import { useMe } from "@/lib/luzeria/queries";
+import { useMe, clientsQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { FEATURE_INDEX, type FeatureEntry } from "@/lib/luzeria/feature-index";
+import { scoreFields } from "@/lib/luzeria/search-match";
+import { Avatar } from "./Avatar";
 
-function normalize(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-}
-
-/** Pontua a relevância de uma entrada pra uma busca — maior é melhor, 0 é
- * "não bate". Prioriza: termo guarda-chuva exato (ex: "financeiro" pra
- * Plano e Cobrança) > nome exato > nome começa com > keyword exata >
- * keyword começa com > nome contém > keyword contém > descrição contém.
- * Isso é o que faz "financeiro" cair primeiro em Plano e Cobrança mesmo
- * aparecendo também como sinônimo em Margem/Afiliados/Revenda. */
-function scoreEntry(entry: FeatureEntry, rawQuery: string): number {
-  const q = normalize(rawQuery.trim());
-  if (!q) return 1;
-  const label = normalize(entry.label);
-  let best = 0;
-  for (const sk of entry.strongKeywords ?? []) {
-    if (normalize(sk) === q) best = Math.max(best, 100);
-  }
-  if (label === q) best = Math.max(best, 95);
-  else if (label.startsWith(q)) best = Math.max(best, 80);
-  for (const k of entry.keywords) {
-    const nk = normalize(k);
-    if (nk === q) best = Math.max(best, 70);
-    else if (nk.startsWith(q)) best = Math.max(best, 55);
-  }
-  if (label.includes(q)) best = Math.max(best, 40);
-  for (const k of entry.keywords) {
-    if (normalize(k).includes(q)) best = Math.max(best, 25);
-  }
-  if (normalize(entry.description).includes(q)) best = Math.max(best, 10);
-  return best;
+/** Pontua a relevância de uma tela pra busca. Cada campo tem um peso: termo
+ * guarda-chuva ("financeiro" pra Plano e Cobrança) pesa mais que o nome, que
+ * pesa mais que as palavras-chave, que pesam mais que a descrição.
+ *
+ * O casamento em si é por PALAVRA e tolerante (ver search-match.ts): quebra a
+ * frase, ignora acento e palavra vazia, aguenta erro de digitação e casa por
+ * radical. Antes a busca comparava a frase inteira de forma literal, então
+ * "pagar asinatura" não achava nada — nem por estar escrito errado, nem por
+ * ninguém ter cadastrado essa frase exata como palavra-chave.
+ */
+function scoreEntry(entry: FeatureEntry, query: string): number {
+  return scoreFields([
+    { texto: (entry.strongKeywords ?? []).join(" "), peso: 3.0 },
+    { texto: entry.label, peso: 2.5 },
+    { texto: entry.keywords.join(" "), peso: 1.5 },
+    { texto: entry.description, peso: 0.6 },
+  ], query);
 }
 
 /** Botão que abre a busca — usado no cabeçalho (desktop) e na barra
@@ -71,6 +60,10 @@ export function GlobalSearchButton({ variant, active }: { variant: "header" | "m
 /** Overlay da busca — renderizado uma vez, globalmente. Não busca dados
  * (posts, clientes): busca "onde é que fica isso" no FEATURE_INDEX, pra
  * quem não acha uma função saber pra onde ir. */
+type Resultado =
+  | { tipo: "tela"; entry: FeatureEntry }
+  | { tipo: "cliente"; client: { id: string; name: string; color: string; photoUrl?: string | null; category?: string } };
+
 export function GlobalSearchOverlay() {
   const open = useUI((s) => s.searchOpen);
   const setOpen = useUI((s) => s.setSearchOpen);
@@ -83,24 +76,49 @@ export function GlobalSearchOverlay() {
     if (open) setQuery("");
   }, [open]);
 
-  const results = useMemo(() => {
+  // Busca também nos clientes: procurar "Filipe" tem que levar ao cliente,
+  // não só a telas. Os dois tipos entram na mesma lista, ordenados juntos.
+  const { data: clients = [] } = useQuery({ ...clientsQO(), enabled: open });
+
+  const results = useMemo((): Resultado[] => {
     if (!me) return [];
     const disabled = new Set(me.disabledFeatures ?? []);
     const visible = FEATURE_INDEX.filter((e) =>
       (!e.roles || (me.role && e.roles.includes(me.role as "master" | "setor"))) &&
       (!e.hideIfDisabled || !disabled.has(e.hideIfDisabled))
     );
-    if (!query.trim()) return visible;
-    return visible
-      .map((e) => ({ entry: e, score: scoreEntry(e, query) }))
-      .filter((r) => r.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .map((r) => r.entry);
-  }, [me, query]);
+    const ativos = clients.filter((c) => !c.archived);
 
-  function go(entry: FeatureEntry) {
+    if (!query.trim()) {
+      return visible.map((entry) => ({ tipo: "tela" as const, entry }));
+    }
+
+    const telas = visible
+      .map((entry) => ({ r: { tipo: "tela" as const, entry }, score: scoreEntry(entry, query) }))
+      .filter((x) => x.score > 0);
+
+    const porCliente = ativos
+      .map((client) => ({
+        r: { tipo: "cliente" as const, client },
+        // Nome do cliente pesa alto: quem digita um nome quer o cliente,
+        // não uma tela que por acaso menciona a palavra.
+        score: scoreFields([{ texto: client.name, peso: 3.2 }, { texto: client.category ?? "", peso: 0.5 }], query),
+      }))
+      .filter((x) => x.score > 0);
+
+    return [...telas, ...porCliente]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 12)
+      .map((x) => x.r);
+  }, [me, query, clients, open]);
+
+  function go(r: Resultado) {
     setOpen(false);
-    navigate({ to: entry.to, search: entry.toSearch } as any);
+    if (r.tipo === "cliente") {
+      navigate({ to: "/cliente/$clientId", params: { clientId: r.client.id } } as any);
+      return;
+    }
+    navigate({ to: r.entry.to, search: r.entry.toSearch } as any);
   }
 
   if (!open) return null;
@@ -134,14 +152,26 @@ export function GlobalSearchOverlay() {
           {results.length === 0 ? (
             <p className="text-center text-foreground/40 text-sm py-8">Nada encontrado — tenta outra palavra.</p>
           ) : (
-            results.map((entry) => (
+            results.map((r) => r.tipo === "cliente" ? (
               <button
-                key={entry.id}
-                onClick={() => go(entry)}
+                key={`c-${r.client.id}`}
+                onClick={() => go(r)}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-foreground/5 transition-colors flex items-center gap-2.5"
+              >
+                <Avatar name={r.client.name} color={r.client.color} avatarUrl={r.client.photoUrl} size={28} />
+                <span className="min-w-0 flex flex-col">
+                  <span className="text-sm font-semibold text-foreground truncate">{r.client.name}</span>
+                  <span className="text-xs text-foreground/45">Cliente{r.client.category ? ` · ${r.client.category}` : ""}</span>
+                </span>
+              </button>
+            ) : (
+              <button
+                key={r.entry.id}
+                onClick={() => go(r)}
                 className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-foreground/5 transition-colors flex flex-col gap-0.5"
               >
-                <span className="text-sm font-semibold text-foreground">{entry.label}</span>
-                <span className="text-xs text-foreground/45">{entry.description}</span>
+                <span className="text-sm font-semibold text-foreground">{r.entry.label}</span>
+                <span className="text-xs text-foreground/45">{r.entry.description}</span>
               </button>
             ))
           )}
