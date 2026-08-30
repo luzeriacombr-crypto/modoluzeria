@@ -289,6 +289,17 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   </span>
                   <div className="flex items-center gap-2">
                     <button
+                      onClick={() => setSelectedIds(
+                        items.length > 0 && items.every((it) => selectedIds.has(it.id))
+                          ? new Set()
+                          : new Set(items.map((it) => it.id)),
+                      )}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition"
+                    >
+                      <CheckSquare size={13} />
+                      {items.length > 0 && items.every((it) => selectedIds.has(it.id)) ? "Limpar seleção" : "Selecionar tudo"}
+                    </button>
+                    <button
                       onClick={bulkDelete}
                       disabled={selectedIds.size === 0 || deleteContentItems.isPending}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-red-400 hover:bg-red-500/10 disabled:opacity-30 transition"
