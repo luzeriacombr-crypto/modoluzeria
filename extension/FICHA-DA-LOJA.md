@@ -128,3 +128,71 @@ extensão. Nenhum dado sai do navegador por causa dessa permissão.
 precisa falar com ele pra autenticar a pessoa e salvar a referência —
 é o único servidor com o qual ela se comunica.
 ```
+
+---
+
+## Aba Privacidade
+
+### Único propósito
+```
+Salvar a página que a pessoa está vendo como referência na Biblioteca
+de Referências do Modo Criador (modocriador.com.br), associada à
+biblioteca geral da agência ou a um cliente específico. É essa a única
+função da extensão: ler o título e o link da aba atual, autenticar a
+pessoa e gravar a referência escolhida. Nada além disso.
+```
+
+### Justificativa de activeTab
+```
+Usada só no momento em que a pessoa clica no ícone da extensão, pra
+ler o título e a URL da aba visível e pré-preencher os campos "Título"
+e "Link" do formulário. Não roda em segundo plano, não é usada em
+nenhum outro momento, e não lê o conteúdo da página além do título e
+da URL.
+```
+
+### Justificativa de storage
+```
+Guarda localmente, no armazenamento do próprio navegador, o token de
+sessão da pessoa depois do login no Modo Criador — assim ela não
+precisa digitar e-mail e senha toda vez que abrir a extensão. Nenhum
+dado sai do navegador por causa dessa permissão; só é lido pela
+própria extensão pra renovar a sessão.
+```
+
+### Justificativa de Permissão do host (grmayzeeemilvhjeninh.supabase.co)
+```
+É o endereço do banco de dados (Supabase) que hospeda o Modo Criador,
+nosso próprio produto (modocriador.com.br). A extensão precisa falar
+com ele pra autenticar a pessoa, buscar a lista de clientes dela e
+gravar a referência salva. É o único servidor com o qual a extensão
+se comunica.
+```
+
+### Você está usando código remoto?
+```
+Não, não estou usando código remoto.
+```
+(Todo o JS já vai dentro do pacote enviado — popup.js, popup.html,
+popup.css. Nenhum script é carregado de fora, e não há eval().)
+
+### Uso de dados — marcar estas 3 caixas
+- [x] Informações de identificação pessoal — *(e-mail, usado pra login)*
+- [x] Informações de autenticação — *(senha, usada pra login — não é guardada, só repassada pro login)*
+- [x] Conteúdo do site — *(título, link e observação da referência salva)*
+
+Deixar desmarcado o resto (saúde, financeiro, comunicações pessoais,
+local, histórico da web, atividade do usuário) — a extensão não faz
+nada disso.
+
+### As 3 declarações — marcar todas (são verdadeiras)
+- [x] Não vendo nem transfiro dados do usuário a terceiros fora dos casos de uso aprovados
+- [x] Não uso nem transfiro dados do usuário para fins não relacionados ao único objetivo do meu item
+- [x] Não uso nem transfiro dados do usuário para determinar credibilidade ou para fins de empréstimo
+
+### URL da Política de Privacidade
+```
+https://www.modocriador.com.br/privacidade
+```
+(Atualizei essa página com uma seção específica sobre a extensão,
+publicada agora — pode usar o link direto.)
