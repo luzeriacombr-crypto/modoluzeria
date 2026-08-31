@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import {
   Rocket, CalendarDays, Users, Link2, FolderOpen, Check, X, Zap, Lock, Star,
   MessageCircle, LayoutDashboard, BarChart3, Bell, ShieldCheck, Smartphone, Tablet, Monitor,
@@ -197,17 +197,26 @@ export const LIFT = "transition-[transform,box-shadow] duration-300 hover:-trans
  * dentro dela (um só observer por bloco, os itens só atrasam a própria
  * transição via `staggerStyle`, não criam observer cada um). */
 export function useReveal<T extends HTMLElement = HTMLDivElement>() {
-  const ref = useRef<T>(null);
   const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setVisible(true); return; }
-    const el = ref.current;
+  const obsRef = useRef<IntersectionObserver | null>(null);
+  // Ref por callback, não useRef comum: o elemento observado às vezes só
+  // existe depois de um carregamento assíncrono (ex.: a grade de Planos só
+  // monta depois que os preços chegam — antes disso é um esqueleto sem
+  // essa ref nenhuma). Um useRef comum monta o observer uma vez, no efeito
+  // do primeiro render, e nunca mais — se o elemento de verdade só aparece
+  // depois, o observer nunca é criado e o card fica com opacidade 0 pra
+  // sempre. Callback ref é chamada pelo React toda vez que o nó muda
+  // (inclusive quando aparece pela primeira vez, atrasado), então funciona
+  // não importa quando o elemento realmente montar.
+  const ref = useCallback((el: T | null) => {
+    if (obsRef.current) { obsRef.current.disconnect(); obsRef.current = null; }
     if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setVisible(true); return; }
     const obs = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) { setVisible(true); obs.disconnect(); }
     }, { threshold: 0.15 });
     obs.observe(el);
-    return () => obs.disconnect();
+    obsRef.current = obs;
   }, []);
   return { ref, visible };
 }
