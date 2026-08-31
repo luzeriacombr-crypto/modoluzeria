@@ -154,6 +154,40 @@ export function useDragReorder<T>(items: T[], onReorder: (next: T[]) => void) {
   return { overIndex, onDragStart, onDragOverItem, onDropItem, onDragEnd };
 }
 
+/** Brilho que segue o mouse — um círculo suave (radial-gradient) centrado
+ * na posição do cursor dentro do elemento, tipo "spotlight". Só no site
+ * público: no editor teria só o cursor do computador do Junior, sem
+ * sentido nenhum. Ignora toque (não existe "mouse" lá) e reduced-motion. */
+export function useMouseGlow<T extends HTMLElement = HTMLDivElement>() {
+  const ref = useRef<T>(null);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+    // Começa centrado (largura/altura reais do próprio elemento), não em
+    // 0,0 — sem isso o brilho nasceria preso no canto até o primeiro
+    // movimento real do mouse.
+    const rect = el.getBoundingClientRect();
+    setPos({ x: rect.width / 2, y: rect.height / 2 });
+    let raf = 0;
+    function onMove(e: MouseEvent) {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const r = el!.getBoundingClientRect();
+        setPos({ x: e.clientX - r.left, y: e.clientY - r.top });
+      });
+    }
+    el.addEventListener("mousemove", onMove);
+    return () => {
+      el.removeEventListener("mousemove", onMove);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+  return { ref, x: pos?.x ?? 0, y: pos?.y ?? 0, active: pos !== null };
+}
+
 export const EASE = { transitionTimingFunction: "var(--ease-premium)" as const };
 export const POP = "transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97]";
 export const LIFT = "transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-2xl";
@@ -1594,8 +1628,22 @@ export function HeroSection({ content, onChange, onCtaClick }: { content: any; o
   // bloquearia essa animação pra sempre. Aplicado num container por fora,
   // os dois efeitos compõem em vez de brigar.
   const parallax = useScrollParallax<HTMLDivElement>(0.06);
+  const glow = useMouseGlow<HTMLElement>();
   return (
-    <section className="px-5 sm:px-10 max-w-[1200px] mx-auto pt-8 pb-16">
+    <section
+      ref={editable ? undefined : glow.ref}
+      className="relative px-5 sm:px-10 max-w-[1200px] mx-auto pt-8 pb-16"
+    >
+      {!editable && glow.active && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            // Mesmo azul do fundo do Hero, só que mais claro — e bem sutil
+            // (opacidade baixa): um brilho discreto, não um destaque.
+            background: `radial-gradient(600px circle at ${glow.x}px ${glow.y}px, rgba(70,90,170,0.14), transparent 70%)`,
+          }}
+        />
+      )}
       <div className="grid lg:grid-cols-2 gap-2 lg:gap-8 items-center">
         <div className="order-2 lg:order-1">
           <div className="inline-flex items-center gap-2 border border-foreground/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide mb-6">
