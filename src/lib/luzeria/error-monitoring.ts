@@ -18,6 +18,16 @@ export const errorMonitoringEnabled = Boolean(DSN);
 export function initErrorMonitoring() {
   if (!DSN) return;
 
+  // Ajuda temporária pra confirmar em produção que o envio pro Sentry
+  // funciona de ponta a ponta, sem depender do navegador conseguir capturar
+  // um throw digitado direto no console (nem sempre passa pelo
+  // window.onerror do jeito esperado). Rodar no console: window.__testSentry()
+  // Remover depois de confirmado.
+  (window as any).__testSentry = () => {
+    Sentry.captureException(new Error("teste manual do sentry"), { level: "warning" });
+    Sentry.flush(2000).then(() => console.log("[sentry] enviado (ou tentativa concluída)"));
+  };
+
   Sentry.init({
     dsn: DSN,
     environment: ENV,
