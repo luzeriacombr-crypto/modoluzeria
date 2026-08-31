@@ -10,7 +10,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { PRESET_COLORS, glassCardStyle, formatMonth } from "@/lib/luzeria/utils";
+import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
 import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { reportAppError } from "@/lib/error-reporting";
 import { toast } from "sonner";
@@ -698,7 +698,7 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
-  const { updateClient, deleteClient, duplicateMonth } = useApi();
+  const { updateClient, deleteClient } = useApi();
   const openFicha = useUI((s) => s.openFicha);
 
   useEffect(() => {
@@ -733,8 +733,6 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
       window.removeEventListener("scroll", place, true);
     };
   }, [menuOpen]);
-
-  const monthKey = useUI((s) => s.selectedMonthKey);
 
   return (
     <div ref={ref}
@@ -833,15 +831,6 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
               maxLength={2}
             />
           </div>
-          <MenuItem onClick={() => {
-            // O aviso ficava FORA do onSuccess: falhando ou não, avisava
-            // que tinha duplicado. Agora só fala depois de confirmar.
-            duplicateMonth.mutate(
-              { data: { clientId: client.id, fromKey: monthKey } },
-              { onSuccess: () => toast.success(`Mês de ${formatMonth(monthKey)} duplicado.`) },
-            );
-            setMenuOpen(false);
-          }}>Duplicar mês</MenuItem>
           <MenuItem onClick={() => { onOpenCustomFields(); setMenuOpen(false); }}>Campos personalizados</MenuItem>
           <MenuItem onClick={() => {
             updateClient.mutate({ data: { id: client.id, patch: { archived: !client.archived } } });
