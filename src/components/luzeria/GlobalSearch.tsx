@@ -28,25 +28,12 @@ function scoreEntry(entry: FeatureEntry, query: string): number {
   ], query);
 }
 
-/** Botão que abre a busca — usado no cabeçalho (desktop) e na barra
- * inferior (celular), cada um com seu próprio visual, ambos abrindo o
- * mesmo overlay global via useUI (só existe uma instância do overlay,
- * renderizada uma vez em App.tsx). */
-export function GlobalSearchButton({ variant, active }: { variant: "header" | "mobile"; active?: boolean }) {
+/** Botão que abre a busca — só no cabeçalho agora (o celular tinha uma
+ * segunda lupa na barra inferior, removida por ser redundante com esta).
+ * Abre o mesmo overlay global via useUI (só existe uma instância do
+ * overlay, renderizada uma vez em App.tsx). */
+export function GlobalSearchButton() {
   const setSearchOpen = useUI((s) => s.setSearchOpen);
-  if (variant === "mobile") {
-    return (
-      <button
-        onClick={() => setSearchOpen(true)}
-        aria-label="Buscar"
-        data-tour="global-search-mobile"
-        className="flex items-center justify-center h-12 w-14 transition-colors"
-        style={{ color: active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 40%, transparent)" }}
-      >
-        <Search size={20} />
-      </button>
-    );
-  }
   return (
     <button
       onClick={() => setSearchOpen(true)}

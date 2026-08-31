@@ -371,7 +371,7 @@ function Header({ sidebarHidden, onToggleSidebar, sidebarCollapsed, onToggleColl
           )}
         </div>
       )}
-      <GlobalSearchButton variant="header" />
+      <GlobalSearchButton />
       <HelpButton />
       <NotificationsBell />
       {me && (

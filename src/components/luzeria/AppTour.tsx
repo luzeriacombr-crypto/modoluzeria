@@ -40,9 +40,8 @@ const STEPS: Step[] = [
     id: "busca",
     title: "Não achou alguma coisa? Busca aqui",
     desc: "Digite o que você quer fazer, do jeito que vier na cabeça — \"pagar assinatura\", \"apaguei sem querer\", ou o nome de um cliente. Ela entende sinônimo e aguenta erro de digitação.",
-    descMobile: "Toque na lupa e digite o que você quer fazer, do jeito que vier na cabeça — \"pagar assinatura\", \"apaguei sem querer\", ou o nome de um cliente.",
+    descMobile: "Toque na lupa aqui em cima e digite o que você quer fazer, do jeito que vier na cabeça — \"pagar assinatura\", \"apaguei sem querer\", ou o nome de um cliente.",
     target: '[data-tour="global-search"]',
-    mobileTarget: '[data-tour="global-search-mobile"]',
   },
   {
     id: "tasks",
