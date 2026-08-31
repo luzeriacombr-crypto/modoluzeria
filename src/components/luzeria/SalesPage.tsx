@@ -8,7 +8,8 @@ import { salesPageBlocksQO } from "@/lib/luzeria/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { DemoRequestModal } from "./DemoRequestModal";
-import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, Reveal, SalesPageBody, useReveal, staggerStyle } from "./salesPageBlocks";
+import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, Reveal, HeroSection, renderBlockNode, useReveal, staggerStyle } from "./salesPageBlocks";
+import { InteractiveDashboardDemo } from "./SalesInteractiveDashboard";
 
 const PENDING_GOOGLE_SIGNUP_KEY = "modocriador:pending-google-signup";
 const DEMO_POPUP_SHOWN_KEY = "modocriador:demo-popup-shown";
@@ -194,7 +195,9 @@ export function SalesPage() {
       </header>
 
       {/* Hero + blocos de conteúdo, editáveis em Configurações > Site */}
-      <SalesPageBody hero={hero} blocks={restBlocks} onCtaClick={() => scrollToForm()} />
+      {hero && <HeroSection content={hero.content} onCtaClick={() => scrollToForm()} />}
+      <InteractiveDashboardDemo />
+      {restBlocks.map((b) => renderBlockNode(b))}
 
       {/* Planos */}
       <section style={{ background: BG_BLUE_2 }} className="border-t border-foreground/10">
