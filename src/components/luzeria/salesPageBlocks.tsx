@@ -158,9 +158,12 @@ export const EASE = { transitionTimingFunction: "var(--ease-premium)" as const }
 export const POP = "transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97]";
 export const LIFT = "transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-2xl";
 
-/** Fades + slides a section's content in once it enters the viewport. */
-export function Reveal({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
-  const ref = useRef<HTMLDivElement>(null);
+/** Observa quando um elemento entra na tela — base compartilhada por
+ * `Reveal` (a seção inteira) e pelo reveal em cascata dos itens de lista
+ * dentro dela (um só observer por bloco, os itens só atrasam a própria
+ * transição via `staggerStyle`, não criam observer cada um). */
+export function useReveal<T extends HTMLElement = HTMLDivElement>() {
+  const ref = useRef<T>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setVisible(true); return; }
@@ -172,6 +175,12 @@ export function Reveal({ children, className, style }: { children: React.ReactNo
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+  return { ref, visible };
+}
+
+/** Fades + slides a section's content in once it enters the viewport. */
+export function Reveal({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
+  const { ref, visible } = useReveal<HTMLDivElement>();
   return (
     <div ref={ref} className={className} style={{
       ...style,
@@ -182,6 +191,60 @@ export function Reveal({ children, className, style }: { children: React.ReactNo
       {children}
     </div>
   );
+}
+
+/** Estilo de um item dentro de uma lista/grade que revela em cascata —
+ * mesmo `visible` de um único observer no container (a lista inteira),
+ * só a transição de cada item atrasa em sequência. Efeito "premium" de
+ * itens aparecendo um a um ao rolar, sem criar um observer por item.
+ *
+ * `transform` some (vira `undefined`, não "translateY(0)") assim que
+ * `visible` vira true — alguns desses itens (os cards de "Simples assim")
+ * também têm um `transform` próprio no hover (LIFT, levanta o card). Um
+ * `style.transform` fixo inline venceria essa classe pra sempre e o hover
+ * nunca mais levantaria nada; devolvendo o controle, o hover volta a
+ * funcionar normalmente depois que o item já apareceu. */
+export function staggerStyle(visible: boolean, index: number, stepMs = 70): React.CSSProperties {
+  const delay = visible ? `${index * stepMs}ms` : "0ms";
+  return {
+    opacity: visible ? 1 : 0,
+    transform: visible ? undefined : "translateY(18px)",
+    transition: `opacity 550ms var(--ease-premium) ${delay}, transform 550ms var(--ease-premium) ${delay}`,
+  };
+}
+
+/** Parallax leve por scroll — desloca o elemento alguns pixels conforme
+ * ele se aproxima do centro da tela. Só usado no site público (a versão
+ * editável das imagens já tem o próprio arrastar-pra-mover, que não deve
+ * competir com um deslocamento automático). Passivo, sem lib: mede a
+ * posição a cada scroll via requestAnimationFrame. */
+export function useScrollParallax<T extends HTMLElement = HTMLDivElement>(strength = 0.05) {
+  const ref = useRef<T>(null);
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    function measure() {
+      const el = ref.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const centerDelta = rect.top + rect.height / 2 - window.innerHeight / 2;
+      setOffset(centerDelta * -strength);
+    }
+    function onScroll() {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(measure);
+    }
+    measure();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [strength]);
+  return { ref, offset };
 }
 
 /* ---------------------------------------------------------------------- *
@@ -1152,6 +1215,10 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
   const drag = useDragReorder(items, (next) => set({ items: next }));
   const py = paddingYValue(content);
   const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
+  // Reveal em cascata só no site público — no editor os itens precisam
+  // estar sempre visíveis pra edição, sem depender de rolar a página.
+  const listReveal = useReveal<HTMLUListElement>();
+  const listVisible = editable || listReveal.visible;
 
   return (
     <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-foreground/10 relative">
@@ -1161,10 +1228,11 @@ export function BulletListBlock({ content, onChange }: { content: any; onChange?
         ) : (
           <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">{content.heading}</h2>
         )}
-        <ul className="space-y-4">
+        <ul ref={editable ? undefined : listReveal.ref} className="space-y-4">
           {items.map((t, i) => (
             <li
               key={i}
+              style={editable ? undefined : staggerStyle(listVisible, i)}
               className={`group/item flex gap-3 text-base sm:text-lg items-start rounded-md transition ${dark ? "text-foreground/80" : "text-[#0A0E23]/75"} ${drag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))] outline-offset-4" : ""}`}
               onDragOver={editable ? (e) => drag.onDragOverItem(e, i) : undefined}
               onDrop={editable ? (e) => drag.onDropItem(e, i) : undefined}
@@ -1227,6 +1295,8 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
   const drag = useDragReorder(items, (next) => set({ items: next }));
   const py = paddingYValue(content);
   const resize = useResizeDrag(py, PADDING_PX_MIN, PADDING_PX_MAX, (v) => set({ paddingY: v }));
+  const gridReveal = useReveal<HTMLDivElement>();
+  const gridVisible = editable || gridReveal.visible;
 
   return (
     <section style={{ ...bgStyle, color: dark ? "#fff" : "#0A0E23" }} className="border-t border-foreground/10 relative">
@@ -1236,12 +1306,12 @@ export function StepsBlock({ content, onChange }: { content: any; onChange?: (c:
         ) : (
           <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-10 text-center">{content.heading}</h2>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div ref={editable ? undefined : gridReveal.ref} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {items.map((s, i) => (
             <div
               key={i}
               className={`relative group/step rounded-xl p-5 border transition ${dark ? "bg-foreground/[0.04] border-foreground/10" : "bg-black/[0.04] border-black/10"} ${LIFT} ${drag.overIndex === i ? "outline outline-2 outline-dashed outline-[rgb(var(--lz-brand-rgb))] outline-offset-4" : ""}`}
-              style={EASE}
+              style={editable ? EASE : { ...EASE, ...staggerStyle(gridVisible, i) }}
               onDragOver={editable ? (e) => drag.onDragOverItem(e, i) : undefined}
               onDrop={editable ? (e) => drag.onDropItem(e, i) : undefined}
             >
@@ -1519,6 +1589,11 @@ export function SingleImageBlock({ content, onChange }: { content: any; onChange
 export function HeroSection({ content, onChange, onCtaClick }: { content: any; onChange?: (c: any) => void; onCtaClick?: () => void }) {
   const editable = !!onChange;
   const set = (patch: any) => onChange?.({ ...content, ...patch });
+  // Parallax só no site público, e só no wrapper — as imagens já flutuam
+  // sozinhas por dentro (keyframe CSS); um transform inline direto nelas
+  // bloquearia essa animação pra sempre. Aplicado num container por fora,
+  // os dois efeitos compõem em vez de brigar.
+  const parallax = useScrollParallax<HTMLDivElement>(0.06);
   return (
     <section className="px-5 sm:px-10 max-w-[1200px] mx-auto pt-8 pb-16">
       <div className="grid lg:grid-cols-2 gap-2 lg:gap-8 items-center">
@@ -1561,7 +1636,11 @@ export function HeroSection({ content, onChange, onCtaClick }: { content: any; o
             </p>
           </div>
         </div>
-        <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
+        <div
+          ref={editable ? undefined : parallax.ref}
+          className="order-1 lg:order-2 flex justify-center lg:justify-end"
+          style={editable ? undefined : { transform: `translateY(${parallax.offset}px)` }}
+        >
           <EditableImageArea
             images={content.images ?? []} onChange={editable ? (images) => set({ images }) : undefined} alt="Modo Criador" mode="hero"
             topicHint={`${content.eyebrowLabel ?? ""} ${content.titleLine1 ?? ""} ${content.titleAccentLine1 ?? ""}`}

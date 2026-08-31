@@ -8,7 +8,7 @@ import { salesPageBlocksQO } from "@/lib/luzeria/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { DemoRequestModal } from "./DemoRequestModal";
-import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, LIFT, Reveal, SalesPageBody } from "./salesPageBlocks";
+import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, Reveal, SalesPageBody, useReveal, staggerStyle } from "./salesPageBlocks";
 
 const PENDING_GOOGLE_SIGNUP_KEY = "modocriador:pending-google-signup";
 const DEMO_POPUP_SHOWN_KEY = "modocriador:demo-popup-shown";
@@ -50,6 +50,7 @@ export function SalesPage() {
   const [invoiceUrl, setInvoiceUrl] = useState<string | null | undefined>(undefined);
   const [showDemoModal, setShowDemoModal] = useState(false);
 
+  const plansReveal = useReveal<HTMLDivElement>();
   const selectablePlans = (plans.data ?? []).filter((p) => p.priceCents != null);
   const hero = blocks.find((b) => b.type === "hero");
   const restBlocks = blocks.filter((b) => b.type !== "hero");
@@ -158,9 +159,22 @@ export function SalesPage() {
   }, [invoiceUrl]);
 
   const scrolled = useScrolled();
+  const scrollProgress = useScrollProgress();
 
   return (
     <div className="min-h-screen text-foreground" style={{ background: "#0A0E23", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+      {/* Barra de progresso de leitura */}
+      <div className="fixed top-0 left-0 right-0 z-50 h-[3px] bg-transparent">
+        <div
+          className="h-full"
+          style={{
+            width: `${scrollProgress * 100}%`,
+            background: LIME,
+            transition: "width 100ms linear",
+          }}
+        />
+      </div>
+
       {/* Header */}
       <header
         className="sticky top-0 z-40 flex items-center justify-between px-5 sm:px-10 py-5"
@@ -202,15 +216,16 @@ export function SalesPage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {selectablePlans.map((p) => {
+            <div ref={plansReveal.ref} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {selectablePlans.map((p, i) => {
                 const recommended = p.name.trim().toLowerCase() === "pro";
                 return (
-                  <div key={p.id} className={`relative rounded-xl p-6 flex flex-col ${LIFT}`}
+                  <div key={p.id} className="relative rounded-xl p-6 flex flex-col transition-[transform,box-shadow] duration-300 hover:-translate-y-1.5 hover:shadow-[0_25px_70px_-20px_rgba(215,255,63,0.4)]"
                     style={{
                       background: recommended ? "rgba(215,255,63,0.06)" : "color-mix(in srgb, var(--foreground) 5%, transparent)",
                       border: recommended ? `2px solid ${LIME}` : "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
                       ...EASE,
+                      ...staggerStyle(plansReveal.visible, i),
                     }}>
                     {recommended && (
                       <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-wide px-3 py-1 rounded-full"
@@ -452,6 +467,32 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
       )}
     </div>
   );
+}
+
+/** Fração (0-1) de quanto já foi rolado da página — vira uma barrinha fina
+ * no topo. Detalhe pequeno, mas junto com o resto passa "produto cuidado". */
+function useScrollProgress() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    function measure() {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0);
+    }
+    function onScroll() {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(measure);
+    }
+    measure();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+  return progress;
 }
 
 function useScrolled(threshold = 30) {
