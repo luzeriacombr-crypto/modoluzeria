@@ -9,7 +9,7 @@ import { CONTENT_TYPE_LABEL, type ContentItem } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { ContentCard, ContentListRow } from "./ContentCard";
 import { FeedPreview } from "./FeedPreview";
-import { ClientFichaContent } from "./ClientFichaPanel";
+import { ClientFichaContent, OnboardingBanner } from "./ClientFichaPanel";
 import { formatMonth, nextMonthKey } from "@/lib/luzeria/utils";
 import { useMe } from "@/lib/luzeria/queries";
 import { MaisAtividadesTab } from "./MaisAtividadesTab";
@@ -240,6 +240,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           )}
         </div>
       </div>
+
+      {isAdmin && (
+        <div className="mt-4">
+          <OnboardingBanner clientId={client.id} onOpenFicha={() => setTab("ficha")} />
+        </div>
+      )}
 
       {/* Tabs — horizontally scrollable on its own (touch swipe), scrollbar
        * hidden, so the rest of the page never shifts sideways on mobile

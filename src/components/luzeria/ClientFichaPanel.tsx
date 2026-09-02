@@ -940,6 +940,69 @@ function AddContactRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d:
 
 /* ============== ONBOARDING ============== */
 
+/** Versão compacta e sempre visível do checklist de onboarding, pro
+ * cabeçalho do cliente (fora da Ficha do Cliente) — só admin de setor e
+ * admin master enxergam isso, já que quem chama esse componente já filtra
+ * por isAdmin antes de renderizar. */
+export function OnboardingBanner({ clientId, onOpenFicha }: { clientId: string; onOpenFicha: () => void }) {
+  const api = useApi();
+  const { data: onboarding } = useQuery(clientOnboardingQO(clientId));
+  const list = onboarding?.checklist ?? [];
+  if (list.length === 0) return null;
+  const done = list.filter((c) => c.done).length;
+  const allDone = done === list.length;
+
+  function toggle(id: string) {
+    api.updateClientOnboarding.mutate({
+      data: { clientId, checklist: list.map((x) => x.id === id ? { ...x, done: !x.done } : x) },
+    });
+  }
+
+  return (
+    <div className="mb-6 rounded-xl border p-3.5"
+      style={{
+        borderColor: allDone ? "rgba(var(--lz-brand-light-rgb),0.35)" : "color-mix(in srgb, var(--foreground) 10%, transparent)",
+        backgroundColor: allDone ? "rgba(var(--lz-brand-light-rgb),0.06)" : "color-mix(in srgb, var(--foreground) 3%, transparent)",
+      }}>
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <div className="flex items-center gap-2">
+          <ListChecks size={13} className="text-foreground/40" />
+          <span className="text-[11px] font-bold uppercase tracking-wide text-foreground/60">Etapas de onboarding</span>
+          <span className="text-[11px] text-foreground/40">{done}/{list.length}</span>
+          {allDone && (
+            <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
+              <CheckCircle2 size={11} /> Completo
+            </span>
+          )}
+        </div>
+        <button onClick={onOpenFicha} className="shrink-0 text-[11px] font-semibold text-foreground/40 hover:text-foreground transition-colors">
+          Editar
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {list.map((c) => (
+          <button key={c.id} onClick={() => toggle(c.id)}
+            className="inline-flex items-center gap-1.5 rounded-full pl-1.5 pr-2.5 py-1 text-[11px] font-medium transition-colors"
+            style={{
+              backgroundColor: c.done ? "rgba(var(--lz-brand-light-rgb),0.16)" : "color-mix(in srgb, var(--foreground) 5%, transparent)",
+              color: c.done ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
+            }}>
+            <span className="h-3.5 w-3.5 rounded-full flex items-center justify-center shrink-0"
+              style={{
+                backgroundColor: c.done ? "rgb(var(--lz-brand-rgb))" : "transparent",
+                border: c.done ? "none" : "1px solid color-mix(in srgb, var(--foreground) 30%, transparent)",
+              }}>
+              {c.done && <Check size={9} color="#0D0D0D" strokeWidth={3} />}
+            </span>
+            <span className={c.done ? "line-through opacity-70" : ""}>{c.text}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function OnboardingBlock({ clientId }: { clientId: string }) {
   const api = useApi();
   const { data: onboarding } = useQuery(clientOnboardingQO(clientId));
