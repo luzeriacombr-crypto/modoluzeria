@@ -133,7 +133,7 @@ const METRIC_COLUMNS: { key: keyof InstagramMediaInsights; label: string }[] = [
   { key: "comments", label: "Comentários" },
   { key: "saved", label: "Salvamentos" },
   { key: "shares", label: "Compart." },
-  { key: "plays", label: "Plays" },
+  { key: "views", label: "Visualizações" },
 ];
 
 function csvEscape(v: string) {
@@ -179,7 +179,7 @@ function MetricsPanel({ clientId, clientName }: { clientId: string; clientName: 
         const insights = await getInsights({ data: { clientId, mediaId: m.id, mediaProductType: m.mediaProductType } });
         next.set(m.id, insights);
       } catch (e: any) {
-        next.set(m.id, { itemId: m.id, reach: null, likes: null, comments: null, saved: null, shares: null, plays: null, totalInteractions: null, degradedReason: null, error: e?.message ?? "Falha ao buscar" });
+        next.set(m.id, { itemId: m.id, reach: null, likes: null, comments: null, saved: null, shares: null, views: null, totalInteractions: null, degradedReason: null, error: e?.message ?? "Falha ao buscar" });
       }
       // Pequena pausa entre chamadas pra não estourar limite de taxa da Meta.
       await new Promise((r) => setTimeout(r, 250));

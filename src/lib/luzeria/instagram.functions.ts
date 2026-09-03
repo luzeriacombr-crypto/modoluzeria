@@ -462,7 +462,7 @@ export type InstagramMediaInsights = {
   comments: number | null;
   saved: number | null;
   shares: number | null;
-  plays: number | null;
+  views: number | null;
   totalInteractions: number | null;
   /** Preenchido quando o conjunto completo de métricas falhou e caímos pro
    * fallback (só "reach") — mostra o motivo original pra facilitar debug. */
@@ -470,7 +470,7 @@ export type InstagramMediaInsights = {
 };
 
 const FEED_METRICS = "reach,likes,comments,saved,shares,total_interactions";
-const REELS_METRICS = "reach,likes,comments,saved,shares,total_interactions,plays";
+const REELS_METRICS = "reach,likes,comments,saved,shares,total_interactions,views";
 const STORY_METRICS = "reach,replies,navigation";
 
 /** media_product_type é o campo que a própria Meta devolve pra cada mídia
@@ -500,7 +500,7 @@ function parseInsights(json: any): Partial<Omit<InstagramMediaInsights, "itemId"
     comments: byName.comments ?? null,
     saved: byName.saved ?? null,
     shares: byName.shares ?? null,
-    plays: byName.plays ?? null,
+    views: byName.views ?? null,
     totalInteractions: byName.total_interactions ?? null,
   };
 }
