@@ -214,9 +214,10 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     .maybeSingle();
   if (!creds) throw new Error("Esse cliente ainda não conectou o Instagram. Vá na Ficha do Cliente e conecte.");
 
-  // Reel é sempre vídeo, Post hoje só aceita imagem, mas Story pode ser
-  // imagem OU vídeo — por isso o tipo de mídia real é o que decide o
-  // media_type/endpoint da chamada, não o item.type sozinho.
+  // Reel é sempre vídeo, Post pode ser 1 imagem OU um carrossel de várias
+  // (até 10, limite da própria Meta), Story pode ser imagem OU vídeo — por
+  // isso o tipo de mídia real é o que decide o media_type/endpoint da
+  // chamada, não o item.type sozinho.
   const { data: files } = await supabaseAdmin
     .from("item_files")
     .select("drive_file_id, mime_type")
@@ -224,93 +225,145 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     .order("sort_order").order("created_at");
   const wantVideo = item.type === "reel";
   const wantImage = item.type === "post";
-  const mediaFile = (files ?? []).find((f: any) => {
+  const relevantFiles = (files ?? []).filter((f: any) => {
     const mime = f.mime_type ?? "";
     if (wantVideo) return mime.startsWith("video/");
     if (wantImage) return mime.startsWith("image/");
     return mime.startsWith("image/") || mime.startsWith("video/"); // story
   });
-  if (!mediaFile) {
+  if (relevantFiles.length === 0) {
     throw new Error(
       item.type === "reel" ? "Anexe um vídeo ao reel antes de publicar."
         : item.type === "story" ? "Anexe uma imagem ou vídeo à story antes de publicar."
         : "Anexe uma imagem ao post antes de publicar.",
     );
   }
-  const isVideo = (mediaFile.mime_type ?? "").startsWith("video/");
-  const igMediaType = item.type === "reel" ? "REELS" : item.type === "story" ? "STORIES" : null;
-  // Stories não aceitam legenda pela API — o texto precisa já estar na
-  // própria imagem/vídeo.
-  const sendsCaption = item.type !== "story";
 
   const { getAccessToken, withDriveOrg } = await import("./drive.functions");
-  const mediaBuffer = await withDriveOrg(clientOrgId, async () => {
-    const token = await getAccessToken();
-    const res = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(mediaFile.drive_file_id)}?alt=media&supportsAllDrives=true`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-    if (!res.ok) throw new Error(`Falha ao baixar ${isVideo ? "o vídeo" : "a imagem"} do Drive (${res.status}).`);
-    return Buffer.from(await res.arrayBuffer());
-  });
+  const tempPaths: string[] = [];
 
-  const mimeType = mediaFile.mime_type ?? (isVideo ? "video/mp4" : "image/jpeg");
-  const ext = isVideo ? "mp4" : mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
-  const tempPath = `${itemId}/${Date.now()}.${ext}`;
-  const { error: upErr } = await supabaseAdmin.storage
-    .from("instagram-publish-temp")
-    .upload(tempPath, mediaBuffer, { contentType: mimeType, upsert: true });
-  if (upErr) throw new Error(`Falha ao preparar ${isVideo ? "o vídeo" : "a imagem"}: ${upErr.message}`);
-  const { data: pub } = supabaseAdmin.storage.from("instagram-publish-temp").getPublicUrl(tempPath);
-  const publicMediaUrl = pub.publicUrl;
-
-  try {
-    const containerRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        ...(isVideo ? { video_url: publicMediaUrl } : { image_url: publicMediaUrl }),
-        ...(igMediaType ? { media_type: igMediaType } : {}),
-        ...(sendsCaption ? { caption: item.caption ?? "" } : {}),
-        access_token: creds.access_token,
-      }),
+  /** Baixa um arquivo do Drive e sobe pro storage temporário público, que a
+   * Meta consegue buscar pra criar o container. Registra o caminho pra
+   * limpeza no finally, não importa quantos arquivos isso rodar. */
+  async function uploadFileToTemp(file: { drive_file_id: string; mime_type: string | null }) {
+    const isVideoFile = (file.mime_type ?? "").startsWith("video/");
+    const buffer = await withDriveOrg(clientOrgId!, async () => {
+      const token = await getAccessToken();
+      const res = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.drive_file_id)}?alt=media&supportsAllDrives=true`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) throw new Error(`Falha ao baixar ${isVideoFile ? "o vídeo" : "a imagem"} do Drive (${res.status}).`);
+      return Buffer.from(await res.arrayBuffer());
     });
-    const containerJson: any = await containerRes.json();
-    if (!containerRes.ok || !containerJson.id) {
-      throw new Error(containerJson?.error?.message ?? `O Instagram recusou ${isVideo ? "o vídeo" : "a imagem"}.`);
-    }
+    const mimeType = file.mime_type ?? (isVideoFile ? "video/mp4" : "image/jpeg");
+    const ext = isVideoFile ? "mp4" : mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
+    const tempPath = `${itemId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: upErr } = await supabaseAdmin.storage
+      .from("instagram-publish-temp")
+      .upload(tempPath, buffer, { contentType: mimeType, upsert: true });
+    if (upErr) throw new Error(`Falha ao preparar ${isVideoFile ? "o vídeo" : "a imagem"}: ${upErr.message}`);
+    tempPaths.push(tempPath);
+    const { data: pub } = supabaseAdmin.storage.from("instagram-publish-temp").getPublicUrl(tempPath);
+    return { url: pub.publicUrl, isVideoFile };
+  }
 
-    // Instagram processes the container asynchronously — publishing
-    // immediately after creation can fail with "Media ID is not
-    // available". Poll status_code until it's FINISHED (or give up). Vídeo
-    // demora bem mais que imagem pra processar, por isso a espera máxima é
-    // maior nesse caso (vale tanto pra Reels quanto pra Story em vídeo).
-    const maxAttempts = isVideo ? 40 : 15;
-    const intervalMs = isVideo ? 3000 : 2000;
-    let finished = false;
+  /** Instagram processa o container de forma assíncrona — publicar (ou usar
+   * como filho de carrossel) logo após criar pode falhar com "Media ID is
+   * not available". Espera status_code virar FINISHED, ou desiste. Vídeo
+   * demora bem mais que imagem, por isso o limite de espera é maior. */
+  async function waitForContainer(containerId: string, isVideoFile: boolean, label: string) {
+    const maxAttempts = isVideoFile ? 40 : 15;
+    const intervalMs = isVideoFile ? 3000 : 2000;
     let lastStatus = "UNKNOWN";
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const statusRes = await fetch(
-        `${IG_GRAPH_API}/${containerJson.id}?fields=status_code,status&access_token=${encodeURIComponent(creds.access_token)}`,
+        `${IG_GRAPH_API}/${containerId}?fields=status_code,status&access_token=${encodeURIComponent(creds!.access_token)}`,
       );
       const statusJson: any = await statusRes.json();
       lastStatus = statusJson.status_code ?? "UNKNOWN";
-      if (lastStatus === "FINISHED") { finished = true; break; }
+      if (lastStatus === "FINISHED") return;
       if (lastStatus === "ERROR" || lastStatus === "EXPIRED") {
         console.error("[Instagram] container processing failed:", statusJson);
-        throw new Error(`O Instagram falhou ao processar ${isVideo ? "o vídeo" : "a imagem"} (${statusJson.status ?? lastStatus}).`);
+        throw new Error(`O Instagram falhou ao processar ${label} (${statusJson.status ?? lastStatus}).`);
       }
       await new Promise((r) => setTimeout(r, intervalMs));
     }
-    if (!finished) {
-      console.error("[Instagram] container timed out, last status:", lastStatus);
-      throw new Error(`O Instagram está demorando pra processar ${isVideo ? "o vídeo" : "a imagem"}. Tente publicar de novo em instantes.`);
+    console.error("[Instagram] container timed out, last status:", lastStatus);
+    throw new Error(`O Instagram está demorando pra processar ${label}. Tente publicar de novo em instantes.`);
+  }
+
+  try {
+    let creationId: string;
+
+    if (item.type === "post" && relevantFiles.length > 1) {
+      // Carrossel — um container "filho" por imagem/vídeo (is_carousel_item),
+      // depois um container "pai" (media_type=CAROUSEL) referenciando todos.
+      // A legenda vai só no pai. Limite de 10 itens é da própria Meta.
+      const childIds: string[] = [];
+      for (const file of relevantFiles.slice(0, 10)) {
+        const { url, isVideoFile } = await uploadFileToTemp(file);
+        const childRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            ...(isVideoFile ? { video_url: url, media_type: "VIDEO" } : { image_url: url }),
+            is_carousel_item: "true",
+            access_token: creds.access_token,
+          }),
+        });
+        const childJson: any = await childRes.json();
+        if (!childRes.ok || !childJson.id) {
+          throw new Error(childJson?.error?.message ?? "O Instagram recusou um item do carrossel.");
+        }
+        await waitForContainer(childJson.id, isVideoFile, "um item do carrossel");
+        childIds.push(childJson.id);
+      }
+      const parentRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          media_type: "CAROUSEL",
+          children: childIds.join(","),
+          caption: item.caption ?? "",
+          access_token: creds.access_token,
+        }),
+      });
+      const parentJson: any = await parentRes.json();
+      if (!parentRes.ok || !parentJson.id) {
+        throw new Error(parentJson?.error?.message ?? "O Instagram recusou o carrossel.");
+      }
+      await waitForContainer(parentJson.id, false, "o carrossel");
+      creationId = parentJson.id;
+    } else {
+      // Post com 1 imagem só, Reel ou Story — mídia única.
+      const { url, isVideoFile } = await uploadFileToTemp(relevantFiles[0]);
+      const igMediaType = item.type === "reel" ? "REELS" : item.type === "story" ? "STORIES" : null;
+      // Stories não aceitam legenda pela API — o texto precisa já estar na
+      // própria imagem/vídeo.
+      const sendsCaption = item.type !== "story";
+      const containerRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          ...(isVideoFile ? { video_url: url } : { image_url: url }),
+          ...(igMediaType ? { media_type: igMediaType } : {}),
+          ...(sendsCaption ? { caption: item.caption ?? "" } : {}),
+          access_token: creds.access_token,
+        }),
+      });
+      const containerJson: any = await containerRes.json();
+      if (!containerRes.ok || !containerJson.id) {
+        throw new Error(containerJson?.error?.message ?? `O Instagram recusou ${isVideoFile ? "o vídeo" : "a imagem"}.`);
+      }
+      await waitForContainer(containerJson.id, isVideoFile, isVideoFile ? "o vídeo" : "a imagem");
+      creationId = containerJson.id;
     }
 
     const publishRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media_publish`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ creation_id: containerJson.id, access_token: creds.access_token }),
+      body: new URLSearchParams({ creation_id: creationId, access_token: creds.access_token }),
     });
     const publishJson: any = await publishRes.json();
     if (!publishRes.ok || !publishJson.id) {
@@ -338,7 +391,9 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
 
     return { ok: true as const, instagramMediaId: publishJson.id as string };
   } finally {
-    await supabaseAdmin.storage.from("instagram-publish-temp").remove([tempPath]).catch(() => {});
+    if (tempPaths.length > 0) {
+      await supabaseAdmin.storage.from("instagram-publish-temp").remove(tempPaths).catch(() => {});
+    }
   }
 }
 
