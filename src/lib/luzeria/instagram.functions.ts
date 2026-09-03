@@ -615,16 +615,41 @@ export const getInstagramAccountOverview = createServerFn({ method: "GET" })
     const profile: any = await profileRes.json();
     if (!profileRes.ok) throw new Error(profile?.error?.message ?? "Falha ao buscar dados do perfil.");
 
-    const since = Math.floor(Date.now() / 1000) - 30 * 86400;
-    const until = Math.floor(Date.now() / 1000);
-    const kpiRes = await fetch(
-      `${IG_GRAPH_API}/${acct}/insights?metric=reach,profile_views,accounts_engaged,total_interactions&period=day&since=${since}&until=${until}&access_token=${tok}`,
+    // "reach" é o único desses 4 que a Meta devolve como série diária de
+    // verdade (period=day + since/until, sem metric_type) — os outros 3
+    // só respondem com metric_type=total_value, que soma um intervalo
+    // inteiro num valor só. Por isso buscamos reach separado (dá a série
+    // pro gráfico) e os outros 3 em duas metades (15 dias cada) pra
+    // conseguir montar total + variação igual fazemos com reach.
+    const now = Math.floor(Date.now() / 1000);
+    const since30 = now - 30 * 86400;
+    const since15 = now - 15 * 86400;
+
+    const reachRes = await fetch(
+      `${IG_GRAPH_API}/${acct}/insights?metric=reach&period=day&since=${since30}&until=${now}&access_token=${tok}`,
     );
-    const kpiJson: any = await kpiRes.json();
-    if (!kpiRes.ok) throw new Error(kpiJson?.error?.message ?? "Falha ao buscar métricas da conta.");
-    const seriesFor = (name: string) => (kpiJson.data ?? []).find((m: any) => m.name === name)?.values ?? [];
+    const reachJson: any = await reachRes.json();
+    if (!reachRes.ok) throw new Error(reachJson?.error?.message ?? "Falha ao buscar alcance da conta.");
+    const reachValues = reachJson.data?.[0]?.values ?? [];
     const sumOf = (values: any[]) => values.reduce((a, v) => a + (v.value ?? 0), 0);
-    const reachValues = seriesFor("reach");
+
+    const otherMetrics = "profile_views,accounts_engaged,total_interactions";
+    async function totalsFor(sinceTs: number, untilTs: number) {
+      const res = await fetch(
+        `${IG_GRAPH_API}/${acct}/insights?metric=${otherMetrics}&period=day&metric_type=total_value&since=${sinceTs}&until=${untilTs}&access_token=${tok}`,
+      );
+      const json: any = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao buscar métricas da conta.");
+      const byName: Record<string, number> = {};
+      for (const m of json.data ?? []) byName[m.name] = m.total_value?.value ?? 0;
+      return byName;
+    }
+    const [firstHalf, secondHalf] = await Promise.all([totalsFor(since30, since15), totalsFor(since15, now)]);
+    function totalAndChange(name: string) {
+      const a = firstHalf[name] ?? 0;
+      const b = secondHalf[name] ?? 0;
+      return { total: a + b, changePct: a === 0 ? null : Math.round(((b - a) / a) * 1000) / 10 };
+    }
 
     const mediaRes = await fetch(`${IG_GRAPH_API}/${acct}/media?fields=timestamp&limit=50&access_token=${tok}`);
     const mediaJson: any = await mediaRes.json();
@@ -684,9 +709,9 @@ export const getInstagramAccountOverview = createServerFn({ method: "GET" })
       mediaCount: profile.media_count ?? 0,
       kpis: {
         reach: sumOf(reachValues), reachChangePct: changePct(reachValues.map((v: any) => v.value ?? 0)),
-        profileViews: sumOf(seriesFor("profile_views")), profileViewsChangePct: changePct(seriesFor("profile_views").map((v: any) => v.value ?? 0)),
-        accountsEngaged: sumOf(seriesFor("accounts_engaged")), accountsEngagedChangePct: changePct(seriesFor("accounts_engaged").map((v: any) => v.value ?? 0)),
-        totalInteractions: sumOf(seriesFor("total_interactions")), totalInteractionsChangePct: changePct(seriesFor("total_interactions").map((v: any) => v.value ?? 0)),
+        profileViews: totalAndChange("profile_views").total, profileViewsChangePct: totalAndChange("profile_views").changePct,
+        accountsEngaged: totalAndChange("accounts_engaged").total, accountsEngagedChangePct: totalAndChange("accounts_engaged").changePct,
+        totalInteractions: totalAndChange("total_interactions").total, totalInteractionsChangePct: totalAndChange("total_interactions").changePct,
       },
       reachSeries: reachValues.map((v: any) => ({ date: v.end_time, value: v.value ?? 0 })),
       postingFrequency: WEEKDAY_LABELS.map((day, i) => ({ day, count: dayCounts[i] })),
