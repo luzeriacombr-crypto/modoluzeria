@@ -414,6 +414,7 @@ export type InstagramActivityItem = {
   scheduledAt: string | null;
   igPublishedAt: string | null;
   igAutoPublish: boolean;
+  igMediaId: string | null;
   clientId: string;
   clientName: string;
   clientColor: string;
@@ -432,7 +433,7 @@ export const getInstagramActivity = createServerFn({ method: "GET" })
     const { data: rows, error } = await context.supabase
       .from("content_items")
       .select(
-        "id, title, type, post_format, scheduled_at, ig_published_at, ig_auto_publish, months!inner(key, clients!months_client_id_fkey!inner(id, name, color, archived, category))",
+        "id, title, type, post_format, scheduled_at, ig_published_at, ig_auto_publish, ig_media_id, months!inner(key, clients!months_client_id_fkey!inner(id, name, color, archived, category))",
       )
       .or("ig_auto_publish.eq.true,ig_published_at.not.is.null")
       .order("ig_published_at", { ascending: false, nullsFirst: false });
@@ -442,9 +443,103 @@ export const getInstagramActivity = createServerFn({ method: "GET" })
       .map((r: any) => ({
         id: r.id, title: r.title, type: r.type, postFormat: r.post_format,
         scheduledAt: r.scheduled_at, igPublishedAt: r.ig_published_at, igAutoPublish: r.ig_auto_publish,
+        igMediaId: r.ig_media_id,
         clientId: r.months.clients.id, clientName: r.months.clients.name, clientColor: r.months.clients.color,
         monthKey: r.months.key,
       })) as InstagramActivityItem[];
+  });
+
+/** Métricas de uma publicação já feita pelo app (Post/Carrossel, Reel ou
+ * Story) — usa a permissão `instagram_business_manage_insights`, que ainda
+ * precisa ser adicionada e aprovada pela Meta (separada da permissão de
+ * publicar). Enquanto isso, toda chamada aqui retorna 403 da própria API —
+ * o erro sobe pro chamador com a mensagem original da Meta. */
+export type InstagramMediaInsights = {
+  itemId: string;
+  reach: number | null;
+  likes: number | null;
+  comments: number | null;
+  saved: number | null;
+  shares: number | null;
+  plays: number | null;
+  totalInteractions: number | null;
+  /** Preenchido quando o conjunto completo de métricas falhou e caímos pro
+   * fallback (só "reach") — mostra o motivo original pra facilitar debug. */
+  degradedReason: string | null;
+};
+
+const FEED_METRICS = "reach,likes,comments,saved,shares,total_interactions";
+const REELS_METRICS = "reach,likes,comments,saved,shares,total_interactions,plays";
+const STORY_METRICS = "reach,replies,navigation";
+
+function metricsFor(type: string) {
+  if (type === "reel") return REELS_METRICS;
+  if (type === "story") return STORY_METRICS;
+  return FEED_METRICS;
+}
+
+function parseInsights(json: any): Partial<Omit<InstagramMediaInsights, "itemId" | "degradedReason">> {
+  const byName: Record<string, number> = {};
+  for (const m of json?.data ?? []) {
+    const value = m.values?.[0]?.value ?? m.total_value?.value;
+    if (typeof value === "number") byName[m.name] = value;
+  }
+  return {
+    reach: byName.reach ?? null,
+    likes: byName.likes ?? null,
+    comments: byName.comments ?? null,
+    saved: byName.saved ?? null,
+    shares: byName.shares ?? null,
+    plays: byName.plays ?? null,
+    totalInteractions: byName.total_interactions ?? null,
+  };
+}
+
+export const getInstagramItemInsights = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string }) => z.object({ itemId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<InstagramMediaInsights> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { data: item } = await context.supabase
+      .from("content_items")
+      .select("id, type, ig_media_id, months!inner(client_id, clients!months_client_id_fkey!inner(id, org_id))")
+      .eq("id", data.itemId)
+      .maybeSingle();
+    if (!item || (item as any).months?.clients?.org_id !== context.orgId) throw new Error("Item não encontrado.");
+    if (!item.ig_media_id) throw new Error("Esse item ainda não foi publicado pelo Modo Criador.");
+
+    const clientId = (item as any).months.client_id;
+    const { data: creds } = await context.supabase
+      .from("client_instagram_credentials")
+      .select("access_token")
+      .eq("client_id", clientId)
+      .maybeSingle();
+    if (!creds) throw new Error("Esse cliente não está mais com o Instagram conectado.");
+
+    async function fetchMetrics(metrics: string) {
+      const res = await fetch(
+        `${IG_GRAPH_API}/${item!.ig_media_id}/insights?metric=${metrics}&access_token=${encodeURIComponent(creds!.access_token)}`,
+      );
+      const json: any = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao buscar métricas no Instagram.");
+      return json;
+    }
+
+    try {
+      const json = await fetchMetrics(metricsFor(item.type));
+      return { itemId: data.itemId, degradedReason: null, ...parseInsights(json) } as InstagramMediaInsights;
+    } catch (e: any) {
+      // Alguma métrica do conjunto completo pode não valer pra esse tipo de
+      // mídia (a Meta muda isso com frequência) — cai pro básico, que a
+      // documentação garante pra qualquer tipo, em vez de falhar tudo.
+      try {
+        const json = await fetchMetrics("reach");
+        return { itemId: data.itemId, degradedReason: e?.message ?? "Métricas completas indisponíveis", ...parseInsights(json) } as InstagramMediaInsights;
+      } catch (e2: any) {
+        throw new Error(e2?.message ?? e?.message ?? "Falha ao buscar métricas no Instagram.");
+      }
+    }
   });
 
 export type TodayPublicationItem = {

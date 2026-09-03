@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Instagram, Clock, CheckCircle2, Image as ImageIcon } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ArrowUpDown } from "lucide-react";
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
-import type { InstagramActivityItem } from "@/lib/luzeria/instagram.functions";
+import { getInstagramItemInsights, type InstagramActivityItem, type InstagramMediaInsights } from "@/lib/luzeria/instagram.functions";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { POST_FORMAT_LABEL, CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 
@@ -33,13 +34,24 @@ export function InstagramActivityPage() {
     );
   }
 
+  const [clientFilter, setClientFilter] = useState<string | null>(null);
+  const clients = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; color: string }>();
+    for (const i of items) if (!map.has(i.clientId)) map.set(i.clientId, { id: i.clientId, name: i.clientName, color: i.clientColor });
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [items]);
+
+  const filtered = useMemo(
+    () => (clientFilter ? items.filter((i) => i.clientId === clientFilter) : items),
+    [items, clientFilter],
+  );
   const scheduled = useMemo(
-    () => items.filter((i) => i.igAutoPublish).sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime()),
-    [items],
+    () => filtered.filter((i) => i.igAutoPublish).sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime()),
+    [filtered],
   );
   const published = useMemo(
-    () => items.filter((i) => !!i.igPublishedAt).sort((a, b) => new Date(b.igPublishedAt!).getTime() - new Date(a.igPublishedAt!).getTime()),
-    [items],
+    () => filtered.filter((i) => !!i.igPublishedAt).sort((a, b) => new Date(b.igPublishedAt!).getTime() - new Date(a.igPublishedAt!).getTime()),
+    [filtered],
   );
 
   return (
@@ -48,10 +60,24 @@ export function InstagramActivityPage() {
         <Instagram size={20} className="text-[var(--lz-accent-ink)]" />
         <h1 className="text-[28px] font-bold text-foreground tracking-tight">Instagram</h1>
       </div>
-      <p className="text-xs text-foreground/40 mb-8">
+      <p className="text-xs text-foreground/40 mb-5">
         Posts programados e já publicados pelo Modo Criador, de todos os clientes. Publicação feita direto no
         Instagram (fora do app) não aparece aqui.
       </p>
+
+      {clients.length > 0 && (
+        <div className="flex items-center gap-2 mb-6">
+          <label className="text-[11px] uppercase font-bold tracking-wider text-foreground/40">Cliente</label>
+          <select
+            value={clientFilter ?? ""}
+            onChange={(e) => setClientFilter(e.target.value || null)}
+            className="bg-card border border-foreground/10 rounded-md px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+          >
+            <option value="">Todos os clientes</option>
+            {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+      )}
 
       {isLoading && <p className="text-xs text-foreground/30 text-center mt-10">Carregando…</p>}
 
@@ -60,6 +86,10 @@ export function InstagramActivityPage() {
           <Instagram size={22} className="mx-auto mb-3 text-foreground/20" />
           <p className="text-foreground/50 text-sm">Nenhuma publicação programada ou feita pelo app ainda.</p>
         </div>
+      )}
+
+      {clientFilter && published.length > 0 && (
+        <MetricsPanel clientName={clients.find((c) => c.id === clientFilter)?.name ?? ""} items={published} />
       )}
 
       {scheduled.length > 0 && (
@@ -82,6 +112,150 @@ export function InstagramActivityPage() {
           dateOf={(i) => i.igPublishedAt!}
           datePrefix="Publicado em"
         />
+      )}
+    </div>
+  );
+}
+
+const METRIC_COLUMNS: { key: keyof InstagramMediaInsights; label: string }[] = [
+  { key: "reach", label: "Alcance" },
+  { key: "likes", label: "Curtidas" },
+  { key: "comments", label: "Comentários" },
+  { key: "saved", label: "Salvamentos" },
+  { key: "shares", label: "Compart." },
+  { key: "plays", label: "Plays" },
+];
+
+function csvEscape(v: string) {
+  return `"${v.replace(/"/g, '""')}"`;
+}
+
+/** Painel de métricas por cliente — carrega sob demanda (chama a API do
+ * Instagram uma vez por item publicado) e deixa exportar em CSV. Depende da
+ * permissão `instagram_business_manage_insights`, ainda não aprovada pela
+ * Meta — enquanto isso, "Carregar métricas" mostra o erro real que a Meta
+ * devolve pra cada item. */
+function MetricsPanel({ clientName, items }: { clientName: string; items: InstagramActivityItem[] }) {
+  const getInsights = useServerFn(getInstagramItemInsights);
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<Map<string, InstagramMediaInsights & { error?: string }> | null>(null);
+  const [sortKey, setSortKey] = useState<keyof InstagramMediaInsights>("reach");
+
+  const publishable = items.filter((i) => i.igMediaId);
+
+  async function load() {
+    setLoading(true);
+    const next = new Map<string, InstagramMediaInsights & { error?: string }>();
+    for (const item of publishable) {
+      try {
+        const insights = await getInsights({ data: { itemId: item.id } });
+        next.set(item.id, insights);
+      } catch (e: any) {
+        next.set(item.id, { itemId: item.id, reach: null, likes: null, comments: null, saved: null, shares: null, plays: null, totalInteractions: null, degradedReason: null, error: e?.message ?? "Falha ao buscar" });
+      }
+      // Pequena pausa entre chamadas pra não estourar limite de taxa da Meta.
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    setResults(next);
+    setLoading(false);
+  }
+
+  const sorted = useMemo(() => {
+    if (!results) return publishable;
+    return [...publishable].sort((a, b) => {
+      const av = results.get(a.id)?.[sortKey] as number | null ?? -1;
+      const bv = results.get(b.id)?.[sortKey] as number | null ?? -1;
+      return bv - av;
+    });
+  }, [publishable, results, sortKey]);
+
+  function exportCsv() {
+    if (!results) return;
+    const header = ["Título", "Tipo", "Publicado em", ...METRIC_COLUMNS.map((c) => c.label), "Erro"];
+    const lines = [header.map(csvEscape).join(",")];
+    for (const item of sorted) {
+      const r = results.get(item.id);
+      const row = [
+        item.title || "(sem título)",
+        typeLabel(item),
+        item.igPublishedAt ? new Date(item.igPublishedAt).toLocaleString("pt-BR") : "",
+        ...METRIC_COLUMNS.map((c) => String(r?.[c.key] ?? "")),
+        r?.error ?? r?.degradedReason ?? "",
+      ];
+      lines.push(row.map((v) => csvEscape(String(v))).join(","));
+    }
+    const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `metricas-instagram-${clientName.toLowerCase().replace(/\s+/g, "-")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="mb-8 rounded-lg border border-foreground/8 bg-card p-4">
+      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+        <div className="flex items-center gap-1.5 text-foreground/60">
+          <BarChart3 size={14} />
+          <span className="text-[11px] uppercase font-bold tracking-wider">Métricas de {clientName}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {!results && (
+            <button
+              onClick={load} disabled={loading || publishable.length === 0}
+              className="lz-btn-primary text-xs px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {loading ? <Loader2 size={13} className="animate-spin" /> : <BarChart3 size={13} />}
+              {loading ? "Carregando…" : "Carregar métricas"}
+            </button>
+          )}
+          {results && (
+            <button onClick={exportCsv} className="text-xs px-3 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground inline-flex items-center gap-1.5">
+              <Download size={13} /> Exportar CSV
+            </button>
+          )}
+        </div>
+      </div>
+
+      {publishable.length === 0 && (
+        <p className="text-xs text-foreground/40">Nenhum item publicado com registro de mídia do Instagram pra esse cliente.</p>
+      )}
+
+      {results && publishable.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-foreground/40 border-b border-foreground/8">
+                <th className="py-1.5 pr-3 font-semibold">Item</th>
+                {METRIC_COLUMNS.map((c) => (
+                  <th key={c.key} className="py-1.5 pr-3 font-semibold">
+                    <button onClick={() => setSortKey(c.key)} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
+                      {c.label} {sortKey === c.key && <ArrowUpDown size={10} />}
+                    </button>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((item) => {
+                const r = results.get(item.id);
+                return (
+                  <tr key={item.id} className="border-b border-foreground/5 last:border-0">
+                    <td className="py-1.5 pr-3 text-foreground/80 max-w-[220px] truncate">{item.title || "(sem título)"}</td>
+                    {r?.error ? (
+                      <td colSpan={METRIC_COLUMNS.length} className="py-1.5 pr-3 text-red-400/80">{r.error}</td>
+                    ) : (
+                      METRIC_COLUMNS.map((c) => (
+                        <td key={c.key} className="py-1.5 pr-3 text-foreground/70 tabular-nums">{r?.[c.key] ?? "—"}</td>
+                      ))
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
