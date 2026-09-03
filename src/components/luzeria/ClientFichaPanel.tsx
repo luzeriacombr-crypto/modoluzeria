@@ -16,7 +16,6 @@ import { toast } from "sonner";
 import { ImageCropModal } from "./ImageCropModal";
 import { ClientBlockedItemsModal } from "./ClientBlockedItemsModal";
 import { getInstagramConnectionStatus, getInstagramConnectUrl, disconnectInstagram } from "@/lib/luzeria/instagram.functions";
-import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 
 function formatHours(h: number | null) {
   if (h == null) return "—";
@@ -678,8 +677,6 @@ function Section({ label, children, last, id }: { label: string; children: React
 }
 
 function InstagramSection({ clientId }: { clientId: string }) {
-  const me = useMe().data;
-  const canConnect = me?.orgId === LUZERIA_ORG_ID;
   const getConnStatus = useServerFn(getInstagramConnectionStatus);
   const getConnectUrl = useServerFn(getInstagramConnectUrl);
   const disconnect = useServerFn(disconnectInstagram);
@@ -721,7 +718,7 @@ function InstagramSection({ clientId }: { clientId: string }) {
   return (
     <div>
       <p className="text-[11px] text-foreground/40 mb-3">
-        Conecte a conta do Instagram (Business ou Criador de Conteúdo) desse cliente pra poder publicar Posts direto pelo Modo Criador.
+        Conecte a conta do Instagram (Business ou Criador de Conteúdo) desse cliente pra poder publicar Posts, Carrosséis e Reels direto pelo Modo Criador.
       </p>
       {status.isLoading ? (
         <div className="text-foreground/40 text-sm">Verificando…</div>
@@ -735,18 +732,11 @@ function InstagramSection({ clientId }: { clientId: string }) {
             Desconectar
           </button>
         </div>
-      ) : canConnect ? (
+      ) : (
         <button onClick={connect} disabled={connecting}
           className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 disabled:opacity-50">
           {connecting ? <Loader2 size={14} className="animate-spin" /> : <Instagram size={14} />}
           Conectar Instagram
-        </button>
-      ) : (
-        <button disabled title="Ainda em revisão junto à Meta — em breve"
-          className="text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 opacity-40 cursor-not-allowed border border-foreground/8 text-foreground/60">
-          <Instagram size={14} />
-          Conectar Instagram
-          <span className="text-[10px] uppercase tracking-wider">· Em breve</span>
         </button>
       )}
     </div>

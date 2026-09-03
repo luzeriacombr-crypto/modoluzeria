@@ -1,4 +1,4 @@
-// Publicação automática no Instagram — Fase 1 (Posts). Duas formas de
+// Publicação automática no Instagram — Posts/Carrosséis e Reels. Duas formas de
 // disparar: botão manual "Publicar agora", ou "Programar publicação" que
 // deixa o item marcado pra sair sozinho quando bater o scheduled_at (um job
 // externo — GitHub Actions — chama /api/cron/publish-instagram a cada
@@ -195,7 +195,7 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     .eq("id", itemId)
     .maybeSingle();
   if (!item) throw new Error("Item não encontrado.");
-  if (item.type !== "post") throw new Error("A publicação automática só está disponível pra Posts, por enquanto.");
+  if (item.type !== "post" && item.type !== "reel") throw new Error("A publicação automática só está disponível pra Posts e Reels.");
   if (item.status !== "PRONTO_PARA_PUBLICAR" && item.status !== "FINALIZADO") {
     throw new Error('Marque o status como "Pronto para publicar" antes de publicar no Instagram.');
   }
@@ -211,56 +211,62 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     .maybeSingle();
   if (!creds) throw new Error("Esse cliente ainda não conectou o Instagram. Vá na Ficha do Cliente e conecte.");
 
+  const isReel = item.type === "reel";
   const { data: files } = await supabaseAdmin
     .from("item_files")
     .select("drive_file_id, mime_type")
     .eq("item_id", itemId)
     .order("sort_order").order("created_at");
-  const imageFile = (files ?? []).find((f: any) => (f.mime_type ?? "").startsWith("image/"));
-  if (!imageFile) throw new Error("Anexe uma imagem ao post antes de publicar.");
+  const mediaFile = (files ?? []).find((f: any) =>
+    (f.mime_type ?? "").startsWith(isReel ? "video/" : "image/"));
+  if (!mediaFile) throw new Error(isReel ? "Anexe um vídeo ao reel antes de publicar." : "Anexe uma imagem ao post antes de publicar.");
 
   const { getAccessToken, withDriveOrg } = await import("./drive.functions");
-  const imageBuffer = await withDriveOrg(clientOrgId, async () => {
+  const mediaBuffer = await withDriveOrg(clientOrgId, async () => {
     const token = await getAccessToken();
     const res = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(imageFile.drive_file_id)}?alt=media&supportsAllDrives=true`,
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(mediaFile.drive_file_id)}?alt=media&supportsAllDrives=true`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
-    if (!res.ok) throw new Error(`Falha ao baixar a imagem do Drive (${res.status}).`);
+    if (!res.ok) throw new Error(`Falha ao baixar ${isReel ? "o vídeo" : "a imagem"} do Drive (${res.status}).`);
     return Buffer.from(await res.arrayBuffer());
   });
 
-  const mimeType = imageFile.mime_type ?? "image/jpeg";
-  const ext = mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
+  const mimeType = mediaFile.mime_type ?? (isReel ? "video/mp4" : "image/jpeg");
+  const ext = isReel ? "mp4" : mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
   const tempPath = `${itemId}/${Date.now()}.${ext}`;
   const { error: upErr } = await supabaseAdmin.storage
     .from("instagram-publish-temp")
-    .upload(tempPath, imageBuffer, { contentType: mimeType, upsert: true });
-  if (upErr) throw new Error(`Falha ao preparar a imagem: ${upErr.message}`);
+    .upload(tempPath, mediaBuffer, { contentType: mimeType, upsert: true });
+  if (upErr) throw new Error(`Falha ao preparar ${isReel ? "o vídeo" : "a imagem"}: ${upErr.message}`);
   const { data: pub } = supabaseAdmin.storage.from("instagram-publish-temp").getPublicUrl(tempPath);
-  const publicImageUrl = pub.publicUrl;
+  const publicMediaUrl = pub.publicUrl;
 
   try {
     const containerRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        image_url: publicImageUrl,
+        ...(isReel ? { media_type: "REELS", video_url: publicMediaUrl } : { image_url: publicMediaUrl }),
         caption: item.caption ?? "",
         access_token: creds.access_token,
       }),
     });
     const containerJson: any = await containerRes.json();
     if (!containerRes.ok || !containerJson.id) {
-      throw new Error(containerJson?.error?.message ?? "O Instagram recusou a imagem.");
+      throw new Error(containerJson?.error?.message ?? `O Instagram recusou ${isReel ? "o vídeo" : "a imagem"}.`);
     }
 
     // Instagram processes the container asynchronously — publishing
     // immediately after creation can fail with "Media ID is not
-    // available". Poll status_code until it's FINISHED (or give up).
+    // available". Poll status_code until it's FINISHED (or give up). Vídeo
+    // (Reels) demora bem mais que imagem pra processar, por isso a espera
+    // máxima é maior nesse caso.
+    const maxAttempts = isReel ? 40 : 15;
+    const intervalMs = isReel ? 3000 : 2000;
     let finished = false;
     let lastStatus = "UNKNOWN";
-    for (let attempt = 0; attempt < 15; attempt++) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const statusRes = await fetch(
         `${IG_GRAPH_API}/${containerJson.id}?fields=status_code,status&access_token=${encodeURIComponent(creds.access_token)}`,
       );
@@ -269,13 +275,13 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       if (lastStatus === "FINISHED") { finished = true; break; }
       if (lastStatus === "ERROR" || lastStatus === "EXPIRED") {
         console.error("[Instagram] container processing failed:", statusJson);
-        throw new Error(`O Instagram falhou ao processar a imagem (${statusJson.status ?? lastStatus}).`);
+        throw new Error(`O Instagram falhou ao processar ${isReel ? "o vídeo" : "a imagem"} (${statusJson.status ?? lastStatus}).`);
       }
-      await new Promise((r) => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, intervalMs));
     }
     if (!finished) {
       console.error("[Instagram] container timed out, last status:", lastStatus);
-      throw new Error("O Instagram está demorando pra processar a imagem. Tente publicar de novo em instantes.");
+      throw new Error(`O Instagram está demorando pra processar ${isReel ? "o vídeo" : "a imagem"}. Tente publicar de novo em instantes.`);
     }
 
     const publishRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media_publish`, {
@@ -332,7 +338,7 @@ export const setInstagramAutoPublish = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!item) throw new Error("Item não encontrado.");
     if ((item as any).months?.clients?.org_id !== context.orgId) throw new Error("Item não encontrado.");
-    if (item.type !== "post") throw new Error("Só é possível programar Posts, por enquanto.");
+    if (item.type !== "post" && item.type !== "reel") throw new Error("Só é possível programar Posts e Reels.");
     if (data.enabled) {
       if (item.status !== "PRONTO_PARA_PUBLICAR") {
         throw new Error('Marque o status como "Pronto para publicar" antes de programar.');
@@ -430,12 +436,11 @@ export type TodayPublicationItem = {
 
 /** Posts/Reels com "Data de publicação" caindo no dia de hoje, dos clientes
  * onde o usuário é o "Responsável fixo" — pra ele não esquecer de publicar
- * manualmente enquanto a Meta não libera publicação automática pra todo
- * mundo (hoje só funciona pra Luzeria, ver INSTAGRAM_CONNECT_ENABLED em
- * ClientFichaPanel.tsx). Some da lista sozinho assim que ig_published_at é
- * setado (publicado pelo app) — publicação manual direto no Instagram não
- * teria como o sistema saber, então continua aparecendo até o item ser
- * movido de status/data por quem publicou. */
+ * manualmente (ou conferir a publicação automática) no Instagram. Some da
+ * lista sozinho assim que ig_published_at é setado (publicado pelo app) —
+ * publicação manual direto no Instagram não teria como o sistema saber,
+ * então continua aparecendo até o item ser movido de status/data por quem
+ * publicou. */
 export const getTodayPublications = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId?: string; from: string; to: string }) => d)

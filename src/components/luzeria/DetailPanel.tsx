@@ -1276,8 +1276,8 @@ export function DetailPanel() {
           </ModalSection>
         )}
 
-        {/* Publicar no Instagram (Posts, admin com permissão, só quando pronto pra publicar) */}
-        {item.type === "post" && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && (
+        {/* Publicar no Instagram (Posts/Carrosséis e Reels, admin com permissão, só quando pronto pra publicar) */}
+        {(item.type === "post" || item.type === "reel") && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && (
           <ModalSection label="Publicar">
             {clientInstagramConnected ? (
               <>
