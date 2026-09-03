@@ -2,11 +2,15 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ArrowUpDown, ExternalLink, Sparkles } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import {
+  Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ArrowUpDown, ExternalLink,
+  Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown,
+} from "lucide-react";
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
 import {
-  getInstagramAccountMedia, getInstagramAccountMediaInsights,
-  type InstagramActivityItem, type InstagramAccountMedia, type InstagramMediaInsights,
+  getInstagramAccountMedia, getInstagramAccountMediaInsights, getInstagramAccountOverview,
+  type InstagramActivityItem, type InstagramAccountMedia, type InstagramMediaInsights, type InstagramAccountOverview,
 } from "@/lib/luzeria/instagram.functions";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { POST_FORMAT_LABEL, CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
@@ -99,7 +103,11 @@ export function InstagramActivityPage() {
       )}
 
       {clientFilter && (
-        <MetricsPanel key={clientFilter} clientId={clientFilter} clientName={clients.find((c) => c.id === clientFilter)?.name ?? ""} />
+        <AccountOverviewDashboard key={clientFilter} clientId={clientFilter} clientName={clients.find((c) => c.id === clientFilter)?.name ?? ""} />
+      )}
+
+      {clientFilter && (
+        <MetricsPanel key={`table-${clientFilter}`} clientId={clientFilter} clientName={clients.find((c) => c.id === clientFilter)?.name ?? ""} />
       )}
 
       {scheduled.length > 0 && (
@@ -122,6 +130,166 @@ export function InstagramActivityPage() {
           dateOf={(i) => i.igPublishedAt!}
           datePrefix="Publicado em"
         />
+      )}
+    </div>
+  );
+}
+
+function KpiCard({ icon, label, value, changePct }: { icon: React.ReactNode; label: string; value: number; changePct: number | null }) {
+  return (
+    <div className="rounded-lg border border-foreground/8 bg-card p-3.5">
+      <div className="flex items-center gap-1.5 text-foreground/40 mb-1.5">
+        {icon}
+        <span className="text-[10px] uppercase font-bold tracking-wider">{label}</span>
+      </div>
+      <div className="flex items-end justify-between gap-2">
+        <span className="text-2xl font-bold text-foreground tabular-nums">{value.toLocaleString("pt-BR")}</span>
+        {changePct !== null && (
+          <span
+            className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded"
+            style={{
+              color: changePct >= 0 ? "#7ED957" : "#FF6B6B",
+              backgroundColor: changePct >= 0 ? "rgba(126,217,87,0.12)" : "rgba(255,107,107,0.12)",
+            }}
+          >
+            {changePct >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+            {Math.abs(changePct)}%
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DemographicBar({ label, pct }: { label: string; pct: number }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="w-24 shrink-0 text-foreground/60 truncate">{label}</span>
+      <div className="flex-1 h-1.5 rounded-full bg-foreground/8 overflow-hidden">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "rgb(var(--lz-brand-rgb))" }} />
+      </div>
+      <span className="w-9 shrink-0 text-right text-foreground/50 tabular-nums">{pct}%</span>
+    </div>
+  );
+}
+
+/** Dashboard estilo "Insights do Instagram" — carrega sozinho ao escolher
+ * um cliente (poucas chamadas: perfil, métricas de conta em série e
+ * demografia), diferente do painel de desempenho por publicação abaixo
+ * (que é sob demanda porque faz 1 chamada por post). */
+function AccountOverviewDashboard({ clientId, clientName }: { clientId: string; clientName: string }) {
+  const getOverview = useServerFn(getInstagramAccountOverview);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["instagram-account-overview", clientId],
+    queryFn: () => getOverview({ data: { clientId } }),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="mb-6 rounded-lg border border-foreground/8 bg-card p-8 text-center">
+        <Loader2 size={18} className="animate-spin mx-auto text-foreground/30" />
+      </div>
+    );
+  }
+  if (error || !data) {
+    return (
+      <div className="mb-6 rounded-lg border border-foreground/8 bg-card p-4 text-xs text-red-400/80">
+        {(error as any)?.message ?? "Não foi possível carregar o painel de insights."}
+      </div>
+    );
+  }
+
+  const maxReach = Math.max(...data.reachSeries.map((r) => r.value), 1);
+  const maxFreq = Math.max(...data.postingFrequency.map((d) => d.count), 1);
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-1.5 mb-3 text-foreground/60">
+        <BarChart3 size={14} />
+        <span className="text-[11px] uppercase font-bold tracking-wider">Insights de {clientName}</span>
+        {data.username && <span className="text-[11px] text-foreground/35">@{data.username}</span>}
+      </div>
+
+      <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+        <KpiCard icon={<Users size={12} />} label="Seguidores" value={data.followersCount} changePct={null} />
+        <KpiCard icon={<Eye size={12} />} label="Alcance (30d)" value={data.kpis.reach} changePct={data.kpis.reachChangePct} />
+        <KpiCard icon={<Sparkles size={12} />} label="Visitas ao perfil" value={data.kpis.profileViews} changePct={data.kpis.profileViewsChangePct} />
+        <KpiCard icon={<Heart size={12} />} label="Interações" value={data.kpis.totalInteractions} changePct={data.kpis.totalInteractionsChangePct} />
+      </div>
+
+      <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "2fr 1fr" }}>
+        <div className="rounded-lg border border-foreground/8 bg-card p-4">
+          <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Alcance por dia (30 dias)</span>
+          <div className="h-40 mt-2 -ml-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.reachSeries.map((r) => ({ ...r, label: new Date(r.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) }))}>
+                <XAxis dataKey="label" axisLine={false} tickLine={false} interval={4}
+                  tick={{ fill: "color-mix(in srgb, var(--foreground) 40%, transparent)", fontSize: 9 }} />
+                <Tooltip
+                  cursor={{ fill: "rgba(var(--lz-brand-light-rgb),0.08)" }}
+                  content={({ active, payload }: any) => active && payload?.length ? (
+                    <div className="bg-background border border-foreground/10 rounded-md px-2 py-1 text-[10px] text-foreground/80 shadow-xl">
+                      {payload[0].payload.label}: <b>{payload[0].value.toLocaleString("pt-BR")}</b>
+                    </div>
+                  ) : null}
+                />
+                <Bar dataKey="value" radius={[3, 3, 0, 0]}>
+                  {data.reachSeries.map((r, i) => (
+                    <Cell key={i} fill={r.value === maxReach ? "var(--lz-accent-ink)" : "rgba(var(--lz-brand-light-rgb),0.4)"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-foreground/8 bg-card p-4">
+          <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Frequência de postagem</span>
+          <div className="h-40 mt-2 -ml-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.postingFrequency}>
+                <XAxis dataKey="day" axisLine={false} tickLine={false}
+                  tick={{ fill: "color-mix(in srgb, var(--foreground) 40%, transparent)", fontSize: 9 }} />
+                <Tooltip
+                  cursor={{ fill: "rgba(var(--lz-brand-light-rgb),0.08)" }}
+                  content={({ active, payload }: any) => active && payload?.length ? (
+                    <div className="bg-background border border-foreground/10 rounded-md px-2 py-1 text-[10px] text-foreground/80 shadow-xl">
+                      {payload[0].payload.day}: <b>{payload[0].value}</b> post{payload[0].value === 1 ? "" : "s"}
+                    </div>
+                  ) : null}
+                />
+                <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+                  {data.postingFrequency.map((d, i) => (
+                    <Cell key={i} fill={d.count === maxFreq && maxFreq > 0 ? "var(--lz-accent-ink)" : "rgba(var(--lz-brand-light-rgb),0.4)"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {data.demographics && (
+        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+          <div className="rounded-lg border border-foreground/8 bg-card p-4">
+            <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-3">Gênero</span>
+            <div className="space-y-2">
+              {data.demographics.gender.map((g) => <DemographicBar key={g.label} label={g.label} pct={g.pct} />)}
+            </div>
+          </div>
+          <div className="rounded-lg border border-foreground/8 bg-card p-4">
+            <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-3">Idade</span>
+            <div className="space-y-2">
+              {data.demographics.age.map((a) => <DemographicBar key={a.label} label={a.label} pct={a.pct} />)}
+            </div>
+          </div>
+          <div className="rounded-lg border border-foreground/8 bg-card p-4">
+            <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-3">País</span>
+            <div className="space-y-2">
+              {data.demographics.countries.map((c) => <DemographicBar key={c.label} label={c.label} pct={c.pct} />)}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -228,7 +396,7 @@ function MetricsPanel({ clientId, clientName }: { clientId: string; clientName: 
       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
         <div className="flex items-center gap-1.5 text-foreground/60">
           <BarChart3 size={14} />
-          <span className="text-[11px] uppercase font-bold tracking-wider">Métricas de {clientName}</span>
+          <span className="text-[11px] uppercase font-bold tracking-wider">Desempenho por publicação</span>
           <span className="text-[10px] text-foreground/35 normal-case font-normal">— toda a conta, não só o que passou pelo app</span>
         </div>
         <div className="flex items-center gap-2">

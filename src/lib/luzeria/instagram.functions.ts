@@ -563,6 +563,137 @@ export const getInstagramItemInsights = createServerFn({ method: "GET" })
     return { itemId: data.itemId, ...result } as InstagramMediaInsights;
   });
 
+const WEEKDAY_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+
+function changePct(series: number[]): number | null {
+  const mid = Math.floor(series.length / 2);
+  const firstHalf = series.slice(0, mid).reduce((a, b) => a + b, 0);
+  const secondHalf = series.slice(mid).reduce((a, b) => a + b, 0);
+  if (firstHalf === 0) return null;
+  return Math.round(((secondHalf - firstHalf) / firstHalf) * 1000) / 10;
+}
+
+export type InstagramAccountOverview = {
+  username: string | null;
+  followersCount: number;
+  followingCount: number;
+  mediaCount: number;
+  kpis: {
+    reach: number; reachChangePct: number | null;
+    profileViews: number; profileViewsChangePct: number | null;
+    accountsEngaged: number; accountsEngagedChangePct: number | null;
+    totalInteractions: number; totalInteractionsChangePct: number | null;
+  };
+  reachSeries: { date: string; value: number }[];
+  postingFrequency: { day: string; count: number }[];
+  demographics: {
+    gender: { label: string; value: number; pct: number }[];
+    age: { label: string; value: number; pct: number }[];
+    countries: { label: string; value: number; pct: number }[];
+  } | null;
+};
+
+/** Visão geral da conta do cliente, no estilo "dashboard de insights" —
+ * seguidores, alcance/visitas/interações dos últimos 30 dias (com variação
+ * vs. os 15 dias anteriores), frequência de postagem por dia da semana, e
+ * dados demográficos dos seguidores (idade, gênero, país). `demographics`
+ * vem `null` quando a conta não tem audiência suficiente pra Meta liberar
+ * esse dado — a tela deve esconder essa seção nesse caso, não tratar como
+ * erro. */
+export const getInstagramAccountOverview = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<InstagramAccountOverview> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+    const tok = encodeURIComponent(creds.access_token);
+    const acct = creds.instagram_business_account_id;
+
+    const profileRes = await fetch(`${IG_GRAPH_API}/${acct}?fields=username,followers_count,follows_count,media_count&access_token=${tok}`);
+    const profile: any = await profileRes.json();
+    if (!profileRes.ok) throw new Error(profile?.error?.message ?? "Falha ao buscar dados do perfil.");
+
+    const since = Math.floor(Date.now() / 1000) - 30 * 86400;
+    const until = Math.floor(Date.now() / 1000);
+    const kpiRes = await fetch(
+      `${IG_GRAPH_API}/${acct}/insights?metric=reach,profile_views,accounts_engaged,total_interactions&period=day&since=${since}&until=${until}&access_token=${tok}`,
+    );
+    const kpiJson: any = await kpiRes.json();
+    if (!kpiRes.ok) throw new Error(kpiJson?.error?.message ?? "Falha ao buscar métricas da conta.");
+    const seriesFor = (name: string) => (kpiJson.data ?? []).find((m: any) => m.name === name)?.values ?? [];
+    const sumOf = (values: any[]) => values.reduce((a, v) => a + (v.value ?? 0), 0);
+    const reachValues = seriesFor("reach");
+
+    const mediaRes = await fetch(`${IG_GRAPH_API}/${acct}/media?fields=timestamp&limit=50&access_token=${tok}`);
+    const mediaJson: any = await mediaRes.json();
+    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+    for (const m of mediaJson.data ?? []) {
+      const jsDay = new Date(m.timestamp).getDay(); // 0=Dom..6=Sáb
+      dayCounts[(jsDay + 6) % 7]++; // reindexa pra 0=Seg..6=Dom
+    }
+
+    let demographics: InstagramAccountOverview["demographics"] = null;
+    try {
+      const [ageGenderRes, countryRes] = await Promise.all([
+        fetch(`${IG_GRAPH_API}/${acct}/insights?metric=follower_demographics&period=lifetime&metric_type=total_value&breakdown=age,gender&access_token=${tok}`),
+        fetch(`${IG_GRAPH_API}/${acct}/insights?metric=follower_demographics&period=lifetime&metric_type=total_value&breakdown=country&access_token=${tok}`),
+      ]);
+      const ageGenderJson: any = await ageGenderRes.json();
+      const countryJson: any = await countryRes.json();
+      if (!ageGenderRes.ok) throw new Error(ageGenderJson?.error?.message ?? "sem dados demográficos");
+      const results: { dimension_values: string[]; value: number }[] =
+        ageGenderJson.data?.[0]?.total_value?.breakdowns?.[0]?.results ?? [];
+      const genderTotals = new Map<string, number>();
+      const ageTotals = new Map<string, number>();
+      let grandTotal = 0;
+      for (const r of results) {
+        const [age, gender] = r.dimension_values;
+        genderTotals.set(gender, (genderTotals.get(gender) ?? 0) + r.value);
+        ageTotals.set(age, (ageTotals.get(age) ?? 0) + r.value);
+        grandTotal += r.value;
+      }
+      const genderLabel: Record<string, string> = { F: "Mulheres", M: "Homens", U: "Não informado" };
+      const countryResults: { dimension_values: string[]; value: number }[] =
+        countryJson.data?.[0]?.total_value?.breakdowns?.[0]?.results ?? [];
+      const topCountries = [...countryResults].sort((a, b) => b.value - a.value).slice(0, 5);
+
+      demographics = {
+        gender: [...genderTotals.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([k, v]) => ({ label: genderLabel[k] ?? k, value: v, pct: grandTotal ? Math.round((v / grandTotal) * 100) : 0 })),
+        age: [...ageTotals.entries()]
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([k, v]) => ({ label: k, value: v, pct: grandTotal ? Math.round((v / grandTotal) * 100) : 0 })),
+        countries: topCountries.map((r) => ({
+          label: r.dimension_values[0], value: r.value,
+          pct: grandTotal ? Math.round((r.value / grandTotal) * 100) : 0,
+        })),
+      };
+    } catch {
+      // Conta sem audiência suficiente pra esse dado, ou indisponível — a
+      // tela simplesmente esconde a seção de demografia nesse caso.
+      demographics = null;
+    }
+
+    return {
+      username: profile.username ?? null,
+      followersCount: profile.followers_count ?? 0,
+      followingCount: profile.follows_count ?? 0,
+      mediaCount: profile.media_count ?? 0,
+      kpis: {
+        reach: sumOf(reachValues), reachChangePct: changePct(reachValues.map((v: any) => v.value ?? 0)),
+        profileViews: sumOf(seriesFor("profile_views")), profileViewsChangePct: changePct(seriesFor("profile_views").map((v: any) => v.value ?? 0)),
+        accountsEngaged: sumOf(seriesFor("accounts_engaged")), accountsEngagedChangePct: changePct(seriesFor("accounts_engaged").map((v: any) => v.value ?? 0)),
+        totalInteractions: sumOf(seriesFor("total_interactions")), totalInteractionsChangePct: changePct(seriesFor("total_interactions").map((v: any) => v.value ?? 0)),
+      },
+      reachSeries: reachValues.map((v: any) => ({ date: v.end_time, value: v.value ?? 0 })),
+      postingFrequency: WEEKDAY_LABELS.map((day, i) => ({ day, count: dayCounts[i] })),
+      demographics,
+    };
+  });
+
 export type InstagramAccountMedia = {
   id: string;
   caption: string | null;
