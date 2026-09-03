@@ -472,10 +472,19 @@ const FEED_METRICS = "reach,likes,comments,saved,shares,total_interactions";
 const REELS_METRICS = "reach,likes,comments,saved,shares,total_interactions,plays";
 const STORY_METRICS = "reach,replies,navigation";
 
-function metricsFor(type: string) {
-  if (type === "reel") return REELS_METRICS;
-  if (type === "story") return STORY_METRICS;
+/** media_product_type é o campo que a própria Meta devolve pra cada mídia
+ * (FEED, REELS, STORY) — usar isso em vez do nosso content_items.type
+ * deixa a busca de métricas válida tanto pro que foi publicado pelo app
+ * quanto pro que a agência postou direto no Instagram. */
+function metricsForProductType(productType: string) {
+  if (productType === "REELS") return REELS_METRICS;
+  if (productType === "STORY") return STORY_METRICS;
   return FEED_METRICS;
+}
+function productTypeForItemType(type: string) {
+  if (type === "reel") return "REELS";
+  if (type === "story") return "STORY";
+  return "FEED";
 }
 
 function parseInsights(json: any): Partial<Omit<InstagramMediaInsights, "itemId" | "degradedReason">> {
@@ -495,6 +504,44 @@ function parseInsights(json: any): Partial<Omit<InstagramMediaInsights, "itemId"
   };
 }
 
+/** Busca as métricas de uma mídia do Instagram (identificada pelo id que a
+ * própria Meta usa), com fallback pro básico ("reach", garantido pra
+ * qualquer tipo) se o conjunto completo falhar pra esse media_product_type
+ * — a Meta muda essa lista de vez em quando. Compartilhado entre a busca
+ * por item do app e por mídia direto da conta. */
+async function fetchMediaInsights(accessToken: string, mediaId: string, productType: string) {
+  async function fetchMetrics(metrics: string) {
+    const res = await fetch(
+      `${IG_GRAPH_API}/${mediaId}/insights?metric=${metrics}&access_token=${encodeURIComponent(accessToken)}`,
+    );
+    const json: any = await res.json();
+    if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao buscar métricas no Instagram.");
+    return json;
+  }
+
+  try {
+    const json = await fetchMetrics(metricsForProductType(productType));
+    return { degradedReason: null, ...parseInsights(json) };
+  } catch (e: any) {
+    try {
+      const json = await fetchMetrics("reach");
+      return { degradedReason: e?.message ?? "Métricas completas indisponíveis", ...parseInsights(json) };
+    } catch (e2: any) {
+      throw new Error(e2?.message ?? e?.message ?? "Falha ao buscar métricas no Instagram.");
+    }
+  }
+}
+
+async function getClientInstagramCreds(supabase: any, clientId: string) {
+  const { data: creds } = await supabase
+    .from("client_instagram_credentials")
+    .select("instagram_business_account_id, access_token")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  if (!creds) throw new Error("Esse cliente não está mais com o Instagram conectado.");
+  return creds as { instagram_business_account_id: string; access_token: string };
+}
+
 export const getInstagramItemInsights = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { itemId: string }) => z.object({ itemId: z.string().uuid() }).parse(d))
@@ -510,36 +557,81 @@ export const getInstagramItemInsights = createServerFn({ method: "GET" })
     if (!item.ig_media_id) throw new Error("Esse item ainda não foi publicado pelo Modo Criador.");
 
     const clientId = (item as any).months.client_id;
-    const { data: creds } = await context.supabase
-      .from("client_instagram_credentials")
-      .select("access_token")
-      .eq("client_id", clientId)
-      .maybeSingle();
-    if (!creds) throw new Error("Esse cliente não está mais com o Instagram conectado.");
+    const creds = await getClientInstagramCreds(context.supabase, clientId);
+    const result = await fetchMediaInsights(creds.access_token, item.ig_media_id, productTypeForItemType(item.type));
+    return { itemId: data.itemId, ...result } as InstagramMediaInsights;
+  });
 
-    async function fetchMetrics(metrics: string) {
-      const res = await fetch(
-        `${IG_GRAPH_API}/${item!.ig_media_id}/insights?metric=${metrics}&access_token=${encodeURIComponent(creds!.access_token)}`,
-      );
-      const json: any = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao buscar métricas no Instagram.");
-      return json;
-    }
+export type InstagramAccountMedia = {
+  id: string;
+  caption: string | null;
+  mediaType: string;
+  mediaProductType: string;
+  timestamp: string;
+  permalink: string | null;
+  thumbnailUrl: string | null;
+  /** Preenchido quando essa mídia também existe como item do Modo Criador
+   * (bate o ig_media_id) — deixa dar crédito ao que foi publicado por aqui,
+   * mas a lista em si é de TUDO que está na conta do cliente. */
+  publishedByApp: boolean;
+};
 
-    try {
-      const json = await fetchMetrics(metricsFor(item.type));
-      return { itemId: data.itemId, degradedReason: null, ...parseInsights(json) } as InstagramMediaInsights;
-    } catch (e: any) {
-      // Alguma métrica do conjunto completo pode não valer pra esse tipo de
-      // mídia (a Meta muda isso com frequência) — cai pro básico, que a
-      // documentação garante pra qualquer tipo, em vez de falhar tudo.
-      try {
-        const json = await fetchMetrics("reach");
-        return { itemId: data.itemId, degradedReason: e?.message ?? "Métricas completas indisponíveis", ...parseInsights(json) } as InstagramMediaInsights;
-      } catch (e2: any) {
-        throw new Error(e2?.message ?? e?.message ?? "Falha ao buscar métricas no Instagram.");
-      }
-    }
+/** Lista as publicações reais da conta do Instagram do cliente — direto da
+ * Meta, não do nosso banco — pra dar uma visão completa (o que foi
+ * publicado pelo Modo Criador E o que foi postado direto pelo Instagram).
+ * Usa `instagram_business_basic`, já aprovado; as métricas de cada uma
+ * (endpoint separado) que dependem da permissão de insights ainda não
+ * aprovada. */
+export const getInstagramAccountMedia = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; after?: string }) =>
+    z.object({ clientId: z.string().uuid(), after: z.string().optional() }).parse(d))
+  .handler(async ({ data, context }): Promise<{ items: InstagramAccountMedia[]; nextAfter: string | null }> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+
+    const fields = "id,caption,media_type,media_product_type,timestamp,permalink,thumbnail_url";
+    const params = new URLSearchParams({ fields, limit: "25", access_token: creds.access_token });
+    if (data.after) params.set("after", data.after);
+    const res = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media?${params.toString()}`);
+    const json: any = await res.json();
+    if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao listar publicações do Instagram.");
+
+    const { data: appItems } = await context.supabase
+      .from("content_items")
+      .select("ig_media_id, months!inner(client_id)")
+      .eq("months.client_id", data.clientId)
+      .not("ig_media_id", "is", null);
+    const appMediaIds = new Set((appItems ?? []).map((r: any) => r.ig_media_id));
+
+    const items: InstagramAccountMedia[] = (json.data ?? []).map((m: any) => ({
+      id: m.id,
+      caption: m.caption ?? null,
+      mediaType: m.media_type,
+      mediaProductType: m.media_product_type,
+      timestamp: m.timestamp,
+      permalink: m.permalink ?? null,
+      thumbnailUrl: m.thumbnail_url ?? null,
+      publishedByApp: appMediaIds.has(m.id),
+    }));
+    return { items, nextAfter: json.paging?.cursors?.after ?? null };
+  });
+
+/** Métricas de uma mídia da conta (pode não ter item correspondente no
+ * nosso banco — publicada direto no Instagram). */
+export const getInstagramAccountMediaInsights = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; mediaId: string; mediaProductType: string }) =>
+    z.object({ clientId: z.string().uuid(), mediaId: z.string().min(1), mediaProductType: z.string().min(1) }).parse(d))
+  .handler(async ({ data, context }): Promise<InstagramMediaInsights> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+    const result = await fetchMediaInsights(creds.access_token, data.mediaId, data.mediaProductType);
+    return { itemId: data.mediaId, ...result } as InstagramMediaInsights;
   });
 
 export type TodayPublicationItem = {

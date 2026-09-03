@@ -2,9 +2,12 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ArrowUpDown } from "lucide-react";
+import { Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ArrowUpDown, ExternalLink, Sparkles } from "lucide-react";
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
-import { getInstagramItemInsights, type InstagramActivityItem, type InstagramMediaInsights } from "@/lib/luzeria/instagram.functions";
+import {
+  getInstagramAccountMedia, getInstagramAccountMediaInsights,
+  type InstagramActivityItem, type InstagramAccountMedia, type InstagramMediaInsights,
+} from "@/lib/luzeria/instagram.functions";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { POST_FORMAT_LABEL, CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 
@@ -15,24 +18,18 @@ function typeLabel(item: InstagramActivityItem) {
   return CONTENT_TYPE_LABEL[item.type as keyof typeof CONTENT_TYPE_LABEL] ?? item.type;
 }
 
+function productTypeLabel(t: string) {
+  if (t === "REELS") return "Reel";
+  if (t === "STORY") return "Story";
+  return "Post";
+}
+
 export function InstagramActivityPage() {
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { data: items = [], isLoading } = useQuery({ ...instagramActivityQO(), enabled: isAdmin });
   const itemIds = useMemo(() => items.map((i) => i.id), [items]);
   const { data: thumbs } = useQuery({ ...gridThumbnailsQO(itemIds), enabled: isAdmin && itemIds.length > 0 });
-
-  if (me && !isAdmin) {
-    return (
-      <div className="px-5 md:px-10 py-8 max-w-[1400px] mx-auto">
-        <div className="flex items-center gap-2 mb-1">
-          <Instagram size={20} className="text-[var(--lz-accent-ink)]" />
-          <h1 className="text-[28px] font-bold text-foreground tracking-tight">Instagram</h1>
-        </div>
-        <p className="text-sm text-foreground/40 mt-6">Essa tela é só pra Adm Master e Adm de Setor.</p>
-      </div>
-    );
-  }
 
   const [clientFilter, setClientFilter] = useState<string | null>(null);
   const clients = useMemo(() => {
@@ -54,6 +51,18 @@ export function InstagramActivityPage() {
     [filtered],
   );
 
+  if (me && !isAdmin) {
+    return (
+      <div className="px-5 md:px-10 py-8 max-w-[1400px] mx-auto">
+        <div className="flex items-center gap-2 mb-1">
+          <Instagram size={20} className="text-[var(--lz-accent-ink)]" />
+          <h1 className="text-[28px] font-bold text-foreground tracking-tight">Instagram</h1>
+        </div>
+        <p className="text-sm text-foreground/40 mt-6">Essa tela é só pra Adm Master e Adm de Setor.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="px-5 md:px-10 py-8 max-w-[1400px] mx-auto">
       <div className="flex items-center gap-2 mb-1">
@@ -62,7 +71,8 @@ export function InstagramActivityPage() {
       </div>
       <p className="text-xs text-foreground/40 mb-5">
         Posts programados e já publicados pelo Modo Criador, de todos os clientes. Publicação feita direto no
-        Instagram (fora do app) não aparece aqui.
+        Instagram (fora do app) não aparece aqui — pra ver tudo da conta de um cliente, use o painel de métricas
+        abaixo.
       </p>
 
       {clients.length > 0 && (
@@ -88,8 +98,8 @@ export function InstagramActivityPage() {
         </div>
       )}
 
-      {clientFilter && published.length > 0 && (
-        <MetricsPanel clientName={clients.find((c) => c.id === clientFilter)?.name ?? ""} items={published} />
+      {clientFilter && (
+        <MetricsPanel key={clientFilter} clientId={clientFilter} clientName={clients.find((c) => c.id === clientFilter)?.name ?? ""} />
       )}
 
       {scheduled.length > 0 && (
@@ -105,7 +115,7 @@ export function InstagramActivityPage() {
 
       {published.length > 0 && (
         <ActivitySection
-          label="Publicados"
+          label="Publicados pelo Modo Criador"
           icon={<CheckCircle2 size={13} />}
           items={published}
           thumbs={thumbs}
@@ -130,55 +140,75 @@ function csvEscape(v: string) {
   return `"${v.replace(/"/g, '""')}"`;
 }
 
-/** Painel de métricas por cliente — carrega sob demanda (chama a API do
- * Instagram uma vez por item publicado) e deixa exportar em CSV. Depende da
- * permissão `instagram_business_manage_insights`, ainda não aprovada pela
- * Meta — enquanto isso, "Carregar métricas" mostra o erro real que a Meta
- * devolve pra cada item. */
-function MetricsPanel({ clientName, items }: { clientName: string; items: InstagramActivityItem[] }) {
-  const getInsights = useServerFn(getInstagramItemInsights);
-  const [loading, setLoading] = useState(false);
+/** Painel de métricas por cliente — busca TODAS as publicações reais da
+ * conta do Instagram desse cliente (direto na Meta, não só o que passou
+ * pelo Modo Criador), depois carrega o alcance/curtidas/etc de cada uma sob
+ * demanda. Depende da permissão `instagram_business_manage_insights`,
+ * ainda não aprovada pela Meta — enquanto isso, "Carregar métricas" mostra
+ * o erro real que a Meta devolve pra cada publicação. */
+function MetricsPanel({ clientId, clientName }: { clientId: string; clientName: string }) {
+  const getMedia = useServerFn(getInstagramAccountMedia);
+  const getInsights = useServerFn(getInstagramAccountMediaInsights);
+  const [loadingMedia, setLoadingMedia] = useState(false);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [media, setMedia] = useState<InstagramAccountMedia[] | null>(null);
+  const [loadingInsights, setLoadingInsights] = useState(false);
   const [results, setResults] = useState<Map<string, InstagramMediaInsights & { error?: string }> | null>(null);
   const [sortKey, setSortKey] = useState<keyof InstagramMediaInsights>("reach");
 
-  const publishable = items.filter((i) => i.igMediaId);
+  async function loadMedia() {
+    setLoadingMedia(true);
+    setMediaError(null);
+    setResults(null);
+    try {
+      const r = await getMedia({ data: { clientId } });
+      setMedia(r.items);
+    } catch (e: any) {
+      setMediaError(e?.message ?? "Falha ao listar publicações do Instagram.");
+    } finally {
+      setLoadingMedia(false);
+    }
+  }
 
-  async function load() {
-    setLoading(true);
+  async function loadInsights() {
+    if (!media) return;
+    setLoadingInsights(true);
     const next = new Map<string, InstagramMediaInsights & { error?: string }>();
-    for (const item of publishable) {
+    for (const m of media) {
       try {
-        const insights = await getInsights({ data: { itemId: item.id } });
-        next.set(item.id, insights);
+        const insights = await getInsights({ data: { clientId, mediaId: m.id, mediaProductType: m.mediaProductType } });
+        next.set(m.id, insights);
       } catch (e: any) {
-        next.set(item.id, { itemId: item.id, reach: null, likes: null, comments: null, saved: null, shares: null, plays: null, totalInteractions: null, degradedReason: null, error: e?.message ?? "Falha ao buscar" });
+        next.set(m.id, { itemId: m.id, reach: null, likes: null, comments: null, saved: null, shares: null, plays: null, totalInteractions: null, degradedReason: null, error: e?.message ?? "Falha ao buscar" });
       }
       // Pequena pausa entre chamadas pra não estourar limite de taxa da Meta.
       await new Promise((r) => setTimeout(r, 250));
     }
     setResults(next);
-    setLoading(false);
+    setLoadingInsights(false);
   }
 
   const sorted = useMemo(() => {
-    if (!results) return publishable;
-    return [...publishable].sort((a, b) => {
+    if (!media) return [];
+    if (!results) return media;
+    return [...media].sort((a, b) => {
       const av = results.get(a.id)?.[sortKey] as number | null ?? -1;
       const bv = results.get(b.id)?.[sortKey] as number | null ?? -1;
       return bv - av;
     });
-  }, [publishable, results, sortKey]);
+  }, [media, results, sortKey]);
 
   function exportCsv() {
-    if (!results) return;
-    const header = ["Título", "Tipo", "Publicado em", ...METRIC_COLUMNS.map((c) => c.label), "Erro"];
+    if (!media) return;
+    const header = ["Legenda", "Tipo", "Publicado em", "Pelo Modo Criador", ...METRIC_COLUMNS.map((c) => c.label), "Erro"];
     const lines = [header.map(csvEscape).join(",")];
-    for (const item of sorted) {
-      const r = results.get(item.id);
+    for (const m of sorted) {
+      const r = results?.get(m.id);
       const row = [
-        item.title || "(sem título)",
-        typeLabel(item),
-        item.igPublishedAt ? new Date(item.igPublishedAt).toLocaleString("pt-BR") : "",
+        (m.caption ?? "").slice(0, 120) || "(sem legenda)",
+        productTypeLabel(m.mediaProductType),
+        new Date(m.timestamp).toLocaleString("pt-BR"),
+        m.publishedByApp ? "Sim" : "Não",
         ...METRIC_COLUMNS.map((c) => String(r?.[c.key] ?? "")),
         r?.error ?? r?.degradedReason ?? "",
       ];
@@ -199,15 +229,25 @@ function MetricsPanel({ clientName, items }: { clientName: string; items: Instag
         <div className="flex items-center gap-1.5 text-foreground/60">
           <BarChart3 size={14} />
           <span className="text-[11px] uppercase font-bold tracking-wider">Métricas de {clientName}</span>
+          <span className="text-[10px] text-foreground/35 normal-case font-normal">— toda a conta, não só o que passou pelo app</span>
         </div>
         <div className="flex items-center gap-2">
-          {!results && (
+          {!media && (
             <button
-              onClick={load} disabled={loading || publishable.length === 0}
+              onClick={loadMedia} disabled={loadingMedia}
               className="lz-btn-primary text-xs px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 disabled:opacity-50"
             >
-              {loading ? <Loader2 size={13} className="animate-spin" /> : <BarChart3 size={13} />}
-              {loading ? "Carregando…" : "Carregar métricas"}
+              {loadingMedia ? <Loader2 size={13} className="animate-spin" /> : <Instagram size={13} />}
+              {loadingMedia ? "Buscando…" : "Carregar publicações da conta"}
+            </button>
+          )}
+          {media && !results && (
+            <button
+              onClick={loadInsights} disabled={loadingInsights || media.length === 0}
+              className="lz-btn-primary text-xs px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {loadingInsights ? <Loader2 size={13} className="animate-spin" /> : <BarChart3 size={13} />}
+              {loadingInsights ? "Carregando métricas…" : "Carregar métricas"}
             </button>
           )}
           {results && (
@@ -218,17 +258,17 @@ function MetricsPanel({ clientName, items }: { clientName: string; items: Instag
         </div>
       </div>
 
-      {publishable.length === 0 && (
-        <p className="text-xs text-foreground/40">Nenhum item publicado com registro de mídia do Instagram pra esse cliente.</p>
-      )}
+      {mediaError && <p className="text-xs text-red-400/80">{mediaError}</p>}
+      {media && media.length === 0 && <p className="text-xs text-foreground/40">Nenhuma publicação encontrada nessa conta do Instagram.</p>}
 
-      {results && publishable.length > 0 && (
+      {media && media.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="text-left text-foreground/40 border-b border-foreground/8">
-                <th className="py-1.5 pr-3 font-semibold">Item</th>
-                {METRIC_COLUMNS.map((c) => (
+                <th className="py-1.5 pr-3 font-semibold">Publicação</th>
+                <th className="py-1.5 pr-3 font-semibold">Tipo</th>
+                {results && METRIC_COLUMNS.map((c) => (
                   <th key={c.key} className="py-1.5 pr-3 font-semibold">
                     <button onClick={() => setSortKey(c.key)} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
                       {c.label} {sortKey === c.key && <ArrowUpDown size={10} />}
@@ -238,17 +278,40 @@ function MetricsPanel({ clientName, items }: { clientName: string; items: Instag
               </tr>
             </thead>
             <tbody>
-              {sorted.map((item) => {
-                const r = results.get(item.id);
+              {sorted.map((m) => {
+                const r = results?.get(m.id);
                 return (
-                  <tr key={item.id} className="border-b border-foreground/5 last:border-0">
-                    <td className="py-1.5 pr-3 text-foreground/80 max-w-[220px] truncate">{item.title || "(sem título)"}</td>
-                    {r?.error ? (
-                      <td colSpan={METRIC_COLUMNS.length} className="py-1.5 pr-3 text-red-400/80">{r.error}</td>
-                    ) : (
-                      METRIC_COLUMNS.map((c) => (
-                        <td key={c.key} className="py-1.5 pr-3 text-foreground/70 tabular-nums">{r?.[c.key] ?? "—"}</td>
-                      ))
+                  <tr key={m.id} className="border-b border-foreground/5 last:border-0">
+                    <td className="py-1.5 pr-3 max-w-[260px]">
+                      <div className="flex items-center gap-2">
+                        {m.thumbnailUrl && <img src={m.thumbnailUrl} alt="" className="w-7 h-7 rounded object-cover shrink-0" />}
+                        <div className="min-w-0">
+                          <div className="text-foreground/80 truncate">{m.caption || "(sem legenda)"}</div>
+                          <div className="text-[10px] text-foreground/35 flex items-center gap-1.5">
+                            {new Date(m.timestamp).toLocaleDateString("pt-BR")}
+                            {m.publishedByApp && (
+                              <span className="inline-flex items-center gap-0.5" title="Publicado pelo Modo Criador">
+                                <Sparkles size={9} /> Modo Criador
+                              </span>
+                            )}
+                            {m.permalink && (
+                              <a href={m.permalink} target="_blank" rel="noreferrer" className="hover:text-foreground/70">
+                                <ExternalLink size={9} />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-1.5 pr-3 text-foreground/60">{productTypeLabel(m.mediaProductType)}</td>
+                    {results && (
+                      r?.error ? (
+                        <td colSpan={METRIC_COLUMNS.length} className="py-1.5 pr-3 text-red-400/80">{r.error}</td>
+                      ) : (
+                        METRIC_COLUMNS.map((c) => (
+                          <td key={c.key} className="py-1.5 pr-3 text-foreground/70 tabular-nums">{r?.[c.key] ?? "—"}</td>
+                        ))
+                      )
                     )}
                   </tr>
                 );
