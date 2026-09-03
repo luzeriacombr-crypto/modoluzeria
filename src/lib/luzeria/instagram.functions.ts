@@ -32,19 +32,15 @@ const IG_SCOPES = [
 // causa raiz do problema; mantido em www por ser o canônico de verdade.
 const INSTAGRAM_REDIRECT_URI = "https://www.modocriador.com.br/oauth/instagram-callback";
 
-async function assertMaster(supabase: any, userId: string) {
-  const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
-  if (!isMaster) throw new Error("Apenas o Adm Master pode executar esta ação.");
-}
-
 /** Master, or setor with the org's "instagram_publish" permission granted —
- * used only by the actual publish/schedule actions. Connecting/disconnecting
- * a client's Instagram account stays master-only (assertMaster above). */
+ * used both by the publish/schedule actions and by connect/disconnect,
+ * since managing a client's Instagram connection needs the same trust
+ * level as being allowed to publish through it. */
 async function assertCanPublish(supabase: any, userId: string) {
   const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
   if (isMaster) return;
   const { data: allowed } = await supabase.rpc("has_setor_permission", { _user_id: userId, _perm: "instagram_publish" });
-  if (!allowed) throw new Error("Você não tem permissão pra publicar no Instagram.");
+  if (!allowed) throw new Error("Você não tem permissão pra gerenciar o Instagram desse cliente.");
 }
 
 async function assertClientInOrg(supabase: any, clientId: string, orgId: string) {
@@ -70,22 +66,22 @@ export const disconnectInstagram = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertMaster(context.supabase, context.userId);
+    await assertCanPublish(context.supabase, context.userId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const { error } = await context.supabase.from("client_instagram_credentials").delete().eq("client_id", data.clientId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
-/** Builds the Instagram consent URL for this client's master to connect
- * the client's Instagram account directly. `state` carries the clientId
- * through the redirect — re-validated (belongs to caller's org) in
- * completeInstagramConnect. */
+/** Builds the Instagram consent URL for an admin (master, or setor with the
+ * "instagram_publish" permission) to connect the client's Instagram account
+ * directly. `state` carries the clientId through the redirect —
+ * re-validated (belongs to caller's org) in completeInstagramConnect. */
 export const getInstagramConnectUrl = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertMaster(context.supabase, context.userId);
+    await assertCanPublish(context.supabase, context.userId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const appId = process.env.INSTAGRAM_APP_ID;
     if (!appId) throw new Error("INSTAGRAM_APP_ID ausente no servidor.");
@@ -116,7 +112,7 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
       clientId: z.string().uuid(),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertMaster(context.supabase, context.userId);
+    await assertCanPublish(context.supabase, context.userId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const appId = process.env.INSTAGRAM_APP_ID;
     const appSecret = process.env.INSTAGRAM_APP_SECRET;

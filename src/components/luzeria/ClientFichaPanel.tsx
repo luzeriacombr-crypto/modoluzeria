@@ -10,7 +10,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, journeyStagesQO } from "@/lib/luzeria/queries";
-import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
+import { CONTENT_TYPE_LABEL, hasSetorPermission } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
 import { ImageCropModal } from "./ImageCropModal";
@@ -98,6 +98,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const isMaster = me?.role === "master";
+  const canManageInstagram = hasSetorPermission(me, "instagram_publish");
   const api = useApi();
 
   const [description, setDescription] = useState("");
@@ -314,8 +315,8 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
           </Section>
         )}
 
-        {/* Instagram (master) */}
-        {isMaster && (
+        {/* Instagram (master, ou setor com a permissão "Publicar no Instagram") */}
+        {canManageInstagram && (
           <Section label="Instagram">
             <InstagramSection clientId={client.id} />
           </Section>
