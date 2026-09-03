@@ -1,4 +1,4 @@
-// Publicação automática no Instagram — Posts/Carrosséis e Reels. Duas formas de
+// Publicação automática no Instagram — Posts/Carrosséis, Reels e Stories. Duas formas de
 // disparar: botão manual "Publicar agora", ou "Programar publicação" que
 // deixa o item marcado pra sair sozinho quando bater o scheduled_at (um job
 // externo — GitHub Actions — chama /api/cron/publish-instagram a cada
@@ -195,7 +195,9 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     .eq("id", itemId)
     .maybeSingle();
   if (!item) throw new Error("Item não encontrado.");
-  if (item.type !== "post" && item.type !== "reel") throw new Error("A publicação automática só está disponível pra Posts e Reels.");
+  if (item.type !== "post" && item.type !== "reel" && item.type !== "story") {
+    throw new Error("A publicação automática só está disponível pra Posts, Reels e Stories.");
+  }
   if (item.status !== "PRONTO_PARA_PUBLICAR" && item.status !== "FINALIZADO") {
     throw new Error('Marque o status como "Pronto para publicar" antes de publicar no Instagram.');
   }
@@ -211,15 +213,34 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     .maybeSingle();
   if (!creds) throw new Error("Esse cliente ainda não conectou o Instagram. Vá na Ficha do Cliente e conecte.");
 
-  const isReel = item.type === "reel";
+  // Reel é sempre vídeo, Post hoje só aceita imagem, mas Story pode ser
+  // imagem OU vídeo — por isso o tipo de mídia real é o que decide o
+  // media_type/endpoint da chamada, não o item.type sozinho.
   const { data: files } = await supabaseAdmin
     .from("item_files")
     .select("drive_file_id, mime_type")
     .eq("item_id", itemId)
     .order("sort_order").order("created_at");
-  const mediaFile = (files ?? []).find((f: any) =>
-    (f.mime_type ?? "").startsWith(isReel ? "video/" : "image/"));
-  if (!mediaFile) throw new Error(isReel ? "Anexe um vídeo ao reel antes de publicar." : "Anexe uma imagem ao post antes de publicar.");
+  const wantVideo = item.type === "reel";
+  const wantImage = item.type === "post";
+  const mediaFile = (files ?? []).find((f: any) => {
+    const mime = f.mime_type ?? "";
+    if (wantVideo) return mime.startsWith("video/");
+    if (wantImage) return mime.startsWith("image/");
+    return mime.startsWith("image/") || mime.startsWith("video/"); // story
+  });
+  if (!mediaFile) {
+    throw new Error(
+      item.type === "reel" ? "Anexe um vídeo ao reel antes de publicar."
+        : item.type === "story" ? "Anexe uma imagem ou vídeo à story antes de publicar."
+        : "Anexe uma imagem ao post antes de publicar.",
+    );
+  }
+  const isVideo = (mediaFile.mime_type ?? "").startsWith("video/");
+  const igMediaType = item.type === "reel" ? "REELS" : item.type === "story" ? "STORIES" : null;
+  // Stories não aceitam legenda pela API — o texto precisa já estar na
+  // própria imagem/vídeo.
+  const sendsCaption = item.type !== "story";
 
   const { getAccessToken, withDriveOrg } = await import("./drive.functions");
   const mediaBuffer = await withDriveOrg(clientOrgId, async () => {
@@ -228,17 +249,17 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(mediaFile.drive_file_id)}?alt=media&supportsAllDrives=true`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
-    if (!res.ok) throw new Error(`Falha ao baixar ${isReel ? "o vídeo" : "a imagem"} do Drive (${res.status}).`);
+    if (!res.ok) throw new Error(`Falha ao baixar ${isVideo ? "o vídeo" : "a imagem"} do Drive (${res.status}).`);
     return Buffer.from(await res.arrayBuffer());
   });
 
-  const mimeType = mediaFile.mime_type ?? (isReel ? "video/mp4" : "image/jpeg");
-  const ext = isReel ? "mp4" : mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
+  const mimeType = mediaFile.mime_type ?? (isVideo ? "video/mp4" : "image/jpeg");
+  const ext = isVideo ? "mp4" : mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
   const tempPath = `${itemId}/${Date.now()}.${ext}`;
   const { error: upErr } = await supabaseAdmin.storage
     .from("instagram-publish-temp")
     .upload(tempPath, mediaBuffer, { contentType: mimeType, upsert: true });
-  if (upErr) throw new Error(`Falha ao preparar ${isReel ? "o vídeo" : "a imagem"}: ${upErr.message}`);
+  if (upErr) throw new Error(`Falha ao preparar ${isVideo ? "o vídeo" : "a imagem"}: ${upErr.message}`);
   const { data: pub } = supabaseAdmin.storage.from("instagram-publish-temp").getPublicUrl(tempPath);
   const publicMediaUrl = pub.publicUrl;
 
@@ -247,23 +268,24 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        ...(isReel ? { media_type: "REELS", video_url: publicMediaUrl } : { image_url: publicMediaUrl }),
-        caption: item.caption ?? "",
+        ...(isVideo ? { video_url: publicMediaUrl } : { image_url: publicMediaUrl }),
+        ...(igMediaType ? { media_type: igMediaType } : {}),
+        ...(sendsCaption ? { caption: item.caption ?? "" } : {}),
         access_token: creds.access_token,
       }),
     });
     const containerJson: any = await containerRes.json();
     if (!containerRes.ok || !containerJson.id) {
-      throw new Error(containerJson?.error?.message ?? `O Instagram recusou ${isReel ? "o vídeo" : "a imagem"}.`);
+      throw new Error(containerJson?.error?.message ?? `O Instagram recusou ${isVideo ? "o vídeo" : "a imagem"}.`);
     }
 
     // Instagram processes the container asynchronously — publishing
     // immediately after creation can fail with "Media ID is not
     // available". Poll status_code until it's FINISHED (or give up). Vídeo
-    // (Reels) demora bem mais que imagem pra processar, por isso a espera
-    // máxima é maior nesse caso.
-    const maxAttempts = isReel ? 40 : 15;
-    const intervalMs = isReel ? 3000 : 2000;
+    // demora bem mais que imagem pra processar, por isso a espera máxima é
+    // maior nesse caso (vale tanto pra Reels quanto pra Story em vídeo).
+    const maxAttempts = isVideo ? 40 : 15;
+    const intervalMs = isVideo ? 3000 : 2000;
     let finished = false;
     let lastStatus = "UNKNOWN";
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -275,13 +297,13 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       if (lastStatus === "FINISHED") { finished = true; break; }
       if (lastStatus === "ERROR" || lastStatus === "EXPIRED") {
         console.error("[Instagram] container processing failed:", statusJson);
-        throw new Error(`O Instagram falhou ao processar ${isReel ? "o vídeo" : "a imagem"} (${statusJson.status ?? lastStatus}).`);
+        throw new Error(`O Instagram falhou ao processar ${isVideo ? "o vídeo" : "a imagem"} (${statusJson.status ?? lastStatus}).`);
       }
       await new Promise((r) => setTimeout(r, intervalMs));
     }
     if (!finished) {
       console.error("[Instagram] container timed out, last status:", lastStatus);
-      throw new Error(`O Instagram está demorando pra processar ${isReel ? "o vídeo" : "a imagem"}. Tente publicar de novo em instantes.`);
+      throw new Error(`O Instagram está demorando pra processar ${isVideo ? "o vídeo" : "a imagem"}. Tente publicar de novo em instantes.`);
     }
 
     const publishRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media_publish`, {
@@ -294,7 +316,10 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       throw new Error(publishJson?.error?.message ?? "Falha ao publicar no Instagram.");
     }
 
-    if (item.status !== "FINALIZADO") {
+    // Story não tem status "Finalizado" no funil do app (isso é coisa de
+    // Post/Reel, ligada ao Preview de Feed) — pra Story, publicar não muda
+    // o status, só registra ig_published_at/ig_media_id abaixo.
+    if (item.type !== "story" && item.status !== "FINALIZADO") {
       // Same RPC the normal status dropdown uses — keeps triggers,
       // permissions and side effects (finalizations credit, activity
       // log, notifications) identical to a manual status change.
@@ -338,7 +363,7 @@ export const setInstagramAutoPublish = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!item) throw new Error("Item não encontrado.");
     if ((item as any).months?.clients?.org_id !== context.orgId) throw new Error("Item não encontrado.");
-    if (item.type !== "post" && item.type !== "reel") throw new Error("Só é possível programar Posts e Reels.");
+    if (item.type !== "post" && item.type !== "reel" && item.type !== "story") throw new Error("Só é possível programar Posts, Reels e Stories.");
     if (data.enabled) {
       if (item.status !== "PRONTO_PARA_PUBLICAR") {
         throw new Error('Marque o status como "Pronto para publicar" antes de programar.');
@@ -463,7 +488,7 @@ export const getTodayPublications = createServerFn({ method: "GET" })
     const { data: rows, error } = await context.supabase
       .from("content_items")
       .select("id, title, type, post_format, scheduled_at, months!inner(client_id, key, clients!months_client_id_fkey!inner(id, name, color))")
-      .in("type", ["post", "reel"])
+      .in("type", ["post", "reel", "story"])
       .gte("scheduled_at", data.from)
       .lt("scheduled_at", data.to)
       .is("ig_published_at", null)

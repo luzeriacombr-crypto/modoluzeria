@@ -718,7 +718,7 @@ function InstagramSection({ clientId }: { clientId: string }) {
   return (
     <div>
       <p className="text-[11px] text-foreground/40 mb-3">
-        Conecte a conta do Instagram (Business ou Criador de Conteúdo) desse cliente pra poder publicar Posts, Carrosséis e Reels direto pelo Modo Criador.
+        Conecte a conta do Instagram (Business ou Criador de Conteúdo) desse cliente pra poder publicar Posts, Carrosséis, Reels e Stories direto pelo Modo Criador.
       </p>
       {status.isLoading ? (
         <div className="text-foreground/40 text-sm">Verificando…</div>

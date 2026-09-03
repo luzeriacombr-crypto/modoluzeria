@@ -1276,8 +1276,8 @@ export function DetailPanel() {
           </ModalSection>
         )}
 
-        {/* Publicar no Instagram (Posts/Carrosséis e Reels, admin com permissão, só quando pronto pra publicar) */}
-        {(item.type === "post" || item.type === "reel") && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && (
+        {/* Publicar no Instagram (Posts/Carrosséis, Reels e Stories, admin com permissão, só quando pronto pra publicar) */}
+        {(item.type === "post" || item.type === "reel" || item.type === "story") && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && (
           <ModalSection label="Publicar">
             {clientInstagramConnected ? (
               <>
@@ -1336,6 +1336,7 @@ export function DetailPanel() {
                 <p className="text-[11px] text-foreground/40 mt-2">
                   Publica direto na conta do cliente e marca o item como Finalizado. "Programar" usa a data e horário
                   definidos em "Data de publicação" abaixo.
+                  {item.type === "story" && " A legenda não é enviada — o Instagram não aceita texto por API em Stories."}
                 </p>
               </>
             ) : (
