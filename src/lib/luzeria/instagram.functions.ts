@@ -17,6 +17,7 @@ const IG_GRAPH_API = "https://graph.instagram.com/v21.0";
 const IG_SCOPES = [
   "instagram_business_basic",
   "instagram_business_content_publish",
+  "instagram_business_manage_insights",
 ].join(",");
 // Fixo — precisa bater byte a byte com o redirect_uri cadastrado em Meta
 // for Developers > Modo Criador > Casos de uso > Instagram Business >
