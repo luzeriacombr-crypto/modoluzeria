@@ -331,6 +331,10 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       ig_published_at: new Date().toISOString(),
       ig_media_id: publishJson.id,
     }).eq("id", itemId);
+    // Histórico de toda publicação (manual, programada uma vez, ou
+    // repetida) — content_items só guarda a mais recente nas duas colunas
+    // acima, então uma Story repetida precisa desse log pra "Publicado Nx".
+    await supabaseAdmin.from("content_item_publishes").insert({ content_item_id: itemId, ig_media_id: publishJson.id });
 
     return { ok: true as const, instagramMediaId: publishJson.id as string };
   } finally {
@@ -381,18 +385,140 @@ export const setInstagramAutoPublish = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const REPEAT_SLOT_SCHEMA = z.object({
+  weekday: z.number().int().min(1).max(7),
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+});
+
+export type StoryRepeatStatus = {
+  mode: "daily" | "weekly" | "custom" | null;
+  slots: { weekday: number; time: string }[] | null;
+  publishes: { publishedAt: string; igMediaId: string | null }[];
+};
+
+/** Estado da repetição de uma Story + histórico de publicações (manuais,
+ * programadas ou repetidas) — pra tela mostrar "Publicado Nx" com datas. */
+export const getStoryRepeatStatus = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string }) => z.object({ itemId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<StoryRepeatStatus> => {
+    const { data: item } = await context.supabase
+      .from("content_items")
+      .select("id, org_id, ig_repeat_mode, ig_repeat_slots")
+      .eq("id", data.itemId)
+      .maybeSingle();
+    if (!item || (item as any).org_id !== context.orgId) throw new Error("Item não encontrado.");
+    const { data: publishes } = await context.supabase
+      .from("content_item_publishes")
+      .select("published_at, ig_media_id")
+      .eq("content_item_id", data.itemId)
+      .order("published_at", { ascending: false })
+      .limit(20);
+    return {
+      mode: (item as any).ig_repeat_mode ?? null,
+      slots: (item as any).ig_repeat_slots ?? null,
+      publishes: (publishes ?? []).map((p: any) => ({ publishedAt: p.published_at, igMediaId: p.ig_media_id })),
+    };
+  });
+
+/** Liga/desliga (ou muda) a repetição de publicação de uma Story — "pra
+ * sempre", sem data de término: diária e semanal reaproveitam o horário
+ * (e, na semanal, o dia da semana) já definidos em "Data de publicação";
+ * personalizada usa os dias/horários escolhidos em `slots`. */
+export const setStoryRepeatRule = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string; mode: "daily" | "weekly" | "custom" | null; slots?: { weekday: number; time: string }[] }) =>
+    z.object({
+      itemId: z.string().uuid(),
+      mode: z.enum(["daily", "weekly", "custom"]).nullable(),
+      slots: z.array(REPEAT_SLOT_SCHEMA).max(7).optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCanPublish(context.supabase, context.userId);
+    const { data: item } = await context.supabase
+      .from("content_items")
+      .select("id, type, org_id, scheduled_at")
+      .eq("id", data.itemId)
+      .maybeSingle();
+    if (!item || (item as any).org_id !== context.orgId) throw new Error("Item não encontrado.");
+    if (item.type !== "story") throw new Error("Repetição só está disponível pra Stories.");
+    if (data.mode && !item.scheduled_at) {
+      throw new Error("Defina uma data e horário em Publicação antes de ativar a repetição.");
+    }
+    if (data.mode === "custom" && (!data.slots || data.slots.length === 0)) {
+      throw new Error("Escolha pelo menos um dia da semana pro modo personalizado.");
+    }
+    const { error } = await context.supabase
+      .from("content_items")
+      .update({
+        ig_repeat_mode: data.mode,
+        ig_repeat_slots: data.mode === "custom" ? data.slots : null,
+        ig_repeat_last_fired_date: null,
+      })
+      .eq("id", data.itemId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// Brasil inteiro usa UTC-3 desde o fim do horário de verão em 2019 — sem
+// DST pra se preocupar. Convertida pra "hora de parede" em São Paulo,
+// weekday é ISO (1=Segunda..7=Domingo), pra bater com ig_repeat_slots.
+const SP_OFFSET_MS = 3 * 60 * 60 * 1000;
+function saoPauloParts(date: Date) {
+  const sp = new Date(date.getTime() - SP_OFFSET_MS);
+  const jsWeekday = sp.getUTCDay(); // 0=Dom..6=Sáb
+  return {
+    weekday: jsWeekday === 0 ? 7 : jsWeekday,
+    hm: sp.toISOString().slice(11, 16),
+    dateStr: sp.toISOString().slice(0, 10),
+  };
+}
+
+/** Decide se uma Story com repetição ativa deve disparar agora — compara
+ * contra a hora de parede em São Paulo, não UTC direto. */
+function isRepeatDue(item: { scheduled_at: string | null; ig_repeat_mode: string | null; ig_repeat_slots: any; ig_repeat_last_fired_date: string | null }, now: Date) {
+  const nowSp = saoPauloParts(now);
+  if (item.ig_repeat_last_fired_date === nowSp.dateStr) return false; // já disparou hoje
+
+  if (item.ig_repeat_mode === "daily") {
+    if (!item.scheduled_at) return false;
+    return nowSp.hm >= saoPauloParts(new Date(item.scheduled_at)).hm;
+  }
+  if (item.ig_repeat_mode === "weekly") {
+    if (!item.scheduled_at) return false;
+    const schedSp = saoPauloParts(new Date(item.scheduled_at));
+    return nowSp.weekday === schedSp.weekday && nowSp.hm >= schedSp.hm;
+  }
+  if (item.ig_repeat_mode === "custom") {
+    const slots: { weekday: number; time: string }[] = item.ig_repeat_slots ?? [];
+    return slots.some((s) => s.weekday === nowSp.weekday && nowSp.hm >= s.time);
+  }
+  return false;
+}
+
 /** Called by the external cron (GitHub Actions, every few minutes — Vercel
  * Hobby's native cron only runs daily) via /api/cron/publish-instagram.
- * Scans for posts scheduled to go out and publishes each, tolerating
- * per-item failures so one bad post doesn't block the rest. */
+ * Scans for posts scheduled to go out (uma vez) e Stories com repetição
+ * ativa (diária/semanal/personalizada, pra sempre), publicando cada um e
+ * tolerando falha individual pra não travar o resto. */
 export async function runScheduledInstagramPublishes() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const now = new Date();
+
   const { data: due } = await supabaseAdmin
     .from("content_items")
     .select("id")
     .eq("ig_auto_publish", true)
     .eq("status", "PRONTO_PARA_PUBLICAR")
-    .lte("scheduled_at", new Date().toISOString());
+    .lte("scheduled_at", now.toISOString());
+
+  const { data: repeatCandidates } = await supabaseAdmin
+    .from("content_items")
+    .select("id, scheduled_at, ig_repeat_mode, ig_repeat_slots, ig_repeat_last_fired_date")
+    .eq("type", "story")
+    .eq("status", "PRONTO_PARA_PUBLICAR")
+    .not("ig_repeat_mode", "is", null);
+  const dueRepeatIds = (repeatCandidates ?? []).filter((it) => isRepeatDue(it, now)).map((it) => it.id);
 
   const results: { itemId: string; ok: boolean; error?: string }[] = [];
   for (const row of due ?? []) {
@@ -402,6 +528,16 @@ export async function runScheduledInstagramPublishes() {
     } catch (e: any) {
       console.error("[Instagram cron] falha ao publicar", row.id, e);
       results.push({ itemId: row.id, ok: false, error: e?.message ?? String(e) });
+    }
+  }
+  for (const itemId of dueRepeatIds) {
+    try {
+      await runInstagramPublish(itemId);
+      await supabaseAdmin.from("content_items").update({ ig_repeat_last_fired_date: saoPauloParts(now).dateStr }).eq("id", itemId);
+      results.push({ itemId, ok: true });
+    } catch (e: any) {
+      console.error("[Instagram cron] falha ao repetir story", itemId, e);
+      results.push({ itemId, ok: false, error: e?.message ?? String(e) });
     }
   }
   return results;

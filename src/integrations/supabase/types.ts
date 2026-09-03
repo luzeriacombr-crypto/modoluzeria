@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -1338,6 +1338,35 @@ export type Database = {
           },
         ]
       }
+      content_item_publishes: {
+        Row: {
+          content_item_id: string
+          id: string
+          ig_media_id: string | null
+          published_at: string
+        }
+        Insert: {
+          content_item_id: string
+          id?: string
+          ig_media_id?: string | null
+          published_at?: string
+        }
+        Update: {
+          content_item_id?: string
+          id?: string
+          ig_media_id?: string | null
+          published_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_item_publishes_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_items: {
         Row: {
           activity_location: string | null
@@ -1362,6 +1391,9 @@ export type Database = {
           ig_auto_publish: boolean
           ig_media_id: string | null
           ig_published_at: string | null
+          ig_repeat_last_fired_date: string | null
+          ig_repeat_mode: string | null
+          ig_repeat_slots: Json | null
           last_status_change_at: string | null
           legacy_assignee: string | null
           month_id: string
@@ -1400,6 +1432,9 @@ export type Database = {
           ig_auto_publish?: boolean
           ig_media_id?: string | null
           ig_published_at?: string | null
+          ig_repeat_last_fired_date?: string | null
+          ig_repeat_mode?: string | null
+          ig_repeat_slots?: Json | null
           last_status_change_at?: string | null
           legacy_assignee?: string | null
           month_id: string
@@ -1438,6 +1473,9 @@ export type Database = {
           ig_auto_publish?: boolean
           ig_media_id?: string | null
           ig_published_at?: string | null
+          ig_repeat_last_fired_date?: string | null
+          ig_repeat_mode?: string | null
+          ig_repeat_slots?: Json | null
           last_status_change_at?: string | null
           legacy_assignee?: string | null
           month_id?: string
@@ -3297,6 +3335,13 @@ export type Database = {
           whatsapp: string
         }[]
       }
+      run_retention_cleanup: {
+        Args: never
+        Returns: {
+          itens_purgados: number
+          notificacoes_apagadas: number
+        }[]
+      }
       send_daily_digest: { Args: never; Returns: number }
       send_deadline_reminders: { Args: never; Returns: number }
       set_item_editor: {
@@ -3377,12 +3422,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3406,11 +3451,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3431,11 +3476,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3456,11 +3501,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3473,11 +3518,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat } from "lucide-react";
 import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { getInstagramConnectionStatus } from "@/lib/luzeria/instagram.functions";
+import { getInstagramConnectionStatus, getStoryRepeatStatus, setStoryRepeatRule } from "@/lib/luzeria/instagram.functions";
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
 import { downloadDriveFile, downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
 import { FileActionsMenu } from "./FileActionsMenu";
@@ -1338,6 +1338,7 @@ export function DetailPanel() {
                   definidos em "Data de publicação" abaixo.
                   {item.type === "story" && " A legenda não é enviada — o Instagram não aceita texto por API em Stories."}
                 </p>
+                {item.type === "story" && <StoryRepeatControl itemId={item.id} scheduledAt={item.scheduledAt ?? null} />}
               </>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
@@ -1630,4 +1631,136 @@ function relTime(iso: string) {
   if (diff < 86400) return `há ${Math.floor(diff / 3600)}h`;
   if (diff < 604800) return `há ${Math.floor(diff / 86400)}d`;
   return new Date(iso).toLocaleDateString("pt-BR");
+}
+
+const REPEAT_WEEKDAYS = [
+  { v: 1, l: "Seg" }, { v: 2, l: "Ter" }, { v: 3, l: "Qua" }, { v: 4, l: "Qui" },
+  { v: 5, l: "Sex" }, { v: 6, l: "Sáb" }, { v: 7, l: "Dom" },
+];
+type RepeatSlot = { weekday: number; time: string };
+type RepeatMode = "daily" | "weekly" | "custom" | null;
+
+/** Repetir a mesma Story várias vezes — diária, semanal (mesmo dia/horário
+ * de "Data de publicação") ou personalizada (dias e horários escolhidos
+ * aqui). Pra sempre, sem data de término — desliga só se voltar pra "Não
+ * repetir". */
+function StoryRepeatControl({ itemId, scheduledAt }: { itemId: string; scheduledAt: string | null }) {
+  const getStatus = useServerFn(getStoryRepeatStatus);
+  const setRule = useServerFn(setStoryRepeatRule);
+  const qc = useQueryClient();
+  const { data: status } = useQuery({
+    queryKey: ["story-repeat-status", itemId],
+    queryFn: () => getStatus({ data: { itemId } }),
+  });
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customSlots, setCustomSlots] = useState<RepeatSlot[]>([]);
+  const slotsKey = status?.slots ? JSON.stringify(status.slots) : "";
+  useEffect(() => {
+    if (status?.mode === "custom" && status.slots) setCustomSlots(status.slots);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status?.mode, slotsKey]);
+
+  const mutation = useMutation({
+    mutationFn: (vars: { mode: RepeatMode; slots?: RepeatSlot[] }) => setRule({ data: { itemId, ...vars } }),
+    onSuccess: () => { toast.success("Repetição atualizada."); qc.invalidateQueries({ queryKey: ["story-repeat-status", itemId] }); },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao atualizar repetição."),
+  });
+
+  function selectMode(mode: RepeatMode) {
+    if (mode === "custom") { setCustomOpen(true); return; }
+    setCustomOpen(false);
+    mutation.mutate({ mode });
+  }
+  function toggleDay(weekday: number) {
+    setCustomSlots((prev) => (
+      prev.some((s) => s.weekday === weekday)
+        ? prev.filter((s) => s.weekday !== weekday)
+        : [...prev, { weekday, time: "12:00" }].sort((a, b) => a.weekday - b.weekday)
+    ));
+  }
+  function setDayTime(weekday: number, time: string) {
+    setCustomSlots((prev) => prev.map((s) => (s.weekday === weekday ? { ...s, time } : s)));
+  }
+
+  const currentMode: RepeatMode = status?.mode ?? null;
+  const scheduledTimeLabel = scheduledAt
+    ? new Date(scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    : null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-foreground/8">
+      <div className="flex items-center gap-1.5 mb-2 text-foreground/60">
+        <Repeat size={13} />
+        <span className="text-[11px] uppercase font-bold tracking-wider">Repetir publicação</span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {([
+          { v: null, l: "Não repetir" },
+          { v: "daily", l: "Diariamente" },
+          { v: "weekly", l: "Semanalmente" },
+          { v: "custom", l: "Personalizado" },
+        ] as { v: RepeatMode; l: string }[]).map((opt) => (
+          <button
+            key={String(opt.v)}
+            onClick={() => selectMode(opt.v)}
+            disabled={mutation.isPending || (opt.v !== null && !scheduledAt)}
+            title={opt.v !== null && !scheduledAt ? "Defina uma data e horário em Publicação primeiro" : undefined}
+            className="rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40"
+            style={{
+              backgroundColor: currentMode === opt.v ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
+              color: currentMode === opt.v ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
+            }}
+          >
+            {opt.l}
+          </button>
+        ))}
+      </div>
+
+      {(customOpen || currentMode === "custom") && (
+        <div className="mt-2.5 space-y-1.5">
+          {REPEAT_WEEKDAYS.map((d) => {
+            const slot = customSlots.find((s) => s.weekday === d.v);
+            return (
+              <div key={d.v} className="flex items-center gap-2 text-xs">
+                <label className="flex items-center gap-1.5 w-14 text-foreground/70">
+                  <input type="checkbox" checked={!!slot} onChange={() => toggleDay(d.v)} />
+                  {d.l}
+                </label>
+                {slot && (
+                  <input
+                    type="time" value={slot.time}
+                    onChange={(e) => setDayTime(d.v, e.target.value)}
+                    className="bg-background border border-foreground/10 rounded px-2 py-1 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                  />
+                )}
+              </div>
+            );
+          })}
+          <button
+            onClick={() => mutation.mutate({ mode: "custom", slots: customSlots })}
+            disabled={mutation.isPending || customSlots.length === 0}
+            className="lz-btn-primary text-xs px-3 py-1.5 rounded-md mt-1 disabled:opacity-50"
+          >
+            Salvar dias personalizados
+          </button>
+        </div>
+      )}
+
+      {currentMode && (
+        <p className="text-[11px] mt-2" style={{ color: "var(--lz-accent-ink)" }}>
+          {currentMode === "daily" && `Repetindo todo dia${scheduledTimeLabel ? ` às ${scheduledTimeLabel}` : ""}`}
+          {currentMode === "weekly" && `Repetindo toda semana${scheduledTimeLabel ? ` às ${scheduledTimeLabel}` : ""}`}
+          {currentMode === "custom" && "Repetindo nos dias personalizados"}
+          , pra sempre.
+        </p>
+      )}
+
+      {status && status.publishes.length > 0 && (
+        <p className="text-[11px] text-foreground/40 mt-1.5">
+          Publicado {status.publishes.length}{status.publishes.length >= 20 ? "+" : ""}x — última em{" "}
+          {new Date(status.publishes[0].publishedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}.
+        </p>
+      )}
+    </div>
+  );
 }
