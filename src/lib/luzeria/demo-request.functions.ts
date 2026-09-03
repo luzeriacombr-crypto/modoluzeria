@@ -5,6 +5,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
 import { LUZERIA_ORG_ID, MODO_CRIADOR_OWNER_ID } from "./api.functions";
+import { getTrustedClientIp } from "./signup-rate-limit.server";
 
 const PLATFORM_SUPPORT_EMAIL = "junioreisfoto2@gmail.com";
 const DEMO_REQUEST_LIMIT_PER_HOUR = 5;
@@ -22,9 +23,7 @@ export const requestDemo = createServerFn({ method: "POST" })
 
     const { getRequest } = await import("@tanstack/react-start/server");
     const request = getRequest();
-    const ip = request?.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-      || request?.headers.get("x-real-ip")
-      || "unknown";
+    const ip = getTrustedClientIp(request);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 

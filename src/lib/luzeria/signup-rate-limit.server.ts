@@ -4,12 +4,21 @@
 // callAdminEdgeFn which only loads behind authenticated, lazily-split routes).
 const SIGNUP_LIMIT_PER_HOUR = 5;
 
+/** IP de verdade do cliente, resistente a spoofing — a Vercel sempre
+ * ANEXA o IP real como o último salto de x-forwarded-for, então o
+ * primeiro (esquerda) é livre pro próprio cliente inventar (bastava trocar
+ * a cada tentativa pra furar qualquer limite baseado nele). Único proxy
+ * confiável na frente (Vercel), por isso pegar o último basta. */
+export function getTrustedClientIp(request: Request | null): string {
+  const xff = request?.headers.get("x-forwarded-for");
+  const lastHop = xff?.split(",").map((s) => s.trim()).filter(Boolean).pop();
+  return lastHop || request?.headers.get("x-real-ip") || "unknown";
+}
+
 export async function checkSignupRateLimit(supabaseAdmin: any) {
   const { getRequest } = await import("@tanstack/react-start/server");
   const request = getRequest();
-  const ip = request?.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || request?.headers.get("x-real-ip")
-    || "unknown";
+  const ip = getTrustedClientIp(request);
 
   const windowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { count } = await supabaseAdmin
