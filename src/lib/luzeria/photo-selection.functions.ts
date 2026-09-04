@@ -364,6 +364,49 @@ export const getPublicPhotoSelection = createServerFn({ method: "GET" })
     };
   });
 
+/** Usado pela rota /api/selecao-og/$token (não é createServerFn — chamado
+ * direto de um handler HTTP cru, pra devolver bytes de imagem prontos pro
+ * crawler do WhatsApp/Facebook buscar sem autenticação nenhuma, igual a
+ * própria seleção pública). Mesma marca d'água de qualquer outra foto. */
+export async function getPublicPhotoSelectionCoverImage(token: string): Promise<Buffer | null> {
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
+  );
+  const { data: info, error } = await supabase.rpc("get_public_photo_selection_info", { _token: token });
+  if (error || !info) return null;
+  const r = info as any;
+
+  return withDriveOrg(r.orgId as string, async () => {
+    let coverFileId = r.coverDriveFileId as string | null;
+    try {
+      const files = await listDriveFolderImages(r.driveFolderId as string, "nome");
+      if (!coverFileId || !files.some((f) => f.id === coverFileId)) {
+        coverFileId = files[0]?.id ?? null;
+      }
+    } catch (e) {
+      console.error("[getPublicPhotoSelectionCoverImage] listDriveFolderImages failed:", e);
+    }
+    if (!coverFileId) return null;
+
+    try {
+      const accessToken = await getAccessToken();
+      const contentRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(coverFileId)}?alt=media&supportsAllDrives=true`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!contentRes.ok) return null;
+      const imageBuf = Buffer.from(await contentRes.arrayBuffer());
+      const watermark = await resolveWatermarkSpec(r.orgId as string);
+      return protectPhotoBytes(imageBuf, watermark);
+    } catch (e) {
+      console.error("[getPublicPhotoSelectionCoverImage] failed:", e);
+      return null;
+    }
+  });
+}
+
 /** Único jeito de uma foto chegar no navegador do visitante público: os
  * bytes originais nunca são expostos — sempre passam por aqui, que confirma
  * que cada `fileId` realmente pertence à pasta dessa seleção (evita virar

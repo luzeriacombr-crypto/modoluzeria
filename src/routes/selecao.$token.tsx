@@ -47,11 +47,32 @@ export const Route = createFileRoute("/selecao/$token")({
       return null;
     }
   },
-  head: ({ loaderData }) => {
+  head: ({ loaderData, params }) => {
     const title = loaderData?.title
       ? `Seleção de fotos — ${loaderData.title}`
       : "Seleção de fotos";
-    return { meta: [{ title }, { name: "robots", content: "noindex" }] };
+    const description = loaderData?.clientName
+      ? `Escolha suas fotos favoritas — ${loaderData.clientName}`
+      : "Escolha suas fotos favoritas.";
+    const meta: Record<string, string>[] = [
+      { title },
+      { name: "robots", content: "noindex" },
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+    ];
+    // Só entra com og:image quando a seleção tem foto de capa — sem isso
+    // o crawler do WhatsApp/etc. cairia num link de imagem inexistente.
+    if (loaderData?.coverPhotoId) {
+      const appUrl = import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com.br";
+      const ogImage = `${appUrl}/api/selecao-og/${params.token}`;
+      meta.push({ property: "og:image", content: ogImage }, { name: "twitter:image", content: ogImage });
+    }
+    return { meta };
   },
 });
 
