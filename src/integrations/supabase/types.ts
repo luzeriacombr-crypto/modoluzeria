@@ -2543,6 +2543,98 @@ export type Database = {
           },
         ]
       }
+      photo_selection_choices: {
+        Row: {
+          created_at: string
+          drive_file_id: string
+          file_name: string
+          id: string
+          selection_id: string
+        }
+        Insert: {
+          created_at?: string
+          drive_file_id: string
+          file_name: string
+          id?: string
+          selection_id: string
+        }
+        Update: {
+          created_at?: string
+          drive_file_id?: string
+          file_name?: string
+          id?: string
+          selection_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_selection_choices_selection_id_fkey"
+            columns: ["selection_id"]
+            isOneToOne: false
+            referencedRelation: "photo_selections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photo_selections: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          deadline: string | null
+          drive_folder_id: string
+          drive_folder_link: string
+          finalized_at: string | null
+          id: string
+          org_id: string
+          status: string
+          title: string
+          token: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          drive_folder_id: string
+          drive_folder_link: string
+          finalized_at?: string | null
+          id?: string
+          org_id: string
+          status?: string
+          title: string
+          token: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          drive_folder_id?: string
+          drive_folder_link?: string
+          finalized_at?: string | null
+          id?: string
+          org_id?: string
+          status?: string
+          title?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_selections_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photo_selections_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           created_at: string
@@ -3232,6 +3324,7 @@ export type Database = {
       approve_public_feed: { Args: { _token: string }; Returns: string }
       auto_mark_missed: { Args: never; Returns: number }
       current_org_id: { Args: never; Returns: string }
+      finalize_photo_selection: { Args: { _token: string }; Returns: boolean }
       generate_recurring_for_month: {
         Args: { _month_key?: string }
         Returns: number
@@ -3257,6 +3350,10 @@ export type Database = {
       get_my_email: { Args: never; Returns: string }
       get_org_id_for_token: { Args: { _token: string }; Returns: string }
       get_public_feed: { Args: { _token: string }; Returns: Json }
+      get_public_photo_selection_info: {
+        Args: { _token: string }
+        Returns: Json
+      }
       has_cargo_permission: {
         Args: { _perm: string; _user_id: string }
         Returns: boolean
@@ -3373,6 +3470,10 @@ export type Database = {
           _token: string
         }
         Returns: Json
+      }
+      submit_photo_selection: {
+        Args: { _choices: Json; _token: string }
+        Returns: boolean
       }
       update_feed_order: { Args: { p_updates: Json }; Returns: undefined }
       update_item_idx: { Args: { p_updates: Json }; Returns: undefined }

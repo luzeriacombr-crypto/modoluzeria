@@ -20,6 +20,7 @@ import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as AfiliarRouteImport } from './routes/afiliar'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SelecaoTokenRouteImport } from './routes/selecao.$token'
 import { Route as PromoSlugRouteImport } from './routes/promo/$slug'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
@@ -95,6 +96,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SelecaoTokenRoute = SelecaoTokenRouteImport.update({
+  id: '/selecao/$token',
+  path: '/selecao/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PromoSlugRoute = PromoSlugRouteImport.update({
@@ -241,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
+  '/selecao/$token': typeof SelecaoTokenRoute
   '/afiliado/dashboard': typeof AuthenticatedAfiliadoDashboardRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
@@ -275,6 +282,7 @@ export interface FileRoutesByTo {
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
+  '/selecao/$token': typeof SelecaoTokenRoute
   '/afiliado/dashboard': typeof AuthenticatedAfiliadoDashboardRoute
   '/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
@@ -311,6 +319,7 @@ export interface FileRoutesById {
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
+  '/selecao/$token': typeof SelecaoTokenRoute
   '/_authenticated/afiliado/dashboard': typeof AuthenticatedAfiliadoDashboardRoute
   '/_authenticated/cliente/$clientId': typeof AuthenticatedClienteClientIdRoute
   '/_authenticated/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
@@ -347,6 +356,7 @@ export interface FileRouteTypes {
     | '/assinar/completar'
     | '/preview/$token'
     | '/promo/$slug'
+    | '/selecao/$token'
     | '/afiliado/dashboard'
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
@@ -381,6 +391,7 @@ export interface FileRouteTypes {
     | '/assinar/completar'
     | '/preview/$token'
     | '/promo/$slug'
+    | '/selecao/$token'
     | '/afiliado/dashboard'
     | '/cliente/$clientId'
     | '/oauth/drive-callback'
@@ -416,6 +427,7 @@ export interface FileRouteTypes {
     | '/assinar/completar'
     | '/preview/$token'
     | '/promo/$slug'
+    | '/selecao/$token'
     | '/_authenticated/afiliado/dashboard'
     | '/_authenticated/cliente/$clientId'
     | '/_authenticated/oauth/drive-callback'
@@ -440,6 +452,7 @@ export interface RootRouteChildren {
   TermosRoute: typeof TermosRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
   PromoSlugRoute: typeof PromoSlugRoute
+  SelecaoTokenRoute: typeof SelecaoTokenRoute
   ApiCronPublishInstagramRoute: typeof ApiCronPublishInstagramRoute
   ApiCronRetentionCleanupRoute: typeof ApiCronRetentionCleanupRoute
   ApiCronSendPushNotificationsRoute: typeof ApiCronSendPushNotificationsRoute
@@ -522,6 +535,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/selecao/$token': {
+      id: '/selecao/$token'
+      path: '/selecao/$token'
+      fullPath: '/selecao/$token'
+      preLoaderRoute: typeof SelecaoTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/promo/$slug': {
@@ -749,6 +769,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermosRoute: TermosRoute,
   PreviewTokenRoute: PreviewTokenRoute,
   PromoSlugRoute: PromoSlugRoute,
+  SelecaoTokenRoute: SelecaoTokenRoute,
   ApiCronPublishInstagramRoute: ApiCronPublishInstagramRoute,
   ApiCronRetentionCleanupRoute: ApiCronRetentionCleanupRoute,
   ApiCronSendPushNotificationsRoute: ApiCronSendPushNotificationsRoute,

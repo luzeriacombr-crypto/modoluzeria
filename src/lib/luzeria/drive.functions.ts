@@ -325,7 +325,7 @@ async function resolveTargetFolderForItem(
 }
 
 /** Extract a Drive file ID from a URL or return the raw ID. */
-function parseDriveId(input: string): string | null {
+export function parseDriveId(input: string): string | null {
   const s = input.trim();
   if (!s) return null;
   // Plain id (chars allowed in Drive ids)
@@ -486,6 +486,37 @@ export const searchDriveFiles = createServerFn({ method: "GET" })
       modifiedTime: f.modifiedTime ?? null,
     }));
   }));
+
+/** Lists every image directly inside a Drive folder, paginating through
+ * `nextPageToken` until exhausted — a seleção de fotos pode ter centenas de
+ * imagens, e nem searchDriveFiles nem driveListChildFolders paginam hoje.
+ * Plain async function (not a createServerFn) so it can be called both from
+ * an authenticated admin context and from the public/anon photo-selection
+ * flow in photo-selection.functions.ts, which has no logged-in profile to
+ * satisfy requireActiveProfile. Callers are responsible for already being
+ * inside withDriveOrg(orgId, ...). */
+export async function listDriveFolderImages(folderId: string) {
+  const q = `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`;
+  const files: Array<{ id: string; name: string; thumbnailUrl: string | null }> = [];
+  let pageToken: string | undefined;
+  do {
+    const params = new URLSearchParams({
+      q,
+      pageSize: "1000",
+      fields: "nextPageToken,files(id,name,thumbnailLink)",
+      orderBy: "name",
+      supportsAllDrives: "true",
+      includeItemsFromAllDrives: "true",
+    });
+    if (pageToken) params.set("pageToken", pageToken);
+    const json: any = await driveFetch(`/drive/v3/files?${params.toString()}`);
+    for (const f of json.files ?? []) {
+      files.push({ id: f.id, name: f.name, thumbnailUrl: f.thumbnailLink ?? null });
+    }
+    pageToken = json.nextPageToken;
+  } while (pageToken);
+  return files;
+}
 
 /* ============== ATTACH BY ID/URL ============== */
 

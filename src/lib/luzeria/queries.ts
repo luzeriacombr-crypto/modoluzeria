@@ -53,6 +53,10 @@ import {
   getPublicFeed, getPublicDriveThumbnail, addPublicFeedback,
 } from "./feed-share.functions";
 import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from "./platform-updates.functions";
+import {
+  createPhotoSelection, listPhotoSelections, getPhotoSelectionDetail, deletePhotoSelection,
+  getPublicPhotoSelection,
+} from "./photo-selection.functions";
 import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications } from "./instagram.functions";
 import {
   getCalendarItems, getGoogleCalendarAuthUrl, disconnectGoogleCalendar,
@@ -502,6 +506,28 @@ export const publicFeedQO = (token: string | null) =>
     queryFn: () => getPublicFeed({ data: { token: token! } }),
     enabled: !!token,
     staleTime: 30_000,
+  });
+
+export const photoSelectionsQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["photo-selections", clientId],
+    queryFn: () => listPhotoSelections({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
+  });
+
+export const photoSelectionDetailQO = (id: string | null) =>
+  queryOptions({
+    queryKey: ["photo-selection-detail", id],
+    queryFn: () => getPhotoSelectionDetail({ data: { id: id! } }),
+    enabled: !!id,
+  });
+
+export const publicPhotoSelectionQO = (token: string | null) =>
+  queryOptions({
+    queryKey: ["public-photo-selection", token],
+    queryFn: () => getPublicPhotoSelection({ data: { token: token! } }),
+    enabled: !!token,
+    staleTime: 15_000,
   });
 
 export const publicDriveThumbQO = (token: string, fileId: string | null) =>
@@ -1290,6 +1316,15 @@ export function useApi() {
     addPublicFeedback: useMutation({
       mutationFn: useServerFn(addPublicFeedback),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["public-feed"] }),
+    }),
+    /* ===== SELEÇÃO DE FOTOS ===== */
+    createPhotoSelection: useMutation({
+      mutationFn: useServerFn(createPhotoSelection),
+      onSuccess: (_d, vars: any) => qc.invalidateQueries({ queryKey: ["photo-selections", vars?.data?.clientId] }),
+    }),
+    deletePhotoSelection: useMutation({
+      mutationFn: useServerFn(deletePhotoSelection),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["photo-selections"] }),
     }),
     /* ===== FÓRUM ===== */
     createForumPost: useMutation({
