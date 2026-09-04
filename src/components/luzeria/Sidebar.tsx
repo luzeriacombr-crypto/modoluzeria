@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Plus, Info, CircleHelp, CalendarDays, Instagram, Users, Wallet, UserCog, BookMarked,
-  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2,
+  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -23,6 +23,7 @@ export const DEFAULT_NAV_LABELS: Record<string, string> = {
   cobranca: "Plano e Cobrança", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda",
   rotina: "Rotina", membros: "Membros", relatorio: "Relatório", jornada: "Jornada do cliente",
   vendas: "Vendas", lixeira: "Lixeira", pagamentos: "Pagamentos", cliente: "Visão Geral", "cliente-overview": "Visão Geral",
+  "selecao-de-fotos": "Seleção de Fotos",
 };
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
@@ -127,6 +128,7 @@ export function Sidebar({
   const canJourney = isMaster || hasSetorPermission(me, "settings_journey");
   const canFinanceiro = isMaster || hasPermission(me, "view_financeiro");
   const canSales = !disabled.has("sales_pipeline") && hasPermission(me, "sales_pipeline");
+  const canPhotoSelection = !disabled.has("photo_selection") && isAdmin;
   const rotinaEnabled = !disabled.has("rotina");
   const configTabActive = (tabId: string) => pathname === "/configuracoes" && routerSearch?.tab === tabId;
   const goToConfigTab = (tabId: string) => navigate({ to: "/configuracoes", search: { tab: tabId } });
@@ -255,6 +257,11 @@ export function Sidebar({
             ...(canSales ? [{ id: "vendas", label: navLabel("vendas", "Vendas"), meta: { icon: <Handshake size={17} />, label: navLabel("vendas", "Vendas"), active: pathname === "/vendas", kind: "button" as const, onClick: () => navigate({ to: "/vendas" }) }, node: (
               <div key="vendas" data-tour="nav-vendas">
                 <NavButton icon={<Handshake size={15} />} label={navLabel("vendas", "Vendas")} active={pathname === "/vendas"} onClick={() => navigate({ to: "/vendas" })} />
+              </div>
+            ) }] : []),
+            ...(canPhotoSelection ? [{ id: "selecao-de-fotos", label: navLabel("selecao-de-fotos", "Seleção de Fotos"), meta: { icon: <Images size={17} />, label: navLabel("selecao-de-fotos", "Seleção de Fotos"), active: pathname.startsWith("/selecao-de-fotos"), kind: "button" as const, onClick: () => navigate({ to: "/selecao-de-fotos" }) }, node: (
+              <div key="selecao-de-fotos" data-tour="nav-selecao-de-fotos">
+                <NavButton icon={<Images size={15} />} label={navLabel("selecao-de-fotos", "Seleção de Fotos")} active={pathname.startsWith("/selecao-de-fotos")} onClick={() => navigate({ to: "/selecao-de-fotos" })} />
               </div>
             ) }] : []),
             ...(isAdmin ? [{ id: "lixeira", label: navLabel("lixeira", "Lixeira"), meta: { icon: <Trash2 size={17} />, label: navLabel("lixeira", "Lixeira"), active: pathname === "/lixeira", kind: "button" as const, onClick: () => navigate({ to: "/lixeira" }) }, node: (

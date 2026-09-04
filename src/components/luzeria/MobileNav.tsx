@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2, Plus, Search } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2, Plus, Search, Images } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -200,6 +200,13 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
                 icon={<Handshake size={17} />}
                 label={navLabel("vendas", "Vendas")}
                 onClick={() => { navigate({ to: "/vendas" }); closeAllSheets(); }}
+              />
+            )}
+            {isAdmin && !disabledFeatures.has("photo_selection") && (
+              <MenuLink
+                icon={<Images size={17} />}
+                label={navLabel("selecao-de-fotos", "Seleção de Fotos")}
+                onClick={() => { navigate({ to: "/selecao-de-fotos" }); closeAllSheets(); }}
               />
             )}
             {isAdmin && (

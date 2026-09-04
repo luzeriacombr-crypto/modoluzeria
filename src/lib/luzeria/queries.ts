@@ -54,6 +54,7 @@ import {
 } from "./feed-share.functions";
 import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from "./platform-updates.functions";
 import {
+  listPhotoClients, getPhotoClient, createPhotoClient, deletePhotoClient,
   createPhotoSelection, listPhotoSelections, getPhotoSelectionDetail, deletePhotoSelection,
   getPublicPhotoSelection,
 } from "./photo-selection.functions";
@@ -508,11 +509,21 @@ export const publicFeedQO = (token: string | null) =>
     staleTime: 30_000,
   });
 
-export const photoSelectionsQO = (clientId: string | null) =>
+export const photoClientsQO = () =>
+  queryOptions({ queryKey: ["photo-clients"], queryFn: () => listPhotoClients() });
+
+export const photoClientQO = (id: string | null) =>
   queryOptions({
-    queryKey: ["photo-selections", clientId],
-    queryFn: () => listPhotoSelections({ data: { clientId: clientId! } }),
-    enabled: !!clientId,
+    queryKey: ["photo-client", id],
+    queryFn: () => getPhotoClient({ data: { id: id! } }),
+    enabled: !!id,
+  });
+
+export const photoSelectionsQO = (photoClientId: string | null) =>
+  queryOptions({
+    queryKey: ["photo-selections", photoClientId],
+    queryFn: () => listPhotoSelections({ data: { photoClientId: photoClientId! } }),
+    enabled: !!photoClientId,
   });
 
 export const photoSelectionDetailQO = (id: string | null) =>
@@ -1318,9 +1329,17 @@ export function useApi() {
       onSuccess: () => qc.invalidateQueries({ queryKey: ["public-feed"] }),
     }),
     /* ===== SELEÇÃO DE FOTOS ===== */
+    createPhotoClient: useMutation({
+      mutationFn: useServerFn(createPhotoClient),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["photo-clients"] }),
+    }),
+    deletePhotoClient: useMutation({
+      mutationFn: useServerFn(deletePhotoClient),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["photo-clients"] }),
+    }),
     createPhotoSelection: useMutation({
       mutationFn: useServerFn(createPhotoSelection),
-      onSuccess: (_d, vars: any) => qc.invalidateQueries({ queryKey: ["photo-selections", vars?.data?.clientId] }),
+      onSuccess: (_d, vars: any) => qc.invalidateQueries({ queryKey: ["photo-selections", vars?.data?.photoClientId] }),
     }),
     deletePhotoSelection: useMutation({
       mutationFn: useServerFn(deletePhotoSelection),

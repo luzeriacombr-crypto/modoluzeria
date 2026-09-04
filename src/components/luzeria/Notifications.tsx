@@ -114,6 +114,8 @@ export function NotificationsBell() {
                     navigate({ to: "/ajuda", search: { tab: "forum" } });
                   } else if (n.type === "demo_request") {
                     navigate({ to: "/configuracoes", search: { tab: "cobranca" } });
+                  } else if (n.type === "photo_selection_finalized" && n.photoClientId) {
+                    navigate({ to: "/selecao-de-fotos/$clientId", params: { clientId: n.photoClientId } });
                   }
                 }}
                 className="w-full text-left px-4 py-3 border-b border-foreground/4 hover:bg-foreground/[0.04] transition-colors block"

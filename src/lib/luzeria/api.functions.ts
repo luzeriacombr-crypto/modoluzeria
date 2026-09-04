@@ -1884,6 +1884,7 @@ export const listNotifications = createServerFn({ method: "GET" })
       message: n.message, read: n.read, createdAt: n.created_at,
       clientId: n.client_id ?? n.content_items?.months?.client_id ?? null,
       monthKey: n.content_items?.months?.key ?? null,
+      photoClientId: n.photo_client_id ?? null,
     }));
   });
 

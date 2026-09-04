@@ -2276,6 +2276,7 @@ export type Database = {
           id: string
           item_id: string | null
           message: string
+          photo_client_id: string | null
           push_sent_at: string | null
           read: boolean
           type: string
@@ -2287,6 +2288,7 @@ export type Database = {
           id?: string
           item_id?: string | null
           message: string
+          photo_client_id?: string | null
           push_sent_at?: string | null
           read?: boolean
           type: string
@@ -2298,6 +2300,7 @@ export type Database = {
           id?: string
           item_id?: string | null
           message?: string
+          photo_client_id?: string | null
           push_sent_at?: string | null
           read?: boolean
           type?: string
@@ -2316,6 +2319,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_photo_client_id_fkey"
+            columns: ["photo_client_id"]
+            isOneToOne: false
+            referencedRelation: "photo_clients"
             referencedColumns: ["id"]
           },
           {
@@ -2543,6 +2553,38 @@ export type Database = {
           },
         ]
       }
+      photo_clients: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          org_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          org_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_clients_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       photo_selection_choices: {
         Row: {
           created_at: string
@@ -2577,7 +2619,6 @@ export type Database = {
       }
       photo_selections: {
         Row: {
-          client_id: string
           created_at: string
           created_by: string | null
           deadline: string | null
@@ -2586,12 +2627,12 @@ export type Database = {
           finalized_at: string | null
           id: string
           org_id: string
+          photo_client_id: string
           status: string
           title: string
           token: string
         }
         Insert: {
-          client_id: string
           created_at?: string
           created_by?: string | null
           deadline?: string | null
@@ -2600,12 +2641,12 @@ export type Database = {
           finalized_at?: string | null
           id?: string
           org_id: string
+          photo_client_id: string
           status?: string
           title: string
           token: string
         }
         Update: {
-          client_id?: string
           created_at?: string
           created_by?: string | null
           deadline?: string | null
@@ -2614,23 +2655,24 @@ export type Database = {
           finalized_at?: string | null
           id?: string
           org_id?: string
+          photo_client_id?: string
           status?: string
           title?: string
           token?: string
         }
         Relationships: [
           {
-            foreignKeyName: "photo_selections_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "photo_selections_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photo_selections_photo_client_id_fkey"
+            columns: ["photo_client_id"]
+            isOneToOne: false
+            referencedRelation: "photo_clients"
             referencedColumns: ["id"]
           },
         ]

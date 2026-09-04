@@ -9,9 +9,12 @@ const PUBLIC_BASE = import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com
 
 /** Cliente cola o link de uma pasta do Drive, o app vira um site público
  * onde ele escolhe as fotos, e a agência copia o código pro Lightroom —
- * mesmo padrão de link público por token do preview de feed. */
-export function ClientPhotoSelectionTab({ clientId }: { clientId: string }) {
-  const { data: selections = [], isLoading } = useQuery(photoSelectionsQO(clientId));
+ * mesmo padrão de link público por token do preview de feed. Usado tanto
+ * na página de detalhe de um cliente de fotografia (área independente
+ * "Seleção de Fotos") quanto reaproveitável em qualquer outro lugar que
+ * precise gerenciar seleções de um `photoClientId`. */
+export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string }) {
+  const { data: selections = [], isLoading } = useQuery(photoSelectionsQO(photoClientId));
   const { createPhotoSelection, deletePhotoSelection } = useApi();
   const [showNew, setShowNew] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -63,7 +66,7 @@ export function ClientPhotoSelectionTab({ clientId }: { clientId: string }) {
           onClose={() => setShowNew(false)}
           saving={createPhotoSelection.isPending}
           onCreate={(vals) => {
-            createPhotoSelection.mutate({ data: { clientId, ...vals } }, {
+            createPhotoSelection.mutate({ data: { photoClientId, ...vals } }, {
               onSuccess: () => { setShowNew(false); toast.success("Seleção criada — copie o link pro cliente."); },
               onError: (e: any) => toast.error(e?.message ?? "Erro ao criar seleção."),
             });

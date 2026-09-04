@@ -15,7 +15,6 @@ import { useMe } from "@/lib/luzeria/queries";
 import { MaisAtividadesTab } from "./MaisAtividadesTab";
 import { ClientDocsTab } from "./ClientDocsTab";
 import { ClientReferenceLibraryTab } from "./ClientReferenceLibraryTab";
-import { ClientPhotoSelectionTab } from "./ClientPhotoSelectionTab";
 import { CampanhasTab } from "./CampanhasTab";
 import { Modal } from "./Modals";
 import type { Client } from "@/lib/luzeria/types";
@@ -44,7 +43,7 @@ const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizado
  * Ficha e Stories ficam de fora (Stories já tem seu próprio toggle de
  * sempre, "ficha" é o mínimo de navegação garantido). */
 const HIDEABLE_TABS = ["posts", "reels", "finalizados", "mais", "feed"] as const;
-type MaisSubTab = "atividades" | "campanhas" | "docs" | "biblioteca" | "selecao";
+type MaisSubTab = "atividades" | "campanhas" | "docs" | "biblioteca";
 
 export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   clientId: string; tab?: string; onTabChange: (tab: ClientTab) => void;
@@ -184,7 +183,6 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
 
   const showDocsSubTab = isAdmin;
   const showBibliotecaSubTab = !disabledFeatures.has("reference_library");
-  const showSelecaoSubTab = isAdmin;
   const tabs = visibleTabs;
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
@@ -488,9 +486,6 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
               {showBibliotecaSubTab && (
                 <MaisSubTabPill active={maisSubTab === "biblioteca"} onClick={() => setMaisSubTab("biblioteca")}>Biblioteca</MaisSubTabPill>
               )}
-              {showSelecaoSubTab && (
-                <MaisSubTabPill active={maisSubTab === "selecao"} onClick={() => setMaisSubTab("selecao")}>Seleção de Fotos</MaisSubTabPill>
-              )}
             </div>
             {maisSubTab === "atividades" && month && (
               <MaisAtividadesTab
@@ -510,7 +505,6 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             )}
             {maisSubTab === "docs" && showDocsSubTab && <ClientDocsTab clientId={client.id} />}
             {maisSubTab === "biblioteca" && showBibliotecaSubTab && <ClientReferenceLibraryTab clientId={client.id} />}
-            {maisSubTab === "selecao" && showSelecaoSubTab && <ClientPhotoSelectionTab clientId={client.id} />}
           </div>
         )}
         {tab === "ficha" && (

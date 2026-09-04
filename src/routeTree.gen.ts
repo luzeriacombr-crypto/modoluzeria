@@ -25,6 +25,7 @@ import { Route as PromoSlugRouteImport } from './routes/promo/$slug'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
+import { Route as AuthenticatedSelecaoDeFotosRouteImport } from './routes/_authenticated/selecao-de-fotos'
 import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated/rotina'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
@@ -38,6 +39,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as ApiCronSendPushNotificationsRouteImport } from './routes/api.cron.send-push-notifications'
 import { Route as ApiCronRetentionCleanupRouteImport } from './routes/api.cron.retention-cleanup'
 import { Route as ApiCronPublishInstagramRouteImport } from './routes/api.cron.publish-instagram'
+import { Route as AuthenticatedSelecaoDeFotosClientIdRouteImport } from './routes/_authenticated/selecao-de-fotos_.$clientId'
 import { Route as AuthenticatedOauthInstagramCallbackRouteImport } from './routes/_authenticated/oauth.instagram-callback'
 import { Route as AuthenticatedOauthGoogleCalendarCallbackRouteImport } from './routes/_authenticated/oauth.google-calendar-callback'
 import { Route as AuthenticatedOauthDriveCallbackRouteImport } from './routes/_authenticated/oauth.drive-callback'
@@ -123,6 +125,12 @@ const AuthenticatedVendasRoute = AuthenticatedVendasRouteImport.update({
   path: '/vendas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSelecaoDeFotosRoute =
+  AuthenticatedSelecaoDeFotosRouteImport.update({
+    id: '/selecao-de-fotos',
+    path: '/selecao-de-fotos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRotinaRoute = AuthenticatedRotinaRouteImport.update({
   id: '/rotina',
   path: '/rotina',
@@ -191,6 +199,12 @@ const ApiCronPublishInstagramRoute = ApiCronPublishInstagramRouteImport.update({
   path: '/api/cron/publish-instagram',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSelecaoDeFotosClientIdRoute =
+  AuthenticatedSelecaoDeFotosClientIdRouteImport.update({
+    id: '/selecao-de-fotos_/$clientId',
+    path: '/selecao-de-fotos/$clientId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedOauthInstagramCallbackRoute =
   AuthenticatedOauthInstagramCallbackRouteImport.update({
     id: '/oauth/instagram-callback',
@@ -243,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
+  '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
@@ -253,6 +268,7 @@ export interface FileRoutesByFullPath {
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
   '/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
+  '/selecao-de-fotos/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
@@ -278,6 +294,7 @@ export interface FileRoutesByTo {
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/rotina': typeof AuthenticatedRotinaRoute
+  '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
@@ -288,6 +305,7 @@ export interface FileRoutesByTo {
   '/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
   '/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
+  '/selecao-de-fotos/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
@@ -315,6 +333,7 @@ export interface FileRoutesById {
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/rotina': typeof AuthenticatedRotinaRoute
+  '/_authenticated/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/preview/$token': typeof PreviewTokenRoute
@@ -325,6 +344,7 @@ export interface FileRoutesById {
   '/_authenticated/oauth/drive-callback': typeof AuthenticatedOauthDriveCallbackRoute
   '/_authenticated/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/_authenticated/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
+  '/_authenticated/selecao-de-fotos_/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
@@ -352,6 +372,7 @@ export interface FileRouteTypes {
     | '/minhas-tarefas'
     | '/perfil'
     | '/rotina'
+    | '/selecao-de-fotos'
     | '/vendas'
     | '/assinar/completar'
     | '/preview/$token'
@@ -362,6 +383,7 @@ export interface FileRouteTypes {
     | '/oauth/drive-callback'
     | '/oauth/google-calendar-callback'
     | '/oauth/instagram-callback'
+    | '/selecao-de-fotos/$clientId'
     | '/api/cron/publish-instagram'
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-push-notifications'
@@ -387,6 +409,7 @@ export interface FileRouteTypes {
     | '/minhas-tarefas'
     | '/perfil'
     | '/rotina'
+    | '/selecao-de-fotos'
     | '/vendas'
     | '/assinar/completar'
     | '/preview/$token'
@@ -397,6 +420,7 @@ export interface FileRouteTypes {
     | '/oauth/drive-callback'
     | '/oauth/google-calendar-callback'
     | '/oauth/instagram-callback'
+    | '/selecao-de-fotos/$clientId'
     | '/api/cron/publish-instagram'
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-push-notifications'
@@ -423,6 +447,7 @@ export interface FileRouteTypes {
     | '/_authenticated/minhas-tarefas'
     | '/_authenticated/perfil'
     | '/_authenticated/rotina'
+    | '/_authenticated/selecao-de-fotos'
     | '/_authenticated/vendas'
     | '/assinar/completar'
     | '/preview/$token'
@@ -433,6 +458,7 @@ export interface FileRouteTypes {
     | '/_authenticated/oauth/drive-callback'
     | '/_authenticated/oauth/google-calendar-callback'
     | '/_authenticated/oauth/instagram-callback'
+    | '/_authenticated/selecao-de-fotos_/$clientId'
     | '/api/cron/publish-instagram'
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-push-notifications'
@@ -572,6 +598,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVendasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/selecao-de-fotos': {
+      id: '/_authenticated/selecao-de-fotos'
+      path: '/selecao-de-fotos'
+      fullPath: '/selecao-de-fotos'
+      preLoaderRoute: typeof AuthenticatedSelecaoDeFotosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/rotina': {
       id: '/_authenticated/rotina'
       path: '/rotina'
@@ -663,6 +696,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronPublishInstagramRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/selecao-de-fotos_/$clientId': {
+      id: '/_authenticated/selecao-de-fotos_/$clientId'
+      path: '/selecao-de-fotos/$clientId'
+      fullPath: '/selecao-de-fotos/$clientId'
+      preLoaderRoute: typeof AuthenticatedSelecaoDeFotosClientIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/oauth/instagram-callback': {
       id: '/_authenticated/oauth/instagram-callback'
       path: '/oauth/instagram-callback'
@@ -712,12 +752,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedRotinaRoute: typeof AuthenticatedRotinaRoute
+  AuthenticatedSelecaoDeFotosRoute: typeof AuthenticatedSelecaoDeFotosRoute
   AuthenticatedVendasRoute: typeof AuthenticatedVendasRoute
   AuthenticatedAfiliadoDashboardRoute: typeof AuthenticatedAfiliadoDashboardRoute
   AuthenticatedClienteClientIdRoute: typeof AuthenticatedClienteClientIdRoute
   AuthenticatedOauthDriveCallbackRoute: typeof AuthenticatedOauthDriveCallbackRoute
   AuthenticatedOauthGoogleCalendarCallbackRoute: typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   AuthenticatedOauthInstagramCallbackRoute: typeof AuthenticatedOauthInstagramCallbackRoute
+  AuthenticatedSelecaoDeFotosClientIdRoute: typeof AuthenticatedSelecaoDeFotosClientIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -731,6 +773,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedRotinaRoute: AuthenticatedRotinaRoute,
+  AuthenticatedSelecaoDeFotosRoute: AuthenticatedSelecaoDeFotosRoute,
   AuthenticatedVendasRoute: AuthenticatedVendasRoute,
   AuthenticatedAfiliadoDashboardRoute: AuthenticatedAfiliadoDashboardRoute,
   AuthenticatedClienteClientIdRoute: AuthenticatedClienteClientIdRoute,
@@ -739,6 +782,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedOauthGoogleCalendarCallbackRoute,
   AuthenticatedOauthInstagramCallbackRoute:
     AuthenticatedOauthInstagramCallbackRoute,
+  AuthenticatedSelecaoDeFotosClientIdRoute:
+    AuthenticatedSelecaoDeFotosClientIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
