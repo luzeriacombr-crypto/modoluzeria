@@ -56,7 +56,7 @@ import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from 
 import {
   listPhotoClients, getPhotoClient, createPhotoClient, deletePhotoClient,
   createPhotoSelection, listPhotoSelections, getPhotoSelectionDetail, deletePhotoSelection, setPhotoSelectionStatus,
-  getPublicPhotoSelection, getPublicPhotoThumbnail,
+  getPublicPhotoSelection, getPublicPhotoThumbnails,
 } from "./photo-selection.functions";
 import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications } from "./instagram.functions";
 import {
@@ -541,11 +541,13 @@ export const publicPhotoSelectionQO = (token: string | null) =>
     staleTime: 15_000,
   });
 
-export const publicPhotoThumbQO = (token: string, fileId: string | null) =>
+/** Em lote (ver o comentário em getPublicPhotoThumbnails) — cada chamada
+ * gasta 1 token do Drive pra várias fotos de uma vez, não 1 por foto. */
+export const publicPhotoThumbsBatchQO = (token: string, fileIds: string[]) =>
   queryOptions({
-    queryKey: ["public-photo-thumb", token, fileId],
-    queryFn: () => getPublicPhotoThumbnail({ data: { token, fileId: fileId! } }),
-    enabled: !!token && !!fileId,
+    queryKey: ["public-photo-thumbs-batch", token, fileIds.join(",")],
+    queryFn: () => getPublicPhotoThumbnails({ data: { token, fileIds } }),
+    enabled: !!token && fileIds.length > 0,
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,
     retry: false,

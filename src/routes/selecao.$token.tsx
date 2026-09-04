@@ -1,12 +1,42 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Heart, Lock, X } from "lucide-react";
-import { publicPhotoSelectionQO, publicPhotoThumbQO } from "@/lib/luzeria/queries";
+import { publicPhotoSelectionQO, publicPhotoThumbsBatchQO } from "@/lib/luzeria/queries";
 import { submitPhotoSelectionResponse } from "@/lib/luzeria/photo-selection.functions";
+
+/** Fotos são buscadas em lotes (não uma de cada vez) — ver o comentário em
+ * getPublicPhotoThumbnails no backend: cada lote gasta só 1 token do Drive,
+ * então um lote pequeno demais volta a bater no mesmo limite que quebrava
+ * galerias grandes. */
+const THUMB_BATCH_SIZE = 10;
+
+/** Busca as miniaturas de todas as fotos em lotes de THUMB_BATCH_SIZE e
+ * devolve um mapa fileId -> dataUrl (undefined enquanto carrega, null se
+ * essa foto específica falhou). */
+function usePhotoThumbnails(token: string, photoIds: string[]) {
+  const chunks = useMemo(() => {
+    const out: string[][] = [];
+    for (let i = 0; i < photoIds.length; i += THUMB_BATCH_SIZE) out.push(photoIds.slice(i, i + THUMB_BATCH_SIZE));
+    return out;
+  }, [photoIds.join(",")]);
+
+  const results = useQueries({
+    queries: chunks.map((ids) => publicPhotoThumbsBatchQO(token, ids)),
+  });
+
+  return useMemo(() => {
+    const map = new Map<string, string | null | undefined>();
+    for (const id of photoIds) map.set(id, undefined);
+    for (const r of results) {
+      if (r.data) for (const [id, url] of Object.entries(r.data)) map.set(id, url);
+    }
+    return map;
+  }, [results.map((r) => r.dataUpdatedAt).join(","), photoIds.join(",")]);
+}
 
 export const Route = createFileRoute("/selecao/$token")({
   component: PublicPhotoSelectionPage,
@@ -46,6 +76,11 @@ function PublicPhotoSelectionPage() {
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submittedAs, setSubmittedAs] = useState<string | null>(null);
+
+  // Hooks não podem vir depois de um return condicional — calculado com
+  // array vazio até q.data chegar, sem efeito no resultado.
+  const photoIds = useMemo(() => (q.data?.photos ?? []).map((p) => p.id), [q.data?.photos]);
+  const thumbs = usePhotoThumbnails(token, photoIds);
 
   if (q.isLoading) {
     return <Shell><div className="text-white/60 text-sm">Carregando…</div></Shell>;
@@ -115,7 +150,7 @@ function PublicPhotoSelectionPage() {
       {/* Capa cheia */}
       <div className="relative w-full h-[100vh] min-h-[520px] flex items-end justify-center overflow-hidden">
         {photos[0] ? (
-          <ProtectedPhoto token={token} fileId={photos[0].id} className="absolute inset-0 w-full h-full object-cover" />
+          <ProtectedPhoto dataUrl={thumbs.get(photos[0].id)} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
           <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, #1C1C1C, #0D0D0D)" }} />
         )}
@@ -213,7 +248,7 @@ function PublicPhotoSelectionPage() {
                   className="relative block w-full mb-2 overflow-hidden rounded-md break-inside-avoid"
                   style={{ background: "#1C1C1C" }}
                 >
-                  <ProtectedPhoto token={token} fileId={p.id} className="w-full h-auto block" />
+                  <ProtectedPhoto dataUrl={thumbs.get(p.id)} className="w-full h-auto block" />
                   {isSelected && (
                     <div
                       className="absolute top-1.5 right-1.5 size-6 rounded-full grid place-items-center border-2"
@@ -231,8 +266,8 @@ function PublicPhotoSelectionPage() {
 
       {lightboxIndex != null && photos[lightboxIndex] && !submittedAs && !isClosed && (
         <Lightbox
-          token={token}
           photos={photos}
+          thumbs={thumbs}
           index={lightboxIndex}
           selected={selected}
           onClose={() => setLightboxIndex(null)}
@@ -319,17 +354,17 @@ function NamePromptModal({ count, submitting, onCancel, onConfirm }: {
 }
 
 /** Única forma de uma foto aparecer nessa página: os bytes já vêm do
- * servidor com a marca d'água da agência queimada (getPublicPhotoThumbnail)
- * — nunca a URL crua do Drive. `draggable`/clique-direito bloqueados como
- * dificultador extra (não é proteção de verdade, só tira o caminho fácil). */
-function ProtectedPhoto({ token, fileId, className }: { token: string; fileId: string; className?: string }) {
-  const { data, isLoading } = useQuery(publicPhotoThumbQO(token, fileId));
-  if (isLoading || !data?.dataUrl) {
+ * servidor com a marca d'água da agência queimada (getPublicPhotoThumbnails,
+ * em lote — ver comentário lá) — nunca a URL crua do Drive.
+ * `draggable`/clique-direito bloqueados como dificultador extra (não é
+ * proteção de verdade, só tira o caminho fácil). */
+function ProtectedPhoto({ dataUrl, className }: { dataUrl: string | null | undefined; className?: string }) {
+  if (!dataUrl) {
     return <div className={`${className ?? ""} animate-pulse aspect-square`} style={{ background: "#1C1C1C" }} />;
   }
   return (
     <img
-      src={data.dataUrl}
+      src={dataUrl}
       alt=""
       draggable={false}
       onContextMenu={(e) => e.preventDefault()}
@@ -338,9 +373,9 @@ function ProtectedPhoto({ token, fileId, className }: { token: string; fileId: s
   );
 }
 
-function Lightbox({ token, photos, index, selected, onClose, onNavigate, onToggle }: {
-  token: string;
+function Lightbox({ photos, thumbs, index, selected, onClose, onNavigate, onToggle }: {
   photos: Array<{ id: string; name: string }>;
+  thumbs: Map<string, string | null | undefined>;
   index: number;
   selected: Set<string>;
   onClose: () => void;
@@ -379,7 +414,7 @@ function Lightbox({ token, photos, index, selected, onClose, onNavigate, onToggl
 
       {/* Imagem */}
       <div className="flex-1 relative grid place-items-center px-4 sm:px-16 min-h-0">
-        <ProtectedPhoto token={token} fileId={photo.id} className="max-w-full max-h-full object-contain" />
+        <ProtectedPhoto dataUrl={thumbs.get(photo.id)} className="max-w-full max-h-full object-contain" />
         {index > 0 && (
           <button
             type="button"

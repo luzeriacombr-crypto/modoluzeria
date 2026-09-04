@@ -306,48 +306,70 @@ export const getPublicPhotoSelection = createServerFn({ method: "GET" })
 
 /** Único jeito de uma foto chegar no navegador do visitante público: os
  * bytes originais nunca são expostos — sempre passam por aqui, que confirma
- * que `fileId` realmente pertence à pasta dessa seleção (evita virar proxy
- * pra qualquer arquivo do Drive) e devolve a imagem já com a marca d'água
- * da agência queimada nos pixels (protectPhotoBytes). */
-export const getPublicPhotoThumbnail = createServerFn({ method: "GET" })
-  .inputValidator((d: { token: string; fileId: string }) =>
-    z.object({ token: z.string().min(8).max(60), fileId: z.string().min(5).max(200) }).parse(d))
+ * que cada `fileId` realmente pertence à pasta dessa seleção (evita virar
+ * proxy pra qualquer arquivo do Drive) e devolve a imagem já com a marca
+ * d'água da agência queimada nos pixels (protectPhotoBytes).
+ *
+ * Em LOTE de propósito: cada acesso ao Drive busca (e cacheia só na memória
+ * do processo) um access token via refresh_token — uma galeria de 60+ fotos
+ * pedindo uma foto por invocação bate em 60+ invocações "frias" cada uma
+ * tentando renovar o token ao mesmo tempo, e a própria Google limita esse
+ * ritmo de renovação (foi exatamente o que quebrou a seleção "Safira e
+ * Clylton" em produção). Um lote de N fotos gasta 1 token só, pro lote
+ * inteiro — mesma lógica de getGridThumbnails em drive.functions.ts. */
+export const getPublicPhotoThumbnails = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; fileIds: string[] }) =>
+    z.object({
+      token: z.string().min(8).max(60),
+      fileIds: z.array(z.string().min(5).max(200)).min(1).max(20),
+    }).parse(d))
   .handler(async ({ data }) => {
+    const result: Record<string, string | null> = {};
+    for (const id of data.fileIds) result[id] = null;
+
     const { createClient } = await import("@supabase/supabase-js");
     const supabase = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_PUBLISHABLE_KEY!,
     );
     const { data: info, error } = await supabase.rpc("get_public_photo_selection_info", { _token: data.token });
-    if (error || !info) return { dataUrl: null as string | null };
+    if (error || !info) return result;
     const r = info as any;
 
     return withDriveOrg(r.orgId as string, async () => {
-      const accessToken = await getAccessToken();
-      const metaRes = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=parents&supportsAllDrives=true`,
-        { headers: { Authorization: `Bearer ${accessToken}` } },
-      );
-      if (!metaRes.ok) return { dataUrl: null as string | null };
-      const meta: any = await metaRes.json();
-      const parents: string[] = meta.parents ?? [];
-      if (!parents.includes(r.driveFolderId as string)) return { dataUrl: null as string | null };
-
-      const contentRes = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(data.fileId)}?alt=media&supportsAllDrives=true`,
-        { headers: { Authorization: `Bearer ${accessToken}` } },
-      );
-      if (!contentRes.ok) return { dataUrl: null as string | null };
-      const imageBuf = Buffer.from(await contentRes.arrayBuffer());
+      let accessToken: string;
+      try {
+        accessToken = await getAccessToken();
+      } catch (e) {
+        console.error("[getPublicPhotoThumbnails] getAccessToken failed:", e);
+        return result;
+      }
       const watermark = await resolveWatermarkSpec(r.orgId as string);
 
-      try {
-        const outBuf = await protectPhotoBytes(imageBuf, watermark);
-        return { dataUrl: `data:image/jpeg;base64,${outBuf.toString("base64")}` };
-      } catch (e) {
-        console.error("[getPublicPhotoThumbnail] watermark compositing failed:", e);
-        return { dataUrl: null as string | null };
-      }
+      await Promise.all(data.fileIds.map(async (fileId) => {
+        try {
+          const metaRes = await fetch(
+            `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=parents&supportsAllDrives=true`,
+            { headers: { Authorization: `Bearer ${accessToken}` } },
+          );
+          if (!metaRes.ok) return;
+          const meta: any = await metaRes.json();
+          if (!((meta.parents ?? []) as string[]).includes(r.driveFolderId as string)) return;
+
+          const contentRes = await fetch(
+            `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
+            { headers: { Authorization: `Bearer ${accessToken}` } },
+          );
+          if (!contentRes.ok) return;
+          const imageBuf = Buffer.from(await contentRes.arrayBuffer());
+          const outBuf = await protectPhotoBytes(imageBuf, watermark);
+          result[fileId] = `data:image/jpeg;base64,${outBuf.toString("base64")}`;
+        } catch (e) {
+          console.error(`[getPublicPhotoThumbnails] failed for ${fileId}:`, e);
+        }
+      }));
+
+      return result;
     });
   });
 
