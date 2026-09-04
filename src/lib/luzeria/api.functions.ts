@@ -151,7 +151,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -162,17 +162,20 @@ export const getMe = createServerFn({ method: "GET" })
     const logoPathLight = (org as any)?.logo_path_light as string | null | undefined;
     const feedPreviewImagePath = (org as any)?.feed_preview_image_path as string | null | undefined;
     const faviconPath = (org as any)?.favicon_path as string | null | undefined;
-    const [signed, logoSigned, logoLightSigned, feedPreviewSigned, faviconSigned] = await Promise.all([
+    const photoWatermarkPath = (org as any)?.photo_watermark_path as string | null | undefined;
+    const [signed, logoSigned, logoLightSigned, feedPreviewSigned, faviconSigned, watermarkSigned] = await Promise.all([
       signAvatarPaths(context.supabase, [profile.avatar_url]),
       signAvatarPaths(context.supabase, [logoPath], null),
       signAvatarPaths(context.supabase, [logoPathLight], null),
       signAvatarPaths(context.supabase, [feedPreviewImagePath], FEED_PREVIEW_THUMB),
       signAvatarPaths(context.supabase, [faviconPath], FAVICON_THUMB),
+      signAvatarPaths(context.supabase, [photoWatermarkPath], null),
     ]);
     const orgLogoUrl = logoPath ? logoSigned.get(logoPath) ?? null : null;
     const orgLogoUrlLight = logoPathLight ? logoLightSigned.get(logoPathLight) ?? null : null;
     const orgFeedPreviewImageUrl = feedPreviewImagePath ? feedPreviewSigned.get(feedPreviewImagePath) ?? null : null;
     const orgFaviconUrl = faviconPath ? faviconSigned.get(faviconPath) ?? null : null;
+    const orgPhotoWatermarkUrl = photoWatermarkPath ? watermarkSigned.get(photoWatermarkPath) ?? null : null;
     // Cargos atribuídos (pode ter vários) — cargoPermissions já é a união
     // de todos eles, pra checar direto com hasPermission() sem cruzar listas.
     const { data: cargoRows } = await context.supabase
@@ -205,6 +208,8 @@ export const getMe = createServerFn({ method: "GET" })
       orgFeedPreviewImagePath: feedPreviewImagePath ?? null,
       orgFaviconUrl,
       orgFaviconPath: faviconPath ?? null,
+      orgPhotoWatermarkUrl,
+      orgPhotoWatermarkPath: photoWatermarkPath ?? null,
       disabledFeatures: ((org as any)?.disabled_features ?? []) as string[],
       setorPermissions: ((org as any)?.setor_permissions ?? []) as string[],
       membersCanSetEditorFormat: ((org as any)?.members_can_set_editor_format ?? false) as boolean,
@@ -243,6 +248,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     colorPrimary?: string | null; colorPrimaryLight?: string | null; colorSidebar?: string | null;
     colorAccentLight?: string | null;
     taxId?: string | null; feedPreviewImagePath?: string | null; faviconPath?: string | null;
+    photoWatermarkPath?: string | null;
     disabledFeatures?: string[];
     membersCanSetEditorFormat?: boolean;
     borderRadius?: number;
@@ -264,6 +270,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/).nullable().optional(),
       feedPreviewImagePath: z.string().max(300).nullable().optional(),
       faviconPath: z.string().max(300).nullable().optional(),
+      photoWatermarkPath: z.string().max(300).nullable().optional(),
       disabledFeatures: z.array(z.string().max(40)).max(20).optional(),
       membersCanSetEditorFormat: z.boolean().optional(),
       borderRadius: z.number().int().min(0).max(28).optional(),
@@ -293,6 +300,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.taxId !== undefined) patch.tax_id = data.taxId;
     if (data.feedPreviewImagePath !== undefined) patch.feed_preview_image_path = data.feedPreviewImagePath;
     if (data.faviconPath !== undefined) patch.favicon_path = data.faviconPath;
+    if (data.photoWatermarkPath !== undefined) patch.photo_watermark_path = data.photoWatermarkPath;
     if (data.disabledFeatures !== undefined) patch.disabled_features = data.disabledFeatures;
     if (data.membersCanSetEditorFormat !== undefined) patch.members_can_set_editor_format = data.membersCanSetEditorFormat;
     if (data.borderRadius !== undefined) patch.border_radius = data.borderRadius;

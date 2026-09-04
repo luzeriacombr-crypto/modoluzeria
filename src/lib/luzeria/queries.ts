@@ -56,7 +56,7 @@ import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from 
 import {
   listPhotoClients, getPhotoClient, createPhotoClient, deletePhotoClient,
   createPhotoSelection, listPhotoSelections, getPhotoSelectionDetail, deletePhotoSelection,
-  getPublicPhotoSelection,
+  getPublicPhotoSelection, getPublicPhotoThumbnail,
 } from "./photo-selection.functions";
 import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications } from "./instagram.functions";
 import {
@@ -539,6 +539,16 @@ export const publicPhotoSelectionQO = (token: string | null) =>
     queryFn: () => getPublicPhotoSelection({ data: { token: token! } }),
     enabled: !!token,
     staleTime: 15_000,
+  });
+
+export const publicPhotoThumbQO = (token: string, fileId: string | null) =>
+  queryOptions({
+    queryKey: ["public-photo-thumb", token, fileId],
+    queryFn: () => getPublicPhotoThumbnail({ data: { token, fileId: fileId! } }),
+    enabled: !!token && !!fileId,
+    staleTime: 1000 * 60 * 30,
+    gcTime: 1000 * 60 * 60,
+    retry: false,
   });
 
 export const publicDriveThumbQO = (token: string, fileId: string | null) =>

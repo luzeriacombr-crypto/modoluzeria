@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Images, Plus, Trash2 } from "lucide-react";
-import { photoClientsQO, useApi } from "@/lib/luzeria/queries";
+import { Images, Plus, ShieldCheck, Trash2, Upload } from "lucide-react";
+import { photoClientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { supabase } from "@/integrations/supabase/client";
 import { Modal } from "./Modals";
+
+const MAX_WATERMARK_BYTES = 3 * 1024 * 1024;
 
 /** Página inicial da área independente "Seleção de Fotos": lista os
  * clientes de fotografia (entidade própria, sem nada de posts/reels) da
@@ -43,6 +46,8 @@ export function PhotoClientsListPage() {
         o cliente, entre nele e crie um link de seleção.
       </p>
 
+      <WatermarkSettings />
+
       {isLoading ? (
         <div className="text-foreground/40 text-sm py-10 text-center">Carregando…</div>
       ) : photoClients.length === 0 ? (
@@ -79,6 +84,86 @@ export function PhotoClientsListPage() {
       )}
 
       {showNew && <NewPhotoClientModal onClose={() => setShowNew(false)} />}
+    </div>
+  );
+}
+
+/** Marca d'água só do Master (mesma trava de storage do upload de logo da
+ * agência) — protege as fotos que aparecem no link público de cada
+ * seleção, queimada nos pixels no servidor (nunca é só CSS por cima). */
+function WatermarkSettings() {
+  const { data: me } = useMe();
+  const { updateMyOrg } = useApi();
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  if (me?.role !== "master") return null;
+
+  async function pickWatermark(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.type !== "image/png") { toast.error("A marca d'água precisa ser um PNG (com transparência)."); return; }
+    if (file.size > MAX_WATERMARK_BYTES) { toast.error("Imagem muito grande (máximo 3 MB)."); return; }
+    setUploading(true);
+    try {
+      const path = `org-logos/${me!.orgId}/watermark-${Date.now()}.png`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        contentType: file.type, upsert: true,
+      });
+      if (upErr) throw upErr;
+      await updateMyOrg.mutateAsync({ data: { photoWatermarkPath: path } });
+      toast.success("Marca d'água atualizada.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao enviar a marca d'água.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function removeWatermark() {
+    updateMyOrg.mutate({ data: { photoWatermarkPath: null } }, {
+      onSuccess: () => toast.success("Marca d'água removida — as fotos passam a aparecer sem proteção."),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
+    });
+  }
+
+  return (
+    <div className="rounded-xl p-4 mb-6 flex items-center gap-4" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
+      <div className="size-14 rounded-lg shrink-0 grid place-items-center overflow-hidden" style={{ background: "color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
+        {me?.orgPhotoWatermarkUrl ? (
+          <img src={me.orgPhotoWatermarkUrl} alt="Marca d'água" className="max-w-full max-h-full object-contain" />
+        ) : (
+          <ShieldCheck size={20} className="text-foreground/25" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-foreground">Marca d'água de proteção</div>
+        <div className="text-foreground/40 text-xs mt-0.5">
+          {me?.orgPhotoWatermarkUrl
+            ? "As fotos do link público já saem com essa marca queimada na imagem."
+            : "Sem marca d'água configurada — as fotos aparecem sem proteção nenhuma no link público."}
+        </div>
+      </div>
+      <input ref={fileInputRef} type="file" accept="image/png" className="hidden" onChange={pickWatermark} />
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/25 transition disabled:opacity-50 shrink-0"
+      >
+        <Upload size={13} /> {uploading ? "Enviando…" : me?.orgPhotoWatermarkUrl ? "Trocar" : "Enviar PNG"}
+      </button>
+      {me?.orgPhotoWatermarkUrl && (
+        <button
+          type="button"
+          onClick={removeWatermark}
+          className="p-2 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 transition shrink-0"
+          title="Remover marca d'água"
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
     </div>
   );
 }

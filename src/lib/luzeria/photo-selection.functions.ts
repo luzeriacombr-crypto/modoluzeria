@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
-import { parseDriveId, listDriveFolderImages, withDriveOrg } from "./drive.functions";
+import { parseDriveId, listDriveFolderImages, withDriveOrg, getAccessToken } from "./drive.functions";
+import { protectPhotoBytes } from "./photo-watermark.server";
 
 /** Mesmo gerador de token de feed-share.functions.ts. */
 function randomToken(len = 22): string {
@@ -214,7 +215,11 @@ export type PublicPhotoSelection = {
   status: "aberta" | "finalizada";
   clientName: string;
   deadline: string | null;
-  photos: Array<{ id: string; name: string; thumbnailUrl: string | null }>;
+  // Sem thumbnailUrl aqui de propósito — a foto em si nunca sai do Drive
+  // direto pro navegador do cliente final. O visual de cada foto vem de
+  // getPublicPhotoThumbnail, que devolve os bytes já com a marca d'água
+  // da agência queimada (ver photo-watermark.server.ts).
+  photos: Array<{ id: string; name: string }>;
   selectedFileIds: string[];
 };
 
@@ -230,9 +235,10 @@ export const getPublicPhotoSelection = createServerFn({ method: "GET" })
     if (error || !info) return null;
     const r = info as any;
 
-    let photos: Array<{ id: string; name: string; thumbnailUrl: string | null }> = [];
+    let photos: Array<{ id: string; name: string }> = [];
     try {
-      photos = await withDriveOrg(r.orgId as string, () => listDriveFolderImages(r.driveFolderId as string));
+      const files = await withDriveOrg(r.orgId as string, () => listDriveFolderImages(r.driveFolderId as string));
+      photos = files.map((f) => ({ id: f.id, name: f.name }));
     } catch (e) {
       console.error("[getPublicPhotoSelection] Drive listing failed:", e);
     }
@@ -246,6 +252,62 @@ export const getPublicPhotoSelection = createServerFn({ method: "GET" })
       photos,
       selectedFileIds: ((r.choices ?? []) as any[]).map((c) => c.driveFileId as string),
     };
+  });
+
+/** Único jeito de uma foto chegar no navegador do visitante público: os
+ * bytes originais nunca são expostos — sempre passam por aqui, que confirma
+ * que `fileId` realmente pertence à pasta dessa seleção (evita virar proxy
+ * pra qualquer arquivo do Drive) e devolve a imagem já com a marca d'água
+ * da agência queimada nos pixels (protectPhotoBytes). */
+export const getPublicPhotoThumbnail = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string; fileId: string }) =>
+    z.object({ token: z.string().min(8).max(60), fileId: z.string().min(5).max(200) }).parse(d))
+  .handler(async ({ data }) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+    );
+    const { data: info, error } = await supabase.rpc("get_public_photo_selection_info", { _token: data.token });
+    if (error || !info) return { dataUrl: null as string | null };
+    const r = info as any;
+
+    return withDriveOrg(r.orgId as string, async () => {
+      const accessToken = await getAccessToken();
+      const metaRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(data.fileId)}?fields=parents&supportsAllDrives=true`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!metaRes.ok) return { dataUrl: null as string | null };
+      const meta: any = await metaRes.json();
+      const parents: string[] = meta.parents ?? [];
+      if (!parents.includes(r.driveFolderId as string)) return { dataUrl: null as string | null };
+
+      const contentRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(data.fileId)}?alt=media&supportsAllDrives=true`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!contentRes.ok) return { dataUrl: null as string | null };
+      const imageBuf = Buffer.from(await contentRes.arrayBuffer());
+
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: orgRow } = await supabaseAdmin
+        .from("orgs").select("photo_watermark_path").eq("id", r.orgId as string).maybeSingle();
+      const watermarkPath = (orgRow as any)?.photo_watermark_path as string | null | undefined;
+      let watermarkBuf: Buffer | null = null;
+      if (watermarkPath) {
+        const { data: wmFile } = await supabaseAdmin.storage.from("avatars").download(watermarkPath);
+        if (wmFile) watermarkBuf = Buffer.from(await wmFile.arrayBuffer());
+      }
+
+      try {
+        const outBuf = await protectPhotoBytes(imageBuf, watermarkBuf);
+        return { dataUrl: `data:image/jpeg;base64,${outBuf.toString("base64")}` };
+      } catch (e) {
+        console.error("[getPublicPhotoThumbnail] watermark compositing failed:", e);
+        return { dataUrl: null as string | null };
+      }
+    });
   });
 
 export const submitPublicPhotoSelection = createServerFn({ method: "POST" })

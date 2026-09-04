@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { Check, Loader2 } from "lucide-react";
-import { publicPhotoSelectionQO } from "@/lib/luzeria/queries";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Heart, Loader2, X } from "lucide-react";
+import { publicPhotoSelectionQO, publicPhotoThumbQO } from "@/lib/luzeria/queries";
 import { submitPublicPhotoSelection, finalizePublicPhotoSelection } from "@/lib/luzeria/photo-selection.functions";
 
 export const Route = createFileRoute("/selecao/$token")({
@@ -25,6 +25,17 @@ export const Route = createFileRoute("/selecao/$token")({
   },
 });
 
+function daysUntil(dateOnly: string): number {
+  const target = new Date(`${dateOnly}T00:00:00`).getTime();
+  const now = new Date();
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return Math.ceil((target - todayMidnight) / 86_400_000);
+}
+
+function formatFullDate(dateOnly: string) {
+  return new Date(`${dateOnly}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+}
+
 function PublicPhotoSelectionPage() {
   const { token } = Route.useParams();
   const q = useQuery(publicPhotoSelectionQO(token));
@@ -35,6 +46,7 @@ function PublicPhotoSelectionPage() {
   const [saving, setSaving] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (q.data) setSelected(new Set(q.data.selectedFileIds));
@@ -58,6 +70,7 @@ function PublicPhotoSelectionPage() {
 
   const { title, clientName, status, deadline, photos } = q.data;
   const isFinalized = status === "finalizada";
+  const remainingDays = deadline ? daysUntil(deadline) : null;
 
   function toggle(id: string) {
     if (isFinalized) return;
@@ -112,29 +125,74 @@ function PublicPhotoSelectionPage() {
     }
   }
 
+  function scrollToGallery() {
+    document.getElementById("galeria")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   return (
-    <div className="min-h-screen pb-28" style={{ background: "#0D0D0D" }}>
+    <div className="min-h-screen pb-28 select-none" style={{ background: "#0D0D0D" }}>
       <Toaster theme="dark" position="bottom-right" />
-      <div className="px-4 pt-8 pb-6 max-w-[880px] mx-auto">
-        <div className="text-white text-xl font-bold leading-tight">{title}</div>
-        <div className="text-white/50 text-[13px] mt-0.5">
-          {clientName ? `${clientName} · ` : ""}Seleção de fotos
-        </div>
-        {deadline && (
-          <div className="text-white/40 text-[12px] mt-2">
-            Prazo: {new Date(`${deadline}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
-          </div>
+
+      {/* Capa cheia */}
+      <div className="relative w-full h-[100vh] min-h-[520px] flex items-end justify-center overflow-hidden">
+        {photos[0] ? (
+          <ProtectedPhoto token={token} fileId={photos[0].id} className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, #1C1C1C, #0D0D0D)" }} />
         )}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.35) 100%)" }} />
+        <div className="relative z-10 flex flex-col items-center gap-6 pb-16 px-6 text-center">
+          <h1
+            className="text-white text-4xl sm:text-6xl leading-tight"
+            style={{ fontFamily: "'Instrument Serif', serif" }}
+          >
+            {title}
+          </h1>
+          <button
+            type="button"
+            onClick={scrollToGallery}
+            className="size-10 rounded-full grid place-items-center text-white/80 hover:text-white border border-white/30 hover:border-white/60 transition animate-bounce"
+            aria-label="Ver fotos"
+          >
+            <ChevronDown size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Barra de info */}
+      <div className="border-b border-white/8 sticky top-0 z-30" style={{ background: "rgba(13,13,13,0.92)", backdropFilter: "blur(8px)" }}>
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-white font-semibold" style={{ fontFamily: "'Instrument Serif', serif", fontSize: 20 }}>
+              {title}
+            </div>
+            <div className="text-white/40 text-[11px] mt-0.5">
+              {clientName ? `${clientName} · ` : ""}{photos.length} foto{photos.length === 1 ? "" : "s"}
+            </div>
+          </div>
+          {deadline && !isFinalized && (
+            <div className="text-right">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">Prazo de seleção</div>
+              <div className="text-white text-[12px] font-semibold">
+                {formatFullDate(deadline)}
+                {remainingDays != null && (
+                  <span className="text-white/40 font-normal"> {remainingDays > 0 ? `(restam ${remainingDays} dia${remainingDays === 1 ? "" : "s"})` : remainingDays === 0 ? "(é hoje)" : "(prazo vencido)"}</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div id="galeria" className="max-w-[1200px] mx-auto px-4 sm:px-8 pt-6">
         {!isFinalized && (
-          <div className="text-white/40 text-[12px] mt-2 leading-snug">
+          <div className="text-white/40 text-[12px] mb-5 leading-snug">
             Clique nas fotos que você quer escolher. Você pode salvar e voltar depois — quando terminar, clique em "Finalizar seleção".
           </div>
         )}
-      </div>
 
-      <div className="max-w-[880px] mx-auto px-4">
         {isFinalized ? (
-          <div className="rounded-xl p-8 text-center" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <div className="rounded-xl p-8 text-center mb-8" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="size-12 rounded-full mx-auto mb-3 grid place-items-center" style={{ background: "rgba(34,197,94,0.15)" }}>
               <Check size={22} color="rgb(34,197,94)" />
             </div>
@@ -147,36 +205,29 @@ function PublicPhotoSelectionPage() {
           <div className="rounded-xl py-14 text-center text-white/40 text-sm" style={{ background: "#1C1C1C" }}>
             Nenhuma foto encontrada nessa pasta ainda.
           </div>
-        ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1.5">
-            {photos.map((p) => {
+        ) : null}
+
+        {photos.length > 0 && (
+          <div className="columns-2 sm:columns-3 lg:columns-4 gap-2">
+            {photos.map((p, idx) => {
               const isSelected = selected.has(p.id);
               return (
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => toggle(p.id)}
-                  className="relative aspect-square overflow-hidden rounded-md"
+                  onClick={() => setLightboxIndex(idx)}
+                  className="relative block w-full mb-2 overflow-hidden rounded-md break-inside-avoid"
                   style={{ background: "#1C1C1C" }}
                 >
-                  {p.thumbnailUrl ? (
-                    <img src={p.thumbnailUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full grid place-items-center text-white/20 text-[10px]">sem prévia</div>
+                  <ProtectedPhoto token={token} fileId={p.id} className="w-full h-auto block" />
+                  {isSelected && (
+                    <div
+                      className="absolute top-1.5 right-1.5 size-6 rounded-full grid place-items-center border-2"
+                      style={{ background: "rgb(var(--lz-brand-rgb))", borderColor: "rgb(var(--lz-brand-rgb))" }}
+                    >
+                      <Check size={14} color="#0D0D0D" />
+                    </div>
                   )}
-                  <div
-                    className="absolute inset-0 transition"
-                    style={{ background: isSelected ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0)" }}
-                  />
-                  <div
-                    className="absolute top-1.5 right-1.5 size-6 rounded-full grid place-items-center border-2 transition"
-                    style={{
-                      background: isSelected ? "rgb(var(--lz-brand-rgb))" : "rgba(0,0,0,0.4)",
-                      borderColor: isSelected ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.5)",
-                    }}
-                  >
-                    {isSelected && <Check size={14} color="#0D0D0D" />}
-                  </div>
                 </button>
               );
             })}
@@ -184,9 +235,22 @@ function PublicPhotoSelectionPage() {
         )}
       </div>
 
+      {lightboxIndex != null && photos[lightboxIndex] && (
+        <Lightbox
+          token={token}
+          photos={photos}
+          index={lightboxIndex}
+          selected={selected}
+          canSelect={!isFinalized}
+          onClose={() => setLightboxIndex(null)}
+          onNavigate={setLightboxIndex}
+          onToggle={toggle}
+        />
+      )}
+
       {!isFinalized && photos.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 px-4 py-3" style={{ background: "rgba(13,13,13,0.95)", borderTop: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(8px)" }}>
-          <div className="max-w-[880px] mx-auto flex items-center gap-3">
+        <div className="fixed bottom-0 left-0 right-0 z-40 px-4 py-3" style={{ background: "rgba(13,13,13,0.95)", borderTop: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(8px)" }}>
+          <div className="max-w-[1200px] mx-auto flex items-center gap-3">
             <span className="text-white text-sm font-semibold flex-1">
               {selected.size} selecionada{selected.size === 1 ? "" : "s"}
             </span>
@@ -211,6 +275,99 @@ function PublicPhotoSelectionPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Única forma de uma foto aparecer nessa página: os bytes já vêm do
+ * servidor com a marca d'água da agência queimada (getPublicPhotoThumbnail)
+ * — nunca a URL crua do Drive. `draggable`/clique-direito bloqueados como
+ * dificultador extra (não é proteção de verdade, só tira o caminho fácil). */
+function ProtectedPhoto({ token, fileId, className }: { token: string; fileId: string; className?: string }) {
+  const { data, isLoading } = useQuery(publicPhotoThumbQO(token, fileId));
+  if (isLoading || !data?.dataUrl) {
+    return <div className={`${className ?? ""} animate-pulse aspect-square`} style={{ background: "#1C1C1C" }} />;
+  }
+  return (
+    <img
+      src={data.dataUrl}
+      alt=""
+      draggable={false}
+      onContextMenu={(e) => e.preventDefault()}
+      className={className}
+    />
+  );
+}
+
+function Lightbox({ token, photos, index, selected, canSelect, onClose, onNavigate, onToggle }: {
+  token: string;
+  photos: Array<{ id: string; name: string }>;
+  index: number;
+  selected: Set<string>;
+  canSelect: boolean;
+  onClose: () => void;
+  onNavigate: (index: number) => void;
+  onToggle: (id: string) => void;
+}) {
+  const photo = photos[index];
+  const isSelected = selected.has(photo.id);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight") onNavigate(Math.min(index + 1, photos.length - 1));
+      else if (e.key === "ArrowLeft") onNavigate(Math.max(index - 1, 0));
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [index, photos.length, onClose, onNavigate]);
+
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: "#0D0D0D" }}>
+      {/* Topo */}
+      <div className="flex items-center justify-between px-4 sm:px-6 py-4 shrink-0">
+        {canSelect ? (
+          <button
+            type="button"
+            onClick={() => onToggle(photo.id)}
+            className="inline-flex items-center gap-2 text-sm font-medium transition"
+            style={{ color: isSelected ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.8)" }}
+          >
+            <Heart size={18} fill={isSelected ? "currentColor" : "none"} /> {isSelected ? "Selecionada" : "Selecionar"}
+          </button>
+        ) : <span />}
+        <button type="button" onClick={onClose} className="text-white/70 hover:text-white transition" aria-label="Fechar">
+          <X size={22} />
+        </button>
+      </div>
+
+      {/* Imagem */}
+      <div className="flex-1 relative grid place-items-center px-4 sm:px-16 min-h-0">
+        <ProtectedPhoto token={token} fileId={photo.id} className="max-w-full max-h-full object-contain" />
+        {index > 0 && (
+          <button
+            type="button"
+            onClick={() => onNavigate(index - 1)}
+            className="absolute left-1 sm:left-3 top-1/2 -translate-y-1/2 size-10 rounded-full grid place-items-center text-white/70 hover:text-white hover:bg-white/10 transition"
+            aria-label="Anterior"
+          >
+            <ChevronLeft size={22} />
+          </button>
+        )}
+        {index < photos.length - 1 && (
+          <button
+            type="button"
+            onClick={() => onNavigate(index + 1)}
+            className="absolute right-1 sm:right-3 top-1/2 -translate-y-1/2 size-10 rounded-full grid place-items-center text-white/70 hover:text-white hover:bg-white/10 transition"
+            aria-label="Próxima"
+          >
+            <ChevronRight size={22} />
+          </button>
+        )}
+      </div>
+
+      {/* Rodapé */}
+      <div className="text-center py-3 text-white/40 text-[11px] shrink-0">{photo.name}</div>
     </div>
   );
 }

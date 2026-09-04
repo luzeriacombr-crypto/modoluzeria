@@ -2437,6 +2437,7 @@ export type Database = {
           nav_labels: Json
           nav_order: Json
           payment_message_template: string | null
+          photo_watermark_path: string | null
           pix_key: string | null
           plan_id: string
           promotion_code_id: string | null
@@ -2477,6 +2478,7 @@ export type Database = {
           nav_labels?: Json
           nav_order?: Json
           payment_message_template?: string | null
+          photo_watermark_path?: string | null
           pix_key?: string | null
           plan_id?: string
           promotion_code_id?: string | null
@@ -2517,6 +2519,7 @@ export type Database = {
           nav_labels?: Json
           nav_order?: Json
           payment_message_template?: string | null
+          photo_watermark_path?: string | null
           pix_key?: string | null
           plan_id?: string
           promotion_code_id?: string | null

@@ -269,6 +269,10 @@ export interface Profile {
    * pra usar o ícone padrão do Modo Criador. */
   orgFaviconUrl?: string | null;
   orgFaviconPath?: string | null;
+  /** PNG com transparência usado como marca d'água nas fotos públicas da
+   * Seleção de Fotos, ou null se a agência ainda não configurou uma. */
+  orgPhotoWatermarkUrl?: string | null;
+  orgPhotoWatermarkPath?: string | null;
   /** Optional features this org's team turned off in Configurações > Geral
    * — keys from OPTIONAL_FEATURE_KEYS. Hides the corresponding UI without
    * touching any underlying data. */
