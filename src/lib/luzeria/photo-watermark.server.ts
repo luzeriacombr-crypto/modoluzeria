@@ -6,13 +6,19 @@ import { WATERMARK_FONT_BASE64 } from "./watermark-font-data";
  * prejudicar a decisão do cliente na hora de escolher. Usado pra capa e
  * pra visualização em tela cheia (lightbox) — não pra grade, que usa
  * GRID_THUMB_MAX_DIMENSION, bem menor. */
-const PREVIEW_MAX_DIMENSION = 1080;
+const PREVIEW_MAX_DIMENSION = 1280;
 
 /** Miniatura da grade — é a imagem que carrega logo de cara, uma por foto
- * da galeria inteira (60+ em ensaios grandes), então precisa ser bem leve.
+ * da galeria inteira (60+ em ensaios grandes), então precisa ser leve, mas
+ * não a ponto de ficar borrada em tela retina (a grade mostra até ~300px
+ * de largura em CSS, que em tela 2x já pede ~600px de pixels reais).
  * A foto em tamanho real só é buscada quando o cliente abre o lightbox
  * (ver getPublicPhotoThumbnails com size: "full"). */
-export const GRID_THUMB_MAX_DIMENSION = 480;
+export const GRID_THUMB_MAX_DIMENSION = 640;
+
+/** mozjpeg dá uma compressão bem melhor que o encoder padrão pro mesmo
+ * "quality" — menos artefato visível pro mesmo peso de arquivo. */
+const JPEG_OPTS = { quality: 88, mozjpeg: true } as const;
 
 const WATERMARK_FONT_FAMILY = "LZWatermarkFont";
 let fontRegistered = false;
@@ -90,14 +96,14 @@ export async function protectPhotoBytes(
     .toBuffer({ resolveWithObject: true });
 
   if (watermark.mode === "none") {
-    return sharp(resized.data).jpeg({ quality: 82 }).toBuffer();
+    return sharp(resized.data).jpeg(JPEG_OPTS).toBuffer();
   }
 
   const { width = maxDim, height = maxDim } = resized.info;
 
   if (watermark.mode === "text") {
     const layer = await buildTextWatermarkLayer(watermark.text, watermark.opacity, watermark.density, width, height);
-    return sharp(resized.data).composite([{ input: layer, left: 0, top: 0 }]).jpeg({ quality: 82 }).toBuffer();
+    return sharp(resized.data).composite([{ input: layer, left: 0, top: 0 }]).jpeg(JPEG_OPTS).toBuffer();
   }
 
   // mode: "image" — grade de repetições pequenas do PNG enviado pela agência.
@@ -119,7 +125,7 @@ export async function protectPhotoBytes(
       composites.push({ input: rotatedTile, left: x, top: y });
     }
   }
-  return sharp(resized.data).composite(composites).jpeg({ quality: 82 }).toBuffer();
+  return sharp(resized.data).composite(composites).jpeg(JPEG_OPTS).toBuffer();
 }
 
 /** Fundo neutro pra pré-visualizar a marca d'água nas Configurações, sem
