@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Images, ImageIcon, Plus, ShieldCheck, Trash2, Type, Upload } from "lucide-react";
+import { Images, ImageIcon, Plus, ShieldCheck, Trash2, Type, Upload, ChevronDown, ChevronRight } from "lucide-react";
 import { photoClientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
@@ -109,6 +109,7 @@ function WatermarkSettings() {
   const [opacity, setOpacity] = useState(me?.orgPhotoWatermarkOpacity ?? 35);
   const [density, setDensity] = useState<WatermarkDensity>(me?.orgPhotoWatermarkDensity ?? "media");
   const [dirty, setDirty] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (!me || dirty) return;
@@ -154,55 +155,72 @@ function WatermarkSettings() {
     });
   }
 
+  const modeLabel = mode === "none" ? "Nenhuma" : mode === "text" ? "Texto" : "Imagem";
+
   return (
-    <div className="rounded-xl p-4 mb-6" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
-      <div className="flex items-center gap-3 mb-1">
+    <div className="rounded-xl mb-6" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center gap-3 p-4 text-left"
+      >
         <ShieldCheck size={16} className="text-foreground/40 shrink-0" />
-        <div className="text-sm font-semibold text-foreground">Marca d'água de proteção</div>
-      </div>
-      <p className="text-foreground/40 text-xs mb-3">
-        Toda foto do link público já passa por aqui — sem marca configurada, ela aparece sem proteção nenhuma.
-      </p>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-foreground">Marca d'água de proteção</div>
+          {!expanded && (
+            <div className="text-foreground/40 text-xs mt-0.5">Modo atual: {modeLabel}</div>
+          )}
+        </div>
+        {expanded ? <ChevronDown size={16} className="text-foreground/40 shrink-0" /> : <ChevronRight size={16} className="text-foreground/40 shrink-0" />}
+      </button>
 
-      <div className="flex items-center gap-2 mb-4">
-        <ModePill active={mode === "none"} onClick={() => setMode("none")}>Nenhuma</ModePill>
-        <ModePill active={mode === "text"} onClick={() => setMode("text")} icon={<Type size={12} />}>Texto</ModePill>
-        <ModePill active={mode === "image"} onClick={() => setMode("image")} icon={<ImageIcon size={12} />}>Imagem</ModePill>
-      </div>
+      {expanded && (
+        <div className="px-4 pb-4">
+          <p className="text-foreground/40 text-xs mb-3">
+            Toda foto do link público já passa por aqui — sem marca configurada, ela aparece sem proteção nenhuma.
+          </p>
 
-      {mode === "text" && (
-        <TextWatermarkEditor
-          text={text} opacity={opacity} density={density}
-          onText={(v) => { setText(v); setDirty(true); }}
-          onOpacity={(v) => { setOpacity(v); setDirty(true); }}
-          onDensity={(v) => { setDensity(v); setDirty(true); }}
-          onSave={saveText}
-          saving={updateMyOrg.isPending}
-          dirty={dirty}
-        />
-      )}
-
-      {mode === "image" && (
-        <div className="flex items-center gap-4">
-          <div className="size-14 rounded-lg shrink-0 grid place-items-center overflow-hidden" style={{ background: "color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
-            {me?.orgPhotoWatermarkUrl ? (
-              <img src={me.orgPhotoWatermarkUrl} alt="Marca d'água" className="max-w-full max-h-full object-contain" />
-            ) : (
-              <ImageIcon size={20} className="text-foreground/25" />
-            )}
+          <div className="flex items-center gap-2 mb-4">
+            <ModePill active={mode === "none"} onClick={() => setMode("none")}>Nenhuma</ModePill>
+            <ModePill active={mode === "text"} onClick={() => setMode("text")} icon={<Type size={12} />}>Texto</ModePill>
+            <ModePill active={mode === "image"} onClick={() => setMode("image")} icon={<ImageIcon size={12} />}>Imagem</ModePill>
           </div>
-          <div className="flex-1 min-w-0 text-foreground/40 text-xs">
-            PNG com transparência — sai repetido em grade por cima de cada foto.
-          </div>
-          <input ref={fileInputRef} type="file" accept="image/png" className="hidden" onChange={pickWatermark} />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/25 transition disabled:opacity-50 shrink-0"
-          >
-            <Upload size={13} /> {uploading ? "Enviando…" : me?.orgPhotoWatermarkUrl ? "Trocar" : "Enviar PNG"}
-          </button>
+
+          {mode === "text" && (
+            <TextWatermarkEditor
+              text={text} opacity={opacity} density={density}
+              onText={(v) => { setText(v); setDirty(true); }}
+              onOpacity={(v) => { setOpacity(v); setDirty(true); }}
+              onDensity={(v) => { setDensity(v); setDirty(true); }}
+              onSave={saveText}
+              saving={updateMyOrg.isPending}
+              dirty={dirty}
+            />
+          )}
+
+          {mode === "image" && (
+            <div className="flex items-center gap-4">
+              <div className="size-14 rounded-lg shrink-0 grid place-items-center overflow-hidden" style={{ background: "color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
+                {me?.orgPhotoWatermarkUrl ? (
+                  <img src={me.orgPhotoWatermarkUrl} alt="Marca d'água" className="max-w-full max-h-full object-contain" />
+                ) : (
+                  <ImageIcon size={20} className="text-foreground/25" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0 text-foreground/40 text-xs">
+                PNG com transparência — sai repetido em grade por cima de cada foto.
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/png" className="hidden" onChange={pickWatermark} />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/25 transition disabled:opacity-50 shrink-0"
+              >
+                <Upload size={13} /> {uploading ? "Enviando…" : me?.orgPhotoWatermarkUrl ? "Trocar" : "Enviar PNG"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
