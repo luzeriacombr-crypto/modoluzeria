@@ -151,7 +151,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -210,6 +210,10 @@ export const getMe = createServerFn({ method: "GET" })
       orgFaviconPath: faviconPath ?? null,
       orgPhotoWatermarkUrl,
       orgPhotoWatermarkPath: photoWatermarkPath ?? null,
+      orgPhotoWatermarkMode: ((org as any)?.photo_watermark_mode ?? "none") as "none" | "text" | "image",
+      orgPhotoWatermarkText: ((org as any)?.photo_watermark_text ?? null) as string | null,
+      orgPhotoWatermarkOpacity: ((org as any)?.photo_watermark_opacity ?? 35) as number,
+      orgPhotoWatermarkDensity: ((org as any)?.photo_watermark_density ?? "media") as "baixa" | "media" | "alta",
       disabledFeatures: ((org as any)?.disabled_features ?? []) as string[],
       setorPermissions: ((org as any)?.setor_permissions ?? []) as string[],
       membersCanSetEditorFormat: ((org as any)?.members_can_set_editor_format ?? false) as boolean,
@@ -249,6 +253,10 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     colorAccentLight?: string | null;
     taxId?: string | null; feedPreviewImagePath?: string | null; faviconPath?: string | null;
     photoWatermarkPath?: string | null;
+    photoWatermarkMode?: "none" | "text" | "image";
+    photoWatermarkText?: string | null;
+    photoWatermarkOpacity?: number;
+    photoWatermarkDensity?: "baixa" | "media" | "alta";
     disabledFeatures?: string[];
     membersCanSetEditorFormat?: boolean;
     borderRadius?: number;
@@ -271,6 +279,10 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       feedPreviewImagePath: z.string().max(300).nullable().optional(),
       faviconPath: z.string().max(300).nullable().optional(),
       photoWatermarkPath: z.string().max(300).nullable().optional(),
+      photoWatermarkMode: z.enum(["none", "text", "image"]).optional(),
+      photoWatermarkText: z.string().trim().max(60).nullable().optional(),
+      photoWatermarkOpacity: z.number().int().min(5).max(90).optional(),
+      photoWatermarkDensity: z.enum(["baixa", "media", "alta"]).optional(),
       disabledFeatures: z.array(z.string().max(40)).max(20).optional(),
       membersCanSetEditorFormat: z.boolean().optional(),
       borderRadius: z.number().int().min(0).max(28).optional(),
@@ -301,6 +313,10 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.feedPreviewImagePath !== undefined) patch.feed_preview_image_path = data.feedPreviewImagePath;
     if (data.faviconPath !== undefined) patch.favicon_path = data.faviconPath;
     if (data.photoWatermarkPath !== undefined) patch.photo_watermark_path = data.photoWatermarkPath;
+    if (data.photoWatermarkMode !== undefined) patch.photo_watermark_mode = data.photoWatermarkMode;
+    if (data.photoWatermarkText !== undefined) patch.photo_watermark_text = data.photoWatermarkText;
+    if (data.photoWatermarkOpacity !== undefined) patch.photo_watermark_opacity = data.photoWatermarkOpacity;
+    if (data.photoWatermarkDensity !== undefined) patch.photo_watermark_density = data.photoWatermarkDensity;
     if (data.disabledFeatures !== undefined) patch.disabled_features = data.disabledFeatures;
     if (data.membersCanSetEditorFormat !== undefined) patch.members_can_set_editor_format = data.membersCanSetEditorFormat;
     if (data.borderRadius !== undefined) patch.border_radius = data.borderRadius;

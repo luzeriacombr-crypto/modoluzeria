@@ -2,7 +2,35 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import { parseDriveId, listDriveFolderImages, withDriveOrg, getAccessToken } from "./drive.functions";
-import { protectPhotoBytes } from "./photo-watermark.server";
+import { protectPhotoBytes, buildPreviewBackground, type WatermarkSpec } from "./photo-watermark.server";
+
+/** Resolve a config de marca d'água salva pra uma org — usado tanto na
+ * proteção real das fotos públicas quanto na pré-visualização das
+ * Configurações. */
+async function resolveWatermarkSpec(orgId: string): Promise<WatermarkSpec> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: orgRow } = await supabaseAdmin
+    .from("orgs")
+    .select("photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, photo_watermark_path")
+    .eq("id", orgId)
+    .maybeSingle();
+  const row = orgRow as any;
+  const mode = (row?.photo_watermark_mode as string) ?? "none";
+
+  if (mode === "text") {
+    return {
+      mode: "text",
+      text: (row?.photo_watermark_text as string) || "REPRODUÇÃO PROIBIDA",
+      opacity: (row?.photo_watermark_opacity as number) ?? 35,
+      density: (row?.photo_watermark_density as "baixa" | "media" | "alta") ?? "media",
+    };
+  }
+  if (mode === "image" && row?.photo_watermark_path) {
+    const { data: wmFile } = await supabaseAdmin.storage.from("avatars").download(row.photo_watermark_path as string);
+    if (wmFile) return { mode: "image", buffer: Buffer.from(await wmFile.arrayBuffer()) };
+  }
+  return { mode: "none" };
+}
 
 /** Mesmo gerador de token de feed-share.functions.ts. */
 function randomToken(len = 22): string {
@@ -289,25 +317,34 @@ export const getPublicPhotoThumbnail = createServerFn({ method: "GET" })
       );
       if (!contentRes.ok) return { dataUrl: null as string | null };
       const imageBuf = Buffer.from(await contentRes.arrayBuffer());
-
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: orgRow } = await supabaseAdmin
-        .from("orgs").select("photo_watermark_path").eq("id", r.orgId as string).maybeSingle();
-      const watermarkPath = (orgRow as any)?.photo_watermark_path as string | null | undefined;
-      let watermarkBuf: Buffer | null = null;
-      if (watermarkPath) {
-        const { data: wmFile } = await supabaseAdmin.storage.from("avatars").download(watermarkPath);
-        if (wmFile) watermarkBuf = Buffer.from(await wmFile.arrayBuffer());
-      }
+      const watermark = await resolveWatermarkSpec(r.orgId as string);
 
       try {
-        const outBuf = await protectPhotoBytes(imageBuf, watermarkBuf);
+        const outBuf = await protectPhotoBytes(imageBuf, watermark);
         return { dataUrl: `data:image/jpeg;base64,${outBuf.toString("base64")}` };
       } catch (e) {
         console.error("[getPublicPhotoThumbnail] watermark compositing failed:", e);
         return { dataUrl: null as string | null };
       }
     });
+  });
+
+/** Admin: pré-visualiza a marca d'água de TEXTO com valores ainda não
+ * salvos (pra tela de Configurações reagir a cada ajuste do slider/campo),
+ * num fundo neutro — não precisa de foto real. A marca por imagem já dá
+ * pra conferir olhando o próprio arquivo escolhido, sem round-trip. */
+export const getWatermarkPreview = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { text: string; opacity: number; density: "baixa" | "media" | "alta" }) =>
+    z.object({
+      text: z.string().trim().max(60),
+      opacity: z.number().int().min(5).max(90),
+      density: z.enum(["baixa", "media", "alta"]),
+    }).parse(d))
+  .handler(async ({ data }) => {
+    const bg = await buildPreviewBackground(800, 450);
+    const outBuf = await protectPhotoBytes(bg, { mode: "text", ...data });
+    return { dataUrl: `data:image/jpeg;base64,${outBuf.toString("base64")}` };
   });
 
 export const submitPublicPhotoSelection = createServerFn({ method: "POST" })

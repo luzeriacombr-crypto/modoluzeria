@@ -273,6 +273,10 @@ export interface Profile {
    * Seleção de Fotos, ou null se a agência ainda não configurou uma. */
   orgPhotoWatermarkUrl?: string | null;
   orgPhotoWatermarkPath?: string | null;
+  orgPhotoWatermarkMode?: "none" | "text" | "image";
+  orgPhotoWatermarkText?: string | null;
+  orgPhotoWatermarkOpacity?: number;
+  orgPhotoWatermarkDensity?: "baixa" | "media" | "alta";
   /** Optional features this org's team turned off in Configurações > Geral
    * — keys from OPTIONAL_FEATURE_KEYS. Hides the corresponding UI without
    * touching any underlying data. */

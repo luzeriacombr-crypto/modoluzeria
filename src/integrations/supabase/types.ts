@@ -2437,7 +2437,11 @@ export type Database = {
           nav_labels: Json
           nav_order: Json
           payment_message_template: string | null
+          photo_watermark_density: string
+          photo_watermark_mode: string
+          photo_watermark_opacity: number
           photo_watermark_path: string | null
+          photo_watermark_text: string | null
           pix_key: string | null
           plan_id: string
           promotion_code_id: string | null
@@ -2478,7 +2482,11 @@ export type Database = {
           nav_labels?: Json
           nav_order?: Json
           payment_message_template?: string | null
+          photo_watermark_density?: string
+          photo_watermark_mode?: string
+          photo_watermark_opacity?: number
           photo_watermark_path?: string | null
+          photo_watermark_text?: string | null
           pix_key?: string | null
           plan_id?: string
           promotion_code_id?: string | null
@@ -2519,7 +2527,11 @@ export type Database = {
           nav_labels?: Json
           nav_order?: Json
           payment_message_template?: string | null
+          photo_watermark_density?: string
+          photo_watermark_mode?: string
+          photo_watermark_opacity?: number
           photo_watermark_path?: string | null
+          photo_watermark_text?: string | null
           pix_key?: string | null
           plan_id?: string
           promotion_code_id?: string | null

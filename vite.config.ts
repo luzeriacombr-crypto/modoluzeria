@@ -86,7 +86,15 @@ export default defineConfig(async ({ command, mode }) => {
         "react/jsx-runtime",
         "react/jsx-dev-runtime",
       ],
+      // Binários nativos (marca d'água em photo-watermark.server.ts) — o
+      // pre-bundler do Vite tenta interpretar o .node deles como JS/ESM e
+      // quebra o dev server. Só rodam no servidor mesmo, nunca precisam
+      // passar pelo optimizer.
+      exclude: ["@napi-rs/canvas", "sharp"],
       ignoreOutdatedRequests: true,
+    },
+    ssr: {
+      external: ["@napi-rs/canvas", "sharp"],
     },
     server: { host: "::", port: process.env.PORT ? Number(process.env.PORT) : 8080 },
     plugins,
