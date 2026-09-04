@@ -304,6 +304,18 @@ export const getPublicPhotoSelection = createServerFn({ method: "GET" })
     };
   });
 
+/** Diagnóstico temporário (tabela `_debug_photo_thumb_log`, sem RLS pra
+ * anon/authenticated — só service_role escreve e só eu leio via SQL
+ * direto) — investigando por que fotos de uma seleção específica não
+ * carregavam em produção. Nunca expõe nada pro visitante público; remove
+ * assim que o bug real for identificado. */
+async function logDebug(stage: string, fileId: string, detail: string) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("_debug_photo_thumb_log").insert({ stage, file_id: fileId, detail });
+  } catch { /* diagnóstico não pode derrubar a resposta real */ }
+}
+
 /** Único jeito de uma foto chegar no navegador do visitante público: os
  * bytes originais nunca são expostos — sempre passam por aqui, que confirma
  * que cada `fileId` realmente pertence à pasta dessa seleção (evita virar
@@ -352,20 +364,35 @@ export const getPublicPhotoThumbnails = createServerFn({ method: "POST" })
             `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=parents&supportsAllDrives=true`,
             { headers: { Authorization: `Bearer ${accessToken}` } },
           );
-          if (!metaRes.ok) return;
+          if (!metaRes.ok) {
+            const body = await metaRes.text().catch(() => "");
+            await logDebug("meta", fileId, `${metaRes.status}: ${body.slice(0, 300)}`);
+            return;
+          }
           const meta: any = await metaRes.json();
-          if (!((meta.parents ?? []) as string[]).includes(r.driveFolderId as string)) return;
+          if (!((meta.parents ?? []) as string[]).includes(r.driveFolderId as string)) {
+            await logDebug("parents-mismatch", fileId, `parents=${JSON.stringify(meta.parents)} want=${r.driveFolderId}`);
+            return;
+          }
 
           const contentRes = await fetch(
             `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
             { headers: { Authorization: `Bearer ${accessToken}` } },
           );
-          if (!contentRes.ok) return;
+          if (!contentRes.ok) {
+            const body = await contentRes.text().catch(() => "");
+            await logDebug("content", fileId, `${contentRes.status}: ${body.slice(0, 300)}`);
+            return;
+          }
           const imageBuf = Buffer.from(await contentRes.arrayBuffer());
-          const outBuf = await protectPhotoBytes(imageBuf, watermark);
-          result[fileId] = `data:image/jpeg;base64,${outBuf.toString("base64")}`;
-        } catch (e) {
-          console.error(`[getPublicPhotoThumbnails] failed for ${fileId}:`, e);
+          try {
+            const outBuf = await protectPhotoBytes(imageBuf, watermark);
+            result[fileId] = `data:image/jpeg;base64,${outBuf.toString("base64")}`;
+          } catch (e: any) {
+            await logDebug("composite", fileId, `${e?.message ?? e}`);
+          }
+        } catch (e: any) {
+          await logDebug("throw", fileId, `${e?.message ?? e}`);
         }
       }));
 

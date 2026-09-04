@@ -39,6 +39,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      _debug_photo_thumb_log: {
+        Row: {
+          created_at: string
+          detail: string
+          file_id: string
+          id: string
+          stage: string
+        }
+        Insert: {
+          created_at?: string
+          detail: string
+          file_id: string
+          id?: string
+          stage: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string
+          file_id?: string
+          id?: string
+          stage?: string
+        }
+        Relationships: []
+      }
       activity_log: {
         Row: {
           action: string
