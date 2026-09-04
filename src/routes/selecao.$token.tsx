@@ -147,15 +147,15 @@ function PublicPhotoSelectionPage() {
     <div className="min-h-screen pb-28 select-none" style={{ background: "#0D0D0D" }}>
       <Toaster theme="dark" position="bottom-right" />
 
-      {/* Capa cheia */}
-      <div className="relative w-full h-[100vh] min-h-[520px] flex items-end justify-center overflow-hidden">
+      {/* Capa — no tamanho/proporção real da foto, sem forçar recorte de tela cheia */}
+      <div className="relative w-full overflow-hidden">
         {photos[0] ? (
-          <ProtectedPhoto dataUrl={thumbs.get(photos[0].id)} className="absolute inset-0 w-full h-full object-cover" />
+          <ProtectedPhoto dataUrl={thumbs.get(photos[0].id)} className="w-full h-auto block" />
         ) : (
-          <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, #1C1C1C, #0D0D0D)" }} />
+          <div className="w-full aspect-[4/3]" style={{ background: "linear-gradient(160deg, #1C1C1C, #0D0D0D)" }} />
         )}
         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.35) 100%)" }} />
-        <div className="relative z-10 flex flex-col items-center gap-6 pb-16 px-6 text-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-end gap-6 pb-16 px-6 text-center">
           <h1
             className="text-white text-4xl sm:text-6xl leading-tight"
             style={{ fontFamily: "'Instrument Serif', serif" }}
@@ -201,7 +201,7 @@ function PublicPhotoSelectionPage() {
       <div id="galeria" className="max-w-[1200px] mx-auto px-4 sm:px-8 pt-6">
         {!isClosed && !submittedAs && (
           <div className="text-white/40 text-[12px] mb-5 leading-snug">
-            Clique nas fotos que você quer escolher e depois clique em "Finalizar seleção" — você vai colocar seu nome pra sua agência saber quem escolheu.
+            Clique nas fotos que você quer escolher e depois clique em "Finalizar seleção" — você vai colocar seu nome.
           </div>
         )}
 
