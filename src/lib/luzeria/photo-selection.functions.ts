@@ -361,7 +361,7 @@ export const getPublicPhotoThumbnails = createServerFn({ method: "POST" })
       await Promise.all(data.fileIds.map(async (fileId) => {
         try {
           const metaRes = await fetch(
-            `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=parents&supportsAllDrives=true`,
+            `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=id,name,parents,driveId,teamDriveId&supportsAllDrives=true`,
             { headers: { Authorization: `Bearer ${accessToken}` } },
           );
           if (!metaRes.ok) {
@@ -371,7 +371,7 @@ export const getPublicPhotoThumbnails = createServerFn({ method: "POST" })
           }
           const meta: any = await metaRes.json();
           if (!((meta.parents ?? []) as string[]).includes(r.driveFolderId as string)) {
-            await logDebug("parents-mismatch", fileId, `parents=${JSON.stringify(meta.parents)} want=${r.driveFolderId}`);
+            await logDebug("parents-mismatch", fileId, `full=${JSON.stringify(meta)} want=${r.driveFolderId}`);
             return;
           }
 
