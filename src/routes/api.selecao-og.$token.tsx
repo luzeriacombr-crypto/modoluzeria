@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/selecao-og/$token")({
   server: {
     handlers: {
       GET: async ({ params }) => {
-        const buf = await getPublicPhotoSelectionCoverImage(params.token);
+        const buf = await getPublicPhotoSelectionCoverImage({ data: { token: params.token } });
         if (!buf) {
           return new Response("Not found", { status: 404 });
         }
