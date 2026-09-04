@@ -3,8 +3,10 @@ import { createCanvas, GlobalFonts } from "@napi-rs/canvas";
 import { WATERMARK_FONT_BASE64 } from "./watermark-font-data";
 
 /** Preview, não entrega final — reduz o peso e o tempo de composição sem
- * prejudicar a decisão do cliente na hora de escolher. */
-const PREVIEW_MAX_DIMENSION = 1600;
+ * prejudicar a decisão do cliente na hora de escolher. 1080 na aresta
+ * longa: galerias com dezenas de fotos (a mesma imagem serve tanto a
+ * grade quanto a visualização em tela cheia) carregavam devagar em 1600. */
+const PREVIEW_MAX_DIMENSION = 1080;
 
 const WATERMARK_FONT_FAMILY = "LZWatermarkFont";
 let fontRegistered = false;
