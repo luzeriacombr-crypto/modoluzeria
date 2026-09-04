@@ -2666,6 +2666,7 @@ export type Database = {
       }
       photo_selections: {
         Row: {
+          cover_drive_file_id: string | null
           created_at: string
           created_by: string | null
           deadline: string | null
@@ -2674,11 +2675,13 @@ export type Database = {
           id: string
           org_id: string
           photo_client_id: string
+          photo_order: string
           status: string
           title: string
           token: string
         }
         Insert: {
+          cover_drive_file_id?: string | null
           created_at?: string
           created_by?: string | null
           deadline?: string | null
@@ -2687,11 +2690,13 @@ export type Database = {
           id?: string
           org_id: string
           photo_client_id: string
+          photo_order?: string
           status?: string
           title: string
           token: string
         }
         Update: {
+          cover_drive_file_id?: string | null
           created_at?: string
           created_by?: string | null
           deadline?: string | null
@@ -2700,6 +2705,7 @@ export type Database = {
           id?: string
           org_id?: string
           photo_client_id?: string
+          photo_order?: string
           status?: string
           title?: string
           token?: string

@@ -56,6 +56,7 @@ import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from 
 import {
   listPhotoClients, getPhotoClient, createPhotoClient, deletePhotoClient,
   createPhotoSelection, listPhotoSelections, getPhotoSelectionDetail, deletePhotoSelection, setPhotoSelectionStatus,
+  listSelectionDriveImages, setPhotoSelectionCover, setPhotoSelectionOrder,
   getPublicPhotoSelection, getPublicPhotoThumbnails,
 } from "./photo-selection.functions";
 import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications } from "./instagram.functions";
@@ -531,6 +532,17 @@ export const photoSelectionDetailQO = (id: string | null) =>
     queryKey: ["photo-selection-detail", id],
     queryFn: () => getPhotoSelectionDetail({ data: { id: id! } }),
     enabled: !!id,
+  });
+
+/** Miniaturas cruas do Drive pro admin escolher a capa — só usado dentro
+ * do modal de escolha, por isso staleTime alto (a lista real não muda
+ * durante a sessão de escolha). */
+export const selectionDriveImagesQO = (id: string | null) =>
+  queryOptions({
+    queryKey: ["selection-drive-images", id],
+    queryFn: () => listSelectionDriveImages({ data: { id: id! } }),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5,
   });
 
 export const publicPhotoSelectionQO = (token: string | null) =>
@@ -1363,6 +1375,14 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["photo-selections"] });
         qc.invalidateQueries({ queryKey: ["photo-selection-detail"] });
       },
+    }),
+    setPhotoSelectionCover: useMutation({
+      mutationFn: useServerFn(setPhotoSelectionCover),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["photo-selection-detail"] }),
+    }),
+    setPhotoSelectionOrder: useMutation({
+      mutationFn: useServerFn(setPhotoSelectionOrder),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["photo-selection-detail"] }),
     }),
     /* ===== FÓRUM ===== */
     createForumPost: useMutation({

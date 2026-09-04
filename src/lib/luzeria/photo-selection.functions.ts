@@ -117,16 +117,19 @@ export type PhotoSelectionSummary = {
   deadline: string | null;
   createdAt: string;
   submissionCount: number;
+  photoOrder: "nome" | "horario";
+  coverDriveFileId: string | null;
 };
 
 export const createPhotoSelection = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { photoClientId: string; title: string; driveFolderLink: string; deadline?: string | null }) =>
+  .inputValidator((d: { photoClientId: string; title: string; driveFolderLink: string; deadline?: string | null; photoOrder?: "nome" | "horario" }) =>
     z.object({
       photoClientId: z.string().uuid(),
       title: z.string().trim().min(1).max(120),
       driveFolderLink: z.string().trim().min(5).max(500),
       deadline: z.string().trim().max(10).optional().nullable(),
+      photoOrder: z.enum(["nome", "horario"]).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     await assertAdmin(context.supabase, context.userId);
@@ -151,6 +154,7 @@ export const createPhotoSelection = createServerFn({ method: "POST" })
         drive_folder_id: folderId,
         drive_folder_link: data.driveFolderLink,
         deadline: data.deadline || null,
+        photo_order: data.photoOrder ?? "nome",
         token,
         created_by: context.userId,
       })
@@ -166,7 +170,7 @@ export const listPhotoSelections = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("photo_selections")
-      .select("id, title, status, token, deadline, created_at, photo_selection_submissions(count)")
+      .select("id, title, status, token, deadline, created_at, photo_order, cover_drive_file_id, photo_selection_submissions(count)")
       .eq("photo_client_id", data.photoClientId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -178,6 +182,8 @@ export const listPhotoSelections = createServerFn({ method: "GET" })
       deadline: r.deadline as string | null,
       createdAt: r.created_at as string,
       submissionCount: r.photo_selection_submissions?.[0]?.count ?? 0,
+      photoOrder: r.photo_order as "nome" | "horario",
+      coverDriveFileId: r.cover_drive_file_id as string | null,
     })) as PhotoSelectionSummary[];
   });
 
@@ -200,7 +206,7 @@ export const getPhotoSelectionDetail = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("photo_selections")
-      .select("id, photo_client_id, title, status, token, deadline, drive_folder_link, created_at")
+      .select("id, photo_client_id, title, status, token, deadline, drive_folder_link, created_at, photo_order, cover_drive_file_id")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -234,7 +240,51 @@ export const getPhotoSelectionDetail = createServerFn({ method: "GET" })
       createdAt: row.created_at as string,
       submissions,
       submissionCount: submissions.length,
+      photoOrder: row.photo_order as "nome" | "horario",
+      coverDriveFileId: row.cover_drive_file_id as string | null,
     } as PhotoSelectionDetail;
+  });
+
+/** Admin: lista as fotos da pasta pra escolher qual usar de capa — sempre
+ * por nome (só pra navegar/reconhecer, a ordem de exibição pro cliente é
+ * outra configuração). Miniaturas cruas do Drive, sem marca d'água — tela
+ * interna, autenticada, mesmo padrão de searchDriveFiles. */
+export const listSelectionDriveImages = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    const { data: row, error } = await context.supabase
+      .from("photo_selections")
+      .select("drive_folder_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Seleção não encontrada.");
+    return listDriveFolderImages(row.drive_folder_id as string, "nome");
+  }));
+
+export const setPhotoSelectionCover = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string; driveFileId: string | null }) =>
+    z.object({ id: z.string().uuid(), driveFileId: z.string().min(5).max(200).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase
+      .from("photo_selections").update({ cover_drive_file_id: data.driveFileId }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setPhotoSelectionOrder = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string; photoOrder: "nome" | "horario" }) =>
+    z.object({ id: z.string().uuid(), photoOrder: z.enum(["nome", "horario"]) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase
+      .from("photo_selections").update({ photo_order: data.photoOrder }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const deletePhotoSelection = createServerFn({ method: "POST" })
@@ -272,6 +322,9 @@ export type PublicPhotoSelection = {
   // getPublicPhotoThumbnail, que devolve os bytes já com a marca d'água
   // da agência queimada (ver photo-watermark.server.ts).
   photos: Array<{ id: string; name: string }>;
+  // Foto escolhida pelo admin pra capa — se não tiver sido escolhida ou
+  // não existir mais na pasta, o front cai pra photos[0].
+  coverPhotoId: string | null;
 };
 
 export const getPublicPhotoSelection = createServerFn({ method: "GET" })
@@ -288,11 +341,17 @@ export const getPublicPhotoSelection = createServerFn({ method: "GET" })
 
     let photos: Array<{ id: string; name: string }> = [];
     try {
-      const files = await withDriveOrg(r.orgId as string, () => listDriveFolderImages(r.driveFolderId as string));
+      const sortBy = (r.photoOrder as "nome" | "horario") ?? "nome";
+      const files = await withDriveOrg(r.orgId as string, () => listDriveFolderImages(r.driveFolderId as string, sortBy));
       photos = files.map((f) => ({ id: f.id, name: f.name }));
     } catch (e) {
       console.error("[getPublicPhotoSelection] Drive listing failed:", e);
     }
+
+    const coverDriveFileId = (r.coverDriveFileId as string | null) ?? null;
+    const coverPhotoId = coverDriveFileId && photos.some((p) => p.id === coverDriveFileId)
+      ? coverDriveFileId
+      : (photos[0]?.id ?? null);
 
     return {
       selectionId: r.selectionId as string,
@@ -301,6 +360,7 @@ export const getPublicPhotoSelection = createServerFn({ method: "GET" })
       clientName: (r.clientName as string) ?? "",
       deadline: (r.deadline as string) ?? null,
       photos,
+      coverPhotoId,
     };
   });
 

@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Copy, Trash2, ExternalLink, Image as ImageIcon, Lock, Unlock, ChevronDown, ChevronRight } from "lucide-react";
-import { photoSelectionsQO, photoSelectionDetailQO, driveThumbnailQO, useApi } from "@/lib/luzeria/queries";
+import { Plus, Copy, Trash2, ExternalLink, Image as ImageIcon, Lock, Unlock, ChevronDown, ChevronRight, Star } from "lucide-react";
+import { photoSelectionsQO, photoSelectionDetailQO, selectionDriveImagesQO, driveThumbnailQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+
+type PhotoOrder = "nome" | "horario";
+const ORDER_LABEL: Record<PhotoOrder, string> = { nome: "Nome", horario: "Horário" };
 
 const PUBLIC_BASE = import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com.br";
 
@@ -15,9 +18,10 @@ const PUBLIC_BASE = import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com
  * precise gerenciar seleções de um `photoClientId`. */
 export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string }) {
   const { data: selections = [], isLoading } = useQuery(photoSelectionsQO(photoClientId));
-  const { createPhotoSelection, deletePhotoSelection, setPhotoSelectionStatus } = useApi();
+  const { createPhotoSelection, deletePhotoSelection, setPhotoSelectionStatus, setPhotoSelectionCover, setPhotoSelectionOrder } = useApi();
   const [showNew, setShowNew] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [pickingCoverFor, setPickingCoverFor] = useState<string | null>(null);
 
   async function handleDelete(id: string) {
     if (!(await requestConfirm("Remover essa seleção de fotos? O link público deixa de funcionar.", { danger: true }))) return;
@@ -62,6 +66,10 @@ export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string 
                 onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar."),
               })}
               togglingStatus={setPhotoSelectionStatus.isPending}
+              onChangeOrder={(photoOrder) => setPhotoSelectionOrder.mutate({ data: { id: s.id, photoOrder } }, {
+                onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar."),
+              })}
+              onPickCover={() => setPickingCoverFor(s.id)}
             />
           ))}
         </div>
@@ -75,6 +83,19 @@ export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string 
             createPhotoSelection.mutate({ data: { photoClientId, ...vals } }, {
               onSuccess: () => { setShowNew(false); toast.success("Seleção criada — copie o link pro cliente."); },
               onError: (e: any) => toast.error(e?.message ?? "Erro ao criar seleção."),
+            });
+          }}
+        />
+      )}
+
+      {pickingCoverFor && (
+        <CoverPickerModal
+          selectionId={pickingCoverFor}
+          onClose={() => setPickingCoverFor(null)}
+          onPick={(driveFileId) => {
+            setPhotoSelectionCover.mutate({ data: { id: pickingCoverFor, driveFileId } }, {
+              onSuccess: () => { toast.success("Capa atualizada."); setPickingCoverFor(null); },
+              onError: (e: any) => toast.error(e?.message ?? "Erro ao definir capa."),
             });
           }}
         />
@@ -108,13 +129,15 @@ function stripExtension(name: string) {
   return idx > 0 ? name.slice(0, idx) : name;
 }
 
-function SelectionRow({ selection, isOpen, onToggle, onDelete, onToggleStatus, togglingStatus }: {
+function SelectionRow({ selection, isOpen, onToggle, onDelete, onToggleStatus, togglingStatus, onChangeOrder, onPickCover }: {
   selection: { id: string; title: string; status: "aberta" | "encerrada"; token: string; deadline: string | null; submissionCount: number };
   isOpen: boolean;
   onToggle: () => void;
   onDelete: () => void;
   onToggleStatus: () => void;
   togglingStatus: boolean;
+  onChangeOrder: (order: PhotoOrder) => void;
+  onPickCover: () => void;
 }) {
   const { data: detail } = useQuery({ ...photoSelectionDetailQO(selection.id), enabled: isOpen });
   const [copied, setCopied] = useState(false);
@@ -160,6 +183,31 @@ function SelectionRow({ selection, isOpen, onToggle, onDelete, onToggleStatus, t
               <span className="text-[11px] text-foreground/40 w-full">Prazo: {formatDeadline(selection.deadline)}</span>
             )}
           </div>
+
+          {detail && (
+            <div className="flex items-center gap-4 flex-wrap pb-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-foreground/35">Ordenar por</span>
+                {(["nome", "horario"] as PhotoOrder[]).map((o) => (
+                  <button
+                    key={o}
+                    onClick={() => onChangeOrder(o)}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-full border transition"
+                    style={{
+                      borderColor: detail.photoOrder === o ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 12%, transparent)",
+                      color: detail.photoOrder === o ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
+                    }}
+                  >
+                    {ORDER_LABEL[o]}
+                  </button>
+                ))}
+              </div>
+              <button onClick={onPickCover}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/25 transition">
+                <Star size={12} /> {detail.coverDriveFileId ? "Trocar capa" : "Escolher capa"}
+              </button>
+            </div>
+          )}
 
           {!detail ? (
             <div className="text-foreground/30 text-xs py-4 text-center">Carregando…</div>
@@ -242,17 +290,18 @@ function ChoiceThumb({ fileId, fileName }: { fileId: string; fileName: string })
 
 function NewSelectionModal({ onClose, onCreate, saving }: {
   onClose: () => void;
-  onCreate: (vals: { title: string; driveFolderLink: string; deadline?: string | null }) => void;
+  onCreate: (vals: { title: string; driveFolderLink: string; deadline?: string | null; photoOrder: PhotoOrder }) => void;
   saving: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [link, setLink] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [photoOrder, setPhotoOrder] = useState<PhotoOrder>("nome");
 
   function submit() {
     if (!title.trim()) { toast.error("Dá um título pra essa seleção."); return; }
     if (!link.trim()) { toast.error("Cola o link da pasta do Drive."); return; }
-    onCreate({ title: title.trim(), driveFolderLink: link.trim(), deadline: deadline || null });
+    onCreate({ title: title.trim(), driveFolderLink: link.trim(), deadline: deadline || null, photoOrder });
   }
 
   return (
@@ -280,11 +329,81 @@ function NewSelectionModal({ onClose, onCreate, saving }: {
           className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-4"
         />
 
+        <label className="block text-[11px] font-bold uppercase tracking-wide text-foreground/40 mb-1.5">Ordenar fotos por</label>
+        <div className="flex items-center gap-1.5 mb-4">
+          {(["nome", "horario"] as PhotoOrder[]).map((o) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => setPhotoOrder(o)}
+              className="flex-1 text-xs font-semibold px-3 py-2 rounded-md border transition"
+              style={{
+                borderColor: photoOrder === o ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 12%, transparent)",
+                color: photoOrder === o ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
+              }}
+            >
+              {ORDER_LABEL[o]}
+            </button>
+          ))}
+        </div>
+
         <div className="flex items-center justify-end gap-2">
           <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
           <button onClick={submit} disabled={saving} className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50">
             {saving ? "Criando…" : "Criar seleção"}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Miniaturas cruas do Drive (sem marca d'água) — tela interna, só o admin
+ * vê, mesmo padrão já usado em searchDriveFiles/candidatos de pasta. */
+function CoverPickerModal({ selectionId, onClose, onPick }: {
+  selectionId: string;
+  onClose: () => void;
+  onPick: (driveFileId: string) => void;
+}) {
+  const { data: images = [], isLoading } = useQuery(selectionDriveImagesQO(selectionId));
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-2xl max-h-[80vh] rounded-xl p-5 flex flex-col"
+        style={{ background: "var(--card)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4 shrink-0">
+          <div className="text-base font-bold text-foreground">Escolher foto de capa</div>
+          <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-2 py-1">Fechar</button>
+        </div>
+        <div className="overflow-y-auto">
+          {isLoading ? (
+            <div className="text-foreground/40 text-sm py-10 text-center">Carregando fotos…</div>
+          ) : images.length === 0 ? (
+            <div className="text-foreground/30 text-sm py-10 text-center">Nenhuma foto encontrada nessa pasta.</div>
+          ) : (
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+              {images.map((img) => (
+                <button
+                  key={img.id}
+                  onClick={() => onPick(img.id)}
+                  className="relative aspect-square rounded-md overflow-hidden hover:ring-2 transition"
+                  style={{ background: "var(--background)" }}
+                  title={img.name}
+                >
+                  {img.thumbnailUrl ? (
+                    <img src={img.thumbnailUrl} alt={img.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full grid place-items-center">
+                      <ImageIcon size={16} className="text-foreground/20" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -487,6 +487,17 @@ export const searchDriveFiles = createServerFn({ method: "GET" })
     }));
   }));
 
+/** Drive's `imageMediaMetadata.time` (EXIF) comes as "YYYY:MM:DD HH:MM:SS",
+ * not ISO — swap the first two ':' (date separators) for '-' and the
+ * space for 'T' so Date.parse can read it. Missing/unparseable time sorts
+ * last (Infinity), falling back to name order among those. */
+function parseDriveExifTime(t: string | undefined): number {
+  if (!t) return Infinity;
+  const iso = t.replace(":", "-").replace(":", "-").replace(" ", "T");
+  const ms = Date.parse(iso);
+  return Number.isNaN(ms) ? Infinity : ms;
+}
+
 /** Lists every image directly inside a Drive folder, paginating through
  * `nextPageToken` until exhausted — a seleção de fotos pode ter centenas de
  * imagens, e nem searchDriveFiles nem driveListChildFolders paginam hoje.
@@ -494,16 +505,24 @@ export const searchDriveFiles = createServerFn({ method: "GET" })
  * an authenticated admin context and from the public/anon photo-selection
  * flow in photo-selection.functions.ts, which has no logged-in profile to
  * satisfy requireActiveProfile. Callers are responsible for already being
- * inside withDriveOrg(orgId, ...). */
-export async function listDriveFolderImages(folderId: string) {
+ * inside withDriveOrg(orgId, ...).
+ *
+ * `sortBy: "horario"` orders by the photo's real capture time (EXIF) —
+ * the Drive API itself has no `orderBy` option for that, so this fetches
+ * `imageMediaMetadata.time` in the same list call (no extra requests) and
+ * sorts client-side after all pages are collected. */
+export async function listDriveFolderImages(folderId: string, sortBy: "nome" | "horario" = "nome") {
   const q = `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`;
-  const files: Array<{ id: string; name: string; thumbnailUrl: string | null }> = [];
+  const files: Array<{ id: string; name: string; thumbnailUrl: string | null; takenAt?: string }> = [];
+  const fields = sortBy === "horario"
+    ? "nextPageToken,files(id,name,thumbnailLink,imageMediaMetadata(time))"
+    : "nextPageToken,files(id,name,thumbnailLink)";
   let pageToken: string | undefined;
   do {
     const params = new URLSearchParams({
       q,
       pageSize: "1000",
-      fields: "nextPageToken,files(id,name,thumbnailLink)",
+      fields,
       orderBy: "name",
       supportsAllDrives: "true",
       includeItemsFromAllDrives: "true",
@@ -511,11 +530,18 @@ export async function listDriveFolderImages(folderId: string) {
     if (pageToken) params.set("pageToken", pageToken);
     const json: any = await driveFetch(`/drive/v3/files?${params.toString()}`);
     for (const f of json.files ?? []) {
-      files.push({ id: f.id, name: f.name, thumbnailUrl: f.thumbnailLink ?? null });
+      files.push({ id: f.id, name: f.name, thumbnailUrl: f.thumbnailLink ?? null, takenAt: f.imageMediaMetadata?.time });
     }
     pageToken = json.nextPageToken;
   } while (pageToken);
-  return files;
+
+  if (sortBy === "horario") {
+    files.sort((a, b) => {
+      const diff = parseDriveExifTime(a.takenAt) - parseDriveExifTime(b.takenAt);
+      return diff !== 0 ? diff : a.name.localeCompare(b.name);
+    });
+  }
+  return files.map(({ id, name, thumbnailUrl }) => ({ id, name, thumbnailUrl }));
 }
 
 /* ============== ATTACH BY ID/URL ============== */

@@ -96,7 +96,7 @@ function PublicPhotoSelectionPage() {
     );
   }
 
-  const { title, clientName, status, deadline, photos } = q.data;
+  const { title, clientName, status, deadline, photos, coverPhotoId } = q.data;
   const isClosed = status === "encerrada";
   const remainingDays = deadline ? daysUntil(deadline) : null;
   const photosById = new Map(photos.map((p) => [p.id, p]));
@@ -149,8 +149,8 @@ function PublicPhotoSelectionPage() {
 
       {/* Capa — no tamanho/proporção real da foto, sem forçar recorte de tela cheia */}
       <div className="relative w-full overflow-hidden">
-        {photos[0] ? (
-          <ProtectedPhoto dataUrl={thumbs.get(photos[0].id)} className="w-full h-auto block" />
+        {coverPhotoId ? (
+          <ProtectedPhoto dataUrl={thumbs.get(coverPhotoId)} className="w-full h-auto block" />
         ) : (
           <div className="w-full aspect-[4/3]" style={{ background: "linear-gradient(160deg, #1C1C1C, #0D0D0D)" }} />
         )}
