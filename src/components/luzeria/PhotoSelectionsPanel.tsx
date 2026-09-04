@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Copy, Trash2, ExternalLink, Image as ImageIcon, Check, Clock } from "lucide-react";
+import { Plus, Copy, Trash2, ExternalLink, Image as ImageIcon, Lock, Unlock, ChevronDown, ChevronRight } from "lucide-react";
 import { photoSelectionsQO, photoSelectionDetailQO, driveThumbnailQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
@@ -15,7 +15,7 @@ const PUBLIC_BASE = import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com
  * precise gerenciar seleções de um `photoClientId`. */
 export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string }) {
   const { data: selections = [], isLoading } = useQuery(photoSelectionsQO(photoClientId));
-  const { createPhotoSelection, deletePhotoSelection } = useApi();
+  const { createPhotoSelection, deletePhotoSelection, setPhotoSelectionStatus } = useApi();
   const [showNew, setShowNew] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -56,6 +56,12 @@ export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string 
               isOpen={openId === s.id}
               onToggle={() => setOpenId(openId === s.id ? null : s.id)}
               onDelete={() => handleDelete(s.id)}
+              onToggleStatus={() => setPhotoSelectionStatus.mutate({
+                data: { id: s.id, status: s.status === "aberta" ? "encerrada" : "aberta" },
+              }, {
+                onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar."),
+              })}
+              togglingStatus={setPhotoSelectionStatus.isPending}
             />
           ))}
         </div>
@@ -77,18 +83,18 @@ export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string 
   );
 }
 
-function StatusPill({ status }: { status: "aberta" | "finalizada" }) {
-  const isDone = status === "finalizada";
+function StatusPill({ status }: { status: "aberta" | "encerrada" }) {
+  const isClosed = status === "encerrada";
   return (
     <span
       className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0"
       style={{
-        background: isDone ? "rgba(34,197,94,0.15)" : "rgba(234,179,8,0.15)",
-        color: isDone ? "rgb(34,197,94)" : "rgb(234,179,8)",
+        background: isClosed ? "rgba(148,163,184,0.15)" : "rgba(34,197,94,0.15)",
+        color: isClosed ? "rgb(148,163,184)" : "rgb(34,197,94)",
       }}
     >
-      {isDone ? <Check size={10} /> : <Clock size={10} />}
-      {isDone ? "Finalizada" : "Aguardando"}
+      {isClosed ? <Lock size={10} /> : <Unlock size={10} />}
+      {isClosed ? "Encerrada" : "Aberta"}
     </span>
   );
 }
@@ -102,11 +108,13 @@ function stripExtension(name: string) {
   return idx > 0 ? name.slice(0, idx) : name;
 }
 
-function SelectionRow({ selection, isOpen, onToggle, onDelete }: {
-  selection: { id: string; title: string; status: "aberta" | "finalizada"; token: string; deadline: string | null; choiceCount: number };
+function SelectionRow({ selection, isOpen, onToggle, onDelete, onToggleStatus, togglingStatus }: {
+  selection: { id: string; title: string; status: "aberta" | "encerrada"; token: string; deadline: string | null; submissionCount: number };
   isOpen: boolean;
   onToggle: () => void;
   onDelete: () => void;
+  onToggleStatus: () => void;
+  togglingStatus: boolean;
 }) {
   const { data: detail } = useQuery({ ...photoSelectionDetailQO(selection.id), enabled: isOpen });
   const [copied, setCopied] = useState(false);
@@ -118,15 +126,6 @@ function SelectionRow({ selection, isOpen, onToggle, onDelete }: {
     setTimeout(() => setCopied(false), 1500);
   }
 
-  function copyLightroomCode() {
-    if (!detail?.choices.length) return;
-    const code = detail.choices.map((c) => `${stripExtension(c.fileName)}.`).join(", ");
-    navigator.clipboard.writeText(code).then(
-      () => toast.success("Código do Lightroom copiado."),
-      () => toast.error("Não consegui copiar. Tenta selecionar manualmente."),
-    );
-  }
-
   return (
     <div className="rounded-lg overflow-hidden" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
       <button onClick={onToggle} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[0.02] transition-colors">
@@ -134,7 +133,7 @@ function SelectionRow({ selection, isOpen, onToggle, onDelete }: {
         <span className="flex-1 min-w-0 text-sm text-foreground truncate">{selection.title}</span>
         <StatusPill status={selection.status} />
         <span className="text-[11px] text-foreground/35 shrink-0">
-          {selection.choiceCount} foto{selection.choiceCount === 1 ? "" : "s"}
+          {selection.submissionCount} resposta{selection.submissionCount === 1 ? "" : "s"}
         </span>
         <span onClick={(e) => { e.stopPropagation(); onDelete(); }}
           className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 transition shrink-0">
@@ -152,39 +151,78 @@ function SelectionRow({ selection, isOpen, onToggle, onDelete }: {
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/25 transition">
               <ExternalLink size={12} /> Abrir
             </a>
+            <button onClick={onToggleStatus} disabled={togglingStatus}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/25 transition disabled:opacity-50 ml-auto">
+              {selection.status === "aberta" ? <Lock size={12} /> : <Unlock size={12} />}
+              {selection.status === "aberta" ? "Encerrar seleção" : "Reabrir seleção"}
+            </button>
             {selection.deadline && (
-              <span className="text-[11px] text-foreground/40">Prazo: {formatDeadline(selection.deadline)}</span>
+              <span className="text-[11px] text-foreground/40 w-full">Prazo: {formatDeadline(selection.deadline)}</span>
             )}
           </div>
 
           {!detail ? (
             <div className="text-foreground/30 text-xs py-4 text-center">Carregando…</div>
-          ) : detail.choices.length === 0 ? (
+          ) : detail.submissions.length === 0 ? (
             <div className="text-foreground/30 text-xs py-4 text-center border border-dashed border-foreground/10 rounded-lg">
-              Aguardando o cliente escolher as fotos.
+              Aguardando respostas.
             </div>
           ) : (
-            <div>
-              <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-foreground/35">
-                  {detail.choices.length} foto{detail.choices.length === 1 ? "" : "s"} escolhida{detail.choices.length === 1 ? "" : "s"}
-                </span>
-                <button onClick={copyLightroomCode}
-                  className="lz-btn-primary text-[11px] px-3 py-1.5 rounded-md inline-flex items-center gap-1.5">
-                  <Copy size={12} /> Copiar código Lightroom
-                </button>
-              </div>
-              <div className="grid grid-cols-6 gap-1.5">
-                {detail.choices.map((c) => (
-                  <ChoiceThumb key={c.driveFileId} fileId={c.driveFileId} fileName={c.fileName} />
-                ))}
-              </div>
+            <div className="space-y-2">
+              {detail.submissions.map((sub) => (
+                <SubmissionRow key={sub.id} submission={sub} />
+              ))}
             </div>
           )}
         </div>
       )}
     </div>
   );
+}
+
+function SubmissionRow({ submission }: {
+  submission: { id: string; respondentName: string; finalizedAt: string; choices: Array<{ driveFileId: string; fileName: string }> };
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  function copyLightroomCode() {
+    const code = submission.choices.map((c) => `${stripExtension(c.fileName)}.`).join(", ");
+    navigator.clipboard.writeText(code).then(
+      () => toast.success("Código do Lightroom copiado."),
+      () => toast.error("Não consegui copiar. Tenta selecionar manualmente."),
+    );
+  }
+
+  return (
+    <div className="rounded-md" style={{ background: "var(--background)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
+      <button onClick={() => setExpanded((v) => !v)} className="w-full flex items-center gap-2 px-3 py-2.5 text-left">
+        {expanded ? <ChevronDown size={13} className="text-foreground/30 shrink-0" /> : <ChevronRight size={13} className="text-foreground/30 shrink-0" />}
+        <span className="flex-1 min-w-0 text-sm font-semibold text-foreground truncate">{submission.respondentName}</span>
+        <span className="text-[11px] text-foreground/35 shrink-0">
+          {submission.choices.length} foto{submission.choices.length === 1 ? "" : "s"} · {formatDateTime(submission.finalizedAt)}
+        </span>
+      </button>
+      {expanded && (
+        <div className="px-3 pb-3 pt-0.5">
+          <div className="flex justify-end mb-2">
+            <button onClick={copyLightroomCode}
+              className="lz-btn-primary text-[11px] px-3 py-1.5 rounded-md inline-flex items-center gap-1.5">
+              <Copy size={12} /> Copiar código Lightroom
+            </button>
+          </div>
+          <div className="grid grid-cols-6 gap-1.5">
+            {submission.choices.map((c) => (
+              <ChoiceThumb key={c.driveFileId} fileId={c.driveFileId} fileName={c.fileName} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function ChoiceThumb({ fileId, fileName }: { fileId: string; fileName: string }) {

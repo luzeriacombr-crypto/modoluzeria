@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Heart, Loader2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Heart, Lock, X } from "lucide-react";
 import { publicPhotoSelectionQO, publicPhotoThumbQO } from "@/lib/luzeria/queries";
-import { submitPublicPhotoSelection, finalizePublicPhotoSelection } from "@/lib/luzeria/photo-selection.functions";
+import { submitPhotoSelectionResponse } from "@/lib/luzeria/photo-selection.functions";
 
 export const Route = createFileRoute("/selecao/$token")({
   component: PublicPhotoSelectionPage,
@@ -39,20 +39,13 @@ function formatFullDate(dateOnly: string) {
 function PublicPhotoSelectionPage() {
   const { token } = Route.useParams();
   const q = useQuery(publicPhotoSelectionQO(token));
-  const submitFn = useServerFn(submitPublicPhotoSelection);
-  const finalizeFn = useServerFn(finalizePublicPhotoSelection);
+  const submitFn = useServerFn(submitPhotoSelectionResponse);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
-  const [finalizing, setFinalizing] = useState(false);
-  const [dirty, setDirty] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (q.data) setSelected(new Set(q.data.selectedFileIds));
-  }, [q.data?.selectionId]);
-
-  const photosById = useMemo(() => new Map((q.data?.photos ?? []).map((p) => [p.id, p])), [q.data?.photos]);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submittedAs, setSubmittedAs] = useState<string | null>(null);
 
   if (q.isLoading) {
     return <Shell><div className="text-white/60 text-sm">Carregando…</div></Shell>;
@@ -69,60 +62,46 @@ function PublicPhotoSelectionPage() {
   }
 
   const { title, clientName, status, deadline, photos } = q.data;
-  const isFinalized = status === "finalizada";
+  const isClosed = status === "encerrada";
   const remainingDays = deadline ? daysUntil(deadline) : null;
+  const photosById = new Map(photos.map((p) => [p.id, p]));
 
   function toggle(id: string) {
-    if (isFinalized) return;
+    if (isClosed || submittedAs) return;
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
-    setDirty(true);
   }
 
-  async function handleSave() {
-    setSaving(true);
+  function openNamePrompt() {
+    if (selected.size === 0) { toast.error("Escolha ao menos uma foto antes de finalizar."); return; }
+    setShowNamePrompt(true);
+  }
+
+  async function handleConfirmName(name: string) {
+    setSubmitting(true);
     try {
       const choices = [...selected].map((id) => ({
         driveFileId: id,
         fileName: photosById.get(id)?.name ?? id,
       }));
-      await submitFn({ data: { token, choices } });
-      setDirty(false);
-      toast.success("Seleção salva.");
+      await submitFn({ data: { token, respondentName: name, choices } });
+      setShowNamePrompt(false);
+      setSubmittedAs(name);
+      toast.success("Seleção enviada!");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao salvar seleção.");
+      toast.error(e?.message ?? "Erro ao enviar seleção.");
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   }
 
-  async function handleFinalize() {
-    if (selected.size === 0) { toast.error("Escolha ao menos uma foto antes de finalizar."); return; }
-    const ok = window.confirm(
-      `Finalizar com ${selected.size} foto${selected.size === 1 ? "" : "s"} escolhida${selected.size === 1 ? "" : "s"}? Depois disso não dá mais pra mudar.`,
-    );
-    if (!ok) return;
-    setFinalizing(true);
-    try {
-      if (dirty) {
-        const choices = [...selected].map((id) => ({
-          driveFileId: id,
-          fileName: photosById.get(id)?.name ?? id,
-        }));
-        await submitFn({ data: { token, choices } });
-      }
-      await finalizeFn({ data: { token } });
-      setDirty(false);
-      await q.refetch();
-      toast.success("Seleção finalizada!");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao finalizar seleção.");
-    } finally {
-      setFinalizing(false);
-    }
+  function selectAsSomeoneElse() {
+    setSubmittedAs(null);
+    setSelected(new Set());
+    document.getElementById("galeria")?.scrollIntoView({ behavior: "smooth" });
   }
 
   function scrollToGallery() {
@@ -170,7 +149,7 @@ function PublicPhotoSelectionPage() {
               {clientName ? `${clientName} · ` : ""}{photos.length} foto{photos.length === 1 ? "" : "s"}
             </div>
           </div>
-          {deadline && !isFinalized && (
+          {deadline && !isClosed && (
             <div className="text-right">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">Prazo de seleção</div>
               <div className="text-white text-[12px] font-semibold">
@@ -185,21 +164,36 @@ function PublicPhotoSelectionPage() {
       </div>
 
       <div id="galeria" className="max-w-[1200px] mx-auto px-4 sm:px-8 pt-6">
-        {!isFinalized && (
+        {!isClosed && !submittedAs && (
           <div className="text-white/40 text-[12px] mb-5 leading-snug">
-            Clique nas fotos que você quer escolher. Você pode salvar e voltar depois — quando terminar, clique em "Finalizar seleção".
+            Clique nas fotos que você quer escolher e depois clique em "Finalizar seleção" — você vai colocar seu nome pra sua agência saber quem escolheu.
           </div>
         )}
 
-        {isFinalized ? (
+        {submittedAs ? (
           <div className="rounded-xl p-8 text-center mb-8" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="size-12 rounded-full mx-auto mb-3 grid place-items-center" style={{ background: "rgba(34,197,94,0.15)" }}>
               <Check size={22} color="rgb(34,197,94)" />
             </div>
-            <div className="text-white font-bold text-base mb-1">Seleção finalizada!</div>
-            <div className="text-white/50 text-sm">
-              {selected.size} foto{selected.size === 1 ? "" : "s"} escolhida{selected.size === 1 ? "" : "s"}. Sua agência já foi avisada.
+            <div className="text-white font-bold text-base mb-1">Obrigado, {submittedAs}!</div>
+            <div className="text-white/50 text-sm mb-5">Sua seleção foi registrada. Sua agência já foi avisada.</div>
+            {!isClosed && (
+              <button
+                type="button"
+                onClick={selectAsSomeoneElse}
+                className="text-[12px] font-semibold text-white/50 hover:text-white underline underline-offset-2 transition"
+              >
+                Selecionar como outra pessoa
+              </button>
+            )}
+          </div>
+        ) : isClosed ? (
+          <div className="rounded-xl p-8 text-center mb-8" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="size-12 rounded-full mx-auto mb-3 grid place-items-center" style={{ background: "rgba(148,163,184,0.15)" }}>
+              <Lock size={20} color="rgb(148,163,184)" />
             </div>
+            <div className="text-white font-bold text-base mb-1">Essa seleção foi encerrada</div>
+            <div className="text-white/50 text-sm">Sua agência não está mais recebendo respostas por esse link.</div>
           </div>
         ) : photos.length === 0 ? (
           <div className="rounded-xl py-14 text-center text-white/40 text-sm" style={{ background: "#1C1C1C" }}>
@@ -207,7 +201,7 @@ function PublicPhotoSelectionPage() {
           </div>
         ) : null}
 
-        {photos.length > 0 && (
+        {!submittedAs && !isClosed && photos.length > 0 && (
           <div className="columns-2 sm:columns-3 lg:columns-4 gap-2">
             {photos.map((p, idx) => {
               const isSelected = selected.has(p.id);
@@ -235,20 +229,19 @@ function PublicPhotoSelectionPage() {
         )}
       </div>
 
-      {lightboxIndex != null && photos[lightboxIndex] && (
+      {lightboxIndex != null && photos[lightboxIndex] && !submittedAs && !isClosed && (
         <Lightbox
           token={token}
           photos={photos}
           index={lightboxIndex}
           selected={selected}
-          canSelect={!isFinalized}
           onClose={() => setLightboxIndex(null)}
           onNavigate={setLightboxIndex}
           onToggle={toggle}
         />
       )}
 
-      {!isFinalized && photos.length > 0 && (
+      {!submittedAs && !isClosed && photos.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-40 px-4 py-3" style={{ background: "rgba(13,13,13,0.95)", borderTop: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(8px)" }}>
           <div className="max-w-[1200px] mx-auto flex items-center gap-3">
             <span className="text-white text-sm font-semibold flex-1">
@@ -256,25 +249,71 @@ function PublicPhotoSelectionPage() {
             </span>
             <button
               type="button"
-              onClick={handleSave}
-              disabled={saving || finalizing || !dirty}
-              className="px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-wide transition disabled:opacity-40"
-              style={{ background: "rgba(255,255,255,0.08)", color: "white" }}
-            >
-              {saving ? <Loader2 size={14} className="animate-spin" /> : "Salvar seleção"}
-            </button>
-            <button
-              type="button"
-              onClick={handleFinalize}
-              disabled={finalizing || saving}
-              className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wide transition disabled:opacity-50"
+              onClick={openNamePrompt}
+              className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wide transition"
               style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
             >
-              {finalizing ? "Finalizando…" : "Finalizar seleção"}
+              Finalizar seleção
             </button>
           </div>
         </div>
       )}
+
+      {showNamePrompt && (
+        <NamePromptModal
+          count={selected.size}
+          submitting={submitting}
+          onCancel={() => setShowNamePrompt(false)}
+          onConfirm={handleConfirmName}
+        />
+      )}
+    </div>
+  );
+}
+
+function NamePromptModal({ count, submitting, onCancel, onConfirm }: {
+  count: number; submitting: boolean; onCancel: () => void; onConfirm: (name: string) => void;
+}) {
+  const [name, setName] = useState("");
+
+  function submit() {
+    if (!name.trim()) { toast.error("Digita seu nome pra continuar."); return; }
+    onConfirm(name.trim());
+  }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onCancel}>
+      <div
+        className="w-full max-w-sm rounded-xl p-5"
+        style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.1)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-white text-base font-bold mb-1">Quase lá!</div>
+        <div className="text-white/50 text-xs mb-4">
+          {count} foto{count === 1 ? "" : "s"} selecionada{count === 1 ? "" : "s"}. Coloca seu nome pra sua agência saber quem escolheu.
+        </div>
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+          placeholder="Seu nome"
+          maxLength={80}
+          className="w-full rounded-md px-3 py-2.5 text-sm text-white outline-none mb-4"
+          style={{ background: "#0D0D0D", border: "1px solid rgba(255,255,255,0.12)" }}
+        />
+        <div className="flex items-center justify-end gap-2">
+          <button onClick={onCancel} className="text-xs text-white/50 hover:text-white px-3 py-2">Cancelar</button>
+          <button
+            onClick={submit}
+            disabled={submitting}
+            className="px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50 transition-opacity hover:opacity-90"
+            style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+          >
+            {submitting ? "Enviando…" : "Confirmar"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -299,12 +338,11 @@ function ProtectedPhoto({ token, fileId, className }: { token: string; fileId: s
   );
 }
 
-function Lightbox({ token, photos, index, selected, canSelect, onClose, onNavigate, onToggle }: {
+function Lightbox({ token, photos, index, selected, onClose, onNavigate, onToggle }: {
   token: string;
   photos: Array<{ id: string; name: string }>;
   index: number;
   selected: Set<string>;
-  canSelect: boolean;
   onClose: () => void;
   onNavigate: (index: number) => void;
   onToggle: (id: string) => void;
@@ -326,16 +364,14 @@ function Lightbox({ token, photos, index, selected, canSelect, onClose, onNaviga
     <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: "#0D0D0D" }}>
       {/* Topo */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 shrink-0">
-        {canSelect ? (
-          <button
-            type="button"
-            onClick={() => onToggle(photo.id)}
-            className="inline-flex items-center gap-2 text-sm font-medium transition"
-            style={{ color: isSelected ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.8)" }}
-          >
-            <Heart size={18} fill={isSelected ? "currentColor" : "none"} /> {isSelected ? "Selecionada" : "Selecionar"}
-          </button>
-        ) : <span />}
+        <button
+          type="button"
+          onClick={() => onToggle(photo.id)}
+          className="inline-flex items-center gap-2 text-sm font-medium transition"
+          style={{ color: isSelected ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.8)" }}
+        >
+          <Heart size={18} fill={isSelected ? "currentColor" : "none"} /> {isSelected ? "Selecionada" : "Selecionar"}
+        </button>
         <button type="button" onClick={onClose} className="text-white/70 hover:text-white transition" aria-label="Fechar">
           <X size={22} />
         </button>

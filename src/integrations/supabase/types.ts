@@ -2606,25 +2606,57 @@ export type Database = {
           drive_file_id: string
           file_name: string
           id: string
-          selection_id: string
+          submission_id: string
         }
         Insert: {
           created_at?: string
           drive_file_id: string
           file_name: string
           id?: string
-          selection_id: string
+          submission_id: string
         }
         Update: {
           created_at?: string
           drive_file_id?: string
           file_name?: string
           id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_selection_choices_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "photo_selection_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photo_selection_submissions: {
+        Row: {
+          created_at: string
+          finalized_at: string
+          id: string
+          respondent_name: string
+          selection_id: string
+        }
+        Insert: {
+          created_at?: string
+          finalized_at?: string
+          id?: string
+          respondent_name: string
+          selection_id: string
+        }
+        Update: {
+          created_at?: string
+          finalized_at?: string
+          id?: string
+          respondent_name?: string
           selection_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "photo_selection_choices_selection_id_fkey"
+            foreignKeyName: "photo_selection_submissions_selection_id_fkey"
             columns: ["selection_id"]
             isOneToOne: false
             referencedRelation: "photo_selections"
@@ -2639,7 +2671,6 @@ export type Database = {
           deadline: string | null
           drive_folder_id: string
           drive_folder_link: string
-          finalized_at: string | null
           id: string
           org_id: string
           photo_client_id: string
@@ -2653,7 +2684,6 @@ export type Database = {
           deadline?: string | null
           drive_folder_id: string
           drive_folder_link: string
-          finalized_at?: string | null
           id?: string
           org_id: string
           photo_client_id: string
@@ -2667,7 +2697,6 @@ export type Database = {
           deadline?: string | null
           drive_folder_id?: string
           drive_folder_link?: string
-          finalized_at?: string | null
           id?: string
           org_id?: string
           photo_client_id?: string
@@ -3381,7 +3410,6 @@ export type Database = {
       approve_public_feed: { Args: { _token: string }; Returns: string }
       auto_mark_missed: { Args: never; Returns: number }
       current_org_id: { Args: never; Returns: string }
-      finalize_photo_selection: { Args: { _token: string }; Returns: boolean }
       generate_recurring_for_month: {
         Args: { _month_key?: string }
         Returns: number
@@ -3528,8 +3556,8 @@ export type Database = {
         }
         Returns: Json
       }
-      submit_photo_selection: {
-        Args: { _choices: Json; _token: string }
+      submit_photo_selection_response: {
+        Args: { _choices: Json; _respondent_name: string; _token: string }
         Returns: boolean
       }
       update_feed_order: { Args: { p_updates: Json }; Returns: undefined }

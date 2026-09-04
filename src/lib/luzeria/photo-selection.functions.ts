@@ -112,11 +112,11 @@ export const deletePhotoClient = createServerFn({ method: "POST" })
 export type PhotoSelectionSummary = {
   id: string;
   title: string;
-  status: "aberta" | "finalizada";
+  status: "aberta" | "encerrada";
   token: string;
   deadline: string | null;
   createdAt: string;
-  choiceCount: number;
+  submissionCount: number;
 };
 
 export const createPhotoSelection = createServerFn({ method: "POST" })
@@ -166,25 +166,32 @@ export const listPhotoSelections = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("photo_selections")
-      .select("id, title, status, token, deadline, created_at, photo_selection_choices(count)")
+      .select("id, title, status, token, deadline, created_at, photo_selection_submissions(count)")
       .eq("photo_client_id", data.photoClientId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
       id: r.id as string,
       title: r.title as string,
-      status: r.status as "aberta" | "finalizada",
+      status: r.status as "aberta" | "encerrada",
       token: r.token as string,
       deadline: r.deadline as string | null,
       createdAt: r.created_at as string,
-      choiceCount: r.photo_selection_choices?.[0]?.count ?? 0,
+      submissionCount: r.photo_selection_submissions?.[0]?.count ?? 0,
     })) as PhotoSelectionSummary[];
   });
+
+export type PhotoSelectionSubmission = {
+  id: string;
+  respondentName: string;
+  finalizedAt: string;
+  choices: Array<{ driveFileId: string; fileName: string }>;
+};
 
 export type PhotoSelectionDetail = PhotoSelectionSummary & {
   photoClientId: string;
   driveFolderLink: string;
-  choices: Array<{ driveFileId: string; fileName: string }>;
+  submissions: PhotoSelectionSubmission[];
 };
 
 export const getPhotoSelectionDetail = createServerFn({ method: "GET" })
@@ -199,29 +206,34 @@ export const getPhotoSelectionDetail = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Seleção não encontrada.");
 
-    const { data: choiceRows, error: choiceErr } = await context.supabase
-      .from("photo_selection_choices")
-      .select("drive_file_id, file_name")
+    const { data: subRows, error: subErr } = await context.supabase
+      .from("photo_selection_submissions")
+      .select("id, respondent_name, finalized_at, photo_selection_choices(drive_file_id, file_name)")
       .eq("selection_id", data.id)
-      .order("file_name");
-    if (choiceErr) throw new Error(choiceErr.message);
+      .order("finalized_at", { ascending: false });
+    if (subErr) throw new Error(subErr.message);
 
-    const choices = (choiceRows ?? []).map((c: any) => ({
-      driveFileId: c.drive_file_id as string,
-      fileName: c.file_name as string,
+    const submissions: PhotoSelectionSubmission[] = (subRows ?? []).map((s: any) => ({
+      id: s.id as string,
+      respondentName: s.respondent_name as string,
+      finalizedAt: s.finalized_at as string,
+      choices: (s.photo_selection_choices ?? []).map((c: any) => ({
+        driveFileId: c.drive_file_id as string,
+        fileName: c.file_name as string,
+      })),
     }));
 
     return {
       id: row.id as string,
       photoClientId: row.photo_client_id as string,
       title: row.title as string,
-      status: row.status as "aberta" | "finalizada",
+      status: row.status as "aberta" | "encerrada",
       token: row.token as string,
       deadline: row.deadline as string | null,
       driveFolderLink: row.drive_folder_link as string,
       createdAt: row.created_at as string,
-      choices,
-      choiceCount: choices.length,
+      submissions,
+      submissionCount: submissions.length,
     } as PhotoSelectionDetail;
   });
 
@@ -235,12 +247,24 @@ export const deletePhotoSelection = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const setPhotoSelectionStatus = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string; status: "aberta" | "encerrada" }) =>
+    z.object({ id: z.string().uuid(), status: z.enum(["aberta", "encerrada"]) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase
+      .from("photo_selections").update({ status: data.status }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /* ============ PUBLIC (sem login, por token) ============ */
 
 export type PublicPhotoSelection = {
   selectionId: string;
   title: string;
-  status: "aberta" | "finalizada";
+  status: "aberta" | "encerrada";
   clientName: string;
   deadline: string | null;
   // Sem thumbnailUrl aqui de propósito — a foto em si nunca sai do Drive
@@ -248,7 +272,6 @@ export type PublicPhotoSelection = {
   // getPublicPhotoThumbnail, que devolve os bytes já com a marca d'água
   // da agência queimada (ver photo-watermark.server.ts).
   photos: Array<{ id: string; name: string }>;
-  selectedFileIds: string[];
 };
 
 export const getPublicPhotoSelection = createServerFn({ method: "GET" })
@@ -274,11 +297,10 @@ export const getPublicPhotoSelection = createServerFn({ method: "GET" })
     return {
       selectionId: r.selectionId as string,
       title: r.title as string,
-      status: r.status as "aberta" | "finalizada",
+      status: r.status as "aberta" | "encerrada",
       clientName: (r.clientName as string) ?? "",
       deadline: (r.deadline as string) ?? null,
       photos,
-      selectedFileIds: ((r.choices ?? []) as any[]).map((c) => c.driveFileId as string),
     };
   });
 
@@ -347,14 +369,19 @@ export const getWatermarkPreview = createServerFn({ method: "POST" })
     return { dataUrl: `data:image/jpeg;base64,${outBuf.toString("base64")}` };
   });
 
-export const submitPublicPhotoSelection = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string; choices: Array<{ driveFileId: string; fileName: string }> }) =>
+/** Uma pessoa finaliza sua própria resposta — sem rascunho salvo antes:
+ * escolhe as fotos numa única visita e só grava aqui, no final, com o
+ * nome dela. Cada chamada cria uma resposta NOVA (várias pessoas podem
+ * usar o mesmo link, cada uma com seu nome e suas fotos). */
+export const submitPhotoSelectionResponse = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; respondentName: string; choices: Array<{ driveFileId: string; fileName: string }> }) =>
     z.object({
       token: z.string().min(8).max(60),
+      respondentName: z.string().trim().min(1).max(80),
       choices: z.array(z.object({
         driveFileId: z.string().min(1).max(200),
         fileName: z.string().min(1).max(255),
-      })).max(2000),
+      })).min(1).max(2000),
     }).parse(d))
   .handler(async ({ data }) => {
     const { createClient } = await import("@supabase/supabase-js");
@@ -362,25 +389,12 @@ export const submitPublicPhotoSelection = createServerFn({ method: "POST" })
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_PUBLISHABLE_KEY!,
     );
-    const { data: ok, error } = await supabase.rpc("submit_photo_selection", {
+    const { data: ok, error } = await supabase.rpc("submit_photo_selection_response", {
       _token: data.token,
+      _respondent_name: data.respondentName,
       _choices: data.choices,
     });
     if (error) throw new Error(error.message);
-    if (!ok) throw new Error("Link inválido ou seleção já finalizada.");
-    return { ok: true };
-  });
-
-export const finalizePublicPhotoSelection = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string }) => z.object({ token: z.string().min(8).max(60) }).parse(d))
-  .handler(async ({ data }) => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_PUBLISHABLE_KEY!,
-    );
-    const { data: ok, error } = await supabase.rpc("finalize_photo_selection", { _token: data.token });
-    if (error) throw new Error(error.message);
-    if (!ok) throw new Error("Link inválido.");
+    if (!ok) throw new Error("Link inválido ou essa seleção foi encerrada.");
     return { ok: true };
   });

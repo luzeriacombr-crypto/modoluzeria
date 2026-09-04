@@ -55,7 +55,7 @@ import {
 import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from "./platform-updates.functions";
 import {
   listPhotoClients, getPhotoClient, createPhotoClient, deletePhotoClient,
-  createPhotoSelection, listPhotoSelections, getPhotoSelectionDetail, deletePhotoSelection,
+  createPhotoSelection, listPhotoSelections, getPhotoSelectionDetail, deletePhotoSelection, setPhotoSelectionStatus,
   getPublicPhotoSelection, getPublicPhotoThumbnail,
 } from "./photo-selection.functions";
 import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications } from "./instagram.functions";
@@ -1354,6 +1354,13 @@ export function useApi() {
     deletePhotoSelection: useMutation({
       mutationFn: useServerFn(deletePhotoSelection),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["photo-selections"] }),
+    }),
+    setPhotoSelectionStatus: useMutation({
+      mutationFn: useServerFn(setPhotoSelectionStatus),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["photo-selections"] });
+        qc.invalidateQueries({ queryKey: ["photo-selection-detail"] });
+      },
     }),
     /* ===== FÓRUM ===== */
     createForumPost: useMutation({
