@@ -3,10 +3,16 @@ import { createCanvas, GlobalFonts } from "@napi-rs/canvas";
 import { WATERMARK_FONT_BASE64 } from "./watermark-font-data";
 
 /** Preview, não entrega final — reduz o peso e o tempo de composição sem
- * prejudicar a decisão do cliente na hora de escolher. 1080 na aresta
- * longa: galerias com dezenas de fotos (a mesma imagem serve tanto a
- * grade quanto a visualização em tela cheia) carregavam devagar em 1600. */
+ * prejudicar a decisão do cliente na hora de escolher. Usado pra capa e
+ * pra visualização em tela cheia (lightbox) — não pra grade, que usa
+ * GRID_THUMB_MAX_DIMENSION, bem menor. */
 const PREVIEW_MAX_DIMENSION = 1080;
+
+/** Miniatura da grade — é a imagem que carrega logo de cara, uma por foto
+ * da galeria inteira (60+ em ensaios grandes), então precisa ser bem leve.
+ * A foto em tamanho real só é buscada quando o cliente abre o lightbox
+ * (ver getPublicPhotoThumbnails com size: "full"). */
+export const GRID_THUMB_MAX_DIMENSION = 480;
 
 const WATERMARK_FONT_FAMILY = "LZWatermarkFont";
 let fontRegistered = false;
@@ -73,17 +79,21 @@ async function buildTextWatermarkLayer(
  * queimada nos pixels, conforme `watermark` — não é overlay de CSS: o
  * arquivo que sai daqui é o único que o navegador do cliente final chega a
  * ver. `mode: "none"` só redimensiona pro tamanho de preview. */
-export async function protectPhotoBytes(imageBuf: Buffer, watermark: WatermarkSpec): Promise<Buffer> {
+export async function protectPhotoBytes(
+  imageBuf: Buffer,
+  watermark: WatermarkSpec,
+  maxDim: number = PREVIEW_MAX_DIMENSION,
+): Promise<Buffer> {
   const resized = await sharp(imageBuf)
     .rotate()
-    .resize({ width: PREVIEW_MAX_DIMENSION, height: PREVIEW_MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
+    .resize({ width: maxDim, height: maxDim, fit: "inside", withoutEnlargement: true })
     .toBuffer({ resolveWithObject: true });
 
   if (watermark.mode === "none") {
     return sharp(resized.data).jpeg({ quality: 82 }).toBuffer();
   }
 
-  const { width = PREVIEW_MAX_DIMENSION, height = PREVIEW_MAX_DIMENSION } = resized.info;
+  const { width = maxDim, height = maxDim } = resized.info;
 
   if (watermark.mode === "text") {
     const layer = await buildTextWatermarkLayer(watermark.text, watermark.opacity, watermark.density, width, height);

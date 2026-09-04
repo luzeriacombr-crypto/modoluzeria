@@ -554,11 +554,13 @@ export const publicPhotoSelectionQO = (token: string | null) =>
   });
 
 /** Em lote (ver o comentário em getPublicPhotoThumbnails) — cada chamada
- * gasta 1 token do Drive pra várias fotos de uma vez, não 1 por foto. */
-export const publicPhotoThumbsBatchQO = (token: string, fileIds: string[]) =>
+ * gasta 1 token do Drive pra várias fotos de uma vez, não 1 por foto.
+ * `size: "grid"` (padrão) é a miniatura leve da galeria; `"full"` é usado
+ * sob demanda pra capa e pro lightbox. */
+export const publicPhotoThumbsBatchQO = (token: string, fileIds: string[], size: "grid" | "full" = "grid") =>
   queryOptions({
-    queryKey: ["public-photo-thumbs-batch", token, fileIds.join(",")],
-    queryFn: () => getPublicPhotoThumbnails({ data: { token, fileIds } }),
+    queryKey: ["public-photo-thumbs-batch", token, size, fileIds.join(",")],
+    queryFn: () => getPublicPhotoThumbnails({ data: { token, fileIds, size } }),
     enabled: !!token && fileIds.length > 0,
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,

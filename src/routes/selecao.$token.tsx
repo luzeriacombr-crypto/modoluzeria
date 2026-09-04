@@ -14,9 +14,12 @@ import { submitPhotoSelectionResponse } from "@/lib/luzeria/photo-selection.func
  * galerias grandes. */
 const THUMB_BATCH_SIZE = 10;
 
-/** Busca as miniaturas de todas as fotos em lotes de THUMB_BATCH_SIZE e
- * devolve um mapa fileId -> dataUrl (undefined enquanto carrega, null se
- * essa foto específica falhou). */
+/** Busca as MINIATURAS (pequenas, leves) de todas as fotos em lotes de
+ * THUMB_BATCH_SIZE e devolve um mapa fileId -> dataUrl (undefined enquanto
+ * carrega, null se essa foto específica falhou). É o que carrega logo de
+ * cara pra galeria inteira — por isso o tamanho reduzido (ver
+ * GRID_THUMB_MAX_DIMENSION no backend). O tamanho real de cada foto só é
+ * buscado sob demanda, ver usePhotoFullImages. */
 function usePhotoThumbnails(token: string, photoIds: string[]) {
   const chunks = useMemo(() => {
     const out: string[][] = [];
@@ -25,7 +28,7 @@ function usePhotoThumbnails(token: string, photoIds: string[]) {
   }, [photoIds.join(",")]);
 
   const results = useQueries({
-    queries: chunks.map((ids) => publicPhotoThumbsBatchQO(token, ids)),
+    queries: chunks.map((ids) => publicPhotoThumbsBatchQO(token, ids, "grid")),
   });
 
   return useMemo(() => {
@@ -36,6 +39,20 @@ function usePhotoThumbnails(token: string, photoIds: string[]) {
     }
     return map;
   }, [results.map((r) => r.dataUpdatedAt).join(","), photoIds.join(",")]);
+}
+
+/** Busca o tamanho real (maior, com mais qualidade) só das fotos passadas
+ * — usado sob demanda pra capa e pro lightbox, não pra galeria inteira,
+ * pra não pesar o carregamento inicial da página. */
+function usePhotoFullImages(token: string, photoIds: string[]) {
+  const idsKey = photoIds.join(",");
+  const query = useQuery(publicPhotoThumbsBatchQO(token, photoIds, "full"));
+
+  return useMemo(() => {
+    const map = new Map<string, string | null | undefined>();
+    for (const id of photoIds) map.set(id, query.data ? query.data[id] : undefined);
+    return map;
+  }, [query.dataUpdatedAt, idsKey]);
 }
 
 export const Route = createFileRoute("/selecao/$token")({
@@ -103,6 +120,21 @@ function PublicPhotoSelectionPage() {
   const photoIds = useMemo(() => (q.data?.photos ?? []).map((p) => p.id), [q.data?.photos]);
   const thumbs = usePhotoThumbnails(token, photoIds);
 
+  // Capa e foto aberta no lightbox pedem o tamanho real — não a miniatura
+  // leve da grade — mas só essas, e só quando precisam (não a galeria
+  // inteira de uma vez).
+  const coverPhotoId = q.data?.coverPhotoId ?? null;
+  const coverIds = useMemo(() => (coverPhotoId ? [coverPhotoId] : []), [coverPhotoId]);
+  const coverFull = usePhotoFullImages(token, coverIds);
+
+  const lightboxIds = useMemo(() => {
+    if (lightboxIndex == null) return [];
+    const list = q.data?.photos ?? [];
+    return [list[lightboxIndex - 1]?.id, list[lightboxIndex]?.id, list[lightboxIndex + 1]?.id]
+      .filter((id): id is string => !!id);
+  }, [lightboxIndex, q.data?.photos]);
+  const lightboxFull = usePhotoFullImages(token, lightboxIds);
+
   if (q.isLoading) {
     return <Shell><div className="text-white/60 text-sm">Carregando…</div></Shell>;
   }
@@ -117,7 +149,7 @@ function PublicPhotoSelectionPage() {
     );
   }
 
-  const { title, clientName, status, deadline, photos, coverPhotoId } = q.data;
+  const { title, clientName, status, deadline, photos } = q.data;
   const isClosed = status === "encerrada";
   const remainingDays = deadline ? daysUntil(deadline) : null;
   const photosById = new Map(photos.map((p) => [p.id, p]));
@@ -171,7 +203,10 @@ function PublicPhotoSelectionPage() {
       {/* Capa — no tamanho/proporção real da foto, sem forçar recorte de tela cheia */}
       <div className="relative w-full overflow-hidden">
         {coverPhotoId ? (
-          <ProtectedPhoto dataUrl={thumbs.get(coverPhotoId)} className="w-full h-auto block" />
+          <ProtectedPhoto
+            dataUrl={coverFull.get(coverPhotoId) ?? thumbs.get(coverPhotoId)}
+            className="w-full h-auto block"
+          />
         ) : (
           <div className="w-full aspect-[4/3]" style={{ background: "linear-gradient(160deg, #1C1C1C, #0D0D0D)" }} />
         )}
@@ -289,6 +324,7 @@ function PublicPhotoSelectionPage() {
         <Lightbox
           photos={photos}
           thumbs={thumbs}
+          full={lightboxFull}
           index={lightboxIndex}
           selected={selected}
           onClose={() => setLightboxIndex(null)}
@@ -394,9 +430,10 @@ function ProtectedPhoto({ dataUrl, className }: { dataUrl: string | null | undef
   );
 }
 
-function Lightbox({ photos, thumbs, index, selected, onClose, onNavigate, onToggle }: {
+function Lightbox({ photos, thumbs, full, index, selected, onClose, onNavigate, onToggle }: {
   photos: Array<{ id: string; name: string }>;
   thumbs: Map<string, string | null | undefined>;
+  full: Map<string, string | null | undefined>;
   index: number;
   selected: Set<string>;
   onClose: () => void;
@@ -435,7 +472,10 @@ function Lightbox({ photos, thumbs, index, selected, onClose, onNavigate, onTogg
 
       {/* Imagem */}
       <div className="flex-1 relative grid place-items-center px-4 sm:px-16 min-h-0">
-        <ProtectedPhoto dataUrl={thumbs.get(photo.id)} className="max-w-full max-h-full object-contain" />
+        <ProtectedPhoto
+          dataUrl={full.get(photo.id) ?? thumbs.get(photo.id)}
+          className="max-w-full max-h-full object-contain"
+        />
         {index > 0 && (
           <button
             type="button"

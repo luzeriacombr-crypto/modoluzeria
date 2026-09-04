@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import { parseDriveId, listDriveFolderImages, withDriveOrg, getAccessToken } from "./drive.functions";
-import { protectPhotoBytes, buildPreviewBackground, type WatermarkSpec } from "./photo-watermark.server";
+import { protectPhotoBytes, buildPreviewBackground, GRID_THUMB_MAX_DIMENSION, type WatermarkSpec } from "./photo-watermark.server";
 
 /** Resolve a config de marca d'água salva pra uma org — usado tanto na
  * proteção real das fotos públicas quanto na pré-visualização das
@@ -435,12 +435,18 @@ export const getPublicPhotoSelectionCoverImage = createServerFn({ method: "GET" 
  * pedindo uma foto por invocação bate em 60+ invocações "frias" cada uma
  * tentando renovar o token ao mesmo tempo, e a própria Google limita esse
  * ritmo de renovação. Um lote de N fotos gasta 1 token só, pro lote inteiro
- * — mesma lógica de getGridThumbnails em drive.functions.ts. */
+ * — mesma lógica de getGridThumbnails em drive.functions.ts.
+ *
+ * `size: "grid"` (padrão) devolve uma miniatura bem menor — é o que carrega
+ * pra galeria inteira de cara, então precisa ser leve. `size: "full"` devolve
+ * no tamanho de preview normal, usado só sob demanda (capa e lightbox, ver
+ * selecao.$token.tsx) pra não pesar o carregamento inicial da página. */
 export const getPublicPhotoThumbnails = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string; fileIds: string[] }) =>
+  .inputValidator((d: { token: string; fileIds: string[]; size?: "grid" | "full" }) =>
     z.object({
       token: z.string().min(8).max(60),
       fileIds: z.array(z.string().min(5).max(200)).min(1).max(20),
+      size: z.enum(["grid", "full"]).optional(),
     }).parse(d))
   .handler(async ({ data }) => {
     const result: Record<string, string | null> = {};
@@ -474,6 +480,7 @@ export const getPublicPhotoThumbnails = createServerFn({ method: "POST" })
       }
 
       const watermark = await resolveWatermarkSpec(r.orgId as string);
+      const maxDim = data.size === "full" ? undefined : GRID_THUMB_MAX_DIMENSION;
 
       await Promise.all(data.fileIds.map(async (fileId) => {
         if (!validIds.has(fileId)) return;
@@ -484,7 +491,9 @@ export const getPublicPhotoThumbnails = createServerFn({ method: "POST" })
           );
           if (!contentRes.ok) return;
           const imageBuf = Buffer.from(await contentRes.arrayBuffer());
-          const outBuf = await protectPhotoBytes(imageBuf, watermark);
+          const outBuf = maxDim
+            ? await protectPhotoBytes(imageBuf, watermark, maxDim)
+            : await protectPhotoBytes(imageBuf, watermark);
           result[fileId] = `data:image/jpeg;base64,${outBuf.toString("base64")}`;
         } catch (e) {
           console.error(`[getPublicPhotoThumbnails] failed for ${fileId}:`, e);
