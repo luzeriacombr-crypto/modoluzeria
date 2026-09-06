@@ -3,13 +3,22 @@
  * sem CMS, sem tabela no banco, só um array em TS. Pensado pra reforçar
  * o SEO de cauda longa (ver as 5 páginas de funcionalidade) com a história
  * real por trás de cada uma — a Luzeria era uma agência que sentia essas
- * dores antes de virarem funcionalidades do produto. */
+ * dores antes de virarem funcionalidades do produto.
+ *
+ * Texto dentro de qualquer bloco aceita **negrito** (dois asteriscos),
+ * renderizado por renderInline() em blog_.$slug.tsx — não é markdown de
+ * verdade, só o suficiente pra dar ênfase pontual sem precisar de uma
+ * lib de markdown pra um site que não tem mais nenhum outro uso pra ela. */
 
 export type BlogBlock =
+  | { type: "lead"; text: string }
   | { type: "p"; text: string }
   | { type: "h2"; text: string }
+  | { type: "h3"; text: string }
   | { type: "quote"; text: string }
-  | { type: "list"; items: string[] };
+  | { type: "callout"; title?: string; text: string }
+  | { type: "list"; items: string[] }
+  | { type: "rankedList"; items: { title: string; text: string }[] };
 
 export type BlogPost = {
   slug: string;
@@ -19,10 +28,229 @@ export type BlogPost = {
   readingMinutes: number;
   relatedFeatureHref?: string;
   relatedFeatureLabel?: string;
+  /** Foto real da equipe/rotina da Luzeria — não stock photo. Opcional, só
+   * alguns posts têm (por enquanto só o de origem). */
+  coverImage?: { src: string; alt: string };
   body: BlogBlock[];
 };
 
 export const BLOG_POSTS: BlogPost[] = [
+  {
+    slug: "melhores-apps-de-edicao-para-agencia",
+    title: "Os apps de edição que valem a pena pra quem vive de conteúdo de cliente",
+    description:
+      "Uma lista honesta das ferramentas de edição que a gente realmente usa no dia a dia — o que serve pra vídeo rápido, o que serve pra tratamento de foto, e onde cada uma brilha.",
+    date: "2026-09-07",
+    readingMinutes: 5,
+    relatedFeatureHref: "/biblioteca-de-referencias",
+    relatedFeatureLabel: "Biblioteca de Referências",
+    body: [
+      {
+        type: "lead",
+        text: "Toda agência de conteúdo acumula uma pilha de apps de edição — uns que viram rotina, outros que são baixados, testados uma vez e esquecidos. Depois de anos gerenciando conteúdo de vários clientes ao mesmo tempo, essa é a lista que **realmente ficou** na nossa rotina.",
+      },
+      {
+        type: "p",
+        text: "Não é uma lista de \"os 20 melhores apps de edição de 2026\" genérica que você acha em qualquer busca. É o que sobrevive quando você precisa entregar conteúdo bom, rápido, pra mais de um cliente ao mesmo tempo, sem virar refém de um app pesado demais pra rodar no celular no meio de uma gravação externa.",
+      },
+      { type: "h2", text: "Pra vídeo" },
+      {
+        type: "rankedList",
+        items: [
+          {
+            title: "CapCut",
+            text: "O app que mais usamos pra Reels e vídeo curto. Legenda automática decente em português, transições prontas, e roda liso até em celular mais simples. Se sua agência ainda não usa, comece por aqui.",
+          },
+          {
+            title: "Descript",
+            text: "Pra vídeo falado (entrevista, depoimento, conteúdo educativo) — edita cortando o texto da transcrição, não a linha do tempo. Depois que você se acostuma, é difícil voltar a editar vídeo do jeito tradicional pra esse tipo de conteúdo.",
+          },
+          {
+            title: "InShot",
+            text: "Mais simples que o CapCut, mais rápido pra ajuste pontual — cortar, redimensionar formato, adicionar música. Bom app de \"apaga incêndio\" quando falta tempo.",
+          },
+        ],
+      },
+      { type: "h2", text: "Pra foto" },
+      {
+        type: "rankedList",
+        items: [
+          {
+            title: "Lightroom Mobile",
+            text: "Preset consistente entre fotos de um mesmo ensaio é o que faz um feed parecer profissional. Se sua agência trabalha com fotógrafo, vale montar presets próprios da marca de cada cliente.",
+          },
+          {
+            title: "VSCO",
+            text: "Ainda muito usado, principalmente por quem vem do mundo da fotografia antes das redes sociais. Filtro mais sutil que a maioria dos apps voltados só pra Instagram.",
+          },
+          {
+            title: "Canva",
+            text: "Não é só template bonito — pra carrossel, banner de story e material de apresentação pro cliente, é a ferramenta mais rápida que existe hoje.",
+          },
+        ],
+      },
+      {
+        type: "callout",
+        title: "Um ponto que ninguém fala",
+        text: "Quanto mais apps de edição a equipe usa, mais importante fica ter um lugar único pra guardar as referências que inspiraram cada escolha visual — senão a decisão de \"por que usamos esse preset nesse cliente\" vira memória de uma pessoa só, não da agência.",
+      },
+      {
+        type: "p",
+        text: "É exatamente esse o motivo da nossa **Biblioteca de Referências** existir dentro do Modo Criador: salvar o vídeo, o post ou o site que inspirou uma decisão, associado ao cliente certo, pra qualquer pessoa da equipe consultar depois — sem depender de print perdido no WhatsApp.",
+      },
+    ],
+  },
+  {
+    slug: "maiores-erros-gerenciando-conteudo-de-varios-clientes",
+    title: "Os maiores erros de quem gerencia conteúdo de vários clientes",
+    description:
+      "Aprovação que só existe na palavra, backup que depende de disciplina, processo que não escala — os erros mais comuns (e mais caros) de quem cresce sem ajustar a operação.",
+    date: "2026-09-07",
+    readingMinutes: 5,
+    relatedFeatureHref: "/aprovacao-de-conteudo-por-link",
+    relatedFeatureLabel: "Aprovação de Conteúdo por Link",
+    body: [
+      {
+        type: "lead",
+        text: "Gerenciar conteúdo de **um** cliente é fácil. Gerenciar de dez, cada um com seu jeito de aprovar, sua pasta, seu prazo, é outro jogo — e é aí que a maioria dos erros aparece, quase sempre sem ninguém perceber até virar prejuízo de verdade.",
+      },
+      { type: "h2", text: "1. Aprovação que só existe na palavra" },
+      {
+        type: "p",
+        text: "O cliente disse \"pode postar\" numa ligação, ou reagiu com um coraçãozinho no WhatsApp. Não tem registro. Duas semanas depois, ele pergunta por que aquele post foi ao ar sem autorização — e não tem como provar o contrário.",
+      },
+      { type: "h2", text: "2. Backup que depende de alguém lembrar" },
+      {
+        type: "p",
+        text: "\"Fulano, você salvou o arquivo final na pasta do cliente?\" — se essa pergunta é rotina na sua agência, o problema não é o Fulano, é o processo. **Disciplina individual falha**, principalmente quando a equipe cresce e o volume de arquivo multiplica.",
+      },
+      { type: "h2", text: "3. Cada pessoa da equipe com seu próprio sistema" },
+      {
+        type: "p",
+        text: "Uma organiza no Drive, outra no Notion, outra numa planilha que só ela entende. Funciona até essa pessoa sair de férias — ou sair da empresa — e ninguém mais souber onde as coisas estão.",
+      },
+      {
+        type: "quote",
+        text: "A gente só percebeu o tamanho desse problema quando uma pessoa-chave da equipe ficou de licença numa semana cheia de entrega. Foi aí que decidimos que nenhum processo podia depender só da cabeça de uma pessoa.",
+      },
+      { type: "h2", text: "4. Publicar na mão em escala" },
+      {
+        type: "p",
+        text: "Funciona com dois clientes. Com quinze, é uma pessoa inteira da equipe gastando a manhã só copiando e colando conteúdo aprovado pro Instagram de cada um, todo santo dia.",
+      },
+      { type: "h2", text: "5. Não separar o que é geral do que é de cliente específico" },
+      {
+        type: "p",
+        text: "Referência, ideia, briefing — quando tudo fica misturado numa pasta só, chega um momento em que ninguém confia mais no que está ali, e todo mundo volta a perguntar direto pra quem \"sabe de cor\".",
+      },
+      { type: "h2", text: "6. Escalar clientes sem escalar processo" },
+      {
+        type: "p",
+        text: "Esse é o erro que engloba todos os outros: dobrar o número de clientes usando exatamente o mesmo processo manual que já estava no limite antes. O que era \"corrido\" vira insustentável.",
+      },
+      {
+        type: "callout",
+        text: "Nenhum desses erros é sobre a equipe ser desorganizada — é sobre usar processo manual em uma escala que já não comporta mais processo manual. A correção não é cobrar mais disciplina, é automatizar o que dá pra automatizar.",
+      },
+    ],
+  },
+  {
+    slug: "onde-investir-quando-a-agencia-comeca-a-crescer",
+    title: "Onde vale a pena investir quando a agência começa a crescer",
+    description:
+      "Antes de contratar mais gente ou gastar em anúncio, tem prioridades que rendem mais: automatizar o repetitivo, documentar processo, e escolher ferramenta certa.",
+    date: "2026-09-07",
+    readingMinutes: 4,
+    relatedFeatureHref: "/backup-automatico-drive",
+    relatedFeatureLabel: "Backup Automático no Drive",
+    body: [
+      {
+        type: "lead",
+        text: "Quando a agência começa a crescer, a tentação natural é contratar. Mais cliente, mais gente pra dar conta. Só que **contratar antes de organizar processo** costuma só multiplicar a bagunça — agora com mais gente dentro dela.",
+      },
+      { type: "h2", text: "Antes de contratar: automatize o repetitivo" },
+      {
+        type: "p",
+        text: "Publicar post na mão, organizar arquivo na mão, cobrar aprovação na mão — cada uma dessas tarefas repetitivas que uma ferramenta resolve sozinha é tempo de equipe que sobra pra fazer o que exige de fato criatividade e estratégia, que é o que o cliente está pagando pra ter.",
+      },
+      {
+        type: "rankedList",
+        items: [
+          {
+            title: "Automação de publicação",
+            text: "Se sua equipe ainda posta manualmente no Instagram de cada cliente, esse é provavelmente o primeiro investimento que se paga sozinho, rápido.",
+          },
+          {
+            title: "Backup automático",
+            text: "Uma hora perdida procurando arquivo — ou, pior, um arquivo perdido de vez — custa muito mais do que qualquer assinatura de ferramenta.",
+          },
+          {
+            title: "Aprovação com registro",
+            text: "Elimina a discussão de \"mas eu não aprovei isso\" e o tempo gasto indo atrás de confirmação por mensagem.",
+          },
+        ],
+      },
+      { type: "h2", text: "Documentar processo antes de contratar" },
+      {
+        type: "p",
+        text: "Se o processo só existe na cabeça de quem já está na equipe há anos, contratar alguém novo significa treinar do zero, na marra, sem material nenhum de apoio. Um processo documentado (mesmo que simples) é o que permite crescer sem que cada pessoa nova vire um gargalo de treinamento.",
+      },
+      { type: "h2", text: "Só depois: mais gente, mais anúncio" },
+      {
+        type: "p",
+        text: "Contratar e investir em aquisição de cliente novo fazem sentido — mas rendem muito mais quando a operação já aguenta o volume que já existe hoje sem estourar. Crescer em cima de uma base instável só acelera o colapso, não o resultado.",
+      },
+      {
+        type: "quote",
+        text: "A pergunta que a gente aprendeu a fazer antes de qualquer investimento: isso resolve um gargalo que já existe, ou só adiciona capacidade em cima de um processo que já estava quebrado?",
+      },
+    ],
+  },
+  {
+    slug: "por-que-agencias-estao-deixando-o-trello",
+    title: "Por que tantas agências estão deixando ferramentas como o Trello",
+    description:
+      "Trello, Asana e Notion são ótimos pra organizar tarefa interna — mas não foram feitos pra aprovação de cliente sem login, publicação automática e backup de mídia. É aí que agências sentem o limite.",
+    date: "2026-09-07",
+    readingMinutes: 4,
+    relatedFeatureHref: "/",
+    relatedFeatureLabel: "Conhecer o Modo Criador",
+    body: [
+      {
+        type: "lead",
+        text: "Isso não é sobre o Trello ser ruim — **não é**. É uma ferramenta excelente pra organizar tarefa interna de qualquer equipe. O problema aparece quando uma agência de conteúdo tenta espremer nele um tipo de operação que ele nunca foi feito pra resolver.",
+      },
+      { type: "h2", text: "O que o Trello resolve bem" },
+      {
+        type: "p",
+        text: "Quadro, cartão, coluna de status — pra organizar a produção interna (\"em produção\", \"em revisão\", \"aprovado\"), funciona bem. O problema começa na hora que o cliente final entra na jogada.",
+      },
+      { type: "h2", text: "Onde a fricção aparece" },
+      {
+        type: "list",
+        items: [
+          "O cliente precisa criar conta e aprender a navegar num quadro que não foi desenhado pra ele — resultado: ele só olha por WhatsApp mesmo",
+          "Não existe um jeito nativo de aplicar marca d'água ou proteger imagem antes da entrega",
+          "Publicar direto no Instagram do cliente exige uma automação por fora, feita na mão, que quebra sem aviso",
+          "Backup de arquivo pesado (foto, vídeo) não é o forte de uma ferramenta pensada pra texto e checklist",
+          "Múltiplos clientes dividindo o mesmo espaço de trabalho é fácil de configurar errado e vazar informação de um cliente pro outro",
+        ],
+      },
+      {
+        type: "callout",
+        title: "O ponto central",
+        text: "Ferramentas genéricas de produtividade foram desenhadas pra equipes internas organizarem tarefa entre si — não pra um fluxo onde o cliente final também participa, sem treinamento, sem login, e onde o produto final é mídia pesada, não texto.",
+      },
+      {
+        type: "p",
+        text: "Foi exatamente esse limite que a Luzeria sentiu antes de existir o Modo Criador. A gente tentou Trello, tentou planilha, tentou uma combinação dos dois. Funcionava até o número de clientes crescer o suficiente pra expor cada uma dessas rachaduras ao mesmo tempo.",
+      },
+      {
+        type: "quote",
+        text: "Não trocamos o Trello por outro quadro de tarefas. Trocamos por uma ferramenta pensada especificamente pro fluxo de agência: aprovação por link, publicação automática, backup e proteção de mídia — tudo junto, não emendado por fora.",
+      },
+    ],
+  },
   {
     slug: "de-onde-veio-o-modo-criador",
     title: "De onde veio o Modo Criador",
@@ -30,10 +258,18 @@ export const BLOG_POSTS: BlogPost[] = [
       "O Modo Criador não nasceu como produto — nasceu como o painel interno que a Luzeria Estúdio construiu pra dar conta da própria bagunça.",
     date: "2026-09-06",
     readingMinutes: 4,
+    coverImage: {
+      src: "/blog/equipe-luzeria.jpg",
+      alt: "Duas pessoas da equipe da Luzeria Estúdio olhando juntas pra tela de um computador, sorrindo",
+    },
     body: [
       {
+        type: "lead",
+        text: "Antes de ser um produto que qualquer agência pode assinar, o Modo Criador era só o jeito que a **Luzeria Estúdio** achou pra parar de se afogar na própria operação.",
+      },
+      {
         type: "p",
-        text: "Antes de ser um produto que qualquer agência pode assinar, o Modo Criador era só o jeito que a Luzeria Estúdio achou pra parar de se afogar na própria operação. A gente gerencia conteúdo de vários clientes ao mesmo tempo — calendário, aprovação, arquivo, publicação — e por muito tempo isso viveu espalhado entre planilha, pasta de Drive e conversa de WhatsApp.",
+        text: "A gente gerencia conteúdo de vários clientes ao mesmo tempo — calendário, aprovação, arquivo, publicação — e por muito tempo isso viveu espalhado entre planilha, pasta de Drive e conversa de WhatsApp.",
       },
       {
         type: "p",
@@ -42,7 +278,7 @@ export const BLOG_POSTS: BlogPost[] = [
       { type: "h2", text: "O ponto de virada" },
       {
         type: "p",
-        text: "Em algum momento ficou claro que o problema não era falta de organização nossa — era falta de uma ferramenta feita pra esse tipo de operação. As que existiam por aí eram genéricas demais, ou caras demais pra o tamanho da nossa agência, ou não resolviam a parte que mais doía: o cliente aprovando conteúdo sem precisar criar conta, sem baixar app, sem virar mais um login que ele ia esquecer a senha.",
+        text: "Em algum momento ficou claro que o problema não era falta de organização nossa — era falta de uma ferramenta feita pra esse tipo de operação. As que existiam por aí eram genéricas demais, ou caras demais pra o tamanho da nossa agência, ou não resolviam a parte que mais doía: o cliente aprovando conteúdo **sem precisar criar conta**, sem baixar app, sem virar mais um login que ele ia esquecer a senha.",
       },
       {
         type: "quote",
@@ -65,8 +301,8 @@ export const BLOG_POSTS: BlogPost[] = [
     relatedFeatureLabel: "Backup Automático no Drive",
     body: [
       {
-        type: "p",
-        text: "Teve uma época na Luzeria em que cada pessoa da equipe guardava os arquivos de cliente do jeito que achava melhor. Uma no Drive pessoal. Outra numa pasta local do computador. Outra mandava tudo direto pro WhatsApp do cliente e confiava na sorte.",
+        type: "lead",
+        text: "Teve uma época na Luzeria em que **cada pessoa da equipe guardava os arquivos de cliente do jeito que achava melhor**. Uma no Drive pessoal. Outra numa pasta local do computador. Outra mandava tudo direto pro WhatsApp do cliente e confiava na sorte.",
       },
       {
         type: "p",
@@ -86,7 +322,7 @@ export const BLOG_POSTS: BlogPost[] = [
         ],
       },
       {
-        type: "p",
+        type: "callout",
         text: "Foi assim que o backup automático virou parte do Modo Criador — não como um extra bonito, mas como resposta direta a um problema que já tinha custado arquivo de verdade da gente.",
       },
     ],
@@ -102,12 +338,16 @@ export const BLOG_POSTS: BlogPost[] = [
     relatedFeatureLabel: "Aprovação de Conteúdo por Link",
     body: [
       {
-        type: "p",
-        text: "Por muito tempo, aprovação de post na Luzeria era isso: mandar a imagem no grupo do WhatsApp do cliente e esperar um 'ok' ou um coraçãozinho de reação. Funcionava enquanto o volume era pequeno. Deixou de funcionar quando cada cliente virou uma conversa cheia de imagem, áudio, e o post aprovado há duas semanas ficou perdido lá em cima, impossível de achar sem rolar a tela por dez minutos.",
+        type: "lead",
+        text: "Por muito tempo, aprovação de post na Luzeria era isso: mandar a imagem no grupo do WhatsApp do cliente e esperar um \"ok\" ou um coraçãozinho de reação.",
       },
       {
         type: "p",
-        text: "Pior: às vezes o cliente aprovava de boca, numa ligação, e ninguém documentava. Na hora de publicar, vinha a dúvida — foi esse mesmo que ele aprovou? Teve alteração que ele pediu e a gente esqueceu de aplicar?",
+        text: "Funcionava enquanto o volume era pequeno. Deixou de funcionar quando cada cliente virou uma conversa cheia de imagem, áudio, e o post aprovado há duas semanas ficou perdido lá em cima, impossível de achar sem rolar a tela por dez minutos.",
+      },
+      {
+        type: "p",
+        text: "Pior: às vezes o cliente aprovava de boca, numa ligação, e ninguém documentava. Na hora de publicar, vinha a dúvida — **foi esse mesmo que ele aprovou**? Teve alteração que ele pediu e a gente esqueceu de aplicar?",
       },
       { type: "h2", text: "O que a gente precisava de verdade" },
       {
@@ -135,12 +375,16 @@ export const BLOG_POSTS: BlogPost[] = [
     relatedFeatureLabel: "Seleção de Fotos pra Fotógrafos",
     body: [
       {
-        type: "p",
-        text: "Esse problema não era da parte de social media da Luzeria — era de fotógrafos parceiros e clientes que trabalham com ensaio e evento. O fluxo de sempre era mandar a pasta inteira do Google Drive, crua, com todas as fotos, e torcer pra o cliente conseguir escolher as favoritas sem se perder.",
+        type: "lead",
+        text: "Esse problema não era da parte de social media da Luzeria — era de fotógrafos parceiros e clientes que trabalham com ensaio e evento.",
       },
       {
         type: "p",
-        text: "Duas coisas davam errado direto. Primeira: sem controle nenhum sobre quem tinha acesso, era comum foto de prévia (ainda sem tratamento, sem ser a entrega final) circular antes da hora, às vezes usada em rede social pelo próprio cliente sem querer prejudicar ninguém, mas prejudicando o trabalho do fotógrafo. Segunda: quando mais de uma pessoa precisava escolher junto — noivo e noiva, por exemplo — não tinha jeito de saber quem tinha escolhido o quê.",
+        text: "O fluxo de sempre era mandar a pasta inteira do Google Drive, crua, com todas as fotos, e torcer pra o cliente conseguir escolher as favoritas sem se perder.",
+      },
+      {
+        type: "p",
+        text: "Duas coisas davam errado direto. Primeira: sem controle nenhum sobre quem tinha acesso, era comum foto de prévia (ainda sem tratamento, sem ser a entrega final) circular antes da hora, às vezes usada em rede social pelo próprio cliente sem querer prejudicar ninguém, mas **prejudicando o trabalho do fotógrafo**. Segunda: quando mais de uma pessoa precisava escolher junto — noivo e noiva, por exemplo — não tinha jeito de saber quem tinha escolhido o quê.",
       },
       { type: "h2", text: "Proteção sem complicar o fluxo" },
       {
@@ -156,7 +400,7 @@ export const BLOG_POSTS: BlogPost[] = [
         ],
       },
       {
-        type: "p",
+        type: "callout",
         text: "Isso virou a Seleção de Fotos do Modo Criador — pensada pra fotógrafo que vive de entregar ensaio grande e não pode se dar ao luxo de perder controle sobre o próprio material antes da entrega final.",
       },
     ],
@@ -172,12 +416,16 @@ export const BLOG_POSTS: BlogPost[] = [
     relatedFeatureLabel: "Publicação Automática no Instagram",
     body: [
       {
-        type: "p",
-        text: "Aprovar o conteúdo era só metade do trabalho. A outra metade era publicar — e por muito tempo isso significou abrir o Instagram de cada cliente, um por um, baixar a imagem aprovada, colar a legenda, conferir se não tinha esquecido nenhuma hashtag, e postar. Todo santo dia, pra cada cliente ativo.",
+        type: "lead",
+        text: "Aprovar o conteúdo era só metade do trabalho. A outra metade era publicar.",
       },
       {
         type: "p",
-        text: "Multiplica isso pelo número de clientes que uma agência de verdade tem, e o que sobra é uma pessoa da equipe gastando a manhã inteira só de tarefa repetitiva — tempo que não ia pra estratégia, não ia pra atender melhor o cliente, não ia pra nada que realmente movesse a agulha.",
+        text: "E por muito tempo isso significou abrir o Instagram de cada cliente, um por um, baixar a imagem aprovada, colar a legenda, conferir se não tinha esquecido nenhuma hashtag, e postar. Todo santo dia, pra cada cliente ativo.",
+      },
+      {
+        type: "p",
+        text: "Multiplica isso pelo número de clientes que uma agência de verdade tem, e o que sobra é uma pessoa da equipe gastando a manhã inteira só de tarefa repetitiva — tempo que não ia pra estratégia, não ia pra atender melhor o cliente, não ia pra nada que **realmente movesse a agulha**.",
       },
       { type: "h2", text: "Automatizar sem perder controle" },
       {

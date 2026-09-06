@@ -1,4 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { Fragment } from "react";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { BG_BLUE, BG_GRAY, BG_WHITE, LIME, Reveal, POP, EASE } from "@/components/luzeria/salesPageBlocks";
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/blog_/$slug")({
       author: { "@type": "Organization", name: "Modo Criador" },
       publisher: { "@type": "Organization", name: "Modo Criador" },
       mainEntityOfPage: url,
+      ...(post.coverImage ? { image: `${SITE_URL}${post.coverImage.src}` } : {}),
     };
     return {
       meta: [
@@ -39,6 +41,7 @@ export const Route = createFileRoute("/blog_/$slug")({
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: post.title },
         { name: "twitter:description", content: post.description },
+        ...(post.coverImage ? [{ property: "og:image", content: `${SITE_URL}${post.coverImage.src}` }, { name: "twitter:image", content: `${SITE_URL}${post.coverImage.src}` }] : []),
         { "script:ld+json": articleLd },
       ],
       links: [{ rel: "canonical", href: url }],
@@ -50,15 +53,44 @@ function formatDate(iso: string) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 }
 
+/** "**negrito**" -> <strong>. Não é markdown de verdade, só o suficiente
+ * pra dar ênfase pontual dentro de um texto sem precisar de uma lib de
+ * markdown pra um site que não tem mais nenhum outro uso pra ela. */
+function renderInline(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i} className="text-white font-bold">{part.slice(2, -2)}</strong>;
+    }
+    return <Fragment key={i}>{part}</Fragment>;
+  });
+}
+
 function Block({ block }: { block: BlogBlock }) {
+  if (block.type === "lead") {
+    return <p className="text-xl sm:text-2xl text-white/85 leading-relaxed mb-7 font-medium">{renderInline(block.text)}</p>;
+  }
   if (block.type === "h2") {
     return <h2 className="font-criador-serif normal-case text-2xl sm:text-3xl mt-10 mb-4 text-white">{block.text}</h2>;
+  }
+  if (block.type === "h3") {
+    return <h3 className="text-lg sm:text-xl font-bold mt-8 mb-3 text-white">{block.text}</h3>;
   }
   if (block.type === "quote") {
     return (
       <blockquote className="my-8 pl-5 border-l-2 text-lg sm:text-xl text-white/80 leading-relaxed italic" style={{ borderColor: LIME }}>
-        {block.text}
+        "{renderInline(block.text)}"
       </blockquote>
+    );
+  }
+  if (block.type === "callout") {
+    return (
+      <div className="my-8 rounded-xl border p-5 sm:p-6" style={{ borderColor: "rgba(215,255,63,0.3)", background: "rgba(215,255,63,0.06)" }}>
+        {block.title && (
+          <div className="text-[11px] font-black uppercase tracking-wider mb-2" style={{ color: LIME }}>{block.title}</div>
+        )}
+        <p className="text-white/80 leading-relaxed text-[15px] sm:text-base">{renderInline(block.text)}</p>
+      </div>
     );
   }
   if (block.type === "list") {
@@ -67,13 +99,30 @@ function Block({ block }: { block: BlogBlock }) {
         {block.items.map((item) => (
           <li key={item} className="flex items-start gap-2.5 text-white/70 leading-relaxed">
             <span className="mt-2 h-1.5 w-1.5 rounded-full shrink-0" style={{ background: LIME }} />
-            {item}
+            <span>{renderInline(item)}</span>
           </li>
         ))}
       </ul>
     );
   }
-  return <p className="text-white/70 leading-relaxed mb-5">{block.text}</p>;
+  if (block.type === "rankedList") {
+    return (
+      <div className="my-6 space-y-3">
+        {block.items.map((item, i) => (
+          <div key={item.title} className="flex gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+            <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-black text-sm" style={{ background: LIME, color: "#0A0E23" }}>
+              {i + 1}
+            </div>
+            <div>
+              <div className="font-bold text-white mb-1">{item.title}</div>
+              <p className="text-sm text-white/60 leading-relaxed">{renderInline(item.text)}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <p className="text-white/70 leading-relaxed mb-5">{renderInline(block.text)}</p>;
 }
 
 function BlogPostRoute() {
@@ -88,6 +137,12 @@ function BlogPostRoute() {
           <Link to="/blog" className="text-sm text-white/60 hover:text-white transition">← Blog</Link>
         </div>
       </header>
+
+      {post.coverImage && (
+        <div className="w-full max-h-[420px] overflow-hidden">
+          <img src={post.coverImage.src} alt={post.coverImage.alt} className="w-full h-full object-cover" style={{ maxHeight: 420 }} />
+        </div>
+      )}
 
       <article className="px-5 sm:px-10 max-w-[680px] mx-auto py-14 sm:py-20">
         <Reveal>

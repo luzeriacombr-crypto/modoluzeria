@@ -40,18 +40,27 @@ function BlogIndexRoute() {
       </header>
 
       <section style={{ background: BG_GRAY }} className="border-b border-white/10">
-        <Reveal className="px-5 sm:px-10 max-w-[900px] mx-auto py-16 sm:py-20">
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full mb-5"
-            style={{ background: "rgba(215,255,63,0.12)", color: LIME }}>
-            Blog
-          </span>
-          <h1 className="font-criador-serif normal-case text-4xl sm:text-5xl leading-tight mb-4">
-            As dores de agência que viraram funcionalidade
-          </h1>
-          <p className="text-lg text-white/60 max-w-xl">
-            Cada texto aqui parte de um problema real que a Luzeria Estúdio teve gerenciando conteúdo de cliente —
-            antes do Modo Criador virar um produto que qualquer agência pode assinar.
-          </p>
+        <Reveal className="px-5 sm:px-10 max-w-[900px] mx-auto py-16 sm:py-20 grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
+          <div>
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full mb-5"
+              style={{ background: "rgba(215,255,63,0.12)", color: LIME }}>
+              Blog
+            </span>
+            <h1 className="font-criador-serif normal-case text-4xl sm:text-5xl leading-tight mb-4">
+              As dores de agência que viraram funcionalidade
+            </h1>
+            <p className="text-lg text-white/60 max-w-xl">
+              Cada texto aqui parte de um problema real que a Luzeria Estúdio teve gerenciando conteúdo de cliente —
+              antes do Modo Criador virar um produto que qualquer agência pode assinar.
+            </p>
+          </div>
+          <div className="hidden lg:block rounded-2xl overflow-hidden border border-white/10">
+            <img
+              src="/blog/equipe-luzeria.jpg"
+              alt="Equipe da Luzeria Estúdio trabalhando junto, olhando pra tela de um computador"
+              className="w-full h-full object-cover"
+            />
+          </div>
         </Reveal>
       </section>
 
@@ -62,17 +71,26 @@ function BlogIndexRoute() {
               <Link
                 to="/blog/$slug"
                 params={{ slug: post.slug }}
-                className={`block rounded-xl p-6 border border-white/10 bg-white/[0.03] ${LIFT}`}
+                className={`flex gap-5 rounded-xl p-6 border border-white/10 bg-white/[0.03] ${LIFT}`}
                 style={EASE}
               >
-                <div className="text-[11px] uppercase tracking-wide text-white/40 mb-2">
-                  {formatDate(post.date)} · {post.readingMinutes} min de leitura
+                {post.coverImage && (
+                  <img
+                    src={post.coverImage.src}
+                    alt=""
+                    className="hidden sm:block w-28 h-28 rounded-lg object-cover shrink-0"
+                  />
+                )}
+                <div className="min-w-0">
+                  <div className="text-[11px] uppercase tracking-wide text-white/40 mb-2">
+                    {formatDate(post.date)} · {post.readingMinutes} min de leitura
+                  </div>
+                  <h2 className="text-xl font-bold text-white mb-2">{post.title}</h2>
+                  <p className="text-sm text-white/55 leading-relaxed mb-3">{post.description}</p>
+                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: LIME }}>
+                    Ler o texto <ArrowRight size={14} />
+                  </span>
                 </div>
-                <h2 className="text-xl font-bold text-white mb-2">{post.title}</h2>
-                <p className="text-sm text-white/55 leading-relaxed mb-3">{post.description}</p>
-                <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: LIME }}>
-                  Ler o texto <ArrowRight size={14} />
-                </span>
               </Link>
             </Reveal>
           ))}
