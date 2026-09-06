@@ -9,6 +9,7 @@ import { blogPostsAdminQO, blogPostAdminQO, useApi } from "@/lib/luzeria/queries
 import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
 import { buildAiFormattingPrompt, parseAiFormattedText } from "@/lib/luzeria/blog-ai-format";
 import type { BlogBlock } from "@/lib/luzeria/blog-posts";
+import { BLOG_CATEGORIES, type BlogCategory } from "@/lib/luzeria/blog-admin.functions";
 
 const BLOCK_TYPE_LABEL: Record<BlogBlock["type"], string> = {
   lead: "Abertura (destaque)",
@@ -102,6 +103,9 @@ function BlogPostList({ onEdit }: { onEdit: (id: string | "new") => void }) {
                   {post.published ? <Eye size={10} /> : <EyeOff size={10} />}
                   {post.published ? "Publicado" : "Rascunho"}
                 </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-foreground/5 text-foreground/50">
+                  {BLOG_CATEGORIES.find((c) => c.id === post.category)?.label ?? post.category}
+                </span>
                 <span className="text-[11px] text-foreground/40">{post.date} · /blog/{post.slug}</span>
               </div>
               <div className="font-semibold text-sm truncate">{post.title}</div>
@@ -145,6 +149,7 @@ function BlogPostEditor({ id, onClose }: { id: string | null; onClose: () => voi
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [coverImageAlt, setCoverImageAlt] = useState("");
   const [relatedFeatureHref, setRelatedFeatureHref] = useState<string>("");
+  const [category, setCategory] = useState<BlogCategory>("dono-de-agencia");
   const [published, setPublished] = useState(true);
   const [body, setBody] = useState<BlogBlock[]>([]);
   const [aiOpen, setAiOpen] = useState(false);
@@ -164,6 +169,7 @@ function BlogPostEditor({ id, onClose }: { id: string | null; onClose: () => voi
     setCoverImageUrl(existing.coverImageUrl);
     setCoverImageAlt(existing.coverImageAlt);
     setRelatedFeatureHref(existing.relatedFeatureHref ?? "");
+    setCategory(existing.category);
     setPublished(existing.published);
     setBody(existing.body);
   }, [existing]);
@@ -236,6 +242,7 @@ function BlogPostEditor({ id, onClose }: { id: string | null; onClose: () => voi
       relatedFeatureLabel: feature?.label ?? null,
       body,
       published,
+      category,
     };
     try {
       if (id) await api.updateBlogPost.mutateAsync({ data: { id, ...payload } });
@@ -306,6 +313,12 @@ function BlogPostEditor({ id, onClose }: { id: string | null; onClose: () => voi
               <label className="text-[11px] font-bold uppercase tracking-wide text-foreground/50 block mb-1.5">Minutos de leitura</label>
               <input type="number" min={1} max={60} value={readingMinutes} onChange={(e) => setReadingMinutes(Number(e.target.value) || 1)} className="w-full rounded-lg border border-foreground/15 bg-transparent px-3 py-2.5 text-sm" />
             </div>
+          </div>
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wide text-foreground/50 block mb-1.5">Categoria</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value as BlogCategory)} className="w-full rounded-lg border border-foreground/15 bg-transparent px-3 py-2.5 text-sm">
+              {BLOG_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
           </div>
           <div>
             <label className="text-[11px] font-bold uppercase tracking-wide text-foreground/50 block mb-1.5">Link relacionado (opcional — mostra um CTA no fim do artigo)</label>

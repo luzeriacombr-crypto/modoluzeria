@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { BG_BLUE, BG_GRAY, LIME, Reveal, LIFT, POP, EASE } from "@/components/luzeria/salesPageBlocks";
@@ -9,6 +9,15 @@ import { publishedBlogPostsQO } from "@/lib/luzeria/queries";
 const TITLE = "Blog do Modo Criador";
 const DESCRIPTION =
   "As dores reais de agência que viraram funcionalidade — contadas por quem criou o Modo Criador pra própria agência antes de virar produto.";
+
+const CATEGORIES = [
+  { id: "todos", label: "Todos" },
+  { id: "tecnologia", label: "Tecnologia" },
+  { id: "meta-instagram", label: "Meta/Instagram" },
+  { id: "clientes", label: "Clientes" },
+  { id: "dono-de-agencia", label: "Dono de Agência" },
+] as const;
+type CategoryFilter = (typeof CATEGORIES)[number]["id"];
 
 export const Route = createFileRoute("/blog")({
   component: BlogIndexRoute,
@@ -43,11 +52,17 @@ function formatDate(iso: string) {
 function BlogIndexRoute() {
   const loaderData = Route.useLoaderData();
   const { data: posts } = useQuery({ ...publishedBlogPostsQO(), initialData: loaderData.posts });
-  const featured = useMemo(
-    () => (posts ?? []).find((p) => p.slug === loaderData.featuredSlug) ?? posts?.[0] ?? null,
-    [posts, loaderData.featuredSlug],
+  const [activeCategory, setActiveCategory] = useState<CategoryFilter>("todos");
+
+  const filtered = useMemo(
+    () => (activeCategory === "todos" ? (posts ?? []) : (posts ?? []).filter((p) => p.category === activeCategory)),
+    [posts, activeCategory],
   );
-  const rest = (posts ?? []).filter((p) => p.slug !== featured?.slug);
+  const featured = useMemo(() => {
+    if (activeCategory !== "todos") return filtered[0] ?? null;
+    return (posts ?? []).find((p) => p.slug === loaderData.featuredSlug) ?? posts?.[0] ?? null;
+  }, [posts, filtered, activeCategory, loaderData.featuredSlug]);
+  const rest = filtered.filter((p) => p.slug !== featured?.slug);
 
   return (
     <div className="min-h-screen text-white" style={{ background: BG_BLUE, fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
@@ -62,12 +77,35 @@ function BlogIndexRoute() {
         <div className="pointer-events-none absolute -top-40 -right-24 w-[560px] h-[560px] rounded-full blur-[110px] opacity-[0.18]" style={{ background: LIME }} />
         <div className="pointer-events-none absolute -bottom-32 -left-24 w-[420px] h-[420px] rounded-full blur-[110px] opacity-[0.10]" style={{ background: LIME }} />
 
-        <div className="relative px-5 sm:px-10 max-w-[900px] mx-auto pt-10 sm:pt-14">
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full mb-6"
-            style={{ background: "rgba(215,255,63,0.12)", color: LIME }}>
+        <div className="relative px-5 sm:px-10 max-w-[900px] mx-auto pt-14 sm:pt-20 pb-2">
+          <h1
+            className="text-center font-black uppercase tracking-tight text-4xl sm:text-6xl text-white mb-7"
+            style={{ textWrap: "balance" as any }}
+          >
             Blog do Modo Criador
-          </span>
+          </h1>
+          <div className="flex flex-wrap justify-center gap-2 mb-8">
+            {CATEGORIES.map((cat) => {
+              const active = activeCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className="text-[11px] sm:text-xs font-bold uppercase tracking-wide px-3.5 py-2 rounded-full transition-colors"
+                  style={active ? { background: LIME, color: BG_BLUE } : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}
+                >
+                  {cat.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {!featured && (
+          <div className="relative px-5 sm:px-10 max-w-[900px] mx-auto pb-16 sm:pb-20 text-center text-white/40 text-sm">
+            Ainda não tem artigo nessa categoria.
+          </div>
+        )}
 
         {featured && (
           <Reveal className="relative px-5 sm:px-10 max-w-[900px] mx-auto pb-16 sm:pb-20">
@@ -95,12 +133,12 @@ function BlogIndexRoute() {
                 >
                   <Sparkles size={10} className="hidden sm:inline" /> Em destaque
                 </span>
-                <h1
+                <h2
                   className="font-criador-serif normal-case text-base sm:text-3xl md:text-5xl leading-tight mb-1 sm:mb-4 text-white line-clamp-2"
                   style={{ textWrap: "balance" as any }}
                 >
                   {featured.title}
-                </h1>
+                </h2>
                 <p className="hidden sm:block text-white/70 text-sm md:text-lg mb-3 md:mb-7 max-w-xl leading-relaxed line-clamp-2">
                   {featured.description}
                 </p>

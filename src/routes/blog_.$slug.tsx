@@ -22,6 +22,12 @@ export const Route = createFileRoute("/blog_/$slug")({
     if (!loaderData) return {};
     const post = loaderData;
     const url = `${SITE_URL}/blog/${post.slug}`;
+    // Capas antigas eram caminho relativo (/blog/foo.jpg); as novas, feitas
+    // pelo admin, já são URL absoluta do Storage — só prefixar quando ainda
+    // não for absoluta, senão vira "modocriador.com.brhttps://..." quebrado.
+    const coverImageUrl = post.coverImage
+      ? (post.coverImage.src.startsWith("http") ? post.coverImage.src : `${SITE_URL}${post.coverImage.src}`)
+      : null;
     const articleLd = {
       "@context": "https://schema.org",
       "@type": "BlogPosting",
@@ -31,7 +37,7 @@ export const Route = createFileRoute("/blog_/$slug")({
       author: { "@type": "Organization", name: "Modo Criador" },
       publisher: { "@type": "Organization", name: "Modo Criador" },
       mainEntityOfPage: url,
-      ...(post.coverImage ? { image: `${SITE_URL}${post.coverImage.src}` } : {}),
+      ...(coverImageUrl ? { image: coverImageUrl } : {}),
     };
     return {
       meta: [
@@ -43,7 +49,7 @@ export const Route = createFileRoute("/blog_/$slug")({
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: post.title },
         { name: "twitter:description", content: post.description },
-        ...(post.coverImage ? [{ property: "og:image", content: `${SITE_URL}${post.coverImage.src}` }, { name: "twitter:image", content: `${SITE_URL}${post.coverImage.src}` }] : []),
+        ...(coverImageUrl ? [{ property: "og:image", content: coverImageUrl }, { name: "twitter:image", content: coverImageUrl }] : []),
         { "script:ld+json": articleLd },
       ],
       links: [{ rel: "canonical", href: url }],
