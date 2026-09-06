@@ -187,7 +187,16 @@ export function SalesPage() {
         }}
       >
         <div className="flex items-center justify-between max-w-[1100px] mx-auto w-full">
-          <ModoCriadorLogo variant="brand" className="h-6 w-auto" />
+          <div className="flex items-center gap-4">
+            <ModoCriadorLogo variant="brand" className="h-6 w-auto" />
+            <Link
+              to="/blog"
+              className="text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full transition hover:brightness-110"
+              style={{ background: "rgba(215,255,63,0.12)", color: LIME }}
+            >
+              Blog
+            </Link>
+          </div>
           <Link to="/auth" className="text-sm text-foreground/70 hover:text-foreground transition">
             Já tem conta? Entrar →
           </Link>
