@@ -77,7 +77,8 @@ export const listBlogPostsAdmin = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     await assertPlatformAdmin(context.supabase, context.userId, context.orgId);
-    const { data, error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
       .from("blog_posts")
       .select("id, slug, title, description, date, reading_minutes, cover_image_url, cover_image_alt, related_feature_href, related_feature_label, body, published, updated_at")
       .order("date", { ascending: false });
@@ -90,7 +91,8 @@ export const getBlogPostAdmin = createServerFn({ method: "GET" })
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context.supabase, context.userId, context.orgId);
-    const { data: row, error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
       .from("blog_posts")
       .select("id, slug, title, description, date, reading_minutes, cover_image_url, cover_image_alt, related_feature_href, related_feature_label, body, published, updated_at")
       .eq("id", data.id)
@@ -122,7 +124,8 @@ export const createBlogPost = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => postFieldsSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context.supabase, context.userId, context.orgId);
-    const { data: row, error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
       .from("blog_posts")
       .insert(toDbPatch(data))
       .select("id")
@@ -136,8 +139,9 @@ export const updateBlogPost = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => postFieldsSchema.extend({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context.supabase, context.userId, context.orgId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, ...fields } = data;
-    const { error } = await context.supabase.from("blog_posts").update(toDbPatch(fields)).eq("id", id);
+    const { error } = await supabaseAdmin.from("blog_posts").update(toDbPatch(fields)).eq("id", id);
     if (error) throw new Error(error.code === "23505" ? "Já existe um artigo com esse endereço (slug)." : error.message);
     return { ok: true };
   });
@@ -147,7 +151,8 @@ export const deleteBlogPost = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context.supabase, context.userId, context.orgId);
-    const { error } = await context.supabase.from("blog_posts").delete().eq("id", data.id);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("blog_posts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
