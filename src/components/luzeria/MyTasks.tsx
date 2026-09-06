@@ -6,7 +6,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet } from "lucide-react";
+import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
@@ -615,11 +615,16 @@ function groupEventsByDay(events: any[]): { dateStr: string; events: any[] }[] {
   return groups;
 }
 
+const COLLAPSED_EVENT_COUNT = 5;
+
 function UpcomingCalendarWidget() {
   const { data } = useQuery(upcomingCalendarEventsQO());
   const [openEvent, setOpenEvent] = useState<any | null>(null);
+  const [expanded, setExpanded] = useState(false);
   if (!data?.connected || !data.events?.length) return null;
-  const groups = groupEventsByDay(data.events);
+  const hasMore = data.events.length > COLLAPSED_EVENT_COUNT;
+  const visibleEvents = expanded ? data.events : data.events.slice(0, COLLAPSED_EVENT_COUNT);
+  const groups = groupEventsByDay(visibleEvents);
   return (
     <div className="mb-6 bg-card rounded-lg overflow-hidden">
       <div className="flex items-center gap-2 px-4 pt-3 pb-2">
@@ -654,6 +659,14 @@ function UpcomingCalendarWidget() {
           </div>
         </div>
       ))}
+      {hasMore && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-foreground/50 hover:text-foreground/80 transition-colors border-t border-white/[0.05]"
+        >
+          {expanded ? <>Mostrar menos <ChevronUp size={12} /></> : <>Mostrar mais ({data.events.length - COLLAPSED_EVENT_COUNT}) <ChevronDown size={12} /></>}
+        </button>
+      )}
       {openEvent && <CalendarEventModal event={openEvent} onClose={() => setOpenEvent(null)} />}
     </div>
   );
