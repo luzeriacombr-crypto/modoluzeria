@@ -74,7 +74,7 @@ function BlogIndexRoute() {
             <Link
               to="/blog/$slug"
               params={{ slug: featured.slug }}
-              className={`group relative block rounded-3xl overflow-hidden border border-white/10 min-h-[440px] sm:min-h-[500px] flex items-end ${LIFT}`}
+              className={`group relative block rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 aspect-video flex items-end ${LIFT}`}
               style={EASE}
             >
               {featured.coverImage && (
@@ -86,29 +86,29 @@ function BlogIndexRoute() {
               )}
               <div
                 className="absolute inset-0"
-                style={{ background: "linear-gradient(180deg, rgba(10,14,35,0.05) 0%, rgba(10,14,35,0.45) 45%, rgba(10,14,35,0.97) 100%)" }}
+                style={{ background: "linear-gradient(180deg, rgba(10,14,35,0.05) 0%, rgba(10,14,35,0.4) 55%, rgba(10,14,35,0.95) 100%)" }}
               />
-              <div className="relative p-7 sm:p-12 max-w-2xl">
+              <div className="relative p-3.5 sm:p-8 md:p-12 max-w-2xl w-full">
                 <span
-                  className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full mb-5"
+                  className="inline-flex items-center gap-1 sm:gap-1.5 text-[8px] sm:text-[11px] font-black uppercase tracking-wide px-2 sm:px-3 py-0.5 sm:py-1.5 rounded-full mb-1.5 sm:mb-5"
                   style={{ background: "rgba(215,255,63,0.18)", color: LIME, backdropFilter: "blur(6px)" }}
                 >
-                  <Sparkles size={12} /> Em destaque
+                  <Sparkles size={10} className="hidden sm:inline" /> Em destaque
                 </span>
                 <h1
-                  className="font-criador-serif normal-case text-3xl sm:text-5xl leading-tight mb-4 text-white"
+                  className="font-criador-serif normal-case text-base sm:text-3xl md:text-5xl leading-tight mb-1 sm:mb-4 text-white line-clamp-2"
                   style={{ textWrap: "balance" as any }}
                 >
                   {featured.title}
                 </h1>
-                <p className="text-white/70 text-base sm:text-lg mb-7 max-w-xl leading-relaxed line-clamp-2">
+                <p className="hidden sm:block text-white/70 text-sm md:text-lg mb-3 md:mb-7 max-w-xl leading-relaxed line-clamp-2">
                   {featured.description}
                 </p>
                 <span
-                  className={`inline-flex items-center gap-2 px-6 py-3 rounded-full font-black uppercase text-sm ${POP}`}
+                  className={`inline-flex items-center gap-1 sm:gap-2 px-2.5 py-1 sm:px-6 sm:py-3 rounded-full font-black uppercase text-[9px] sm:text-sm ${POP}`}
                   style={{ background: LIME, color: BG_BLUE }}
                 >
-                  Continuar lendo <ArrowRight size={16} />
+                  Continuar lendo <ArrowRight size={12} className="sm:hidden" /><ArrowRight size={16} className="hidden sm:inline" />
                 </span>
               </div>
             </Link>
