@@ -59,7 +59,7 @@ import {
   listSelectionDriveImages, setPhotoSelectionCover, setPhotoSelectionOrder,
   getPublicPhotoSelection, getPublicPhotoThumbnails,
 } from "./photo-selection.functions";
-import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications } from "./instagram.functions";
+import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications, hasUsedInstagramPublish } from "./instagram.functions";
 import {
   getCalendarItems, getGoogleCalendarAuthUrl, disconnectGoogleCalendar,
   getMyCalendarConnection, getUpcomingCalendarEvents, createCalendarEvent,
@@ -91,6 +91,9 @@ import {
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 export const instagramActivityQO = () =>
   queryOptions({ queryKey: ["instagram-activity"], queryFn: () => getInstagramActivity() });
+
+export const hasUsedInstagramPublishQO = () =>
+  queryOptions({ queryKey: ["has-used-instagram-publish"], queryFn: () => hasUsedInstagramPublish(), staleTime: 60_000 });
 export const todayPublicationsQO = (from: string, to: string, userId?: string) =>
   queryOptions({
     queryKey: ["today-publications", from, to, userId ?? null],

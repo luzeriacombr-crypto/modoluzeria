@@ -609,6 +609,22 @@ export type InstagramActivityItem = {
   monthKey: string;
 };
 
+/** Se a agência já publicou (ou programou) alguma vez pelo app — usado só
+ * pra decidir se ainda vale a pena mostrar o banner de "novidade" avisando
+ * que a publicação saiu do modo restrito a testadores. Quem já usou não
+ * precisa mais do aviso. */
+export const hasUsedInstagramPublish = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("content_items")
+      .select("id")
+      .or("ig_auto_publish.eq.true,ig_published_at.not.is.null")
+      .limit(1);
+    if (error) throw new Error(error.message);
+    return (data ?? []).length > 0;
+  });
+
 /** Tudo que já foi publicado no Instagram pelo app, ou que está programado
  * pra sair sozinho — de todos os clientes da agência, pra tela "Instagram"
  * do menu lateral. Publicação manual direto no Instagram (fora do app) não

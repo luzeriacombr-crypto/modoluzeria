@@ -1,22 +1,46 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Instagram, X } from "lucide-react";
+import { hasUsedInstagramPublishQO } from "@/lib/luzeria/queries";
 
 const DISMISS_KEY = "modocriador:instagram-live-banner-dismissed";
-/** Se ninguém dispensar, some sozinho depois dessa data — pra não virar
- * lixo permanente de UI pra quem nunca clicou no X. */
+const VIEW_COUNT_KEY = "modocriador:instagram-live-banner-views";
+/** Some sozinho depois de 3 exibições — não precisa continuar avisando
+ * quem já viu e não se interessou. */
+const MAX_VIEWS = 3;
+/** Se ninguém dispensar nem bater o limite de views, some sozinho depois
+ * dessa data — pra não virar lixo permanente de UI. */
 const SHOW_UNTIL = new Date("2026-10-15");
 
 const IG_GRADIENT = "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)";
 
 /** Avisa admins (setor + master) que a publicação no Instagram saiu do modo
  * restrito a testadores — App Review da Meta aprovado em 2026-09-02. Só
- * quem administra clientes decide usar a função, então só eles veem. */
+ * quem administra clientes decide usar a função, então só eles veem.
+ *
+ * Some em 3 situações: passou de 3 exibições, a agência já testou/publicou/
+ * programou algo pelo Instagram (não precisa mais do aviso), ou passou da
+ * data de corte. */
 export function InstagramLiveBanner({ isAdmin }: { isAdmin: boolean }) {
+  const { data: hasUsed, isLoading: hasUsedLoading } = useQuery({ ...hasUsedInstagramPublishQO(), enabled: isAdmin });
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(DISMISS_KEY) === "1");
+  const [viewCount, setViewCount] = useState(() => Number(localStorage.getItem(VIEW_COUNT_KEY) ?? "0"));
   const navigate = useNavigate();
 
-  if (!isAdmin || dismissed || Date.now() > SHOW_UNTIL.getTime()) return null;
+  const shouldShow =
+    isAdmin && !dismissed && !hasUsedLoading && !hasUsed && viewCount < MAX_VIEWS && Date.now() <= SHOW_UNTIL.getTime();
+
+  useEffect(() => {
+    if (!shouldShow) return;
+    localStorage.setItem(VIEW_COUNT_KEY, String(viewCount + 1));
+    setViewCount((v) => v + 1);
+    // Conta uma exibição só na montagem (uma "entrada" = uma visualização),
+    // não a cada re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldShow]);
+
+  if (!shouldShow) return null;
 
   function dismiss() {
     localStorage.setItem(DISMISS_KEY, "1");
