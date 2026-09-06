@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import { getAccessToken, withDriveOrg } from "./drive.functions";
+import { signCoverPaths } from "./api.functions";
 import type { Status } from "./types";
 import {
   type ClientStage,
@@ -439,6 +440,9 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       );
     }
 
+    const coverPaths = [...sorted, ...sortedStories].map((it: any) => it.cover_path ?? null);
+    const signedCovers = await signCoverPaths(supabaseAdmin, coverPaths);
+
     function mapItem(it: any): PublicFeedItem {
       const files = (filesByItem.get(it.id) ?? []).map((f: any) => ({
         id: f.id,
@@ -447,7 +451,12 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         webViewUrl: f.web_view_url ?? f.webViewUrl,
         thumbUrl: thumbUrls.get(f.drive_file_id ?? f.driveFileId) ?? null,
       }));
-      const gridThumb = files[0]?.thumbUrl ?? null;
+      // Um cover_path escolhido manualmente (setItemCover/uploadItemCover)
+      // precisa valer aqui igual já vale no painel interno (getMonth) — senão
+      // o link público mostra a miniatura do primeiro arquivo em vez da capa
+      // que a agência escolheu.
+      const coverUrl = it.cover_path ? signedCovers.get(it.cover_path) ?? null : null;
+      const gridThumb = coverUrl ?? files[0]?.thumbUrl ?? null;
       const status = it.status as Status;
       const stage = mapStatusToClientStage(status);
       const blockedReason: string | null = it.blocked_reason ?? null;
@@ -461,7 +470,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
         title: it.title,
         caption: it.caption ?? "",
         scheduledAt: it.scheduled_at ?? null,
-        coverUrl: null,
+        coverUrl,
         gridThumb,
         files,
         feedback: (fbByItem.get(it.id) ?? []).map((f: any) => ({
