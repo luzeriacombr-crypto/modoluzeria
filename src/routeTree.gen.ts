@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermosRouteImport } from './routes/termos'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SelecaoDeFotosParaFotografosRouteImport } from './routes/selecao-de-fotos-para-fotografos'
 import { Route as RevendaRouteImport } from './routes/revenda'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
@@ -57,6 +58,11 @@ import { Route as AuthenticatedAfiliadoDashboardRouteImport } from './routes/_au
 const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SelecaoDeFotosParaFotografosRoute =
@@ -303,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/revenda': typeof RevendaRoute
   '/selecao-de-fotos-para-fotografos': typeof SelecaoDeFotosParaFotografosRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
@@ -348,6 +355,7 @@ export interface FileRoutesByTo {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/revenda': typeof RevendaRoute
   '/selecao-de-fotos-para-fotografos': typeof SelecaoDeFotosParaFotografosRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
@@ -395,6 +403,7 @@ export interface FileRoutesById {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/revenda': typeof RevendaRoute
   '/selecao-de-fotos-para-fotografos': typeof SelecaoDeFotosParaFotografosRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/ajuda': typeof AuthenticatedAjudaRoute
@@ -442,6 +451,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/revenda'
     | '/selecao-de-fotos-para-fotografos'
+    | '/sitemap.xml'
     | '/termos'
     | '/admin'
     | '/ajuda'
@@ -487,6 +497,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/revenda'
     | '/selecao-de-fotos-para-fotografos'
+    | '/sitemap.xml'
     | '/termos'
     | '/admin'
     | '/ajuda'
@@ -533,6 +544,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/revenda'
     | '/selecao-de-fotos-para-fotografos'
+    | '/sitemap.xml'
     | '/termos'
     | '/_authenticated/admin'
     | '/_authenticated/ajuda'
@@ -580,6 +592,7 @@ export interface RootRouteChildren {
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   RevendaRoute: typeof RevendaRoute
   SelecaoDeFotosParaFotografosRoute: typeof SelecaoDeFotosParaFotografosRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermosRoute: typeof TermosRoute
   BlogSlugRoute: typeof BlogSlugRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
@@ -598,6 +611,13 @@ declare module '@tanstack/react-router' {
       path: '/termos'
       fullPath: '/termos'
       preLoaderRoute: typeof TermosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/selecao-de-fotos-para-fotografos': {
@@ -980,6 +1000,7 @@ const rootRouteChildren: RootRouteChildren = {
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   RevendaRoute: RevendaRoute,
   SelecaoDeFotosParaFotografosRoute: SelecaoDeFotosParaFotografosRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermosRoute: TermosRoute,
   BlogSlugRoute: BlogSlugRoute,
   PreviewTokenRoute: PreviewTokenRoute,

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Search, Star, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
+  Search, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Plus, Info, CircleHelp, CalendarDays, Instagram, Users, Wallet, UserCog, BookMarked,
   Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images,
 } from "lucide-react";
@@ -754,11 +754,10 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
         to="/cliente/$clientId"
         params={{ clientId: client.id }}
         preload="intent"
-        className="relative w-full flex items-center gap-2.5 pl-3 pr-9 py-2 text-left"
+        className={`relative w-full flex items-center gap-2.5 pl-3 py-2 text-left ${canManage ? "pr-12" : "pr-8"}`}
       >
         <Avatar name={client.name} color={client.color} size={26} avatarUrl={client.photoUrl} />
         <span className="text-sm truncate text-white/90 flex-1">{client.name}</span>
-        {client.favorite && <Star size={12} className="text-[rgb(var(--lz-brand-rgb))] fill-[rgb(var(--lz-brand-rgb))]" />}
       </Link>
 
       <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center opacity-40 group-hover:opacity-100 transition-opacity">
@@ -768,10 +767,6 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
           className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-[rgb(var(--lz-brand-rgb))]"
         >
           <Info size={13} />
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); updateClient.mutate({ data: { id: client.id, patch: { favorite: !client.favorite } } }); }}
-          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white">
-          <Star size={13} className={client.favorite ? "fill-[rgb(var(--lz-brand-rgb))] text-[rgb(var(--lz-brand-rgb))]" : ""} />
         </button>
         {canManage && (
           <button ref={btnRef} onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
