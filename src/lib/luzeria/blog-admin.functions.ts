@@ -26,7 +26,7 @@ const blockSchema: z.ZodType<BlogBlock> = z.union([
 ]);
 
 export const BLOG_CATEGORIES = [
-  { id: "tecnologia", label: "Tecnologia" },
+  { id: "tecnologia", label: "Ferramentas" },
   { id: "meta-instagram", label: "Meta/Instagram" },
   { id: "clientes", label: "Clientes" },
   { id: "dono-de-agencia", label: "Dono de Agência" },

@@ -12,7 +12,7 @@ const DESCRIPTION =
 
 const CATEGORIES = [
   { id: "todos", label: "Todos" },
-  { id: "tecnologia", label: "Tecnologia" },
+  { id: "tecnologia", label: "Ferramentas" },
   { id: "meta-instagram", label: "Meta/Instagram" },
   { id: "clientes", label: "Clientes" },
   { id: "dono-de-agencia", label: "Dono de Agência" },
@@ -79,10 +79,11 @@ function BlogIndexRoute() {
 
         <div className="relative px-5 sm:px-10 max-w-[900px] mx-auto pt-14 sm:pt-20 pb-2">
           <h1
-            className="text-center font-black uppercase tracking-tight text-4xl sm:text-6xl text-white mb-7"
+            className="text-center uppercase tracking-tight text-4xl sm:text-6xl text-white mb-7"
             style={{ textWrap: "balance" as any }}
           >
-            Blog do Modo Criador
+            <span className="font-normal">Blog do </span>
+            <span className="font-black">Modo Criador</span>
           </h1>
           <div className="flex flex-wrap justify-center gap-2 mb-8">
             {CATEGORIES.map((cat) => {
