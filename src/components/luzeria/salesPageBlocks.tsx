@@ -1641,8 +1641,28 @@ export function HeroSection({ content, onChange, onCtaClick }: { content: any; o
   return (
     <section
       ref={editable ? undefined : glow.ref}
-      className="relative px-5 sm:px-10 max-w-[1200px] mx-auto pt-8 pb-16"
+      className="relative px-5 sm:px-10 max-w-[1200px] mx-auto pt-8 pb-16 overflow-hidden"
     >
+      <style>{`
+        @keyframes sales-hero-grid-drift {
+          from { background-position: 0 0; }
+          to { background-position: 64px 64px; }
+        }
+        .sales-hero-grid {
+          background-image:
+            linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+          background-size: 32px 32px;
+          animation: sales-hero-grid-drift 18s linear infinite;
+        }
+      `}</style>
+      <div
+        className="sales-hero-grid pointer-events-none absolute inset-0"
+        style={{
+          maskImage: "radial-gradient(ellipse 65% 55% at 30% 25%, black 30%, transparent 100%)",
+          WebkitMaskImage: "radial-gradient(ellipse 65% 55% at 30% 25%, black 30%, transparent 100%)",
+        }}
+      />
       {!editable && glow.active && (
         <div
           className="pointer-events-none absolute inset-0"
