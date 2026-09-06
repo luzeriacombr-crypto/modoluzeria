@@ -586,61 +586,74 @@ const ACTIVITY_LABELS: Record<string, string> = {
 };
 
 /** "Hoje"/"Amanhã" comparando no fuso de Brasília — um evento às 23h de
- * "amanhã" em UTC ainda pode ser "hoje" em São Paulo, e vice-versa. */
-function eventDayLabel(iso: string): string {
+ * "amanhã" em UTC ainda pode ser "hoje" em São Paulo, e vice-versa. Pro
+ * resto da janela, o nome do dia da semana por extenso. */
+function dayGroupLabel(dateStr: string): string {
   const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" });
-  const eventDateStr = fmt.format(new Date(iso));
   const now = new Date();
   const todayStr = fmt.format(now);
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = fmt.format(tomorrow);
-  if (eventDateStr === todayStr) return "Hoje";
-  if (eventDateStr === tomorrowStr) return "Amanhã";
-  return new Date(`${eventDateStr}T00:00:00-03:00`)
-    .toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })
-    .replace(".", "");
+  if (dateStr === todayStr) return "Hoje";
+  if (dateStr === tomorrowStr) return "Amanhã";
+  const weekday = new Date(`${dateStr}T00:00:00-03:00`).toLocaleDateString("pt-BR", { weekday: "long" });
+  return weekday.charAt(0).toUpperCase() + weekday.slice(1);
+}
+
+/** Agrupa a lista (já vem ordenada por horário da API do Google) em blocos
+ * por dia local de Brasília, preservando a ordem. */
+function groupEventsByDay(events: any[]): { dateStr: string; events: any[] }[] {
+  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" });
+  const groups: { dateStr: string; events: any[] }[] = [];
+  for (const ev of events) {
+    const dateStr = fmt.format(new Date(ev.start));
+    const last = groups[groups.length - 1];
+    if (last && last.dateStr === dateStr) last.events.push(ev);
+    else groups.push({ dateStr, events: [ev] });
+  }
+  return groups;
 }
 
 function UpcomingCalendarWidget() {
   const { data } = useQuery(upcomingCalendarEventsQO());
   const [openEvent, setOpenEvent] = useState<any | null>(null);
   if (!data?.connected || !data.events?.length) return null;
+  const groups = groupEventsByDay(data.events);
   return (
     <div className="mb-6 bg-card rounded-lg overflow-hidden">
       <div className="flex items-center gap-2 px-4 pt-3 pb-2">
         <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
           <CalendarClock size={11} />
         </span>
-        <h2 className="text-[11px] uppercase font-bold tracking-wider text-foreground/60">Próximos eventos</h2>
+        <h2 className="text-[11px] uppercase font-bold tracking-wider text-foreground/60">Agenda</h2>
       </div>
-      <div className="divide-y divide-white/[0.05] lz-stagger">
-        {data.events.map((ev: any) => (
-          <button
-            key={ev.id}
-            onClick={() => setOpenEvent(ev)}
-            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-foreground/[0.03] transition-colors text-left"
-          >
-            <span className="flex flex-col items-start gap-0.5 shrink-0 w-14">
-              <span
-                className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.14)", color: "var(--lz-accent-ink)" }}
+      {groups.map((group) => (
+        <div key={group.dateStr}>
+          <div className="px-4 pt-2.5 pb-1 text-[11px] font-bold text-foreground/70">
+            {dayGroupLabel(group.dateStr)}
+          </div>
+          <div className="divide-y divide-white/[0.05] lz-stagger">
+            {group.events.map((ev: any) => (
+              <button
+                key={ev.id}
+                onClick={() => setOpenEvent(ev)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-foreground/[0.03] transition-colors text-left"
               >
-                {eventDayLabel(ev.start)}
-              </span>
-              <span className="text-[11px] text-foreground/40 tabular-nums">
-                {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-              </span>
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="text-sm text-foreground/90 truncate block">{ev.title}</span>
-              {ev.attendees?.length > 0 && (
-                <span className="text-[11px] text-foreground/40 truncate block">com {ev.attendees.join(", ")}</span>
-              )}
-            </span>
-          </button>
-        ))}
-      </div>
+                <span className="text-[11px] text-foreground/40 tabular-nums shrink-0">
+                  {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="text-sm text-foreground/90 truncate block">{ev.title}</span>
+                  {ev.attendees?.length > 0 && (
+                    <span className="text-[11px] text-foreground/40 truncate block">com {ev.attendees.join(", ")}</span>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
       {openEvent && <CalendarEventModal event={openEvent} onClose={() => setOpenEvent(null)} />}
     </div>
   );

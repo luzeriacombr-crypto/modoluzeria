@@ -167,7 +167,8 @@ async function getValidCalendarAccessToken(supabase: any, userId: string): Promi
   }
 }
 
-const UPCOMING_EVENTS_LIMIT = 5;
+const UPCOMING_EVENTS_DAYS_AHEAD = 7;
+const UPCOMING_EVENTS_LIMIT = 20;
 
 export const getUpcomingCalendarEvents = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
@@ -184,11 +185,17 @@ export const getUpcomingCalendarEvents = createServerFn({ method: "GET" })
     const accessToken = await getValidCalendarAccessToken(context.supabase, targetUserId);
     if (!accessToken) return { connected: false, events: [] as any[] };
 
-    // A partir de agora (não do início do dia) — já passou não é "próximo".
-    // maxResults aqui já limita direto na API do Google, então "próximos 5"
-    // não depende de nenhum corte manual depois.
+    // Do início do dia de HOJE (não "agora") — um compromisso de hoje que já
+    // passou (ex: pagamento das 9h consultado às 14h) continua sendo "de
+    // hoje" pra quem olha a agenda, não pode sumir da lista. "Hoje" segue no
+    // fuso de Brasília, não no do servidor (UTC na Vercel).
+    const todayInBrazil = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+    const startOfToday = new Date(`${todayInBrazil}T00:00:00-03:00`);
+    const endOfWindow = new Date(startOfToday);
+    endOfWindow.setDate(endOfWindow.getDate() + UPCOMING_EVENTS_DAYS_AHEAD);
     const params = new URLSearchParams({
-      timeMin: new Date().toISOString(),
+      timeMin: startOfToday.toISOString(),
+      timeMax: endOfWindow.toISOString(),
       singleEvents: "true",
       orderBy: "startTime",
       maxResults: String(UPCOMING_EVENTS_LIMIT),
