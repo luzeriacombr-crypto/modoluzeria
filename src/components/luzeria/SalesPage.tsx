@@ -430,6 +430,7 @@ export function SalesPage() {
 
       <footer style={{ background: BG_BLUE }} className="px-5 sm:px-10 py-10 text-center text-foreground/30 text-xs">
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mb-4 max-w-2xl mx-auto">
+          <Link to="/blog" className="underline hover:text-foreground/50 transition">Blog</Link>
           <Link to="/selecao-de-fotos-para-fotografos" className="underline hover:text-foreground/50 transition">Seleção de Fotos</Link>
           <Link to="/aprovacao-de-conteudo-por-link" className="underline hover:text-foreground/50 transition">Aprovação por Link</Link>
           <Link to="/backup-automatico-drive" className="underline hover:text-foreground/50 transition">Backup no Drive</Link>

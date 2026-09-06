@@ -46,6 +46,36 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://www.modocriador.com.br/blog</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.modocriador.com.br/blog/de-onde-veio-o-modo-criador</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.modocriador.com.br/blog/como-paramos-de-perder-arquivo-de-cliente</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.modocriador.com.br/blog/fim-da-aprovacao-perdida-no-whatsapp</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.modocriador.com.br/blog/por-que-a-selecao-de-fotos-parou-de-ser-um-problema</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.modocriador.com.br/blog/publicar-no-instagram-na-mao-quase-nos-esgotou</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://www.modocriador.com.br/privacidade</loc>
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>

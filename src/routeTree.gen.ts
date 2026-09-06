@@ -17,6 +17,7 @@ import { Route as PublicacaoAutomaticaInstagramRouteImport } from './routes/publ
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as ExclusaoDeDadosRouteImport } from './routes/exclusao-de-dados'
+import { Route as BlogRouteImport } from './routes/blog'
 import { Route as BibliotecaDeReferenciasRouteImport } from './routes/biblioteca-de-referencias'
 import { Route as BackupAutomaticoDriveRouteImport } from './routes/backup-automatico-drive'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -28,6 +29,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SelecaoTokenRouteImport } from './routes/selecao.$token'
 import { Route as PromoSlugRouteImport } from './routes/promo/$slug'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
+import { Route as BlogSlugRouteImport } from './routes/blog_.$slug'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AuthenticatedSelecaoDeFotosRouteImport } from './routes/_authenticated/selecao-de-fotos'
@@ -94,6 +96,11 @@ const ExclusaoDeDadosRoute = ExclusaoDeDadosRouteImport.update({
   path: '/exclusao-de-dados',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BibliotecaDeReferenciasRoute = BibliotecaDeReferenciasRouteImport.update({
   id: '/biblioteca-de-referencias',
   path: '/biblioteca-de-referencias',
@@ -147,6 +154,11 @@ const PromoSlugRoute = PromoSlugRouteImport.update({
 const PreviewTokenRoute = PreviewTokenRouteImport.update({
   id: '/preview/$token',
   path: '/preview/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog_/$slug',
+  path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssinarCompletarRoute = AssinarCompletarRouteImport.update({
@@ -283,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/backup-automatico-drive': typeof BackupAutomaticoDriveRoute
   '/biblioteca-de-referencias': typeof BibliotecaDeReferenciasRoute
+  '/blog': typeof BlogRoute
   '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -304,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
   '/assinar/completar': typeof AssinarCompletarRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
   '/selecao/$token': typeof SelecaoTokenRoute
@@ -326,6 +340,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/backup-automatico-drive': typeof BackupAutomaticoDriveRoute
   '/biblioteca-de-referencias': typeof BibliotecaDeReferenciasRoute
+  '/blog': typeof BlogRoute
   '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -347,6 +362,7 @@ export interface FileRoutesByTo {
   '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
   '/assinar/completar': typeof AssinarCompletarRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
   '/selecao/$token': typeof SelecaoTokenRoute
@@ -371,6 +387,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/backup-automatico-drive': typeof BackupAutomaticoDriveRoute
   '/biblioteca-de-referencias': typeof BibliotecaDeReferenciasRoute
+  '/blog': typeof BlogRoute
   '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -392,6 +409,7 @@ export interface FileRoutesById {
   '/_authenticated/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/assinar/completar': typeof AssinarCompletarRoute
+  '/blog_/$slug': typeof BlogSlugRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
   '/selecao/$token': typeof SelecaoTokenRoute
@@ -416,6 +434,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/backup-automatico-drive'
     | '/biblioteca-de-referencias'
+    | '/blog'
     | '/exclusao-de-dados'
     | '/mfa'
     | '/privacidade'
@@ -437,6 +456,7 @@ export interface FileRouteTypes {
     | '/selecao-de-fotos'
     | '/vendas'
     | '/assinar/completar'
+    | '/blog/$slug'
     | '/preview/$token'
     | '/promo/$slug'
     | '/selecao/$token'
@@ -459,6 +479,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/backup-automatico-drive'
     | '/biblioteca-de-referencias'
+    | '/blog'
     | '/exclusao-de-dados'
     | '/mfa'
     | '/privacidade'
@@ -480,6 +501,7 @@ export interface FileRouteTypes {
     | '/selecao-de-fotos'
     | '/vendas'
     | '/assinar/completar'
+    | '/blog/$slug'
     | '/preview/$token'
     | '/promo/$slug'
     | '/selecao/$token'
@@ -503,6 +525,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/backup-automatico-drive'
     | '/biblioteca-de-referencias'
+    | '/blog'
     | '/exclusao-de-dados'
     | '/mfa'
     | '/privacidade'
@@ -524,6 +547,7 @@ export interface FileRouteTypes {
     | '/_authenticated/selecao-de-fotos'
     | '/_authenticated/vendas'
     | '/assinar/completar'
+    | '/blog_/$slug'
     | '/preview/$token'
     | '/promo/$slug'
     | '/selecao/$token'
@@ -548,6 +572,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BackupAutomaticoDriveRoute: typeof BackupAutomaticoDriveRoute
   BibliotecaDeReferenciasRoute: typeof BibliotecaDeReferenciasRoute
+  BlogRoute: typeof BlogRoute
   ExclusaoDeDadosRoute: typeof ExclusaoDeDadosRoute
   MfaRoute: typeof MfaRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
@@ -556,6 +581,7 @@ export interface RootRouteChildren {
   RevendaRoute: typeof RevendaRoute
   SelecaoDeFotosParaFotografosRoute: typeof SelecaoDeFotosParaFotografosRoute
   TermosRoute: typeof TermosRoute
+  BlogSlugRoute: typeof BlogSlugRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
   PromoSlugRoute: typeof PromoSlugRoute
   SelecaoTokenRoute: typeof SelecaoTokenRoute
@@ -621,6 +647,13 @@ declare module '@tanstack/react-router' {
       path: '/exclusao-de-dados'
       fullPath: '/exclusao-de-dados'
       preLoaderRoute: typeof ExclusaoDeDadosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/biblioteca-de-referencias': {
@@ -698,6 +731,13 @@ declare module '@tanstack/react-router' {
       path: '/preview/$token'
       fullPath: '/preview/$token'
       preLoaderRoute: typeof PreviewTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog_/$slug': {
+      id: '/blog_/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assinar/completar': {
@@ -932,6 +972,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BackupAutomaticoDriveRoute: BackupAutomaticoDriveRoute,
   BibliotecaDeReferenciasRoute: BibliotecaDeReferenciasRoute,
+  BlogRoute: BlogRoute,
   ExclusaoDeDadosRoute: ExclusaoDeDadosRoute,
   MfaRoute: MfaRoute,
   PrivacidadeRoute: PrivacidadeRoute,
@@ -940,6 +981,7 @@ const rootRouteChildren: RootRouteChildren = {
   RevendaRoute: RevendaRoute,
   SelecaoDeFotosParaFotografosRoute: SelecaoDeFotosParaFotografosRoute,
   TermosRoute: TermosRoute,
+  BlogSlugRoute: BlogSlugRoute,
   PreviewTokenRoute: PreviewTokenRoute,
   PromoSlugRoute: PromoSlugRoute,
   SelecaoTokenRoute: SelecaoTokenRoute,
