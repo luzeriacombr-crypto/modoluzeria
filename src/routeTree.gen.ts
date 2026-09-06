@@ -10,13 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermosRouteImport } from './routes/termos'
+import { Route as SelecaoDeFotosParaFotografosRouteImport } from './routes/selecao-de-fotos-para-fotografos'
 import { Route as RevendaRouteImport } from './routes/revenda'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
+import { Route as PublicacaoAutomaticaInstagramRouteImport } from './routes/publicacao-automatica-instagram'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as ExclusaoDeDadosRouteImport } from './routes/exclusao-de-dados'
+import { Route as BibliotecaDeReferenciasRouteImport } from './routes/biblioteca-de-referencias'
+import { Route as BackupAutomaticoDriveRouteImport } from './routes/backup-automatico-drive'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AssinarRouteImport } from './routes/assinar'
+import { Route as AprovacaoDeConteudoPorLinkRouteImport } from './routes/aprovacao-de-conteudo-por-link'
 import { Route as AfiliarRouteImport } from './routes/afiliar'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -52,6 +57,12 @@ const TermosRoute = TermosRouteImport.update({
   path: '/termos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SelecaoDeFotosParaFotografosRoute =
+  SelecaoDeFotosParaFotografosRouteImport.update({
+    id: '/selecao-de-fotos-para-fotografos',
+    path: '/selecao-de-fotos-para-fotografos',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const RevendaRoute = RevendaRouteImport.update({
   id: '/revenda',
   path: '/revenda',
@@ -62,6 +73,12 @@ const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
   path: '/redefinir-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PublicacaoAutomaticaInstagramRoute =
+  PublicacaoAutomaticaInstagramRouteImport.update({
+    id: '/publicacao-automatica-instagram',
+    path: '/publicacao-automatica-instagram',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
   id: '/privacidade',
   path: '/privacidade',
@@ -77,6 +94,16 @@ const ExclusaoDeDadosRoute = ExclusaoDeDadosRouteImport.update({
   path: '/exclusao-de-dados',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BibliotecaDeReferenciasRoute = BibliotecaDeReferenciasRouteImport.update({
+  id: '/biblioteca-de-referencias',
+  path: '/biblioteca-de-referencias',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BackupAutomaticoDriveRoute = BackupAutomaticoDriveRouteImport.update({
+  id: '/backup-automatico-drive',
+  path: '/backup-automatico-drive',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -87,6 +114,12 @@ const AssinarRoute = AssinarRouteImport.update({
   path: '/assinar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AprovacaoDeConteudoPorLinkRoute =
+  AprovacaoDeConteudoPorLinkRouteImport.update({
+    id: '/aprovacao-de-conteudo-por-link',
+    path: '/aprovacao-de-conteudo-por-link',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AfiliarRoute = AfiliarRouteImport.update({
   id: '/afiliar',
   path: '/afiliar',
@@ -245,13 +278,18 @@ const AuthenticatedAfiliadoDashboardRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/afiliar': typeof AfiliarRoute
+  '/aprovacao-de-conteudo-por-link': typeof AprovacaoDeConteudoPorLinkRoute
   '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
+  '/backup-automatico-drive': typeof BackupAutomaticoDriveRoute
+  '/biblioteca-de-referencias': typeof BibliotecaDeReferenciasRoute
   '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/publicacao-automatica-instagram': typeof PublicacaoAutomaticaInstagramRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/revenda': typeof RevendaRoute
+  '/selecao-de-fotos-para-fotografos': typeof SelecaoDeFotosParaFotografosRoute
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
@@ -283,13 +321,18 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/afiliar': typeof AfiliarRoute
+  '/aprovacao-de-conteudo-por-link': typeof AprovacaoDeConteudoPorLinkRoute
   '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
+  '/backup-automatico-drive': typeof BackupAutomaticoDriveRoute
+  '/biblioteca-de-referencias': typeof BibliotecaDeReferenciasRoute
   '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/publicacao-automatica-instagram': typeof PublicacaoAutomaticaInstagramRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/revenda': typeof RevendaRoute
+  '/selecao-de-fotos-para-fotografos': typeof SelecaoDeFotosParaFotografosRoute
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
@@ -323,13 +366,18 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/afiliar': typeof AfiliarRoute
+  '/aprovacao-de-conteudo-por-link': typeof AprovacaoDeConteudoPorLinkRoute
   '/assinar': typeof AssinarRouteWithChildren
   '/auth': typeof AuthRoute
+  '/backup-automatico-drive': typeof BackupAutomaticoDriveRoute
+  '/biblioteca-de-referencias': typeof BibliotecaDeReferenciasRoute
   '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/publicacao-automatica-instagram': typeof PublicacaoAutomaticaInstagramRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/revenda': typeof RevendaRoute
+  '/selecao-de-fotos-para-fotografos': typeof SelecaoDeFotosParaFotografosRoute
   '/termos': typeof TermosRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/ajuda': typeof AuthenticatedAjudaRoute
@@ -363,13 +411,18 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/afiliar'
+    | '/aprovacao-de-conteudo-por-link'
     | '/assinar'
     | '/auth'
+    | '/backup-automatico-drive'
+    | '/biblioteca-de-referencias'
     | '/exclusao-de-dados'
     | '/mfa'
     | '/privacidade'
+    | '/publicacao-automatica-instagram'
     | '/redefinir-senha'
     | '/revenda'
+    | '/selecao-de-fotos-para-fotografos'
     | '/termos'
     | '/admin'
     | '/ajuda'
@@ -401,13 +454,18 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/afiliar'
+    | '/aprovacao-de-conteudo-por-link'
     | '/assinar'
     | '/auth'
+    | '/backup-automatico-drive'
+    | '/biblioteca-de-referencias'
     | '/exclusao-de-dados'
     | '/mfa'
     | '/privacidade'
+    | '/publicacao-automatica-instagram'
     | '/redefinir-senha'
     | '/revenda'
+    | '/selecao-de-fotos-para-fotografos'
     | '/termos'
     | '/admin'
     | '/ajuda'
@@ -440,13 +498,18 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/afiliar'
+    | '/aprovacao-de-conteudo-por-link'
     | '/assinar'
     | '/auth'
+    | '/backup-automatico-drive'
+    | '/biblioteca-de-referencias'
     | '/exclusao-de-dados'
     | '/mfa'
     | '/privacidade'
+    | '/publicacao-automatica-instagram'
     | '/redefinir-senha'
     | '/revenda'
+    | '/selecao-de-fotos-para-fotografos'
     | '/termos'
     | '/_authenticated/admin'
     | '/_authenticated/ajuda'
@@ -480,13 +543,18 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AfiliarRoute: typeof AfiliarRoute
+  AprovacaoDeConteudoPorLinkRoute: typeof AprovacaoDeConteudoPorLinkRoute
   AssinarRoute: typeof AssinarRouteWithChildren
   AuthRoute: typeof AuthRoute
+  BackupAutomaticoDriveRoute: typeof BackupAutomaticoDriveRoute
+  BibliotecaDeReferenciasRoute: typeof BibliotecaDeReferenciasRoute
   ExclusaoDeDadosRoute: typeof ExclusaoDeDadosRoute
   MfaRoute: typeof MfaRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
+  PublicacaoAutomaticaInstagramRoute: typeof PublicacaoAutomaticaInstagramRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   RevendaRoute: typeof RevendaRoute
+  SelecaoDeFotosParaFotografosRoute: typeof SelecaoDeFotosParaFotografosRoute
   TermosRoute: typeof TermosRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
   PromoSlugRoute: typeof PromoSlugRoute
@@ -506,6 +574,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/selecao-de-fotos-para-fotografos': {
+      id: '/selecao-de-fotos-para-fotografos'
+      path: '/selecao-de-fotos-para-fotografos'
+      fullPath: '/selecao-de-fotos-para-fotografos'
+      preLoaderRoute: typeof SelecaoDeFotosParaFotografosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/revenda': {
       id: '/revenda'
       path: '/revenda'
@@ -518,6 +593,13 @@ declare module '@tanstack/react-router' {
       path: '/redefinir-senha'
       fullPath: '/redefinir-senha'
       preLoaderRoute: typeof RedefinirSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/publicacao-automatica-instagram': {
+      id: '/publicacao-automatica-instagram'
+      path: '/publicacao-automatica-instagram'
+      fullPath: '/publicacao-automatica-instagram'
+      preLoaderRoute: typeof PublicacaoAutomaticaInstagramRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacidade': {
@@ -541,6 +623,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExclusaoDeDadosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/biblioteca-de-referencias': {
+      id: '/biblioteca-de-referencias'
+      path: '/biblioteca-de-referencias'
+      fullPath: '/biblioteca-de-referencias'
+      preLoaderRoute: typeof BibliotecaDeReferenciasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/backup-automatico-drive': {
+      id: '/backup-automatico-drive'
+      path: '/backup-automatico-drive'
+      fullPath: '/backup-automatico-drive'
+      preLoaderRoute: typeof BackupAutomaticoDriveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -553,6 +649,13 @@ declare module '@tanstack/react-router' {
       path: '/assinar'
       fullPath: '/assinar'
       preLoaderRoute: typeof AssinarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aprovacao-de-conteudo-por-link': {
+      id: '/aprovacao-de-conteudo-por-link'
+      path: '/aprovacao-de-conteudo-por-link'
+      fullPath: '/aprovacao-de-conteudo-por-link'
+      preLoaderRoute: typeof AprovacaoDeConteudoPorLinkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/afiliar': {
@@ -824,13 +927,18 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AfiliarRoute: AfiliarRoute,
+  AprovacaoDeConteudoPorLinkRoute: AprovacaoDeConteudoPorLinkRoute,
   AssinarRoute: AssinarRouteWithChildren,
   AuthRoute: AuthRoute,
+  BackupAutomaticoDriveRoute: BackupAutomaticoDriveRoute,
+  BibliotecaDeReferenciasRoute: BibliotecaDeReferenciasRoute,
   ExclusaoDeDadosRoute: ExclusaoDeDadosRoute,
   MfaRoute: MfaRoute,
   PrivacidadeRoute: PrivacidadeRoute,
+  PublicacaoAutomaticaInstagramRoute: PublicacaoAutomaticaInstagramRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   RevendaRoute: RevendaRoute,
+  SelecaoDeFotosParaFotografosRoute: SelecaoDeFotosParaFotografosRoute,
   TermosRoute: TermosRoute,
   PreviewTokenRoute: PreviewTokenRoute,
   PromoSlugRoute: PromoSlugRoute,

@@ -16,6 +16,36 @@
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://www.modocriador.com.br/revenda</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.modocriador.com.br/selecao-de-fotos-para-fotografos</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.modocriador.com.br/aprovacao-de-conteudo-por-link</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.modocriador.com.br/backup-automatico-drive</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.modocriador.com.br/publicacao-automatica-instagram</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.modocriador.com.br/biblioteca-de-referencias</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://www.modocriador.com.br/privacidade</loc>
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>
