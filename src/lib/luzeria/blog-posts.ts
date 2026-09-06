@@ -28,9 +28,9 @@ export type BlogPost = {
   readingMinutes: number;
   relatedFeatureHref?: string;
   relatedFeatureLabel?: string;
-  /** Foto real da equipe/rotina da Luzeria — não stock photo. Opcional, só
-   * alguns posts têm (por enquanto só o de origem). */
-  coverImage?: { src: string; alt: string };
+  /** Foto real da rotina/equipe da Luzeria (ensaio "Rotina Luzeria - Agosto
+   * 2026") — não stock photo. */
+  coverImage: { src: string; alt: string };
   body: BlogBlock[];
 };
 
@@ -44,6 +44,10 @@ export const BLOG_POSTS: BlogPost[] = [
     readingMinutes: 5,
     relatedFeatureHref: "/biblioteca-de-referencias",
     relatedFeatureLabel: "Biblioteca de Referências",
+    coverImage: {
+      src: "/blog/apps-edicao-gravacao.jpg",
+      alt: "Pessoa da equipe da Luzeria mexendo em equipamento de gravação de vídeo",
+    },
     body: [
       {
         type: "lead",
@@ -109,6 +113,10 @@ export const BLOG_POSTS: BlogPost[] = [
     readingMinutes: 5,
     relatedFeatureHref: "/aprovacao-de-conteudo-por-link",
     relatedFeatureLabel: "Aprovação de Conteúdo por Link",
+    coverImage: {
+      src: "/blog/erros-explicando.jpg",
+      alt: "Pessoa da equipe da Luzeria gesticulando enquanto explica algo",
+    },
     body: [
       {
         type: "lead",
@@ -163,6 +171,10 @@ export const BLOG_POSTS: BlogPost[] = [
     readingMinutes: 4,
     relatedFeatureHref: "/backup-automatico-drive",
     relatedFeatureLabel: "Backup Automático no Drive",
+    coverImage: {
+      src: "/blog/investimento-apresentando.jpg",
+      alt: "Pessoa da equipe da Luzeria apresentando, com as mãos em movimento",
+    },
     body: [
       {
         type: "lead",
@@ -215,6 +227,10 @@ export const BLOG_POSTS: BlogPost[] = [
     readingMinutes: 4,
     relatedFeatureHref: "/",
     relatedFeatureLabel: "Conhecer o Modo Criador",
+    coverImage: {
+      src: "/blog/trello-foco.jpg",
+      alt: "Pessoa da equipe da Luzeria concentrada trabalhando no laptop",
+    },
     body: [
       {
         type: "lead",
@@ -299,6 +315,10 @@ export const BLOG_POSTS: BlogPost[] = [
     readingMinutes: 3,
     relatedFeatureHref: "/backup-automatico-drive",
     relatedFeatureLabel: "Backup Automático no Drive",
+    coverImage: {
+      src: "/blog/arquivo-organizado.jpg",
+      alt: "Pessoa da equipe da Luzeria trabalhando organizada na mesa",
+    },
     body: [
       {
         type: "lead",
@@ -336,6 +356,10 @@ export const BLOG_POSTS: BlogPost[] = [
     readingMinutes: 3,
     relatedFeatureHref: "/aprovacao-de-conteudo-por-link",
     relatedFeatureLabel: "Aprovação de Conteúdo por Link",
+    coverImage: {
+      src: "/blog/aprovacao-sorrindo.jpg",
+      alt: "Pessoa da equipe da Luzeria sorrindo enquanto trabalha na mesa",
+    },
     body: [
       {
         type: "lead",
@@ -373,6 +397,10 @@ export const BLOG_POSTS: BlogPost[] = [
     readingMinutes: 3,
     relatedFeatureHref: "/selecao-de-fotos-para-fotografos",
     relatedFeatureLabel: "Seleção de Fotos pra Fotógrafos",
+    coverImage: {
+      src: "/blog/selecao-fotos-monitor.jpg",
+      alt: "Pessoa da equipe da Luzeria olhando pra tela em uma sala com pouca luz",
+    },
     body: [
       {
         type: "lead",
@@ -414,6 +442,10 @@ export const BLOG_POSTS: BlogPost[] = [
     readingMinutes: 3,
     relatedFeatureHref: "/publicacao-automatica-instagram",
     relatedFeatureLabel: "Publicação Automática no Instagram",
+    coverImage: {
+      src: "/blog/publicacao-manual.jpg",
+      alt: "Pessoa da equipe da Luzeria concentrada trabalhando no laptop",
+    },
     body: [
       {
         type: "lead",
