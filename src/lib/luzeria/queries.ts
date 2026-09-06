@@ -62,7 +62,7 @@ import {
 import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications } from "./instagram.functions";
 import {
   getCalendarItems, getGoogleCalendarAuthUrl, disconnectGoogleCalendar,
-  getMyCalendarConnection, getTodayCalendarEvents, createCalendarEvent,
+  getMyCalendarConnection, getUpcomingCalendarEvents, createCalendarEvent,
 } from "./calendar.functions";
 import {
   getSalesPageBlocks, listSalesPageBlocksAdmin, createSalesPageBlock, updateSalesPageBlock,
@@ -471,10 +471,10 @@ export const myCalendarConnectionQO = () =>
     staleTime: 60_000,
   });
 
-export const todayCalendarEventsQO = (userId?: string) =>
+export const upcomingCalendarEventsQO = (userId?: string) =>
   queryOptions({
-    queryKey: ["today-calendar-events", userId ?? "self"],
-    queryFn: () => getTodayCalendarEvents({ data: { userId } }),
+    queryKey: ["upcoming-calendar-events", userId ?? "self"],
+    queryFn: () => getUpcomingCalendarEvents({ data: { userId } }),
     staleTime: 60_000,
   });
 

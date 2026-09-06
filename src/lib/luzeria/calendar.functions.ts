@@ -167,7 +167,9 @@ async function getValidCalendarAccessToken(supabase: any, userId: string): Promi
   }
 }
 
-export const getTodayCalendarEvents = createServerFn({ method: "GET" })
+const UPCOMING_EVENTS_LIMIT = 5;
+
+export const getUpcomingCalendarEvents = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId?: string }) =>
     z.object({ userId: z.string().uuid().optional() }).parse(d))
@@ -182,19 +184,14 @@ export const getTodayCalendarEvents = createServerFn({ method: "GET" })
     const accessToken = await getValidCalendarAccessToken(context.supabase, targetUserId);
     if (!accessToken) return { connected: false, events: [] as any[] };
 
-    // "Hoje" tem que ser o dia no horário de Brasília, não no fuso do
-    // servidor (UTC na Vercel) — sem isso, entre 21h e meia-noite (Brasília)
-    // o servidor já está no dia seguinte em UTC e a janela pega parte de
-    // ontem/amanhã em vez do dia local de verdade.
-    const todayInBrazil = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
-    const startOfDay = new Date(`${todayInBrazil}T00:00:00-03:00`);
-    const endOfDay = new Date(`${todayInBrazil}T23:59:59-03:00`);
+    // A partir de agora (não do início do dia) — já passou não é "próximo".
+    // maxResults aqui já limita direto na API do Google, então "próximos 5"
+    // não depende de nenhum corte manual depois.
     const params = new URLSearchParams({
-      timeMin: startOfDay.toISOString(),
-      timeMax: endOfDay.toISOString(),
+      timeMin: new Date().toISOString(),
       singleEvents: "true",
       orderBy: "startTime",
-      maxResults: "20",
+      maxResults: String(UPCOMING_EVENTS_LIMIT),
     });
     // eslint-disable-next-line no-console
     const res = await fetch(`${GCAL_EVENTS_URL}?${params.toString()}`, {

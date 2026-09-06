@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, todayCalendarEventsQO, clientsQO, clientPaymentsQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, hasPermission, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -194,7 +194,7 @@ export function MyTasks() {
 
       {targetId && <ActivityCountsWidget monthKey={monthKey} userId={targetId} />}
 
-      {isMeView && googleCalendarEnabled && <TodayCalendarWidget />}
+      {isMeView && googleCalendarEnabled && <UpcomingCalendarWidget />}
 
       {isMeView && todayPublications.length > 0 && (
         <div className="mb-6">
@@ -585,8 +585,25 @@ const ACTIVITY_LABELS: Record<string, string> = {
   gravacao: "vídeos gravados", roteiro: "roteiros", sistema: "sistemas", outros: "outras atividades",
 };
 
-function TodayCalendarWidget() {
-  const { data } = useQuery(todayCalendarEventsQO());
+/** "Hoje"/"Amanhã" comparando no fuso de Brasília — um evento às 23h de
+ * "amanhã" em UTC ainda pode ser "hoje" em São Paulo, e vice-versa. */
+function eventDayLabel(iso: string): string {
+  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" });
+  const eventDateStr = fmt.format(new Date(iso));
+  const now = new Date();
+  const todayStr = fmt.format(now);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = fmt.format(tomorrow);
+  if (eventDateStr === todayStr) return "Hoje";
+  if (eventDateStr === tomorrowStr) return "Amanhã";
+  return new Date(`${eventDateStr}T00:00:00-03:00`)
+    .toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })
+    .replace(".", "");
+}
+
+function UpcomingCalendarWidget() {
+  const { data } = useQuery(upcomingCalendarEventsQO());
   const [openEvent, setOpenEvent] = useState<any | null>(null);
   if (!data?.connected || !data.events?.length) return null;
   return (
@@ -595,7 +612,7 @@ function TodayCalendarWidget() {
         <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
           <CalendarClock size={11} />
         </span>
-        <h2 className="text-[11px] uppercase font-bold tracking-wider text-foreground/60">Hoje na agenda</h2>
+        <h2 className="text-[11px] uppercase font-bold tracking-wider text-foreground/60">Próximos eventos</h2>
       </div>
       <div className="divide-y divide-white/[0.05] lz-stagger">
         {data.events.map((ev: any) => (
@@ -604,8 +621,16 @@ function TodayCalendarWidget() {
             onClick={() => setOpenEvent(ev)}
             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-foreground/[0.03] transition-colors text-left"
           >
-            <span className="text-[11px] text-foreground/40 tabular-nums shrink-0">
-              {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            <span className="flex flex-col items-start gap-0.5 shrink-0 w-14">
+              <span
+                className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.14)", color: "var(--lz-accent-ink)" }}
+              >
+                {eventDayLabel(ev.start)}
+              </span>
+              <span className="text-[11px] text-foreground/40 tabular-nums">
+                {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </span>
             </span>
             <span className="min-w-0 flex-1">
               <span className="text-sm text-foreground/90 truncate block">{ev.title}</span>
