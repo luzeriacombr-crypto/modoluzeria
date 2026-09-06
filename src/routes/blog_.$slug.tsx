@@ -1,9 +1,11 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Fragment } from "react";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { BG_BLUE, BG_GRAY, BG_WHITE, LIME, Reveal, POP, EASE } from "@/components/luzeria/salesPageBlocks";
-import { BLOG_POSTS, getBlogPost, type BlogBlock } from "@/lib/luzeria/blog-posts";
+import { publishedBlogPostQO, publishedBlogPostsQO } from "@/lib/luzeria/queries";
+import type { BlogBlock } from "@/lib/luzeria/blog-posts";
 
 const SITE_URL = "https://www.modocriador.com.br";
 const WHATSAPP_HREF =
@@ -11,8 +13,8 @@ const WHATSAPP_HREF =
 
 export const Route = createFileRoute("/blog_/$slug")({
   component: BlogPostRoute,
-  loader: ({ params }) => {
-    const post = getBlogPost(params.slug);
+  loader: async ({ params, context }) => {
+    const post = await (context as any).queryClient.fetchQuery(publishedBlogPostQO(params.slug)).catch(() => null);
     if (!post) throw notFound();
     return post;
   },
@@ -126,8 +128,11 @@ function Block({ block }: { block: BlogBlock }) {
 }
 
 function BlogPostRoute() {
-  const post = Route.useLoaderData();
-  const others = BLOG_POSTS.filter((p) => p.slug !== post.slug).slice(0, 2);
+  const params = Route.useParams();
+  const { data: post } = useQuery({ ...publishedBlogPostQO(params.slug), initialData: Route.useLoaderData() });
+  const { data: allPosts } = useQuery(publishedBlogPostsQO());
+  if (!post) return null;
+  const others = (allPosts ?? []).filter((p) => p.slug !== post.slug).slice(0, 2);
 
   return (
     <div className="min-h-screen text-white" style={{ background: BG_BLUE, fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>

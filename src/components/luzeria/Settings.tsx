@@ -25,6 +25,7 @@ const AgenciesBillingPanel = lazy(() => import("./AgenciesBillingPanel").then((m
 const ClientMarginPanel = lazy(() => import("./ClientMarginPanel").then((m) => ({ default: m.ClientMarginPanel })));
 const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => ({ default: m.DemoRequestsPanel })));
 const SalesPageEditorTab = lazy(() => import("./SalesPageEditorTab").then((m) => ({ default: m.SalesPageEditorTab })));
+const BlogAdminTab = lazy(() => import("./BlogAdminTab").then((m) => ({ default: m.BlogAdminTab })));
 const JourneyStagesTab = lazy(() => import("./JourneyStagesTab").then((m) => ({ default: m.JourneyStagesTab })));
 const ClientPaymentsPanel = lazy(() => import("./ClientPaymentsPanel").then((m) => ({ default: m.ClientPaymentsPanel })));
 const ClientOperationsOverview = lazy(() => import("./ClientOperationsOverview").then((m) => ({ default: m.ClientOperationsOverview })));
@@ -37,8 +38,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "automations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "updates" | "site" | "journey" | "cliente";
-const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "updates", "site", "journey", "cliente"];
+type SettingsTab = "team" | "report" | "automations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "updates" | "site" | "blog" | "journey" | "cliente";
+const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "updates", "site", "blog", "journey", "cliente"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -92,6 +93,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
              tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? "Visão geral, jornada, margem e pagamentos de cada cliente." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
+             tab === "blog" ? "Escreva e edite os artigos do blog (modocriador.com.br/blog)." :
              "Ajustes gerais da operação."}
           </p>
         </div>
@@ -105,7 +107,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "cobranca", label: "Plano e Cobrança" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
-          ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }] : []),
+          ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }, { id: "blog", label: "Blog" }] : []),
         ].filter((t) => allowedTabs.includes(t.id as SettingsTab)).map((t) => {
           const active = tab === (t.id as any) ||
             (t.id === "team" && tab === "report") ||
@@ -177,6 +179,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        ) :
        tab === "updates" ? <UpdatesTab /> :
        tab === "site" ? (me.isPlatformAdmin ? <SalesPageEditorTab /> : null) :
+       tab === "blog" ? (me.isPlatformAdmin ? <BlogAdminTab /> : null) :
        tab === "automations" ? (
         <div className="space-y-10">
           {!(me.disabledFeatures ?? []).includes("drive") && (

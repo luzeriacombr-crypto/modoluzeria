@@ -77,6 +77,10 @@ import { getClientBlockedItems } from "./blocked-items.functions";
 import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
 import { setProfileClientAccess } from "./client-access.functions";
 import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
+import {
+  listBlogPostsAdmin, getBlogPostAdmin, createBlogPost, updateBlogPost, deleteBlogPost,
+  getPublishedBlogPosts, getPublishedBlogPost,
+} from "./blog-admin.functions";
 import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
 import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
 import { listTrash, restoreItem, purgeItem } from "./trash.functions";
@@ -94,6 +98,28 @@ export const instagramActivityQO = () =>
 
 export const hasUsedInstagramPublishQO = () =>
   queryOptions({ queryKey: ["has-used-instagram-publish"], queryFn: () => hasUsedInstagramPublish(), staleTime: 60_000 });
+
+/* ===== BLOG ===== */
+
+export const blogPostsAdminQO = () =>
+  queryOptions({ queryKey: ["blog-posts-admin"], queryFn: () => listBlogPostsAdmin() });
+
+export const blogPostAdminQO = (id: string | null) =>
+  queryOptions({
+    queryKey: ["blog-post-admin", id],
+    queryFn: () => getBlogPostAdmin({ data: { id: id! } }),
+    enabled: !!id,
+  });
+
+export const publishedBlogPostsQO = () =>
+  queryOptions({ queryKey: ["published-blog-posts"], queryFn: () => getPublishedBlogPosts(), staleTime: 60_000 });
+
+export const publishedBlogPostQO = (slug: string) =>
+  queryOptions({
+    queryKey: ["published-blog-post", slug],
+    queryFn: () => getPublishedBlogPost({ data: { slug } }),
+    staleTime: 60_000,
+  });
 export const todayPublicationsQO = (from: string, to: string, userId?: string) =>
   queryOptions({
     queryKey: ["today-publications", from, to, userId ?? null],
@@ -1411,6 +1437,22 @@ export function useApi() {
     moderateForumReply: useMutation({
       mutationFn: useServerFn(moderateForumReply),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["forum-post-detail"] }),
+    }),
+    /* ===== BLOG ===== */
+    createBlogPost: useMutation({
+      mutationFn: useServerFn(createBlogPost),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["blog-posts-admin"] }),
+    }),
+    updateBlogPost: useMutation({
+      mutationFn: useServerFn(updateBlogPost),
+      onSuccess: (_d, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["blog-posts-admin"] });
+        qc.invalidateQueries({ queryKey: ["blog-post-admin", vars?.data?.id] });
+      },
+    }),
+    deleteBlogPost: useMutation({
+      mutationFn: useServerFn(deleteBlogPost),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["blog-posts-admin"] }),
     }),
   };
 }

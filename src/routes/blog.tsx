@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { BG_BLUE, BG_GRAY, LIME, Reveal, LIFT, EASE } from "@/components/luzeria/salesPageBlocks";
-import { BLOG_POSTS } from "@/lib/luzeria/blog-posts";
+import { publishedBlogPostsQO } from "@/lib/luzeria/queries";
 
 const TITLE = "Blog do Modo Criador";
 const DESCRIPTION =
@@ -10,6 +11,13 @@ const DESCRIPTION =
 
 export const Route = createFileRoute("/blog")({
   component: BlogIndexRoute,
+  loader: async ({ context }) => {
+    try {
+      return await (context as any).queryClient.fetchQuery(publishedBlogPostsQO());
+    } catch {
+      return [];
+    }
+  },
   head: () => ({
     meta: [
       { title: TITLE },
@@ -30,6 +38,8 @@ function formatDate(iso: string) {
 }
 
 function BlogIndexRoute() {
+  const { data: posts } = useQuery({ ...publishedBlogPostsQO(), initialData: Route.useLoaderData() });
+
   return (
     <div className="min-h-screen text-white" style={{ background: BG_BLUE, fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       <header className="flex items-center justify-between px-5 sm:px-10 py-5 border-b border-white/10">
@@ -66,7 +76,7 @@ function BlogIndexRoute() {
 
       <section className="px-5 sm:px-10 max-w-[900px] mx-auto py-12 sm:py-16">
         <div className="space-y-4">
-          {BLOG_POSTS.map((post) => (
+          {(posts ?? []).map((post) => (
             <Reveal key={post.slug}>
               <Link
                 to="/blog/$slug"
