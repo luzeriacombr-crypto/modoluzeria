@@ -33,7 +33,23 @@ export default defineConfig(async ({ command, mode }) => {
     const { nitro } = await import("nitro/vite");
     // Pin functions to São Paulo — the Supabase project lives in sa-east-1,
     // so matching the region avoids a cross-continent round trip per request.
-    plugins.push(nitro({ preset: "vercel", vercel: { functions: { regions: ["gru1"] } } }));
+    plugins.push(nitro({
+      preset: "vercel",
+      vercel: {
+        // TanStack Start empacota SSR + toda rota (páginas e /api/*) numa
+        // função Vercel só (__server.func) — não tem rota isolada pro Nitro
+        // aplicar `functionRules` por caminho, então o limite precisa ir
+        // aqui, na config base, valendo pra essa função única.
+        //
+        // Publicar Reel baixa o vídeo do Drive, sobe pro storage temporário
+        // e ainda espera a Meta processar o container (até 40 tentativas de
+        // 3s = 2min só nessa espera, ver waitForContainer em
+        // instagram.functions.ts) — vídeo grande (100MB+) estourava o tempo
+        // padrão da função e matava a publicação no meio, sem nem cair no
+        // catch pra registrar o erro (por isso sumia sem deixar rastro).
+        functions: { regions: ["gru1"], maxDuration: 300 },
+      },
+    }));
   }
 
   // Opt-in bundle analysis: `ANALYZE=1 bun run build` emits
