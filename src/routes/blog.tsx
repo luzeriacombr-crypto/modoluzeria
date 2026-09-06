@@ -74,8 +74,25 @@ function BlogIndexRoute() {
       </header>
 
       <section className="relative overflow-hidden" style={{ background: BG_BLUE }}>
-        <div className="pointer-events-none absolute -top-40 -right-24 w-[560px] h-[560px] rounded-full blur-[110px] opacity-[0.18]" style={{ background: LIME }} />
-        <div className="pointer-events-none absolute -bottom-32 -left-24 w-[420px] h-[420px] rounded-full blur-[110px] opacity-[0.10]" style={{ background: LIME }} />
+        <style>{`
+          @keyframes blog-grid-drift {
+            from { background-position: 0 0; }
+            to { background-position: 64px 64px; }
+          }
+          .blog-tech-grid {
+            background-image:
+              linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 32px 32px;
+            animation: blog-grid-drift 18s linear infinite;
+          }
+        `}</style>
+        <div
+          className="blog-tech-grid pointer-events-none absolute inset-0"
+          style={{ maskImage: "radial-gradient(ellipse 70% 60% at 50% 0%, black 40%, transparent 100%)", WebkitMaskImage: "radial-gradient(ellipse 70% 60% at 50% 0%, black 40%, transparent 100%)" }}
+        />
+        <div className="pointer-events-none absolute -top-40 -right-24 w-[560px] h-[560px] rounded-full blur-[130px] opacity-[0.10]" style={{ background: "#4A6BFF" }} />
+        <div className="pointer-events-none absolute -bottom-32 -left-24 w-[420px] h-[420px] rounded-full blur-[130px] opacity-[0.08]" style={{ background: "#4A6BFF" }} />
 
         <div className="relative px-5 sm:px-10 max-w-[900px] mx-auto pt-14 sm:pt-20 pb-2">
           <h1
@@ -83,16 +100,16 @@ function BlogIndexRoute() {
             style={{ textWrap: "balance" as any }}
           >
             <span className="font-normal">Blog do </span>
-            <span className="font-black">Modo Criador</span>
+            <span className="font-black" style={{ color: LIME }}>Modo Criador</span>
           </h1>
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
+          <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-6 sm:mb-8">
             {CATEGORIES.map((cat) => {
               const active = activeCategory === cat.id;
               return (
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className="text-[11px] sm:text-xs font-bold uppercase tracking-wide px-3.5 py-2 rounded-full transition-colors"
+                  className="text-[9px] sm:text-xs font-bold uppercase tracking-wide px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full transition-colors"
                   style={active ? { background: LIME, color: BG_BLUE } : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}
                 >
                   {cat.label}
