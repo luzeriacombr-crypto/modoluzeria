@@ -9,6 +9,7 @@ import { publishedBlogPostsQO } from "@/lib/luzeria/queries";
 const TITLE = "Blog do Modo Criador";
 const DESCRIPTION =
   "As dores reais de agência que viraram funcionalidade — contadas por quem criou o Modo Criador pra própria agência antes de virar produto.";
+const OG_IMAGE = "https://grmayzeeemilvhjeninh.supabase.co/storage/v1/object/public/marketing-assets/blog-index-og-image-1788722746896794000.png";
 
 const CATEGORIES = [
   { id: "todos", label: "Todos" },
@@ -37,9 +38,11 @@ export const Route = createFileRoute("/blog")({
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: OG_IMAGE },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: TITLE },
       { name: "twitter:description", content: DESCRIPTION },
+      { name: "twitter:image", content: OG_IMAGE },
     ],
     links: [{ rel: "canonical", href: "https://www.modocriador.com.br/blog" }],
   }),
