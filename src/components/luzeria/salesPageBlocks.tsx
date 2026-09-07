@@ -1707,20 +1707,19 @@ export function HeroSection({ content, onChange, onCtaClick }: { content: any; o
               <Editable value={content.ctaLabel} onCommit={(v) => set({ ctaLabel: v })} />
             </div>
           ) : (
-            <div className="relative inline-flex rounded-full p-px mt-8 overflow-hidden">
+            <div className="relative inline-flex items-center justify-center mt-8">
               <style>{`
-                @keyframes cta-glow-spin { to { transform: rotate(360deg); } }
-                .cta-glow-ring {
-                  animation: cta-glow-spin 5s linear infinite;
-                  background: conic-gradient(from 0deg,
-                    transparent 0deg, transparent 250deg,
-                    rgba(215,255,63,0.35) 282deg,
-                    rgba(255,255,255,0.8) 310deg,
-                    rgba(215,255,63,0.35) 338deg,
-                    transparent 360deg);
+                @keyframes cta-halo-pulse {
+                  0%, 100% { transform: scale(0.88); opacity: .5; }
+                  50% { transform: scale(1.12); opacity: 1; }
+                }
+                .cta-halo {
+                  animation: cta-halo-pulse 2.8s ease-in-out infinite;
+                  background: radial-gradient(circle, rgba(215,255,63,0.35) 0%, transparent 70%);
+                  filter: blur(6px);
                 }
               `}</style>
-              <div className="cta-glow-ring absolute inset-[-60%] opacity-90" />
+              <div className="cta-halo absolute -inset-3.5 rounded-full" />
               <div
                 className={`relative z-10 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full ${POP}`}
                 style={{ background: LIME, color: "#0A0E23", ...EASE }}
