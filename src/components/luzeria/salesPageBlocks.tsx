@@ -1699,13 +1699,37 @@ export function HeroSection({ content, onChange, onCtaClick }: { content: any; o
           ) : (
             <p className="text-foreground/60 text-base sm:text-lg max-w-[560px] mt-6 leading-relaxed">{content.subtitle}</p>
           )}
-          <div
-            className={`mt-8 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full ${editable ? "" : POP}`}
-            style={{ background: LIME, color: "#0A0E23", ...EASE }}
-            onClick={editable ? undefined : onCtaClick}
-          >
-            {editable ? <Editable value={content.ctaLabel} onCommit={(v) => set({ ctaLabel: v })} /> : content.ctaLabel}
-          </div>
+          {editable ? (
+            <div
+              className="mt-8 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full"
+              style={{ background: LIME, color: "#0A0E23", ...EASE }}
+            >
+              <Editable value={content.ctaLabel} onCommit={(v) => set({ ctaLabel: v })} />
+            </div>
+          ) : (
+            <div className="relative inline-flex rounded-full p-px mt-8 overflow-hidden">
+              <style>{`
+                @keyframes cta-glow-spin { to { transform: rotate(360deg); } }
+                .cta-glow-ring {
+                  animation: cta-glow-spin 5s linear infinite;
+                  background: conic-gradient(from 0deg,
+                    transparent 0deg, transparent 250deg,
+                    rgba(215,255,63,0.35) 282deg,
+                    rgba(255,255,255,0.8) 310deg,
+                    rgba(215,255,63,0.35) 338deg,
+                    transparent 360deg);
+                }
+              `}</style>
+              <div className="cta-glow-ring absolute inset-[-60%] opacity-90" />
+              <div
+                className={`relative z-10 inline-flex items-center gap-2 font-black uppercase text-sm px-7 py-4 rounded-full ${POP}`}
+                style={{ background: LIME, color: "#0A0E23", ...EASE }}
+                onClick={onCtaClick}
+              >
+                {content.ctaLabel}
+              </div>
+            </div>
+          )}
           <div className="flex items-center gap-3 mt-3 max-w-[480px]">
             <img src={clickupTrelloLogos} alt="Logos do ClickUp e do Trello" className="h-9 w-auto shrink-0 opacity-80" />
             <p className="text-foreground/40 text-xs">
