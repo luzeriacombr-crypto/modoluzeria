@@ -624,6 +624,7 @@ export function DetailPanel() {
   const [title, setTitle] = useState("");
   const [copy, setCopy] = useState("");
   const [caption, setCaption] = useState("");
+  const [igCollaborators, setIgCollaborators] = useState("");
   const [editingCopy, setEditingCopy] = useState(false);
   const copyTextareaRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -665,6 +666,7 @@ export function DetailPanel() {
       setLocation(item.location ?? "");
       setQuantity(typeof item.activityQuantity === "number" ? String(item.activityQuantity) : "");
       setCaption(item.caption ?? "");
+      setIgCollaborators(item.igCollaborators ?? "");
       setDueDate(item.dueDate ?? "");
       const scheduled = toScheduledLocalParts(item.scheduledAt);
       setScheduledDate(scheduled.date);
@@ -1281,6 +1283,28 @@ export function DetailPanel() {
           <ModalSection label="Publicar">
             {clientInstagramConnected ? (
               <>
+                {item.type !== "story" && (
+                  <div className="mb-3">
+                    <label className="text-[11px] text-foreground/50 block mb-1">
+                      Convidar perfil pra colaborar (opcional)
+                    </label>
+                    <input
+                      value={igCollaborators}
+                      onChange={(e) => setIgCollaborators(e.target.value)}
+                      onBlur={() => {
+                        const normalized = igCollaborators.trim();
+                        if (normalized !== (item.igCollaborators ?? "")) {
+                          updateItem.mutate({ data: { id: item.id, patch: { ig_collaborators: normalized || null } } });
+                        }
+                      }}
+                      placeholder="usuario1, usuario2"
+                      className="w-full bg-card border border-transparent rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 transition-colors"
+                    />
+                    <p className="text-[10px] text-foreground/40 mt-1">
+                      Usuário do Instagram, sem @, separado por vírgula (até 3). O perfil precisa aceitar o convite pra aparecer como colaborador.
+                    </p>
+                  </div>
+                )}
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={async () => {

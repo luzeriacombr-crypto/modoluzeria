@@ -188,7 +188,7 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
 
   const { data: item } = await supabaseAdmin
     .from("content_items")
-    .select("id, type, status, caption, month_id, months(client_id, clients!months_client_id_fkey(id, org_id))")
+    .select("id, type, status, caption, ig_collaborators, month_id, months(client_id, clients!months_client_id_fkey(id, org_id))")
     .eq("id", itemId)
     .maybeSingle();
   if (!item) throw new Error("Item não encontrado.");
@@ -209,6 +209,12 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     .eq("client_id", clientId)
     .maybeSingle();
   if (!creds) throw new Error("Esse cliente ainda não conectou o Instagram. Vá na Ficha do Cliente e conecte.");
+
+  // Convite de colaborador só existe pra Post/Carrossel e Reel — a Meta não
+  // aceita esse campo em Story. O perfil convidado ainda precisa aceitar no
+  // próprio Instagram pra aparecer como colab de verdade.
+  const collaborators = item.type === "story" ? [] : ((item as any).ig_collaborators as string | null ?? "")
+    .split(",").map((s) => s.trim().replace(/^@/, "")).filter(Boolean).slice(0, 3);
 
   // Reel é sempre vídeo, Post pode ser 1 imagem OU um carrossel de várias
   // (até 10, limite da própria Meta), Story pode ser imagem OU vídeo — por
@@ -322,6 +328,7 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
           media_type: "CAROUSEL",
           children: childIds.join(","),
           caption: item.caption ?? "",
+          ...(collaborators.length > 0 ? { collaborators: JSON.stringify(collaborators) } : {}),
           access_token: creds.access_token,
         }),
       });
@@ -345,6 +352,7 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
           ...(isVideoFile ? { video_url: url } : { image_url: url }),
           ...(igMediaType ? { media_type: igMediaType } : {}),
           ...(sendsCaption ? { caption: item.caption ?? "" } : {}),
+          ...(collaborators.length > 0 ? { collaborators: JSON.stringify(collaborators) } : {}),
           access_token: creds.access_token,
         }),
       });

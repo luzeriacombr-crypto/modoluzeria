@@ -1181,7 +1181,7 @@ export const getMonth = createServerFn({ method: "GET" })
     if (!month) return null;
     const { data: items } = await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, activity_location, activity_quantity, campaign_id, campaign_internal")
+      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, ig_collaborators, activity_location, activity_quantity, campaign_id, campaign_internal")
       .eq("month_id", month.id).order("type").order("idx");
     const itemIds = (items ?? []).map((it: any) => it.id);
     const [{ data: assignees }, { data: comments }] = await Promise.all([
@@ -1228,6 +1228,7 @@ export const getMonth = createServerFn({ method: "GET" })
       dueDate: ((it as any).due_date ?? null) as any,
       scheduledAt: ((it as any).scheduled_at ?? null) as any,
       igAutoPublish: ((it as any).ig_auto_publish ?? false) as any,
+      igCollaborators: ((it as any).ig_collaborators ?? null) as any,
       startedAt: ((it as any).started_at ?? null) as any,
       finishedAt: ((it as any).finished_at ?? null) as any,
       blockedReason: ((it as any).blocked_reason ?? null) as any,
@@ -1279,6 +1280,7 @@ export const updateItem = createServerFn({ method: "POST" })
       reel_type?: string | null; post_format?: string | null; editor_id?: string | null;
       due_date?: string | null; scheduled_at?: string | null; blocked_reason?: string | null;
       activity_location?: string | null; activity_quantity?: number | null;
+      ig_collaborators?: string | null;
     };
   }) => d)
   .handler(async ({ data, context }) => {

@@ -129,6 +129,8 @@ export interface ContentItem {
   scheduledAt?: string | null;
   /** When true, the scheduled-publish cron auto-publishes this post to Instagram once scheduledAt arrives. */
   igAutoPublish?: boolean;
+  /** Comma-separated Instagram usernames (no @) invited as collaborators on this post/reel. They must accept the invite in the Instagram app for the collab tag to show. Only supported for posts and reels — not stories. */
+  igCollaborators?: string | null;
   /** Set automatically when item leaves PLANEJAMENTO for the first time. */
   startedAt?: string | null;
   /** Set automatically when item reaches PRONTO_PARA_PUBLICAR. */

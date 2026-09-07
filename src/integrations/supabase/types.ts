@@ -1443,6 +1443,7 @@ export type Database = {
           id: string
           idx: number
           ig_auto_publish: boolean
+          ig_collaborators: string | null
           ig_media_id: string | null
           ig_published_at: string | null
           ig_repeat_last_fired_date: string | null
@@ -1484,6 +1485,7 @@ export type Database = {
           id?: string
           idx: number
           ig_auto_publish?: boolean
+          ig_collaborators?: string | null
           ig_media_id?: string | null
           ig_published_at?: string | null
           ig_repeat_last_fired_date?: string | null
@@ -1525,6 +1527,7 @@ export type Database = {
           id?: string
           idx?: number
           ig_auto_publish?: boolean
+          ig_collaborators?: string | null
           ig_media_id?: string | null
           ig_published_at?: string | null
           ig_repeat_last_fired_date?: string | null
