@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus } from "lucide-react";
 import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -1284,9 +1284,14 @@ export function DetailPanel() {
             {clientInstagramConnected ? (
               <>
                 {item.type !== "story" && (
-                  <div className="mb-3">
-                    <label className="text-[11px] text-foreground/50 block mb-1">
-                      Convidar perfil pra colaborar (opcional)
+                  <div
+                    className="rounded-lg px-3.5 py-3 mb-3"
+                    style={{ background: "rgba(var(--lz-brand-rgb),0.1)", border: "1px solid rgba(var(--lz-brand-rgb),0.3)" }}
+                  >
+                    <label className="flex items-center gap-1.5 text-sm font-bold text-foreground mb-1.5">
+                      <UserPlus size={15} style={{ color: "var(--lz-accent-ink)" }} />
+                      Convidar perfil pra colaborar
+                      <span className="text-[11px] font-normal text-foreground/40">(opcional)</span>
                     </label>
                     <input
                       value={igCollaborators}
@@ -1298,9 +1303,9 @@ export function DetailPanel() {
                         }
                       }}
                       placeholder="usuario1, usuario2"
-                      className="w-full bg-card border border-transparent rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 transition-colors"
+                      className="w-full bg-card border border-foreground/10 rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 transition-colors"
                     />
-                    <p className="text-[10px] text-foreground/40 mt-1">
+                    <p className="text-[11px] text-foreground/50 mt-1.5">
                       Usuário do Instagram, sem @, separado por vírgula (até 3). O perfil precisa aceitar o convite pra aparecer como colaborador.
                     </p>
                   </div>
