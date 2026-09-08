@@ -834,6 +834,7 @@ function DirectMessagesPanel({ clientId }: { clientId: string }) {
     setActiveConversation(c);
     setMessages(null);
     setLoadingMessages(true);
+    setError(null);
     try {
       const r = await getMessages({ data: { clientId, conversationId: c.id } });
       setMessages(r);
@@ -848,6 +849,7 @@ function DirectMessagesPanel({ clientId }: { clientId: string }) {
     const text = draft.trim();
     if (!text || !activeConversation?.participantId) return;
     setSending(true);
+    setError(null);
     try {
       await sendMessage({ data: { clientId, recipientId: activeConversation.participantId, message: text } });
       setDraft("");
