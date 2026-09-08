@@ -2544,6 +2544,56 @@ export const getTopMembersByGoal = createServerFn({ method: "GET" })
     return { period: data.period, ranking, noGoal };
   });
 
+/* ============== MY EDITING STATS ============== */
+
+export type MyEditingStats = { edited: number; approved: number };
+
+/** Quantos reels a pessoa editou (fez upload de arquivo) e quantos foram
+ * aprovados (status virou FINALIZADO ou PRONTO_PARA_PUBLICAR) dentro do mês
+ * — contando pela data real da ação (upload / mudança de status), não pelo
+ * mês do calendário de conteúdo do item. Assim, um vídeo do lote de
+ * setembro que ela editou em agosto conta como produção dela em agosto,
+ * igual ao critério validado na auditoria com o Calebe. */
+export const getMyEditingStats = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId: string; monthKey: string }) =>
+    z.object({ userId: z.string().uuid(), monthKey: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
+  .handler(async ({ data, context }): Promise<MyEditingStats> => {
+    if (data.userId !== context.userId) {
+      const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+      if (!isAdmin) throw new Error("Forbidden");
+    }
+    // Limites do mês no fuso de Brasília (UTC-3, sem horário de verão).
+    const [y, m] = data.monthKey.split("-").map(Number);
+    const start = new Date(Date.UTC(y, m - 1, 1, 3, 0, 0)).toISOString();
+    const end = new Date(Date.UTC(y, m, 1, 3, 0, 0)).toISOString();
+
+    const [uploadsRes, approvedRes] = await Promise.all([
+      context.supabase
+        .from("item_files")
+        .select("content_items!inner(id)")
+        .eq("added_by", data.userId)
+        .eq("kind", "media")
+        .eq("content_items.type", "reel")
+        .eq("content_items.editor_id", data.userId)
+        .gte("created_at", start)
+        .lt("created_at", end),
+      context.supabase
+        .from("content_items")
+        .select("id")
+        .eq("editor_id", data.userId)
+        .eq("type", "reel")
+        .in("status", ["FINALIZADO", "PRONTO_PARA_PUBLICAR"])
+        .gte("last_status_change_at", start)
+        .lt("last_status_change_at", end),
+    ]);
+    if (uploadsRes.error) throw new Error(uploadsRes.error.message);
+    if (approvedRes.error) throw new Error(approvedRes.error.message);
+
+    const editedIds = new Set((uploadsRes.data ?? []).map((r: any) => r.content_items.id));
+    return { edited: editedIds.size, approved: (approvedRes.data ?? []).length };
+  });
+
 /* ============== MEMBER FINALIZATIONS ============== */
 
 export const getMemberFinalizations = createServerFn({ method: "GET" })

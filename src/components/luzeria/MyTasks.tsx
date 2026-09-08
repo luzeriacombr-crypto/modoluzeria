@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myEditingStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, hasPermission, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -193,6 +193,8 @@ export function MyTasks() {
       {targetId && !targetProfile?.hideGoalsWidget && <div data-tour="goals"><GoalsWidget monthKey={monthKey} userId={targetId} /></div>}
 
       {targetId && <ActivityCountsWidget monthKey={monthKey} userId={targetId} />}
+
+      {targetId && <EditingStatsWidget monthKey={monthKey} userId={targetId} />}
 
       {isMeView && googleCalendarEnabled && <UpcomingCalendarWidget />}
 
@@ -779,6 +781,33 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function EditingStatsWidget({ monthKey, userId }: { monthKey: string; userId: string }) {
+  const { data: stats } = useQuery(myEditingStatsQO(userId, monthKey));
+  if (!stats || (stats.edited === 0 && stats.approved === 0)) return null;
+
+  return (
+    <div className="mb-6 bg-card rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+        <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
+          <Film size={11} />
+        </span>
+        <h2 className="text-[11.5px] uppercase font-semibold tracking-wide text-foreground/60">Produção de vídeo em {formatMonth(monthKey)}</h2>
+      </div>
+      <div className="flex flex-wrap gap-2 px-4 pb-3.5">
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.12)", color: "var(--lz-accent-ink)" }}>
+          {stats.edited} vídeo{stats.edited === 1 ? "" : "s"} editado{stats.edited === 1 ? "" : "s"}
+        </span>
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.12)", color: "var(--lz-accent-ink)" }}>
+          {stats.approved} vídeo{stats.approved === 1 ? "" : "s"} aprovado{stats.approved === 1 ? "" : "s"}
+        </span>
+      </div>
+      <p className="px-4 pb-3.5 -mt-2 text-[11px] text-foreground/35">
+        Conta pela data em que você editou ou em que o vídeo foi aprovado — mesmo que ele seja de outro mês.
+      </p>
     </div>
   );
 }

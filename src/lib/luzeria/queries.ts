@@ -11,7 +11,7 @@ import {
   setItemEditor, setItemReelType, setItemPostFormat,
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   addCleaningTask, renameCleaningTask, deleteCleaningTask,
-  adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations,
+  adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations, getMyEditingStats,
   listOrgsBilling, getOrgNextInvoice,
   updateMyAccount,
   getReport, getDeliveryTrend, getMemberReportDetail, getMemberVelocity, getFileUploadsReport,
@@ -205,6 +205,13 @@ export const memberFinalizationsQO = (
   queryOptions({
     queryKey: ["member-finalizations", userId, period, monthKey],
     queryFn: () => getMemberFinalizations({ data: { userId, period, monthKey } }),
+    enabled: !!userId && !!monthKey,
+  });
+
+export const myEditingStatsQO = (userId: string, monthKey: string) =>
+  queryOptions({
+    queryKey: ["my-editing-stats", userId, monthKey],
+    queryFn: () => getMyEditingStats({ data: { userId, monthKey } }),
     enabled: !!userId && !!monthKey,
   });
 
