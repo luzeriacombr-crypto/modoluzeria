@@ -21,7 +21,7 @@ export const DEFAULT_NAV_LABELS: Record<string, string> = {
   calendario: "Calendário", biblioteca: "Biblioteca",
   instagram: "Instagram", financeiro: "Financeiro", equipe: "Equipe", ajuda: "Ajuda",
   cobranca: "Plano e Cobrança", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda",
-  rotina: "Rotina", membros: "Membros", relatorio: "Relatório", jornada: "Jornada do cliente",
+  rotina: "Rotina", membros: "Membros", relatorio: "Relatório", "auditoria-producao": "Auditoria de Produção", jornada: "Jornada do cliente",
   vendas: "Vendas", lixeira: "Lixeira", pagamentos: "Pagamentos", cliente: "Visão Geral", "cliente-overview": "Visão Geral",
   "selecao-de-fotos": "Seleção de Fotos",
 };
@@ -184,6 +184,7 @@ export function Sidebar({
             ...(rotinaEnabled ? [{ id: "rotina", label: navLabel("rotina", "Rotina"), node: <div key="rotina" data-tour="nav-rotina"><NavSubButton label={navLabel("rotina", "Rotina")} active={pathname === "/rotina"} onClick={() => navigate({ to: "/rotina" })} /></div> }] : []),
             ...(canTeam ? [{ id: "membros", label: navLabel("membros", "Membros"), node: <NavSubButton key="membros" label={navLabel("membros", "Membros")} active={configTabActive("team")} onClick={() => goToConfigTab("team")} /> }] : []),
             ...(canReport ? [{ id: "relatorio", label: navLabel("relatorio", "Relatório"), node: <NavSubButton key="relatorio" label={navLabel("relatorio", "Relatório")} active={configTabActive("report")} onClick={() => goToConfigTab("report")} /> }] : []),
+            ...(canReport ? [{ id: "auditoria-producao", label: navLabel("auditoria-producao", "Auditoria de Produção"), node: <NavSubButton key="auditoria-producao" label={navLabel("auditoria-producao", "Auditoria de Produção")} active={configTabActive("auditoria")} onClick={() => goToConfigTab("auditoria")} /> }] : []),
           ]);
 
           const mainItems: { id: string; label: string; node: React.ReactNode; meta: CollapsedMeta }[] = orderSection("main", [
@@ -285,10 +286,10 @@ export function Sidebar({
                 </NavGroup>
               </div>
             ) }] : []),
-            ...((canTeam || canReport || rotinaEnabled) ? [{ id: "equipe", label: navLabel("equipe", "Equipe"), meta: { icon: <UserCog size={17} />, label: navLabel("equipe", "Equipe"), active: configTabActive("team") || configTabActive("report") || pathname === "/rotina", kind: "flyout" as const }, node: (
+            ...((canTeam || canReport || rotinaEnabled) ? [{ id: "equipe", label: navLabel("equipe", "Equipe"), meta: { icon: <UserCog size={17} />, label: navLabel("equipe", "Equipe"), active: configTabActive("team") || configTabActive("report") || configTabActive("auditoria") || pathname === "/rotina", kind: "flyout" as const }, node: (
               <div key="equipe" data-tour="nav-equipe">
                 <NavGroup icon={<UserCog size={15} />} label={navLabel("equipe", "Equipe")}
-                  active={configTabActive("team") || configTabActive("report") || pathname === "/rotina"}>
+                  active={configTabActive("team") || configTabActive("report") || configTabActive("auditoria") || pathname === "/rotina"}>
                   {equipeItems.map((it) => it.node)}
                 </NavGroup>
               </div>

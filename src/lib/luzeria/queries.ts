@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { reportHandledError } from "./error-monitoring";
 import { getClientContract, saveClientContract, deleteClientContract } from "./client-contracts.functions";
+import { getProductionAudit } from "./production-audit.functions";
 import { listClientBrandAssets, addClientBrandAsset, deleteClientBrandAsset } from "./client-brand-assets.functions";
 import {
   addAssignee, addContentItem, createClient, deleteClient, deleteItem, deleteContentItems, duplicateMonth, setNotifyStoriesInTasks, setWhatsappGroupLink,
@@ -505,6 +506,13 @@ export const clientContractQO = (clientId: string | null) =>
     queryKey: ["client-contract", clientId],
     queryFn: () => getClientContract({ data: { clientId: clientId! } }),
     enabled: !!clientId,
+  });
+
+export const productionAuditQO = (userId: string | null, monthKey: string) =>
+  queryOptions({
+    queryKey: ["production-audit", userId, monthKey],
+    queryFn: () => getProductionAudit({ data: { userId: userId!, monthKey } }),
+    enabled: !!userId && !!monthKey,
   });
 
 export const clientBrandAssetsQO = (clientId: string | null) =>

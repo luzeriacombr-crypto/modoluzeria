@@ -29,6 +29,7 @@ const BlogAdminTab = lazy(() => import("./BlogAdminTab").then((m) => ({ default:
 const JourneyStagesTab = lazy(() => import("./JourneyStagesTab").then((m) => ({ default: m.JourneyStagesTab })));
 const ClientPaymentsPanel = lazy(() => import("./ClientPaymentsPanel").then((m) => ({ default: m.ClientPaymentsPanel })));
 const ClientOperationsOverview = lazy(() => import("./ClientOperationsOverview").then((m) => ({ default: m.ClientOperationsOverview })));
+const ProductionAuditTab = lazy(() => import("./ProductionAuditTab").then((m) => ({ default: m.ProductionAuditTab })));
 
 function TabLoadingFallback() {
   return (
@@ -38,8 +39,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "automations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "updates" | "site" | "blog" | "journey" | "cliente";
-const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "updates", "site", "blog", "journey", "cliente"];
+type SettingsTab = "team" | "report" | "auditoria" | "automations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "updates" | "site" | "blog" | "journey" | "cliente";
+const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "updates", "site", "blog", "journey", "cliente"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -53,7 +54,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
   const isAdmin = isMaster || me.role === "setor";
   const setorAllowedTabs: SettingsTab[] = [
     ...(hasSetorPermission(me, "settings_journey") ? (["journey", "cliente"] as SettingsTab[]) : []),
-    ...(hasSetorPermission(me, "team_reports") ? (["report"] as SettingsTab[]) : []),
+    ...(hasSetorPermission(me, "team_reports") ? (["report", "auditoria"] as SettingsTab[]) : []),
     ...(hasPermission(me, "view_financeiro") ? (["cobranca", "margem", "pagamentos", "cliente"] as SettingsTab[]) : []),
     ...(hasPermission(me, "manage_team") ? (["team"] as SettingsTab[]) : []),
     // Estas duas permissões apareciam no editor de cargos com rótulo e
@@ -87,7 +88,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         <div>
           <h1 className="text-[32px] font-bold text-foreground tracking-tight">Configurações</h1>
           <p className="text-sm text-foreground/50 mt-2">
-            {tab === "team" || tab === "report" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
+            {tab === "team" || tab === "report" || tab === "auditoria" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
              tab === "automations" ? "Google Drive, lembretes automáticos e rotinas que o sistema executa sozinho." :
              tab === "cobranca" || tab === "afiliados" || tab === "revenda" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
              tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? "Visão geral, jornada, margem e pagamentos de cada cliente." :
@@ -110,7 +111,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }, { id: "blog", label: "Blog" }] : []),
         ].filter((t) => allowedTabs.includes(t.id as SettingsTab)).map((t) => {
           const active = tab === (t.id as any) ||
-            (t.id === "team" && tab === "report") ||
+            (t.id === "team" && (tab === "report" || tab === "auditoria")) ||
             (t.id === "cliente" && (tab === "margem" || tab === "journey" || tab === "pagamentos")) ||
             (t.id === "cobranca" && (tab === "afiliados" || tab === "revenda"));
           return (
@@ -193,16 +194,20 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           </div>
         </div>
        ) :
-       tab === "team" || tab === "report" ? (
+       tab === "team" || tab === "report" || tab === "auditoria" ? (
         <>
-      {allowedTabs.includes("report") && (
+      {(allowedTabs.includes("report") || allowedTabs.includes("auditoria")) && (
         <div className="flex items-center gap-1 mb-6 -mt-2">
-          {[{ id: "team" as const, label: "Equipe" }, { id: "report" as const, label: "Relatório" }].map((s) => (
+          {[
+            { id: "team" as const, label: "Equipe" },
+            ...(allowedTabs.includes("report") ? [{ id: "report" as const, label: "Relatório" }] : []),
+            ...(allowedTabs.includes("auditoria") ? [{ id: "auditoria" as const, label: "Auditoria de Produção" }] : []),
+          ].map((s) => (
             <SubTabPill key={s.id} active={tab === s.id} onClick={() => setTab(s.id)} label={s.label} />
           ))}
         </div>
       )}
-      {tab === "report" ? <ReportsTab /> : (
+      {tab === "report" ? <ReportsTab /> : tab === "auditoria" ? <ProductionAuditTab /> : (
         <>
       {pending.length > 0 && (
         <>
