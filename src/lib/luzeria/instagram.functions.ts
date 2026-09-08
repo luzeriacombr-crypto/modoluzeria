@@ -18,6 +18,8 @@ const IG_SCOPES = [
   "instagram_business_basic",
   "instagram_business_content_publish",
   "instagram_business_manage_insights",
+  "instagram_business_manage_comments",
+  "instagram_business_manage_messages",
 ].join(",");
 // Fixo — precisa bater byte a byte com o redirect_uri cadastrado em Meta
 // for Developers > Modo Criador > Casos de uso > Instagram Business >
@@ -796,7 +798,16 @@ export type InstagramAccountOverview = {
     totalInteractions: number; totalInteractionsChangePct: number | null;
   };
   reachSeries: { date: string; value: number }[];
+  /** Crescimento (ou queda) de seguidores dia a dia — a Meta só libera esse
+   * histórico pros últimos 30 dias, igual reach. */
+  followersSeries: { date: string; value: number }[];
+  followersChangePct: number | null;
   postingFrequency: { day: string; count: number }[];
+  /** Média de seguidores online por hora do dia (0-23, agregado — a Meta
+   * não abre isso por dia da semana) — ajuda a decidir o melhor horário pra
+   * publicar. Vem `null` quando a Meta não libera esse dado pra essa conta
+   * (mesmo caso de demographics). */
+  onlineFollowers: { hour: number; value: number }[] | null;
   demographics: {
     gender: { label: string; value: number; pct: number }[];
     age: { label: string; value: number; pct: number }[];
@@ -844,6 +855,14 @@ export const getInstagramAccountOverview = createServerFn({ method: "GET" })
     const reachValues = reachJson.data?.[0]?.values ?? [];
     const sumOf = (values: any[]) => values.reduce((a, v) => a + (v.value ?? 0), 0);
 
+    // follower_count é uma série diária igual reach — dá pra ver
+    // crescimento/queda de seguidor dia a dia, não só o total atual.
+    const followersRes = await fetch(
+      `${IG_GRAPH_API}/${acct}/insights?metric=follower_count&period=day&since=${since30}&until=${now}&access_token=${tok}`,
+    );
+    const followersJson: any = await followersRes.json();
+    const followersValues = followersRes.ok ? (followersJson.data?.[0]?.values ?? []) : [];
+
     const otherMetrics = "profile_views,accounts_engaged,total_interactions";
     async function totalsFor(sinceTs: number, untilTs: number) {
       const res = await fetch(
@@ -868,6 +887,20 @@ export const getInstagramAccountOverview = createServerFn({ method: "GET" })
     for (const m of mediaJson.data ?? []) {
       const jsDay = new Date(m.timestamp).getDay(); // 0=Dom..6=Sáb
       dayCounts[(jsDay + 6) % 7]++; // reindexa pra 0=Seg..6=Dom
+    }
+
+    let onlineFollowers: InstagramAccountOverview["onlineFollowers"] = null;
+    try {
+      const onlineRes = await fetch(
+        `${IG_GRAPH_API}/${acct}/insights?metric=online_followers&period=lifetime&access_token=${tok}`,
+      );
+      const onlineJson: any = await onlineRes.json();
+      if (!onlineRes.ok) throw new Error(onlineJson?.error?.message ?? "sem dado de horário online");
+      const byHour: Record<string, number> = onlineJson.data?.[0]?.values?.[0]?.value ?? {};
+      onlineFollowers = Array.from({ length: 24 }, (_, h) => ({ hour: h, value: byHour[String(h)] ?? 0 }));
+    } catch {
+      // Conta sem esse dado liberado — a tela esconde a seção, igual demographics.
+      onlineFollowers = null;
     }
 
     let demographics: InstagramAccountOverview["demographics"] = null;
@@ -925,7 +958,10 @@ export const getInstagramAccountOverview = createServerFn({ method: "GET" })
         totalInteractions: totalAndChange("total_interactions").total, totalInteractionsChangePct: totalAndChange("total_interactions").changePct,
       },
       reachSeries: reachValues.map((v: any) => ({ date: v.end_time, value: v.value ?? 0 })),
+      followersSeries: followersValues.map((v: any) => ({ date: v.end_time, value: v.value ?? 0 })),
+      followersChangePct: changePct(followersValues.map((v: any) => v.value ?? 0)),
       postingFrequency: WEEKDAY_LABELS.map((day, i) => ({ day, count: dayCounts[i] })),
+      onlineFollowers,
       demographics,
     };
   });
@@ -1002,6 +1038,68 @@ export const getInstagramAccountMediaInsights = createServerFn({ method: "GET" }
     return { itemId: data.mediaId, ...result } as InstagramMediaInsights;
   });
 
+export type InstagramComment = {
+  id: string;
+  text: string;
+  username: string | null;
+  timestamp: string;
+  likeCount: number;
+  replies: { id: string; text: string; username: string | null; timestamp: string }[];
+};
+
+/** Comentários de uma publicação específica da conta — a própria API da
+ * Meta não tem um "feed de comentários de todos os posts juntos", sempre é
+ * por mídia. Por isso a tela pede pra escolher o post primeiro (reusa a
+ * lista de `getInstagramAccountMedia`). */
+export const getInstagramComments = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; mediaId: string }) =>
+    z.object({ clientId: z.string().uuid(), mediaId: z.string().min(1) }).parse(d))
+  .handler(async ({ data, context }): Promise<InstagramComment[]> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+    const fields = "id,text,username,timestamp,like_count,replies{id,text,username,timestamp}";
+    const res = await fetch(
+      `${IG_GRAPH_API}/${data.mediaId}/comments?fields=${encodeURIComponent(fields)}&access_token=${encodeURIComponent(creds.access_token)}`,
+    );
+    const json: any = await res.json();
+    if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao buscar comentários.");
+    return (json.data ?? []).map((c: any) => ({
+      id: c.id,
+      text: c.text ?? "",
+      username: c.username ?? null,
+      timestamp: c.timestamp,
+      likeCount: c.like_count ?? 0,
+      replies: (c.replies?.data ?? []).map((r: any) => ({
+        id: r.id, text: r.text ?? "", username: r.username ?? null, timestamp: r.timestamp,
+      })),
+    }));
+  });
+
+export const replyToInstagramComment = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; commentId: string; message: string }) =>
+    z.object({
+      clientId: z.string().uuid(), commentId: z.string().min(1),
+      message: z.string().trim().min(1).max(2200),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+    const res = await fetch(`${IG_GRAPH_API}/${data.commentId}/replies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ message: data.message, access_token: creds.access_token }),
+    });
+    const json: any = await res.json();
+    if (!res.ok || !json.id) throw new Error(json?.error?.message ?? "Falha ao responder o comentário.");
+    return { ok: true, id: json.id as string };
+  });
+
 export type TodayPublicationItem = {
   id: string;
   title: string;
@@ -1021,6 +1119,115 @@ export type TodayPublicationItem = {
  * publicação manual direto no Instagram não teria como o sistema saber,
  * então continua aparecendo até o item ser movido de status/data por quem
  * publicou. */
+export type InstagramConversation = {
+  id: string;
+  participantId: string | null;
+  participantUsername: string | null;
+  updatedTime: string;
+  lastMessagePreview: string | null;
+};
+
+/** Lista as conversas do Direct da conta do cliente — usa a Conversations
+ * API da Meta filtrada por `platform=instagram`, a mesma infra do
+ * Messenger. Precisa da permissão `instagram_business_manage_messages`,
+ * ainda não aprovada em produção — funciona hoje só pra conta cadastrada
+ * como testadora no Meta for Developers (ver nota em IG_SCOPES). */
+export const getInstagramConversations = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<InstagramConversation[]> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+    const fields = "participants,updated_time,messages.limit(1){message,created_time}";
+    const res = await fetch(
+      `${IG_GRAPH_API}/${creds.instagram_business_account_id}/conversations?platform=instagram&fields=${encodeURIComponent(fields)}&access_token=${encodeURIComponent(creds.access_token)}`,
+    );
+    const json: any = await res.json();
+    if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao buscar as conversas do Direct.");
+    return (json.data ?? []).map((c: any) => {
+      const others = (c.participants?.data ?? []).filter((p: any) => p.id !== creds.instagram_business_account_id);
+      return {
+        id: c.id,
+        participantId: others[0]?.id ?? null,
+        participantUsername: others[0]?.username ?? null,
+        updatedTime: c.updated_time,
+        lastMessagePreview: c.messages?.data?.[0]?.message ?? null,
+      };
+    });
+  });
+
+export type InstagramDirectMessage = {
+  id: string;
+  text: string | null;
+  fromMe: boolean;
+  senderUsername: string | null;
+  createdTime: string;
+};
+
+export const getInstagramConversationMessages = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; conversationId: string }) =>
+    z.object({ clientId: z.string().uuid(), conversationId: z.string().min(1) }).parse(d))
+  .handler(async ({ data, context }): Promise<InstagramDirectMessage[]> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+    const fields = "messages{id,message,from,created_time}";
+    const res = await fetch(
+      `${IG_GRAPH_API}/${data.conversationId}?fields=${encodeURIComponent(fields)}&access_token=${encodeURIComponent(creds.access_token)}`,
+    );
+    const json: any = await res.json();
+    if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao buscar as mensagens.");
+    const messages: any[] = json.messages?.data ?? [];
+    return messages
+      .map((m: any) => ({
+        id: m.id,
+        text: m.message ?? null,
+        fromMe: m.from?.id === creds.instagram_business_account_id,
+        senderUsername: m.from?.username ?? null,
+        createdTime: m.created_time,
+      }))
+      .reverse(); // a Meta devolve mais recente primeiro; a tela mostra em ordem cronológica
+  });
+
+/** Manda uma mensagem no Direct. A própria Meta só libera responder dentro
+ * de 24h da última mensagem recebida do seguidor (janela padrão de
+ * mensageria da plataforma) — fora disso a chamada falha mesmo com o
+ * token e a permissão certos. */
+export const sendInstagramDirectMessage = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; recipientId: string; message: string }) =>
+    z.object({
+      clientId: z.string().uuid(), recipientId: z.string().min(1),
+      message: z.string().trim().min(1).max(1000),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+    const res = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient: { id: data.recipientId },
+        message: { text: data.message },
+        access_token: creds.access_token,
+      }),
+    });
+    const json: any = await res.json();
+    if (!res.ok) {
+      throw new Error(
+        json?.error?.message ??
+          "Falha ao enviar a mensagem. O Instagram só permite responder dentro de 24h da última mensagem do seguidor, salvo algumas exceções.",
+      );
+    }
+    return { ok: true };
+  });
+
 export const getTodayPublications = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId?: string; from: string; to: string }) => d)

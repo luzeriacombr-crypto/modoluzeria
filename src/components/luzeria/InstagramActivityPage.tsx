@@ -1,16 +1,19 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import {
   Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ArrowUpDown, ExternalLink,
-  Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown,
+  Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown, MessageCircle, Send, X, Mail,
 } from "lucide-react";
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
 import {
   getInstagramAccountMedia, getInstagramAccountMediaInsights, getInstagramAccountOverview,
+  getInstagramComments, replyToInstagramComment,
+  getInstagramConversations, getInstagramConversationMessages, sendInstagramDirectMessage,
   type InstagramActivityItem, type InstagramAccountMedia, type InstagramMediaInsights, type InstagramAccountOverview,
+  type InstagramComment, type InstagramConversation, type InstagramDirectMessage,
 } from "@/lib/luzeria/instagram.functions";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { POST_FORMAT_LABEL, CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
@@ -110,6 +113,10 @@ export function InstagramActivityPage() {
         <MetricsPanel key={`table-${clientFilter}`} clientId={clientFilter} clientName={clients.find((c) => c.id === clientFilter)?.name ?? ""} />
       )}
 
+      {clientFilter && (
+        <DirectMessagesPanel key={`direct-${clientFilter}`} clientId={clientFilter} />
+      )}
+
       {scheduled.length > 0 && (
         <ActivitySection
           label="Programados"
@@ -201,6 +208,8 @@ function AccountOverviewDashboard({ clientId, clientName }: { clientId: string; 
 
   const maxReach = Math.max(...data.reachSeries.map((r) => r.value), 1);
   const maxFreq = Math.max(...data.postingFrequency.map((d) => d.count), 1);
+  const maxOnline = Math.max(...(data.onlineFollowers?.map((h) => h.value) ?? []), 1);
+  const bestHour = data.onlineFollowers ? [...data.onlineFollowers].sort((a, b) => b.value - a.value)[0] : null;
 
   return (
     <div className="mb-6">
@@ -211,13 +220,13 @@ function AccountOverviewDashboard({ clientId, clientName }: { clientId: string; 
       </div>
 
       <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
-        <KpiCard icon={<Users size={12} />} label="Seguidores" value={data.followersCount} changePct={null} />
+        <KpiCard icon={<Users size={12} />} label="Seguidores" value={data.followersCount} changePct={data.followersChangePct} />
         <KpiCard icon={<Eye size={12} />} label="Alcance (30d)" value={data.kpis.reach} changePct={data.kpis.reachChangePct} />
         <KpiCard icon={<Sparkles size={12} />} label="Visitas ao perfil" value={data.kpis.profileViews} changePct={data.kpis.profileViewsChangePct} />
         <KpiCard icon={<Heart size={12} />} label="Interações" value={data.kpis.totalInteractions} changePct={data.kpis.totalInteractionsChangePct} />
       </div>
 
-      <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "2fr 1fr" }}>
+      <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
         <div className="rounded-lg border border-foreground/8 bg-card p-4">
           <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Alcance por dia (30 dias)</span>
           <div className="h-40 mt-2 -ml-2">
@@ -236,6 +245,31 @@ function AccountOverviewDashboard({ clientId, clientName }: { clientId: string; 
                 <Bar dataKey="value" radius={[3, 3, 0, 0]}>
                   {data.reachSeries.map((r, i) => (
                     <Cell key={i} fill={r.value === maxReach ? "var(--lz-accent-ink)" : "rgba(var(--lz-brand-light-rgb),0.4)"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-foreground/8 bg-card p-4">
+          <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Seguidores por dia (30 dias)</span>
+          <div className="h-40 mt-2 -ml-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.followersSeries.map((r) => ({ ...r, label: new Date(r.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) }))}>
+                <XAxis dataKey="label" axisLine={false} tickLine={false} interval={4}
+                  tick={{ fill: "color-mix(in srgb, var(--foreground) 40%, transparent)", fontSize: 9 }} />
+                <Tooltip
+                  cursor={{ fill: "rgba(var(--lz-brand-light-rgb),0.08)" }}
+                  content={({ active, payload }: any) => active && payload?.length ? (
+                    <div className="bg-background border border-foreground/10 rounded-md px-2 py-1 text-[10px] text-foreground/80 shadow-xl">
+                      {payload[0].payload.label}: <b>{payload[0].value >= 0 ? "+" : ""}{payload[0].value.toLocaleString("pt-BR")}</b>
+                    </div>
+                  ) : null}
+                />
+                <Bar dataKey="value" radius={[3, 3, 0, 0]}>
+                  {data.followersSeries.map((r, i) => (
+                    <Cell key={i} fill={r.value >= 0 ? "#7ED957" : "#FF6B6B"} />
                   ))}
                 </Bar>
               </BarChart>
@@ -268,6 +302,40 @@ function AccountOverviewDashboard({ clientId, clientName }: { clientId: string; 
           </div>
         </div>
       </div>
+
+      {data.onlineFollowers && (
+        <div className="rounded-lg border border-foreground/8 bg-card p-4 mb-4">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Seguidores online por horário</span>
+            {bestHour && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ color: "var(--lz-accent-ink)", backgroundColor: "rgba(var(--lz-brand-rgb),0.12)" }}>
+                Melhor horário: {String(bestHour.hour).padStart(2, "0")}h
+              </span>
+            )}
+          </div>
+          <div className="h-32 mt-2 -ml-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.onlineFollowers.map((h) => ({ ...h, label: `${String(h.hour).padStart(2, "0")}h` }))}>
+                <XAxis dataKey="label" axisLine={false} tickLine={false} interval={2}
+                  tick={{ fill: "color-mix(in srgb, var(--foreground) 40%, transparent)", fontSize: 9 }} />
+                <Tooltip
+                  cursor={{ fill: "rgba(var(--lz-brand-light-rgb),0.08)" }}
+                  content={({ active, payload }: any) => active && payload?.length ? (
+                    <div className="bg-background border border-foreground/10 rounded-md px-2 py-1 text-[10px] text-foreground/80 shadow-xl">
+                      {payload[0].payload.label}: <b>{payload[0].value.toLocaleString("pt-BR")}</b> online
+                    </div>
+                  ) : null}
+                />
+                <Bar dataKey="value" radius={[3, 3, 0, 0]}>
+                  {data.onlineFollowers.map((h, i) => (
+                    <Cell key={i} fill={h.value === maxOnline && maxOnline > 0 ? "var(--lz-accent-ink)" : "rgba(var(--lz-brand-light-rgb),0.4)"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {data.demographics && (
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
@@ -323,6 +391,7 @@ function MetricsPanel({ clientId, clientName }: { clientId: string; clientName: 
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [results, setResults] = useState<Map<string, InstagramMediaInsights & { error?: string }> | null>(null);
   const [sortKey, setSortKey] = useState<keyof InstagramMediaInsights>("reach");
+  const [commentsMedia, setCommentsMedia] = useState<InstagramAccountMedia | null>(null);
 
   async function loadMedia() {
     setLoadingMedia(true);
@@ -443,6 +512,7 @@ function MetricsPanel({ clientId, clientName }: { clientId: string; clientName: 
                     </button>
                   </th>
                 ))}
+                <th className="py-1.5 pr-3 font-semibold" />
               </tr>
             </thead>
             <tbody>
@@ -481,11 +551,278 @@ function MetricsPanel({ clientId, clientName }: { clientId: string; clientName: 
                         ))
                       )
                     )}
+                    <td className="py-1.5 pr-1 text-right">
+                      <button
+                        onClick={() => setCommentsMedia(m)}
+                        title="Ver e responder comentários"
+                        className="p-1.5 rounded-md text-foreground/40 hover:text-foreground hover:bg-foreground/5"
+                      >
+                        <MessageCircle size={13} />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {commentsMedia && (
+        <CommentsModal clientId={clientId} media={commentsMedia} onClose={() => setCommentsMedia(null)} />
+      )}
+    </div>
+  );
+}
+
+function CommentsModal({ clientId, media, onClose }: { clientId: string; media: InstagramAccountMedia; onClose: () => void }) {
+  const getComments = useServerFn(getInstagramComments);
+  const doReply = useServerFn(replyToInstagramComment);
+  const [comments, setComments] = useState<InstagramComment[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await getComments({ data: { clientId, mediaId: media.id } });
+      setComments(r);
+    } catch (e: any) {
+      setError(e?.message ?? "Falha ao buscar comentários.");
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => { load(); }, []);
+
+  async function sendReply(commentId: string) {
+    const message = (replyDrafts[commentId] ?? "").trim();
+    if (!message) return;
+    setSendingId(commentId);
+    try {
+      await doReply({ data: { clientId, commentId, message } });
+      setReplyDrafts((d) => ({ ...d, [commentId]: "" }));
+      await load();
+    } catch (e: any) {
+      setError(e?.message ?? "Falha ao responder o comentário.");
+    } finally {
+      setSendingId(null);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div
+        className="bg-card border border-foreground/10 rounded-xl w-full max-w-lg max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 p-4 border-b border-foreground/8">
+          <div className="min-w-0">
+            <div className="text-sm font-bold text-foreground flex items-center gap-1.5"><MessageCircle size={14} /> Comentários</div>
+            <div className="text-[11px] text-foreground/40 truncate">{media.caption || "(sem legenda)"}</div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md text-foreground/40 hover:text-foreground hover:bg-foreground/5 shrink-0">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {loading && <div className="text-center py-8"><Loader2 size={16} className="animate-spin mx-auto text-foreground/30" /></div>}
+          {error && <p className="text-xs text-red-400/80">{error}</p>}
+          {!loading && comments && comments.length === 0 && <p className="text-xs text-foreground/40">Nenhum comentário ainda.</p>}
+          {!loading && comments?.map((c) => (
+            <div key={c.id} className="text-xs">
+              <div className="flex items-baseline gap-1.5 mb-0.5">
+                <span className="font-bold text-foreground">@{c.username ?? "desconhecido"}</span>
+                <span className="text-foreground/35 text-[10px]">{new Date(c.timestamp).toLocaleString("pt-BR")}</span>
+              </div>
+              <p className="text-foreground/80 mb-1.5">{c.text}</p>
+              {c.replies.length > 0 && (
+                <div className="ml-4 border-l border-foreground/8 pl-3 space-y-1.5 mb-1.5">
+                  {c.replies.map((r) => (
+                    <div key={r.id}>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-bold text-foreground/80">@{r.username ?? "você"}</span>
+                        <span className="text-foreground/35 text-[10px]">{new Date(r.timestamp).toLocaleString("pt-BR")}</span>
+                      </div>
+                      <p className="text-foreground/70">{r.text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <input
+                  value={replyDrafts[c.id] ?? ""}
+                  onChange={(e) => setReplyDrafts((d) => ({ ...d, [c.id]: e.target.value }))}
+                  onKeyDown={(e) => { if (e.key === "Enter") sendReply(c.id); }}
+                  placeholder="Responder…"
+                  className="flex-1 bg-background border border-foreground/10 rounded-md px-2 py-1.5 text-xs outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                />
+                <button
+                  onClick={() => sendReply(c.id)}
+                  disabled={sendingId === c.id || !(replyDrafts[c.id] ?? "").trim()}
+                  className="p-1.5 rounded-md text-foreground/50 hover:text-foreground disabled:opacity-30"
+                >
+                  {sendingId === c.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DirectMessagesPanel({ clientId }: { clientId: string }) {
+  const getConversations = useServerFn(getInstagramConversations);
+  const getMessages = useServerFn(getInstagramConversationMessages);
+  const sendMessage = useServerFn(sendInstagramDirectMessage);
+
+  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<InstagramConversation[] | null>(null);
+  const [activeConversation, setActiveConversation] = useState<InstagramConversation | null>(null);
+  const [messages, setMessages] = useState<InstagramDirectMessage[] | null>(null);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+
+  async function loadConversations() {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await getConversations({ data: { clientId } });
+      setConversations(r);
+    } catch (e: any) {
+      setError(e?.message ?? "Falha ao buscar as conversas do Direct.");
+    } finally {
+      setLoading(false);
+      setLoaded(true);
+    }
+  }
+
+  async function openConversation(c: InstagramConversation) {
+    setActiveConversation(c);
+    setMessages(null);
+    setLoadingMessages(true);
+    try {
+      const r = await getMessages({ data: { clientId, conversationId: c.id } });
+      setMessages(r);
+    } catch (e: any) {
+      setError(e?.message ?? "Falha ao buscar as mensagens.");
+    } finally {
+      setLoadingMessages(false);
+    }
+  }
+
+  async function send() {
+    const text = draft.trim();
+    if (!text || !activeConversation?.participantId) return;
+    setSending(true);
+    try {
+      await sendMessage({ data: { clientId, recipientId: activeConversation.participantId, message: text } });
+      setDraft("");
+      await openConversation(activeConversation);
+    } catch (e: any) {
+      setError(e?.message ?? "Falha ao enviar a mensagem.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="mb-8 rounded-lg border border-foreground/8 bg-card p-4">
+      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+        <div className="flex items-center gap-1.5 text-foreground/60">
+          <Mail size={14} />
+          <span className="text-[11px] uppercase font-bold tracking-wider">Direct</span>
+          <span className="text-[10px] text-foreground/35 normal-case font-normal">— veja e responda as mensagens da conta</span>
+        </div>
+        {!loaded && (
+          <button
+            onClick={loadConversations} disabled={loading}
+            className="lz-btn-primary text-xs px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {loading ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
+            {loading ? "Buscando…" : "Carregar Direct"}
+          </button>
+        )}
+      </div>
+
+      {error && <p className="text-xs text-red-400/80 mb-2">{error}</p>}
+
+      {loaded && conversations && conversations.length === 0 && (
+        <p className="text-xs text-foreground/40">Nenhuma conversa encontrada nessa conta.</p>
+      )}
+
+      {loaded && conversations && conversations.length > 0 && (
+        <div className="grid gap-3" style={{ gridTemplateColumns: "220px 1fr" }}>
+          <div className="border border-foreground/8 rounded-lg overflow-hidden max-h-[360px] overflow-y-auto">
+            {conversations.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => openConversation(c)}
+                className="w-full text-left px-3 py-2.5 border-b border-foreground/5 last:border-0 hover:bg-foreground/5 transition-colors"
+                style={activeConversation?.id === c.id ? { backgroundColor: "rgba(var(--lz-brand-rgb),0.1)" } : undefined}
+              >
+                <div className="text-xs font-bold text-foreground truncate">@{c.participantUsername ?? "desconhecido"}</div>
+                {c.lastMessagePreview && (
+                  <div className="text-[10px] text-foreground/40 truncate mt-0.5">{c.lastMessagePreview}</div>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="border border-foreground/8 rounded-lg flex flex-col max-h-[360px]">
+            {!activeConversation && (
+              <div className="flex-1 flex items-center justify-center text-xs text-foreground/30 p-6 text-center">
+                Escolha uma conversa pra ver as mensagens.
+              </div>
+            )}
+            {activeConversation && (
+              <>
+                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                  {loadingMessages && <div className="text-center py-6"><Loader2 size={15} className="animate-spin mx-auto text-foreground/30" /></div>}
+                  {!loadingMessages && messages?.map((m) => (
+                    <div key={m.id} className={`flex ${m.fromMe ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className="max-w-[75%] rounded-lg px-2.5 py-1.5 text-xs"
+                        style={m.fromMe
+                          ? { backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }
+                          : { backgroundColor: "color-mix(in srgb, var(--foreground) 8%, transparent)" }}
+                      >
+                        {m.text ?? "(mídia ou mensagem não suportada)"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-1.5 p-2.5 border-t border-foreground/8">
+                  <input
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+                    placeholder="Escreva uma mensagem…"
+                    className="flex-1 bg-background border border-foreground/10 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                  />
+                  <button
+                    onClick={send}
+                    disabled={sending || !draft.trim()}
+                    className="p-1.5 rounded-md text-foreground/50 hover:text-foreground disabled:opacity-30"
+                  >
+                    {sending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                  </button>
+                </div>
+                <p className="text-[9px] text-foreground/30 px-2.5 pb-2">
+                  O Instagram só permite responder dentro de 24h da última mensagem recebida.
+                </p>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
