@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, TrendingDown, Info, X } from "lucide-react";
 import { orgCostSettingsQO, clientMarginsQO, clientMarginBreakdownQO, useApi } from "@/lib/luzeria/queries";
@@ -8,6 +8,12 @@ import { InfoTip } from "./InfoTip";
 
 const EFFORT_TYPES: ContentType[] = ["post", "reel", "story", "gravacao", "outros"];
 const DAYS_OPTIONS = [30, 90, 180] as const;
+const SORT_OPTIONS = [
+  { id: "margin", label: "Pior margem" },
+  { id: "name", label: "Nome" },
+  { id: "contract", label: "Valor do contrato" },
+] as const;
+type SortBy = (typeof SORT_OPTIONS)[number]["id"];
 
 const money = (v: number | null) =>
   v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -84,6 +90,18 @@ export function ClientMarginPanel() {
   const { data, isLoading } = useQuery(clientMarginsQO(days));
   const { openFicha } = useUI();
   const [breakdownFor, setBreakdownFor] = useState<{ clientId: string; clientName: string } | null>(null);
+  const [sortBy, setSortBy] = useState<SortBy>("margin");
+
+  // O server já devolve ordenado por margem (pior primeiro) — os outros
+  // modos só reordenam no cliente, sem re-buscar nada.
+  const sortedRows = useMemo(() => {
+    if (!data) return [];
+    if (sortBy === "margin") return data.rows;
+    const rows = [...data.rows];
+    if (sortBy === "name") rows.sort((a, b) => a.clientName.localeCompare(b.clientName, "pt-BR"));
+    else rows.sort((a, b) => (b.contractValue ?? -1) - (a.contractValue ?? -1));
+    return rows;
+  }, [data, sortBy]);
 
   return (
     <div className="space-y-4">
@@ -99,14 +117,28 @@ export function ClientMarginPanel() {
         Custo é uma estimativa (itens finalizados × horas médias × custo-hora de quem finalizou, ou o padrão acima quando a pessoa não tem remuneração cadastrada) — não é apontamento real de horas nem contabilidade oficial.
       </div>
 
-      <div className="flex items-center gap-1.5">
-        {DAYS_OPTIONS.map((d) => (
-          <button key={d} onClick={() => setDays(d)}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-colors ${days === d ? "text-[#0D0D0D]" : "text-foreground/60 hover:text-foreground bg-foreground/[0.05]"}`}
-            style={days === d ? { backgroundColor: "rgb(var(--lz-brand-rgb))" } : undefined}>
-            {d} dias
-          </button>
-        ))}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-1.5">
+          {DAYS_OPTIONS.map((d) => (
+            <button key={d} onClick={() => setDays(d)}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-colors ${days === d ? "text-[#0D0D0D]" : "text-foreground/60 hover:text-foreground bg-foreground/[0.05]"}`}
+              style={days === d ? { backgroundColor: "rgb(var(--lz-brand-rgb))" } : undefined}>
+              {d} dias
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-foreground/40">
+          Ordenar por
+          <div className="flex items-center gap-1 bg-foreground/[0.05] rounded-md p-1">
+            {SORT_OPTIONS.map((opt) => (
+              <button key={opt.id} onClick={() => setSortBy(opt.id)}
+                className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${sortBy === opt.id ? "text-[#0D0D0D]" : "text-foreground/60 hover:text-foreground"}`}
+                style={sortBy === opt.id ? { backgroundColor: "rgb(var(--lz-brand-rgb))" } : undefined}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {isLoading ? (
@@ -159,7 +191,7 @@ export function ClientMarginPanel() {
               </tr>
             </thead>
             <tbody>
-              {data.rows.map((r) => (
+              {sortedRows.map((r) => (
                 <tr key={r.clientId} className="border-b border-foreground/4 last:border-0">
                   <td className="px-4 py-3 text-sm text-foreground">
                     <button onClick={() => openFicha(r.clientId)} className="flex items-center gap-2 hover:underline">

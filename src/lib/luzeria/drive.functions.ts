@@ -1240,6 +1240,42 @@ export const reorganizeAllDriveFiles = createServerFn({ method: "POST" })
     return { ok: true, moved, skipped, errors: errors.slice(0, 20) };
   }));
 
+/** Cria (ou linka, se já existir uma pasta com o nome exato do cliente)
+ * a pasta de entregas de TODOS os clientes da org de uma vez, dentro da
+ * pasta raiz configurada. Pensado pra quem tá começando do zero — quem já
+ * tem uma organização própria no Drive simplesmente não usa isso e
+ * continua linkando manualmente cliente por cliente (Ficha do Cliente). */
+export const bulkCreateClientFolders = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => withDriveOrg(context.orgId, async () => {
+    await assertMaster(context.supabase, context.userId);
+    const { data: clients } = await context.supabase
+      .from("clients")
+      .select("id, name")
+      .eq("archived", false)
+      .neq("category", "Ex-clientes");
+    if (!clients?.length) return { ok: true, created: 0, alreadyLinked: 0, errors: [] as string[] };
+
+    const rootId = await readRootFolderId(context.supabase);
+    let created = 0, alreadyLinked = 0;
+    const errors: string[] = [];
+
+    for (const client of clients as any[]) {
+      try {
+        const existing = await loadClientFolderMap(context.supabase, client.id);
+        if (existing?.drive_folder_id) { alreadyLinked++; continue; }
+        const tree = await ensureDeliveriesFolder(
+          context.supabase, client.id, client.name, rootId, context.userId,
+          { autoCreate: true },
+        );
+        if (tree) created++; else errors.push(`${client.name}: não foi possível resolver a pasta`);
+      } catch (e) {
+        errors.push(`${client.name}: ${(e as any)?.message ?? "erro"}`);
+      }
+    }
+    return { ok: true, created, alreadyLinked, errors: errors.slice(0, 20) };
+  }));
+
 /* ============== PER-CLIENT DELIVERIES FOLDER (Perfil do Cliente) ============== */
 
 async function assertAdmin(supabase: any, userId: string) {

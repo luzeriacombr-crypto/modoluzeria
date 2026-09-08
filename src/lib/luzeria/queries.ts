@@ -2,6 +2,8 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/r
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { reportHandledError } from "./error-monitoring";
+import { getClientContract, saveClientContract, deleteClientContract } from "./client-contracts.functions";
+import { listClientBrandAssets, addClientBrandAsset, deleteClientBrandAsset } from "./client-brand-assets.functions";
 import {
   addAssignee, addContentItem, createClient, deleteClient, deleteItem, deleteContentItems, duplicateMonth, setNotifyStoriesInTasks, setWhatsappGroupLink,
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
@@ -444,6 +446,11 @@ export const itemFilesQO = (itemId: string | null, kind: "media" | "briefing" = 
     queryKey: ["item-files", itemId, kind],
     queryFn: () => listItemFiles({ data: { itemId: itemId!, kind } }),
     enabled: !!itemId,
+    // O padrão global (staleTime de 2min) suprime o refetch-on-focus do
+    // React Query na prática — aqui a gente quer que voltar pra aba já
+    // puxe o que mudou (upload feito em outra aba/sessão), sem mudar o
+    // comportamento padrão do resto do app.
+    staleTime: 0,
   });
 
 export const driveThumbnailQO = (fileId: string | null | undefined, enabled = true, size?: number) =>
@@ -491,6 +498,20 @@ export const clientDeliveriesFolderQO = (clientId: string | null) =>
     queryFn: () => getClientDeliveriesFolder({ data: { clientId: clientId! } }),
     enabled: !!clientId,
     staleTime: 30_000,
+  });
+
+export const clientContractQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["client-contract", clientId],
+    queryFn: () => getClientContract({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
+  });
+
+export const clientBrandAssetsQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["client-brand-assets", clientId],
+    queryFn: () => listClientBrandAssets({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
   });
 
 export const notificationPrefsQO = () =>
@@ -948,6 +969,26 @@ export function useApi() {
       mutationFn: useServerFn(deleteClientLink),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover link."),
+    }),
+    saveClientContract: useMutation({
+      mutationFn: useServerFn(saveClientContract),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-contract"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar contrato."),
+    }),
+    deleteClientContract: useMutation({
+      mutationFn: useServerFn(deleteClientContract),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-contract"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover contrato."),
+    }),
+    addClientBrandAsset: useMutation({
+      mutationFn: useServerFn(addClientBrandAsset),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-brand-assets"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao adicionar arquivo."),
+    }),
+    deleteClientBrandAsset: useMutation({
+      mutationFn: useServerFn(deleteClientBrandAsset),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-brand-assets"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover arquivo."),
     }),
     upsertClientContact: useMutation({
       mutationFn: useServerFn(upsertClientContact),

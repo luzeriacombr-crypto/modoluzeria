@@ -5,11 +5,11 @@ import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
   Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save, Camera, Instagram,
-  MessageCircle, Milestone, Users,
+  MessageCircle, Milestone, Users, Upload, Paperclip, Download,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, journeyStagesQO } from "@/lib/luzeria/queries";
+import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, journeyStagesQO } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL, hasSetorPermission } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
@@ -176,6 +176,16 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         {/* Deliveries folder (Drive) */}
         <Section label="Pasta de entregas (Drive)">
           <DeliveriesFolderBlock clientId={client.id} isAdmin={isAdmin} />
+        </Section>
+
+        {/* Contract */}
+        <Section label="Contrato">
+          <ContractBlock clientId={client.id} isAdmin={isAdmin} />
+        </Section>
+
+        {/* Brand assets */}
+        <Section label="Arquivos da marca">
+          <BrandAssetsBlock clientId={client.id} isAdmin={isAdmin} />
         </Section>
 
         {/* Links */}
@@ -835,6 +845,166 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
       )}
       {!isAdmin && !data?.folderId && (
         <p className="text-[10px] text-foreground/40">Nenhuma pasta configurada. Peça a um administrador.</p>
+      )}
+    </div>
+  );
+}
+
+function ContractBlock({ clientId, isAdmin }: { clientId: string; isAdmin: boolean }) {
+  const { data: contract, isLoading } = useQuery(clientContractQO(clientId));
+  const api = useApi();
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function pick(file: File) {
+    if (file.size > 20 * 1024 * 1024) { toast.error("Arquivo maior que 20MB."); return; }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "pdf";
+      const path = `${clientId}/contrato-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("client-contracts").upload(path, file, {
+        upsert: true, contentType: file.type || undefined,
+      });
+      if (error) throw error;
+      await api.saveClientContract.mutateAsync({
+        data: { clientId, storagePath: path, fileName: file.name, mimeType: file.type || null },
+      });
+      toast.success("Contrato salvo.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao enviar contrato");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function remove() {
+    if (!(await requestConfirm("Remover o contrato deste cliente?", { danger: true }))) return;
+    api.deleteClientContract.mutate({ data: { clientId } });
+  }
+
+  if (isLoading) return <Loader2 size={14} className="animate-spin text-foreground/40" />;
+
+  return (
+    <div className="space-y-2">
+      {contract ? (
+        <div className="flex items-center gap-2 bg-card border border-foreground/6 rounded-md px-3 py-2">
+          <FileText size={14} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-semibold text-foreground truncate">{contract.fileName}</div>
+            <div className="text-[11px] text-foreground/40">
+              Enviado em {new Date(contract.createdAt).toLocaleDateString("pt-BR")}
+            </div>
+          </div>
+          {contract.signedUrl && (
+            <a href={contract.signedUrl} target="_blank" rel="noopener noreferrer"
+              className="p-1 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5" title="Ver/baixar">
+              <Download size={13} />
+            </a>
+          )}
+          {isAdmin && (
+            <button onClick={remove} className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5" title="Remover">
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-foreground/40">Nenhum contrato anexado.</p>
+      )}
+      {isAdmin && (
+        <>
+          <input ref={inputRef} type="file" accept="application/pdf,image/*" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = ""; }} />
+          <button
+            type="button" disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 disabled:opacity-50 transition"
+          >
+            {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+            {contract ? "Substituir contrato" : "Anexar contrato"}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function BrandAssetsBlock({ clientId, isAdmin }: { clientId: string; isAdmin: boolean }) {
+  const { data: assets = [], isLoading } = useQuery(clientBrandAssetsQO(clientId));
+  const api = useApi();
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function pick(files: FileList) {
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > 20 * 1024 * 1024) { toast.error(`"${file.name}" maior que 20MB, pulei.`); continue; }
+        const ext = file.name.split(".").pop() || "bin";
+        const path = `${clientId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error } = await supabase.storage.from("client-brand-assets").upload(path, file, {
+          contentType: file.type || undefined,
+        });
+        if (error) throw error;
+        await api.addClientBrandAsset.mutateAsync({
+          data: { clientId, storagePath: path, label: file.name, mimeType: file.type || null },
+        });
+      }
+      toast.success("Arquivo(s) adicionado(s).");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao enviar arquivo");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function remove(id: string, label: string | null) {
+    if (!(await requestConfirm(`Remover "${label ?? "arquivo"}"?`, { danger: true }))) return;
+    api.deleteClientBrandAsset.mutate({ data: { id } });
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] text-foreground/50 leading-relaxed">
+        Arquivos fixos que a equipe sempre usa desse cliente (logo, marca d'água…) — diferente da Biblioteca de Referências, que é pra inspiração.
+      </p>
+      {isLoading ? (
+        <Loader2 size={14} className="animate-spin text-foreground/40" />
+      ) : assets.length === 0 ? (
+        <p className="text-xs text-foreground/40">Nenhum arquivo cadastrado.</p>
+      ) : (
+        <div className="space-y-2">
+          {assets.map((a) => (
+            <div key={a.id} className="flex items-center gap-2 bg-card border border-foreground/6 rounded-md px-3 py-2">
+              <Paperclip size={14} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />
+              <div className="min-w-0 flex-1 text-xs font-semibold text-foreground truncate">{a.label ?? "Arquivo"}</div>
+              {a.signedUrl && (
+                <a href={a.signedUrl} target="_blank" rel="noopener noreferrer"
+                  className="p-1 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5" title="Ver/baixar">
+                  <Download size={13} />
+                </a>
+              )}
+              {isAdmin && (
+                <button onClick={() => remove(a.id, a.label)} className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5" title="Remover">
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {isAdmin && (
+        <>
+          <input ref={inputRef} type="file" multiple className="hidden"
+            onChange={(e) => { if (e.target.files?.length) pick(e.target.files); e.target.value = ""; }} />
+          <button
+            type="button" disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 disabled:opacity-50 transition"
+          >
+            {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+            Adicionar arquivo
+          </button>
+        </>
       )}
     </div>
   );

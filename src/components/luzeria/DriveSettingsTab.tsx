@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { FolderTree, Loader2, RefreshCw, Save, HardDrive, ExternalLink, Video } from "lucide-react";
+import { FolderTree, Loader2, RefreshCw, Save, HardDrive, ExternalLink, Video, FolderPlus } from "lucide-react";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import {
   getDriveConfig,
   setDriveRootFolder,
   reorganizeAllDriveFiles,
+  bulkCreateClientFolders,
   getDriveConnectionStatus,
   getDriveConnectUrl,
 } from "@/lib/luzeria/drive.functions";
@@ -16,6 +17,7 @@ export function DriveSettingsTab() {
   const getCfg = useServerFn(getDriveConfig);
   const setRoot = useServerFn(setDriveRootFolder);
   const reorganize = useServerFn(reorganizeAllDriveFiles);
+  const bulkCreate = useServerFn(bulkCreateClientFolders);
   const getConnStatus = useServerFn(getDriveConnectionStatus);
   const getConnectUrl = useServerFn(getDriveConnectUrl);
 
@@ -46,6 +48,9 @@ export function DriveSettingsTab() {
   const [running, setRunning] = useState(false);
   const [report, setReport] =
     useState<{ moved: number; skipped: number; errors: string[] } | null>(null);
+  const [bulkCreating, setBulkCreating] = useState(false);
+  const [bulkReport, setBulkReport] =
+    useState<{ created: number; alreadyLinked: number; errors: string[] } | null>(null);
 
   const current = cfg.data?.rootFolderId ?? "";
 
@@ -62,6 +67,21 @@ export function DriveSettingsTab() {
       toast.error(e?.message ?? "Falha ao salvar pasta raiz");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function runBulkCreate() {
+    if (!(await requestConfirm("Criar (ou linkar, se já existir uma pasta com o nome exato) a pasta de entregas de TODOS os clientes dentro da pasta raiz? Quem já tem uma organização própria no Drive não precisa fazer isso — pode linkar cada cliente manualmente na Ficha do Cliente."))) return;
+    setBulkCreating(true);
+    setBulkReport(null);
+    try {
+      const r: any = await bulkCreate();
+      setBulkReport({ created: r.created, alreadyLinked: r.alreadyLinked, errors: r.errors ?? [] });
+      toast.success(`${r.created} pasta(s) criada(s).`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao criar as pastas");
+    } finally {
+      setBulkCreating(false);
     }
   }
 
@@ -149,6 +169,43 @@ export function DriveSettingsTab() {
             Salvar
           </button>
         </div>
+      </section>
+
+      <section className="bg-card rounded-lg p-6 border border-foreground/6">
+        <div className="flex items-center gap-2 text-foreground/60 text-[11px] uppercase tracking-wider font-bold mb-3">
+          <FolderPlus size={12} /> Criar pastas de todos os clientes
+        </div>
+        <p className="text-xs text-foreground/50 mb-4 leading-relaxed">
+          Cria automaticamente a pasta de entregas de cada cliente dentro da pasta raiz — se já existir
+          uma pasta com o nome exato do cliente, ela é linkada em vez de criar outra. Só use isso se
+          está começando do zero; se você já tem uma organização própria no Drive, prefira linkar cada
+          cliente manualmente na Ficha do Cliente pra não duplicar pastas.
+        </p>
+        <button
+          onClick={runBulkCreate}
+          disabled={bulkCreating}
+          className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 disabled:opacity-50"
+        >
+          {bulkCreating ? <Loader2 size={14} className="animate-spin" /> : <FolderPlus size={14} />}
+          Criar pastas de todos os clientes
+        </button>
+
+        {bulkReport && (
+          <div className="mt-5 text-xs text-foreground/70 space-y-1">
+            <div>Criadas: <span className="text-[var(--lz-accent-ink)] font-semibold">{bulkReport.created}</span></div>
+            <div>Já estavam linkadas: <span className="text-foreground/50">{bulkReport.alreadyLinked}</span></div>
+            {bulkReport.errors.length > 0 && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-red-400">
+                  {bulkReport.errors.length} erro(s)
+                </summary>
+                <ul className="mt-2 space-y-1 text-[11px] font-mono text-foreground/50">
+                  {bulkReport.errors.map((e, i) => <li key={i}>{e}</li>)}
+                </ul>
+              </details>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="bg-card rounded-lg p-6 border border-foreground/6">
