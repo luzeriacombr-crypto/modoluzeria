@@ -979,10 +979,11 @@ export const updateMyAccount = createServerFn({ method: "POST" })
 export const listClients = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
-    // cnpj_cpf/address/legal_responsible_name são colunas novas — cast até
-    // os tipos do Supabase serem regenerados depois da migração rodar.
+    // cnpj_cpf/address/legal_responsible_name/legal_responsible_cpf são
+    // colunas novas — cast até os tipos do Supabase serem regenerados
+    // depois da migração rodar.
     const { data, error } = await (context.supabase as any).from("clients")
-      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, hidden_tabs, cnpj_cpf, address, legal_responsible_name")
+      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, hidden_tabs, cnpj_cpf, address, legal_responsible_name, legal_responsible_cpf")
       .order("name");
     if (error) throw new Error(error.message);
     const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
@@ -1005,6 +1006,7 @@ export const listClients = createServerFn({ method: "GET" })
       cnpjCpf: c.cnpj_cpf ?? null,
       address: c.address ?? null,
       legalResponsibleName: c.legal_responsible_name ?? null,
+      legalResponsibleCpf: c.legal_responsible_cpf ?? null,
       createdAt: c.created_at,
       description: c.description ?? null,
       photoPath: c.photo_url ?? null,

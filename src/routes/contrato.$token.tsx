@@ -33,6 +33,32 @@ function formatDateTime(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 }
 
+/** Markdown bem simples do modelo de contrato — `**negrito**` e
+ * `### Título de cláusula` — renderizado formatado em vez de mostrar os
+ * asteriscos/cerquilhas literais pro cliente que vai assinar. */
+function ContractText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split("\n").map((raw, i) => {
+        const trimmed = raw.trim();
+        if (trimmed === "") return <div key={i} className="h-2.5" />;
+        const heading = trimmed.match(/^#{1,6}\s+(.*)$/);
+        const content = heading ? heading[1] : trimmed;
+        const parts = content.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+        return (
+          <p key={i} className={heading ? "font-bold text-white mt-3 mb-1" : "mb-1"}>
+            {parts.map((p, j) =>
+              p.startsWith("**") && p.endsWith("**")
+                ? <strong key={j} className="font-bold text-white">{p.slice(2, -2)}</strong>
+                : <span key={j}>{p}</span>,
+            )}
+          </p>
+        );
+      })}
+    </>
+  );
+}
+
 function PublicContractPage() {
   const { token } = Route.useParams();
   const q = useQuery(publicContractRequestQO(token));
@@ -103,10 +129,10 @@ function PublicContractPage() {
         ) : (
           <>
             <div
-              className="rounded-xl p-5 sm:p-6 mb-8 text-white/80 text-sm leading-relaxed whitespace-pre-wrap"
+              className="rounded-xl p-5 sm:p-6 mb-8 text-white/80 text-sm leading-relaxed"
               style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.08)" }}
             >
-              {contractText}
+              <ContractText text={contractText} />
             </div>
 
             <div className="rounded-xl p-5 sm:p-6" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.08)" }}>

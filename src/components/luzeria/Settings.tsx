@@ -417,15 +417,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const DEFAULT_CONTRACT_TEMPLATE =
-`CONTRATO DE PRESTAÇÃO DE SERVIÇOS
+`**CONTRATO DE PRESTAÇÃO DE SERVIÇOS**
 
-CONTRATANTE: {cliente}, inscrito(a) sob o CNPJ/CPF {cnpj_cpf}, com endereço em {endereco}, neste ato representado(a) por {responsavel}.
+**CONTRATANTE:** {cliente}, inscrito(a) sob o CNPJ/CPF {cnpj_cpf}, com endereço em {endereco}, neste ato representado(a) por **{responsavel}**, CPF {responsavel_cpf}.
 
-CONTRATADA: {agencia}.
+**CONTRATADA:** {agencia}.
 
-OBJETO: Prestação de serviços de gestão de redes sociais e produção de conteúdo, conforme escopo acordado entre as partes.
+### CLÁUSULA PRIMEIRA — DO OBJETO
+Prestação de serviços de gestão de redes sociais e produção de conteúdo, conforme escopo acordado entre as partes.
 
-VALOR: {valor}, com vencimento mensal no dia {vencimento}.
+### CLÁUSULA SEGUNDA — DO VALOR E FORMA DE PAGAMENTO
+O valor deste contrato é de **{valor}**, com vencimento mensal no dia **{vencimento}**.
 
 Este contrato é válido a partir da assinatura eletrônica abaixo, feita pelo(a) responsável indicado(a) acima.`;
 
@@ -444,10 +446,14 @@ function ContractTemplateForm({ template, isMaster }: { template: string | null;
         <code className="text-foreground/60">{"{cnpj_cpf}"}</code>,{" "}
         <code className="text-foreground/60">{"{endereco}"}</code>,{" "}
         <code className="text-foreground/60">{"{responsavel}"}</code>,{" "}
+        <code className="text-foreground/60">{"{responsavel_cpf}"}</code>,{" "}
         <code className="text-foreground/60">{"{agencia}"}</code>,{" "}
         <code className="text-foreground/60">{"{valor}"}</code> e{" "}
         <code className="text-foreground/60">{"{vencimento}"}</code> onde quiser — cada campo é trocado
-        pelos dados do cliente na hora de gerar.
+        pelos dados do cliente na hora de gerar. Os dados fixos da sua agência (CNPJ, endereço, quem assina
+        por vocês) você pode digitar direto no texto — não muda de cliente pra cliente. Também dá pra usar{" "}
+        <code className="text-foreground/60">**negrito**</code> e{" "}
+        <code className="text-foreground/60">### Título da cláusula</code> pra formatar.
       </p>
       <textarea value={value} onChange={(e) => setValue(e.target.value)} rows={12} className={inp + " resize-none font-mono text-xs"} />
       <div className="flex items-center justify-end gap-2 mt-2">

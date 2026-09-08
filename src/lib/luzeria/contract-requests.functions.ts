@@ -143,5 +143,39 @@ export const signContractRequest = createServerFn({ method: "POST" })
       _signature_data_url: data.signatureDataUrl,
     });
     if (error || !ok) throw new Error("Não foi possível assinar — o link pode ter expirado ou já foi usado.");
+
+    // Gera o PDF final e sobe pro Drive do cliente — melhor esforço: se o
+    // Drive não tiver conectado/configurado pra essa agência, a assinatura
+    // já foi salva acima (texto + nome + CPF + desenho), então não faz
+    // sentido falhar a assinatura por causa disso. "Ver contrato assinado"
+    // na Ficha do Cliente continua funcionando de qualquer jeito.
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const db = supabaseAdmin as any;
+      const { data: req } = await db
+        .from("client_contract_requests")
+        .select("org_id, client_id, contract_text, created_by, clients(name), orgs(name)")
+        .eq("token", data.token)
+        .maybeSingle();
+      if (req?.client_id) {
+        const { renderContractPdf } = await import("./contract-pdf.server");
+        const { saveSignedContractPdf } = await import("./drive.functions");
+        const clientName = req.clients?.name ?? "Cliente";
+        const orgName = req.orgs?.name ?? "";
+        const pdfBytes = await renderContractPdf({
+          contractText: req.contract_text,
+          clientName,
+          orgName,
+          signerName: data.signerName,
+          signerCpf: data.signerCpf,
+          signatureDataUrl: data.signatureDataUrl,
+          signedAt: new Date().toISOString(),
+        });
+        await saveSignedContractPdf(db, req.org_id, req.client_id, clientName, req.created_by ?? null, pdfBytes);
+      }
+    } catch (e) {
+      console.warn("[contract-requests] PDF do contrato assinado não gerado/salvo no Drive:", (e as any)?.message);
+    }
+
     return { ok: true };
   });

@@ -225,6 +225,7 @@ export interface Client {
   cnpjCpf?: string | null;
   address?: string | null;
   legalResponsibleName?: string | null;
+  legalResponsibleCpf?: string | null;
 }
 
 export type Role = "master" | "setor" | "member";

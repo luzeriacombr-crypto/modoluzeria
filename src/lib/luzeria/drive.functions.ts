@@ -1567,6 +1567,83 @@ export const finalizeClientContractUpload = createServerFn({ method: "POST" })
     return { ok: true };
   }));
 
+/** Sobe o PDF do contrato assinado (gerado no servidor a partir do texto +
+ * assinatura, não vem do navegador) pra pasta "Contrato - <Cliente>" e
+ * substitui o contrato ativo em `client_contracts` — mesma tabela que a
+ * seção "Contrato" já usa, então o PDF assinado aparece lá sozinho,
+ * mesmo padrão upsert de finalizeClientContractUpload. Chamado a partir
+ * de signContractRequest (rota pública, sem sessão de admin), por isso
+ * recebe `supabase` explicitamente (supabaseAdmin) em vez de tirar de um
+ * context de createServerFn — e roda dentro do seu próprio withDriveOrg. */
+export async function saveSignedContractPdf(
+  supabase: any,
+  orgId: string,
+  clientId: string,
+  clientName: string,
+  createdBy: string | null,
+  pdfBytes: Uint8Array,
+): Promise<void> {
+  return withDriveOrg(orgId, async () => {
+    const folderId = await ensureNamedClientFolder(supabase, clientId, `Contrato - ${clientName}`);
+    const fileName = `Contrato assinado - ${clientName}.pdf`;
+
+    const boundary = `lz_${Math.random().toString(36).slice(2)}`;
+    const metadata = { name: fileName, mimeType: "application/pdf", parents: [folderId] };
+    const bin = Buffer.from(pdfBytes);
+    const parts = [
+      `--${boundary}\r\n`,
+      `Content-Type: application/json; charset=UTF-8\r\n\r\n`,
+      JSON.stringify(metadata) + "\r\n",
+      `--${boundary}\r\n`,
+      `Content-Type: application/pdf\r\n\r\n`,
+    ];
+    const head = Buffer.from(parts.join(""), "utf8");
+    const tail = Buffer.from(`\r\n--${boundary}--`, "utf8");
+    const body = Buffer.concat([head, bin, tail]);
+
+    const res = await fetch(
+      `${UPLOAD_BASE}/files?uploadType=multipart&supportsAllDrives=true&fields=${encodeURIComponent(DRIVE_FIELDS)}`,
+      {
+        method: "POST",
+        headers: {
+          ...await driveHeaders(),
+          "Content-Type": `multipart/related; boundary=${boundary}`,
+          "Content-Length": String(body.length),
+        },
+        body,
+      },
+    );
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Upload do PDF assinado falhou (${res.status}): ${txt.slice(0, 240)}`);
+    }
+    const meta: any = await res.json();
+
+    const { data: existing } = await supabase
+      .from("client_contracts").select("drive_file_id").eq("client_id", clientId).maybeSingle();
+    const { error } = await supabase.from("client_contracts").upsert({
+      client_id: clientId,
+      org_id: orgId,
+      drive_file_id: meta.id,
+      file_name: fileName,
+      mime_type: "application/pdf",
+      web_view_url: meta.webViewLink ?? `https://drive.google.com/file/d/${meta.id}/view`,
+      size_bytes: bin.byteLength,
+      uploaded_by: createdBy,
+    }, { onConflict: "client_id" });
+    if (error) throw new Error(error.message);
+    if (existing?.drive_file_id && existing.drive_file_id !== meta.id) {
+      try {
+        await fetch(`${DRIVE_BASE}/files/${existing.drive_file_id}?supportsAllDrives=true`, {
+          method: "DELETE", headers: await driveHeaders(),
+        });
+      } catch (e) {
+        console.warn("[drive] old contract delete skipped:", (e as any)?.message);
+      }
+    }
+  });
+}
+
 export const deleteClientContract = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))

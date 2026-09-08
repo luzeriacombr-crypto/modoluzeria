@@ -371,6 +371,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
   const [cnpjCpf, setCnpjCpf] = useState<string>(client.cnpjCpf ?? "");
   const [address, setAddress] = useState<string>(client.address ?? "");
   const [legalResponsibleName, setLegalResponsibleName] = useState<string>(client.legalResponsibleName ?? "");
+  const [legalResponsibleCpf, setLegalResponsibleCpf] = useState<string>(client.legalResponsibleCpf ?? "");
   const [contractValue, setContractValue] = useState<string | number>(client.contractValue ?? "");
   const [paymentDueDay, setPaymentDueDay] = useState<string | number>(client.paymentDueDay ?? "");
   const [photoPreview, setPhotoPreview] = useState<string | null>(client.photoUrl ?? null);
@@ -391,6 +392,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     setCnpjCpf(client.cnpjCpf ?? "");
     setAddress(client.address ?? "");
     setLegalResponsibleName(client.legalResponsibleName ?? "");
+    setLegalResponsibleCpf(client.legalResponsibleCpf ?? "");
   }, [client.id]);
 
   function pickPhotoFile(file: File) {
@@ -432,6 +434,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       cnpj_cpf: cnpjCpf.trim() || null,
       address: address.trim() || null,
       legal_responsible_name: legalResponsibleName.trim() || null,
+      legal_responsible_cpf: legalResponsibleCpf.trim() || null,
       ...(isMaster ? {
         contract_value: contractValue === "" ? null : Number(contractValue),
         payment_due_day: paymentDueDay === "" ? null : Number(paymentDueDay),
@@ -515,6 +518,9 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       </ConfigField>
       <ConfigField label="Responsável legal (pro contrato)">
         <input value={legalResponsibleName} disabled={!canEdit} onChange={(e) => setLegalResponsibleName(e.target.value)} className={inp} />
+      </ConfigField>
+      <ConfigField label="CPF do responsável">
+        <input value={legalResponsibleCpf} disabled={!canEdit} onChange={(e) => setLegalResponsibleCpf(e.target.value)} placeholder="Pra preencher o contrato" className={inp} />
       </ConfigField>
       <div className="sm:col-span-2">
         <ConfigField label="Endereço">
@@ -953,15 +959,17 @@ function waLink(text: string): string {
 }
 
 const DEFAULT_CONTRACT_TEMPLATE_FALLBACK =
-`CONTRATO DE PRESTAÇÃO DE SERVIÇOS
+`**CONTRATO DE PRESTAÇÃO DE SERVIÇOS**
 
-CONTRATANTE: {cliente}, inscrito(a) sob o CNPJ/CPF {cnpj_cpf}, com endereço em {endereco}, neste ato representado(a) por {responsavel}.
+**CONTRATANTE:** {cliente}, inscrito(a) sob o CNPJ/CPF {cnpj_cpf}, com endereço em {endereco}, neste ato representado(a) por **{responsavel}**, CPF {responsavel_cpf}.
 
-CONTRATADA: {agencia}.
+**CONTRATADA:** {agencia}.
 
-OBJETO: Prestação de serviços de gestão de redes sociais e produção de conteúdo, conforme escopo acordado entre as partes.
+### CLÁUSULA PRIMEIRA — DO OBJETO
+Prestação de serviços de gestão de redes sociais e produção de conteúdo, conforme escopo acordado entre as partes.
 
-VALOR: {valor}, com vencimento mensal no dia {vencimento}.
+### CLÁUSULA SEGUNDA — DO VALOR E FORMA DE PAGAMENTO
+O valor deste contrato é de **{valor}**, com vencimento mensal no dia **{vencimento}**.
 
 Este contrato é válido a partir da assinatura eletrônica abaixo, feita pelo(a) responsável indicado(a) acima.`;
 
@@ -972,6 +980,7 @@ function buildContractText(client: any, template: string | null, orgName: string
     .replaceAll("{cnpj_cpf}", client.cnpjCpf ?? "não informado")
     .replaceAll("{endereco}", client.address ?? "não informado")
     .replaceAll("{responsavel}", client.legalResponsibleName ?? client.name ?? "")
+    .replaceAll("{responsavel_cpf}", client.legalResponsibleCpf ?? "não informado")
     .replaceAll("{agencia}", orgName ?? "")
     .replaceAll("{valor}", client.contractValue != null ? money(client.contractValue) : "a combinar")
     .replaceAll("{vencimento}", client.paymentDueDay ? `dia ${client.paymentDueDay}` : "a combinar");
@@ -1107,12 +1116,38 @@ function GenerateContractBlock({ client }: { client: any }) {
           Gerar novo contrato
         </button>
       </div>
-      {viewingSigned && <SignedContractModal request={current} onClose={() => setViewingSigned(false)} />}
+      {viewingSigned && <SignedContractModal request={current} clientId={client.id} onClose={() => setViewingSigned(false)} />}
     </div>
   );
 }
 
-function SignedContractModal({ request, onClose }: { request: any; onClose: () => void }) {
+/** Mesmo markdown bem simples do modelo (`**negrito**`/`### título`),
+ * formatado em vez de mostrar os asteriscos/cerquilhas literais. */
+function ContractTextView({ text }: { text: string }) {
+  return (
+    <>
+      {text.split("\n").map((raw, i) => {
+        const trimmed = raw.trim();
+        if (trimmed === "") return <div key={i} className="h-2" />;
+        const heading = trimmed.match(/^#{1,6}\s+(.*)$/);
+        const content = heading ? heading[1] : trimmed;
+        const parts = content.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+        return (
+          <p key={i} className={heading ? "font-bold text-foreground mt-2 mb-1" : "mb-1"}>
+            {parts.map((p, j) =>
+              p.startsWith("**") && p.endsWith("**")
+                ? <strong key={j} className="font-bold text-foreground">{p.slice(2, -2)}</strong>
+                : <span key={j}>{p}</span>,
+            )}
+          </p>
+        );
+      })}
+    </>
+  );
+}
+
+function SignedContractModal({ request, clientId, onClose }: { request: any; clientId: string; onClose: () => void }) {
+  const { data: pdf } = useQuery(clientContractQO(clientId));
   return (
     <div className="fixed inset-0 z-[80] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
       <div
@@ -1123,8 +1158,14 @@ function SignedContractModal({ request, onClose }: { request: any; onClose: () =
           <h3 className="text-sm font-bold text-foreground">Contrato assinado</h3>
           <button onClick={onClose} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5"><X size={16} /></button>
         </div>
-        <div className="text-xs text-foreground/70 whitespace-pre-wrap leading-relaxed bg-card border border-foreground/6 rounded-md p-3 mb-4">
-          {request.contractText}
+        {pdf?.webViewUrl && (
+          <a href={pdf.webViewUrl} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mb-4 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition">
+            <Download size={12} /> Baixar PDF assinado
+          </a>
+        )}
+        <div className="text-xs text-foreground/70 leading-relaxed bg-card border border-foreground/6 rounded-md p-3 mb-4">
+          <ContractTextView text={request.contractText} />
         </div>
         <div className="grid grid-cols-2 gap-3 mb-4 text-xs">
           <div>
