@@ -189,19 +189,38 @@ function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) => void
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ratio = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * ratio;
-    canvas.height = rect.height * ratio;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.scale(ratio, ratio);
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, rect.width, rect.height);
-    ctx.strokeStyle = "#0D0D0D";
-    ctx.lineWidth = 2.2;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
+    let initialized = false;
+
+    // Medir com getBoundingClientRect direto no mount corre risco de pegar
+    // o layout ainda não estabilizado (larguras de 1-2px logo após o
+    // hydrate) — o canvas ficava com esse tamanho errado pra sempre e nada
+    // desenhava nele. ResizeObserver garante que só inicializamos quando
+    // o tamanho de verdade já está disponível, e só uma vez (senão um
+    // resize no meio do desenho apagaria a assinatura).
+    const setup = () => {
+      if (initialized) return;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width < 10 || rect.height < 10) return;
+      initialized = true;
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = rect.width * ratio;
+      canvas.height = rect.height * ratio;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.scale(ratio, ratio);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      ctx.strokeStyle = "#0D0D0D";
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ro.disconnect();
+    };
+
+    const ro = new ResizeObserver(setup);
+    ro.observe(canvas);
+    setup();
+    return () => ro.disconnect();
   }, []);
 
   function pos(e: React.PointerEvent<HTMLCanvasElement>) {
