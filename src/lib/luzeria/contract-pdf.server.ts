@@ -12,7 +12,20 @@ export type ContractPdfInput = {
   signerCpf: string;
   signatureDataUrl: string;
   signedAt: string;
+  /** Logo da agência pra fundo branco (PNG ou JPEG) — vai no topo da
+   * primeira página, como um papel timbrado. Opcional. */
+  logoBytes?: Uint8Array | null;
+  /** Cor da marca da agência, pra linha de destaque do cabeçalho e o
+   * título do bloco de assinatura. Opcional — cai num cinza neutro. */
+  brandColorHex?: string | null;
 };
+
+function hexToRgb01(hex: string | null | undefined): [number, number, number] | null {
+  const m = (hex ?? "").replace("#", "").match(/^([0-9a-fA-F]{6})$/);
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
 
 const PAGE_W = 595.28; // A4
 const PAGE_H = 841.89;
@@ -51,9 +64,29 @@ export async function renderContractPdf(input: ContractPdfInput): Promise<Uint8A
   const doc = await PDFDocument.create();
   const fontRegular = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const brandRgb = hexToRgb01(input.brandColorHex) ?? [0.55, 0.55, 0.55];
+
+  let logoImg: Awaited<ReturnType<typeof doc.embedPng>> | null = null;
+  if (input.logoBytes && input.logoBytes.length > 0) {
+    try { logoImg = await doc.embedPng(input.logoBytes); }
+    catch { try { logoImg = await doc.embedJpg(input.logoBytes); } catch { logoImg = null; } }
+  }
 
   let page = doc.addPage([PAGE_W, PAGE_H]);
   let y = PAGE_H - MARGIN;
+
+  // Papel timbrado só na primeira página: logo (se tiver) + linha na cor
+  // da marca separando do corpo do contrato.
+  const HEADER_LOGO_MAX_W = 170;
+  const HEADER_LOGO_MAX_H = 42;
+  if (logoImg) {
+    const scale = Math.min(HEADER_LOGO_MAX_W / logoImg.width, HEADER_LOGO_MAX_H / logoImg.height, 1);
+    const w = logoImg.width * scale, h = logoImg.height * scale;
+    page.drawImage(logoImg, { x: MARGIN, y: y - h, width: w, height: h });
+    y -= h + 16;
+  }
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: MARGIN + CONTENT_W, y }, thickness: 1.5, color: rgb(...brandRgb) });
+  y -= 24;
 
   const newPage = () => { page = doc.addPage([PAGE_W, PAGE_H]); y = PAGE_H - MARGIN; };
   const ensureSpace = (h: number) => { if (y - h < MARGIN) newPage(); };
@@ -125,7 +158,7 @@ export async function renderContractPdf(input: ContractPdfInput): Promise<Uint8A
   y -= 14;
   page.drawLine({ start: { x: MARGIN, y }, end: { x: MARGIN + CONTENT_W, y }, thickness: 0.75, color: rgb(0.75, 0.75, 0.75) });
   y -= 22;
-  layoutLine("Assinatura eletrônica", { size: SIZE + 1, forceBold: true });
+  layoutLine("Assinatura eletrônica", { size: SIZE + 1, forceBold: true, color: brandRgb });
   y -= 4;
   layoutLine(`Assinado por: ${input.signerName}`);
   layoutLine(`CPF: ${input.signerCpf}`);
@@ -151,6 +184,15 @@ export async function renderContractPdf(input: ContractPdfInput): Promise<Uint8A
     `em nome de ${input.orgName}, referente ao cliente ${input.clientName}.`,
     { size: SIZE - 2, color: [0.45, 0.45, 0.45] },
   );
+
+  // Rodapé com numeração — só depois de fechado o layout, já sabendo
+  // quantas páginas o contrato ocupou no total.
+  const pages = doc.getPages();
+  pages.forEach((p, i) => {
+    const label = `${input.orgName} · Página ${i + 1} de ${pages.length}`;
+    const w = fontRegular.widthOfTextAtSize(label, 8);
+    p.drawText(label, { x: (PAGE_W - w) / 2, y: 28, size: 8, font: fontRegular, color: rgb(0.6, 0.6, 0.6) });
+  });
 
   return doc.save();
 }

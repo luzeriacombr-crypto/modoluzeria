@@ -154,7 +154,7 @@ export const signContractRequest = createServerFn({ method: "POST" })
       const db = supabaseAdmin as any;
       const { data: req } = await db
         .from("client_contract_requests")
-        .select("org_id, client_id, contract_text, created_by, clients(name), orgs(name)")
+        .select("org_id, client_id, contract_text, created_by, clients(name), orgs(name, logo_path_light, logo_path, color_primary)")
         .eq("token", data.token)
         .maybeSingle();
       if (req?.client_id) {
@@ -162,6 +162,20 @@ export const signContractRequest = createServerFn({ method: "POST" })
         const { saveSignedContractPdf } = await import("./drive.functions");
         const clientName = req.clients?.name ?? "Cliente";
         const orgName = req.orgs?.name ?? "";
+        const brandColorHex = req.orgs?.color_primary ?? null;
+
+        // Logo pra fundo branco (papel timbrado do PDF) — prefere a
+        // variante clara (logo_path_light); cai pra logo_path normal se a
+        // agência não tiver cadastrado uma versão clara.
+        let logoBytes: Uint8Array | null = null;
+        const logoPath = req.orgs?.logo_path_light ?? req.orgs?.logo_path ?? null;
+        if (logoPath) {
+          try {
+            const { data: logoFile } = await db.storage.from("avatars").download(logoPath);
+            if (logoFile) logoBytes = new Uint8Array(await logoFile.arrayBuffer());
+          } catch { /* segue sem logo se não conseguir baixar */ }
+        }
+
         const pdfBytes = await renderContractPdf({
           contractText: req.contract_text,
           clientName,
@@ -170,6 +184,8 @@ export const signContractRequest = createServerFn({ method: "POST" })
           signerCpf: data.signerCpf,
           signatureDataUrl: data.signatureDataUrl,
           signedAt: new Date().toISOString(),
+          logoBytes,
+          brandColorHex,
         });
         await saveSignedContractPdf(db, req.org_id, req.client_id, clientName, req.created_by ?? null, pdfBytes);
       }

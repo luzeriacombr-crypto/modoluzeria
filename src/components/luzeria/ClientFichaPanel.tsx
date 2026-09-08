@@ -966,14 +966,16 @@ const DEFAULT_CONTRACT_TEMPLATE_FALLBACK =
 **CONTRATADA:** {agencia}.
 
 ### CLÁUSULA PRIMEIRA — DO OBJETO
-Prestação de serviços de gestão de redes sociais e produção de conteúdo, conforme escopo acordado entre as partes.
+Prestação de serviços de gestão de redes sociais e produção de conteúdo, sendo **{qtd_posts}** posts e **{qtd_reels}** vídeos/reels por mês, conforme escopo acordado entre as partes.
 
 ### CLÁUSULA SEGUNDA — DO VALOR E FORMA DE PAGAMENTO
-O valor deste contrato é de **{valor}**, com vencimento mensal no dia **{vencimento}**.
+O valor deste contrato é de **{valor}** mensais, com vigência de **{duracao_meses}** a contar de **{inicio_contrato}**, e vencimento mensal no dia **{vencimento}**.
 
 Este contrato é válido a partir da assinatura eletrônica abaixo, feita pelo(a) responsável indicado(a) acima.`;
 
-function buildContractText(client: any, template: string | null, orgName: string) {
+type ContractExtraFields = { qtdPosts: string; qtdReels: string; inicioContrato: string; duracaoMeses: string };
+
+function buildContractText(client: any, template: string | null, orgName: string, extra?: ContractExtraFields) {
   const t = template ?? DEFAULT_CONTRACT_TEMPLATE_FALLBACK;
   return t
     .replaceAll("{cliente}", client.name ?? "")
@@ -983,7 +985,11 @@ function buildContractText(client: any, template: string | null, orgName: string
     .replaceAll("{responsavel_cpf}", client.legalResponsibleCpf ?? "não informado")
     .replaceAll("{agencia}", orgName ?? "")
     .replaceAll("{valor}", client.contractValue != null ? money(client.contractValue) : "a combinar")
-    .replaceAll("{vencimento}", client.paymentDueDay ? `dia ${client.paymentDueDay}` : "a combinar");
+    .replaceAll("{vencimento}", client.paymentDueDay ? String(client.paymentDueDay) : "a combinar")
+    .replaceAll("{qtd_posts}", extra?.qtdPosts?.trim() || "a combinar")
+    .replaceAll("{qtd_reels}", extra?.qtdReels?.trim() || "a combinar")
+    .replaceAll("{inicio_contrato}", extra?.inicioContrato?.trim() || "a combinar")
+    .replaceAll("{duracao_meses}", extra?.duracaoMeses?.trim() || "a combinar");
 }
 
 function GenerateContractBlock({ client }: { client: any }) {
@@ -994,11 +1000,20 @@ function GenerateContractBlock({ client }: { client: any }) {
   const [draftText, setDraftText] = useState("");
   const [viewingSigned, setViewingSigned] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [qtdPosts, setQtdPosts] = useState("");
+  const [qtdReels, setQtdReels] = useState("");
+  const [inicioContrato, setInicioContrato] = useState(() => new Date().toISOString().slice(0, 10));
+  const [duracaoMeses, setDuracaoMeses] = useState("12 meses");
 
   const current = requests.find((r) => r.status === "aguardando") ?? requests.find((r) => r.status === "assinado") ?? null;
 
   function startDraft() {
-    setDraftText(buildContractText(client, me?.contractTemplate ?? null, me?.orgName ?? ""));
+    const inicioFmt = inicioContrato
+      ? new Date(inicioContrato + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })
+      : "";
+    setDraftText(buildContractText(client, me?.contractTemplate ?? null, me?.orgName ?? "", {
+      qtdPosts, qtdReels, inicioContrato: inicioFmt, duracaoMeses,
+    }));
     setDrafting(true);
   }
 
@@ -1056,9 +1071,31 @@ function GenerateContractBlock({ client }: { client: any }) {
   }
 
   if (!current) {
+    const miniInp = "w-full bg-card border border-foreground/8 rounded-md px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]";
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         <p className="text-xs text-foreground/40">Nenhum contrato gerado ainda.</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] text-foreground/40 block mb-1">Posts/mês</label>
+            <input value={qtdPosts} onChange={(e) => setQtdPosts(e.target.value)} placeholder="Ex: 3" className={miniInp} />
+          </div>
+          <div>
+            <label className="text-[10px] text-foreground/40 block mb-1">Reels-vídeos/mês</label>
+            <input value={qtdReels} onChange={(e) => setQtdReels(e.target.value)} placeholder="Ex: 3" className={miniInp} />
+          </div>
+          <div>
+            <label className="text-[10px] text-foreground/40 block mb-1">Início do contrato</label>
+            <input type="date" value={inicioContrato} onChange={(e) => setInicioContrato(e.target.value)} className={miniInp} />
+          </div>
+          <div>
+            <label className="text-[10px] text-foreground/40 block mb-1">Duração</label>
+            <input value={duracaoMeses} onChange={(e) => setDuracaoMeses(e.target.value)} placeholder="Ex: 12 meses" className={miniInp} />
+          </div>
+        </div>
+        <p className="text-[10px] text-foreground/35 -mt-1">
+          Valor e dia de pagamento vêm da Configuração do cliente, acima. Esses 4 campos aqui só valem pra esse contrato.
+        </p>
         <button
           onClick={startDraft}
           className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition"
