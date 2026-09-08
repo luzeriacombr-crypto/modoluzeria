@@ -2,10 +2,13 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/r
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { reportHandledError } from "./error-monitoring";
-import { getClientContract, saveClientContract, deleteClientContract } from "./client-contracts.functions";
+import { getClientContract } from "./client-contracts.functions";
 import { getProductionAudit } from "./production-audit.functions";
 import { listClientBrandAssets } from "./client-brand-assets.functions";
-import { startClientAssetUploadSession, finalizeClientAssetUpload, deleteClientBrandAsset } from "./drive.functions";
+import {
+  startClientAssetUploadSession, finalizeClientAssetUpload, deleteClientBrandAsset,
+  startClientContractUploadSession, finalizeClientContractUpload, deleteClientContract,
+} from "./drive.functions";
 import {
   addAssignee, addContentItem, createClient, deleteClient, deleteItem, deleteContentItems, duplicateMonth, setNotifyStoriesInTasks, setWhatsappGroupLink,
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
@@ -979,8 +982,11 @@ export function useApi() {
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover link."),
     }),
-    saveClientContract: useMutation({
-      mutationFn: useServerFn(saveClientContract),
+    startClientContractUploadSession: useMutation({
+      mutationFn: useServerFn(startClientContractUploadSession),
+    }),
+    finalizeClientContractUpload: useMutation({
+      mutationFn: useServerFn(finalizeClientContractUpload),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-contract"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar contrato."),
     }),

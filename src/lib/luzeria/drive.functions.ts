@@ -1358,16 +1358,16 @@ export const clearClientDeliveriesFolder = createServerFn({ method: "POST" })
 
 /* ============== ARQUIVOS DA MARCA (Perfil do Cliente) ============== */
 
-/** Acha (ou cria) a pasta "Arquivo da Marca - <Cliente>" dentro da pasta
- * de entregas já configurada — mesmo nível das pastas de mês, mesmo
- * padrão de nome de "Entregas - <Cliente>". Exige que a pasta de
- * entregas já esteja configurada (Ficha do Cliente → Pasta de entregas). */
-async function ensureBrandAssetsFolder(supabase: any, clientId: string, clientName: string): Promise<string> {
+/** Acha (ou cria) uma pasta com nome fixo (ex: "Arquivo da Marca - X",
+ * "Contrato - X") dentro da pasta de entregas já configurada — mesmo
+ * nível das pastas de mês, mesmo padrão de nome de "Entregas - X". Exige
+ * que a pasta de entregas já esteja configurada (Ficha do Cliente →
+ * Pasta de entregas). */
+async function ensureNamedClientFolder(supabase: any, clientId: string, label: string): Promise<string> {
   const map = await loadClientFolderMap(supabase, clientId);
   if (!map?.deliveries_folder_id) {
     throw new Error("Configure a pasta de entregas do cliente antes (Ficha do Cliente → Pasta de entregas).");
   }
-  const label = `Arquivo da Marca - ${clientName}`;
   const existing = await findChildFolderByName(map.deliveries_folder_id, label);
   if (existing) return existing;
   return driveCreateFolder(label, map.deliveries_folder_id);
@@ -1390,7 +1390,7 @@ export const startClientAssetUploadSession = createServerFn({ method: "POST" })
     const { data: client } = await context.supabase
       .from("clients").select("id, name").eq("id", data.clientId).maybeSingle();
     if (!client) throw new Error("Cliente não encontrado.");
-    const targetParentId = await ensureBrandAssetsFolder(context.supabase, client.id, client.name);
+    const targetParentId = await ensureNamedClientFolder(context.supabase, client.id, `Arquivo da Marca - ${client.name}`);
 
     const metadata = { name: data.name, mimeType: data.mimeType, parents: [targetParentId] };
     const sessionRes = await fetch(
@@ -1471,6 +1471,119 @@ export const deleteClientBrandAsset = createServerFn({ method: "POST" })
       });
     } catch (e) {
       console.warn("[drive] brand asset delete on Drive skipped:", (e as any)?.message);
+    }
+    return { ok: true };
+  }));
+
+/* ============== CONTRATO (Perfil do Cliente) ============== */
+
+/** Fase 1 do upload do contrato — mesmo relay em pedaços que os arquivos
+ * de marca usam, só que a pasta de destino é "Contrato - <Cliente>". */
+export const startClientContractUploadSession = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; name: string; mimeType: string }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      name: z.string().min(1).max(255),
+      mimeType: z.string().min(1).max(200),
+    }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data: client } = await context.supabase
+      .from("clients").select("id, name").eq("id", data.clientId).maybeSingle();
+    if (!client) throw new Error("Cliente não encontrado.");
+    const targetParentId = await ensureNamedClientFolder(context.supabase, client.id, `Contrato - ${client.name}`);
+
+    const metadata = { name: data.name, mimeType: data.mimeType, parents: [targetParentId] };
+    const sessionRes = await fetch(
+      `${UPLOAD_BASE}/files?uploadType=resumable&supportsAllDrives=true&fields=${encodeURIComponent(DRIVE_FIELDS)}`,
+      {
+        method: "POST",
+        headers: {
+          ...await driveHeaders(),
+          "Content-Type": "application/json; charset=UTF-8",
+          "X-Upload-Content-Type": data.mimeType,
+        },
+        body: JSON.stringify(metadata),
+      },
+    );
+    if (!sessionRes.ok) {
+      const txt = await sessionRes.text().catch(() => "");
+      throw new Error(`Não foi possível iniciar o envio pro Drive (${sessionRes.status}): ${txt.slice(0, 240)}`);
+    }
+    const uploadUrl = sessionRes.headers.get("Location");
+    if (!uploadUrl) throw new Error("O Drive não retornou uma URL de upload.");
+    return { uploadUrl };
+  }));
+
+/** Fase 3 — 1 contrato ativo por cliente (UNIQUE client_id): se já tinha
+ * um, apaga o arquivo antigo do Drive antes de trocar. */
+export const finalizeClientContractUpload = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: {
+    clientId: string;
+    driveFile: { id: string; name: string; mimeType?: string; iconLink?: string; thumbnailLink?: string; webViewLink?: string; size?: string | number };
+  }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      driveFile: z.object({
+        id: z.string().min(1),
+        name: z.string().min(1),
+        mimeType: z.string().optional(),
+        iconLink: z.string().optional(),
+        thumbnailLink: z.string().optional(),
+        webViewLink: z.string().optional(),
+        size: z.union([z.string(), z.number()]).optional(),
+      }),
+    }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    await assertAdmin(context.supabase, context.userId);
+    const meta = data.driveFile;
+    const db = context.supabase as any;
+    const { data: existing } = await db
+      .from("client_contracts").select("drive_file_id").eq("client_id", data.clientId).maybeSingle();
+    const { error } = await db.from("client_contracts").upsert({
+      client_id: data.clientId,
+      org_id: context.orgId,
+      drive_file_id: meta.id,
+      file_name: meta.name,
+      mime_type: meta.mimeType ?? null,
+      icon_url: meta.iconLink ?? null,
+      thumbnail_url: meta.thumbnailLink ?? null,
+      web_view_url: meta.webViewLink ?? `https://drive.google.com/file/d/${meta.id}/view`,
+      size_bytes: meta.size != null ? Number(meta.size) : null,
+      uploaded_by: context.userId,
+    }, { onConflict: "client_id" });
+    if (error) throw new Error(error.message);
+    if (existing?.drive_file_id && existing.drive_file_id !== meta.id) {
+      try {
+        await fetch(`${DRIVE_BASE}/files/${existing.drive_file_id}?supportsAllDrives=true`, {
+          method: "DELETE", headers: await driveHeaders(),
+        });
+      } catch (e) {
+        console.warn("[drive] old contract delete skipped:", (e as any)?.message);
+      }
+    }
+    return { ok: true };
+  }));
+
+export const deleteClientContract = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    await assertAdmin(context.supabase, context.userId);
+    const db = context.supabase as any;
+    const { data: row } = await db
+      .from("client_contracts").select("drive_file_id").eq("client_id", data.clientId).maybeSingle();
+    if (!row) return { ok: true };
+    const { error } = await db.from("client_contracts").delete().eq("client_id", data.clientId);
+    if (error) throw new Error(error.message);
+    try {
+      await fetch(`${DRIVE_BASE}/files/${row.drive_file_id}?supportsAllDrives=true`, {
+        method: "DELETE", headers: await driveHeaders(),
+      });
+    } catch (e) {
+      console.warn("[drive] contract delete on Drive skipped:", (e as any)?.message);
     }
     return { ok: true };
   }));

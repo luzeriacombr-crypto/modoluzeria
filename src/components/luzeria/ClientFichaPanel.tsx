@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, driveThumbnailQO, journeyStagesQO } from "@/lib/luzeria/queries";
 import { useClientAssetUpload } from "@/lib/luzeria/use-client-asset-upload";
+import { useClientContractUpload } from "@/lib/luzeria/use-client-contract-upload";
 import { CONTENT_TYPE_LABEL, hasSetorPermission } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
@@ -854,28 +855,13 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
 function ContractBlock({ clientId, isAdmin }: { clientId: string; isAdmin: boolean }) {
   const { data: contract, isLoading } = useQuery(clientContractQO(clientId));
   const api = useApi();
-  const [uploading, setUploading] = useState(false);
+  const { upload, uploadProgress, busy } = useClientContractUpload(clientId);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function pick(file: File) {
-    if (file.size > 20 * 1024 * 1024) { toast.error("Arquivo maior que 20MB."); return; }
-    setUploading(true);
-    try {
-      const ext = file.name.split(".").pop() || "pdf";
-      const path = `${clientId}/contrato-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("client-contracts").upload(path, file, {
-        upsert: true, contentType: file.type || undefined,
-      });
-      if (error) throw error;
-      await api.saveClientContract.mutateAsync({
-        data: { clientId, storagePath: path, fileName: file.name, mimeType: file.type || null },
-      });
-      toast.success("Contrato salvo.");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao enviar contrato");
-    } finally {
-      setUploading(false);
-    }
+    const { error } = await upload(file);
+    if (error) toast.error(error);
+    else toast.success("Contrato salvo na pasta do cliente no Drive.");
   }
 
   async function remove() {
@@ -887,27 +873,30 @@ function ContractBlock({ clientId, isAdmin }: { clientId: string; isAdmin: boole
 
   return (
     <div className="space-y-2">
+      <p className="text-[11px] text-foreground/50 leading-relaxed">
+        Vai direto pra pasta do cliente no Google Drive, em "Contrato - {"{cliente}"}" (precisa da pasta de
+        entregas configurada acima).
+      </p>
       {contract ? (
-        <div className="flex items-center gap-2 bg-card border border-foreground/6 rounded-md px-3 py-2">
-          <FileText size={14} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />
+        <a href={contract.webViewUrl ?? undefined} target="_blank" rel="noopener noreferrer"
+          className="flex items-center gap-2.5 bg-card border border-foreground/6 rounded-md px-2.5 py-2 hover:border-foreground/15 transition-colors">
+          <BrandAssetThumb driveFileId={contract.driveFileId} mime={contract.mimeType} name={contract.fileName} />
           <div className="min-w-0 flex-1">
             <div className="text-xs font-semibold text-foreground truncate">{contract.fileName}</div>
             <div className="text-[11px] text-foreground/40">
               Enviado em {new Date(contract.createdAt).toLocaleDateString("pt-BR")}
             </div>
           </div>
-          {contract.signedUrl && (
-            <a href={contract.signedUrl} target="_blank" rel="noopener noreferrer"
-              className="p-1 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5" title="Ver/baixar">
-              <Download size={13} />
-            </a>
-          )}
+          {contract.webViewUrl && <Download size={13} className="text-foreground/30 shrink-0" />}
           {isAdmin && (
-            <button onClick={remove} className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5" title="Remover">
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); remove(); }}
+              className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 shrink-0" title="Remover"
+            >
               <Trash2 size={13} />
             </button>
           )}
-        </div>
+        </a>
       ) : (
         <p className="text-xs text-foreground/40">Nenhum contrato anexado.</p>
       )}
@@ -916,12 +905,12 @@ function ContractBlock({ clientId, isAdmin }: { clientId: string; isAdmin: boole
           <input ref={inputRef} type="file" accept="application/pdf,image/*" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = ""; }} />
           <button
-            type="button" disabled={uploading}
+            type="button" disabled={busy}
             onClick={() => inputRef.current?.click()}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 disabled:opacity-50 transition"
           >
-            {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-            {contract ? "Substituir contrato" : "Anexar contrato"}
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+            {busy ? `Enviando… ${uploadProgress?.pct ?? 0}%` : contract ? "Substituir contrato" : "Anexar contrato"}
           </button>
         </>
       )}
