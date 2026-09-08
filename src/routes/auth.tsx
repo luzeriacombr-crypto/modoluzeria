@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { ArrowLeft } from "lucide-react";
 import luzeriaLogo from "@/assets/luzeria-logo-login.png";
+import { PasswordInput } from "@/components/luzeria/PasswordInput";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -124,7 +125,8 @@ function AuthPage() {
           <form onSubmit={submit} className="space-y-3">
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Email"
               className="w-full bg-white/10 border border-white/15 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#CDFF00] focus:ring-1 focus:ring-[#CDFF00] placeholder:text-white/40 transition-colors" />
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="Senha"
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="Senha"
+              toggleClassName="text-white/40 hover:text-white/70"
               className="w-full bg-white/10 border border-white/15 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#CDFF00] focus:ring-1 focus:ring-[#CDFF00] placeholder:text-white/40 transition-colors" />
             <button type="submit" disabled={loading}
               className="w-full rounded-md py-2.5 mt-2 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"

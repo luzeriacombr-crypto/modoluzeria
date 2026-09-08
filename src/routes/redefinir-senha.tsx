@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { ArrowLeft } from "lucide-react";
 import luzeriaLogo from "@/assets/luzeria-logo-login.png";
+import { PasswordInput } from "@/components/luzeria/PasswordInput";
 
 export const Route = createFileRoute("/redefinir-senha")({
   component: ResetPasswordPage,
@@ -91,9 +92,11 @@ function ResetPasswordPage() {
             <p className="text-white text-xs uppercase tracking-widest text-center font-semibold mb-3">
               Crie sua nova senha:
             </p>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} placeholder="Nova senha"
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} placeholder="Nova senha"
+              toggleClassName="text-white/40 hover:text-white/70"
               className="w-full bg-white/10 border border-white/15 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#CDFF00] focus:ring-1 focus:ring-[#CDFF00] placeholder:text-white/40 transition-colors" />
-            <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} placeholder="Confirme a nova senha"
+            <PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} placeholder="Confirme a nova senha"
+              toggleClassName="text-white/40 hover:text-white/70"
               className="w-full bg-white/10 border border-white/15 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#CDFF00] focus:ring-1 focus:ring-[#CDFF00] placeholder:text-white/40 transition-colors" />
             <button type="submit" disabled={loading}
               className="w-full rounded-md py-2.5 mt-2 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"

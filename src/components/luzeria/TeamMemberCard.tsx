@@ -11,6 +11,7 @@ import { useApi, useMe, memberPayQO, cargosQO, clientsQO } from "@/lib/luzeria/q
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { Modal } from "./Modals";
+import { PasswordInput } from "./PasswordInput";
 import { AvatarEditor, showAvatarError, uploadAvatar } from "./AvatarEditor";
 import { InfoTip } from "./InfoTip";
 import { glassCardStyle } from "@/lib/luzeria/utils";
@@ -347,10 +348,11 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
           ><KeyRound size={15} /> Definir senha diretamente</button>
           {showPasswordField && (
             <div className="flex items-center gap-2 px-3 pb-1">
-              <input
-                type="text" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+              <PasswordInput
+                value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Nova senha (mín. 8 caracteres)"
-                className="flex-1 bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                wrapperClassName="relative flex-1"
+                className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
               />
               <button
                 onClick={handleSetPassword}

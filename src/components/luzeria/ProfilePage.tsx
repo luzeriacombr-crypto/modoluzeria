@@ -10,6 +10,7 @@ import { AvatarEditor, showAvatarError, uploadAvatar } from "./AvatarEditor";
 import { roleLabel } from "./Sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
+import { PasswordInput } from "./PasswordInput";
 
 export function ProfilePage() {
   const me = useMe().data;
@@ -524,13 +525,13 @@ function AccountSection({ initialName, initialEmail, loading, onSave }: {
           className="lz-input" placeholder="voce@luzeria.com.br" />
       </AccountField>
       <AccountField icon={<Lock size={14} />} label="Nova senha (opcional)">
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+        <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password" minLength={6}
           className="lz-input" placeholder="Mínimo 6 caracteres" />
       </AccountField>
       {passwordSet && (
         <AccountField icon={<Lock size={14} />} label="Confirmar nova senha">
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
+          <PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)}
             autoComplete="new-password" className="lz-input" placeholder="Repita a senha" />
         </AccountField>
       )}

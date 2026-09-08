@@ -10,6 +10,7 @@ import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { DemoRequestModal } from "./DemoRequestModal";
 import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, Reveal, HeroSection, renderBlockNode, useReveal, staggerStyle } from "./salesPageBlocks";
 import { InteractiveDashboardDemo } from "./SalesInteractiveDashboard";
+import { PasswordInput } from "./PasswordInput";
 
 const PENDING_GOOGLE_SIGNUP_KEY = "modocriador:pending-google-signup";
 const DEMO_POPUP_SHOWN_KEY = "modocriador:demo-popup-shown";
@@ -334,7 +335,8 @@ export function SalesPage() {
               <input required type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="lz-input-onlight" placeholder="(99) 99999-9999" maxLength={30} />
             </Field>
             <Field label="Crie uma senha">
-              <input required type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="lz-input-onlight" />
+              <PasswordInput required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)}
+                toggleClassName="text-[#0A0E23]/40 hover:text-[#0A0E23]/70" className="lz-input-onlight" />
             </Field>
             <Field label="CNPJ ou CPF da agência">
               <input required value={taxId} onChange={(e) => setTaxId(e.target.value)} className="lz-input-onlight" placeholder="Somente números" maxLength={18} />
