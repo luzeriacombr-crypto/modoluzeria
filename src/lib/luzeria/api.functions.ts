@@ -2555,7 +2555,8 @@ export const getTopMembersByGoal = createServerFn({ method: "GET" })
 /* ============== MY WORK STATS ============== */
 
 export type MyWorkStatsItem = { itemId: string; title: string; clientId: string; clientName: string };
-export type MyWorkStatsSection = { done: number; goal: number | null; items: MyWorkStatsItem[] };
+export type MyWorkStatsClientBreakdown = { clientId: string; clientName: string; count: number };
+export type MyWorkStatsSection = { done: number; goal: number | null; items: MyWorkStatsItem[]; byClient?: MyWorkStatsClientBreakdown[] };
 export type MyWorkStats = {
   reels: MyWorkStatsSection;
   posts: MyWorkStatsSection;
@@ -2611,7 +2612,7 @@ export const getMyWorkStats = createServerFn({ method: "GET" })
       return [...map.values()];
     }
 
-    async function byAssigneeDone(type: "gravacao" | "roteiro"): Promise<MyWorkStatsItem[]> {
+    async function byAssigneeDone(type: "roteiro"): Promise<MyWorkStatsItem[]> {
       const { data: assigns } = await context.supabase.from("item_assignees").select("item_id").eq("user_id", data.userId);
       const ids = (assigns ?? []).map((a: any) => a.item_id);
       if (!ids.length) return [];
@@ -2628,10 +2629,44 @@ export const getMyWorkStats = createServerFn({ method: "GET" })
         .map((r: any) => ({ itemId: r.id, title: r.title ?? "(sem título)", clientId: r.months.clients.id, clientName: r.months.clients.name }));
     }
 
-    const [reelItems, postItems, gravacaoItems, roteiroItems, goalRow] = await Promise.all([
+    /** Gravação conta em VÍDEOS, não em sessões/itens — uma sessão de
+     * gravação pode render vários vídeos (`activity_quantity`). O "toque"
+     * mostra o detalhe por cliente (quantos vídeos gravados pra cada um),
+     * não a lista crua de sessões — mais útil pra ver onde o volume veio. */
+    async function gravacaoStats(): Promise<{ done: number; items: MyWorkStatsItem[]; byClient: MyWorkStatsClientBreakdown[] }> {
+      const { data: assigns } = await context.supabase.from("item_assignees").select("item_id").eq("user_id", data.userId);
+      const ids = (assigns ?? []).map((a: any) => a.item_id);
+      if (!ids.length) return { done: 0, items: [], byClient: [] };
+      const { data: rows, error } = await context.supabase
+        .from("content_items")
+        .select("id, title, status, activity_quantity, last_status_change_at, months!inner(clients!months_client_id_fkey!inner(id, name))")
+        .in("id", ids)
+        .eq("type", "gravacao")
+        .gte("last_status_change_at", start)
+        .lt("last_status_change_at", end);
+      if (error) throw new Error(error.message);
+      const doneRows = (rows ?? []).filter((r: any) => isDoneStatus(r.status));
+      const items: MyWorkStatsItem[] = doneRows.map((r: any) => ({
+        itemId: r.id, title: r.title ?? "(sem título)", clientId: r.months.clients.id, clientName: r.months.clients.name,
+      }));
+      const byClientMap = new Map<string, MyWorkStatsClientBreakdown>();
+      let done = 0;
+      for (const r of doneRows as any[]) {
+        const qty = r.activity_quantity ?? 1;
+        done += qty;
+        const cid = r.months.clients.id;
+        const row = byClientMap.get(cid) ?? { clientId: cid, clientName: r.months.clients.name, count: 0 };
+        row.count += qty;
+        byClientMap.set(cid, row);
+      }
+      const byClient = [...byClientMap.values()].sort((a, b) => b.count - a.count);
+      return { done, items, byClient };
+    }
+
+    const [reelItems, postItems, gravacaoResult, roteiroItems, goalRow] = await Promise.all([
       byEditorUpload("reel"),
       byEditorUpload("post"),
-      byAssigneeDone("gravacao"),
+      gravacaoStats(),
       byAssigneeDone("roteiro"),
       context.supabase.from("member_goals")
         .select("reels_goal, posts_goal, gravacao_goal")
@@ -2642,7 +2677,7 @@ export const getMyWorkStats = createServerFn({ method: "GET" })
     return {
       reels: { done: reelItems.length, goal: g?.reels_goal || null, items: reelItems },
       posts: { done: postItems.length, goal: g?.posts_goal || null, items: postItems },
-      gravacao: { done: gravacaoItems.length, goal: g?.gravacao_goal || null, items: gravacaoItems },
+      gravacao: { done: gravacaoResult.done, goal: g?.gravacao_goal || null, items: gravacaoResult.items, byClient: gravacaoResult.byClient },
       roteiro: { done: roteiroItems.length, goal: null, items: roteiroItems },
     };
   });
@@ -3183,25 +3218,37 @@ export const getReport = createServerFn({ method: "GET" })
     }).sort((a, b) => b.total - a.total);
 
     // ---- by editor / format ----
-    // Um item pode gerar várias linhas em `finalizations` — uma por
-    // retrabalho (reaprovado de novo no mês) e também uma por cada
-    // item_assignees daquele item (o trigger record_finalizations credita
-    // todo mundo atribuído, não só o editor). Contar por linha inflava o
-    // total de um editor pelo número de vezes que o item foi reaprovado
-    // MULTIPLICADO pelo número de pessoas atribuídas — um reel com 3
-    // atribuídos e reaprovado 1x já virava 3 no total. Cada item entra uma
-    // única vez por editor, não uma vez por linha de finalização.
+    // Fonte própria, independente do `history` de finalizations: quem
+    // edita um reel nem sempre é quem fica creditado na aprovação (o
+    // trigger de finalizations credita todo mundo atribuído, não só o
+    // editor), e o que importa aqui é "editor_id do reel + alguém subiu
+    // arquivo pra ele no período" (não precisa ter sido o próprio editor
+    // a subir). Um reel pode ter mais de um upload no período — cada item
+    // entra uma única vez por editor, dedup por itemId.
+    let reelUploadsQ = context.supabase
+      .from("item_files")
+      .select("content_items!inner(id, title, editor_id, reel_type, months!inner(client_id, clients!months_client_id_fkey!inner(name, color)))")
+      .eq("kind", "media")
+      .eq("content_items.type", "reel")
+      .gte("created_at", fromISO)
+      .lt("created_at", toISO);
+    if (filterUser) reelUploadsQ = reelUploadsQ.eq("content_items.editor_id", filterUser);
+    const { data: reelUploadRows } = await reelUploadsQ;
+
     const fmtAgg = new Map<string, { lofi: number; facil: number; basico: number; avancado: number }>();
     const itemsByEditor = new Map<string, { itemId: string; title: string; clientName: string | null; clientColor: string | null }[]>();
-    contentHist.forEach((h) => {
-      if (h.type !== "reel" || !h.itemId) return;
-      const eid = h.editorId ?? "__none__";
+    const seenReelIds = new Set<string>();
+    (reelUploadRows ?? []).forEach((r: any) => {
+      const ci = r.content_items;
+      if (filterClient && ci.months?.client_id !== filterClient) return;
+      if (seenReelIds.has(ci.id)) return;
+      seenReelIds.add(ci.id);
+      const eid = ci.editor_id ?? "__none__";
       const list = itemsByEditor.get(eid) ?? [];
-      if (list.some((it) => it.itemId === h.itemId)) return;
-      list.push({ itemId: h.itemId, title: h.title, clientName: h.clientName, clientColor: h.clientColor });
+      list.push({ itemId: ci.id, title: ci.title, clientName: ci.months?.clients?.name ?? null, clientColor: ci.months?.clients?.color ?? null });
       itemsByEditor.set(eid, list);
       const row = fmtAgg.get(eid) ?? { lofi: 0, facil: 0, basico: 0, avancado: 0 };
-      const rt = (h.reelType as any) as "lofi" | "facil" | "basico" | "avancado" | null;
+      const rt = (ci.reel_type as any) as "lofi" | "facil" | "basico" | "avancado" | null;
       if (rt && row[rt] !== undefined) row[rt]++;
       fmtAgg.set(eid, row);
     });
@@ -3285,21 +3332,24 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
       lateDays: computeLateDays(r.content_items.due_date, r.finalized_at),
     }));
 
-    // Reels edited by this user (editor_id) — exclui os que ele também é
-    // responsável (já contam em "reels" acima, pra não listar a mesma
-    // entrega duas vezes) e deduplica por item: um reel com vários
-    // responsáveis gera uma linha de finalizations por responsável, e
-    // todas batem com o filtro de editor_id do mesmo jeito.
+    // Reels editados por essa pessoa (editor_id do reel) — critério
+    // próprio, diferente de "reels" acima: conta pela data do UPLOAD do
+    // arquivo (não precisa ter sido ela mesma a subir — nem sempre quem
+    // edita é quem sobe o arquivo no sistema), não pela data de
+    // aprovação/finalização. Mesmo critério de getMyWorkStats. Exclui os
+    // que já apareceram em "reels" (créditados via finalizations), pra
+    // não listar a mesma entrega duas vezes.
     const ownReelIds = new Set(baseList.filter((x) => x.type === "reel").map((x) => x.itemId));
-    const seenEditedIds = new Set<string>();
     const { data: editedRows } = await context.supabase
-      .from("finalizations")
-      .select("finalized_at, content_items!inner(id, type, title, editor_id, reel_type, due_date, months!inner(clients!months_client_id_fkey!inner(id, name, color)))")
+      .from("item_files")
+      .select("created_at, content_items!inner(id, title, reel_type, due_date, months!inner(clients!months_client_id_fkey!inner(id, name, color)))")
+      .eq("kind", "media")
+      .eq("content_items.type", "reel")
       .eq("content_items.editor_id", data.userId)
-      .gte("finalized_at", fromISO)
-      .lt("finalized_at", toISO);
+      .gte("created_at", fromISO)
+      .lt("created_at", toISO);
+    const seenEditedIds = new Set<string>();
     const editedReels = (editedRows ?? [])
-      .filter((r: any) => r.content_items?.type === "reel")
       .filter((r: any) => !ownReelIds.has(r.content_items.id))
       .filter((r: any) => {
         if (seenEditedIds.has(r.content_items.id)) return false;
@@ -3307,14 +3357,14 @@ export const getMemberReportDetail = createServerFn({ method: "GET" })
         return true;
       })
       .map((r: any) => ({
-        finalizedAt: r.finalized_at,
+        finalizedAt: r.created_at,
         itemId: r.content_items.id,
         title: r.content_items.title,
         reelType: r.content_items.reel_type ?? null,
         clientId: r.content_items.months.clients.id,
         clientName: r.content_items.months.clients.name,
         clientColor: r.content_items.months.clients.color,
-        lateDays: computeLateDays(r.content_items.due_date, r.finalized_at),
+        lateDays: computeLateDays(r.content_items.due_date, r.created_at),
       }));
 
     // Stories / cleaning in range
