@@ -749,11 +749,11 @@ async function fetchMediaInsights(accessToken: string, mediaId: string, productT
 async function getClientInstagramCreds(supabase: any, clientId: string) {
   const { data: creds } = await supabase
     .from("client_instagram_credentials")
-    .select("instagram_business_account_id, access_token")
+    .select("instagram_business_account_id, access_token, ig_username")
     .eq("client_id", clientId)
     .maybeSingle();
   if (!creds) throw new Error("Esse cliente não está mais com o Instagram conectado.");
-  return creds as { instagram_business_account_id: string; access_token: string };
+  return creds as { instagram_business_account_id: string; access_token: string; ig_username: string | null };
 }
 
 export const getInstagramItemInsights = createServerFn({ method: "GET" })
@@ -1175,8 +1175,16 @@ export const getInstagramConversations = createServerFn({ method: "GET" })
     );
     const json: any = await res.json();
     if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao buscar as conversas do Direct.");
+    // O id que a Conversations API devolve pra própria conta em
+    // `participants.data` às vezes não bate com `instagram_business_account_id`
+    // (obtido via /me) — formatos de id diferentes pra mesma conta,
+    // dependendo do produto. O username é confiável nos dois casos, então
+    // filtra por ele (com fallback pro id, se por algum motivo não tivermos
+    // o username salvo).
     return (json.data ?? []).map((c: any) => {
-      const others = (c.participants?.data ?? []).filter((p: any) => p.id !== creds.instagram_business_account_id);
+      const others = (c.participants?.data ?? []).filter((p: any) =>
+        creds.ig_username ? p.username !== creds.ig_username : p.id !== creds.instagram_business_account_id,
+      );
       return {
         id: c.id,
         participantId: others[0]?.id ?? null,
@@ -1215,7 +1223,7 @@ export const getInstagramConversationMessages = createServerFn({ method: "GET" }
       .map((m: any) => ({
         id: m.id,
         text: m.message ?? null,
-        fromMe: m.from?.id === creds.instagram_business_account_id,
+        fromMe: creds.ig_username ? m.from?.username === creds.ig_username : m.from?.id === creds.instagram_business_account_id,
         senderUsername: m.from?.username ?? null,
         createdTime: m.created_time,
       }))
