@@ -1355,3 +1355,122 @@ export const clearClientDeliveriesFolder = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/* ============== ARQUIVOS DA MARCA (Perfil do Cliente) ============== */
+
+/** Acha (ou cria) a pasta "Arquivo da Marca - <Cliente>" dentro da pasta
+ * de entregas já configurada — mesmo nível das pastas de mês, mesmo
+ * padrão de nome de "Entregas - <Cliente>". Exige que a pasta de
+ * entregas já esteja configurada (Ficha do Cliente → Pasta de entregas). */
+async function ensureBrandAssetsFolder(supabase: any, clientId: string, clientName: string): Promise<string> {
+  const map = await loadClientFolderMap(supabase, clientId);
+  if (!map?.deliveries_folder_id) {
+    throw new Error("Configure a pasta de entregas do cliente antes (Ficha do Cliente → Pasta de entregas).");
+  }
+  const label = `Arquivo da Marca - ${clientName}`;
+  const existing = await findChildFolderByName(map.deliveries_folder_id, label);
+  if (existing) return existing;
+  return driveCreateFolder(label, map.deliveries_folder_id);
+}
+
+/** Fase 1 do upload de um arquivo de marca — mesmo relay em pedaços que
+ * `startDriveUploadSession` usa pros arquivos de post/reel (ver o
+ * comentário lá pra entender por que não é upload direto do navegador),
+ * só que a pasta de destino é resolvida pelo cliente, não por um item. */
+export const startClientAssetUploadSession = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; name: string; mimeType: string }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      name: z.string().min(1).max(255),
+      mimeType: z.string().min(1).max(200),
+    }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data: client } = await context.supabase
+      .from("clients").select("id, name").eq("id", data.clientId).maybeSingle();
+    if (!client) throw new Error("Cliente não encontrado.");
+    const targetParentId = await ensureBrandAssetsFolder(context.supabase, client.id, client.name);
+
+    const metadata = { name: data.name, mimeType: data.mimeType, parents: [targetParentId] };
+    const sessionRes = await fetch(
+      `${UPLOAD_BASE}/files?uploadType=resumable&supportsAllDrives=true&fields=${encodeURIComponent(DRIVE_FIELDS)}`,
+      {
+        method: "POST",
+        headers: {
+          ...await driveHeaders(),
+          "Content-Type": "application/json; charset=UTF-8",
+          "X-Upload-Content-Type": data.mimeType,
+        },
+        body: JSON.stringify(metadata),
+      },
+    );
+    if (!sessionRes.ok) {
+      const txt = await sessionRes.text().catch(() => "");
+      throw new Error(`Não foi possível iniciar o envio pro Drive (${sessionRes.status}): ${txt.slice(0, 240)}`);
+    }
+    const uploadUrl = sessionRes.headers.get("Location");
+    if (!uploadUrl) throw new Error("O Drive não retornou uma URL de upload.");
+    return { uploadUrl };
+  }));
+
+/** Fase 3 (a fase 2, o envio em pedaços, reusa `uploadDriveChunk` — ela não
+ * depende de item nem de cliente, só da uploadUrl que a sessão devolveu). */
+export const finalizeClientAssetUpload = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: {
+    clientId: string;
+    driveFile: { id: string; name: string; mimeType?: string; iconLink?: string; thumbnailLink?: string; webViewLink?: string; size?: string | number };
+  }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      driveFile: z.object({
+        id: z.string().min(1),
+        name: z.string().min(1),
+        mimeType: z.string().optional(),
+        iconLink: z.string().optional(),
+        thumbnailLink: z.string().optional(),
+        webViewLink: z.string().optional(),
+        size: z.union([z.string(), z.number()]).optional(),
+      }),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const meta = data.driveFile;
+    const db = context.supabase as any;
+    const { data: row, error } = await db.from("client_brand_assets").insert({
+      client_id: data.clientId,
+      org_id: context.orgId,
+      drive_file_id: meta.id,
+      name: meta.name,
+      mime_type: meta.mimeType ?? null,
+      icon_url: meta.iconLink ?? null,
+      thumbnail_url: meta.thumbnailLink ?? null,
+      web_view_url: meta.webViewLink ?? `https://drive.google.com/file/d/${meta.id}/view`,
+      size_bytes: meta.size != null ? Number(meta.size) : null,
+      created_by: context.userId,
+    }).select("id").single();
+    if (error) throw new Error(error.message);
+    return { id: row.id as string };
+  });
+
+export const deleteClientBrandAsset = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    await assertAdmin(context.supabase, context.userId);
+    const db = context.supabase as any;
+    const { data: row } = await db
+      .from("client_brand_assets").select("drive_file_id").eq("id", data.id).maybeSingle();
+    if (!row) return { ok: true };
+    const { error } = await db.from("client_brand_assets").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    try {
+      await fetch(`${DRIVE_BASE}/files/${row.drive_file_id}?supportsAllDrives=true`, {
+        method: "DELETE", headers: await driveHeaders(),
+      });
+    } catch (e) {
+      console.warn("[drive] brand asset delete on Drive skipped:", (e as any)?.message);
+    }
+    return { ok: true };
+  }));

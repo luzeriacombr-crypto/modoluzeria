@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { reportHandledError } from "./error-monitoring";
 import { getClientContract, saveClientContract, deleteClientContract } from "./client-contracts.functions";
 import { getProductionAudit } from "./production-audit.functions";
-import { listClientBrandAssets, addClientBrandAsset, deleteClientBrandAsset } from "./client-brand-assets.functions";
+import { listClientBrandAssets } from "./client-brand-assets.functions";
+import { startClientAssetUploadSession, finalizeClientAssetUpload, deleteClientBrandAsset } from "./drive.functions";
 import {
   addAssignee, addContentItem, createClient, deleteClient, deleteItem, deleteContentItems, duplicateMonth, setNotifyStoriesInTasks, setWhatsappGroupLink,
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
@@ -988,8 +989,11 @@ export function useApi() {
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-contract"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover contrato."),
     }),
-    addClientBrandAsset: useMutation({
-      mutationFn: useServerFn(addClientBrandAsset),
+    startClientAssetUploadSession: useMutation({
+      mutationFn: useServerFn(startClientAssetUploadSession),
+    }),
+    finalizeClientAssetUpload: useMutation({
+      mutationFn: useServerFn(finalizeClientAssetUpload),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-brand-assets"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao adicionar arquivo."),
     }),

@@ -5,11 +5,12 @@ import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
   Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save, Camera, Instagram,
-  MessageCircle, Milestone, Users, Upload, Paperclip, Download,
+  MessageCircle, Milestone, Users, Upload, Download, Film, Image as ImageIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, journeyStagesQO } from "@/lib/luzeria/queries";
+import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, driveThumbnailQO, journeyStagesQO } from "@/lib/luzeria/queries";
+import { useClientAssetUpload } from "@/lib/luzeria/use-client-asset-upload";
 import { CONTENT_TYPE_LABEL, hasSetorPermission } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
@@ -928,44 +929,58 @@ function ContractBlock({ clientId, isAdmin }: { clientId: string; isAdmin: boole
   );
 }
 
+function BrandAssetMimeIcon({ mime }: { mime?: string | null }) {
+  const m = mime ?? "";
+  if (m.startsWith("image/")) return <ImageIcon size={16} style={{ color: "var(--lz-accent-ink)" }} />;
+  if (m.startsWith("video/")) return <Film size={16} style={{ color: "var(--lz-accent-ink)" }} />;
+  return <FileText size={16} style={{ color: "var(--lz-accent-ink)" }} />;
+}
+
+function isBrandAssetThumbnailable(mime?: string | null) {
+  const m = mime ?? "";
+  return m.startsWith("image/") || m.startsWith("video/") || m === "application/pdf";
+}
+
+function BrandAssetThumb({ driveFileId, mime, name }: { driveFileId: string; mime?: string | null; name: string }) {
+  const enabled = isBrandAssetThumbnailable(mime);
+  const { data, isLoading } = useQuery(driveThumbnailQO(driveFileId, enabled));
+  const url = data?.dataUrl ?? null;
+  return (
+    <div className="w-10 h-10 shrink-0 rounded-md overflow-hidden bg-background border border-foreground/8 flex items-center justify-center">
+      {url ? (
+        <img src={url} alt={name} className="w-full h-full object-cover" loading="lazy" />
+      ) : isLoading && enabled ? (
+        <Loader2 size={12} className="animate-spin text-foreground/30" />
+      ) : (
+        <BrandAssetMimeIcon mime={mime} />
+      )}
+    </div>
+  );
+}
+
 function BrandAssetsBlock({ clientId, isAdmin }: { clientId: string; isAdmin: boolean }) {
   const { data: assets = [], isLoading } = useQuery(clientBrandAssetsQO(clientId));
   const api = useApi();
-  const [uploading, setUploading] = useState(false);
+  const { upload, uploadProgress, busy } = useClientAssetUpload(clientId);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function pick(files: FileList) {
-    setUploading(true);
-    try {
-      for (const file of Array.from(files)) {
-        if (file.size > 20 * 1024 * 1024) { toast.error(`"${file.name}" maior que 20MB, pulei.`); continue; }
-        const ext = file.name.split(".").pop() || "bin";
-        const path = `${clientId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-        const { error } = await supabase.storage.from("client-brand-assets").upload(path, file, {
-          contentType: file.type || undefined,
-        });
-        if (error) throw error;
-        await api.addClientBrandAsset.mutateAsync({
-          data: { clientId, storagePath: path, label: file.name, mimeType: file.type || null },
-        });
-      }
-      toast.success("Arquivo(s) adicionado(s).");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao enviar arquivo");
-    } finally {
-      setUploading(false);
-    }
+    const { failed } = await upload(Array.from(files));
+    if (failed.length > 0) toast.error(failed.map((f) => `${f.name}: ${f.msg}`).join(" | "));
+    else toast.success("Arquivo(s) adicionado(s) na pasta do cliente no Drive.");
   }
 
-  async function remove(id: string, label: string | null) {
-    if (!(await requestConfirm(`Remover "${label ?? "arquivo"}"?`, { danger: true }))) return;
+  async function remove(id: string, name: string) {
+    if (!(await requestConfirm(`Remover "${name}"?`, { danger: true }))) return;
     api.deleteClientBrandAsset.mutate({ data: { id } });
   }
 
   return (
     <div className="space-y-2">
       <p className="text-[11px] text-foreground/50 leading-relaxed">
-        Arquivos fixos que a equipe sempre usa desse cliente (logo, marca d'água…) — diferente da Biblioteca de Referências, que é pra inspiração.
+        Arquivos fixos que a equipe sempre usa desse cliente (logo, marca d'água, vídeos ou docs padrão…) —
+        diferente da Biblioteca de Referências, que é pra inspiração. Vai direto pra pasta do cliente no
+        Google Drive, em "Arquivo da Marca - {"{cliente}"}" (precisa da pasta de entregas configurada acima).
       </p>
       {isLoading ? (
         <Loader2 size={14} className="animate-spin text-foreground/40" />
@@ -974,21 +989,20 @@ function BrandAssetsBlock({ clientId, isAdmin }: { clientId: string; isAdmin: bo
       ) : (
         <div className="space-y-2">
           {assets.map((a) => (
-            <div key={a.id} className="flex items-center gap-2 bg-card border border-foreground/6 rounded-md px-3 py-2">
-              <Paperclip size={14} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />
-              <div className="min-w-0 flex-1 text-xs font-semibold text-foreground truncate">{a.label ?? "Arquivo"}</div>
-              {a.signedUrl && (
-                <a href={a.signedUrl} target="_blank" rel="noopener noreferrer"
-                  className="p-1 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5" title="Ver/baixar">
-                  <Download size={13} />
-                </a>
-              )}
+            <a key={a.id} href={a.webViewUrl ?? undefined} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2.5 bg-card border border-foreground/6 rounded-md px-2.5 py-2 hover:border-foreground/15 transition-colors">
+              <BrandAssetThumb driveFileId={a.driveFileId} mime={a.mimeType} name={a.name} />
+              <div className="min-w-0 flex-1 text-xs font-semibold text-foreground truncate">{a.name}</div>
+              {a.webViewUrl && <Download size={13} className="text-foreground/30 shrink-0" />}
               {isAdmin && (
-                <button onClick={() => remove(a.id, a.label)} className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5" title="Remover">
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); remove(a.id, a.name); }}
+                  className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 shrink-0" title="Remover"
+                >
                   <Trash2 size={13} />
                 </button>
               )}
-            </div>
+            </a>
           ))}
         </div>
       )}
@@ -997,12 +1011,12 @@ function BrandAssetsBlock({ clientId, isAdmin }: { clientId: string; isAdmin: bo
           <input ref={inputRef} type="file" multiple className="hidden"
             onChange={(e) => { if (e.target.files?.length) pick(e.target.files); e.target.value = ""; }} />
           <button
-            type="button" disabled={uploading}
+            type="button" disabled={busy}
             onClick={() => inputRef.current?.click()}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 disabled:opacity-50 transition"
           >
-            {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-            Adicionar arquivo
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+            {uploadProgress ? `Enviando… ${uploadProgress.pct}% (${uploadProgress.done + 1}/${uploadProgress.total})` : "Adicionar arquivo"}
           </button>
         </>
       )}

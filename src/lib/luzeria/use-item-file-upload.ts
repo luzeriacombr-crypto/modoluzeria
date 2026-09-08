@@ -6,8 +6,8 @@ import { useApi } from "./queries";
 // ~5.3MB base64 tripped it — chunk uploads were failing outright, not
 // just slow). Also a clean multiple of 256KB, which Google's resumable
 // upload protocol requires for every non-final chunk.
-const CHUNK_SIZE = 2.5 * 1024 * 1024;
-const MAX_CHUNK_ATTEMPTS = 3;
+export const CHUNK_SIZE = 2.5 * 1024 * 1024;
+export const MAX_CHUNK_ATTEMPTS = 3;
 
 export function parseDriveError(msg: string | undefined): { kind: "missing"; clientId: string } | { kind: "other"; msg: string } {
   const m = /^\[DELIVERIES_FOLDER_MISSING:([0-9a-f-]{36})\]\s*(.*)$/i.exec(msg ?? "");
@@ -17,7 +17,7 @@ export function parseDriveError(msg: string | undefined): { kind: "missing"; cli
 
 /** ArrayBuffer -> base64, in sub-chunks — spreading a large typed array
  * straight into String.fromCharCode blows the call stack well before 4MB. */
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
+export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   const STEP = 0x8000;
   let binary = "";
