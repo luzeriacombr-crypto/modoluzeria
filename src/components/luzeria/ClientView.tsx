@@ -40,9 +40,8 @@ function byScheduledAt(direction: OrderDirection) {
 type ClientTab = "posts" | "reels" | "stories" | "finalizados" | "mais" | "feed" | "ficha";
 const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizados", "mais", "feed", "ficha"];
 /** Abas que dá pra ocultar (por padrão da agência ou só pra um cliente) —
- * Ficha e Stories ficam de fora (Stories já tem seu próprio toggle de
- * sempre, "ficha" é o mínimo de navegação garantido). */
-const HIDEABLE_TABS = ["posts", "reels", "finalizados", "mais", "feed"] as const;
+ * só "ficha" fica de fora (é o mínimo de navegação garantido). */
+const HIDEABLE_TABS = ["posts", "reels", "stories", "finalizados", "mais", "feed"] as const;
 type MaisSubTab = "atividades" | "campanhas" | "docs" | "biblioteca";
 
 export function ClientView({ clientId, tab: tabParam, onTabChange }: {
@@ -100,7 +99,6 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   // pode mais ser fixo em "posts" — cai na primeira aba visível pra esse
   // cliente, senão a grade de conteúdo renderiza sem nenhuma aba destacada.
   const visibleTabs = VALID_CLIENT_TABS
-    .filter((t) => t !== "stories" || !disabledFeatures.has("stories"))
     .filter((t) => !(HIDEABLE_TABS as readonly string[]).includes(t) || !hiddenTabs.has(t));
   const tab: ClientTab = tabParam && (visibleTabs as string[]).includes(tabParam)
     ? (tabParam as ClientTab)
@@ -589,7 +587,7 @@ function MaisSubTabPill({ active, onClick, children }: { active: boolean; onClic
 }
 
 const HIDEABLE_TAB_LABEL: Record<(typeof HIDEABLE_TABS)[number], string> = {
-  posts: "Posts", reels: "Reels", finalizados: "Finalizados", mais: "Mais", feed: "Preview de Feed",
+  posts: "Posts", reels: "Reels", stories: "Stories", finalizados: "Finalizados", mais: "Mais", feed: "Preview de Feed",
 };
 
 function CustomizeTabsModal({ client, disabledFeatures, onClose, onSaveOrgDefault, onSaveClientOverride, onClearClientOverride }: {
