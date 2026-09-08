@@ -147,15 +147,14 @@ export const getGoalProgress = createServerFn({ method: "GET" })
     }
 
     // Reels: mesmo critério de "aprovados" da tela Minhas Demandas
-    // (getMyEditingStats) — dos reels que a pessoa é editora E de fato
-    // subiu arquivo nesse mês, quantos já estão prontos/finalizados.
-    // "Atribuído + atualizado no mês" (o critério acima) contava reels
-    // que a pessoa nem editou de verdade, só estava vinculada de algum
-    // jeito e algo no item mudou no mês.
+    // (getMyEditingStats) — dos reels que a pessoa é editor_id E alguém
+    // subiu arquivo nesse mês (não precisa ter sido ela mesma a subir),
+    // quantos já estão prontos/finalizados. "Atribuído + atualizado no
+    // mês" (o critério antigo) contava reels que a pessoa nem editou de
+    // verdade, só estava vinculada de algum jeito e algo no item mudou.
     const { data: reelUploads } = await context.supabase
       .from("item_files")
       .select("content_items!inner(id, status)")
-      .eq("added_by", targetUser)
       .eq("kind", "media")
       .eq("content_items.type", "reel")
       .eq("content_items.editor_id", targetUser)
@@ -234,23 +233,23 @@ export const getGoalProgressForOrg = createServerFn({ method: "GET" })
         .in("done_by", userIds).eq("status", "done")
         .gte("occurrence_date", `${data.monthKey}-01`).lt("occurrence_date", `${data.monthKey}-31T23:59:59`),
       // Reels: mesmo critério de "aprovados" de getMyEditingStats — quem
-      // é editor_id do reel E de fato subiu arquivo nesse mês, não só
-      // "atribuído + item atualizado no mês" (critério solto demais, um
-      // reel podia contar pra alguém que nem editou de verdade).
+      // é editor_id do reel, não quem de fato subiu o arquivo (nem sempre
+      // é a mesma pessoa) — e alguém subiu arquivo pra ele nesse mês. Não
+      // é mais "atribuído + item atualizado no mês" (critério solto
+      // demais, um reel podia contar pra alguém que nem editou de verdade).
       context.supabase.from("item_files")
-        .select("added_by, content_items!inner(id, status, editor_id, type)")
+        .select("content_items!inner(id, status, editor_id, type)")
         .eq("kind", "media")
         .eq("content_items.type", "reel")
-        .in("added_by", userIds)
+        .in("content_items.editor_id", userIds)
         .gte("created_at", start).lt("created_at", end),
     ]);
 
     const reelDoneByUser = new Map<string, Map<string, string>>();
     for (const r of (reelUploadRows ?? []) as any[]) {
       const ci = r.content_items;
-      if (ci.editor_id !== r.added_by) continue;
-      if (!reelDoneByUser.has(r.added_by)) reelDoneByUser.set(r.added_by, new Map());
-      const m = reelDoneByUser.get(r.added_by)!;
+      if (!reelDoneByUser.has(ci.editor_id)) reelDoneByUser.set(ci.editor_id, new Map());
+      const m = reelDoneByUser.get(ci.editor_id)!;
       if (!m.has(ci.id)) m.set(ci.id, ci.status);
     }
 

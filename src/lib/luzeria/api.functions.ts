@@ -2560,15 +2560,15 @@ export type MyEditingStats = {
   editedItems: MyEditingStatsItem[]; approvedItems: MyEditingStatsItem[];
 };
 
-/** Quantos reels a pessoa editou (fez upload de arquivo) dentro do mês —
- * contando pela data real do upload, não pelo mês do calendário de
- * conteúdo do item (um vídeo do lote de setembro que ela editou em
- * agosto conta como produção dela em agosto). "Aprovados" é sempre um
- * SUBCONJUNTO de "editados": dos vídeos que ela editou nesse mês, quantos
- * já estão com status FINALIZADO ou PRONTO_PARA_PUBLICAR agora — não uma
- * contagem à parte por data de mudança de status (senão um vídeo editado
- * em agosto e aprovado só em setembro contava como "aprovado" sem nunca
- * ter contado como "editado" no mesmo mês, o que não faz sentido). */
+/** Quantos reels a pessoa editou dentro do mês — ela é a `editor_id` do
+ * reel e alguém subiu um arquivo pra ele no mês (não precisa ter sido ela
+ * mesma a subir: às vezes quem edita o vídeo não é quem sobe o arquivo no
+ * sistema). Conta pela data real do upload, não pelo mês do calendário de
+ * conteúdo do item (um vídeo do lote de setembro editado em agosto conta
+ * como produção dela em agosto). "Aprovados" é sempre um SUBCONJUNTO de
+ * "editados": dos vídeos que ela editou nesse mês, quantos já estão com
+ * status FINALIZADO ou PRONTO_PARA_PUBLICAR agora — não uma contagem à
+ * parte por data de mudança de status. */
 export const getMyEditingStats = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string; monthKey: string }) =>
@@ -2586,7 +2586,6 @@ export const getMyEditingStats = createServerFn({ method: "GET" })
     const { data: rows, error } = await context.supabase
       .from("item_files")
       .select("content_items!inner(id, title, status, months!inner(clients!months_client_id_fkey!inner(id, name)))")
-      .eq("added_by", data.userId)
       .eq("kind", "media")
       .eq("content_items.type", "reel")
       .eq("content_items.editor_id", data.userId)
