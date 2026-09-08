@@ -83,7 +83,11 @@ import {
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
 import { setProfileClientAccess } from "./client-access.functions";
-import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
+import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, setContractTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
+import {
+  listContractRequests, createContractRequest, cancelContractRequest,
+  getPublicContractRequest,
+} from "./contract-requests.functions";
 import {
   listBlogPostsAdmin, getBlogPostAdmin, createBlogPost, updateBlogPost, deleteBlogPost,
   getPublishedBlogPosts, getPublishedBlogPost,
@@ -517,6 +521,21 @@ export const productionAuditQO = (userId: string | null, monthKey: string) =>
     queryKey: ["production-audit", userId, monthKey],
     queryFn: () => getProductionAudit({ data: { userId: userId!, monthKey } }),
     enabled: !!userId && !!monthKey,
+  });
+
+export const contractRequestsQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["contract-requests", clientId],
+    queryFn: () => listContractRequests({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
+  });
+
+export const publicContractRequestQO = (token: string | null) =>
+  queryOptions({
+    queryKey: ["public-contract-request", token],
+    queryFn: () => getPublicContractRequest({ data: { token: token! } }),
+    enabled: !!token,
+    staleTime: 15_000,
   });
 
 export const clientBrandAssetsQO = (clientId: string | null) =>
@@ -1074,6 +1093,21 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["client-payments"] });
       },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar chave Pix."),
+    }),
+    setContractTemplate: useMutation({
+      mutationFn: useServerFn(setContractTemplate),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar modelo de contrato."),
+    }),
+    createContractRequest: useMutation({
+      mutationFn: useServerFn(createContractRequest),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["contract-requests"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao gerar contrato."),
+    }),
+    cancelContractRequest: useMutation({
+      mutationFn: useServerFn(cancelContractRequest),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["contract-requests"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao cancelar."),
     }),
     setPaymentMessageTemplate: useMutation({
       mutationFn: useServerFn(setPaymentMessageTemplate),

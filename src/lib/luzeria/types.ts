@@ -220,6 +220,11 @@ export interface Client {
    * — null = usa o padrão da agência (me.disabledFeatures); um array
    * substitui o padrão só pra esse cliente. */
   hiddenTabs?: string[] | null;
+  /** CNPJ ou CPF, endereço e nome do responsável legal — usados pra
+   * preencher o contrato automaticamente. */
+  cnpjCpf?: string | null;
+  address?: string | null;
+  legalResponsibleName?: string | null;
 }
 
 export type Role = "master" | "setor" | "member";
@@ -327,6 +332,9 @@ export interface Profile {
    * null = auto (derived from the brand's light/sidebar colors). */
   heroGradientFrom?: string | null;
   heroGradientTo?: string | null;
+  /** Modelo de contrato da agência (texto com {variáveis}) — null cai no
+   * modelo padrão embutido no front. */
+  contractTemplate?: string | null;
   /** Personal (not org-wide) — which screen this member lands on right
    * after login. null = today's default (Minhas Demandas). */
   defaultLanding?: { view: string; clientId?: string } | null;

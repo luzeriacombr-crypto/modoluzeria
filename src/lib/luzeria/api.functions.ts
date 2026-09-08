@@ -151,7 +151,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -223,6 +223,7 @@ export const getMe = createServerFn({ method: "GET" })
       dashboardLayout: ((org as any)?.dashboard_layout ?? {}) as Record<string, { x: number; y: number; w: number; h: number }>,
       heroGradientFrom: ((org as any)?.hero_gradient_from ?? null) as string | null,
       heroGradientTo: ((org as any)?.hero_gradient_to ?? null) as string | null,
+      contractTemplate: ((org as any)?.contract_template ?? null) as string | null,
       cargoNames,
       cargoPermissions,
       defaultLanding: ((profile as any)?.default_landing ?? null) as { view: string; clientId?: string } | null,
@@ -978,8 +979,10 @@ export const updateMyAccount = createServerFn({ method: "POST" })
 export const listClients = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase.from("clients")
-      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, hidden_tabs")
+    // cnpj_cpf/address/legal_responsible_name são colunas novas — cast até
+    // os tipos do Supabase serem regenerados depois da migração rodar.
+    const { data, error } = await (context.supabase as any).from("clients")
+      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, hidden_tabs, cnpj_cpf, address, legal_responsible_name")
       .order("name");
     if (error) throw new Error(error.message);
     const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
@@ -987,7 +990,7 @@ export const listClients = createServerFn({ method: "GET" })
     // contract_value é dado financeiro sensível — só volta pro Adm Master, mesmo que a
     // RLS de admin manage clients já libere leitura/escrita pra setor também.
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
-    return (data ?? []).map<Client>((c: any) => ({
+    return (data ?? []).map((c: any) => ({
       id: c.id, name: c.name, color: c.color, icon: c.icon,
       favorite: c.favorite, archived: c.archived,
       category: c.category ?? "Social Media",
@@ -999,6 +1002,9 @@ export const listClients = createServerFn({ method: "GET" })
         reviewDay: c.review_day ?? "",
         notes: c.notes ?? "",
       },
+      cnpjCpf: c.cnpj_cpf ?? null,
+      address: c.address ?? null,
+      legalResponsibleName: c.legal_responsible_name ?? null,
       createdAt: c.created_at,
       description: c.description ?? null,
       photoPath: c.photo_url ?? null,
@@ -1007,7 +1013,7 @@ export const listClients = createServerFn({ method: "GET" })
       contractValue: isMaster ? (c.contract_value ?? null) : undefined,
       paymentDueDay: isMaster ? (c.payment_due_day ?? null) : undefined,
       hiddenTabs: c.hidden_tabs ?? null,
-    }));
+    })) as Client[];
   });
 
 export const setNotifyStoriesInTasks = createServerFn({ method: "POST" })

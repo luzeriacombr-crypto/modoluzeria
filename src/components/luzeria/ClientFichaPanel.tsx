@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, driveThumbnailQO, journeyStagesQO } from "@/lib/luzeria/queries";
+import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, driveThumbnailQO, journeyStagesQO, contractRequestsQO } from "@/lib/luzeria/queries";
 import { useClientAssetUpload } from "@/lib/luzeria/use-client-asset-upload";
 import { useClientContractUpload } from "@/lib/luzeria/use-client-contract-upload";
 import { CONTENT_TYPE_LABEL, hasSetorPermission } from "@/lib/luzeria/types";
@@ -180,10 +180,17 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
           <DeliveriesFolderBlock clientId={client.id} isAdmin={isAdmin} />
         </Section>
 
-        {/* Contract */}
+        {/* Contract (arquivo pronto, anexado manualmente) */}
         <Section label="Contrato">
           <ContractBlock clientId={client.id} isAdmin={isAdmin} />
         </Section>
+
+        {/* Contract generation + e-signature */}
+        {isAdmin && (
+          <Section label="Gerar contrato pra assinatura">
+            <GenerateContractBlock client={client} />
+          </Section>
+        )}
 
         {/* Brand assets */}
         <Section label="Arquivos da marca">
@@ -361,6 +368,9 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
   const [responsible, setResponsible] = useState<string>(client.customFields.fixedResponsibleId ?? "");
   const [reviewDay, setReviewDay] = useState<string>(client.customFields.reviewDay ?? "");
   const [notes, setNotes] = useState<string>(client.customFields.notes ?? "");
+  const [cnpjCpf, setCnpjCpf] = useState<string>(client.cnpjCpf ?? "");
+  const [address, setAddress] = useState<string>(client.address ?? "");
+  const [legalResponsibleName, setLegalResponsibleName] = useState<string>(client.legalResponsibleName ?? "");
   const [contractValue, setContractValue] = useState<string | number>(client.contractValue ?? "");
   const [paymentDueDay, setPaymentDueDay] = useState<string | number>(client.paymentDueDay ?? "");
   const [photoPreview, setPhotoPreview] = useState<string | null>(client.photoUrl ?? null);
@@ -378,6 +388,9 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     setContractValue(client.contractValue ?? "");
     setPaymentDueDay(client.paymentDueDay ?? "");
     setPhotoPreview(client.photoUrl ?? null);
+    setCnpjCpf(client.cnpjCpf ?? "");
+    setAddress(client.address ?? "");
+    setLegalResponsibleName(client.legalResponsibleName ?? "");
   }, [client.id]);
 
   function pickPhotoFile(file: File) {
@@ -416,6 +429,9 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       reels_per_week: Number(reelsPerWeek) || 0,
       fixed_responsible_id: responsible || null,
       review_day: reviewDay, notes,
+      cnpj_cpf: cnpjCpf.trim() || null,
+      address: address.trim() || null,
+      legal_responsible_name: legalResponsibleName.trim() || null,
       ...(isMaster ? {
         contract_value: contractValue === "" ? null : Number(contractValue),
         payment_due_day: paymentDueDay === "" ? null : Number(paymentDueDay),
@@ -494,6 +510,17 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
           {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </ConfigField>
+      <ConfigField label="CNPJ ou CPF">
+        <input value={cnpjCpf} disabled={!canEdit} onChange={(e) => setCnpjCpf(e.target.value)} placeholder="Pra preencher o contrato" className={inp} />
+      </ConfigField>
+      <ConfigField label="Responsável legal (pro contrato)">
+        <input value={legalResponsibleName} disabled={!canEdit} onChange={(e) => setLegalResponsibleName(e.target.value)} className={inp} />
+      </ConfigField>
+      <div className="sm:col-span-2">
+        <ConfigField label="Endereço">
+          <input value={address} disabled={!canEdit} onChange={(e) => setAddress(e.target.value)} className={inp} />
+        </ConfigField>
+      </div>
       {isMaster && (
         <ConfigField label="Valor mensal do contrato (R$)">
           <input
@@ -914,6 +941,208 @@ function ContractBlock({ clientId, isAdmin }: { clientId: string; isAdmin: boole
           </button>
         </>
       )}
+    </div>
+  );
+}
+
+const money = (v: number | null) =>
+  v == null ? "" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+function waLink(text: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+const DEFAULT_CONTRACT_TEMPLATE_FALLBACK =
+`CONTRATO DE PRESTAÇÃO DE SERVIÇOS
+
+CONTRATANTE: {cliente}, inscrito(a) sob o CNPJ/CPF {cnpj_cpf}, com endereço em {endereco}, neste ato representado(a) por {responsavel}.
+
+CONTRATADA: {agencia}.
+
+OBJETO: Prestação de serviços de gestão de redes sociais e produção de conteúdo, conforme escopo acordado entre as partes.
+
+VALOR: {valor}, com vencimento mensal no dia {vencimento}.
+
+Este contrato é válido a partir da assinatura eletrônica abaixo, feita pelo(a) responsável indicado(a) acima.`;
+
+function buildContractText(client: any, template: string | null, orgName: string) {
+  const t = template ?? DEFAULT_CONTRACT_TEMPLATE_FALLBACK;
+  return t
+    .replaceAll("{cliente}", client.name ?? "")
+    .replaceAll("{cnpj_cpf}", client.cnpjCpf ?? "não informado")
+    .replaceAll("{endereco}", client.address ?? "não informado")
+    .replaceAll("{responsavel}", client.legalResponsibleName ?? client.name ?? "")
+    .replaceAll("{agencia}", orgName ?? "")
+    .replaceAll("{valor}", client.contractValue != null ? money(client.contractValue) : "a combinar")
+    .replaceAll("{vencimento}", client.paymentDueDay ? `dia ${client.paymentDueDay}` : "a combinar");
+}
+
+function GenerateContractBlock({ client }: { client: any }) {
+  const me = useMe().data;
+  const api = useApi();
+  const { data: requests = [], isLoading } = useQuery(contractRequestsQO(client.id));
+  const [drafting, setDrafting] = useState(false);
+  const [draftText, setDraftText] = useState("");
+  const [viewingSigned, setViewingSigned] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const current = requests.find((r) => r.status === "aguardando") ?? requests.find((r) => r.status === "assinado") ?? null;
+
+  function startDraft() {
+    setDraftText(buildContractText(client, me?.contractTemplate ?? null, me?.orgName ?? ""));
+    setDrafting(true);
+  }
+
+  function confirmDraft() {
+    if (!draftText.trim()) return;
+    api.createContractRequest.mutate(
+      { data: { clientId: client.id, contractText: draftText.trim() } },
+      { onSuccess: () => { setDrafting(false); toast.success("Contrato gerado. Copie o link e mande pro cliente."); } },
+    );
+  }
+
+  async function cancel(id: string) {
+    if (!(await requestConfirm("Cancelar esse contrato? O link deixa de funcionar.", { danger: true }))) return;
+    api.cancelContractRequest.mutate({ data: { id } });
+  }
+
+  const link = current ? `https://modocriador.com.br/contrato/${current.token}` : null;
+
+  function copyLink() {
+    if (!link) return;
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  if (isLoading) return <Loader2 size={14} className="animate-spin text-foreground/40" />;
+
+  if (drafting) {
+    return (
+      <div className="space-y-2">
+        <p className="text-[11px] text-foreground/50 leading-relaxed">
+          Confira o texto antes de gerar o link — dá pra ajustar um detalhe pontual aqui sem mudar o modelo padrão.
+        </p>
+        <textarea
+          value={draftText}
+          onChange={(e) => setDraftText(e.target.value)}
+          rows={10}
+          className="w-full bg-card border border-foreground/8 rounded-md px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] resize-none"
+        />
+        <div className="flex items-center justify-end gap-2">
+          <button onClick={() => setDrafting(false)} className="text-xs text-foreground/40 hover:text-foreground transition px-3 py-2">
+            Cancelar
+          </button>
+          <button
+            onClick={confirmDraft}
+            disabled={api.createContractRequest.isPending || !draftText.trim()}
+            className="rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+          >
+            {api.createContractRequest.isPending ? "Gerando…" : "Gerar contrato e link"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!current) {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-foreground/40">Nenhum contrato gerado ainda.</p>
+        <button
+          onClick={startDraft}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition"
+        >
+          <FileText size={12} /> Gerar contrato
+        </button>
+      </div>
+    );
+  }
+
+  if (current.status === "aguardando") {
+    return (
+      <div className="space-y-2">
+        <div className="bg-card border border-foreground/6 rounded-md px-3 py-2.5">
+          <div className="text-xs font-semibold text-foreground mb-1">Aguardando assinatura</div>
+          <div className="text-[11px] text-foreground/50 truncate">{link}</div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={copyLink} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition">
+            {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copiado!" : "Copiar link"}
+          </button>
+          <a
+            href={waLink(`Olá! Segue o link do contrato pra assinar: ${link}`)}
+            target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition"
+          >
+            <MessageCircle size={12} /> Mandar no WhatsApp
+          </a>
+          <button onClick={() => cancel(current.id)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold text-foreground/40 hover:text-red-400 transition">
+            <Trash2 size={12} /> Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="bg-card border border-foreground/6 rounded-md px-3 py-2.5 flex items-center gap-2.5">
+        <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(34,197,94,0.15)" }}>
+          <Check size={14} color="rgb(34,197,94)" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-xs font-semibold text-foreground">Assinado por {current.signerName}</div>
+          <div className="text-[11px] text-foreground/40">
+            {current.signedAt && new Date(current.signedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={() => setViewingSigned(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition">
+          <FileText size={12} /> Ver contrato assinado
+        </button>
+        <button onClick={startDraft} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold text-foreground/40 hover:text-foreground transition">
+          Gerar novo contrato
+        </button>
+      </div>
+      {viewingSigned && <SignedContractModal request={current} onClose={() => setViewingSigned(false)} />}
+    </div>
+  );
+}
+
+function SignedContractModal({ request, onClose }: { request: any; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[80] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-background rounded-xl border border-foreground/10 max-w-lg w-full max-h-[85vh] overflow-y-auto p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-foreground">Contrato assinado</h3>
+          <button onClick={onClose} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5"><X size={16} /></button>
+        </div>
+        <div className="text-xs text-foreground/70 whitespace-pre-wrap leading-relaxed bg-card border border-foreground/6 rounded-md p-3 mb-4">
+          {request.contractText}
+        </div>
+        <div className="grid grid-cols-2 gap-3 mb-4 text-xs">
+          <div>
+            <div className="text-[10px] uppercase text-foreground/40 tracking-wider mb-0.5">Assinado por</div>
+            <div className="text-foreground font-semibold">{request.signerName}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase text-foreground/40 tracking-wider mb-0.5">CPF</div>
+            <div className="text-foreground font-semibold">{request.signerCpf}</div>
+          </div>
+        </div>
+        {request.signatureDataUrl && (
+          <div>
+            <div className="text-[10px] uppercase text-foreground/40 tracking-wider mb-1">Assinatura</div>
+            <img src={request.signatureDataUrl} alt="Assinatura" className="rounded-md border border-foreground/10 bg-white" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

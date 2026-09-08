@@ -172,6 +172,23 @@ export const setPaymentMessageTemplate = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Mesma ideia de setPaymentMessageTemplate — null cai no modelo padrão
+ * embutido no front (ClientFichaPanel.tsx), {chave} trocado por texto
+ * puro na hora de gerar um contrato, sem motor de template nenhum. */
+export const setContractTemplate = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { template: string | null }) => z.object({ template: z.string().trim().max(20000).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    // `contract_template` é coluna nova — cast até os tipos do Supabase
+    // serem regenerados depois da migração rodar.
+    const { error } = await (context.supabase as any).from("orgs")
+      .update({ contract_template: data.template?.trim() || null }).eq("id", context.orgId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const markClientPaymentReceived = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string; period: string; amountCents?: number | null }) =>

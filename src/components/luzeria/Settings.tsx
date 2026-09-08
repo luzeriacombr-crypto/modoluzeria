@@ -416,11 +416,63 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+const DEFAULT_CONTRACT_TEMPLATE =
+`CONTRATO DE PRESTAÇÃO DE SERVIÇOS
+
+CONTRATANTE: {cliente}, inscrito(a) sob o CNPJ/CPF {cnpj_cpf}, com endereço em {endereco}, neste ato representado(a) por {responsavel}.
+
+CONTRATADA: {agencia}.
+
+OBJETO: Prestação de serviços de gestão de redes sociais e produção de conteúdo, conforme escopo acordado entre as partes.
+
+VALOR: {valor}, com vencimento mensal no dia {vencimento}.
+
+Este contrato é válido a partir da assinatura eletrônica abaixo, feita pelo(a) responsável indicado(a) acima.`;
+
+function ContractTemplateForm({ template, isMaster }: { template: string | null; isMaster: boolean }) {
+  const api = useApi();
+  const [value, setValue] = useState(template ?? DEFAULT_CONTRACT_TEMPLATE);
+  useEffect(() => setValue(template ?? DEFAULT_CONTRACT_TEMPLATE), [template]);
+  if (!isMaster) return null;
+  const inp = "w-full bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] transition-colors";
+  return (
+    <div className="bg-card rounded-lg p-5">
+      <div className="text-sm font-semibold text-foreground mb-1">Modelo de contrato</div>
+      <p className="text-[11px] text-foreground/50 mb-2 leading-relaxed">
+        Usado quando você gera um contrato pra um cliente assinar. Use{" "}
+        <code className="text-foreground/60">{"{cliente}"}</code>,{" "}
+        <code className="text-foreground/60">{"{cnpj_cpf}"}</code>,{" "}
+        <code className="text-foreground/60">{"{endereco}"}</code>,{" "}
+        <code className="text-foreground/60">{"{responsavel}"}</code>,{" "}
+        <code className="text-foreground/60">{"{agencia}"}</code>,{" "}
+        <code className="text-foreground/60">{"{valor}"}</code> e{" "}
+        <code className="text-foreground/60">{"{vencimento}"}</code> onde quiser — cada campo é trocado
+        pelos dados do cliente na hora de gerar.
+      </p>
+      <textarea value={value} onChange={(e) => setValue(e.target.value)} rows={12} className={inp + " resize-none font-mono text-xs"} />
+      <div className="flex items-center justify-end gap-2 mt-2">
+        <button onClick={() => setValue(DEFAULT_CONTRACT_TEMPLATE)} className="text-xs text-foreground/40 hover:text-foreground transition">
+          Restaurar padrão
+        </button>
+        <button
+          onClick={() => api.setContractTemplate.mutate({ data: { template: value } }, { onSuccess: () => toast.success("Modelo salvo.") })}
+          disabled={api.setContractTemplate.isPending || !value.trim()}
+          className="shrink-0 rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >
+          {api.setContractTemplate.isPending ? "Salvando…" : "Salvar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function GeneralSettings() {
   const { data: settings } = useQuery(appSettingsQO());
   const { updateAppSettings } = useApi();
   const me = useMe().data;
   if (!settings) return <div className="text-foreground/40 text-sm">Carregando…</div>;
+  const isMaster = me?.role === "master";
 
   const toggle = (next: boolean) =>
     updateAppSettings.mutate({ data: { requireRatingOnFinalize: next } }, {
@@ -471,6 +523,15 @@ function GeneralSettings() {
             settings.requireRatingOnFinalize ? "left-[22px]" : "left-0.5"}`} />
         </button>
       </div>
+
+      {isMaster && (
+        <>
+          <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
+            <SettingsIcon size={12} /> Contrato
+          </h2>
+          <ContractTemplateForm template={me?.contractTemplate ?? null} isMaster={isMaster} />
+        </>
+      )}
 
       <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
         <SettingsIcon size={12} /> Recursos

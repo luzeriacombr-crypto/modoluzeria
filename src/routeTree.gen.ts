@@ -30,6 +30,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SelecaoTokenRouteImport } from './routes/selecao.$token'
 import { Route as PromoSlugRouteImport } from './routes/promo/$slug'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
+import { Route as ContratoTokenRouteImport } from './routes/contrato.$token'
 import { Route as BlogSlugRouteImport } from './routes/blog_.$slug'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
@@ -160,6 +161,11 @@ const PromoSlugRoute = PromoSlugRouteImport.update({
 const PreviewTokenRoute = PreviewTokenRouteImport.update({
   id: '/preview/$token',
   path: '/preview/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContratoTokenRoute = ContratoTokenRouteImport.update({
+  id: '/contrato/$token',
+  path: '/contrato/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
@@ -325,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/vendas': typeof AuthenticatedVendasRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/contrato/$token': typeof ContratoTokenRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
   '/selecao/$token': typeof SelecaoTokenRoute
@@ -371,6 +378,7 @@ export interface FileRoutesByTo {
   '/vendas': typeof AuthenticatedVendasRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/contrato/$token': typeof ContratoTokenRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
   '/selecao/$token': typeof SelecaoTokenRoute
@@ -419,6 +427,7 @@ export interface FileRoutesById {
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog_/$slug': typeof BlogSlugRoute
+  '/contrato/$token': typeof ContratoTokenRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
   '/selecao/$token': typeof SelecaoTokenRoute
@@ -467,6 +476,7 @@ export interface FileRouteTypes {
     | '/vendas'
     | '/assinar/completar'
     | '/blog/$slug'
+    | '/contrato/$token'
     | '/preview/$token'
     | '/promo/$slug'
     | '/selecao/$token'
@@ -513,6 +523,7 @@ export interface FileRouteTypes {
     | '/vendas'
     | '/assinar/completar'
     | '/blog/$slug'
+    | '/contrato/$token'
     | '/preview/$token'
     | '/promo/$slug'
     | '/selecao/$token'
@@ -560,6 +571,7 @@ export interface FileRouteTypes {
     | '/_authenticated/vendas'
     | '/assinar/completar'
     | '/blog_/$slug'
+    | '/contrato/$token'
     | '/preview/$token'
     | '/promo/$slug'
     | '/selecao/$token'
@@ -595,6 +607,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermosRoute: typeof TermosRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  ContratoTokenRoute: typeof ContratoTokenRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
   PromoSlugRoute: typeof PromoSlugRoute
   SelecaoTokenRoute: typeof SelecaoTokenRoute
@@ -751,6 +764,13 @@ declare module '@tanstack/react-router' {
       path: '/preview/$token'
       fullPath: '/preview/$token'
       preLoaderRoute: typeof PreviewTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contrato/$token': {
+      id: '/contrato/$token'
+      path: '/contrato/$token'
+      fullPath: '/contrato/$token'
+      preLoaderRoute: typeof ContratoTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog_/$slug': {
@@ -1003,6 +1023,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermosRoute: TermosRoute,
   BlogSlugRoute: BlogSlugRoute,
+  ContratoTokenRoute: ContratoTokenRoute,
   PreviewTokenRoute: PreviewTokenRoute,
   PromoSlugRoute: PromoSlugRoute,
   SelecaoTokenRoute: SelecaoTokenRoute,
