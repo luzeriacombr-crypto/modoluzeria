@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myEditingStatsQO, goalProgressQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, hasPermission, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, Fragment } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, TrendingUp } from "lucide-react";
+import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, TrendingUp, Video, FileText } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
@@ -194,7 +194,7 @@ export function MyTasks() {
 
       {targetId && <ActivityCountsWidget monthKey={monthKey} userId={targetId} />}
 
-      {targetId && <EditingStatsWidget monthKey={monthKey} userId={targetId} />}
+      {targetId && <WorkStatsWidget monthKey={monthKey} userId={targetId} />}
 
       {isMeView && googleCalendarEnabled && <UpcomingCalendarWidget />}
 
@@ -803,14 +803,26 @@ function daysElapsedInMonth(monthKey: string): number {
   return daysInMonth;
 }
 
-function EditingStatsWidget({ monthKey, userId }: { monthKey: string; userId: string }) {
-  const { data: stats } = useQuery(myEditingStatsQO(userId, monthKey));
-  const { data: goal } = useQuery(goalProgressQO(monthKey, userId));
-  const [open, setOpen] = useState(false);
+type WorkTypeKey = "reels" | "posts" | "gravacao" | "roteiro";
+const WORK_TYPE_META: Record<WorkTypeKey, { label: string; color: string; icon: (size: number) => React.ReactNode }> = {
+  reels: { label: "Reels editados", color: "var(--lz-accent-ink)", icon: (s) => <Film size={s} /> },
+  posts: { label: "Posts editados", color: "#4A9EFF", icon: (s) => <ImageIcon size={s} /> },
+  gravacao: { label: "Gravações concluídas", color: "#B392F0", icon: (s) => <Video size={s} /> },
+  roteiro: { label: "Roteiros concluídos", color: "#5BA88A", icon: (s) => <FileText size={s} /> },
+};
+
+/** Card duplo (feito/meta + média por dia) repetido por tipo de trabalho
+ * — só entra o tipo que a pessoa tiver pelo menos 1 feito no mês; sem
+ * meta configurada pra esse tipo, mostra só o número (sem fração). */
+function WorkStatsWidget({ monthKey, userId }: { monthKey: string; userId: string }) {
+  const { data: stats } = useQuery(myWorkStatsQO(userId, monthKey));
+  const [open, setOpen] = useState<WorkTypeKey | null>(null);
   const { selectMonth, openItem, flash } = useUI();
   const navigate = useNavigate();
 
-  if (!stats || stats.edited === 0) return null;
+  if (!stats) return null;
+  const types = (Object.keys(WORK_TYPE_META) as WorkTypeKey[]).filter((k) => stats[k].done > 0);
+  if (types.length === 0) return null;
 
   function openVideo(itemId: string, clientId: string) {
     navigate({ to: "/cliente/$clientId", params: { clientId } });
@@ -819,59 +831,66 @@ function EditingStatsWidget({ monthKey, userId }: { monthKey: string; userId: st
   }
 
   const days = daysElapsedInMonth(monthKey);
-  const perDay = (stats.edited / days).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const reelsGoal = goal?.reelsGoal ?? 0;
-  const lime = "var(--lz-accent-ink)";
   const orange = "#FF8C42";
+  const openSection = open ? stats[open] : null;
 
   return (
     <div className="mb-6">
-      <div className="grid grid-cols-2 gap-3">
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => setOpen((o) => !o)}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpen((o) => !o); }}
-          className="relative overflow-hidden rounded-xl p-4 cursor-pointer transition-transform hover:-translate-y-0.5"
-          style={{ background: `linear-gradient(160deg, ${hexA(lime, 0.16)} 0%, var(--card) 70%)`, border: `1px solid ${hexA(lime, 0.22)}` }}
-        >
-          <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: lime }} />
-          <div className="relative flex items-center justify-between mb-3">
-            <div className="h-7 w-7 rounded-md inline-flex items-center justify-center" style={{ background: hexA(lime, 0.18), color: lime }}>
-              <Film size={16} />
-            </div>
-            <span className="text-[9px] uppercase font-bold tracking-wider text-foreground/30">Toque</span>
-          </div>
-          <div className="relative text-[28px] font-extrabold leading-none mb-1.5 tabular-nums" style={{ color: lime }}>
-            {stats.edited}{reelsGoal > 0 && <span className="text-foreground/35 font-bold text-lg">/{reelsGoal}</span>}
-          </div>
-          <div className="relative text-[10.5px] uppercase tracking-wider font-bold" style={{ color: lime }}>Vídeos editados</div>
-          <div className="relative text-[10.5px] text-foreground/35 mt-0.5">{reelsGoal > 0 ? "Meta do mês" : formatMonth(monthKey)}</div>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {types.map((key) => {
+          const section = stats[key];
+          const meta = WORK_TYPE_META[key];
+          const perDay = (section.done / days).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+          return (
+            <Fragment key={key}>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setOpen((o) => (o === key ? null : key))}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpen((o) => (o === key ? null : key)); }}
+                className="relative overflow-hidden rounded-xl p-4 cursor-pointer transition-transform hover:-translate-y-0.5"
+                style={{ background: `linear-gradient(160deg, ${hexA(meta.color, 0.16)} 0%, var(--card) 70%)`, border: `1px solid ${hexA(meta.color, 0.22)}` }}
+              >
+                <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: meta.color }} />
+                <div className="relative flex items-center justify-between mb-3">
+                  <div className="h-7 w-7 rounded-md inline-flex items-center justify-center" style={{ background: hexA(meta.color, 0.18), color: meta.color }}>
+                    {meta.icon(16)}
+                  </div>
+                  <span className="text-[9px] uppercase font-bold tracking-wider text-foreground/30">Toque</span>
+                </div>
+                <div className="relative text-[28px] font-extrabold leading-none mb-1.5 tabular-nums" style={{ color: meta.color }}>
+                  {section.done}{section.goal != null && <span className="text-foreground/35 font-bold text-lg">/{section.goal}</span>}
+                </div>
+                <div className="relative text-[10.5px] uppercase tracking-wider font-bold" style={{ color: meta.color }}>{meta.label}</div>
+                <div className="relative text-[10.5px] text-foreground/35 mt-0.5">{section.goal != null ? "Meta do mês" : formatMonth(monthKey)}</div>
+              </div>
 
-        <div
-          className="relative overflow-hidden rounded-xl p-4"
-          style={{ background: `linear-gradient(160deg, ${hexA(orange, 0.16)} 0%, var(--card) 70%)`, border: `1px solid ${hexA(orange, 0.22)}` }}
-        >
-          <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: orange }} />
-          <div className="relative mb-3">
-            <div className="h-7 w-7 rounded-md inline-flex items-center justify-center" style={{ background: hexA(orange, 0.18), color: orange }}>
-              <TrendingUp size={16} />
-            </div>
-          </div>
-          <div className="relative text-[28px] font-extrabold leading-none mb-1.5 tabular-nums" style={{ color: orange }}>{perDay}</div>
-          <div className="relative text-[10.5px] uppercase tracking-wider font-bold" style={{ color: orange }}>Média por dia</div>
-          <div className="relative text-[10.5px] text-foreground/35 mt-0.5">Nos {days} dias corridos do mês</div>
-        </div>
+              <div
+                className="relative overflow-hidden rounded-xl p-4"
+                style={{ background: `linear-gradient(160deg, ${hexA(orange, 0.16)} 0%, var(--card) 70%)`, border: `1px solid ${hexA(orange, 0.22)}` }}
+              >
+                <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: orange }} />
+                <div className="relative mb-3">
+                  <div className="h-7 w-7 rounded-md inline-flex items-center justify-center" style={{ background: hexA(orange, 0.18), color: orange }}>
+                    <TrendingUp size={16} />
+                  </div>
+                </div>
+                <div className="relative text-[28px] font-extrabold leading-none mb-1.5 tabular-nums" style={{ color: orange }}>{perDay}</div>
+                <div className="relative text-[10.5px] uppercase tracking-wider font-bold" style={{ color: orange }}>Média por dia</div>
+                <div className="relative text-[10.5px] text-foreground/35 mt-0.5">Nos {days} dias corridos do mês</div>
+              </div>
+            </Fragment>
+          );
+        })}
       </div>
 
-      {open && (
+      {open && openSection && (
         <div className="mt-2 bg-card border border-foreground/6 rounded-lg px-4 py-2">
-          {stats.editedItems.length === 0 ? (
-            <p className="text-xs text-foreground/40 py-1.5">Nenhum vídeo encontrado.</p>
+          {openSection.items.length === 0 ? (
+            <p className="text-xs text-foreground/40 py-1.5">Nenhum item encontrado.</p>
           ) : (
             <div className="flex flex-col divide-y divide-white/[0.05]">
-              {stats.editedItems.map((it) => (
+              {openSection.items.map((it) => (
                 <button
                   key={it.itemId}
                   type="button"

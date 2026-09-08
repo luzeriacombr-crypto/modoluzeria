@@ -18,7 +18,7 @@ import {
   setItemEditor, setItemReelType, setItemPostFormat,
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   addCleaningTask, renameCleaningTask, deleteCleaningTask,
-  adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations, getMyEditingStats,
+  adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations, getMyWorkStats,
   listOrgsBilling, getOrgNextInvoice,
   updateMyAccount,
   getReport, getDeliveryTrend, getMemberReportDetail, getMemberVelocity, getFileUploadsReport,
@@ -219,10 +219,10 @@ export const memberFinalizationsQO = (
     enabled: !!userId && !!monthKey,
   });
 
-export const myEditingStatsQO = (userId: string, monthKey: string) =>
+export const myWorkStatsQO = (userId: string, monthKey: string) =>
   queryOptions({
-    queryKey: ["my-editing-stats", userId, monthKey],
-    queryFn: () => getMyEditingStats({ data: { userId, monthKey } }),
+    queryKey: ["my-work-stats", userId, monthKey],
+    queryFn: () => getMyWorkStats({ data: { userId, monthKey } }),
     enabled: !!userId && !!monthKey,
   });
 

@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status, WorkSchedule } from "./types";
-import { isActivityType, STATUS_META, SETOR_PERMISSION_KEYS } from "./types";
+import { isActivityType, STATUS_META, SETOR_PERMISSION_KEYS, isDoneStatus } from "./types";
 
 /** Fixed id of the original Luzeria Estúdio org — also hardcoded in migrations
  * and in the admin-auth-operations edge function (they can't share a TS import). */
@@ -2552,28 +2552,36 @@ export const getTopMembersByGoal = createServerFn({ method: "GET" })
     return { period: data.period, ranking, noGoal };
   });
 
-/* ============== MY EDITING STATS ============== */
+/* ============== MY WORK STATS ============== */
 
-export type MyEditingStatsItem = { itemId: string; title: string; clientId: string; clientName: string };
-export type MyEditingStats = {
-  edited: number; approved: number;
-  editedItems: MyEditingStatsItem[]; approvedItems: MyEditingStatsItem[];
+export type MyWorkStatsItem = { itemId: string; title: string; clientId: string; clientName: string };
+export type MyWorkStatsSection = { done: number; goal: number | null; items: MyWorkStatsItem[] };
+export type MyWorkStats = {
+  reels: MyWorkStatsSection;
+  posts: MyWorkStatsSection;
+  gravacao: MyWorkStatsSection;
+  roteiro: MyWorkStatsSection;
 };
 
-/** Quantos reels a pessoa editou dentro do mês — ela é a `editor_id` do
- * reel e alguém subiu um arquivo pra ele no mês (não precisa ter sido ela
- * mesma a subir: às vezes quem edita o vídeo não é quem sobe o arquivo no
- * sistema). Conta pela data real do upload, não pelo mês do calendário de
- * conteúdo do item (um vídeo do lote de setembro editado em agosto conta
- * como produção dela em agosto). "Aprovados" é sempre um SUBCONJUNTO de
- * "editados": dos vídeos que ela editou nesse mês, quantos já estão com
- * status FINALIZADO ou PRONTO_PARA_PUBLICAR agora — não uma contagem à
- * parte por data de mudança de status. */
-export const getMyEditingStats = createServerFn({ method: "GET" })
+/** Produção da pessoa no mês, por tipo de trabalho — pensado pro card de
+ * "Minhas Demandas" (só aparece o tipo que ela tiver pelo menos 1 feito;
+ * `goal` null quando não tem meta configurada pra esse tipo, o front
+ * mostra só o número sem fração nesse caso).
+ *
+ * Reels e posts: ela é a `editor_id` do item e ALGUÉM subiu um arquivo
+ * pra ele no mês (não precisa ter sido ela mesma a subir — às vezes quem
+ * edita não é quem sobe o arquivo no sistema). Conta pela data real do
+ * upload, não pelo mês do calendário de conteúdo do item.
+ *
+ * Gravação e roteiro não têm o conceito de "editor" (ver DetailPanel —
+ * o seletor de editor só aparece pra post/reel/story) — contam por
+ * atribuição (item_assignees) + o status ter virado concluído/pronto
+ * dentro do mês (last_status_change_at), não por "algo mudou no item". */
+export const getMyWorkStats = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string; monthKey: string }) =>
     z.object({ userId: z.string().uuid(), monthKey: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
-  .handler(async ({ data, context }): Promise<MyEditingStats> => {
+  .handler(async ({ data, context }): Promise<MyWorkStats> => {
     if (data.userId !== context.userId) {
       const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
       if (!isAdmin) throw new Error("Forbidden");
@@ -2583,35 +2591,60 @@ export const getMyEditingStats = createServerFn({ method: "GET" })
     const start = new Date(Date.UTC(y, m - 1, 1, 3, 0, 0)).toISOString();
     const end = new Date(Date.UTC(y, m, 1, 3, 0, 0)).toISOString();
 
-    const { data: rows, error } = await context.supabase
-      .from("item_files")
-      .select("content_items!inner(id, title, status, months!inner(clients!months_client_id_fkey!inner(id, name)))")
-      .eq("kind", "media")
-      .eq("content_items.type", "reel")
-      .eq("content_items.editor_id", data.userId)
-      .gte("created_at", start)
-      .lt("created_at", end);
-    if (error) throw new Error(error.message);
-
-    // Um reel pode ter mais de um upload no mês — dedup pelo id do item,
-    // primeiro que aparece vale.
-    const editedMap = new Map<string, MyEditingStatsItem & { status: string }>();
-    for (const r of (rows ?? []) as any[]) {
-      const ci = r.content_items;
-      if (!editedMap.has(ci.id)) {
-        editedMap.set(ci.id, {
-          itemId: ci.id, title: ci.title ?? "(sem título)",
-          clientId: ci.months.clients.id, clientName: ci.months.clients.name,
-          status: ci.status,
-        });
+    async function byEditorUpload(type: "reel" | "post"): Promise<MyWorkStatsItem[]> {
+      const { data: rows, error } = await context.supabase
+        .from("item_files")
+        .select("content_items!inner(id, title, months!inner(clients!months_client_id_fkey!inner(id, name)))")
+        .eq("kind", "media")
+        .eq("content_items.type", type)
+        .eq("content_items.editor_id", data.userId)
+        .gte("created_at", start)
+        .lt("created_at", end);
+      if (error) throw new Error(error.message);
+      const map = new Map<string, MyWorkStatsItem>();
+      for (const r of (rows ?? []) as any[]) {
+        const ci = r.content_items;
+        if (!map.has(ci.id)) {
+          map.set(ci.id, { itemId: ci.id, title: ci.title ?? "(sem título)", clientId: ci.months.clients.id, clientName: ci.months.clients.name });
+        }
       }
+      return [...map.values()];
     }
-    const all = [...editedMap.values()];
-    const strip = ({ status, ...rest }: MyEditingStatsItem & { status: string }) => rest;
-    const editedItems = all.map(strip);
-    const approvedItems = all.filter((it) => it.status === "FINALIZADO" || it.status === "PRONTO_PARA_PUBLICAR").map(strip);
 
-    return { edited: editedItems.length, approved: approvedItems.length, editedItems, approvedItems };
+    async function byAssigneeDone(type: "gravacao" | "roteiro"): Promise<MyWorkStatsItem[]> {
+      const { data: assigns } = await context.supabase.from("item_assignees").select("item_id").eq("user_id", data.userId);
+      const ids = (assigns ?? []).map((a: any) => a.item_id);
+      if (!ids.length) return [];
+      const { data: rows, error } = await context.supabase
+        .from("content_items")
+        .select("id, title, status, last_status_change_at, months!inner(clients!months_client_id_fkey!inner(id, name))")
+        .in("id", ids)
+        .eq("type", type)
+        .gte("last_status_change_at", start)
+        .lt("last_status_change_at", end);
+      if (error) throw new Error(error.message);
+      return (rows ?? [])
+        .filter((r: any) => isDoneStatus(r.status))
+        .map((r: any) => ({ itemId: r.id, title: r.title ?? "(sem título)", clientId: r.months.clients.id, clientName: r.months.clients.name }));
+    }
+
+    const [reelItems, postItems, gravacaoItems, roteiroItems, goalRow] = await Promise.all([
+      byEditorUpload("reel"),
+      byEditorUpload("post"),
+      byAssigneeDone("gravacao"),
+      byAssigneeDone("roteiro"),
+      context.supabase.from("member_goals")
+        .select("reels_goal, posts_goal, gravacao_goal")
+        .eq("user_id", data.userId).eq("month_key", data.monthKey).maybeSingle(),
+    ]);
+
+    const g: any = goalRow.data;
+    return {
+      reels: { done: reelItems.length, goal: g?.reels_goal || null, items: reelItems },
+      posts: { done: postItems.length, goal: g?.posts_goal || null, items: postItems },
+      gravacao: { done: gravacaoItems.length, goal: g?.gravacao_goal || null, items: gravacaoItems },
+      roteiro: { done: roteiroItems.length, goal: null, items: roteiroItems },
+    };
   });
 
 /* ============== MEMBER FINALIZATIONS ============== */
