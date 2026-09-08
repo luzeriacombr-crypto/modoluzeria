@@ -487,6 +487,10 @@ function MemberDetailPanel({
     post: list.filter((t) => t.type === "post").length,
     reel: list.filter((t) => t.type === "reel").length,
     outros: list.filter((t) => t.type === "outros").length,
+    // Vídeos gravados, não sessões — mesmo peso usado no total do ranking.
+    gravacaoVideos: list
+      .filter((t) => t.type === "gravacao")
+      .reduce((sum, t) => sum + ((t.activityQuantity ?? 0) > 0 ? (t.activityQuantity as number) : 1), 0),
   }), [list]);
 
   const costSettings = useQuery(orgCostSettingsQO()).data;
@@ -604,6 +608,12 @@ function MemberDetailPanel({
                         style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
                         {typeLabel}
                       </span>
+                      {t.type === "gravacao" && (t.activityQuantity ?? 0) > 0 && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider"
+                          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+                          {t.activityQuantity} vídeo{t.activityQuantity === 1 ? "" : "s"}
+                        </span>
+                      )}
                     </div>
                     <div className="text-foreground text-sm truncate">{t.title}</div>
                     <div className="text-[10px] text-foreground/40 mt-0.5">{formatFinalized(t.finalizedAt)}</div>
@@ -621,6 +631,11 @@ function MemberDetailPanel({
             <span className="text-foreground font-bold">{counts.post}</span> posts ·{" "}
             <span className="text-foreground font-bold">{counts.reel}</span> reels ·{" "}
             <span className="text-foreground font-bold">{counts.outros}</span> outros
+            {counts.gravacaoVideos > 0 && (
+              <>
+                {" "}· <span className="text-foreground font-bold">{counts.gravacaoVideos}</span> vídeo{counts.gravacaoVideos === 1 ? "" : "s"} gravado{counts.gravacaoVideos === 1 ? "" : "s"}
+              </>
+            )}
           </div>
           <div className="flex items-center gap-1 bg-card rounded-md p-1 text-[10px] flex-wrap">
             {(Object.keys(PERIOD_LABEL) as Period[]).map((p) => (
