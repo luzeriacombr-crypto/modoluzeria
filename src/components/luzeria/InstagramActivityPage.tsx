@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import {
-  Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ArrowUpDown, ExternalLink,
+  Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ExternalLink,
   Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown, MessageCircle, Send, X, Mail,
 } from "lucide-react";
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
@@ -110,7 +110,7 @@ export function InstagramActivityPage() {
       )}
 
       {clientFilter && (
-        <MetricsPanel key={`table-${clientFilter}`} clientId={clientFilter} clientName={clients.find((c) => c.id === clientFilter)?.name ?? ""} />
+        <FeedGridPanel key={`feed-${clientFilter}`} clientId={clientFilter} clientName={clients.find((c) => c.id === clientFilter)?.name ?? ""} />
       )}
 
       {clientFilter && (
@@ -376,71 +376,63 @@ function csvEscape(v: string) {
   return `"${v.replace(/"/g, '""')}"`;
 }
 
-/** Painel de métricas por cliente — busca TODAS as publicações reais da
- * conta do Instagram desse cliente (direto na Meta, não só o que passou
- * pelo Modo Criador), depois carrega o alcance/curtidas/etc de cada uma sob
- * demanda. Depende da permissão `instagram_business_manage_insights`,
- * ainda não aprovada pela Meta — enquanto isso, "Carregar métricas" mostra
- * o erro real que a Meta devolve pra cada publicação. */
-function MetricsPanel({ clientId, clientName }: { clientId: string; clientName: string }) {
+/** Feed da conta do cliente, no estilo grade do próprio Instagram — busca
+ * TODAS as publicações reais (direto na Meta, não só o que passou pelo
+ * Modo Criador), com curtidas/comentários aparecendo ao passar o mouse, e
+ * abre o post com comentários ao lado ao clicar. Depende da permissão
+ * `instagram_business_manage_insights`, ainda não aprovada pela Meta —
+ * enquanto isso, os números da grade ficam em "—" com o erro real da Meta
+ * disponível no CSV. */
+function FeedGridPanel({ clientId, clientName }: { clientId: string; clientName: string }) {
   const getMedia = useServerFn(getInstagramAccountMedia);
   const getInsights = useServerFn(getInstagramAccountMediaInsights);
-  const [loadingMedia, setLoadingMedia] = useState(false);
+  const [loadingMedia, setLoadingMedia] = useState(true);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [media, setMedia] = useState<InstagramAccountMedia[] | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
-  const [results, setResults] = useState<Map<string, InstagramMediaInsights & { error?: string }> | null>(null);
-  const [sortKey, setSortKey] = useState<keyof InstagramMediaInsights>("reach");
-  const [commentsMedia, setCommentsMedia] = useState<InstagramAccountMedia | null>(null);
+  const [results, setResults] = useState<Map<string, InstagramMediaInsights & { error?: string }>>(new Map());
+  const [selected, setSelected] = useState<InstagramAccountMedia | null>(null);
 
-  async function loadMedia() {
+  async function loadAll() {
     setLoadingMedia(true);
     setMediaError(null);
-    setResults(null);
+    setResults(new Map());
+    let items: InstagramAccountMedia[] = [];
     try {
       const r = await getMedia({ data: { clientId } });
-      setMedia(r.items);
+      items = r.items;
+      setMedia(items);
     } catch (e: any) {
       setMediaError(e?.message ?? "Falha ao listar publicações do Instagram.");
-    } finally {
       setLoadingMedia(false);
+      return;
     }
-  }
-
-  async function loadInsights() {
-    if (!media) return;
+    setLoadingMedia(false);
+    if (items.length === 0) return;
     setLoadingInsights(true);
-    const next = new Map<string, InstagramMediaInsights & { error?: string }>();
-    for (const m of media) {
+    for (const m of items) {
       try {
         const insights = await getInsights({ data: { clientId, mediaId: m.id, mediaProductType: m.mediaProductType } });
-        next.set(m.id, insights);
+        setResults((prev) => new Map(prev).set(m.id, insights));
       } catch (e: any) {
-        next.set(m.id, { itemId: m.id, reach: null, likes: null, comments: null, saved: null, shares: null, views: null, totalInteractions: null, degradedReason: null, error: e?.message ?? "Falha ao buscar" });
+        setResults((prev) => new Map(prev).set(m.id, {
+          itemId: m.id, reach: null, likes: null, comments: null, saved: null, shares: null, views: null,
+          totalInteractions: null, degradedReason: null, error: e?.message ?? "Falha ao buscar",
+        }));
       }
       // Pequena pausa entre chamadas pra não estourar limite de taxa da Meta.
       await new Promise((r) => setTimeout(r, 250));
     }
-    setResults(next);
     setLoadingInsights(false);
   }
-
-  const sorted = useMemo(() => {
-    if (!media) return [];
-    if (!results) return media;
-    return [...media].sort((a, b) => {
-      const av = results.get(a.id)?.[sortKey] as number | null ?? -1;
-      const bv = results.get(b.id)?.[sortKey] as number | null ?? -1;
-      return bv - av;
-    });
-  }, [media, results, sortKey]);
+  useEffect(() => { loadAll(); }, [clientId]);
 
   function exportCsv() {
     if (!media) return;
     const header = ["Legenda", "Tipo", "Publicado em", "Pelo Modo Criador", ...METRIC_COLUMNS.map((c) => c.label), "Erro"];
     const lines = [header.map(csvEscape).join(",")];
-    for (const m of sorted) {
-      const r = results?.get(m.id);
+    for (const m of media) {
+      const r = results.get(m.id);
       const row = [
         (m.caption ?? "").slice(0, 120) || "(sem legenda)",
         productTypeLabel(m.mediaProductType),
@@ -464,112 +456,67 @@ function MetricsPanel({ clientId, clientName }: { clientId: string; clientName: 
     <div className="mb-8 rounded-lg border border-foreground/8 bg-card p-4">
       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
         <div className="flex items-center gap-1.5 text-foreground/60">
-          <BarChart3 size={14} />
-          <span className="text-[11px] uppercase font-bold tracking-wider">Desempenho por publicação</span>
+          <Instagram size={14} />
+          <span className="text-[11px] uppercase font-bold tracking-wider">Feed</span>
           <span className="text-[10px] text-foreground/35 normal-case font-normal">— toda a conta, não só o que passou pelo app</span>
         </div>
-        <div className="flex items-center gap-2">
-          {!media && (
-            <button
-              onClick={loadMedia} disabled={loadingMedia}
-              className="lz-btn-primary text-xs px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 disabled:opacity-50"
-            >
-              {loadingMedia ? <Loader2 size={13} className="animate-spin" /> : <Instagram size={13} />}
-              {loadingMedia ? "Buscando…" : "Carregar publicações da conta"}
-            </button>
-          )}
-          {media && !results && (
-            <button
-              onClick={loadInsights} disabled={loadingInsights || media.length === 0}
-              className="lz-btn-primary text-xs px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 disabled:opacity-50"
-            >
-              {loadingInsights ? <Loader2 size={13} className="animate-spin" /> : <BarChart3 size={13} />}
-              {loadingInsights ? "Carregando métricas…" : "Carregar métricas"}
-            </button>
-          )}
-          {results && (
-            <button onClick={exportCsv} className="text-xs px-3 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground inline-flex items-center gap-1.5">
-              <Download size={13} /> Exportar CSV
-            </button>
-          )}
-        </div>
+        {media && media.length > 0 && (
+          <button onClick={exportCsv} className="text-xs px-3 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground inline-flex items-center gap-1.5">
+            <Download size={13} /> Exportar CSV
+          </button>
+        )}
       </div>
 
+      {loadingMedia && <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>}
       {mediaError && <p className="text-xs text-red-400/80">{mediaError}</p>}
-      {media && media.length === 0 && <p className="text-xs text-foreground/40">Nenhuma publicação encontrada nessa conta do Instagram.</p>}
+      {!loadingMedia && media && media.length === 0 && <p className="text-xs text-foreground/40">Nenhuma publicação encontrada nessa conta do Instagram.</p>}
 
       {media && media.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-foreground/40 border-b border-foreground/8">
-                <th className="py-1.5 pr-3 font-semibold">Publicação</th>
-                <th className="py-1.5 pr-3 font-semibold">Tipo</th>
-                {results && METRIC_COLUMNS.map((c) => (
-                  <th key={c.key} className="py-1.5 pr-3 font-semibold">
-                    <button onClick={() => setSortKey(c.key)} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
-                      {c.label} {sortKey === c.key && <ArrowUpDown size={10} />}
-                    </button>
-                  </th>
-                ))}
-                <th className="py-1.5 pr-3 font-semibold" />
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((m) => {
-                const r = results?.get(m.id);
-                return (
-                  <tr key={m.id} className="border-b border-foreground/5 last:border-0">
-                    <td className="py-1.5 pr-3 max-w-[260px]">
-                      <div className="flex items-center gap-2">
-                        {m.thumbnailUrl && <img src={m.thumbnailUrl} alt="" className="w-7 h-7 rounded object-cover shrink-0" />}
-                        <div className="min-w-0">
-                          <div className="text-foreground/80 truncate">{m.caption || "(sem legenda)"}</div>
-                          <div className="text-[10px] text-foreground/35 flex items-center gap-1.5">
-                            {new Date(m.timestamp).toLocaleDateString("pt-BR")}
-                            {m.publishedByApp && (
-                              <span className="inline-flex items-center gap-0.5" title="Publicado pelo Modo Criador">
-                                <Sparkles size={9} /> Modo Criador
-                              </span>
-                            )}
-                            {m.permalink && (
-                              <a href={m.permalink} target="_blank" rel="noreferrer" className="hover:text-foreground/70">
-                                <ExternalLink size={9} />
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-1.5 pr-3 text-foreground/60">{productTypeLabel(m.mediaProductType)}</td>
-                    {results && (
-                      r?.error ? (
-                        <td colSpan={METRIC_COLUMNS.length} className="py-1.5 pr-3 text-red-400/80">{r.error}</td>
-                      ) : (
-                        METRIC_COLUMNS.map((c) => (
-                          <td key={c.key} className="py-1.5 pr-3 text-foreground/70 tabular-nums">{r?.[c.key] ?? "—"}</td>
-                        ))
-                      )
-                    )}
-                    <td className="py-1.5 pr-1 text-right">
-                      <button
-                        onClick={() => setCommentsMedia(m)}
-                        title="Ver e responder comentários"
-                        className="p-1.5 rounded-md text-foreground/40 hover:text-foreground hover:bg-foreground/5"
-                      >
-                        <MessageCircle size={13} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))" }}>
+          {media.map((m) => {
+            const r = results.get(m.id);
+            return (
+              <button
+                key={m.id}
+                onClick={() => setSelected(m)}
+                className="relative aspect-square group overflow-hidden bg-foreground/5"
+              >
+                {m.thumbnailUrl ? (
+                  <img src={m.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center"><ImageIcon size={20} className="text-foreground/15" /></div>
+                )}
+                {m.mediaProductType !== "FEED" && (
+                  <span
+                    className="absolute top-1.5 left-1.5 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
+                    style={{ backgroundColor: "rgba(0,0,0,0.6)", color: "#FFFFFF", backdropFilter: "blur(2px)" }}
+                  >
+                    {productTypeLabel(m.mediaProductType)}
+                  </span>
+                )}
+                {m.publishedByApp && (
+                  <span className="absolute top-1.5 right-1.5 text-white drop-shadow" title="Publicado pelo Modo Criador">
+                    <Sparkles size={12} />
+                  </span>
+                )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100">
+                  <span className="flex items-center gap-1.5 text-white font-bold text-sm">
+                    <Heart size={15} fill="white" />
+                    {r?.error ? "—" : r?.likes ?? (loadingInsights ? <Loader2 size={11} className="animate-spin" /> : "—")}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-white font-bold text-sm">
+                    <MessageCircle size={15} fill="white" />
+                    {r?.error ? "—" : r?.comments ?? (loadingInsights ? <Loader2 size={11} className="animate-spin" /> : "—")}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {commentsMedia && (
-        <CommentsModal clientId={clientId} media={commentsMedia} onClose={() => setCommentsMedia(null)} />
+      {selected && (
+        <PostDetailModal clientId={clientId} media={selected} insights={results.get(selected.id) ?? null} onClose={() => setSelected(null)} />
       )}
     </div>
   );
@@ -663,7 +610,13 @@ function CommentRow({ comment, reply, isReply, onReply }: {
   );
 }
 
-function CommentsModal({ clientId, media, onClose }: { clientId: string; media: InstagramAccountMedia; onClose: () => void }) {
+/** Modal de post no estilo do próprio Instagram: mídia à esquerda,
+ * legenda + comentários + composer à direita — reusa a mesma lógica de
+ * carregar/responder/comentar que já existia no modal antigo, só
+ * reorganizada nesse layout de duas colunas. */
+function PostDetailModal({ clientId, media, insights, onClose }: {
+  clientId: string; media: InstagramAccountMedia; insights: (InstagramMediaInsights & { error?: string }) | null; onClose: () => void;
+}) {
   const getComments = useServerFn(getInstagramComments);
   const doReply = useServerFn(replyToInstagramComment);
   const doPostComment = useServerFn(postInstagramComment);
@@ -724,73 +677,124 @@ function CommentsModal({ clientId, media, onClose }: { clientId: string; media: 
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
       <div
-        className="bg-card border border-foreground/10 rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
+        className="bg-card border border-foreground/10 rounded-2xl w-full max-w-4xl h-[85vh] flex overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative flex items-center justify-center p-3.5 border-b border-foreground/10">
-          <span className="text-[15px] font-bold text-foreground">Comentários</span>
-          <button onClick={onClose} className="absolute right-3 p-1 rounded-full text-foreground/50 hover:text-foreground hover:bg-foreground/5">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {loading && <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>}
-          {error && <p className="text-xs text-red-400/80">{error}</p>}
-          {!loading && comments && comments.length === 0 && (
-            <div className="text-center py-10 text-foreground/40 text-sm">
-              <MessageCircle size={22} className="mx-auto mb-2 opacity-40" />
-              Nenhum comentário ainda.
-            </div>
+        {/* Mídia — igual a coluna esquerda do post aberto no próprio Instagram */}
+        <div className="hidden sm:flex flex-1 bg-black items-center justify-center relative">
+          {media.thumbnailUrl ? (
+            <img src={media.thumbnailUrl} alt="" className="max-w-full max-h-full object-contain" />
+          ) : (
+            <ImageIcon size={40} className="text-white/20" />
           )}
-          {!loading && comments?.map((c) => (
-            <div key={c.id}>
-              <CommentRow comment={c} reply={replyFor(c.id)} onReply={(patch, send) => {
-                if (send) { sendReply(c.id); return; }
-                setReplyState((s) => ({ ...s, [c.id]: { ...replyFor(c.id), ...patch } }));
-              }} />
-              {c.replies.length > 0 && (
-                <div className="ml-[42px] mt-2">
-                  {!expandedReplies.has(c.id) ? (
-                    <button
-                      onClick={() => setExpandedReplies((s) => new Set(s).add(c.id))}
-                      className="flex items-center gap-2 text-[12px] font-semibold text-foreground/40 hover:text-foreground/70"
-                    >
-                      <span className="w-6 h-px bg-foreground/20" />
-                      Ver {c.replies.length} resposta{c.replies.length > 1 ? "s" : ""}
-                    </button>
-                  ) : (
-                    <div className="space-y-3">
-                      {c.replies.map((r) => (
-                        <CommentRow key={r.id} comment={r} isReply reply={{ draft: "", sending: false, open: false }} onReply={() => {}} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+          {media.mediaProductType !== "FEED" && (
+            <span
+              className="absolute top-3 left-3 text-[10px] font-bold uppercase px-2 py-1 rounded tracking-wider"
+              style={{ backgroundColor: "rgba(0,0,0,0.6)", color: "#FFFFFF", backdropFilter: "blur(2px)" }}
+            >
+              {productTypeLabel(media.mediaProductType)}
+            </span>
+          )}
         </div>
 
-        <div className="flex items-center gap-2.5 p-3 border-t border-foreground/10">
-          <CommentAvatar username={media.publishedByApp ? "Modo Criador" : "Conta"} size={28} />
-          <input
-            value={composerDraft}
-            onChange={(e) => setComposerDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") postComment(); }}
-            placeholder="Adicione um comentário…"
-            className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-foreground/30"
-          />
-          <button
-            onClick={postComment}
-            disabled={posting || !composerDraft.trim()}
-            className="text-[13px] font-bold disabled:opacity-30 shrink-0"
-            style={{ color: "var(--lz-accent-ink)" }}
-          >
-            {posting ? <Loader2 size={14} className="animate-spin" /> : "Publicar"}
-          </button>
+        {/* Legenda + comentários + composer */}
+        <div className="w-full sm:w-[380px] flex flex-col min-w-0">
+          <div className="flex items-center justify-between gap-2 p-3.5 border-b border-foreground/10">
+            <div className="flex items-center gap-2 min-w-0">
+              <CommentAvatar username={media.publishedByApp ? "Modo Criador" : "Instagram"} size={30} />
+              <div className="min-w-0">
+                <div className="text-[13px] font-bold text-foreground truncate">
+                  {media.publishedByApp ? "Publicado pelo Modo Criador" : productTypeLabel(media.mediaProductType)}
+                </div>
+                <div className="text-[10px] text-foreground/40">{new Date(media.timestamp).toLocaleDateString("pt-BR")}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {media.permalink && (
+                <a href={media.permalink} target="_blank" rel="noreferrer" className="p-1.5 rounded-full text-foreground/50 hover:text-foreground hover:bg-foreground/5">
+                  <ExternalLink size={15} />
+                </a>
+              )}
+              <button onClick={onClose} className="p-1.5 rounded-full text-foreground/50 hover:text-foreground hover:bg-foreground/5">
+                <X size={17} />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
+            {media.caption && (
+              <div className="flex gap-2.5">
+                <CommentAvatar username={media.publishedByApp ? "Modo Criador" : "Instagram"} size={30} />
+                <p className="text-[13px] text-foreground/90 leading-snug">
+                  <span className="font-bold">{media.publishedByApp ? "modocriador" : "legenda"}</span> {media.caption}
+                </p>
+              </div>
+            )}
+            {loading && <div className="text-center py-8"><Loader2 size={16} className="animate-spin mx-auto text-foreground/30" /></div>}
+            {error && <p className="text-xs text-red-400/80">{error}</p>}
+            {!loading && comments && comments.length === 0 && (
+              <div className="text-center py-8 text-foreground/40 text-sm">
+                <MessageCircle size={20} className="mx-auto mb-2 opacity-40" />
+                Nenhum comentário ainda.
+              </div>
+            )}
+            {!loading && comments?.map((c) => (
+              <div key={c.id}>
+                <CommentRow comment={c} reply={replyFor(c.id)} onReply={(patch, send) => {
+                  if (send) { sendReply(c.id); return; }
+                  setReplyState((s) => ({ ...s, [c.id]: { ...replyFor(c.id), ...patch } }));
+                }} />
+                {c.replies.length > 0 && (
+                  <div className="ml-[42px] mt-2">
+                    {!expandedReplies.has(c.id) ? (
+                      <button
+                        onClick={() => setExpandedReplies((s) => new Set(s).add(c.id))}
+                        className="flex items-center gap-2 text-[12px] font-semibold text-foreground/40 hover:text-foreground/70"
+                      >
+                        <span className="w-6 h-px bg-foreground/20" />
+                        Ver {c.replies.length} resposta{c.replies.length > 1 ? "s" : ""}
+                      </button>
+                    ) : (
+                      <div className="space-y-3">
+                        {c.replies.map((r) => (
+                          <CommentRow key={r.id} comment={r} isReply reply={{ draft: "", sending: false, open: false }} onReply={() => {}} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-foreground/10 p-3">
+            {insights && !insights.error && (insights.likes != null || insights.comments != null) && (
+              <div className="flex items-center gap-4 mb-2.5 text-foreground/70">
+                <span className="flex items-center gap-1.5 text-[13px] font-bold"><Heart size={16} /> {insights.likes ?? "—"} curtidas</span>
+                <span className="flex items-center gap-1.5 text-[13px] font-bold"><MessageCircle size={16} /> {insights.comments ?? "—"} comentários</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2.5">
+              <CommentAvatar username={media.publishedByApp ? "Modo Criador" : "Conta"} size={28} />
+              <input
+                value={composerDraft}
+                onChange={(e) => setComposerDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") postComment(); }}
+                placeholder="Adicione um comentário…"
+                className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-foreground/30"
+              />
+              <button
+                onClick={postComment}
+                disabled={posting || !composerDraft.trim()}
+                className="text-[13px] font-bold disabled:opacity-30 shrink-0"
+                style={{ color: "var(--lz-accent-ink)" }}
+              >
+                {posting ? <Loader2 size={14} className="animate-spin" /> : "Publicar"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
