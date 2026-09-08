@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myEditingStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myEditingStatsQO, goalProgressQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, hasPermission, type Status } from "@/lib/luzeria/types";
 import { STATUS_ICONS } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet } from "lucide-react";
+import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, TrendingUp } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
@@ -785,13 +785,32 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
   );
 }
 
+/** color-mix aceita qualquer sintaxe de cor válida (hex, rgb(), var()...) —
+ * mesmo helper de AdminDashboard.tsx, duplicado aqui porque não é exportado
+ * de lá. */
+function hexA(color: string, a: number) {
+  return `color-mix(in srgb, ${color} ${a * 100}%, transparent)`;
+}
+
+/** Quantos dias já correram desse mês — mês atual usa o dia de hoje; mês
+ * passado (ou futuro) usa o mês inteiro, pra "média por dia" não ficar
+ * absurda olhando um mês que já fechou. */
+function daysElapsedInMonth(monthKey: string): number {
+  const [y, m] = monthKey.split("-").map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const now = new Date();
+  if (now.getFullYear() === y && now.getMonth() + 1 === m) return now.getDate();
+  return daysInMonth;
+}
+
 function EditingStatsWidget({ monthKey, userId }: { monthKey: string; userId: string }) {
   const { data: stats } = useQuery(myEditingStatsQO(userId, monthKey));
-  const [open, setOpen] = useState<"edited" | "approved" | null>(null);
+  const { data: goal } = useQuery(goalProgressQO(monthKey, userId));
+  const [open, setOpen] = useState(false);
   const { selectMonth, openItem, flash } = useUI();
   const navigate = useNavigate();
 
-  if (!stats || (stats.edited === 0 && stats.approved === 0)) return null;
+  if (!stats || stats.edited === 0) return null;
 
   function openVideo(itemId: string, clientId: string) {
     navigate({ to: "/cliente/$clientId", params: { clientId } });
@@ -799,47 +818,60 @@ function EditingStatsWidget({ monthKey, userId }: { monthKey: string; userId: st
     setTimeout(() => { openItem(itemId); flash(itemId); }, 30);
   }
 
-  const list = open === "edited" ? stats!.editedItems : open === "approved" ? stats!.approvedItems : [];
+  const days = daysElapsedInMonth(monthKey);
+  const perDay = (stats.edited / days).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const reelsGoal = goal?.reelsGoal ?? 0;
+  const lime = "var(--lz-accent-ink)";
+  const orange = "#FF8C42";
 
   return (
-    <div className="mb-6 bg-card rounded-lg overflow-hidden">
-      <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-        <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
-          <Film size={11} />
-        </span>
-        <h2 className="text-[11.5px] uppercase font-semibold tracking-wide text-foreground/60">Produção de vídeo em {formatMonth(monthKey)}</h2>
-      </div>
-      <div className="flex flex-wrap gap-2 px-4 pb-3.5">
-        <button
-          type="button"
-          onClick={() => setOpen((t) => (t === "edited" ? null : "edited"))}
-          className="text-xs font-semibold px-2.5 py-1 rounded-full transition-colors"
-          style={{
-            backgroundColor: open === "edited" ? "rgba(var(--lz-brand-light-rgb),0.28)" : "rgba(var(--lz-brand-light-rgb),0.12)",
-            color: "var(--lz-accent-ink)",
-          }}
+    <div className="mb-6">
+      <div className="grid grid-cols-2 gap-3">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpen((o) => !o)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpen((o) => !o); }}
+          className="relative overflow-hidden rounded-xl p-4 cursor-pointer transition-transform hover:-translate-y-0.5"
+          style={{ background: `linear-gradient(160deg, ${hexA(lime, 0.16)} 0%, var(--card) 70%)`, border: `1px solid ${hexA(lime, 0.22)}` }}
         >
-          {stats.edited} vídeo{stats.edited === 1 ? "" : "s"} editado{stats.edited === 1 ? "" : "s"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen((t) => (t === "approved" ? null : "approved"))}
-          className="text-xs font-semibold px-2.5 py-1 rounded-full transition-colors"
-          style={{
-            backgroundColor: open === "approved" ? "rgba(var(--lz-brand-light-rgb),0.28)" : "rgba(var(--lz-brand-light-rgb),0.12)",
-            color: "var(--lz-accent-ink)",
-          }}
+          <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: lime }} />
+          <div className="relative flex items-center justify-between mb-3">
+            <div className="h-7 w-7 rounded-md inline-flex items-center justify-center" style={{ background: hexA(lime, 0.18), color: lime }}>
+              <Film size={16} />
+            </div>
+            <span className="text-[9px] uppercase font-bold tracking-wider text-foreground/30">Toque</span>
+          </div>
+          <div className="relative text-[28px] font-extrabold leading-none mb-1.5 tabular-nums" style={{ color: lime }}>
+            {stats.edited}{reelsGoal > 0 && <span className="text-foreground/35 font-bold text-lg">/{reelsGoal}</span>}
+          </div>
+          <div className="relative text-[10.5px] uppercase tracking-wider font-bold" style={{ color: lime }}>Vídeos editados</div>
+          <div className="relative text-[10.5px] text-foreground/35 mt-0.5">{reelsGoal > 0 ? "Meta do mês" : formatMonth(monthKey)}</div>
+        </div>
+
+        <div
+          className="relative overflow-hidden rounded-xl p-4"
+          style={{ background: `linear-gradient(160deg, ${hexA(orange, 0.16)} 0%, var(--card) 70%)`, border: `1px solid ${hexA(orange, 0.22)}` }}
         >
-          {stats.approved} vídeo{stats.approved === 1 ? "" : "s"} aprovado{stats.approved === 1 ? "" : "s"}
-        </button>
+          <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: orange }} />
+          <div className="relative mb-3">
+            <div className="h-7 w-7 rounded-md inline-flex items-center justify-center" style={{ background: hexA(orange, 0.18), color: orange }}>
+              <TrendingUp size={16} />
+            </div>
+          </div>
+          <div className="relative text-[28px] font-extrabold leading-none mb-1.5 tabular-nums" style={{ color: orange }}>{perDay}</div>
+          <div className="relative text-[10.5px] uppercase tracking-wider font-bold" style={{ color: orange }}>Média por dia</div>
+          <div className="relative text-[10.5px] text-foreground/35 mt-0.5">Nos {days} dias corridos do mês</div>
+        </div>
       </div>
+
       {open && (
-        <div className="border-t border-foreground/6 px-4 py-2">
-          {list.length === 0 ? (
+        <div className="mt-2 bg-card border border-foreground/6 rounded-lg px-4 py-2">
+          {stats.editedItems.length === 0 ? (
             <p className="text-xs text-foreground/40 py-1.5">Nenhum vídeo encontrado.</p>
           ) : (
             <div className="flex flex-col divide-y divide-white/[0.05]">
-              {list.map((it) => (
+              {stats.editedItems.map((it) => (
                 <button
                   key={it.itemId}
                   type="button"
@@ -854,9 +886,6 @@ function EditingStatsWidget({ monthKey, userId }: { monthKey: string; userId: st
           )}
         </div>
       )}
-      <p className="px-4 pb-3.5 -mt-2 text-[11px] text-foreground/35">
-        Editados conta pela data do seu upload, mesmo que o vídeo seja de outro mês. Aprovados é, desses mesmos vídeos, quantos já estão prontos para publicar ou finalizados agora.
-      </p>
     </div>
   );
 }

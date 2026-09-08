@@ -10,8 +10,22 @@ export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: s
   const navigate = useNavigate();
   if (!data) return null;
 
-  const hasGoals = data.postsGoal || data.reelsGoal || data.storiesGoal || data.gravacaoGoal || data.outrosGoal;
-  if (!hasGoals) {
+  // Reels tem card próprio agora (ver EditingStatsWidget em MyTasks.tsx,
+  // que já junta editados/meta/média num lugar só) — não entra mais nas
+  // barras genéricas daqui, senão duplicava a mesma meta em dois lugares.
+  const items = [
+    { label: "Posts", done: data.postsDone, goal: data.postsGoal },
+    { label: "Stories", done: data.storiesDone, goal: data.storiesGoal },
+    { label: "Gravação", done: data.gravacaoDone, goal: data.gravacaoGoal },
+    { label: "Outros", done: data.outrosDone, goal: data.outrosGoal },
+  ].filter((i) => i.goal > 0);
+
+  if (items.length === 0) {
+    // Tem só meta de reels (ou nenhuma meta) — se for só reels, ela já
+    // aparece no card novo, não faz sentido mostrar esse widget vazio
+    // nem o aviso de "sem meta" (a pessoa TEM meta, só que em outro lugar).
+    const anyGoalAtAll = data.postsGoal || data.reelsGoal || data.storiesGoal || data.gravacaoGoal || data.outrosGoal;
+    if (anyGoalAtAll) return null;
     const isSelf = !userId || userId === me?.id;
     if (!isSelf) return null;
     return (
@@ -40,14 +54,6 @@ export function GoalsWidget({ monthKey, userId }: { monthKey: string; userId?: s
       </div>
     );
   }
-
-  const items = [
-    { label: "Posts", done: data.postsDone, goal: data.postsGoal },
-    { label: "Reels", done: data.reelsDone, goal: data.reelsGoal },
-    { label: "Stories", done: data.storiesDone, goal: data.storiesGoal },
-    { label: "Gravação", done: data.gravacaoDone, goal: data.gravacaoGoal },
-    { label: "Outros", done: data.outrosDone, goal: data.outrosGoal },
-  ].filter((i) => i.goal > 0);
 
   return (
     <div className="rounded-xl bg-card border border-foreground/6 p-4 mb-6">
