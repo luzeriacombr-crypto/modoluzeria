@@ -1060,20 +1060,25 @@ export const getInstagramComments = createServerFn({ method: "GET" })
     if (!isAdmin) throw new Error("Forbidden");
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const creds = await getClientInstagramCreds(context.supabase, data.clientId);
-    const fields = "id,text,username,timestamp,like_count,replies{id,text,username,timestamp}";
+    // Pede `username` de dois jeitos (plano e aninhado em `from`) porque o
+    // produto "Instagram API com Login do Instagram" às vezes só preenche
+    // um dos dois, dependendo da conta/comentário — sem isso, o comentário
+    // aparecia sempre como "desconhecido" mesmo tendo autor de verdade.
+    const fields = "id,text,username,from{id,username},timestamp,like_count,replies{id,text,username,from{id,username},timestamp}";
     const res = await fetch(
       `${IG_GRAPH_API}/${data.mediaId}/comments?fields=${encodeURIComponent(fields)}&access_token=${encodeURIComponent(creds.access_token)}`,
     );
     const json: any = await res.json();
     if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao buscar comentários.");
+    const usernameOf = (c: any) => c.username || c.from?.username || null;
     return (json.data ?? []).map((c: any) => ({
       id: c.id,
       text: c.text ?? "",
-      username: c.username ?? null,
+      username: usernameOf(c),
       timestamp: c.timestamp,
       likeCount: c.like_count ?? 0,
       replies: (c.replies?.data ?? []).map((r: any) => ({
-        id: r.id, text: r.text ?? "", username: r.username ?? null, timestamp: r.timestamp,
+        id: r.id, text: r.text ?? "", username: usernameOf(r), timestamp: r.timestamp,
       })),
     }));
   });
@@ -1097,6 +1102,30 @@ export const replyToInstagramComment = createServerFn({ method: "POST" })
     });
     const json: any = await res.json();
     if (!res.ok || !json.id) throw new Error(json?.error?.message ?? "Falha ao responder o comentário.");
+    return { ok: true, id: json.id as string };
+  });
+
+/** Comentário novo direto na publicação (não é resposta a ninguém) — mesmo
+ * endpoint de sempre, só que o alvo é a mídia em vez de um comentário. */
+export const postInstagramComment = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; mediaId: string; message: string }) =>
+    z.object({
+      clientId: z.string().uuid(), mediaId: z.string().min(1),
+      message: z.string().trim().min(1).max(2200),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+    const res = await fetch(`${IG_GRAPH_API}/${data.mediaId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ message: data.message, access_token: creds.access_token }),
+    });
+    const json: any = await res.json();
+    if (!res.ok || !json.id) throw new Error(json?.error?.message ?? "Falha ao publicar o comentário.");
     return { ok: true, id: json.id as string };
   });
 

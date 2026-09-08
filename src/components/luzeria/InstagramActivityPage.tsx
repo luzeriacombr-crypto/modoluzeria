@@ -10,7 +10,7 @@ import {
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
 import {
   getInstagramAccountMedia, getInstagramAccountMediaInsights, getInstagramAccountOverview,
-  getInstagramComments, replyToInstagramComment,
+  getInstagramComments, replyToInstagramComment, postInstagramComment,
   getInstagramConversations, getInstagramConversationMessages, sendInstagramDirectMessage,
   type InstagramActivityItem, type InstagramAccountMedia, type InstagramMediaInsights, type InstagramAccountOverview,
   type InstagramComment, type InstagramConversation, type InstagramDirectMessage,
@@ -575,14 +575,105 @@ function MetricsPanel({ clientId, clientName }: { clientId: string; clientName: 
   );
 }
 
+const AVATAR_COLORS = ["#F58529", "#DD2A7B", "#8134AF", "#515BD4", "#7ED957", "#4FA3E3"];
+function avatarColor(seed: string) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+/** A Meta não devolve foto de perfil de quem comenta — um círculo com a
+ * inicial (cor derivada do nome) fica bem mais próximo do Instagram de
+ * verdade do que um ícone genérico repetido em todo comentário. */
+function CommentAvatar({ username, size = 32 }: { username: string | null; size?: number }) {
+  const label = username ?? "?";
+  return (
+    <div
+      className="rounded-full flex items-center justify-center font-bold text-white shrink-0"
+      style={{ width: size, height: size, fontSize: size * 0.4, background: avatarColor(label) }}
+    >
+      {label[0]?.toUpperCase() ?? "?"}
+    </div>
+  );
+}
+
+function timeAgo(iso: string) {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "agora";
+  if (mins < 60) return `${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} d`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks} sem`;
+  return new Date(iso).toLocaleDateString("pt-BR");
+}
+
+function CommentRow({ comment, reply, isReply, onReply }: {
+  comment: InstagramComment | InstagramComment["replies"][number];
+  reply: { draft: string; sending: boolean; open: boolean };
+  isReply?: boolean;
+  onReply: (patch: Partial<{ draft: string; open: boolean }>, send?: boolean) => void;
+}) {
+  return (
+    <div className="flex gap-2.5">
+      <CommentAvatar username={comment.username} size={isReply ? 26 : 32} />
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] text-foreground leading-snug">
+          <span className="font-bold">{comment.username ?? "seguidor"}</span>{" "}
+          <span className="text-foreground/90">{comment.text}</span>
+        </p>
+        <div className="flex items-center gap-3 mt-1 text-[11px] text-foreground/40">
+          <span>{timeAgo(comment.timestamp)}</span>
+          {!isReply && (
+            <button onClick={() => onReply({ open: !reply.open })} className="font-semibold hover:text-foreground/70">
+              Responder
+            </button>
+          )}
+        </div>
+        {reply.open && !isReply && (
+          <div className="flex items-center gap-1.5 mt-2">
+            <input
+              autoFocus
+              value={reply.draft}
+              onChange={(e) => onReply({ draft: e.target.value })}
+              onKeyDown={(e) => { if (e.key === "Enter") onReply({}, true); }}
+              placeholder={`Respondendo a ${comment.username ?? "seguidor"}…`}
+              className="flex-1 bg-transparent border-b border-foreground/15 py-1 text-[13px] outline-none focus:border-foreground/40 placeholder:text-foreground/30"
+            />
+            <button
+              onClick={() => onReply({}, true)}
+              disabled={reply.sending || !reply.draft.trim()}
+              className="text-[12px] font-bold disabled:opacity-30"
+              style={{ color: "var(--lz-accent-ink)" }}
+            >
+              {reply.sending ? <Loader2 size={13} className="animate-spin" /> : "Enviar"}
+            </button>
+          </div>
+        )}
+      </div>
+      {!isReply && "likeCount" in comment && comment.likeCount > 0 && (
+        <div className="flex flex-col items-center text-foreground/30 shrink-0 pt-0.5">
+          <Heart size={11} />
+          <span className="text-[10px] mt-0.5">{comment.likeCount}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CommentsModal({ clientId, media, onClose }: { clientId: string; media: InstagramAccountMedia; onClose: () => void }) {
   const getComments = useServerFn(getInstagramComments);
   const doReply = useServerFn(replyToInstagramComment);
+  const doPostComment = useServerFn(postInstagramComment);
   const [comments, setComments] = useState<InstagramComment[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
-  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [replyState, setReplyState] = useState<Record<string, { draft: string; sending: boolean; open: boolean }>>({});
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
+  const [composerDraft, setComposerDraft] = useState("");
+  const [posting, setPosting] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -598,79 +689,108 @@ function CommentsModal({ clientId, media, onClose }: { clientId: string; media: 
   }
   useEffect(() => { load(); }, []);
 
+  function replyFor(id: string) {
+    return replyState[id] ?? { draft: "", sending: false, open: false };
+  }
+
   async function sendReply(commentId: string) {
-    const message = (replyDrafts[commentId] ?? "").trim();
+    const message = replyFor(commentId).draft.trim();
     if (!message) return;
-    setSendingId(commentId);
+    setReplyState((s) => ({ ...s, [commentId]: { ...replyFor(commentId), sending: true } }));
     try {
       await doReply({ data: { clientId, commentId, message } });
-      setReplyDrafts((d) => ({ ...d, [commentId]: "" }));
+      setReplyState((s) => ({ ...s, [commentId]: { draft: "", sending: false, open: false } }));
+      setExpandedReplies((s) => new Set(s).add(commentId));
       await load();
     } catch (e: any) {
       setError(e?.message ?? "Falha ao responder o comentário.");
+      setReplyState((s) => ({ ...s, [commentId]: { ...replyFor(commentId), sending: false } }));
+    }
+  }
+
+  async function postComment() {
+    const message = composerDraft.trim();
+    if (!message) return;
+    setPosting(true);
+    try {
+      await doPostComment({ data: { clientId, mediaId: media.id, message } });
+      setComposerDraft("");
+      await load();
+    } catch (e: any) {
+      setError(e?.message ?? "Falha ao publicar o comentário.");
     } finally {
-      setSendingId(null);
+      setPosting(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
-        className="bg-card border border-foreground/10 rounded-xl w-full max-w-lg max-h-[80vh] flex flex-col"
+        className="bg-card border border-foreground/10 rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-3 p-4 border-b border-foreground/8">
-          <div className="min-w-0">
-            <div className="text-sm font-bold text-foreground flex items-center gap-1.5"><MessageCircle size={14} /> Comentários</div>
-            <div className="text-[11px] text-foreground/40 truncate">{media.caption || "(sem legenda)"}</div>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-md text-foreground/40 hover:text-foreground hover:bg-foreground/5 shrink-0">
-            <X size={16} />
+        <div className="relative flex items-center justify-center p-3.5 border-b border-foreground/10">
+          <span className="text-[15px] font-bold text-foreground">Comentários</span>
+          <button onClick={onClose} className="absolute right-3 p-1 rounded-full text-foreground/50 hover:text-foreground hover:bg-foreground/5">
+            <X size={18} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {loading && <div className="text-center py-8"><Loader2 size={16} className="animate-spin mx-auto text-foreground/30" /></div>}
+          {loading && <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>}
           {error && <p className="text-xs text-red-400/80">{error}</p>}
-          {!loading && comments && comments.length === 0 && <p className="text-xs text-foreground/40">Nenhum comentário ainda.</p>}
+          {!loading && comments && comments.length === 0 && (
+            <div className="text-center py-10 text-foreground/40 text-sm">
+              <MessageCircle size={22} className="mx-auto mb-2 opacity-40" />
+              Nenhum comentário ainda.
+            </div>
+          )}
           {!loading && comments?.map((c) => (
-            <div key={c.id} className="text-xs">
-              <div className="flex items-baseline gap-1.5 mb-0.5">
-                <span className="font-bold text-foreground">@{c.username ?? "desconhecido"}</span>
-                <span className="text-foreground/35 text-[10px]">{new Date(c.timestamp).toLocaleString("pt-BR")}</span>
-              </div>
-              <p className="text-foreground/80 mb-1.5">{c.text}</p>
+            <div key={c.id}>
+              <CommentRow comment={c} reply={replyFor(c.id)} onReply={(patch, send) => {
+                if (send) { sendReply(c.id); return; }
+                setReplyState((s) => ({ ...s, [c.id]: { ...replyFor(c.id), ...patch } }));
+              }} />
               {c.replies.length > 0 && (
-                <div className="ml-4 border-l border-foreground/8 pl-3 space-y-1.5 mb-1.5">
-                  {c.replies.map((r) => (
-                    <div key={r.id}>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-bold text-foreground/80">@{r.username ?? "você"}</span>
-                        <span className="text-foreground/35 text-[10px]">{new Date(r.timestamp).toLocaleString("pt-BR")}</span>
-                      </div>
-                      <p className="text-foreground/70">{r.text}</p>
+                <div className="ml-[42px] mt-2">
+                  {!expandedReplies.has(c.id) ? (
+                    <button
+                      onClick={() => setExpandedReplies((s) => new Set(s).add(c.id))}
+                      className="flex items-center gap-2 text-[12px] font-semibold text-foreground/40 hover:text-foreground/70"
+                    >
+                      <span className="w-6 h-px bg-foreground/20" />
+                      Ver {c.replies.length} resposta{c.replies.length > 1 ? "s" : ""}
+                    </button>
+                  ) : (
+                    <div className="space-y-3">
+                      {c.replies.map((r) => (
+                        <CommentRow key={r.id} comment={r} isReply reply={{ draft: "", sending: false, open: false }} onReply={() => {}} />
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
-              <div className="flex items-center gap-1.5">
-                <input
-                  value={replyDrafts[c.id] ?? ""}
-                  onChange={(e) => setReplyDrafts((d) => ({ ...d, [c.id]: e.target.value }))}
-                  onKeyDown={(e) => { if (e.key === "Enter") sendReply(c.id); }}
-                  placeholder="Responder…"
-                  className="flex-1 bg-background border border-foreground/10 rounded-md px-2 py-1.5 text-xs outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
-                />
-                <button
-                  onClick={() => sendReply(c.id)}
-                  disabled={sendingId === c.id || !(replyDrafts[c.id] ?? "").trim()}
-                  className="p-1.5 rounded-md text-foreground/50 hover:text-foreground disabled:opacity-30"
-                >
-                  {sendingId === c.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-                </button>
-              </div>
             </div>
           ))}
+        </div>
+
+        <div className="flex items-center gap-2.5 p-3 border-t border-foreground/10">
+          <CommentAvatar username={media.publishedByApp ? "Modo Criador" : "Conta"} size={28} />
+          <input
+            value={composerDraft}
+            onChange={(e) => setComposerDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") postComment(); }}
+            placeholder="Adicione um comentário…"
+            className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-foreground/30"
+          />
+          <button
+            onClick={postComment}
+            disabled={posting || !composerDraft.trim()}
+            className="text-[13px] font-bold disabled:opacity-30 shrink-0"
+            style={{ color: "var(--lz-accent-ink)" }}
+          >
+            {posting ? <Loader2 size={14} className="animate-spin" /> : "Publicar"}
+          </button>
         </div>
       </div>
     </div>
