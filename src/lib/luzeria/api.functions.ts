@@ -2554,14 +2554,20 @@ export const getTopMembersByGoal = createServerFn({ method: "GET" })
 
 /* ============== MY EDITING STATS ============== */
 
-export type MyEditingStats = { edited: number; approved: number };
+export type MyEditingStatsItem = { itemId: string; title: string; clientId: string; clientName: string };
+export type MyEditingStats = {
+  edited: number; approved: number;
+  editedItems: MyEditingStatsItem[]; approvedItems: MyEditingStatsItem[];
+};
 
 /** Quantos reels a pessoa editou (fez upload de arquivo) e quantos foram
  * aprovados (status virou FINALIZADO ou PRONTO_PARA_PUBLICAR) dentro do mês
  * — contando pela data real da ação (upload / mudança de status), não pelo
  * mês do calendário de conteúdo do item. Assim, um vídeo do lote de
  * setembro que ela editou em agosto conta como produção dela em agosto,
- * igual ao critério validado na auditoria com o Calebe. */
+ * igual ao critério validado na auditoria com o Calebe. Também devolve
+ * quais itens entraram em cada contagem, pra "1 vídeo editado" poder ser
+ * clicável e mostrar quais são. */
 export const getMyEditingStats = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string; monthKey: string }) =>
@@ -2579,7 +2585,7 @@ export const getMyEditingStats = createServerFn({ method: "GET" })
     const [uploadsRes, approvedRes] = await Promise.all([
       context.supabase
         .from("item_files")
-        .select("content_items!inner(id)")
+        .select("content_items!inner(id, title, months!inner(clients!months_client_id_fkey!inner(id, name)))")
         .eq("added_by", data.userId)
         .eq("kind", "media")
         .eq("content_items.type", "reel")
@@ -2588,7 +2594,7 @@ export const getMyEditingStats = createServerFn({ method: "GET" })
         .lt("created_at", end),
       context.supabase
         .from("content_items")
-        .select("id")
+        .select("id, title, months!inner(clients!months_client_id_fkey!inner(id, name))")
         .eq("editor_id", data.userId)
         .eq("type", "reel")
         .in("status", ["FINALIZADO", "PRONTO_PARA_PUBLICAR"])
@@ -2598,8 +2604,22 @@ export const getMyEditingStats = createServerFn({ method: "GET" })
     if (uploadsRes.error) throw new Error(uploadsRes.error.message);
     if (approvedRes.error) throw new Error(approvedRes.error.message);
 
-    const editedIds = new Set((uploadsRes.data ?? []).map((r: any) => r.content_items.id));
-    return { edited: editedIds.size, approved: (approvedRes.data ?? []).length };
+    // Um reel pode ter mais de um upload no mês — dedup pelo id do item,
+    // primeiro que aparece vale (mesmo critério de antes, só que agora
+    // guardando o item em vez de só contar).
+    const editedMap = new Map<string, MyEditingStatsItem>();
+    for (const r of (uploadsRes.data ?? []) as any[]) {
+      const ci = r.content_items;
+      if (!editedMap.has(ci.id)) {
+        editedMap.set(ci.id, { itemId: ci.id, title: ci.title ?? "(sem título)", clientId: ci.months.clients.id, clientName: ci.months.clients.name });
+      }
+    }
+    const editedItems = [...editedMap.values()];
+    const approvedItems: MyEditingStatsItem[] = ((approvedRes.data ?? []) as any[]).map((ci) => ({
+      itemId: ci.id, title: ci.title ?? "(sem título)", clientId: ci.months.clients.id, clientName: ci.months.clients.name,
+    }));
+
+    return { edited: editedItems.length, approved: approvedItems.length, editedItems, approvedItems };
   });
 
 /* ============== MEMBER FINALIZATIONS ============== */

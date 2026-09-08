@@ -787,7 +787,19 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
 
 function EditingStatsWidget({ monthKey, userId }: { monthKey: string; userId: string }) {
   const { data: stats } = useQuery(myEditingStatsQO(userId, monthKey));
+  const [open, setOpen] = useState<"edited" | "approved" | null>(null);
+  const { selectMonth, openItem, flash } = useUI();
+  const navigate = useNavigate();
+
   if (!stats || (stats.edited === 0 && stats.approved === 0)) return null;
+
+  function openVideo(itemId: string, clientId: string) {
+    navigate({ to: "/cliente/$clientId", params: { clientId } });
+    selectMonth(monthKey);
+    setTimeout(() => { openItem(itemId); flash(itemId); }, 30);
+  }
+
+  const list = open === "edited" ? stats!.editedItems : open === "approved" ? stats!.approvedItems : [];
 
   return (
     <div className="mb-6 bg-card rounded-lg overflow-hidden">
@@ -798,13 +810,50 @@ function EditingStatsWidget({ monthKey, userId }: { monthKey: string; userId: st
         <h2 className="text-[11.5px] uppercase font-semibold tracking-wide text-foreground/60">Produção de vídeo em {formatMonth(monthKey)}</h2>
       </div>
       <div className="flex flex-wrap gap-2 px-4 pb-3.5">
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.12)", color: "var(--lz-accent-ink)" }}>
+        <button
+          type="button"
+          onClick={() => setOpen((t) => (t === "edited" ? null : "edited"))}
+          className="text-xs font-semibold px-2.5 py-1 rounded-full transition-colors"
+          style={{
+            backgroundColor: open === "edited" ? "rgba(var(--lz-brand-light-rgb),0.28)" : "rgba(var(--lz-brand-light-rgb),0.12)",
+            color: "var(--lz-accent-ink)",
+          }}
+        >
           {stats.edited} vídeo{stats.edited === 1 ? "" : "s"} editado{stats.edited === 1 ? "" : "s"}
-        </span>
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.12)", color: "var(--lz-accent-ink)" }}>
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen((t) => (t === "approved" ? null : "approved"))}
+          className="text-xs font-semibold px-2.5 py-1 rounded-full transition-colors"
+          style={{
+            backgroundColor: open === "approved" ? "rgba(var(--lz-brand-light-rgb),0.28)" : "rgba(var(--lz-brand-light-rgb),0.12)",
+            color: "var(--lz-accent-ink)",
+          }}
+        >
           {stats.approved} vídeo{stats.approved === 1 ? "" : "s"} aprovado{stats.approved === 1 ? "" : "s"}
-        </span>
+        </button>
       </div>
+      {open && (
+        <div className="border-t border-foreground/6 px-4 py-2">
+          {list.length === 0 ? (
+            <p className="text-xs text-foreground/40 py-1.5">Nenhum vídeo encontrado.</p>
+          ) : (
+            <div className="flex flex-col divide-y divide-white/[0.05]">
+              {list.map((it) => (
+                <button
+                  key={it.itemId}
+                  type="button"
+                  onClick={() => openVideo(it.itemId, it.clientId)}
+                  className="flex items-center justify-between gap-3 py-2 text-left hover:text-foreground text-foreground/70 transition-colors"
+                >
+                  <span className="text-[13px] truncate">{it.title || "(sem título)"}</span>
+                  <span className="text-[11px] text-foreground/40 shrink-0">{it.clientName}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <p className="px-4 pb-3.5 -mt-2 text-[11px] text-foreground/35">
         Conta pela data em que você editou ou em que o vídeo foi aprovado — mesmo que ele seja de outro mês.
       </p>
