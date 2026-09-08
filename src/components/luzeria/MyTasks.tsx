@@ -855,7 +855,7 @@ function EditingStatsWidget({ monthKey, userId }: { monthKey: string; userId: st
         </div>
       )}
       <p className="px-4 pb-3.5 -mt-2 text-[11px] text-foreground/35">
-        Conta pela data em que você editou ou em que o vídeo foi aprovado — mesmo que ele seja de outro mês.
+        Editados conta pela data do seu upload, mesmo que o vídeo seja de outro mês. Aprovados é, desses mesmos vídeos, quantos já estão prontos para publicar ou finalizados agora.
       </p>
     </div>
   );

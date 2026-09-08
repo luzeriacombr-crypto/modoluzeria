@@ -2560,14 +2560,15 @@ export type MyEditingStats = {
   editedItems: MyEditingStatsItem[]; approvedItems: MyEditingStatsItem[];
 };
 
-/** Quantos reels a pessoa editou (fez upload de arquivo) e quantos foram
- * aprovados (status virou FINALIZADO ou PRONTO_PARA_PUBLICAR) dentro do mês
- * — contando pela data real da ação (upload / mudança de status), não pelo
- * mês do calendário de conteúdo do item. Assim, um vídeo do lote de
- * setembro que ela editou em agosto conta como produção dela em agosto,
- * igual ao critério validado na auditoria com o Calebe. Também devolve
- * quais itens entraram em cada contagem, pra "1 vídeo editado" poder ser
- * clicável e mostrar quais são. */
+/** Quantos reels a pessoa editou (fez upload de arquivo) dentro do mês —
+ * contando pela data real do upload, não pelo mês do calendário de
+ * conteúdo do item (um vídeo do lote de setembro que ela editou em
+ * agosto conta como produção dela em agosto). "Aprovados" é sempre um
+ * SUBCONJUNTO de "editados": dos vídeos que ela editou nesse mês, quantos
+ * já estão com status FINALIZADO ou PRONTO_PARA_PUBLICAR agora — não uma
+ * contagem à parte por data de mudança de status (senão um vídeo editado
+ * em agosto e aprovado só em setembro contava como "aprovado" sem nunca
+ * ter contado como "editado" no mesmo mês, o que não faz sentido). */
 export const getMyEditingStats = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string; monthKey: string }) =>
@@ -2582,42 +2583,34 @@ export const getMyEditingStats = createServerFn({ method: "GET" })
     const start = new Date(Date.UTC(y, m - 1, 1, 3, 0, 0)).toISOString();
     const end = new Date(Date.UTC(y, m, 1, 3, 0, 0)).toISOString();
 
-    const [uploadsRes, approvedRes] = await Promise.all([
-      context.supabase
-        .from("item_files")
-        .select("content_items!inner(id, title, months!inner(clients!months_client_id_fkey!inner(id, name)))")
-        .eq("added_by", data.userId)
-        .eq("kind", "media")
-        .eq("content_items.type", "reel")
-        .eq("content_items.editor_id", data.userId)
-        .gte("created_at", start)
-        .lt("created_at", end),
-      context.supabase
-        .from("content_items")
-        .select("id, title, months!inner(clients!months_client_id_fkey!inner(id, name))")
-        .eq("editor_id", data.userId)
-        .eq("type", "reel")
-        .in("status", ["FINALIZADO", "PRONTO_PARA_PUBLICAR"])
-        .gte("last_status_change_at", start)
-        .lt("last_status_change_at", end),
-    ]);
-    if (uploadsRes.error) throw new Error(uploadsRes.error.message);
-    if (approvedRes.error) throw new Error(approvedRes.error.message);
+    const { data: rows, error } = await context.supabase
+      .from("item_files")
+      .select("content_items!inner(id, title, status, months!inner(clients!months_client_id_fkey!inner(id, name)))")
+      .eq("added_by", data.userId)
+      .eq("kind", "media")
+      .eq("content_items.type", "reel")
+      .eq("content_items.editor_id", data.userId)
+      .gte("created_at", start)
+      .lt("created_at", end);
+    if (error) throw new Error(error.message);
 
     // Um reel pode ter mais de um upload no mês — dedup pelo id do item,
-    // primeiro que aparece vale (mesmo critério de antes, só que agora
-    // guardando o item em vez de só contar).
-    const editedMap = new Map<string, MyEditingStatsItem>();
-    for (const r of (uploadsRes.data ?? []) as any[]) {
+    // primeiro que aparece vale.
+    const editedMap = new Map<string, MyEditingStatsItem & { status: string }>();
+    for (const r of (rows ?? []) as any[]) {
       const ci = r.content_items;
       if (!editedMap.has(ci.id)) {
-        editedMap.set(ci.id, { itemId: ci.id, title: ci.title ?? "(sem título)", clientId: ci.months.clients.id, clientName: ci.months.clients.name });
+        editedMap.set(ci.id, {
+          itemId: ci.id, title: ci.title ?? "(sem título)",
+          clientId: ci.months.clients.id, clientName: ci.months.clients.name,
+          status: ci.status,
+        });
       }
     }
-    const editedItems = [...editedMap.values()];
-    const approvedItems: MyEditingStatsItem[] = ((approvedRes.data ?? []) as any[]).map((ci) => ({
-      itemId: ci.id, title: ci.title ?? "(sem título)", clientId: ci.months.clients.id, clientName: ci.months.clients.name,
-    }));
+    const all = [...editedMap.values()];
+    const strip = ({ status, ...rest }: MyEditingStatsItem & { status: string }) => rest;
+    const editedItems = all.map(strip);
+    const approvedItems = all.filter((it) => it.status === "FINALIZADO" || it.status === "PRONTO_PARA_PUBLICAR").map(strip);
 
     return { edited: editedItems.length, approved: approvedItems.length, editedItems, approvedItems };
   });
