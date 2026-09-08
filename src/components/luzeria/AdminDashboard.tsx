@@ -212,7 +212,7 @@ export function AdminDashboard() {
           info="Quantidade de clientes ativos (não arquivados) na agência." />;
         const cardGoal = <MetricCard tone={PALETTE.blue} icon={<Target size={16} />} label="Meta do mês" value={t?.planned ?? 0}
           info="Total de itens planejados pra esse mês, somando todos os clientes ativos — é a meta de entregas do período selecionado." />;
-        const cardDone = <MetricCard tone={"rgb(var(--lz-sidebar-rgb))"} icon={<Package size={16} />} label="Entregues" value={t?.done ?? 0}
+        const cardDone = <MetricCard tone={PALETTE.lime} icon={<Package size={16} />} label="Entregues" value={t?.done ?? 0}
           onClick={() => { setFilterMode("metric"); setSelectedFilter("done"); }}
           info="Itens já finalizados (prontos pra publicar, finalizados ou concluídos) dentro do período selecionado. Clique pra ver a lista." />;
         const missing = (t?.planned ?? 0) - (t?.done ?? 0);
