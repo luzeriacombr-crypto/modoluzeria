@@ -127,24 +127,46 @@ export const getGoalProgress = createServerFn({ method: "GET" })
     const { data: assigns } = await context.supabase
       .from("item_assignees").select("item_id").eq("user_id", targetUser);
     const ids = (assigns ?? []).map((a) => a.item_id);
-    let postsDone = 0, reelsDone = 0, gravacaoDone = 0, outrosDone = 0;
+    let postsDone = 0, gravacaoDone = 0, outrosDone = 0;
     if (ids.length) {
       const { data: done } = await context.supabase
         .from("content_items").select("type, status, activity_quantity")
         .in("id", ids)
         .gte("updated_at", start).lt("updated_at", end);
       // Atividades (gravação, outros) terminam em CONCLUIDO, não em
-      // PRONTO_PARA_PUBLICAR/FINALIZADO como posts/reels — isDoneStatus()
-      // já cobre os três, evitando que elas fiquem perpetuamente em 0.
+      // PRONTO_PARA_PUBLICAR/FINALIZADO como posts — isDoneStatus() já
+      // cobre os três, evitando que elas fiquem perpetuamente em 0.
+      // Reels não entra aqui — critério próprio logo abaixo.
       (done ?? []).filter((it: any) => isDoneStatus(it.status)).forEach((it: any) => {
         if (it.type === "post") postsDone++;
-        if (it.type === "reel") reelsDone++;
         // Meta de gravação/outros é em quantidade de vídeos, não de
         // sessões — soma activity_quantity, igual ranking/relatórios já fazem.
         if (it.type === "gravacao") gravacaoDone += it.activity_quantity ?? 1;
         if (it.type === "outros") outrosDone += it.activity_quantity ?? 1;
       });
     }
+
+    // Reels: mesmo critério de "aprovados" da tela Minhas Demandas
+    // (getMyEditingStats) — dos reels que a pessoa é editora E de fato
+    // subiu arquivo nesse mês, quantos já estão prontos/finalizados.
+    // "Atribuído + atualizado no mês" (o critério acima) contava reels
+    // que a pessoa nem editou de verdade, só estava vinculada de algum
+    // jeito e algo no item mudou no mês.
+    const { data: reelUploads } = await context.supabase
+      .from("item_files")
+      .select("content_items!inner(id, status)")
+      .eq("added_by", targetUser)
+      .eq("kind", "media")
+      .eq("content_items.type", "reel")
+      .eq("content_items.editor_id", targetUser)
+      .gte("created_at", start)
+      .lt("created_at", end);
+    const reelStatusById = new Map<string, string>();
+    for (const r of (reelUploads ?? []) as any[]) {
+      if (!reelStatusById.has(r.content_items.id)) reelStatusById.set(r.content_items.id, r.content_items.status);
+    }
+    let reelsDone = 0;
+    for (const status of reelStatusById.values()) if (isDoneStatus(status as any)) reelsDone++;
 
     // stories: dias publicados pelo usuário no mês
     let storiesDone = 0;
@@ -200,7 +222,7 @@ export const getGoalProgressForOrg = createServerFn({ method: "GET" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [{ data: goalRows }, { data: assignRows }, { data: storyRows }, { data: logRows }] = await Promise.all([
+    const [{ data: goalRows }, { data: assignRows }, { data: storyRows }, { data: logRows }, { data: reelUploadRows }] = await Promise.all([
       supabaseAdmin.from("member_goals")
         .select("user_id, posts_goal, reels_goal, stories_goal, gravacao_goal, outros_goal")
         .eq("month_key", data.monthKey).in("user_id", userIds),
@@ -211,7 +233,26 @@ export const getGoalProgressForOrg = createServerFn({ method: "GET" })
       context.supabase.from("cleaning_log").select("done_by")
         .in("done_by", userIds).eq("status", "done")
         .gte("occurrence_date", `${data.monthKey}-01`).lt("occurrence_date", `${data.monthKey}-31T23:59:59`),
+      // Reels: mesmo critério de "aprovados" de getMyEditingStats — quem
+      // é editor_id do reel E de fato subiu arquivo nesse mês, não só
+      // "atribuído + item atualizado no mês" (critério solto demais, um
+      // reel podia contar pra alguém que nem editou de verdade).
+      context.supabase.from("item_files")
+        .select("added_by, content_items!inner(id, status, editor_id, type)")
+        .eq("kind", "media")
+        .eq("content_items.type", "reel")
+        .in("added_by", userIds)
+        .gte("created_at", start).lt("created_at", end),
     ]);
+
+    const reelDoneByUser = new Map<string, Map<string, string>>();
+    for (const r of (reelUploadRows ?? []) as any[]) {
+      const ci = r.content_items;
+      if (ci.editor_id !== r.added_by) continue;
+      if (!reelDoneByUser.has(r.added_by)) reelDoneByUser.set(r.added_by, new Map());
+      const m = reelDoneByUser.get(r.added_by)!;
+      if (!m.has(ci.id)) m.set(ci.id, ci.status);
+    }
 
     const itemIds = [...new Set((assignRows ?? []).map((a: any) => a.item_id))];
     // itemId -> {type, qty}, só dos que bateram o critério de "feito" (isDoneStatus
@@ -239,7 +280,6 @@ export const getGoalProgressForOrg = createServerFn({ method: "GET" })
       const item = doneByItem.get(a.item_id);
       if (!item || !done[a.user_id]) return;
       if (item.type === "post") done[a.user_id].posts++;
-      if (item.type === "reel") done[a.user_id].reels++;
       // Meta de gravação/outros é em quantidade de vídeos, não de
       // sessões — soma activity_quantity, igual ranking/relatórios já fazem.
       if (item.type === "gravacao") done[a.user_id].gravacao += item.qty;
@@ -247,6 +287,10 @@ export const getGoalProgressForOrg = createServerFn({ method: "GET" })
     });
     (storyRows ?? []).forEach((s: any) => { if (done[s.user_id]) done[s.user_id].stories++; });
     (logRows ?? []).forEach((l: any) => { if (done[l.done_by]) done[l.done_by].rotina++; });
+    reelDoneByUser.forEach((itemMap, uid) => {
+      if (!done[uid]) return;
+      for (const status of itemMap.values()) if (isDoneStatus(status as any)) done[uid].reels++;
+    });
 
     const goalByUser = new Map((goalRows ?? []).map((g: any) => [g.user_id, g]));
 
