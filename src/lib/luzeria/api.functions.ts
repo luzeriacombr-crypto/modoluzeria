@@ -2438,6 +2438,19 @@ export const getTopMembers = createServerFn({ method: "GET" })
       counts.set(f.user_id, (counts.get(f.user_id) ?? 0) + weight);
     });
 
+    // Rotina (limpeza/dia-a-dia) também pontua — 1 ponto por tarefa
+    // concluída no período, mesma fonte que já alimenta "Rotina" em
+    // Meta do mês/Metas da equipe.
+    const { data: cleanRows } = await context.supabase
+      .from("cleaning_log").select("done_by")
+      .eq("status", "done")
+      .gte("occurrence_date", start.toISOString().slice(0, 10))
+      .lt("occurrence_date", end.toISOString().slice(0, 10));
+    (cleanRows ?? []).forEach((r: any) => {
+      if (!r.done_by) return;
+      counts.set(r.done_by, (counts.get(r.done_by) ?? 0) + 1);
+    });
+
     const { data: profiles } = await context.supabase
       .from("profiles").select("id, name, color, icon, avatar_url, exclude_from_ranking")
       .eq("exclude_from_ranking", false);
