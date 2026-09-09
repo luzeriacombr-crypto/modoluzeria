@@ -2502,16 +2502,28 @@ export const getTopMembersByGoal = createServerFn({ method: "GET" })
       });
       const itemIds = [...itemUsers.keys()];
       if (itemIds.length > 0) {
-        const { data: doneItems } = await supabaseAdmin
-          .from("content_items").select("id, type")
-          .in("id", itemIds).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
-          .gte("updated_at", start.toISOString()).lt("updated_at", end.toISOString());
-        (doneItems ?? []).forEach((it: any) => {
-          if (it.type !== "post" && it.type !== "reel") return;
-          (itemUsers.get(it.id) ?? []).forEach((uid) => {
-            const d = doneByUser.get(uid) ?? { posts: 0, reels: 0, stories: 0 };
-            if (it.type === "post") d.posts++; else d.reels++;
-            doneByUser.set(uid, d);
+        // itemIds pode chegar em milhares (todo item já atribuído a
+        // alguém da org, sem filtro de data) — um .in() só com todos eles
+        // de uma vez estoura o tamanho da URL e falha, e como o erro não
+        // era checado, isso silenciosamente zerava o ranking inteiro pra
+        // todo mundo. Quebra em lotes, mesmo padrão de getReport.
+        const chunks: string[][] = [];
+        for (let i = 0; i < itemIds.length; i += 150) chunks.push(itemIds.slice(i, i + 150));
+        const results = await Promise.all(chunks.map((chunk) =>
+          supabaseAdmin
+            .from("content_items").select("id, type")
+            .in("id", chunk).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
+            .gte("updated_at", start.toISOString()).lt("updated_at", end.toISOString())
+        ));
+        results.forEach(({ data: doneItems, error }) => {
+          if (error) { console.error("getTopMembersByGoal content_items batch:", error.message); return; }
+          (doneItems ?? []).forEach((it: any) => {
+            if (it.type !== "post" && it.type !== "reel") return;
+            (itemUsers.get(it.id) ?? []).forEach((uid) => {
+              const d = doneByUser.get(uid) ?? { posts: 0, reels: 0, stories: 0 };
+              if (it.type === "post") d.posts++; else d.reels++;
+              doneByUser.set(uid, d);
+            });
           });
         });
       }
