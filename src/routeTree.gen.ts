@@ -48,6 +48,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as ApiSelecaoOgTokenRouteImport } from './routes/api.selecao-og.$token'
 import { Route as ApiCronSendPushNotificationsRouteImport } from './routes/api.cron.send-push-notifications'
 import { Route as ApiCronRetentionCleanupRouteImport } from './routes/api.cron.retention-cleanup'
+import { Route as ApiCronRefreshInstagramTokensRouteImport } from './routes/api.cron.refresh-instagram-tokens'
 import { Route as ApiCronPublishInstagramRouteImport } from './routes/api.cron.publish-instagram'
 import { Route as AuthenticatedSelecaoDeFotosClientIdRouteImport } from './routes/_authenticated/selecao-de-fotos_.$clientId'
 import { Route as AuthenticatedOauthInstagramCallbackRouteImport } from './routes/_authenticated/oauth.instagram-callback'
@@ -257,6 +258,12 @@ const ApiCronRetentionCleanupRoute = ApiCronRetentionCleanupRouteImport.update({
   path: '/api/cron/retention-cleanup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronRefreshInstagramTokensRoute =
+  ApiCronRefreshInstagramTokensRouteImport.update({
+    id: '/api/cron/refresh-instagram-tokens',
+    path: '/api/cron/refresh-instagram-tokens',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiCronPublishInstagramRoute = ApiCronPublishInstagramRouteImport.update({
   id: '/api/cron/publish-instagram',
   path: '/api/cron/publish-instagram',
@@ -342,6 +349,7 @@ export interface FileRoutesByFullPath {
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/selecao-de-fotos/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
+  '/api/cron/refresh-instagram-tokens': typeof ApiCronRefreshInstagramTokensRoute
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
@@ -389,6 +397,7 @@ export interface FileRoutesByTo {
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/selecao-de-fotos/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
+  '/api/cron/refresh-instagram-tokens': typeof ApiCronRefreshInstagramTokensRoute
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
@@ -438,6 +447,7 @@ export interface FileRoutesById {
   '/_authenticated/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/_authenticated/selecao-de-fotos_/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
+  '/api/cron/refresh-instagram-tokens': typeof ApiCronRefreshInstagramTokensRoute
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
@@ -487,6 +497,7 @@ export interface FileRouteTypes {
     | '/oauth/instagram-callback'
     | '/selecao-de-fotos/$clientId'
     | '/api/cron/publish-instagram'
+    | '/api/cron/refresh-instagram-tokens'
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-push-notifications'
     | '/api/selecao-og/$token'
@@ -534,6 +545,7 @@ export interface FileRouteTypes {
     | '/oauth/instagram-callback'
     | '/selecao-de-fotos/$clientId'
     | '/api/cron/publish-instagram'
+    | '/api/cron/refresh-instagram-tokens'
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-push-notifications'
     | '/api/selecao-og/$token'
@@ -582,6 +594,7 @@ export interface FileRouteTypes {
     | '/_authenticated/oauth/instagram-callback'
     | '/_authenticated/selecao-de-fotos_/$clientId'
     | '/api/cron/publish-instagram'
+    | '/api/cron/refresh-instagram-tokens'
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-push-notifications'
     | '/api/selecao-og/$token'
@@ -612,6 +625,7 @@ export interface RootRouteChildren {
   PromoSlugRoute: typeof PromoSlugRoute
   SelecaoTokenRoute: typeof SelecaoTokenRoute
   ApiCronPublishInstagramRoute: typeof ApiCronPublishInstagramRoute
+  ApiCronRefreshInstagramTokensRoute: typeof ApiCronRefreshInstagramTokensRoute
   ApiCronRetentionCleanupRoute: typeof ApiCronRetentionCleanupRoute
   ApiCronSendPushNotificationsRoute: typeof ApiCronSendPushNotificationsRoute
   ApiSelecaoOgTokenRoute: typeof ApiSelecaoOgTokenRoute
@@ -892,6 +906,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronRetentionCleanupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/refresh-instagram-tokens': {
+      id: '/api/cron/refresh-instagram-tokens'
+      path: '/api/cron/refresh-instagram-tokens'
+      fullPath: '/api/cron/refresh-instagram-tokens'
+      preLoaderRoute: typeof ApiCronRefreshInstagramTokensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/publish-instagram': {
       id: '/api/cron/publish-instagram'
       path: '/api/cron/publish-instagram'
@@ -1028,6 +1049,7 @@ const rootRouteChildren: RootRouteChildren = {
   PromoSlugRoute: PromoSlugRoute,
   SelecaoTokenRoute: SelecaoTokenRoute,
   ApiCronPublishInstagramRoute: ApiCronPublishInstagramRoute,
+  ApiCronRefreshInstagramTokensRoute: ApiCronRefreshInstagramTokensRoute,
   ApiCronRetentionCleanupRoute: ApiCronRetentionCleanupRoute,
   ApiCronSendPushNotificationsRoute: ApiCronSendPushNotificationsRoute,
   ApiSelecaoOgTokenRoute: ApiSelecaoOgTokenRoute,

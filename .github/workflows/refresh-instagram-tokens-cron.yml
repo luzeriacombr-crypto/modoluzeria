@@ -1,16 +1,16 @@
-name: Publish scheduled Instagram posts
+name: Refresh Instagram tokens
 
 on:
   schedule:
-    - cron: "3,13,23,33,43,53 * * * *"
+    - cron: "17 6 * * *"
   workflow_dispatch: {}
 
 jobs:
-  publish:
+  refresh:
     runs-on: ubuntu-latest
     steps:
-      - name: Call publish endpoint
+      - name: Call refresh endpoint
         run: |
           curl --fail --show-error --silent \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            https://www.modocriador.com.br/api/cron/publish-instagram
+            https://www.modocriador.com.br/api/cron/refresh-instagram-tokens

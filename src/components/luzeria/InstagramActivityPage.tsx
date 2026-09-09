@@ -1001,6 +1001,15 @@ function ActivitySection({ label, icon, items, thumbs, dateOf, datePrefix }: {
               >
                 {typeLabel(item)}
               </span>
+              {item.igLastError && (
+                <span
+                  title={item.igLastError}
+                  className="absolute top-1.5 right-1.5 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
+                  style={{ backgroundColor: "rgba(220,38,38,0.85)", color: "#FFFFFF", backdropFilter: "blur(2px)" }}
+                >
+                  Falhou
+                </span>
+              )}
             </div>
             <div className="p-2">
               <span
@@ -1013,6 +1022,9 @@ function ActivitySection({ label, icon, items, thumbs, dateOf, datePrefix }: {
               <div className="text-[10px] text-foreground/35 mt-0.5">
                 {datePrefix} {new Date(dateOf(item)).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
               </div>
+              {item.igLastError && (
+                <div className="text-[10px] text-red-400/80 mt-0.5 truncate" title={item.igLastError}>{item.igLastError}</div>
+              )}
             </div>
           </button>
         ))}

@@ -165,12 +165,19 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
     }
     const igId = String(meJson.id);
     const igUsername: string | null = meJson.username ?? null;
+    // expires_in vem em segundos (a Meta manda ~5184000 = 60 dias) — usa o
+    // valor real quando presente, cai em 60 dias fixo só se a resposta não
+    // trouxer o campo.
+    const expiresInSeconds = typeof longJson.expires_in === "number" ? longJson.expires_in : 60 * 24 * 60 * 60;
+    const tokenExpiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
 
-    const { error } = await context.supabase.from("client_instagram_credentials").upsert({
+    // token_expires_at ainda não está nos tipos gerados do Supabase.
+    const { error } = await (context.supabase as any).from("client_instagram_credentials").upsert({
       client_id: data.clientId,
       instagram_business_account_id: igId,
       ig_username: igUsername,
       access_token: longJson.access_token,
+      token_expires_at: tokenExpiresAt,
       connected_by: context.userId,
       connected_at: new Date().toISOString(),
     }, { onConflict: "client_id" });
@@ -178,6 +185,76 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
 
     return { ok: true as const, igUsername };
   });
+
+/** Renova um token long-lived individual via o endpoint oficial da Meta —
+ * só funciona se o token tiver pelo menos 24h e ainda não tiver expirado.
+ * Devolve o novo token/validade em caso de sucesso; lança se a Meta
+ * recusar (token já morto, cliente revogou acesso, etc. — nesse caso não
+ * tem como recuperar sozinho, precisa reconectar do zero). */
+async function refreshInstagramToken(accessToken: string): Promise<{ accessToken: string; expiresAt: string }> {
+  const res = await fetch(
+    `https://graph.instagram.com/refresh_access_token?` + new URLSearchParams({
+      grant_type: "ig_refresh_token", access_token: accessToken,
+    }),
+  );
+  const json: any = await res.json();
+  if (!res.ok || !json.access_token) {
+    throw new Error(json?.error?.message ?? "Não foi possível renovar o token do Instagram.");
+  }
+  const expiresInSeconds = typeof json.expires_in === "number" ? json.expires_in : 60 * 24 * 60 * 60;
+  return { accessToken: json.access_token, expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString() };
+}
+
+/** Called by the external cron (GitHub Actions, 1x/dia) via
+ * /api/cron/refresh-instagram-tokens. Renova com bastante folga (14 dias
+ * antes de vencer, não em cima da hora) — dá margem pra várias tentativas
+ * se o cron falhar num dia. token_expires_at NULL (conexões de antes dessa
+ * coluna existir) também entra, pra pegar conexões já feitas no primeiro
+ * run depois do deploy. Quando a renovação falha (token já morto demais
+ * pra recuperar), avisa os masters da agência pra reconectar na Ficha do
+ * Cliente. */
+export async function runInstagramTokenRefresh() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const soon = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+  // token_expires_at ainda não está nos tipos gerados do Supabase.
+  const { data: creds } = await (supabaseAdmin as any)
+    .from("client_instagram_credentials")
+    .select("client_id, access_token, clients!client_instagram_credentials_client_id_fkey(id, name, org_id)")
+    .or(`token_expires_at.is.null,token_expires_at.lt.${soon}`);
+
+  const results: { clientId: string; ok: boolean; error?: string }[] = [];
+  for (const row of (creds ?? []) as any[]) {
+    try {
+      const { accessToken, expiresAt } = await refreshInstagramToken(row.access_token);
+      await (supabaseAdmin as any).from("client_instagram_credentials")
+        .update({ access_token: accessToken, token_expires_at: expiresAt })
+        .eq("client_id", row.client_id);
+      results.push({ clientId: row.client_id, ok: true });
+    } catch (e: any) {
+      const errorMessage = e?.message ?? String(e);
+      console.error("[Instagram token refresh] falha", row.client_id, e);
+      const orgId = row.clients?.org_id;
+      if (orgId) {
+        const { data: masterRoles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "master");
+        const masterIds = new Set((masterRoles ?? []).map((r: any) => r.user_id));
+        const { data: orgProfiles } = await supabaseAdmin.from("profiles").select("id").eq("org_id", orgId);
+        const masterProfileIds = (orgProfiles ?? []).map((p: any) => p.id).filter((id: string) => masterIds.has(id));
+        if (masterProfileIds.length > 0) {
+          await supabaseAdmin.from("notifications").insert(
+            masterProfileIds.map((userId: string) => ({
+              user_id: userId,
+              type: "instagram_token_expired",
+              message: `O acesso ao Instagram de "${row.clients?.name ?? "um cliente"}" expirou. Reconecte na Ficha do Cliente pra publicações voltarem a sair.`,
+            })),
+          );
+        }
+      }
+      results.push({ clientId: row.client_id, ok: false, error: errorMessage });
+    }
+  }
+  return results;
+}
 
 /** Does the actual work of publishing a "post" content_item to Instagram —
  * shared by the manual "Publicar agora" button and the scheduled-publish
@@ -385,10 +462,13 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       // log, notifications) identical to a manual status change.
       await supabaseAdmin.rpc("set_item_status", { p_item_id: itemId, p_status: "FINALIZADO" });
     }
-    await supabaseAdmin.from("content_items").update({
+    // ig_last_error/ig_last_error_at ainda não estão nos tipos gerados do Supabase.
+    await (supabaseAdmin as any).from("content_items").update({
       ig_auto_publish: false,
       ig_published_at: new Date().toISOString(),
       ig_media_id: publishJson.id,
+      ig_last_error: null,
+      ig_last_error_at: null,
     }).eq("id", itemId);
     // Histórico de toda publicação (manual, programada uma vez, ou
     // repetida) — content_items só guarda a mais recente nas duas colunas
@@ -557,6 +637,36 @@ function isRepeatDue(item: { scheduled_at: string | null; ig_repeat_mode: string
   return false;
 }
 
+/** Marca a falha no item e avisa os masters da agência — só na primeira
+ * falha de uma sequência (se `hadPreviousError` já vinha setado, a
+ * publicação vai continuar tentando de novo a cada rodada do cron sem
+ * notificar de novo toda vez, senão viraria spam). Limpo automaticamente
+ * assim que uma publicação (manual ou programada) desse item dá certo, no
+ * fim de runInstagramPublish. */
+async function markScheduledPublishFailure(
+  supabaseAdmin: any,
+  item: { id: string; title: string; orgId: string | undefined; hadPreviousError: boolean },
+  errorMessage: string,
+) {
+  await supabaseAdmin.from("content_items")
+    .update({ ig_last_error: errorMessage, ig_last_error_at: new Date().toISOString() })
+    .eq("id", item.id);
+  if (item.hadPreviousError || !item.orgId) return;
+  const { data: masterRoles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "master");
+  const masterIds = new Set((masterRoles ?? []).map((r: any) => r.user_id));
+  const { data: orgProfiles } = await supabaseAdmin.from("profiles").select("id").eq("org_id", item.orgId);
+  const masterProfileIds = (orgProfiles ?? []).map((p: any) => p.id).filter((id: string) => masterIds.has(id));
+  if (masterProfileIds.length === 0) return;
+  await supabaseAdmin.from("notifications").insert(
+    masterProfileIds.map((userId: string) => ({
+      user_id: userId,
+      type: "instagram_publish_failed",
+      item_id: item.id,
+      message: `Falha ao publicar "${item.title}" no Instagram: ${errorMessage}`,
+    })),
+  );
+}
+
 /** Called by the external cron (GitHub Actions, every few minutes — Vercel
  * Hobby's native cron only runs daily) via /api/cron/publish-instagram.
  * Scans for posts scheduled to go out (uma vez) e Stories com repetição
@@ -566,20 +676,21 @@ export async function runScheduledInstagramPublishes() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const now = new Date();
 
-  const { data: due } = await supabaseAdmin
+  // ig_last_error ainda não está nos tipos gerados do Supabase.
+  const { data: due } = await (supabaseAdmin as any)
     .from("content_items")
-    .select("id")
+    .select("id, title, ig_last_error, months(clients!months_client_id_fkey(org_id))")
     .eq("ig_auto_publish", true)
     .eq("status", "PRONTO_PARA_PUBLICAR")
     .lte("scheduled_at", now.toISOString());
 
-  const { data: repeatCandidates } = await supabaseAdmin
+  const { data: repeatCandidates } = await (supabaseAdmin as any)
     .from("content_items")
-    .select("id, scheduled_at, ig_repeat_mode, ig_repeat_slots, ig_repeat_last_fired_date")
+    .select("id, title, ig_last_error, scheduled_at, ig_repeat_mode, ig_repeat_slots, ig_repeat_last_fired_date, months(clients!months_client_id_fkey(org_id))")
     .eq("type", "story")
     .eq("status", "PRONTO_PARA_PUBLICAR")
     .not("ig_repeat_mode", "is", null);
-  const dueRepeatIds = (repeatCandidates ?? []).filter((it) => isRepeatDue(it, now)).map((it) => it.id);
+  const dueRepeats = (repeatCandidates ?? []).filter((it: any) => isRepeatDue(it, now));
 
   const results: { itemId: string; ok: boolean; error?: string }[] = [];
   for (const row of due ?? []) {
@@ -587,18 +698,26 @@ export async function runScheduledInstagramPublishes() {
       await runInstagramPublish(row.id);
       results.push({ itemId: row.id, ok: true });
     } catch (e: any) {
+      const errorMessage = e?.message ?? String(e);
       console.error("[Instagram cron] falha ao publicar", row.id, e);
-      results.push({ itemId: row.id, ok: false, error: e?.message ?? String(e) });
+      await markScheduledPublishFailure(supabaseAdmin, {
+        id: row.id, title: row.title, orgId: (row as any).months?.clients?.org_id, hadPreviousError: !!row.ig_last_error,
+      }, errorMessage);
+      results.push({ itemId: row.id, ok: false, error: errorMessage });
     }
   }
-  for (const itemId of dueRepeatIds) {
+  for (const row of dueRepeats) {
     try {
-      await runInstagramPublish(itemId);
-      await supabaseAdmin.from("content_items").update({ ig_repeat_last_fired_date: saoPauloParts(now).dateStr }).eq("id", itemId);
-      results.push({ itemId, ok: true });
+      await runInstagramPublish(row.id);
+      await supabaseAdmin.from("content_items").update({ ig_repeat_last_fired_date: saoPauloParts(now).dateStr }).eq("id", row.id);
+      results.push({ itemId: row.id, ok: true });
     } catch (e: any) {
-      console.error("[Instagram cron] falha ao repetir story", itemId, e);
-      results.push({ itemId, ok: false, error: e?.message ?? String(e) });
+      const errorMessage = e?.message ?? String(e);
+      console.error("[Instagram cron] falha ao repetir story", row.id, e);
+      await markScheduledPublishFailure(supabaseAdmin, {
+        id: row.id, title: row.title, orgId: (row as any).months?.clients?.org_id, hadPreviousError: !!row.ig_last_error,
+      }, errorMessage);
+      results.push({ itemId: row.id, ok: false, error: errorMessage });
     }
   }
   return results;
@@ -613,6 +732,8 @@ export type InstagramActivityItem = {
   igPublishedAt: string | null;
   igAutoPublish: boolean;
   igMediaId: string | null;
+  igLastError: string | null;
+  igLastErrorAt: string | null;
   clientId: string;
   clientName: string;
   clientColor: string;
@@ -644,10 +765,11 @@ export const getInstagramActivity = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
-    const { data: rows, error } = await context.supabase
+    // ig_last_error/ig_last_error_at ainda não estão nos tipos gerados do Supabase.
+    const { data: rows, error } = await (context.supabase as any)
       .from("content_items")
       .select(
-        "id, title, type, post_format, scheduled_at, ig_published_at, ig_auto_publish, ig_media_id, months!inner(key, clients!months_client_id_fkey!inner(id, name, color, archived, category))",
+        "id, title, type, post_format, scheduled_at, ig_published_at, ig_auto_publish, ig_media_id, ig_last_error, ig_last_error_at, months!inner(key, clients!months_client_id_fkey!inner(id, name, color, archived, category))",
       )
       .or("ig_auto_publish.eq.true,ig_published_at.not.is.null")
       .order("ig_published_at", { ascending: false, nullsFirst: false });
@@ -657,7 +779,7 @@ export const getInstagramActivity = createServerFn({ method: "GET" })
       .map((r: any) => ({
         id: r.id, title: r.title, type: r.type, postFormat: r.post_format,
         scheduledAt: r.scheduled_at, igPublishedAt: r.ig_published_at, igAutoPublish: r.ig_auto_publish,
-        igMediaId: r.ig_media_id,
+        igMediaId: r.ig_media_id, igLastError: r.ig_last_error, igLastErrorAt: r.ig_last_error_at,
         clientId: r.months.clients.id, clientName: r.months.clients.name, clientColor: r.months.clients.color,
         monthKey: r.months.key,
       })) as InstagramActivityItem[];
