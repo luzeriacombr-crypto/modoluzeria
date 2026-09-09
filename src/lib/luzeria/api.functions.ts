@@ -2489,19 +2489,19 @@ export const getTopMembersByGoal = createServerFn({ method: "GET" })
     const userIds = (profiles ?? []).map((p: any) => p.id);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    type GoalCounts = { posts: number; reels: number; stories: number; gravacao: number; outros: number };
+    type GoalCounts = { posts: number; reels: number; stories: number; gravacao: number; outros: number; publicacoes: number };
     const goalByUser = new Map<string, GoalCounts>();
     const doneByUser = new Map<string, GoalCounts>();
 
     if (userIds.length > 0 && monthKeys.length > 0) {
       const { data: goalRows } = await supabaseAdmin
         .from("member_goals")
-        .select("user_id, month_key, posts_goal, reels_goal, stories_goal, gravacao_goal, outros_goal")
+        .select("user_id, month_key, posts_goal, reels_goal, stories_goal, gravacao_goal, outros_goal, publicacoes_goal")
         .in("user_id", userIds).in("month_key", monthKeys);
       (goalRows ?? []).forEach((r: any) => {
-        const g = goalByUser.get(r.user_id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0 };
+        const g = goalByUser.get(r.user_id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0, publicacoes: 0 };
         g.posts += r.posts_goal ?? 0; g.reels += r.reels_goal ?? 0; g.stories += r.stories_goal ?? 0;
-        g.gravacao += r.gravacao_goal ?? 0; g.outros += r.outros_goal ?? 0;
+        g.gravacao += r.gravacao_goal ?? 0; g.outros += r.outros_goal ?? 0; g.publicacoes += r.publicacoes_goal ?? 0;
         goalByUser.set(r.user_id, g);
       });
     }
@@ -2525,7 +2525,7 @@ export const getTopMembersByGoal = createServerFn({ method: "GET" })
         const ci = r.content_items;
         if (!ci?.editor_id || seenItemIds.has(ci.id)) return;
         seenItemIds.add(ci.id);
-        const d = doneByUser.get(ci.editor_id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0 };
+        const d = doneByUser.get(ci.editor_id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0, publicacoes: 0 };
         if (ci.type === "post") d.posts++; else if (ci.type === "reel") d.reels++;
         doneByUser.set(ci.editor_id, d);
       });
@@ -2535,7 +2535,7 @@ export const getTopMembersByGoal = createServerFn({ method: "GET" })
         .eq("org_id", context.orgId).in("user_id", userIds)
         .gte("day", start.toISOString().slice(0, 10)).lt("day", end.toISOString().slice(0, 10));
       (storyRows ?? []).forEach((r: any) => {
-        const d = doneByUser.get(r.user_id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0 };
+        const d = doneByUser.get(r.user_id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0, publicacoes: 0 };
         d.stories++;
         doneByUser.set(r.user_id, d);
       });
@@ -2554,9 +2554,25 @@ export const getTopMembersByGoal = createServerFn({ method: "GET" })
       (activityFinRows ?? []).forEach((r: any) => {
         const ci = r.content_items;
         if (!ci) return;
-        const d = doneByUser.get(r.user_id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0 };
+        const d = doneByUser.get(r.user_id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0, publicacoes: 0 };
         const qty = ci.activity_quantity ?? 1;
         if (ci.type === "gravacao") d.gravacao += qty; else if (ci.type === "outros") d.outros += qty;
+        doneByUser.set(r.user_id, d);
+      });
+
+      // Publicações: post/reel/story em que a pessoa é responsável
+      // (atribuída), não quem editou — mesmo critério de crédito único
+      // (finalizations) usado em Metas da equipe.
+      const { data: publicacoesFinRows } = await supabaseAdmin
+        .from("finalizations")
+        .select("user_id, content_items!inner(type)")
+        .in("user_id", userIds)
+        .in("content_items.type", ["post", "reel", "story"])
+        .gte("finalized_at", start.toISOString())
+        .lt("finalized_at", end.toISOString());
+      (publicacoesFinRows ?? []).forEach((r: any) => {
+        const d = doneByUser.get(r.user_id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0, publicacoes: 0 };
+        d.publicacoes++;
         doneByUser.set(r.user_id, d);
       });
     }
@@ -2565,9 +2581,9 @@ export const getTopMembersByGoal = createServerFn({ method: "GET" })
     const ranking: any[] = [];
     const noGoal: any[] = [];
     (profiles ?? []).forEach((p: any) => {
-      const goal = goalByUser.get(p.id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0 };
-      const done = doneByUser.get(p.id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0 };
-      const totalGoal = goal.posts + goal.reels + goal.stories + goal.gravacao + goal.outros;
+      const goal = goalByUser.get(p.id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0, publicacoes: 0 };
+      const done = doneByUser.get(p.id) ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0, publicacoes: 0 };
+      const totalGoal = goal.posts + goal.reels + goal.stories + goal.gravacao + goal.outros + goal.publicacoes;
       const base = {
         id: p.id, name: p.name, color: p.color, icon: p.icon,
         avatarUrl: p.avatar_url ? (avatarMap.get(p.avatar_url) ?? null) : null,
@@ -2580,7 +2596,8 @@ export const getTopMembersByGoal = createServerFn({ method: "GET" })
         (goal.reels > 0 ? done.reels : 0) +
         (goal.stories > 0 ? done.stories : 0) +
         (goal.gravacao > 0 ? done.gravacao : 0) +
-        (goal.outros > 0 ? done.outros : 0);
+        (goal.outros > 0 ? done.outros : 0) +
+        (goal.publicacoes > 0 ? done.publicacoes : 0);
       ranking.push({ ...base, pct: (totalDone / totalGoal) * 100, totalDone, totalGoal });
     });
     ranking.sort((a, b) => b.pct - a.pct || b.totalDone - a.totalDone);
