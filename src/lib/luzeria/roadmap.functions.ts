@@ -62,12 +62,12 @@ export const listGoals = createServerFn({ method: "GET" })
     const db: any = context.supabase;
     const { data: rows } = await db
       .from("member_goals")
-      .select("user_id, month_key, posts_goal, reels_goal, stories_goal, gravacao_goal, outros_goal")
+      .select("user_id, month_key, posts_goal, reels_goal, stories_goal, gravacao_goal, outros_goal, publicacoes_goal")
       .eq("month_key", data.monthKey);
     return (rows ?? []).map((r: any) => ({
       userId: r.user_id, monthKey: r.month_key,
       postsGoal: r.posts_goal, reelsGoal: r.reels_goal, storiesGoal: r.stories_goal,
-      gravacaoGoal: r.gravacao_goal, outrosGoal: r.outros_goal,
+      gravacaoGoal: r.gravacao_goal, outrosGoal: r.outros_goal, publicacoesGoal: r.publicacoes_goal,
     }));
   });
 
@@ -76,7 +76,7 @@ export const setGoals = createServerFn({ method: "POST" })
   .inputValidator((d: {
     userId: string; monthKey: string;
     postsGoal: number; reelsGoal: number; storiesGoal: number;
-    gravacaoGoal: number; outrosGoal: number;
+    gravacaoGoal: number; outrosGoal: number; publicacoesGoal: number;
   }) => z.object({
     userId: z.string().uuid(),
     monthKey: z.string().regex(/^\d{4}-\d{2}$/),
@@ -85,6 +85,7 @@ export const setGoals = createServerFn({ method: "POST" })
     storiesGoal: z.number().int().min(0).max(9999),
     gravacaoGoal: z.number().int().min(0).max(9999),
     outrosGoal: z.number().int().min(0).max(9999),
+    publicacoesGoal: z.number().int().min(0).max(9999),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -93,7 +94,7 @@ export const setGoals = createServerFn({ method: "POST" })
     const { error } = await db.from("member_goals").upsert({
       user_id: data.userId, month_key: data.monthKey,
       posts_goal: data.postsGoal, reels_goal: data.reelsGoal, stories_goal: data.storiesGoal,
-      gravacao_goal: data.gravacaoGoal, outros_goal: data.outrosGoal,
+      gravacao_goal: data.gravacaoGoal, outros_goal: data.outrosGoal, publicacoes_goal: data.publicacoesGoal,
     }, { onConflict: "user_id,month_key" });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -221,75 +222,75 @@ export const getGoalProgressForOrg = createServerFn({ method: "GET" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [{ data: goalRows }, { data: assignRows }, { data: storyRows }, { data: logRows }, { data: reelUploadRows }] = await Promise.all([
+    const [
+      { data: goalRows }, { data: storyRows }, { data: logRows },
+      { data: uploadRows }, { data: activityFinRows }, { data: publicacoesFinRows },
+    ] = await Promise.all([
       supabaseAdmin.from("member_goals")
-        .select("user_id, posts_goal, reels_goal, stories_goal, gravacao_goal, outros_goal")
+        .select("user_id, posts_goal, reels_goal, stories_goal, gravacao_goal, outros_goal, publicacoes_goal")
         .eq("month_key", data.monthKey).in("user_id", userIds),
-      context.supabase.from("item_assignees").select("item_id, user_id").in("user_id", userIds),
       context.supabase.from("stories_schedule").select("user_id, day")
         .in("user_id", userIds)
         .gte("day", `${data.monthKey}-01`).lt("day", `${data.monthKey}-31T23:59:59`),
       context.supabase.from("cleaning_log").select("done_by")
         .in("done_by", userIds).eq("status", "done")
         .gte("occurrence_date", `${data.monthKey}-01`).lt("occurrence_date", `${data.monthKey}-31T23:59:59`),
-      // Reels: mesmo critério de "aprovados" de getMyEditingStats — quem
-      // é editor_id do reel, não quem de fato subiu o arquivo (nem sempre
-      // é a mesma pessoa) — e alguém subiu arquivo pra ele nesse mês. Não
-      // é mais "atribuído + item atualizado no mês" (critério solto
-      // demais, um reel podia contar pra alguém que nem editou de verdade).
+      // Posts e reels: editor_id (quem editou de verdade, não quem tá
+      // atribuído como responsável) + data real do upload — não "item
+      // atualizado no mês" (critério solto demais, contava reel/post pra
+      // quem nem editou).
       context.supabase.from("item_files")
-        .select("content_items!inner(id, status, editor_id, type)")
+        .select("content_items!inner(id, type, editor_id)")
         .eq("kind", "media")
-        .eq("content_items.type", "reel")
+        .in("content_items.type", ["reel", "post"])
         .in("content_items.editor_id", userIds)
         .gte("created_at", start).lt("created_at", end),
+      // Gravação e outros: não têm editor_id (só post/reel/story têm, ver
+      // DetailPanel) — contam pela mesma fonte de crédito único
+      // (finalizations) usada em Minhas Demandas, em vídeos
+      // (activity_quantity), não em sessões/itens.
+      supabaseAdmin.from("finalizations")
+        .select("user_id, content_items!inner(type, activity_quantity)")
+        .in("user_id", userIds)
+        .in("content_items.type", ["gravacao", "outros"])
+        .gte("finalized_at", start).lt("finalized_at", end),
+      // Publicações: post/reel/story em que a pessoa é responsável
+      // (atribuída), não quem editou — pra quem cuida do planejamento/
+      // entrega do feed (social media). Mesmo crédito único.
+      supabaseAdmin.from("finalizations")
+        .select("user_id, content_items!inner(type)")
+        .in("user_id", userIds)
+        .in("content_items.type", ["post", "reel", "story"])
+        .gte("finalized_at", start).lt("finalized_at", end),
     ]);
 
-    const reelDoneByUser = new Map<string, Map<string, string>>();
-    for (const r of (reelUploadRows ?? []) as any[]) {
+    type Done = { posts: number; reels: number; gravacao: number; outros: number; stories: number; rotina: number; publicacoes: number };
+    const done: Record<string, Done> = {};
+    userIds.forEach((uid: string) => { done[uid] = { posts: 0, reels: 0, gravacao: 0, outros: 0, stories: 0, rotina: 0, publicacoes: 0 }; });
+
+    const seenUpload = new Set<string>();
+    (uploadRows ?? []).forEach((r: any) => {
       const ci = r.content_items;
-      if (!reelDoneByUser.has(ci.editor_id)) reelDoneByUser.set(ci.editor_id, new Map());
-      const m = reelDoneByUser.get(ci.editor_id)!;
-      if (!m.has(ci.id)) m.set(ci.id, ci.status);
-    }
-
-    const itemIds = [...new Set((assignRows ?? []).map((a: any) => a.item_id))];
-    // itemId -> {type, qty}, só dos que bateram o critério de "feito" (isDoneStatus
-    // cobre CONCLUIDO também — atividades como gravação/outros terminam ali, não em
-    // PRONTO_PARA_PUBLICAR/FINALIZADO como posts/reels).
-    const doneByItem = new Map<string, { type: string; qty: number }>();
-    if (itemIds.length) {
-      const chunks: string[][] = [];
-      for (let i = 0; i < itemIds.length; i += 150) chunks.push(itemIds.slice(i, i + 150));
-      const results = await Promise.all(chunks.map((chunk) =>
-        context.supabase.from("content_items").select("id, type, status, activity_quantity")
-          .in("id", chunk)
-          .gte("updated_at", start).lt("updated_at", end)
-      ));
-      results.forEach(({ data: rows, error }) => {
-        if (error) { console.error("getGoalProgressForOrg content_items batch:", error.message); return; }
-        (rows ?? []).filter((it: any) => isDoneStatus(it.status))
-          .forEach((it: any) => doneByItem.set(it.id, { type: it.type, qty: it.activity_quantity ?? 1 }));
-      });
-    }
-
-    const done: Record<string, { posts: number; reels: number; gravacao: number; outros: number; stories: number; rotina: number }> = {};
-    userIds.forEach((uid: string) => { done[uid] = { posts: 0, reels: 0, gravacao: 0, outros: 0, stories: 0, rotina: 0 }; });
-    (assignRows ?? []).forEach((a: any) => {
-      const item = doneByItem.get(a.item_id);
-      if (!item || !done[a.user_id]) return;
-      if (item.type === "post") done[a.user_id].posts++;
-      // Meta de gravação/outros é em quantidade de vídeos, não de
-      // sessões — soma activity_quantity, igual ranking/relatórios já fazem.
-      if (item.type === "gravacao") done[a.user_id].gravacao += item.qty;
-      if (item.type === "outros") done[a.user_id].outros += item.qty;
+      if (!ci?.editor_id || !done[ci.editor_id] || seenUpload.has(ci.id)) return;
+      seenUpload.add(ci.id);
+      if (ci.type === "post") done[ci.editor_id].posts++; else if (ci.type === "reel") done[ci.editor_id].reels++;
     });
+
+    (activityFinRows ?? []).forEach((r: any) => {
+      const ci = r.content_items;
+      if (!ci || !done[r.user_id]) return;
+      const qty = ci.activity_quantity ?? 1;
+      if (ci.type === "gravacao") done[r.user_id].gravacao += qty;
+      else if (ci.type === "outros") done[r.user_id].outros += qty;
+    });
+
+    (publicacoesFinRows ?? []).forEach((r: any) => {
+      if (!done[r.user_id]) return;
+      done[r.user_id].publicacoes++;
+    });
+
     (storyRows ?? []).forEach((s: any) => { if (done[s.user_id]) done[s.user_id].stories++; });
     (logRows ?? []).forEach((l: any) => { if (done[l.done_by]) done[l.done_by].rotina++; });
-    reelDoneByUser.forEach((itemMap, uid) => {
-      if (!done[uid]) return;
-      for (const status of itemMap.values()) if (isDoneStatus(status as any)) done[uid].reels++;
-    });
 
     const goalByUser = new Map((goalRows ?? []).map((g: any) => [g.user_id, g]));
 
@@ -299,9 +300,9 @@ export const getGoalProgressForOrg = createServerFn({ method: "GET" })
       return {
         userId: uid, monthKey: data.monthKey,
         postsGoal: g?.posts_goal ?? 0, reelsGoal: g?.reels_goal ?? 0, storiesGoal: g?.stories_goal ?? 0,
-        gravacaoGoal: g?.gravacao_goal ?? 0, outrosGoal: g?.outros_goal ?? 0,
+        gravacaoGoal: g?.gravacao_goal ?? 0, outrosGoal: g?.outros_goal ?? 0, publicacoesGoal: g?.publicacoes_goal ?? 0,
         postsDone: d.posts, reelsDone: d.reels, storiesDone: d.stories,
-        gravacaoDone: d.gravacao, outrosDone: d.outros, rotinaDone: d.rotina,
+        gravacaoDone: d.gravacao, outrosDone: d.outros, rotinaDone: d.rotina, publicacoesDone: d.publicacoes,
       };
     });
   });

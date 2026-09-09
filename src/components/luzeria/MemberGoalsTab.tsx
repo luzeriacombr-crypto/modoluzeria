@@ -27,7 +27,7 @@ function labelFor(monthKey: string) {
   return `${MONTH_NAMES[m - 1]} ${y}`;
 }
 
-type Row = { posts: number; reels: number; stories: number; gravacao: number; outros: number };
+type Row = { posts: number; reels: number; stories: number; gravacao: number; outros: number; publicacoes: number };
 
 const GOAL_FIELDS: { key: keyof Row; label: string }[] = [
   { key: "posts", label: "Posts" },
@@ -35,6 +35,7 @@ const GOAL_FIELDS: { key: keyof Row; label: string }[] = [
   { key: "stories", label: "Stories" },
   { key: "gravacao", label: "Gravação" },
   { key: "outros", label: "Outros" },
+  { key: "publicacoes", label: "Publicação resp." },
 ];
 
 export function MemberGoalsTab() {
@@ -66,6 +67,7 @@ export function MemberGoalsTab() {
         stories: g?.storiesGoal ?? 0,
         gravacao: g?.gravacaoGoal ?? 0,
         outros: g?.outrosGoal ?? 0,
+        publicacoes: g?.publicacoesGoal ?? 0,
       };
     });
     setDraft(next);
@@ -77,7 +79,7 @@ export function MemberGoalsTab() {
   const rowPayload = (uid: string, row: Row) => ({
     userId: uid, monthKey,
     postsGoal: row.posts, reelsGoal: row.reels, storiesGoal: row.stories,
-    gravacaoGoal: row.gravacao, outrosGoal: row.outros,
+    gravacaoGoal: row.gravacao, outrosGoal: row.outros, publicacoesGoal: row.publicacoes,
   });
 
   const save = (uid: string) => {
@@ -94,10 +96,11 @@ export function MemberGoalsTab() {
 
   const isDirty = (uid: string, row: Row) => {
     const g: any = goals.find((x: any) => x.userId === uid);
-    if (!g) return row.posts || row.reels || row.stories || row.gravacao || row.outros;
+    if (!g) return row.posts || row.reels || row.stories || row.gravacao || row.outros || row.publicacoes;
     return (
       g.postsGoal !== row.posts || g.reelsGoal !== row.reels || g.storiesGoal !== row.stories ||
-      g.gravacaoGoal !== row.gravacao || g.outrosGoal !== row.outros
+      g.gravacaoGoal !== row.gravacao || g.outrosGoal !== row.outros ||
+      (g.publicacoesGoal ?? 0) !== row.publicacoes
     );
   };
 
@@ -115,7 +118,7 @@ export function MemberGoalsTab() {
         if (next[g.userId]) {
           next[g.userId] = {
             posts: g.postsGoal, reels: g.reelsGoal, stories: g.storiesGoal,
-            gravacao: g.gravacaoGoal ?? 0, outros: g.outrosGoal ?? 0,
+            gravacao: g.gravacaoGoal ?? 0, outros: g.outrosGoal ?? 0, publicacoes: g.publicacoesGoal ?? 0,
           };
           count++;
         }
@@ -193,10 +196,11 @@ export function MemberGoalsTab() {
       </div>
 
       <p className="text-[11px] text-foreground/40 mb-3">
-        Defina quantos posts, reels, dias de stories, gravações e outros conteúdos cada membro
-        precisa entregar neste mês. Use <span className="text-foreground/60">0</span> para não definir
-        meta naquela categoria. Rotina não tem meta — só mostra quantas tarefas do dia a dia a
-        pessoa já concluiu.
+        Defina quantos posts, reels, dias de stories, gravações, outros conteúdos e publicações sob
+        responsabilidade cada membro precisa entregar neste mês. Use <span className="text-foreground/60">0</span> para
+        não definir meta naquela categoria. "Publicação resp." é pra quem cuida do planejamento/entrega
+        do feed (social media) — conta post/reel/story em que a pessoa é a responsável, não quem editou.
+        Rotina não tem meta — só mostra quantas tarefas do dia a dia a pessoa já concluiu.
       </p>
 
       <div className="space-y-3">
@@ -204,7 +208,7 @@ export function MemberGoalsTab() {
           <div className="px-5 py-6 text-sm text-foreground/40 bg-card rounded-lg">Sem membros ativos.</div>
         )}
         {activeMembers.map((p) => {
-          const row = draft[p.id] ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0 };
+          const row = draft[p.id] ?? { posts: 0, reels: 0, stories: 0, gravacao: 0, outros: 0, publicacoes: 0 };
           const prog: any = progressByUser.get(p.id);
           const dirty = isDirty(p.id, row);
           return (
