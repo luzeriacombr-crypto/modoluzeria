@@ -58,13 +58,6 @@ const STEPS: Step[] = [
     target: '[data-tour="activity-counts"]',
   },
   {
-    id: "goals",
-    title: "Suas metas do mês",
-    desc: "Acompanhe Posts, Reels e Stories em tempo real. Se a cor virar laranja/vermelho, você está atrás do esperado pro dia do mês.",
-    view: "my",
-    target: '[data-tour="goals"]',
-  },
-  {
     id: "week",
     title: "Visão Minha Semana",
     desc: "Clique aqui pra ver suas demandas em formato de kanban, organizado por dia da semana.",

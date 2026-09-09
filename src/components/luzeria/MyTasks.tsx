@@ -8,7 +8,6 @@ import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
-import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
 import { getDailyVerse } from "@/lib/luzeria/daily-verse";
 
@@ -189,8 +188,6 @@ export function MyTasks() {
       </div>
 
       {showNovaDemanda && <NovaDemandaModal onClose={() => setShowNovaDemanda(false)} />}
-
-      {targetId && !targetProfile?.hideGoalsWidget && <div data-tour="goals"><GoalsWidget monthKey={monthKey} userId={targetId} /></div>}
 
       {targetId && <ActivityCountsWidget monthKey={monthKey} userId={targetId} />}
 
