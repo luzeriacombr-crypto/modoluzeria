@@ -95,6 +95,14 @@ export function ContentCard({
     >
       <div className="relative w-full aspect-[4/5] shrink-0">
         <CardThumb itemId={item.id} coverUrl={item.coverUrl ?? null} batchedThumbUrl={batchedThumbUrl} batched={batched} />
+        {item.status === "FINALIZADO" && (
+          <div
+            className="absolute top-[16px] -right-[38px] w-[150px] rotate-45 text-center py-1 text-[10px] font-bold uppercase tracking-wider z-10 pointer-events-none"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D", boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }}
+          >
+            Publicado
+          </div>
+        )}
         <span
           className="absolute top-2 left-2 rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums"
           style={{ backgroundColor: "rgba(0,0,0,0.55)", color: "rgb(var(--lz-brand-rgb))" }}

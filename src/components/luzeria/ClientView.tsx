@@ -37,11 +37,11 @@ function byScheduledAt(direction: OrderDirection) {
   };
 }
 
-type ClientTab = "posts" | "reels" | "stories" | "finalizados" | "mais" | "feed" | "ficha";
-const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizados", "mais", "feed", "ficha"];
+type ClientTab = "posts" | "reels" | "stories" | "mais" | "feed" | "ficha";
+const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "mais", "feed", "ficha"];
 /** Abas que dá pra ocultar (por padrão da agência ou só pra um cliente) —
  * só "ficha" fica de fora (é o mínimo de navegação garantido). */
-const HIDEABLE_TABS = ["posts", "reels", "stories", "finalizados", "mais", "feed"] as const;
+const HIDEABLE_TABS = ["posts", "reels", "stories", "mais", "feed"] as const;
 type MaisSubTab = "atividades" | "campanhas" | "docs" | "biblioteca";
 
 export function ClientView({ clientId, tab: tabParam, onTabChange }: {
@@ -158,25 +158,20 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
 
   if (!client) return null;
 
-  // Itens "Finalizado" saem da grade de trabalho (fica limpa pro time), mas
-  // continuam existindo e visíveis no Preview de Feed — ver FeedPreview.tsx —
-  // e reaparecem aqui, só pra consulta, na aba "Finalizados".
-  const notFinalized = (items: ContentItem[]) => items.filter((i) => i.status !== "FINALIZADO");
-  const onlyFinalized = (items: ContentItem[]) => items.filter((i) => i.status === "FINALIZADO");
   // Itens marcados como "interno" numa campanha continuam existindo em
   // month.posts/reels (senão o modal de detalhe se perderia ao alternar o
   // toggle), mas somem daqui — só ficam visíveis dentro da própria campanha.
   const notCampaignInternal = (items: ContentItem[]) => items.filter((i) => !i.campaignInternal);
 
+  // Itens "Finalizado" continuam na aba de origem (Posts/Reels) — só
+  // ganham a fita "Publicado" no card (ver ContentCard.tsx). Antes iam pra
+  // uma aba "Finalizados" separada, mas isso fazia o time (ou o cliente)
+  // pensar que nada tinha sido entregue no mês quando a aba principal
+  // esvaziava.
   const TAB_CONFIG = {
-    posts: { label: "Posts", type: "post" as const, items: notFinalized(notCampaignInternal(month?.posts ?? [])) },
-    reels: { label: "Reels", type: "reel" as const, items: notFinalized(notCampaignInternal(month?.reels ?? [])) },
+    posts: { label: "Posts", type: "post" as const, items: notCampaignInternal(month?.posts ?? []) },
+    reels: { label: "Reels", type: "reel" as const, items: notCampaignInternal(month?.reels ?? []) },
     stories: { label: "Stories", type: "story" as const, items: month?.stories ?? [] },
-    finalizados: {
-      label: "Finalizados",
-      type: "post" as const,
-      items: [...onlyFinalized(notCampaignInternal(month?.posts ?? [])), ...onlyFinalized(notCampaignInternal(month?.reels ?? []))],
-    },
   } as const;
 
   const showDocsSubTab = isAdmin;
@@ -254,7 +249,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             <button key={t} onClick={() => setTab(t as any)}
               className="relative py-3 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap"
               style={{ color: tab === t ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>
-              {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : t === "finalizados" ? "Finalizados" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
+              {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
               {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
             </button>
           ))}
@@ -317,7 +312,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                 </div>
               ) : (
               <div className="flex items-center justify-end gap-1.5 mb-3">
-                {isAdmin && tab !== "finalizados" && items.length > 0 && (
+                {isAdmin && items.length > 0 && (
                   <button
                     onClick={() => setSelectMode(true)}
                     title="Selecionar vários"
@@ -404,7 +399,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       onDragEnd={() => { setDragId(null); setOverId(null); }}
                     />
                   ))}
-                  {!selectMode && isAdmin && tab !== "finalizados" && (
+                  {!selectMode && isAdmin && (
                     <button
                       onClick={() => addContentItem.mutate({
                         data: { clientId, key: effectiveMonthKey, type: cfg.type },
@@ -442,7 +437,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       onDragEnd={() => { setDragId(null); setOverId(null); }}
                     />
                   ))}
-                  {!selectMode && isAdmin && tab !== "finalizados" && (
+                  {!selectMode && isAdmin && (
                     <button
                       onClick={() => addContentItem.mutate({
                         data: { clientId, key: effectiveMonthKey, type: cfg.type },
@@ -467,7 +462,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   ))}
                 </div>
               )}
-              {!monthError && !monthLoading && cfg.items.length === 0 && (!isAdmin || tab === "finalizados") && (
+              {!monthError && !monthLoading && cfg.items.length === 0 && !isAdmin && (
                 <div className="px-4 py-10 text-center text-sm text-foreground/40">Sem itens nesta aba.</div>
               )}
             </>
@@ -587,7 +582,7 @@ function MaisSubTabPill({ active, onClick, children }: { active: boolean; onClic
 }
 
 const HIDEABLE_TAB_LABEL: Record<(typeof HIDEABLE_TABS)[number], string> = {
-  posts: "Posts", reels: "Reels", stories: "Stories", finalizados: "Finalizados", mais: "Mais", feed: "Preview de Feed",
+  posts: "Posts", reels: "Reels", stories: "Stories", mais: "Mais", feed: "Preview de Feed",
 };
 
 function CustomizeTabsModal({ client, disabledFeatures, onClose, onSaveOrgDefault, onSaveClientOverride, onClearClientOverride }: {
