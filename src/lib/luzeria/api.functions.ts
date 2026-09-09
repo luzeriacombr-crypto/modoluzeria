@@ -2671,12 +2671,19 @@ export const getMyWorkStats = createServerFn({ method: "GET" })
       return { done, items, byClient };
     }
 
+    // "Publicações finalizadas" é só pra quem tem o cargo Social Media —
+    // sem isso, o card não faz sentido pra ninguém (todo mundo que tem
+    // algum post/reel/story atribuído acabaria vendo o número).
+    const { data: cargoRows } = await context.supabase
+      .from("profile_cargos").select("cargos(name)").eq("profile_id", data.userId);
+    const isSocialMedia = ((cargoRows ?? []) as any[]).some((r) => r.cargos?.name === "Social Media");
+
     const [reelItems, postItems, gravacaoResult, roteiroItems, publicacoesItems, goalRow] = await Promise.all([
       byEditorUpload("reel"),
       byEditorUpload("post"),
       gravacaoStats(),
       byAssigneeDone(["roteiro"]),
-      byAssigneeDone(["post", "reel", "story"]),
+      isSocialMedia ? byAssigneeDone(["post", "reel", "story"]) : Promise.resolve([]),
       context.supabase.from("member_goals")
         .select("reels_goal, posts_goal, gravacao_goal")
         .eq("user_id", data.userId).eq("month_key", data.monthKey).maybeSingle(),
