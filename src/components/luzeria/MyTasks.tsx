@@ -804,6 +804,17 @@ function daysElapsedInMonth(monthKey: string): number {
 }
 
 type WorkTypeKey = "reels" | "posts" | "gravacao" | "roteiro" | "publicacoes";
+
+/** Classes fixas (o Tailwind JIT só reconhece string literal, não dá pra
+ * montar "grid-cols-" + n em runtime) — número de colunas acompanha
+ * quantos tipos estão ativos, pra sempre preencher a largura toda em vez
+ * de reservar espaço pra 4 e sobrar vazio quando só tem 1 ou 2. */
+const GRID_COLS_CLASS: Record<number, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-2 md:grid-cols-3",
+  4: "grid-cols-2 md:grid-cols-4",
+};
 const WORK_TYPE_META: Record<WorkTypeKey, { label: string; color: string; icon: (size: number) => React.ReactNode }> = {
   reels: { label: "Reels editados", color: "var(--lz-accent-ink)", icon: (s) => <Film size={s} /> },
   posts: { label: "Posts editados", color: "#4A9EFF", icon: (s) => <ImageIcon size={s} /> },
@@ -836,7 +847,7 @@ function WorkStatsWidget({ monthKey, userId }: { monthKey: string; userId: strin
 
   return (
     <div className="mb-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className={`grid gap-3 ${GRID_COLS_CLASS[Math.min(types.length, 4)]}`}>
         {types.map((key) => {
           const section = stats[key];
           const meta = WORK_TYPE_META[key];
