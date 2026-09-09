@@ -6,7 +6,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText } from "lucide-react";
+import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { GoalsWidget } from "./GoalsWidget";
 import { MyWeekView } from "./MyWeekView";
@@ -803,12 +803,13 @@ function daysElapsedInMonth(monthKey: string): number {
   return daysInMonth;
 }
 
-type WorkTypeKey = "reels" | "posts" | "gravacao" | "roteiro";
+type WorkTypeKey = "reels" | "posts" | "gravacao" | "roteiro" | "publicacoes";
 const WORK_TYPE_META: Record<WorkTypeKey, { label: string; color: string; icon: (size: number) => React.ReactNode }> = {
   reels: { label: "Reels editados", color: "var(--lz-accent-ink)", icon: (s) => <Film size={s} /> },
   posts: { label: "Posts editados", color: "#4A9EFF", icon: (s) => <ImageIcon size={s} /> },
   gravacao: { label: "Gravações concluídas", color: "#B392F0", icon: (s) => <Video size={s} /> },
   roteiro: { label: "Roteiros concluídos", color: "#5BA88A", icon: (s) => <FileText size={s} /> },
+  publicacoes: { label: "Publicações finalizadas", color: "#FF8C42", icon: (s) => <Send size={s} /> },
 };
 
 /** Card duplo (feito/meta + média por dia) repetido por tipo de trabalho

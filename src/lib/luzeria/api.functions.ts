@@ -2562,6 +2562,7 @@ export type MyWorkStats = {
   posts: MyWorkStatsSection;
   gravacao: MyWorkStatsSection;
   roteiro: MyWorkStatsSection;
+  publicacoes: MyWorkStatsSection;
 };
 
 /** Produção da pessoa no mês, por tipo de trabalho — pensado pro card de
@@ -2577,7 +2578,13 @@ export type MyWorkStats = {
  * Gravação e roteiro não têm o conceito de "editor" (ver DetailPanel —
  * o seletor de editor só aparece pra post/reel/story) — contam por
  * atribuição (item_assignees) + o status ter virado concluído/pronto
- * dentro do mês (last_status_change_at), não por "algo mudou no item". */
+ * dentro do mês (last_status_change_at), não por "algo mudou no item".
+ *
+ * Publicações: pra quem cuida do planejamento/entrega do feed (social
+ * media), não da edição em si — post, reel ou story que ela é
+ * responsável (item_assignees) e o status virou pronto pra publicar/
+ * finalizado/publicado dentro do mês. Não olha editor_id, é sobre quem
+ * é o responsável pela publicação final, não quem editou. */
 export const getMyWorkStats = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string; monthKey: string }) =>
@@ -2612,15 +2619,18 @@ export const getMyWorkStats = createServerFn({ method: "GET" })
       return [...map.values()];
     }
 
-    async function byAssigneeDone(type: "roteiro"): Promise<MyWorkStatsItem[]> {
-      const { data: assigns } = await context.supabase.from("item_assignees").select("item_id").eq("user_id", data.userId);
-      const ids = (assigns ?? []).map((a: any) => a.item_id);
-      if (!ids.length) return [];
+    // Buscado uma vez só e reaproveitado por roteiro/gravação/publicações
+    // — os três contam por atribuição (item_assignees), não editor_id.
+    const { data: assigns } = await context.supabase.from("item_assignees").select("item_id").eq("user_id", data.userId);
+    const assignedIds = (assigns ?? []).map((a: any) => a.item_id);
+
+    async function byAssigneeDone(types: ContentType[]): Promise<MyWorkStatsItem[]> {
+      if (!assignedIds.length) return [];
       const { data: rows, error } = await context.supabase
         .from("content_items")
         .select("id, title, status, last_status_change_at, months!inner(clients!months_client_id_fkey!inner(id, name))")
-        .in("id", ids)
-        .eq("type", type)
+        .in("id", assignedIds)
+        .in("type", types as any)
         .gte("last_status_change_at", start)
         .lt("last_status_change_at", end);
       if (error) throw new Error(error.message);
@@ -2634,13 +2644,11 @@ export const getMyWorkStats = createServerFn({ method: "GET" })
      * mostra o detalhe por cliente (quantos vídeos gravados pra cada um),
      * não a lista crua de sessões — mais útil pra ver onde o volume veio. */
     async function gravacaoStats(): Promise<{ done: number; items: MyWorkStatsItem[]; byClient: MyWorkStatsClientBreakdown[] }> {
-      const { data: assigns } = await context.supabase.from("item_assignees").select("item_id").eq("user_id", data.userId);
-      const ids = (assigns ?? []).map((a: any) => a.item_id);
-      if (!ids.length) return { done: 0, items: [], byClient: [] };
+      if (!assignedIds.length) return { done: 0, items: [], byClient: [] };
       const { data: rows, error } = await context.supabase
         .from("content_items")
         .select("id, title, status, activity_quantity, last_status_change_at, months!inner(clients!months_client_id_fkey!inner(id, name))")
-        .in("id", ids)
+        .in("id", assignedIds)
         .eq("type", "gravacao")
         .gte("last_status_change_at", start)
         .lt("last_status_change_at", end);
@@ -2663,11 +2671,12 @@ export const getMyWorkStats = createServerFn({ method: "GET" })
       return { done, items, byClient };
     }
 
-    const [reelItems, postItems, gravacaoResult, roteiroItems, goalRow] = await Promise.all([
+    const [reelItems, postItems, gravacaoResult, roteiroItems, publicacoesItems, goalRow] = await Promise.all([
       byEditorUpload("reel"),
       byEditorUpload("post"),
       gravacaoStats(),
-      byAssigneeDone("roteiro"),
+      byAssigneeDone(["roteiro"]),
+      byAssigneeDone(["post", "reel", "story"]),
       context.supabase.from("member_goals")
         .select("reels_goal, posts_goal, gravacao_goal")
         .eq("user_id", data.userId).eq("month_key", data.monthKey).maybeSingle(),
@@ -2679,6 +2688,7 @@ export const getMyWorkStats = createServerFn({ method: "GET" })
       posts: { done: postItems.length, goal: g?.posts_goal || null, items: postItems },
       gravacao: { done: gravacaoResult.done, goal: g?.gravacao_goal || null, items: gravacaoResult.items, byClient: gravacaoResult.byClient },
       roteiro: { done: roteiroItems.length, goal: null, items: roteiroItems },
+      publicacoes: { done: publicacoesItems.length, goal: null, items: publicacoesItems },
     };
   });
 
