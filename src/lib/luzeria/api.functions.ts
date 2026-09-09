@@ -2492,41 +2492,28 @@ export const getTopMembersByGoal = createServerFn({ method: "GET" })
     }
 
     if (userIds.length > 0) {
-      const { data: assigns } = await supabaseAdmin
-        .from("item_assignees").select("item_id, user_id").in("user_id", userIds);
-      const itemUsers = new Map<string, string[]>();
-      (assigns ?? []).forEach((a: any) => {
-        const arr = itemUsers.get(a.item_id) ?? [];
-        arr.push(a.user_id);
-        itemUsers.set(a.item_id, arr);
+      // Posts e reels contam por editor_id (quem editou de verdade) + data
+      // do upload — não por item_assignees (quem tá atribuído como
+      // responsável, que pode ser outra pessoa). Mesmo critério de
+      // getMyWorkStats/getGoalProgressForOrg — sem isso, um editor sem
+      // atribuição direta no item aparecia zerado mesmo com produção real.
+      const { data: uploadRows } = await supabaseAdmin
+        .from("item_files")
+        .select("content_items!inner(id, type, editor_id)")
+        .eq("kind", "media")
+        .in("content_items.type", ["reel", "post"])
+        .in("content_items.editor_id", userIds)
+        .gte("created_at", start.toISOString())
+        .lt("created_at", end.toISOString());
+      const seenItemIds = new Set<string>();
+      (uploadRows ?? []).forEach((r: any) => {
+        const ci = r.content_items;
+        if (!ci?.editor_id || seenItemIds.has(ci.id)) return;
+        seenItemIds.add(ci.id);
+        const d = doneByUser.get(ci.editor_id) ?? { posts: 0, reels: 0, stories: 0 };
+        if (ci.type === "post") d.posts++; else if (ci.type === "reel") d.reels++;
+        doneByUser.set(ci.editor_id, d);
       });
-      const itemIds = [...itemUsers.keys()];
-      if (itemIds.length > 0) {
-        // itemIds pode chegar em milhares (todo item já atribuído a
-        // alguém da org, sem filtro de data) — um .in() só com todos eles
-        // de uma vez estoura o tamanho da URL e falha, e como o erro não
-        // era checado, isso silenciosamente zerava o ranking inteiro pra
-        // todo mundo. Quebra em lotes, mesmo padrão de getReport.
-        const chunks: string[][] = [];
-        for (let i = 0; i < itemIds.length; i += 150) chunks.push(itemIds.slice(i, i + 150));
-        const results = await Promise.all(chunks.map((chunk) =>
-          supabaseAdmin
-            .from("content_items").select("id, type")
-            .in("id", chunk).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO"])
-            .gte("updated_at", start.toISOString()).lt("updated_at", end.toISOString())
-        ));
-        results.forEach(({ data: doneItems, error }) => {
-          if (error) { console.error("getTopMembersByGoal content_items batch:", error.message); return; }
-          (doneItems ?? []).forEach((it: any) => {
-            if (it.type !== "post" && it.type !== "reel") return;
-            (itemUsers.get(it.id) ?? []).forEach((uid) => {
-              const d = doneByUser.get(uid) ?? { posts: 0, reels: 0, stories: 0 };
-              if (it.type === "post") d.posts++; else d.reels++;
-              doneByUser.set(uid, d);
-            });
-          });
-        });
-      }
 
       const { data: storyRows } = await supabaseAdmin
         .from("stories_schedule").select("user_id, day")
