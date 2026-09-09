@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status, WorkSchedule } from "./types";
-import { isActivityType, STATUS_META, SETOR_PERMISSION_KEYS, isDoneStatus } from "./types";
+import { isActivityType, STATUS_META, SETOR_PERMISSION_KEYS } from "./types";
 
 /** Fixed id of the original Luzeria Estúdio org — also hardcoded in migrations
  * and in the admin-auth-operations edge function (they can't share a TS import). */
@@ -2587,16 +2587,15 @@ export type MyWorkStats = {
  * edita não é quem sobe o arquivo no sistema). Conta pela data real do
  * upload, não pelo mês do calendário de conteúdo do item.
  *
- * Gravação e roteiro não têm o conceito de "editor" (ver DetailPanel —
- * o seletor de editor só aparece pra post/reel/story) — contam por
- * atribuição (item_assignees) + o status ter virado concluído/pronto
- * dentro do mês (last_status_change_at), não por "algo mudou no item".
- *
- * Publicações: pra quem cuida do planejamento/entrega do feed (social
- * media), não da edição em si — post, reel ou story que ela é
- * responsável (item_assignees) e o status virou pronto pra publicar/
- * finalizado/publicado dentro do mês. Não olha editor_id, é sobre quem
- * é o responsável pela publicação final, não quem editou. */
+ * Gravação, roteiro e publicações não têm o conceito de "editor" (ver
+ * DetailPanel — o seletor de editor só aparece pra post/reel/story) —
+ * contam pela tabela `finalizations`, o mesmo crédito usado no ranking
+ * "Geral": UMA vez por item por pessoa, pra sempre (confirmado com o
+ * Junior — reaprovar/retrabalhar o mesmo item não deve contar de novo).
+ * Isso é diferente do status atual + last_status_change_at, que gerava
+ * número maior de propósito: `record_finalizations()` só credita uma vez
+ * por (item, pessoa), então um item retrabalhado e reaprovado num mês
+ * seguinte não gera novo crédito ali — e é assim mesmo que deve ser. */
 export const getMyWorkStats = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string; monthKey: string }) =>
@@ -2631,24 +2630,25 @@ export const getMyWorkStats = createServerFn({ method: "GET" })
       return [...map.values()];
     }
 
-    // Buscado uma vez só e reaproveitado por roteiro/gravação/publicações
-    // — os três contam por atribuição (item_assignees), não editor_id.
-    const { data: assigns } = await context.supabase.from("item_assignees").select("item_id").eq("user_id", data.userId);
-    const assignedIds = (assigns ?? []).map((a: any) => a.item_id);
-
-    async function byAssigneeDone(types: ContentType[]): Promise<MyWorkStatsItem[]> {
-      if (!assignedIds.length) return [];
+    /** Crédito único (mesma fonte do ranking "Geral") — filtra por tipo
+     * na content_items embutida e pela data real de finalização. */
+    async function byFinalizationCredit(types: ContentType[]): Promise<MyWorkStatsItem[]> {
       const { data: rows, error } = await context.supabase
-        .from("content_items")
-        .select("id, title, status, last_status_change_at, months!inner(clients!months_client_id_fkey!inner(id, name))")
-        .in("id", assignedIds)
-        .in("type", types as any)
-        .gte("last_status_change_at", start)
-        .lt("last_status_change_at", end);
+        .from("finalizations")
+        .select("content_items!inner(id, title, type, months!inner(clients!months_client_id_fkey!inner(id, name)))")
+        .eq("user_id", data.userId)
+        .in("content_items.type", types as any)
+        .gte("finalized_at", start)
+        .lt("finalized_at", end);
       if (error) throw new Error(error.message);
-      return (rows ?? [])
-        .filter((r: any) => isDoneStatus(r.status))
-        .map((r: any) => ({ itemId: r.id, title: r.title ?? "(sem título)", clientId: r.months.clients.id, clientName: r.months.clients.name }));
+      const map = new Map<string, MyWorkStatsItem>();
+      for (const r of (rows ?? []) as any[]) {
+        const ci = r.content_items;
+        if (!map.has(ci.id)) {
+          map.set(ci.id, { itemId: ci.id, title: ci.title ?? "(sem título)", clientId: ci.months.clients.id, clientName: ci.months.clients.name });
+        }
+      }
+      return [...map.values()];
     }
 
     /** Gravação conta em VÍDEOS, não em sessões/itens — uma sessão de
@@ -2656,26 +2656,27 @@ export const getMyWorkStats = createServerFn({ method: "GET" })
      * mostra o detalhe por cliente (quantos vídeos gravados pra cada um),
      * não a lista crua de sessões — mais útil pra ver onde o volume veio. */
     async function gravacaoStats(): Promise<{ done: number; items: MyWorkStatsItem[]; byClient: MyWorkStatsClientBreakdown[] }> {
-      if (!assignedIds.length) return { done: 0, items: [], byClient: [] };
       const { data: rows, error } = await context.supabase
-        .from("content_items")
-        .select("id, title, status, activity_quantity, last_status_change_at, months!inner(clients!months_client_id_fkey!inner(id, name))")
-        .in("id", assignedIds)
-        .eq("type", "gravacao")
-        .gte("last_status_change_at", start)
-        .lt("last_status_change_at", end);
+        .from("finalizations")
+        .select("content_items!inner(id, title, type, activity_quantity, months!inner(clients!months_client_id_fkey!inner(id, name)))")
+        .eq("user_id", data.userId)
+        .eq("content_items.type", "gravacao")
+        .gte("finalized_at", start)
+        .lt("finalized_at", end);
       if (error) throw new Error(error.message);
-      const doneRows = (rows ?? []).filter((r: any) => isDoneStatus(r.status));
-      const items: MyWorkStatsItem[] = doneRows.map((r: any) => ({
-        itemId: r.id, title: r.title ?? "(sem título)", clientId: r.months.clients.id, clientName: r.months.clients.name,
-      }));
+      const seen = new Set<string>();
+      const items: MyWorkStatsItem[] = [];
       const byClientMap = new Map<string, MyWorkStatsClientBreakdown>();
       let done = 0;
-      for (const r of doneRows as any[]) {
-        const qty = r.activity_quantity ?? 1;
+      for (const r of (rows ?? []) as any[]) {
+        const ci = r.content_items;
+        if (seen.has(ci.id)) continue;
+        seen.add(ci.id);
+        items.push({ itemId: ci.id, title: ci.title ?? "(sem título)", clientId: ci.months.clients.id, clientName: ci.months.clients.name });
+        const qty = ci.activity_quantity ?? 1;
         done += qty;
-        const cid = r.months.clients.id;
-        const row = byClientMap.get(cid) ?? { clientId: cid, clientName: r.months.clients.name, count: 0 };
+        const cid = ci.months.clients.id;
+        const row = byClientMap.get(cid) ?? { clientId: cid, clientName: ci.months.clients.name, count: 0 };
         row.count += qty;
         byClientMap.set(cid, row);
       }
@@ -2694,8 +2695,8 @@ export const getMyWorkStats = createServerFn({ method: "GET" })
       byEditorUpload("reel"),
       byEditorUpload("post"),
       gravacaoStats(),
-      byAssigneeDone(["roteiro"]),
-      isSocialMedia ? byAssigneeDone(["post", "reel", "story"]) : Promise.resolve([]),
+      byFinalizationCredit(["roteiro"]),
+      isSocialMedia ? byFinalizationCredit(["post", "reel", "story"]) : Promise.resolve([]),
       context.supabase.from("member_goals")
         .select("reels_goal, posts_goal, gravacao_goal")
         .eq("user_id", data.userId).eq("month_key", data.monthKey).maybeSingle(),
