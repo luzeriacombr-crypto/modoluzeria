@@ -16,11 +16,29 @@
 -- content_status — record_finalizations/track_lead_time/
 -- track_status_transition/run_automation_rules já comparam contra strings
 -- literais ou já fazem ::text, funcionam igual depois da troca.
+--
+-- Dois índices parciais (idx_content_items_ig_auto_publish,
+-- idx_content_items_ig_repeat) têm predicado "status = 'PRONTO_PARA_PUBLICAR'"
+-- — o literal desse predicado fica com o tipo antigo (content_status) e
+-- trava o ALTER COLUMN TYPE ("operator does not exist: text = content_status").
+-- Derruba antes, recria depois (mesma definição de sempre — 20260805140000
+-- e 20260903120000 — só que agora comparando contra text nativamente).
 
 -- 1. content_items.status: enum -> text
+DROP INDEX IF EXISTS public.idx_content_items_ig_auto_publish;
+DROP INDEX IF EXISTS public.idx_content_items_ig_repeat;
+
 ALTER TABLE public.content_items ALTER COLUMN status DROP DEFAULT;
 ALTER TABLE public.content_items ALTER COLUMN status TYPE text USING status::text;
 ALTER TABLE public.content_items ALTER COLUMN status SET DEFAULT 'PLANEJAMENTO';
+
+CREATE INDEX IF NOT EXISTS idx_content_items_ig_auto_publish
+  ON public.content_items (scheduled_at)
+  WHERE ig_auto_publish = true AND status = 'PRONTO_PARA_PUBLICAR';
+
+CREATE INDEX IF NOT EXISTS idx_content_items_ig_repeat
+  ON public.content_items (ig_repeat_mode)
+  WHERE ig_repeat_mode IS NOT NULL AND status = 'PRONTO_PARA_PUBLICAR';
 
 -- 2. tabela por agência (mesmo padrão de client_journey_stages)
 CREATE TABLE public.content_statuses (
