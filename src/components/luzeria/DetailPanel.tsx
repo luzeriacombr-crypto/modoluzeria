@@ -3,16 +3,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus } from "lucide-react";
-import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO } from "@/lib/luzeria/queries";
+import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getInstagramConnectionStatus, getStoryRepeatStatus, setStoryRepeatRule } from "@/lib/luzeria/instagram.functions";
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
 import { downloadDriveFile, downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
 import { FileActionsMenu } from "./FileActionsMenu";
-import { STATUS_META, statusLabel, statusOptionsFor, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, ACTIVITY_QUANTITY_LABEL, hasSetorPermission, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
+import { statusLabel, statusOptionsFor, getStatusMeta, REEL_TYPES, REEL_TYPE_LABEL, POST_FORMATS, POST_FORMAT_LABEL, CONTENT_TYPE_LABEL, isActivityType, ACTIVITY_DATE_LABEL, ACTIVITY_QUANTITY_LABEL, hasSetorPermission, type Profile, type ContentItem, type ReelType, type PostFormat, type Status } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
-import { STATUS_ICONS } from "./icons";
+import { getStatusIcon } from "./icons";
 import { MentionInput, renderMentions } from "./MentionInput";
 import { AudioCommentRecorder, AudioCommentPlayer } from "./AudioCommentRecorder";
 import { ItemTimeline } from "./ItemTimeline";
@@ -585,6 +585,9 @@ export function DetailPanel() {
   const { setItemStatus, updateItem, setItemEditor, setItemReelType, setItemPostFormat, addAssignee, removeAssignee, addCommentWithMentions, addAudioComment, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish, setItemCampaign } = useApi();
   const { data: appSettings } = useQuery(appSettingsQO());
   const { data: campaigns = [] } = useQuery({ ...campaignsQO(selectedClientId ?? ""), enabled: !!selectedClientId });
+  const { data: contentStatuses = [] } = useQuery(contentStatusesQO());
+  const customStatuses = useMemo(() => contentStatuses.filter((r) => r.isCustom), [contentStatuses]);
+  const labelOverrides = useMemo(() => new Map(contentStatuses.map((r) => [r.key, r.label])), [contentStatuses]);
 
   const item = useMemo(() => (selectedItemId && month ? findItem(month, selectedItemId) : undefined), [month, selectedItemId]);
   const navIndex = itemNavList && selectedItemId ? itemNavList.indexOf(selectedItemId) : -1;
@@ -1023,25 +1026,25 @@ export function DetailPanel() {
                   onClick={() => setStatusOpen((o) => !o)}
                   className="w-full flex items-center justify-between gap-3 rounded-md px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all"
                   style={{
-                    backgroundColor: STATUS_META[item.status].bg,
-                    color: STATUS_META[item.status].color,
-                    border: `1px solid ${STATUS_META[item.status].color}`,
+                    backgroundColor: getStatusMeta(item.status, labelOverrides).bg,
+                    color: getStatusMeta(item.status, labelOverrides).color,
+                    border: `1px solid ${getStatusMeta(item.status, labelOverrides).color}`,
                   }}>
                   <span className="flex items-center gap-3">
                     {(() => {
-                      const I = STATUS_ICONS[item.status];
+                      const I = getStatusIcon(item.status);
                       return <I size={16} />;
                     })()}
-                    {statusLabel(item.status, isAvulso)}
+                    {statusLabel(item.status, isAvulso, labelOverrides)}
                   </span>
                   <ChevronDown size={16} className={`transition-transform ${statusOpen ? "rotate-180" : ""}`} />
                 </button>
                 {statusOpen && (
                   <div className="absolute z-50 left-0 right-0 mt-1 rounded-md bg-card border border-foreground/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto">
-                    {statusOptionsFor(item.type)
+                    {statusOptionsFor(item.type, customStatuses)
                       .filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? canApproveFinalize : true))
                       .map((s) => {
-                      const m = STATUS_META[s]; const I = STATUS_ICONS[s];
+                      const m = getStatusMeta(s, labelOverrides); const I = getStatusIcon(s);
                       const active = item.status === s;
                       return (
                         <button key={s}
@@ -1061,7 +1064,7 @@ export function DetailPanel() {
                             backgroundColor: active ? m.bg : "transparent",
                             color: active ? m.color : "color-mix(in srgb, var(--foreground) 60%, transparent)",
                           }}>
-                          <I size={16} /> {statusLabel(s, isAvulso)}
+                          <I size={16} /> {statusLabel(s, isAvulso, labelOverrides)}
                         </button>
                       );
                     })}

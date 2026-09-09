@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { profilesQO, clientsQO, reportQO, reportExtrasQO, memberVelocityQO, fileUploadsReportQO, useApi, type ReportFilters } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
-import { STATUS_META, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
+import { getStatusMeta, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
 import { exportReportXlsx } from "@/lib/luzeria/report-export";
 import { MemberReportPanel } from "./MemberReportPanel";
 import { DeliveryTrendChart } from "./DeliveryTrendChart";
@@ -464,12 +464,12 @@ function StatusDurationView({ data }: { data: any[] }) {
     <Section title="Tempo médio que cada status consome">
       <div className="p-4 space-y-3">
         {data.map((d) => {
-          const meta = STATUS_META[d.status as Status];
+          const meta = getStatusMeta(d.status as Status);
           const pct = max ? (d.avgHours / max) * 100 : 0;
           return (
             <div key={d.status}>
               <div className="flex items-center justify-between mb-1.5 text-xs">
-                <span className="font-semibold" style={{ color: meta?.color ?? "#FFF" }}>{meta?.label ?? d.status}</span>
+                <span className="font-semibold" style={{ color: meta.color }}>{meta.label}</span>
                 <span className="text-foreground/60 tabular-nums">{formatHours(d.avgHours)} <span className="text-foreground/30">· {d.count} transições</span></span>
               </div>
               <div className="h-2 rounded-full bg-foreground/[0.05] overflow-hidden">

@@ -1,12 +1,12 @@
 import {
   FileText, PenLine, Search, MessageSquare, CalendarCheck, CalendarClock, CheckCircle,
-  Paintbrush, Eye, Video, Scissors, Clock, Archive,
+  Paintbrush, Eye, Video, Scissors, Clock, Archive, Circle,
   Film, Image as ImageIcon, Grid3x3, Link as LinkIcon, Ban,
 } from "lucide-react";
-import type { Status } from "@/lib/luzeria/types";
+import type { BuiltinStatus, Status } from "@/lib/luzeria/types";
 
 type IconProps = { className?: string; size?: number; style?: React.CSSProperties; color?: string };
-export const STATUS_ICONS: Record<Status, React.ComponentType<IconProps>> = {
+export const STATUS_ICONS: Record<BuiltinStatus, React.ComponentType<IconProps>> = {
   PLANEJAMENTO: FileText,
   COPY: PenLine,
   REVISAO_INTERNA: Search,
@@ -23,6 +23,12 @@ export const STATUS_ICONS: Record<Status, React.ComponentType<IconProps>> = {
   PENDENTE: Clock,
   CONCLUIDO: CheckCircle,
 };
+
+/** Safe replacement for bare `STATUS_ICONS[status]` indexing — falls back
+ * to a generic circle for org-added custom statuses (not in the map). */
+export function getStatusIcon(status: Status): React.ComponentType<IconProps> {
+  return STATUS_ICONS[status as BuiltinStatus] ?? Circle;
+}
 
 export function detectDriveType(url: string): {
   Icon: React.ComponentType<IconProps>;

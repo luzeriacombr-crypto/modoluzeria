@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status, WorkSchedule } from "./types";
-import { isActivityType, STATUS_META, SETOR_PERMISSION_KEYS } from "./types";
+import { isActivityType, getStatusMeta, SETOR_PERMISSION_KEYS } from "./types";
 
 /** Fixed id of the original Luzeria Estúdio org — also hardcoded in migrations
  * and in the admin-auth-operations edge function (they can't share a TS import). */
@@ -3186,8 +3186,8 @@ export const getReport = createServerFn({ method: "GET" })
     }
 
     (statusRows ?? []).forEach((r: any) => {
-      const fromLabel = r.from_status ? (STATUS_META[r.from_status as Status]?.label ?? r.from_status) : null;
-      const toLabel = STATUS_META[r.to_status as Status]?.label ?? r.to_status;
+      const fromLabel = r.from_status ? getStatusMeta(r.from_status as Status).label : null;
+      const toLabel = getStatusMeta(r.to_status as Status).label;
       const isFinal = r.to_status === "PRONTO_PARA_PUBLICAR" || r.to_status === "CONCLUIDO" || r.to_status === "FINALIZADO";
       const desc = fromLabel ? `Mudou o status de "${fromLabel}" para "${toLabel}"` : `Definiu o status como "${toLabel}"`;
       pushActivity(isFinal ? "finalized" : "status", r.item_id, r.actor_id, r.at, desc);

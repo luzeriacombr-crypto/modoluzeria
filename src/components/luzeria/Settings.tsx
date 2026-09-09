@@ -9,6 +9,7 @@ import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasP
 import { toast } from "sonner";
 import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Gift } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
+import { ContentStatusesSection } from "./ContentStatusesSection";
 
 // Cada uma dessas só renderiza dentro de uma aba específica (nunca mais de
 // uma por vez) — lazy pra quem abre Configurações não pagar o download/parse
@@ -541,6 +542,11 @@ function GeneralSettings() {
             <SettingsIcon size={12} /> Contrato
           </h2>
           <ContractTemplateForm template={me?.contractTemplate ?? null} isMaster={isMaster} />
+
+          <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
+            <SettingsIcon size={12} /> Status
+          </h2>
+          <ContentStatusesSection />
         </>
       )}
 

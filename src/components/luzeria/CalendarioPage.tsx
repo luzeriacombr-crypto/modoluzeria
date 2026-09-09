@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, X, Inbox, CalendarDays, Image as ImageIcon } from "lucide-react";
 import { calendarItemsQO, itemFilesQO, driveThumbnailQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { CONTENT_TYPE_LABEL, STATUS_META, type Status } from "@/lib/luzeria/types";
+import { CONTENT_TYPE_LABEL, getStatusMeta, type Status } from "@/lib/luzeria/types";
 import { formatMonth } from "@/lib/luzeria/utils";
 
 type CalendarItem = {
@@ -173,8 +173,8 @@ export function CalendarioPage() {
                       onMouseLeave={() => setHover(null)}
                       className="w-full text-left px-1.5 py-1 rounded text-[10.5px] leading-tight truncate transition hover:opacity-80"
                       style={{
-                        backgroundColor: `color-mix(in srgb, ${STATUS_META[it.status as Status]?.color ?? "#5BA88A"} 13%, transparent)`,
-                        color: STATUS_META[it.status as Status]?.color ?? "#5BA88A",
+                        backgroundColor: `color-mix(in srgb, ${getStatusMeta(it.status as Status).color} 13%, transparent)`,
+                        color: getStatusMeta(it.status as Status).color,
                       }}
                     >
                       <span className="font-bold">{it.clientName}</span> | {it.title}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar, Image as ImageIcon, Trash2, Check, Megaphone, FolderInput } from "lucide-react";
 import { isDoneStatus, hasSetorPermission, type ContentItem, type Profile } from "@/lib/luzeria/types";
@@ -6,7 +6,7 @@ import {
   statusOptionsFor, REEL_TYPE_LABEL, POST_FORMAT_LABEL,
   type ReelType, type PostFormat,
 } from "@/lib/luzeria/types";
-import { useApi, useMe, itemFilesQO, driveThumbnailQO } from "@/lib/luzeria/queries";
+import { useApi, useMe, itemFilesQO, driveThumbnailQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { useQuery } from "@tanstack/react-query";
 import { StatusBadge } from "./StatusBadge";
 import { AvatarStack } from "./Avatar";
@@ -45,6 +45,9 @@ export function ContentCard({
 }) {
   const { setItemStatus, updateItem, addAssignee } = useApi();
   const me = useMe().data;
+  const { data: contentStatuses = [] } = useQuery(contentStatusesQO());
+  const customStatuses = useMemo(() => contentStatuses.filter((r) => r.isCustom), [contentStatuses]);
+  const labelOverrides = useMemo(() => new Map(contentStatuses.map((r) => [r.key, r.label])), [contentStatuses]);
   const { openItem, flash, recentlyUpdated } = useUI();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(item.title);
@@ -191,8 +194,9 @@ export function ContentCard({
 
         <div onClick={(e) => e.stopPropagation()}>
           <StatusBadge status={item.status}
-            options={statusOptionsFor(item.type).filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? hasSetorPermission(me, "approve_finalize") : true))}
+            options={statusOptionsFor(item.type, customStatuses).filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? hasSetorPermission(me, "approve_finalize") : true))}
             isAvulso={isAvulso}
+            labelOverrides={labelOverrides}
             onChange={(s) => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }} />
         </div>
 
@@ -257,6 +261,9 @@ export function ContentListRow({
 }) {
   const { setItemStatus, updateItem, addAssignee } = useApi();
   const me = useMe().data;
+  const { data: contentStatuses = [] } = useQuery(contentStatusesQO());
+  const customStatuses = useMemo(() => contentStatuses.filter((r) => r.isCustom), [contentStatuses]);
+  const labelOverrides = useMemo(() => new Map(contentStatuses.map((r) => [r.key, r.label])), [contentStatuses]);
   const { openItem, flash, recentlyUpdated } = useUI();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(item.title);
@@ -347,8 +354,9 @@ export function ContentListRow({
 
       <div onClick={(e) => e.stopPropagation()} className="shrink-0">
         <StatusBadge status={item.status}
-          options={statusOptionsFor(item.type).filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? hasSetorPermission(me, "approve_finalize") : true))}
+          options={statusOptionsFor(item.type, customStatuses).filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? hasSetorPermission(me, "approve_finalize") : true))}
           isAvulso={isAvulso}
+          labelOverrides={labelOverrides}
           onChange={(s) => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }} />
       </div>
 

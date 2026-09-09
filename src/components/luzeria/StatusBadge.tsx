@@ -1,23 +1,32 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
-import { STATUS_META, STATUS_ORDER, STATUS_GROUPS, statusLabel, type Status } from "@/lib/luzeria/types";
-import { STATUS_ICONS } from "./icons";
+import { STATUS_ORDER, STATUS_GROUPS, statusLabel, getStatusMeta, isCustomStatus, type Status } from "@/lib/luzeria/types";
+import { getStatusIcon } from "./icons";
 
 export function StatusBadge({
-  status, onChange, size = "sm", options, isAvulso = false,
-}: { status: Status; onChange?: (s: Status) => void; size?: "sm" | "md"; options?: Status[]; isAvulso?: boolean }) {
+  status, onChange, size = "sm", options, isAvulso = false, labelOverrides,
+}: {
+  status: Status; onChange?: (s: Status) => void; size?: "sm" | "md"; options?: Status[]; isAvulso?: boolean;
+  labelOverrides?: Map<string, string>;
+}) {
   const list = options ?? STATUS_ORDER;
   // Grouped by pipeline phase once the list is long enough that a flat wall
   // of options is hard to scan; short lists (e.g. activities: só Pendente/
   // Concluído) stay flat — headers would just add noise for 2-3 items.
+  // Status customizados não estão em nenhum STATUS_GROUPS — caem em
+  // "Produção" (o mesmo grupo dos outros passos intermediários), senão
+  // desapareceriam da lista mesmo estando disponíveis pra selecionar.
   const groups = list.length > 4
     ? STATUS_GROUPS
-        .map((g) => ({ label: g.label, items: list.filter((s) => g.statuses.includes(s)) }))
+        .map((g) => ({
+          label: g.label,
+          items: list.filter((s) => (g.statuses as string[]).includes(s) || (g.label === "Produção" && isCustomStatus(s))),
+        }))
         .filter((g) => g.items.length > 0)
     : [{ label: null as string | null, items: list }];
-  const meta = STATUS_META[status];
-  const Icon = STATUS_ICONS[status];
+  const meta = getStatusMeta(status, labelOverrides);
+  const Icon = getStatusIcon(status);
   const [open, setOpen] = useState(false);
   const [pulse, setPulse] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -97,7 +106,7 @@ export function StatusBadge({
       >
         <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
         <Icon size={12} />
-        <span>{statusLabel(status, isAvulso)}</span>
+        <span>{statusLabel(status, isAvulso, labelOverrides)}</span>
         {onChange && (
           <ChevronDown
             size={11}
@@ -119,8 +128,8 @@ export function StatusBadge({
                 </div>
               )}
               {g.items.map((s) => {
-                const m = STATUS_META[s];
-                const I = STATUS_ICONS[s];
+                const m = getStatusMeta(s, labelOverrides);
+                const I = getStatusIcon(s);
                 return (
                   <button key={s}
                     onClick={(e) => { e.stopPropagation(); onChange?.(s); setOpen(false); }}
@@ -131,7 +140,7 @@ export function StatusBadge({
                     <span className="rounded p-1" style={{ backgroundColor: m.bg, color: m.color }}>
                       <I size={11} />
                     </span>
-                    <span className="text-foreground/80">{statusLabel(s, isAvulso)}</span>
+                    <span className="text-foreground/80">{statusLabel(s, isAvulso, labelOverrides)}</span>
                   </button>
                 );
               })}

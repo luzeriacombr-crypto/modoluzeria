@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Bell, Calendar, Plus, PlayCircle, Repeat, Sparkles, Timer, Trash2, Zap } from "lucide-react";
 import { cronJobsQO, automationRulesQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
-import { STATUS_META, type Status } from "@/lib/luzeria/types";
+import { STATUS_META, getStatusMeta, type Status, type BuiltinStatus } from "@/lib/luzeria/types";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
-const STATUS_OPTIONS = Object.keys(STATUS_META) as Status[];
+const STATUS_OPTIONS = Object.keys(STATUS_META) as BuiltinStatus[];
 
 const JOB_META: Record<string, { label: string; description: string; icon: React.ComponentType<any> }> = {
   luzeria_deadline_reminders: {
@@ -168,11 +168,11 @@ function AutomationRulesSection() {
               {r.onCreate ? (
                 <>Quando o item for <strong>criado</strong></>
               ) : (
-                <>Quando o status virar <strong style={{ color: STATUS_META[r.triggerStatus as Status]?.color }}>{STATUS_META[r.triggerStatus as Status]?.label ?? r.triggerStatus}</strong></>
+                <>Quando o status virar <strong style={{ color: getStatusMeta(r.triggerStatus as Status).color }}>{getStatusMeta(r.triggerStatus as Status).label}</strong></>
               )}
               {" → "}
               {r.actionType === "set_status" ? (
-                <>alterar status para <strong style={{ color: STATUS_META[r.actionStatus as Status]?.color }}>{STATUS_META[r.actionStatus as Status]?.label ?? r.actionStatus}</strong></>
+                <>alterar status para <strong style={{ color: getStatusMeta(r.actionStatus as Status).color }}>{getStatusMeta(r.actionStatus as Status).label}</strong></>
               ) : (
                 <>atribuir para <strong>{memberName(r.actionUserId)}</strong></>
               )}

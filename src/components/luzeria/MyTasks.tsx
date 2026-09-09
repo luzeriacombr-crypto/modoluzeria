@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, useMe, useApi } from "@/lib/luzeria/queries";
-import { STATUS_META, STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, hasPermission, type Status } from "@/lib/luzeria/types";
-import { STATUS_ICONS } from "./icons";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, contentStatusesQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, hasPermission, getStatusMeta, type Status } from "@/lib/luzeria/types";
+import { getStatusIcon } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { useState, lazy, Suspense } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
@@ -46,6 +46,12 @@ function SectionHeader({ icon, iconBg, iconColor, label, count, open, onToggle }
 export function MyTasks() {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
+  const { data: contentStatuses = [] } = useQuery(contentStatusesQO());
+  const effectiveStatusOrder = useMemo(
+    () => [...STATUS_ORDER, ...contentStatuses.filter((r) => r.isCustom).sort((a, b) => a.sortOrder - b.sortOrder).map((r) => r.key)] as Status[],
+    [contentStatuses],
+  );
+  const labelOverrides = useMemo(() => new Map(contentStatuses.map((r) => [r.key, r.label])), [contentStatuses]);
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { setCleaningDone, markMentionRead, logClientStageUpdate } = useApi();
   const [viewAs, setViewAs] = useState<string>("");
@@ -101,7 +107,7 @@ export function MyTasks() {
   });
 
   const grouped: Record<Status, typeof tasks> = Object.fromEntries(
-    STATUS_ORDER.map((s) => [s, [] as typeof tasks])
+    effectiveStatusOrder.map((s) => [s, [] as typeof tasks])
   ) as Record<Status, typeof tasks>;
   tasks.forEach((t) => {
     const s = t.status as Status;
@@ -414,9 +420,9 @@ export function MyTasks() {
         </div>
       ) : (
         <div className="space-y-6 lz-stagger">
-          {STATUS_ORDER.map((s) => {
+          {effectiveStatusOrder.map((s) => {
             if (!grouped[s].length) return null;
-            const m = STATUS_META[s]; const I = STATUS_ICONS[s];
+            const m = getStatusMeta(s, labelOverrides); const I = getStatusIcon(s);
             const sectionId = `status:${s}`;
             const open = isSectionOpen(sectionId);
             return (

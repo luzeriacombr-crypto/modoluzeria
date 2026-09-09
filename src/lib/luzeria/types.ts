@@ -1,4 +1,9 @@
-export type Status =
+/** The 14 fixed statuses the app ships with. Kept as its own closed union so
+ * STATUS_META/STATUS_ICONS/STATUS_GROUPS stay exhaustive and editor
+ * autocomplete still works for these — org-added custom statuses (see
+ * `content_statuses` table) are a separate, unbounded set of strings layered
+ * on top via the `Status` type below. */
+export type BuiltinStatus =
   | "PLANEJAMENTO"
   | "COPY"
   | "REVISAO_INTERNA"
@@ -18,6 +23,43 @@ export type Status =
   // these aren't "published" so the post/reel funnel doesn't apply.
   | "PENDENTE"
   | "CONCLUIDO";
+
+/** Runtime status value stored in content_items.status — any of the 14
+ * builtins (autocompletes in editors) OR an org-specific custom key
+ * (content_statuses.key, e.g. "custom_ab12cd34ef56"). The `(string & {})`
+ * member widens this to accept arbitrary strings without losing builtin
+ * autocomplete/literal-type checking elsewhere. */
+export type Status = BuiltinStatus | (string & {});
+
+/** Status keys the org can rename or that ship with the app by default —
+ * PRONTO_PARA_PUBLICAR/FINALIZADO/CONCLUIDO/TRAVADO/PENDENTE are excluded
+ * (protected, drive metrics/triggers, never editable). */
+export const BUILTIN_STATUS_KEYS: BuiltinStatus[] = [
+  "PLANEJAMENTO", "COPY", "REVISAO_INTERNA", "REVISAO_CLIENTE", "AGENDAMENTO", "REVISAO_AGENDAMENTO",
+  "PRONTO_PARA_PUBLICAR", "FINALIZADO", "TRAVADO", "CRIACAO", "REVISAO_ARTE", "EM_GRAVACAO", "EM_EDICAO",
+  "PENDENTE", "CONCLUIDO",
+];
+
+/** Status keys an org can rename via Configurações → Geral (the other 5
+ * builtins — PRONTO_PARA_PUBLICAR/FINALIZADO/CONCLUIDO/TRAVADO/PENDENTE —
+ * are protected: they drive record_finalizations()/metrics/automations and
+ * stay fixed forever). */
+export const CUSTOMIZABLE_BUILTIN_STATUS_KEYS: BuiltinStatus[] = [
+  "PLANEJAMENTO", "COPY", "REVISAO_INTERNA", "REVISAO_CLIENTE", "AGENDAMENTO", "REVISAO_AGENDAMENTO",
+  "CRIACAO", "REVISAO_ARTE", "EM_GRAVACAO", "EM_EDICAO",
+];
+
+/** The 5 statuses that stay fixed forever — never renamable/deletable
+ * because they drive record_finalizations()/metrics/goal-tracking/
+ * automations/Instagram auto-publish. */
+export const PROTECTED_STATUS_KEYS: BuiltinStatus[] = [
+  "PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO", "TRAVADO", "PENDENTE",
+];
+
+/** True for org-added custom statuses (not one of the 14 builtins). */
+export function isCustomStatus(status: Status): boolean {
+  return !(BUILTIN_STATUS_KEYS as string[]).includes(status);
+}
 
 /** Content types that are activity logs, not publishable content. */
 export const ACTIVITY_TYPES: ContentType[] = ["gravacao", "roteiro", "sistema", "outros"];
@@ -534,7 +576,7 @@ export interface NotificationItem {
 }
 
 export const STATUS_META: Record<
-  Status,
+  BuiltinStatus,
   { label: string; bg: string; color: string; icon: string }
 > = {
   PLANEJAMENTO:        { label: "Planejamento",        bg: "var(--status-planejamento-bg)", color: "var(--status-planejamento-color)", icon: "FileText" },
@@ -554,15 +596,40 @@ export const STATUS_META: Record<
   CONCLUIDO:           { label: "Concluído",            bg: "var(--status-concluido-bg)", color: "var(--status-concluido-color)", icon: "CheckCircle" },
 };
 
+const FALLBACK_STATUS_META = {
+  bg: "color-mix(in srgb, var(--foreground) 8%, transparent)",
+  color: "color-mix(in srgb, var(--foreground) 55%, transparent)",
+  icon: "Circle",
+};
+
+/** Safe replacement for bare `STATUS_META[status]` indexing everywhere a
+ * status value might now be a custom (org-added) key — never throws.
+ * `labelOverrides` is a key->label Map built from the org's
+ * content_statuses rows (covers both builtin-relabels and brand-new
+ * custom labels). */
+export function getStatusMeta(
+  status: Status,
+  labelOverrides?: Map<string, string>,
+): { label: string; bg: string; color: string; icon: string } {
+  const builtin = STATUS_META[status as BuiltinStatus];
+  const overrideLabel = labelOverrides?.get(status);
+  if (builtin) return overrideLabel ? { ...builtin, label: overrideLabel } : builtin;
+  return { ...FALLBACK_STATUS_META, label: overrideLabel ?? status };
+}
+
 /** Rótulo exibido para um status — clientes Avulsos veem "Entregue" no lugar
- * de "Pronto para publicar" (o valor no banco continua PRONTO_PARA_PUBLICAR). */
-export function statusLabel(status: Status, isAvulso?: boolean): string {
+ * de "Pronto para publicar" (o valor no banco continua PRONTO_PARA_PUBLICAR).
+ * `labelOverrides` (opcional) aplica o rótulo customizado da agência,
+ * quando houver. */
+export function statusLabel(status: Status, isAvulso?: boolean, labelOverrides?: Map<string, string>): string {
   if (isAvulso && status === "PRONTO_PARA_PUBLICAR") return "Entregue";
-  return STATUS_META[status].label;
+  const overrideLabel = labelOverrides?.get(status);
+  if (overrideLabel) return overrideLabel;
+  return STATUS_META[status as BuiltinStatus]?.label ?? status;
 }
 
 /** Status comuns a Posts, Reels e Outros, na ordem do pipeline. */
-export const GLOBAL_STATUS_ORDER: Status[] = [
+export const GLOBAL_STATUS_ORDER: BuiltinStatus[] = [
   "PLANEJAMENTO",
   "COPY",
   "REVISAO_INTERNA",
@@ -573,11 +640,11 @@ export const GLOBAL_STATUS_ORDER: Status[] = [
   "PRONTO_PARA_PUBLICAR",
 ];
 
-export const POST_EXTRA_STATUS: Status[] = ["CRIACAO", "REVISAO_ARTE"];
-export const REEL_EXTRA_STATUS: Status[] = ["EM_GRAVACAO", "EM_EDICAO"];
+export const POST_EXTRA_STATUS: BuiltinStatus[] = ["CRIACAO", "REVISAO_ARTE"];
+export const REEL_EXTRA_STATUS: BuiltinStatus[] = ["EM_GRAVACAO", "EM_EDICAO"];
 
 /** Ordem usada para listagens gerais (Dashboard, MyTasks). Inclui todos. */
-export const STATUS_ORDER: Status[] = [
+export const STATUS_ORDER: BuiltinStatus[] = [
   "PLANEJAMENTO",
   "COPY",
   "CRIACAO",
@@ -595,18 +662,27 @@ export const STATUS_ORDER: Status[] = [
 /** Visual grouping for the status-change dropdown — purely presentational
  * (doesn't affect the pipeline/order itself), so a long list of statuses
  * reads as "3 phases" instead of one flat wall of options. */
-export const STATUS_GROUPS: { label: string; statuses: Status[] }[] = [
+export const STATUS_GROUPS: { label: string; statuses: BuiltinStatus[] }[] = [
   { label: "Produção", statuses: ["PLANEJAMENTO", "COPY", "CRIACAO", "REVISAO_ARTE", "EM_GRAVACAO", "EM_EDICAO", "REVISAO_INTERNA", "PENDENTE"] },
   { label: "Aprovação", statuses: ["REVISAO_CLIENTE", "AGENDAMENTO", "REVISAO_AGENDAMENTO", "TRAVADO"] },
   { label: "Publicação", statuses: ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"] },
 ];
 
-export function statusOptionsFor(type: ContentType): Status[] {
+/** `customStatuses` (opcional) são os status extras que a agência criou —
+ * entram depois dos passos builtin e antes de Travado/Pronto pra publicar/
+ * Finalizado, ordenados por sortOrder. Atividades (gravação/roteiro/
+ * sistema/outros) continuam com o pipeline fixo de 2 estados, sem entrar
+ * customização. */
+export function statusOptionsFor(type: ContentType, customStatuses: { key: string; sortOrder: number }[] = []): Status[] {
   // Atividades (gravação/roteiro/sistema/outros) não são publicadas — não fazem
   // sentido no funil de post/reel. Só registram se aconteceu ou não.
   if (isActivityType(type)) {
     return ["PENDENTE", "CONCLUIDO"];
   }
+
+  const customKeys: Status[] = [...customStatuses]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((c) => c.key);
 
   // Stories não aparecem no Preview de Feed — não teria mais nenhum lugar
   // pra ver de novo depois de "Finalizado", então só post/reel ganham essa
@@ -629,6 +705,7 @@ export function statusOptionsFor(type: ContentType): Status[] {
       "COPY",
       ...POST_EXTRA_STATUS,
       ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
+      ...customKeys,
       ...tail,
     ];
   }
@@ -637,6 +714,7 @@ export function statusOptionsFor(type: ContentType): Status[] {
     "COPY",
     ...REEL_EXTRA_STATUS,
     ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
+    ...customKeys,
     ...tail,
   ];
 }

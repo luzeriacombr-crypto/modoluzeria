@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { myWeekQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { STATUS_META, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
+import { getStatusMeta, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
 import { deadlineInfo } from "@/lib/luzeria/utils";
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -71,8 +71,8 @@ export function MyWeekView({ userId }: { userId?: string }) {
                     })()}
                     <span className="text-[9px] uppercase font-bold tracking-wider text-foreground/50 truncate">{t.clientName}</span>
                     <span className="ml-auto text-[8px] uppercase font-bold tracking-wider rounded px-1 py-px"
-                      style={{ backgroundColor: STATUS_META[t.status as Status].bg, color: STATUS_META[t.status as Status].color }}>
-                      {STATUS_META[t.status as Status].label.slice(0, 4)}
+                      style={{ backgroundColor: getStatusMeta(t.status as Status).bg, color: getStatusMeta(t.status as Status).color }}>
+                      {getStatusMeta(t.status as Status).label.slice(0, 4)}
                     </span>
                   </div>
                   <div className="text-[11px] text-foreground leading-tight truncate">{t.title || `${CONTENT_TYPE_LABEL[t.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item"} ${String(t.idx).padStart(2, "0")}`}</div>
@@ -94,8 +94,8 @@ export function MyWeekView({ userId }: { userId?: string }) {
                 <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">{t.clientName}</span>
                 <span className="text-sm text-foreground truncate flex-1">{t.title}</span>
                 <span className="text-[9px] uppercase font-bold tracking-wider rounded px-1.5 py-0.5"
-                  style={{ backgroundColor: STATUS_META[t.status as Status].bg, color: STATUS_META[t.status as Status].color }}>
-                  {STATUS_META[t.status as Status].label}
+                  style={{ backgroundColor: getStatusMeta(t.status as Status).bg, color: getStatusMeta(t.status as Status).color }}>
+                  {getStatusMeta(t.status as Status).label}
                 </span>
               </button>
             ))}
