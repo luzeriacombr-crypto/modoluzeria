@@ -453,17 +453,36 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       throw new Error(publishJson?.error?.message ?? "Falha ao publicar no Instagram.");
     }
 
+    // A Meta às vezes devolve 200 com um id em /media_publish e a mídia não
+    // vai pro ar de verdade (falha silenciosa do lado deles, sem erro
+    // nenhum na resposta) — flagrado num post real que "publicou" aqui mas
+    // nunca apareceu na conta. Confere de verdade antes de dar como certo.
+    await new Promise((r) => setTimeout(r, 2000));
+    const verifyRes = await fetch(`${IG_GRAPH_API}/${publishJson.id}?fields=id&access_token=${encodeURIComponent(creds.access_token)}`);
+    if (!verifyRes.ok) {
+      const verifyJson: any = await verifyRes.json().catch(() => null);
+      console.error("[Instagram] publish reportou sucesso mas a mídia não existe:", publishJson.id, verifyJson);
+      throw new Error("O Instagram confirmou a publicação, mas o conteúdo não apareceu na conta. Tente publicar de novo.");
+    }
+
     // Story não tem status "Finalizado" no funil do app (isso é coisa de
     // Post/Reel, ligada ao Preview de Feed) — pra Story, publicar não muda
     // o status, só registra ig_published_at/ig_media_id abaixo.
-    if (item.type !== "story" && item.status !== "FINALIZADO") {
-      // Same RPC the normal status dropdown uses — keeps triggers,
-      // permissions and side effects (finalizations credit, activity
-      // log, notifications) identical to a manual status change.
-      await supabaseAdmin.rpc("set_item_status", { p_item_id: itemId, p_status: "FINALIZADO" });
-    }
+    //
+    // UPDATE direto, não a RPC set_item_status: essa RPC checa
+    // is_active_profile(auth.uid()), e auth.uid() é NULL numa chamada com
+    // service-role (sem sessão de usuário) — então SEMPRE lançava "Conta
+    // inativa." em silêncio aqui (o await não checava erro de RPC), e o
+    // status nunca virava Finalizado em publicação automática (cron ou
+    // manual), mesmo com a publicação saindo certinho no Instagram. Os
+    // triggers que importam (finalizations, lead-time, automation_rules)
+    // disparam em cima do UPDATE em si, não da RPC — um UPDATE direto tem
+    // exatamente o mesmo efeito, sem a checagem de permissão que não faz
+    // sentido pra uma chamada de sistema já confiável.
+    const statusPatch = item.type !== "story" && item.status !== "FINALIZADO" ? { status: "FINALIZADO" } : {};
     // ig_last_error/ig_last_error_at ainda não estão nos tipos gerados do Supabase.
     await (supabaseAdmin as any).from("content_items").update({
+      ...statusPatch,
       ig_auto_publish: false,
       ig_published_at: new Date().toISOString(),
       ig_media_id: publishJson.id,
