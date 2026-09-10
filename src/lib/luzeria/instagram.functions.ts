@@ -299,10 +299,14 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
   // (até 10, limite da própria Meta), Story pode ser imagem OU vídeo — por
   // isso o tipo de mídia real é o que decide o media_type/endpoint da
   // chamada, não o item.type sozinho.
+  // kind="media" só — "briefing" é imagem de referência/interna (BriefingUploads.tsx),
+  // nunca deve ir pro Instagram. Sem esse filtro, uma referência anexada virava
+  // item extra do carrossel junto com a arte de verdade.
   const { data: files } = await supabaseAdmin
     .from("item_files")
     .select("drive_file_id, mime_type")
     .eq("item_id", itemId)
+    .eq("kind", "media")
     .order("sort_order").order("created_at");
   const wantVideo = item.type === "reel";
   const wantImage = item.type === "post";
