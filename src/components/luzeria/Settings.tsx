@@ -15,7 +15,7 @@ import { ContentStatusesSection } from "./ContentStatusesSection";
 // uma por vez) — lazy pra quem abre Configurações não pagar o download/parse
 // de todas as abas só pra ver "Equipe", que é a aba padrão.
 const ReportsTab = lazy(() => import("./ReportsTab").then((m) => ({ default: m.ReportsTab })));
-const DriveSettingsTab = lazy(() => import("./DriveSettingsTab").then((m) => ({ default: m.DriveSettingsTab })));
+const IntegrationsTab = lazy(() => import("./IntegrationsTab").then((m) => ({ default: m.IntegrationsTab })));
 const MemberGoalsTab = lazy(() => import("./MemberGoalsTab").then((m) => ({ default: m.MemberGoalsTab })));
 const AutomationsTab = lazy(() => import("./AutomationsTab").then((m) => ({ default: m.AutomationsTab })));
 const UpdatesTab = lazy(() => import("./UpdatesTab").then((m) => ({ default: m.UpdatesTab })));
@@ -40,8 +40,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "auditoria" | "automations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "updates" | "site" | "blog" | "journey" | "cliente";
-const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "updates", "site", "blog", "journey", "cliente"];
+type SettingsTab = "team" | "report" | "auditoria" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "updates" | "site" | "blog" | "journey" | "cliente";
+const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "updates", "site", "blog", "journey", "cliente"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -61,7 +61,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
     // Estas duas permissões apareciam no editor de cargos com rótulo e
     // descrição, mas nunca eram conferidas em lugar nenhum: o master
     // marcava, salvava, e nada mudava. Agora valem de verdade.
-    ...(hasPermission(me, "manage_automations") ? (["automations"] as SettingsTab[]) : []),
+    ...(hasPermission(me, "manage_automations") ? (["automations", "integrations"] as SettingsTab[]) : []),
     ...(hasPermission(me, "view_client_overview") ? (["cliente"] as SettingsTab[]) : []),
     ...(isAdmin ? (["cliente"] as SettingsTab[]) : []),
   ];
@@ -90,7 +90,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           <h1 className="text-[32px] font-bold text-foreground tracking-tight">Configurações</h1>
           <p className="text-sm text-foreground/50 mt-2">
             {tab === "team" || tab === "report" || tab === "auditoria" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
-             tab === "automations" ? "Google Drive, lembretes automáticos e rotinas que o sistema executa sozinho." :
+             tab === "integrations" ? "Conecte o Google Drive da agência e acompanhe o Instagram de cada cliente." :
+             tab === "automations" ? "Lembretes automáticos e rotinas que o sistema executa sozinho." :
              tab === "cobranca" || tab === "afiliados" || tab === "revenda" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
              tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? "Visão geral, jornada, margem e pagamentos de cada cliente." :
              tab === "updates" ? "O que mudou no Modo Criador." :
@@ -104,6 +105,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
       <div className="flex items-center gap-1 border-b border-foreground/10 mb-6 overflow-x-auto overflow-y-hidden" data-tour="settings-tabs">
         {[
           { id: "team", label: "Equipe" },
+          { id: "integrations", label: "Integrações" },
           { id: "automations", label: "Automações" },
           { id: "cliente", label: "Clientes" },
           { id: "cobranca", label: "Plano e Cobrança" },
@@ -182,19 +184,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "updates" ? <UpdatesTab /> :
        tab === "site" ? (me.isPlatformAdmin ? <SalesPageEditorTab /> : null) :
        tab === "blog" ? (me.isPlatformAdmin ? <BlogAdminTab /> : null) :
-       tab === "automations" ? (
-        <div className="space-y-10">
-          {!(me.disabledFeatures ?? []).includes("drive") && (
-            <div>
-              <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3">Google Drive</h2>
-              <DriveSettingsTab />
-            </div>
-          )}
-          <div className="pt-2 border-t border-foreground/10">
-            <AutomationsTab />
-          </div>
-        </div>
-       ) :
+       tab === "integrations" ? <IntegrationsTab disabledFeatures={me.disabledFeatures ?? []} /> :
+       tab === "automations" ? <AutomationsTab /> :
        tab === "team" || tab === "report" || tab === "auditoria" ? (
         <>
       {(allowedTabs.includes("report") || allowedTabs.includes("auditoria")) && (

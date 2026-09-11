@@ -1027,7 +1027,18 @@ export const getDriveConfig = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => withDriveOrg(context.orgId, async () => {
     const rootFolderId = await readRootFolderId(context.supabase);
-    return { rootFolderId, default: DEFAULT_ROOT_FOLDER_ID };
+    // readRootFolderId cai num padrão ("root" ou a pasta da Luzeria) quando
+    // ninguém configurou nada ainda — isConfigured distingue isso de uma
+    // escolha real, pro assistente saber se o passo 2 está de fato pronto.
+    const { data: setting } = await context.supabase
+      .from("app_settings").select("value").eq("key", rootFolderSettingKey(context.orgId)).maybeSingle();
+    const settingValue = setting?.value as { id?: string; name?: string } | undefined;
+    return {
+      rootFolderId,
+      rootFolderName: settingValue?.name ?? null,
+      isConfigured: !!settingValue?.id,
+      default: DEFAULT_ROOT_FOLDER_ID,
+    };
   }));
 
 export const setDriveRootFolder = createServerFn({ method: "POST" })
@@ -1147,6 +1158,26 @@ export const completeDriveConnect = createServerFn({ method: "POST" })
     return { ok: true, driveEmail };
   });
 
+/** Scores a list of Drive folders against a client name by similarity —
+ * exact match (normalized) wins, then substring containment, then token
+ * overlap. Shared by findClientFolderCandidates (1 cliente) e
+ * getClientFolderMatches (todos os clientes sem pasta ainda, 1 chamada). */
+function scoreFolderMatch(folders: { id: string; name: string }[], clientName: string) {
+  const target = normalizeName(clientName);
+  const tokens = target.split(" ").filter(Boolean);
+  return folders.map((f) => {
+    const n = normalizeName(f.name);
+    let score = 0;
+    if (n === target) score = 100;
+    else if (n.includes(target) || target.includes(n)) score = 75;
+    else {
+      const hits = tokens.filter((t) => t.length > 2 && n.includes(t)).length;
+      score = (hits / Math.max(1, tokens.length)) * 60;
+    }
+    return { id: f.id, name: f.name, score };
+  }).filter((x) => x.score > 25).sort((a, b) => b.score - a.score);
+}
+
 /** List candidate client folders inside the root (for fuzzy review). */
 export const findClientFolderCandidates = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
@@ -1158,25 +1189,86 @@ export const findClientFolderCandidates = createServerFn({ method: "GET" })
     if (!client) throw new Error("Cliente não encontrado.");
     const rootId = await readRootFolderId(context.supabase);
     const folders = await driveListChildFolders(rootId);
-    const target = normalizeName(client.name);
-    const tokens = target.split(" ").filter(Boolean);
-
-    const scored = folders.map((f) => {
-      const n = normalizeName(f.name);
-      let score = 0;
-      if (n === target) score = 100;
-      else if (n.includes(target) || target.includes(n)) score = 75;
-      else {
-        const hits = tokens.filter((t) => t.length > 2 && n.includes(t)).length;
-        score = (hits / Math.max(1, tokens.length)) * 60;
-      }
-      return { id: f.id, name: f.name, score };
-    }).filter((x) => x.score > 25)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 8);
-
+    const scored = scoreFolderMatch(folders, client.name).slice(0, 8);
     const exact = scored.find((s) => s.score === 100) ?? null;
     return { clientName: client.name, exact, candidates: scored };
+  }));
+
+/** List immediate subfolders of any Drive folder ("root" = top level of the
+ * connected account) — base do navegador de pastas no assistente de
+ * configuração (substitui colar ID/link à mão). */
+export const listDriveFolderChildren = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { folderId?: string }) =>
+    z.object({ folderId: z.string().max(200).optional() }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    return driveListChildFolders(data.folderId ?? "root");
+  }));
+
+/** Pra cada cliente ativo que ainda não tem pasta vinculada, sugere a
+ * pasta mais parecida dentro da raiz (1 listagem só, não 1 por cliente —
+ * evita N chamadas à API do Drive). Passo 3 do assistente de configuração. */
+export const getClientFolderMatches = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => withDriveOrg(context.orgId, async () => {
+    await assertMaster(context.supabase, context.userId);
+    const { data: clients } = await context.supabase
+      .from("clients").select("id, name")
+      .eq("archived", false).neq("category", "Ex-clientes");
+    const total = clients?.length ?? 0;
+    if (!total) return { total: 0, alreadyLinked: 0, suggestions: [] as { clientId: string; clientName: string; match: { id: string; name: string; score: number } | null }[] };
+    const clientIds = (clients as any[]).map((c) => c.id);
+    const { data: mapped } = await context.supabase
+      .from("client_drive_map").select("client_id").in("client_id", clientIds);
+    const mappedIds = new Set(((mapped ?? []) as any[]).map((m) => m.client_id));
+    const unmapped = (clients as any[]).filter((c) => !mappedIds.has(c.id));
+    if (unmapped.length === 0) return { total, alreadyLinked: mappedIds.size, suggestions: [] };
+
+    const rootId = await readRootFolderId(context.supabase);
+    const folders = await driveListChildFolders(rootId);
+    const suggestions = unmapped.map((c: any) => {
+      const scored = scoreFolderMatch(folders, c.name);
+      return { clientId: c.id, clientName: c.name, match: scored[0] ?? null };
+    });
+    return { total, alreadyLinked: mappedIds.size, suggestions };
+  }));
+
+/** Aplica os matches confirmados (ou cria pasta nova quando folderId é
+ * null) — chamada final do passo 3 do assistente. Substitui
+ * bulkCreateClientFolders no fluxo novo (aquela fica intacta, sem uso). */
+export const applyClientFolderMatches = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { assignments: { clientId: string; folderId: string | null }[] }) =>
+    z.object({
+      assignments: z.array(z.object({
+        clientId: z.string().uuid(),
+        folderId: z.string().max(200).nullable(),
+      })).max(500),
+    }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    await assertMaster(context.supabase, context.userId);
+    const clientIds = data.assignments.map((a) => a.clientId);
+    const { data: clients } = await context.supabase
+      .from("clients").select("id, name").in("id", clientIds);
+    const nameById = new Map(((clients ?? []) as any[]).map((c) => [c.id, c.name as string]));
+    const rootId = await readRootFolderId(context.supabase);
+
+    let applied = 0;
+    const errors: string[] = [];
+    for (const a of data.assignments) {
+      const name = nameById.get(a.clientId);
+      if (!name) { errors.push(`Cliente não encontrado (${a.clientId}).`); continue; }
+      try {
+        const tree = await ensureDeliveriesFolder(
+          context.supabase, a.clientId, name, rootId, context.userId,
+          { autoCreate: true, forceClientFolderId: a.folderId ?? undefined },
+        );
+        if (tree) applied++; else errors.push(`${name}: não foi possível resolver a pasta`);
+      } catch (e) {
+        errors.push(`${name}: ${(e as any)?.message ?? "erro"}`);
+      }
+    }
+    return { ok: true, applied, errors: errors.slice(0, 20) };
   }));
 
 /** Idempotently ensure the Entregas folder exists for a client. */

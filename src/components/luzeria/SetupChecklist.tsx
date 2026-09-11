@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, Circle, Palette, HardDrive, Users, X } from "lucide-react";
+import { CheckCircle2, Circle, Palette, HardDrive, Instagram, Users, X } from "lucide-react";
 import { setupChecklistQO, useMe } from "@/lib/luzeria/queries";
 import { ImportClientsStep } from "./ImportClientsStep";
 
@@ -40,7 +40,7 @@ export function SetupChecklist() {
       title: "Conecte seu Google Drive",
       desc: "Seus conteúdos vão direto pro seu arquivo — evita precisar fazer backup.",
       action: (
-        <Link to="/configuracoes" search={{ tab: "automations" }}
+        <Link to="/configuracoes" search={{ tab: "integrations" }}
           className="text-xs font-bold px-3 py-1.5 rounded-md whitespace-nowrap transition"
           style={{ background: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
           Conectar →
@@ -58,6 +58,23 @@ export function SetupChecklist() {
           style={{ background: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
           Importar →
         </button>
+      ),
+    },
+    {
+      // Não entra no allDone (linha 15) — é contínuo, dificilmente todo
+      // cliente vai ter Instagram conectado o tempo todo.
+      done: status.instagramSummary.total > 0 && status.instagramSummary.connected === status.instagramSummary.total,
+      icon: <Instagram size={16} />,
+      title: "Conecte o Instagram dos clientes",
+      desc: status.instagramSummary.total > 0
+        ? `${status.instagramSummary.connected} de ${status.instagramSummary.total} clientes conectados.`
+        : "Publique posts, reels e stories direto pelo Modo Criador.",
+      action: (
+        <Link to="/configuracoes" search={{ tab: "integrations" }}
+          className="text-xs font-bold px-3 py-1.5 rounded-md whitespace-nowrap transition"
+          style={{ background: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+          Ver clientes →
+        </Link>
       ),
     },
   ];

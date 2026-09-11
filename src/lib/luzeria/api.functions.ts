@@ -378,7 +378,9 @@ export const getPlans = createServerFn({ method: "GET" })
   });
 
 /** Drives the "Primeiros passos" checklist shown to masters until they've
- * customized the brand, connected Drive, and added at least one client. */
+ * customized the brand, connected Drive de verdade (conta + pasta raiz +
+ * pelo menos 1 cliente vinculado — não só a autorização OAuth, que sozinha
+ * não deixa nada funcionar), e adicionado pelo menos um cliente. */
 export const getSetupChecklist = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
@@ -388,13 +390,28 @@ export const getSetupChecklist = createServerFn({ method: "GET" })
 
     const { data: drive } = await context.supabase
       .from("org_google_credentials").select("org_id").eq("org_id", context.orgId).maybeSingle();
-    const driveConnected = !!drive || (context.orgId === LUZERIA_ORG_ID && !!process.env.GOOGLE_REFRESH_TOKEN);
+    const driveAccountConnected = !!drive || (context.orgId === LUZERIA_ORG_ID && !!process.env.GOOGLE_REFRESH_TOKEN);
 
-    const { count } = await context.supabase
-      .from("clients").select("id", { count: "exact", head: true }).eq("archived", false).neq("category", "Ex-clientes");
+    const { data: clientRows, count } = await context.supabase
+      .from("clients").select("id", { count: "exact" }).eq("archived", false).neq("category", "Ex-clientes");
     const hasClients = (count ?? 0) > 0;
+    const clientIds = ((clientRows ?? []) as any[]).map((c) => c.id);
 
-    return { brandingDone, driveConnected, hasClients };
+    let driveConnected = false;
+    let instagramConnected = 0;
+    if (clientIds.length > 0) {
+      const [{ count: mappedCount }, { data: igCreds }] = await Promise.all([
+        context.supabase.from("client_drive_map").select("client_id", { count: "exact", head: true }).in("client_id", clientIds),
+        context.supabase.from("client_instagram_credentials").select("client_id").in("client_id", clientIds),
+      ]);
+      driveConnected = driveAccountConnected && (mappedCount ?? 0) > 0;
+      instagramConnected = (igCreds ?? []).length;
+    }
+
+    return {
+      brandingDone, driveConnected, hasClients,
+      instagramSummary: { connected: instagramConnected, total: clientIds.length },
+    };
   });
 
 export const getOrgPlanStatus = createServerFn({ method: "GET" })

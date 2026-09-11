@@ -766,6 +766,20 @@ function InstagramSection({ clientId }: { clientId: string }) {
       <p className="text-[11px] text-foreground/40 mb-3">
         Conecte a conta do Instagram (Business ou Criador de Conteúdo) desse cliente pra poder publicar Posts, Carrosséis, Reels e Stories direto pelo Modo Criador.
       </p>
+      {!status.isLoading && !data?.connected && (
+        <div className="space-y-2 mb-3">
+          <div className="flex items-start gap-2 rounded-md px-3 py-2 text-[11px] leading-relaxed"
+            style={{ backgroundColor: "rgba(111,168,220,0.1)", border: "1px solid rgba(111,168,220,0.25)", color: "color-mix(in srgb, var(--foreground) 75%, transparent)" }}>
+            <User size={13} className="shrink-0 mt-0.5" style={{ color: "#6FA8DC" }} />
+            <span>Faça login com a conta do <b className="text-foreground">Instagram do cliente</b> — não a sua conta de administrador.</span>
+          </div>
+          <div className="flex items-start gap-2 rounded-md px-3 py-2 text-[11px] leading-relaxed"
+            style={{ backgroundColor: "rgba(111,207,151,0.1)", border: "1px solid rgba(111,207,151,0.25)", color: "color-mix(in srgb, var(--foreground) 75%, transparent)" }}>
+            <CheckCircle2 size={13} className="shrink-0 mt-0.5" style={{ color: "#6FCF97" }} />
+            <span><b className="text-foreground">Não precisa</b> de Página do Facebook vinculada — só a conta do Instagram já resolve.</span>
+          </div>
+        </div>
+      )}
       {status.isLoading ? (
         <div className="text-foreground/40 text-sm">Verificando…</div>
       ) : data?.connected ? (

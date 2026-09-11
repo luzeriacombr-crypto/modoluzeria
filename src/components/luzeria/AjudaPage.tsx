@@ -68,11 +68,23 @@ const TUTORIALS: { title: string; steps: string[]; images?: { src: string; alt: 
   {
     title: "Conectar o Google Drive",
     steps: [
-      "Vá em Configurações → Drive.",
-      "Clique em conectar e faça login com a conta Google da agência.",
+      "Vá em Configurações → Integrações → Google Drive. É um assistente de 3 passos.",
+      "Passo 1: clique em conectar e faça login com a conta Google da agência.",
+      "Passo 2: escolha a pasta que vai guardar as pastas de todos os clientes — navega clicando, ou cola o link/ID se já souber.",
+      "Passo 3: confira as sugestões de pasta pra cada cliente (a gente já compara o nome) e confirme — o que não tiver pasta, é criado do zero.",
       "Pronto — os arquivos enviados nos posts passam a ser organizados lá automaticamente.",
     ],
     videoUrl: "https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw",
+  },
+  {
+    title: "Conectar o Instagram de um cliente",
+    steps: [
+      "Abra a Ficha do Cliente e ache a seção \"Instagram\".",
+      "Clique em \"Conectar Instagram\" — a tela de login que abre é a do próprio Instagram, não a do Modo Criador.",
+      "Faça login com a conta do Instagram do cliente (Business ou Criador de Conteúdo) — não a sua conta de administrador.",
+      "Não precisa de Página do Facebook vinculada — só a conta do Instagram já resolve.",
+      "Depois de conectado, aparece \"✓ Conectado — @usuario\" e já dá pra publicar/programar direto pelos posts e reels desse cliente.",
+    ],
   },
   {
     title: "Criar uma automação",
