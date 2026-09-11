@@ -16,7 +16,7 @@ export function GlobalConfirmDialog() {
   }, [request]);
 
   if (!request) return null;
-  const { kind, message, danger, confirmLabel, resolve } = request;
+  const { kind, message, danger, confirmLabel, cancelLabel, resolve } = request;
 
   function close(result: boolean | string | null) {
     resolve(result);
@@ -60,7 +60,7 @@ export function GlobalConfirmDialog() {
             onClick={() => close(kind === "prompt" ? null : false)}
             className="px-3.5 py-2 text-sm text-foreground/60 hover:text-foreground transition-colors"
           >
-            Cancelar
+            {cancelLabel ?? "Cancelar"}
           </button>
           <button
             autoFocus={kind === "confirm"}

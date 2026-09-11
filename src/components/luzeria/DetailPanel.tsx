@@ -1316,6 +1316,11 @@ export function DetailPanel() {
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={async () => {
+                      if (item.type !== "story" && !item.caption?.trim()) {
+                        if (!(await requestConfirm("Vai publicar sem legenda mesmo?", {
+                          confirmLabel: "Publicar mesmo assim", cancelLabel: "Ops, vou colocar a legenda",
+                        }))) return;
+                      }
                       if (!(await requestConfirm('Publicar esse post no Instagram do cliente agora? Isso é uma ação real e pública.'))) return;
                       publishToInstagram.mutate({ data: { itemId: item.id } }, {
                         onSuccess: () => toast.success("Publicado no Instagram!"),
@@ -1345,7 +1350,12 @@ export function DetailPanel() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        if (item.type !== "story" && !item.caption?.trim()) {
+                          if (!(await requestConfirm("Vai programar sem legenda mesmo?", {
+                            confirmLabel: "Programar mesmo assim", cancelLabel: "Ops, vou colocar a legenda",
+                          }))) return;
+                        }
                         setInstagramAutoPublish.mutate({ data: { itemId: item.id, enabled: true } }, {
                           onSuccess: () => toast.success("Publicação programada!"),
                           onError: (e: any) => toast.error(e?.message ?? "Defina data e horário de publicação futuros antes de programar."),

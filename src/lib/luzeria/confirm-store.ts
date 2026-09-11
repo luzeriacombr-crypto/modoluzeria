@@ -5,13 +5,14 @@ type ConfirmRequest = {
   message: string;
   danger?: boolean;
   confirmLabel?: string;
+  cancelLabel?: string;
   defaultValue?: string;
   resolve: (value: any) => void;
 };
 
 interface ConfirmState {
   request: ConfirmRequest | null;
-  requestConfirm: (message: string, opts?: { danger?: boolean; confirmLabel?: string }) => Promise<boolean>;
+  requestConfirm: (message: string, opts?: { danger?: boolean; confirmLabel?: string; cancelLabel?: string }) => Promise<boolean>;
   requestPrompt: (message: string, defaultValue?: string) => Promise<string | null>;
 }
 
@@ -19,7 +20,7 @@ export const useConfirmStore = create<ConfirmState>((set) => ({
   request: null,
   requestConfirm: (message, opts) =>
     new Promise<boolean>((resolve) => {
-      set({ request: { kind: "confirm", message, danger: opts?.danger, confirmLabel: opts?.confirmLabel, resolve } });
+      set({ request: { kind: "confirm", message, danger: opts?.danger, confirmLabel: opts?.confirmLabel, cancelLabel: opts?.cancelLabel, resolve } });
     }),
   requestPrompt: (message, defaultValue) =>
     new Promise<string | null>((resolve) => {
@@ -31,7 +32,7 @@ export const useConfirmStore = create<ConfirmState>((set) => ({
  * shape (call it, await the answer), but rendered as a themed modal instead
  * of the browser's OS dialog. Standalone functions (not hooks) since most
  * callers are plain event handlers, not component bodies. */
-export function requestConfirm(message: string, opts?: { danger?: boolean; confirmLabel?: string }) {
+export function requestConfirm(message: string, opts?: { danger?: boolean; confirmLabel?: string; cancelLabel?: string }) {
   return useConfirmStore.getState().requestConfirm(message, opts);
 }
 export function requestPrompt(message: string, defaultValue?: string) {
