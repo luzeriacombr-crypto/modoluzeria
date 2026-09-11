@@ -37,8 +37,8 @@ function byScheduledAt(direction: OrderDirection) {
   };
 }
 
-type ClientTab = "posts" | "reels" | "stories" | "mais" | "feed" | "ficha";
-const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "mais", "feed", "ficha"];
+type ClientTab = "posts" | "reels" | "stories" | "finalizados" | "mais" | "feed" | "ficha";
+const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizados", "mais", "feed", "ficha"];
 /** Abas que dá pra ocultar (por padrão da agência ou só pra um cliente) —
  * só "ficha" fica de fora (é o mínimo de navegação garantido). */
 const HIDEABLE_TABS = ["posts", "reels", "stories", "mais", "feed"] as const;
@@ -93,12 +93,16 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   }
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
+  const finalizadosSeparateTab = me?.finalizadosSeparateTab ?? false;
   const disabledFeatures = new Set(me?.disabledFeatures ?? []);
   const hiddenTabs = client?.hiddenTabs != null ? new Set(client.hiddenTabs) : disabledFeatures;
   // "posts" agora pode ser oculta, então o fallback (sem ?tab= na URL) não
   // pode mais ser fixo em "posts" — cai na primeira aba visível pra esse
   // cliente, senão a grade de conteúdo renderiza sem nenhuma aba destacada.
+  // "finalizados" não é uma aba ocultável por cliente (Personalizar abas) —
+  // é uma escolha única da agência inteira, em Configurações → Geral.
   const visibleTabs = VALID_CLIENT_TABS
+    .filter((t) => t !== "finalizados" || finalizadosSeparateTab)
     .filter((t) => !(HIDEABLE_TABS as readonly string[]).includes(t) || !hiddenTabs.has(t));
   const tab: ClientTab = tabParam && (visibleTabs as string[]).includes(tabParam)
     ? (tabParam as ClientTab)
@@ -163,15 +167,24 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   // toggle), mas somem daqui — só ficam visíveis dentro da própria campanha.
   const notCampaignInternal = (items: ContentItem[]) => items.filter((i) => !i.campaignInternal);
 
-  // Itens "Finalizado" continuam na aba de origem (Posts/Reels) — só
-  // ganham a fita "Publicado" no card (ver ContentCard.tsx). Antes iam pra
-  // uma aba "Finalizados" separada, mas isso fazia o time (ou o cliente)
-  // pensar que nada tinha sido entregue no mês quando a aba principal
-  // esvaziava.
+  // Por padrão, itens "Finalizado" continuam na aba de origem (Posts/Reels)
+  // — só ganham a fita "Publicado" no card (ver ContentCard.tsx), em vez de
+  // sumir pra uma aba separada (isso fazia o time/cliente pensar que nada
+  // tinha sido entregue no mês quando a aba principal esvaziava). Mas
+  // algumas agências preferem o jeito antigo — escolha em Configurações →
+  // Geral (finalizadosSeparateTab).
+  const notFinalized = (items: ContentItem[]) => (finalizadosSeparateTab ? items.filter((i) => i.status !== "FINALIZADO") : items);
+  const onlyFinalized = (items: ContentItem[]) => items.filter((i) => i.status === "FINALIZADO");
+
   const TAB_CONFIG = {
-    posts: { label: "Posts", type: "post" as const, items: notCampaignInternal(month?.posts ?? []) },
-    reels: { label: "Reels", type: "reel" as const, items: notCampaignInternal(month?.reels ?? []) },
+    posts: { label: "Posts", type: "post" as const, items: notFinalized(notCampaignInternal(month?.posts ?? [])) },
+    reels: { label: "Reels", type: "reel" as const, items: notFinalized(notCampaignInternal(month?.reels ?? [])) },
     stories: { label: "Stories", type: "story" as const, items: month?.stories ?? [] },
+    finalizados: {
+      label: "Finalizados",
+      type: "post" as const,
+      items: [...onlyFinalized(notCampaignInternal(month?.posts ?? [])), ...onlyFinalized(notCampaignInternal(month?.reels ?? []))],
+    },
   } as const;
 
   const showDocsSubTab = isAdmin;
@@ -312,7 +325,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                 </div>
               ) : (
               <div className="flex items-center justify-end gap-1.5 mb-3">
-                {isAdmin && items.length > 0 && (
+                {isAdmin && tab !== "finalizados" && items.length > 0 && (
                   <button
                     onClick={() => setSelectMode(true)}
                     title="Selecionar vários"
@@ -399,7 +412,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       onDragEnd={() => { setDragId(null); setOverId(null); }}
                     />
                   ))}
-                  {!selectMode && isAdmin && (
+                  {!selectMode && isAdmin && tab !== "finalizados" && (
                     <button
                       onClick={() => addContentItem.mutate({
                         data: { clientId, key: effectiveMonthKey, type: cfg.type },
@@ -437,7 +450,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       onDragEnd={() => { setDragId(null); setOverId(null); }}
                     />
                   ))}
-                  {!selectMode && isAdmin && (
+                  {!selectMode && isAdmin && tab !== "finalizados" && (
                     <button
                       onClick={() => addContentItem.mutate({
                         data: { clientId, key: effectiveMonthKey, type: cfg.type },
@@ -462,7 +475,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   ))}
                 </div>
               )}
-              {!monthError && !monthLoading && cfg.items.length === 0 && !isAdmin && (
+              {!monthError && !monthLoading && cfg.items.length === 0 && (!isAdmin || tab === "finalizados") && (
                 <div className="px-4 py-10 text-center text-sm text-foreground/40">Sem itens nesta aba.</div>
               )}
             </>

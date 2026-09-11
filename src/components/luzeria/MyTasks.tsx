@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, contentStatusesQO, useMe, useApi } from "@/lib/luzeria/queries";
-import { STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, isDoneStatus, hasPermission, getStatusMeta, type Status } from "@/lib/luzeria/types";
+import { STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, hasPermission, getStatusMeta, type Status } from "@/lib/luzeria/types";
 import { getStatusIcon } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
@@ -60,9 +60,13 @@ export function MyTasks() {
     ...myTasksQO(targetId),
     enabled: !!targetId,
   });
-  // Já finalizado/entregue/pronto pra publicar some da lista principal —
-  // deixa a página focada no que ainda precisa de atenção.
-  const tasks = allTasks.filter((t: any) => !isDoneStatus(t.status as Status));
+  // Só finalizado/concluído some da lista principal — "Pronto para
+  // publicar" continua aparecendo, porque ainda precisa de alguém de olho
+  // (programar ou publicar na hora certa). Achado num caso real: um post
+  // de data comemorativa ficou "Pronto para publicar" dias sem ninguém
+  // notar, e perdeu a data — porque sumia daqui e ficava perdido no meio
+  // do quadro do cliente.
+  const tasks = allTasks.filter((t: any) => t.status !== "FINALIZADO" && t.status !== "CONCLUIDO");
   const { selectMonth, openItem, flash, openFicha, openStageComposer } = useUI();
   const navigate = useNavigate();
   const isMeView = !isAdmin || !viewAs || viewAs === me?.id;

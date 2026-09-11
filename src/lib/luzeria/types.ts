@@ -356,6 +356,10 @@ export interface Profile {
    * set its editor and pick its video format (reel_type/post_format),
    * not just admins. Present for every profile, same reasoning as above. */
   membersCanSetEditorFormat?: boolean;
+  /** Org-wide: itens finalizados/publicados ficam em aba "Finalizados"
+   * separada (true, comportamento antigo) ou junto na aba de origem com a
+   * fita "Publicado" (false, padrão — ver ClientView.tsx). */
+  finalizadosSeparateTab?: boolean;
   /** Org-wide custom labels for fixed sidebar nav items, keyed by item id
    * (e.g. "dashboard", "cobranca") — falls back to the built-in label when
    * an id has no entry here. */

@@ -151,7 +151,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -217,6 +217,7 @@ export const getMe = createServerFn({ method: "GET" })
       disabledFeatures: ((org as any)?.disabled_features ?? []) as string[],
       setorPermissions: ((org as any)?.setor_permissions ?? []) as string[],
       membersCanSetEditorFormat: ((org as any)?.members_can_set_editor_format ?? false) as boolean,
+      finalizadosSeparateTab: ((org as any)?.finalizados_separate_tab ?? false) as boolean,
       navLabels: ((org as any)?.nav_labels ?? {}) as Record<string, string>,
       navOrder: ((org as any)?.nav_order ?? {}) as Record<string, string[]>,
       borderRadius: ((org as any)?.border_radius ?? 12) as number,
@@ -260,6 +261,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     photoWatermarkDensity?: "baixa" | "media" | "alta";
     disabledFeatures?: string[];
     membersCanSetEditorFormat?: boolean;
+    finalizadosSeparateTab?: boolean;
     borderRadius?: number;
     navLabels?: Record<string, string>;
     navOrder?: Record<string, string[]>;
@@ -286,6 +288,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       photoWatermarkDensity: z.enum(["baixa", "media", "alta"]).optional(),
       disabledFeatures: z.array(z.string().max(40)).max(20).optional(),
       membersCanSetEditorFormat: z.boolean().optional(),
+      finalizadosSeparateTab: z.boolean().optional(),
       borderRadius: z.number().int().min(0).max(28).optional(),
       navLabels: z.record(z.string(), z.string().trim().min(1).max(40)).optional(),
       navOrder: z.record(z.string(), z.array(z.string().max(40)).max(40)).optional(),
@@ -320,6 +323,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.photoWatermarkDensity !== undefined) patch.photo_watermark_density = data.photoWatermarkDensity;
     if (data.disabledFeatures !== undefined) patch.disabled_features = data.disabledFeatures;
     if (data.membersCanSetEditorFormat !== undefined) patch.members_can_set_editor_format = data.membersCanSetEditorFormat;
+    if (data.finalizadosSeparateTab !== undefined) patch.finalizados_separate_tab = data.finalizadosSeparateTab;
     if (data.borderRadius !== undefined) patch.border_radius = data.borderRadius;
     if (data.navLabels !== undefined) patch.nav_labels = data.navLabels;
     if (data.navOrder !== undefined) patch.nav_order = data.navOrder;
