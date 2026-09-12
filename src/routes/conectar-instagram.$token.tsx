@@ -19,11 +19,22 @@ export const Route = createFileRoute("/conectar-instagram/$token")({
   },
   head: ({ loaderData }) => {
     const title = loaderData?.orgName ? `Conectar Instagram — ${loaderData.orgName}` : "Conectar Instagram";
+    const description = loaderData?.orgName
+      ? `Conecte sua conta do Instagram no app oficial da ${loaderData.orgName}.`
+      : "Conecte sua conta do Instagram.";
     return {
       meta: [
         { title },
         { name: "robots", content: "noindex" },
-        { name: "description", content: "Conectar sua conta do Instagram." },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        { property: "og:image", content: "https://www.modocriador.com.br/og-image.png" },
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        { name: "twitter:image", content: "https://www.modocriador.com.br/og-image.png" },
       ],
     };
   },
