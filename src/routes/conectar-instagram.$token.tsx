@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { Instagram, User, CheckCircle2, Loader2 } from "lucide-react";
+import { Instagram, User, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import { publicInstagramConnectInfoQO } from "@/lib/luzeria/queries";
 import { getPublicInstagramConnectUrl } from "@/lib/luzeria/instagram.functions";
 
@@ -107,6 +107,11 @@ function PublicInstagramConnectPage() {
         <p className="text-white/40 text-xs mb-8">{orgName} pede pra conectar o Instagram de {clientName}</p>
 
         <div className="rounded-xl p-5 sm:p-6 space-y-3" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <div className="flex items-start gap-2 rounded-md px-3 py-2 text-[12px] leading-relaxed"
+            style={{ backgroundColor: "rgba(240,180,60,0.1)", border: "1px solid rgba(240,180,60,0.3)", color: "rgba(255,255,255,0.8)" }}>
+            <AlertTriangle size={13} className="shrink-0 mt-0.5" style={{ color: "#F0B43C" }} />
+            <span>Abriu esse link direto pelo WhatsApp? Antes de continuar, toque nos <b className="text-white">••• (mais opções)</b>, embaixo, e escolha <b className="text-white">"Abrir no navegador"</b> — assim o Instagram abre certinho.</span>
+          </div>
           <div className="flex items-start gap-2 rounded-md px-3 py-2 text-[12px] leading-relaxed"
             style={{ backgroundColor: "rgba(111,168,220,0.1)", border: "1px solid rgba(111,168,220,0.25)", color: "rgba(255,255,255,0.75)" }}>
             <User size={13} className="shrink-0 mt-0.5" style={{ color: "#6FA8DC" }} />
