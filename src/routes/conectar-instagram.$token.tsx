@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { Instagram, User, CheckCircle2, Loader2 } from "lucide-react";
+import { Instagram, User, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { publicInstagramConnectInfoQO } from "@/lib/luzeria/queries";
 import { getPublicInstagramConnectUrl } from "@/lib/luzeria/instagram.functions";
 
@@ -104,7 +104,11 @@ function PublicInstagramConnectPage() {
       <div className="max-w-md w-full">
         {orgLogoUrl && <img src={orgLogoUrl} alt={orgName} className="h-9 w-auto object-contain mb-6" />}
         <h1 className="text-white text-2xl font-bold mb-1">Conectar Instagram</h1>
-        <p className="text-white/40 text-xs mb-8">{orgName} pede pra conectar o Instagram de {clientName}</p>
+        <p className="text-white/40 text-xs mb-3">{orgName} pede pra conectar o Instagram de {clientName}</p>
+        <div className="inline-flex items-center gap-1.5 text-[11px] text-white/40 mb-8">
+          <ShieldCheck size={13} style={{ color: "#6FCF97" }} />
+          <span>Login oficial da Meta — sua senha não passa pelo Modo Criador nem pela agência.</span>
+        </div>
 
         <div className="rounded-xl p-5 sm:p-6 space-y-3" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.08)" }}>
           <div className="flex items-start gap-2 rounded-md px-3 py-2 text-[12px] leading-relaxed"
