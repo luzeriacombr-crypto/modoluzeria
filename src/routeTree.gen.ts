@@ -30,7 +30,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SelecaoTokenRouteImport } from './routes/selecao.$token'
 import { Route as PromoSlugRouteImport } from './routes/promo/$slug'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
+import { Route as OauthInstagramCallbackClienteRouteImport } from './routes/oauth.instagram-callback-cliente'
 import { Route as ContratoTokenRouteImport } from './routes/contrato.$token'
+import { Route as ConectarInstagramTokenRouteImport } from './routes/conectar-instagram.$token'
 import { Route as BlogSlugRouteImport } from './routes/blog_.$slug'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
@@ -164,9 +166,20 @@ const PreviewTokenRoute = PreviewTokenRouteImport.update({
   path: '/preview/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OauthInstagramCallbackClienteRoute =
+  OauthInstagramCallbackClienteRouteImport.update({
+    id: '/oauth/instagram-callback-cliente',
+    path: '/oauth/instagram-callback-cliente',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ContratoTokenRoute = ContratoTokenRouteImport.update({
   id: '/contrato/$token',
   path: '/contrato/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConectarInstagramTokenRoute = ConectarInstagramTokenRouteImport.update({
+  id: '/conectar-instagram/$token',
+  path: '/conectar-instagram/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
@@ -338,7 +351,9 @@ export interface FileRoutesByFullPath {
   '/vendas': typeof AuthenticatedVendasRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
+  '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
   '/selecao/$token': typeof SelecaoTokenRoute
@@ -386,7 +401,9 @@ export interface FileRoutesByTo {
   '/vendas': typeof AuthenticatedVendasRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
+  '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
   '/selecao/$token': typeof SelecaoTokenRoute
@@ -436,7 +453,9 @@ export interface FileRoutesById {
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog_/$slug': typeof BlogSlugRoute
+  '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
+  '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
   '/selecao/$token': typeof SelecaoTokenRoute
@@ -486,7 +505,9 @@ export interface FileRouteTypes {
     | '/vendas'
     | '/assinar/completar'
     | '/blog/$slug'
+    | '/conectar-instagram/$token'
     | '/contrato/$token'
+    | '/oauth/instagram-callback-cliente'
     | '/preview/$token'
     | '/promo/$slug'
     | '/selecao/$token'
@@ -534,7 +555,9 @@ export interface FileRouteTypes {
     | '/vendas'
     | '/assinar/completar'
     | '/blog/$slug'
+    | '/conectar-instagram/$token'
     | '/contrato/$token'
+    | '/oauth/instagram-callback-cliente'
     | '/preview/$token'
     | '/promo/$slug'
     | '/selecao/$token'
@@ -583,7 +606,9 @@ export interface FileRouteTypes {
     | '/_authenticated/vendas'
     | '/assinar/completar'
     | '/blog_/$slug'
+    | '/conectar-instagram/$token'
     | '/contrato/$token'
+    | '/oauth/instagram-callback-cliente'
     | '/preview/$token'
     | '/promo/$slug'
     | '/selecao/$token'
@@ -620,7 +645,9 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermosRoute: typeof TermosRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  ConectarInstagramTokenRoute: typeof ConectarInstagramTokenRoute
   ContratoTokenRoute: typeof ContratoTokenRoute
+  OauthInstagramCallbackClienteRoute: typeof OauthInstagramCallbackClienteRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
   PromoSlugRoute: typeof PromoSlugRoute
   SelecaoTokenRoute: typeof SelecaoTokenRoute
@@ -780,11 +807,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PreviewTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oauth/instagram-callback-cliente': {
+      id: '/oauth/instagram-callback-cliente'
+      path: '/oauth/instagram-callback-cliente'
+      fullPath: '/oauth/instagram-callback-cliente'
+      preLoaderRoute: typeof OauthInstagramCallbackClienteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contrato/$token': {
       id: '/contrato/$token'
       path: '/contrato/$token'
       fullPath: '/contrato/$token'
       preLoaderRoute: typeof ContratoTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conectar-instagram/$token': {
+      id: '/conectar-instagram/$token'
+      path: '/conectar-instagram/$token'
+      fullPath: '/conectar-instagram/$token'
+      preLoaderRoute: typeof ConectarInstagramTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog_/$slug': {
@@ -1044,7 +1085,9 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermosRoute: TermosRoute,
   BlogSlugRoute: BlogSlugRoute,
+  ConectarInstagramTokenRoute: ConectarInstagramTokenRoute,
   ContratoTokenRoute: ContratoTokenRoute,
+  OauthInstagramCallbackClienteRoute: OauthInstagramCallbackClienteRoute,
   PreviewTokenRoute: PreviewTokenRoute,
   PromoSlugRoute: PromoSlugRoute,
   SelecaoTokenRoute: SelecaoTokenRoute,

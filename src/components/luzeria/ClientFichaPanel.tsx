@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, driveThumbnailQO, journeyStagesQO, contractRequestsQO } from "@/lib/luzeria/queries";
+import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, driveThumbnailQO, journeyStagesQO, contractRequestsQO, instagramConnectRequestsQO } from "@/lib/luzeria/queries";
 import { useClientAssetUpload } from "@/lib/luzeria/use-client-asset-upload";
 import { useClientContractUpload } from "@/lib/luzeria/use-client-contract-upload";
 import { CONTENT_TYPE_LABEL, hasSetorPermission } from "@/lib/luzeria/types";
@@ -793,12 +793,79 @@ function InstagramSection({ clientId }: { clientId: string }) {
           </button>
         </div>
       ) : (
-        <button onClick={connect} disabled={connecting}
-          className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 disabled:opacity-50">
-          {connecting ? <Loader2 size={14} className="animate-spin" /> : <Instagram size={14} />}
-          Conectar Instagram
-        </button>
+        <div className="space-y-3">
+          <button onClick={connect} disabled={connecting}
+            className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 disabled:opacity-50">
+            {connecting ? <Loader2 size={14} className="animate-spin" /> : <Instagram size={14} />}
+            Conectar Instagram
+          </button>
+          <div className="pt-3 border-t border-foreground/8">
+            <p className="text-[11px] text-foreground/40 mb-2">
+              Ou mande um link pro próprio cliente conectar — evita ter que usar a senha e o 2FA dele.
+            </p>
+            <GenerateInstagramLinkBlock clientId={clientId} />
+          </div>
+        </div>
       )}
+    </div>
+  );
+}
+
+function GenerateInstagramLinkBlock({ clientId }: { clientId: string }) {
+  const api = useApi();
+  const { data: requests = [], isLoading } = useQuery(instagramConnectRequestsQO(clientId));
+  const [copied, setCopied] = useState(false);
+
+  const current = requests.find((r) => r.status === "aguardando") ?? null;
+  const link = current ? `https://www.modocriador.com.br/conectar-instagram/${current.token}` : null;
+
+  function copyLink() {
+    if (!link) return;
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function cancel(id: string) {
+    if (!(await requestConfirm("Cancelar esse link? Ele deixa de funcionar.", { danger: true }))) return;
+    api.cancelInstagramConnectRequest.mutate({ data: { id } });
+  }
+
+  if (isLoading) return <Loader2 size={14} className="animate-spin text-foreground/40" />;
+
+  if (!current) {
+    return (
+      <button
+        onClick={() => api.createInstagramConnectRequest.mutate({ data: { clientId } }, { onSuccess: () => toast.success("Link gerado. Copie e mande pro cliente.") })}
+        disabled={api.createInstagramConnectRequest.isPending}
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition disabled:opacity-50"
+      >
+        <LinkIcon size={12} /> {api.createInstagramConnectRequest.isPending ? "Gerando…" : "Gerar link"}
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="bg-card border border-foreground/6 rounded-md px-3 py-2.5">
+        <div className="text-xs font-semibold text-foreground mb-1">Aguardando o cliente conectar</div>
+        <div className="text-[11px] text-foreground/50 truncate">{link}</div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={copyLink} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition">
+          {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copiado!" : "Copiar link"}
+        </button>
+        <a
+          href={waLink(`Olá! Clique aqui pra conectar seu Instagram: ${link}`)}
+          target="_blank" rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition"
+        >
+          <MessageCircle size={12} /> Mandar no WhatsApp
+        </a>
+        <button onClick={() => cancel(current.id)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold text-foreground/40 hover:text-red-400 transition">
+          <Trash2 size={12} /> Cancelar
+        </button>
+      </div>
     </div>
   );
 }

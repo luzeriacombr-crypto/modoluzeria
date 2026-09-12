@@ -66,7 +66,10 @@ import {
   listSelectionDriveImages, setPhotoSelectionCover, setPhotoSelectionOrder,
   getPublicPhotoSelection, getPublicPhotoThumbnails,
 } from "./photo-selection.functions";
-import { publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications, hasUsedInstagramPublish, getInstagramConnectionSummary } from "./instagram.functions";
+import {
+  publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications, hasUsedInstagramPublish, getInstagramConnectionSummary,
+  createInstagramConnectRequest, listInstagramConnectRequests, cancelInstagramConnectRequest, getPublicInstagramConnectInfo,
+} from "./instagram.functions";
 import {
   getCalendarItems, getGoogleCalendarAuthUrl, disconnectGoogleCalendar,
   getMyCalendarConnection, getUpcomingCalendarEvents, createCalendarEvent,
@@ -541,6 +544,21 @@ export const publicContractRequestQO = (token: string | null) =>
   queryOptions({
     queryKey: ["public-contract-request", token],
     queryFn: () => getPublicContractRequest({ data: { token: token! } }),
+    enabled: !!token,
+    staleTime: 15_000,
+  });
+
+export const instagramConnectRequestsQO = (clientId: string | null) =>
+  queryOptions({
+    queryKey: ["instagram-connect-requests", clientId],
+    queryFn: () => listInstagramConnectRequests({ data: { clientId: clientId! } }),
+    enabled: !!clientId,
+  });
+
+export const publicInstagramConnectInfoQO = (token: string | null) =>
+  queryOptions({
+    queryKey: ["public-instagram-connect-info", token],
+    queryFn: () => getPublicInstagramConnectInfo({ data: { token: token! } }),
     enabled: !!token,
     staleTime: 15_000,
   });
@@ -1124,6 +1142,16 @@ export function useApi() {
     cancelContractRequest: useMutation({
       mutationFn: useServerFn(cancelContractRequest),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["contract-requests"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao cancelar."),
+    }),
+    createInstagramConnectRequest: useMutation({
+      mutationFn: useServerFn(createInstagramConnectRequest),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["instagram-connect-requests"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao gerar link."),
+    }),
+    cancelInstagramConnectRequest: useMutation({
+      mutationFn: useServerFn(cancelInstagramConnectRequest),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["instagram-connect-requests"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao cancelar."),
     }),
     setPaymentMessageTemplate: useMutation({

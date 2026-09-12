@@ -33,6 +33,19 @@ const IG_SCOPES = [
 // mesmo erro "[1/3 troca de código]" — ou seja, o domínio nunca foi a
 // causa raiz do problema; mantido em www por ser o canônico de verdade.
 const INSTAGRAM_REDIRECT_URI = "https://www.modocriador.com.br/oauth/instagram-callback";
+// Segunda redirect_uri, cadastrada à parte na Meta for Developers, só
+// pro fluxo público de autoconexão (cliente conecta pelo próprio link,
+// sem sessão no Modo Criador) — ver createInstagramConnectRequest.
+const INSTAGRAM_REDIRECT_URI_CLIENT = "https://www.modocriador.com.br/oauth/instagram-callback-cliente";
+
+function randomToken(len = 22): string {
+  const alphabet = "abcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (let i = 0; i < len; i++) out += alphabet[bytes[i] % alphabet.length];
+  return out;
+}
 
 /** Master, or setor with the org's "instagram_publish" permission granted —
  * used both by the publish/schedule actions and by connect/disconnect,
@@ -102,10 +115,66 @@ export const getInstagramConnectUrl = createServerFn({ method: "POST" })
   });
 
 /** Exchanges the OAuth code for a short-lived token, upgrades it to a
- * long-lived (60-day) token, fetches the connected account's username, and
- * persists the credentials for this client. Instagram Business Login
- * authenticates directly to one Instagram professional account — no
- * Facebook Page picker needed. */
+ * long-lived (60-day) token, and fetches the connected account's id +
+ * username. Shared by the admin-driven connect flow
+ * (completeInstagramConnect) and the public client-self-connect flow
+ * (completePublicInstagramConnect) — same 3-step exchange, same error
+ * messages, only the redirect_uri differs (has to match byte-for-byte
+ * whichever one Instagram was told to send the code back to). */
+async function exchangeInstagramCode(code: string, redirectUri: string): Promise<{ igId: string; igUsername: string | null; accessToken: string; tokenExpiresAt: string }> {
+  const appId = process.env.INSTAGRAM_APP_ID;
+  const appSecret = process.env.INSTAGRAM_APP_SECRET;
+  if (!appId || !appSecret) throw new Error("Credenciais do Instagram ausentes no servidor.");
+
+  const shortBody = new URLSearchParams({
+    client_id: appId, client_secret: appSecret, grant_type: "authorization_code",
+    redirect_uri: redirectUri, code,
+  });
+  const shortRes = await fetch("https://api.instagram.com/oauth/access_token", {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: shortBody,
+  });
+  const shortJson: any = await shortRes.json();
+  if (!shortRes.ok || !shortJson.access_token || !shortJson.user_id) {
+    console.error("[Instagram connect] falha na troca do código curto:", shortRes.status, JSON.stringify(shortJson));
+    throw new Error(`[1/3 troca de código] ${shortJson?.error_message ?? shortJson?.error?.message ?? "Não foi possível conectar ao Instagram. Tente novamente."}`);
+  }
+
+  const longRes = await fetch(
+    `${IG_GRAPH_API.replace("/v21.0", "")}/access_token?` + new URLSearchParams({
+      grant_type: "ig_exchange_token", client_secret: appSecret, access_token: shortJson.access_token,
+    }),
+  );
+  const longJson: any = await longRes.json();
+  if (!longRes.ok || !longJson.access_token) {
+    console.error("[Instagram connect] falha ao trocar por token longo:", longRes.status, JSON.stringify(longJson));
+    throw new Error(`[2/3 token de 60 dias] ${longJson?.error?.message ?? "Não foi possível validar o acesso ao Instagram."}`);
+  }
+
+  // The user_id from the token exchange isn't reliably the same ID the
+  // /media publishing endpoints expect — fetch the authoritative id via
+  // /me with the long-lived token instead of trusting it.
+  const meRes = await fetch(`${IG_GRAPH_API}/me?fields=id,username&access_token=${encodeURIComponent(longJson.access_token)}`);
+  const meJson: any = await meRes.json();
+  if (!meRes.ok || !meJson.id) {
+    console.error("[Instagram connect] falha ao buscar conta:", meRes.status, JSON.stringify(meJson));
+    throw new Error(`[3/3 identificar conta] ${meJson?.error?.message ?? "Não foi possível identificar a conta do Instagram."}`);
+  }
+  // expires_in vem em segundos (a Meta manda ~5184000 = 60 dias) — usa o
+  // valor real quando presente, cai em 60 dias fixo só se a resposta não
+  // trouxer o campo.
+  const expiresInSeconds = typeof longJson.expires_in === "number" ? longJson.expires_in : 60 * 24 * 60 * 60;
+  return {
+    igId: String(meJson.id),
+    igUsername: meJson.username ?? null,
+    accessToken: longJson.access_token,
+    tokenExpiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString(),
+  };
+}
+
+/** Persiste os créditos trocados e faz o upsert em
+ * client_instagram_credentials — usado só pelo fluxo admin
+ * (completeInstagramConnect); o fluxo público grava via RPC
+ * (complete_instagram_connect_request) pra funcionar sem sessão. */
 export const completeInstagramConnect = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { code: string; clientId: string }) =>
@@ -116,73 +185,166 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCanPublish(context.supabase, context.userId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
-    const appId = process.env.INSTAGRAM_APP_ID;
-    const appSecret = process.env.INSTAGRAM_APP_SECRET;
-    if (!appId || !appSecret) throw new Error("Credenciais do Instagram ausentes no servidor.");
-
-    const shortBody = new URLSearchParams({
-      client_id: appId, client_secret: appSecret, grant_type: "authorization_code",
-      redirect_uri: INSTAGRAM_REDIRECT_URI, code: data.code,
-    });
-    console.error("[Instagram connect] enviando troca de código:", JSON.stringify({
-      at: new Date().toISOString(),
-      client_id: appId,
-      client_id_length: appId.length,
-      client_secret_length: appSecret.length,
-      client_secret_last4: appSecret.slice(-4),
-      redirect_uri: INSTAGRAM_REDIRECT_URI,
-      code_prefix: data.code.slice(0, 12),
-      code_length: data.code.length,
-    }));
-    const shortRes = await fetch("https://api.instagram.com/oauth/access_token", {
-      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: shortBody,
-    });
-    const shortJson: any = await shortRes.json();
-    if (!shortRes.ok || !shortJson.access_token || !shortJson.user_id) {
-      console.error("[Instagram connect] falha na troca do código curto:", shortRes.status, JSON.stringify(shortJson));
-      throw new Error(`[1/3 troca de código] ${shortJson?.error_message ?? shortJson?.error?.message ?? "Não foi possível conectar ao Instagram. Tente novamente."}`);
-    }
-
-    const longRes = await fetch(
-      `${IG_GRAPH_API.replace("/v21.0", "")}/access_token?` + new URLSearchParams({
-        grant_type: "ig_exchange_token", client_secret: appSecret, access_token: shortJson.access_token,
-      }),
-    );
-    const longJson: any = await longRes.json();
-    if (!longRes.ok || !longJson.access_token) {
-      console.error("[Instagram connect] falha ao trocar por token longo:", longRes.status, JSON.stringify(longJson));
-      throw new Error(`[2/3 token de 60 dias] ${longJson?.error?.message ?? "Não foi possível validar o acesso ao Instagram."}`);
-    }
-
-    // The user_id from the token exchange isn't reliably the same ID the
-    // /media publishing endpoints expect — fetch the authoritative id via
-    // /me with the long-lived token instead of trusting it.
-    const meRes = await fetch(`${IG_GRAPH_API}/me?fields=id,username&access_token=${encodeURIComponent(longJson.access_token)}`);
-    const meJson: any = await meRes.json();
-    if (!meRes.ok || !meJson.id) {
-      console.error("[Instagram connect] falha ao buscar conta:", meRes.status, JSON.stringify(meJson));
-      throw new Error(`[3/3 identificar conta] ${meJson?.error?.message ?? "Não foi possível identificar a conta do Instagram."}`);
-    }
-    const igId = String(meJson.id);
-    const igUsername: string | null = meJson.username ?? null;
-    // expires_in vem em segundos (a Meta manda ~5184000 = 60 dias) — usa o
-    // valor real quando presente, cai em 60 dias fixo só se a resposta não
-    // trouxer o campo.
-    const expiresInSeconds = typeof longJson.expires_in === "number" ? longJson.expires_in : 60 * 24 * 60 * 60;
-    const tokenExpiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
+    const { igId, igUsername, accessToken, tokenExpiresAt } = await exchangeInstagramCode(data.code, INSTAGRAM_REDIRECT_URI);
 
     // token_expires_at ainda não está nos tipos gerados do Supabase.
     const { error } = await (context.supabase as any).from("client_instagram_credentials").upsert({
       client_id: data.clientId,
       instagram_business_account_id: igId,
       ig_username: igUsername,
-      access_token: longJson.access_token,
+      access_token: accessToken,
       token_expires_at: tokenExpiresAt,
       connected_by: context.userId,
       connected_at: new Date().toISOString(),
     }, { onConflict: "client_id" });
     if (error) throw new Error(error.message);
 
+    return { ok: true as const, igUsername };
+  });
+
+/** Gera um link único (7 dias de validade) que a agência manda pro
+ * cliente conectar o próprio Instagram, sem precisar da senha dele —
+ * mesmo padrão de createContractRequest (contract-requests.functions.ts). */
+export const createInstagramConnectRequest = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<{ token: string }> => {
+    await assertCanPublish(context.supabase, context.userId);
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const db = context.supabase as any;
+    const token = randomToken();
+    const { error } = await db.from("instagram_connect_requests").insert({
+      org_id: context.orgId,
+      client_id: data.clientId,
+      token,
+      created_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { token };
+  });
+
+export type InstagramConnectRequest = {
+  id: string;
+  token: string;
+  status: "aguardando" | "conectado" | "expirado" | "cancelado";
+  igUsername: string | null;
+  createdAt: string;
+  expiresAt: string;
+};
+
+export const listInstagramConnectRequests = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<InstagramConnectRequest[]> => {
+    const db = context.supabase as any;
+    const { data: rows, error } = await db
+      .from("instagram_connect_requests")
+      .select("id, token, status, ig_username, created_at, expires_at")
+      .eq("client_id", data.clientId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r: any) => ({
+      id: r.id, token: r.token, status: r.status, igUsername: r.ig_username,
+      createdAt: r.created_at, expiresAt: r.expires_at,
+    }));
+  });
+
+export const cancelInstagramConnectRequest = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCanPublish(context.supabase, context.userId);
+    const db = context.supabase as any;
+    const { error } = await db.from("instagram_connect_requests").update({ status: "cancelado" }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export type PublicInstagramConnectInfo = {
+  status: "aguardando" | "conectado" | "expirado" | "cancelado";
+  expiresAt: string;
+  clientName: string;
+  orgName: string;
+  orgLogoUrl: string | null;
+};
+
+/** GET pública, sem sessão — mesmo padrão de getPublicContractRequest:
+ * cliente anon + RPC SECURITY DEFINER, que valida o token por dentro. */
+export const getPublicInstagramConnectInfo = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string }) => z.object({ token: z.string().min(8).max(60) }).parse(d))
+  .handler(async ({ data }): Promise<PublicInstagramConnectInfo | null> => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
+    const { data: info, error } = await supabase.rpc("get_public_instagram_connect_info", { _token: data.token });
+    if (error || !info) return null;
+    const r = info as any;
+
+    let orgLogoUrl: string | null = null;
+    if (r.orgLogoPath) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: signed } = await supabaseAdmin.storage
+          .from("avatars").createSignedUrl(r.orgLogoPath as string, 60 * 60 * 24);
+        orgLogoUrl = signed?.signedUrl ?? null;
+      } catch { /* branding é só cosmético, segue sem logo se falhar */ }
+    }
+
+    return {
+      status: r.status,
+      expiresAt: r.expiresAt,
+      clientName: r.clientName,
+      orgName: r.orgName,
+      orgLogoUrl,
+    };
+  });
+
+/** POST pública, sem sessão — monta a URL de autorização da Meta com a
+ * SEGUNDA redirect_uri (cadastrada à parte pro fluxo público) e
+ * state=token, depois de confirmar que o link ainda é válido. */
+export const getPublicInstagramConnectUrl = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => z.object({ token: z.string().min(8).max(60) }).parse(d))
+  .handler(async ({ data }) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
+    const { data: info, error } = await supabase.rpc("get_public_instagram_connect_info", { _token: data.token });
+    if (error || !info) throw new Error("Link não encontrado.");
+    const r = info as any;
+    if (r.status !== "aguardando") throw new Error("Esse link já foi usado ou cancelado.");
+    if (new Date(r.expiresAt).getTime() < Date.now()) throw new Error("Esse link expirou.");
+
+    const appId = process.env.INSTAGRAM_APP_ID;
+    if (!appId) throw new Error("INSTAGRAM_APP_ID ausente no servidor.");
+    const params = new URLSearchParams({
+      client_id: appId,
+      redirect_uri: INSTAGRAM_REDIRECT_URI_CLIENT,
+      response_type: "code",
+      scope: IG_SCOPES,
+      state: data.token,
+      auth_type: "rerequest",
+    });
+    return { url: `https://www.instagram.com/oauth/authorize?${params.toString()}` };
+  });
+
+/** POST pública, sem sessão — chamada pela página de callback pública
+ * depois que a Meta redireciona de volta com o código. Troca o código
+ * (mesma lógica de completeInstagramConnect, via exchangeInstagramCode)
+ * e grava via RPC, já que não tem sessão pra escrever direto na tabela. */
+export const completePublicInstagramConnect = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; code: string }) =>
+    z.object({ token: z.string().min(8).max(60), code: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const { igId, igUsername, accessToken, tokenExpiresAt } = await exchangeInstagramCode(data.code, INSTAGRAM_REDIRECT_URI_CLIENT);
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
+    const { data: ok, error } = await supabase.rpc("complete_instagram_connect_request", {
+      _token: data.token,
+      _ig_username: igUsername,
+      _ig_business_account_id: igId,
+      _access_token: accessToken,
+      _token_expires_at: tokenExpiresAt,
+    });
+    if (error || !ok) throw new Error("Não foi possível concluir — o link pode ter expirado ou já foi usado.");
     return { ok: true as const, igUsername };
   });
 
