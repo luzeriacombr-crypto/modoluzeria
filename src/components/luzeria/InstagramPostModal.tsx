@@ -68,7 +68,15 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
   else if (mode.kind === "public" && file.thumbUrl) url = file.thumbUrl;
   else if (internalQ.data?.dataUrl) url = internalQ.data.dataUrl;
   return url ? (
-    <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
+    <img
+      src={url}
+      alt=""
+      loading="lazy"
+      draggable={false}
+      onDragStart={(e) => e.preventDefault()}
+      className="w-full h-full object-cover select-none"
+      style={{ WebkitUserDrag: "none" } as React.CSSProperties}
+    />
   ) : (
     <div className="w-full h-full bg-neutral-100 animate-pulse" />
   );
@@ -157,6 +165,9 @@ export function InstagramPostModal({
     if (total <= 1 || settling || playingVideo) return;
     const width = trackContainerRef.current?.offsetWidth || 0;
     if (!width) return;
+    // Evita o navegador iniciar o "arrastar imagem" nativo (mouse no
+    // desktop) ou seleção de texto, que atropelaria o gesto customizado.
+    e.preventDefault();
     dragInfoRef.current = { startX: e.clientX, width };
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
   }
@@ -305,6 +316,8 @@ export function InstagramPostModal({
                   transform: `translateX(${-(slide * (trackContainerRef.current?.offsetWidth || 0)) + dragPx}px)`,
                   transition: settling ? "transform 260ms ease-out" : "none",
                   touchAction: "pan-y",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
                   cursor: total > 1 ? "grab" : undefined,
                 }}
                 onPointerDown={onTrackPointerDown}
