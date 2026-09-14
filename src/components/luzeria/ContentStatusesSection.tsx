@@ -67,12 +67,34 @@ function BuiltinRow({ statusKey, override }: { statusKey: keyof typeof STATUS_ME
     );
   }
 
+  if (override?.hidden) {
+    return (
+      <div className="bg-card border border-foreground/6 rounded-md px-3 py-2.5 flex items-center justify-between gap-3 opacity-60">
+        <span className="text-sm font-semibold text-foreground line-through">{currentLabel}</span>
+        <button
+          onClick={() => api.setContentStatusHidden.mutate({ data: { key: statusKey, hidden: false } })}
+          className="text-[11px] font-semibold text-foreground/50 hover:text-[var(--lz-accent-ink)] shrink-0"
+        >
+          Restaurar
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-card border border-foreground/6 rounded-md px-3 py-2.5 flex items-center justify-between gap-3">
       <span className="text-sm font-semibold text-foreground">{currentLabel}</span>
-      <button onClick={() => setEditing(true)} className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5 shrink-0" title="Editar">
-        <Pencil size={13} />
-      </button>
+      <div className="flex items-center gap-1 shrink-0">
+        <button onClick={() => setEditing(true)} className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5" title="Editar">
+          <Pencil size={13} />
+        </button>
+        <button
+          onClick={async () => { if (await requestConfirm(`Ocultar o status "${currentLabel}"? Ele deixa de aparecer no seletor — dá pra restaurar depois.`, { danger: true })) api.setContentStatusHidden.mutate({ data: { key: statusKey, hidden: true } }); }}
+          className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5" title="Apagar"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
     </div>
   );
 }

@@ -588,6 +588,7 @@ export function DetailPanel() {
   const { data: contentStatuses = [] } = useQuery(contentStatusesQO());
   const customStatuses = useMemo(() => contentStatuses.filter((r) => r.isCustom), [contentStatuses]);
   const labelOverrides = useMemo(() => new Map(contentStatuses.map((r) => [r.key, r.label])), [contentStatuses]);
+  const hiddenStatusKeys = useMemo(() => new Set(contentStatuses.filter((r) => r.hidden).map((r) => r.key)), [contentStatuses]);
 
   const item = useMemo(() => (selectedItemId && month ? findItem(month, selectedItemId) : undefined), [month, selectedItemId]);
   const navIndex = itemNavList && selectedItemId ? itemNavList.indexOf(selectedItemId) : -1;
@@ -1041,7 +1042,7 @@ export function DetailPanel() {
                 </button>
                 {statusOpen && (
                   <div className="absolute z-50 left-0 right-0 mt-1 rounded-md bg-card border border-foreground/10 shadow-xl py-1 max-h-[60vh] overflow-y-auto">
-                    {statusOptionsFor(item.type, customStatuses)
+                    {statusOptionsFor(item.type, customStatuses, hiddenStatusKeys)
                       .filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? canApproveFinalize : true))
                       .map((s) => {
                       const m = getStatusMeta(s, labelOverrides); const I = getStatusIcon(s);

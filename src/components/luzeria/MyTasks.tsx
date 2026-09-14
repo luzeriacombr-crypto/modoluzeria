@@ -47,10 +47,11 @@ export function MyTasks() {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
   const { data: contentStatuses = [] } = useQuery(contentStatusesQO());
-  const effectiveStatusOrder = useMemo(
-    () => [...STATUS_ORDER, ...contentStatuses.filter((r) => r.isCustom).sort((a, b) => a.sortOrder - b.sortOrder).map((r) => r.key)] as Status[],
-    [contentStatuses],
-  );
+  const effectiveStatusOrder = useMemo(() => {
+    const hiddenKeys = new Set(contentStatuses.filter((r) => r.hidden).map((r) => r.key));
+    const combined = [...STATUS_ORDER, ...contentStatuses.filter((r) => r.isCustom).sort((a, b) => a.sortOrder - b.sortOrder).map((r) => r.key)];
+    return combined.filter((s) => !hiddenKeys.has(s)) as Status[];
+  }, [contentStatuses]);
   const labelOverrides = useMemo(() => new Map(contentStatuses.map((r) => [r.key, r.label])), [contentStatuses]);
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const { setCleaningDone, markMentionRead, logClientStageUpdate } = useApi();

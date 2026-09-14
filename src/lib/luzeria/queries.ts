@@ -85,7 +85,7 @@ import {
 } from "./journey-stages.functions";
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
-import { listContentStatuses, upsertContentStatus, deleteContentStatus } from "./content-statuses.functions";
+import { listContentStatuses, upsertContentStatus, deleteContentStatus, setContentStatusHidden } from "./content-statuses.functions";
 import { setProfileClientAccess } from "./client-access.functions";
 import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, setContractTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
 import {
@@ -1094,6 +1094,11 @@ export function useApi() {
       mutationFn: useServerFn(deleteContentStatus),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["content-statuses"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover status."),
+    }),
+    setContentStatusHidden: useMutation({
+      mutationFn: useServerFn(setContentStatusHidden),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["content-statuses"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao ocultar status."),
     }),
     upsertCargo: useMutation({
       mutationFn: useServerFn(upsertCargo),

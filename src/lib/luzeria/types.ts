@@ -670,10 +670,15 @@ export const STATUS_GROUPS: { label: string; statuses: BuiltinStatus[] }[] = [
 
 /** `customStatuses` (opcional) são os status extras que a agência criou —
  * entram depois dos passos builtin e antes de Travado/Pronto pra publicar/
- * Finalizado, ordenados por sortOrder. Atividades (gravação/roteiro/
- * sistema/outros) continuam com o pipeline fixo de 2 estados, sem entrar
- * customização. */
-export function statusOptionsFor(type: ContentType, customStatuses: { key: string; sortOrder: number }[] = []): Status[] {
+ * Finalizado, ordenados por sortOrder. `hiddenKeys` (opcional) remove
+ * builtin customizáveis que a agência ocultou (ver setContentStatusHidden).
+ * Atividades (gravação/roteiro/sistema/outros) continuam com o pipeline
+ * fixo de 2 estados, sem entrar customização nem ocultação. */
+export function statusOptionsFor(
+  type: ContentType,
+  customStatuses: { key: string; sortOrder: number }[] = [],
+  hiddenKeys?: Set<string>,
+): Status[] {
   // Atividades (gravação/roteiro/sistema/outros) não são publicadas — não fazem
   // sentido no funil de post/reel. Só registram se aconteceu ou não.
   if (isActivityType(type)) {
@@ -699,24 +704,24 @@ export function statusOptionsFor(type: ContentType, customStatuses: { key: strin
     "AGENDAMENTO",
     "REVISAO_AGENDAMENTO",
   ];
-  if (type === "post" || type === "story") {
-    return [
-      "PLANEJAMENTO",
-      "COPY",
-      ...POST_EXTRA_STATUS,
-      ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
-      ...customKeys,
-      ...tail,
-    ];
-  }
-  return [
-    "PLANEJAMENTO",
-    "COPY",
-    ...REEL_EXTRA_STATUS,
-    ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
-    ...customKeys,
-    ...tail,
-  ];
+  const full = type === "post" || type === "story"
+    ? [
+        "PLANEJAMENTO",
+        "COPY",
+        ...POST_EXTRA_STATUS,
+        ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
+        ...customKeys,
+        ...tail,
+      ]
+    : [
+        "PLANEJAMENTO",
+        "COPY",
+        ...REEL_EXTRA_STATUS,
+        ...base.filter((s) => s !== "PLANEJAMENTO" && s !== "COPY"),
+        ...customKeys,
+        ...tail,
+      ];
+  return hiddenKeys && hiddenKeys.size > 0 ? full.filter((s) => !hiddenKeys.has(s)) : full;
 }
 
 /* ============== CLIENT PROFILE (Ficha) ============== */

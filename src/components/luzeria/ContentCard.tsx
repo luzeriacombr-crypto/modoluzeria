@@ -48,6 +48,7 @@ export function ContentCard({
   const { data: contentStatuses = [] } = useQuery(contentStatusesQO());
   const customStatuses = useMemo(() => contentStatuses.filter((r) => r.isCustom), [contentStatuses]);
   const labelOverrides = useMemo(() => new Map(contentStatuses.map((r) => [r.key, r.label])), [contentStatuses]);
+  const hiddenStatusKeys = useMemo(() => new Set(contentStatuses.filter((r) => r.hidden).map((r) => r.key)), [contentStatuses]);
   const { openItem, flash, recentlyUpdated } = useUI();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(item.title);
@@ -202,7 +203,7 @@ export function ContentCard({
 
         <div onClick={(e) => e.stopPropagation()}>
           <StatusBadge status={item.status}
-            options={statusOptionsFor(item.type, customStatuses).filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? hasSetorPermission(me, "approve_finalize") : true))}
+            options={statusOptionsFor(item.type, customStatuses, hiddenStatusKeys).filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? hasSetorPermission(me, "approve_finalize") : true))}
             isAvulso={isAvulso}
             labelOverrides={labelOverrides}
             onChange={(s) => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }} />
@@ -272,6 +273,7 @@ export function ContentListRow({
   const { data: contentStatuses = [] } = useQuery(contentStatusesQO());
   const customStatuses = useMemo(() => contentStatuses.filter((r) => r.isCustom), [contentStatuses]);
   const labelOverrides = useMemo(() => new Map(contentStatuses.map((r) => [r.key, r.label])), [contentStatuses]);
+  const hiddenStatusKeys = useMemo(() => new Set(contentStatuses.filter((r) => r.hidden).map((r) => r.key)), [contentStatuses]);
   const { openItem, flash, recentlyUpdated } = useUI();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(item.title);
@@ -362,7 +364,7 @@ export function ContentListRow({
 
       <div onClick={(e) => e.stopPropagation()} className="shrink-0">
         <StatusBadge status={item.status}
-          options={statusOptionsFor(item.type, customStatuses).filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? hasSetorPermission(me, "approve_finalize") : true))}
+          options={statusOptionsFor(item.type, customStatuses, hiddenStatusKeys).filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? hasSetorPermission(me, "approve_finalize") : true))}
           isAvulso={isAvulso}
           labelOverrides={labelOverrides}
           onChange={(s) => { setItemStatus.mutate({ data: { id: item.id, status: s } }); flash(item.id); }} />
