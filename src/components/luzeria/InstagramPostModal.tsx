@@ -132,6 +132,51 @@ export function InstagramPostModal({
   const total = slides.length;
   const current = slides[slide];
 
+  // Arrastar pra trocar de slide (igual ao Instagram) — a trilha inteira
+  // (todas as slides lado a lado) é transladada em px; durante o arraste
+  // o transform acompanha o dedo 1:1 (sem transição), e ao soltar anima
+  // até a posição de descanso mais próxima (slide atual, anterior ou
+  // seguinte, dependendo de quanto arrastou), só então troca o `slide`.
+  const trackContainerRef = useRef<HTMLDivElement>(null);
+  const dragInfoRef = useRef<{ startX: number; width: number } | null>(null);
+  const [dragPx, setDragPx] = useState(0);
+  const [settling, setSettling] = useState(false);
+
+  function settleTo(target: number, width: number) {
+    setSettling(true);
+    setDragPx((slide - target) * width);
+    window.setTimeout(() => {
+      setSlide(target);
+      setDragPx(0);
+      setPlayingVideo(false);
+      setSettling(false);
+    }, 260);
+  }
+
+  function onTrackPointerDown(e: React.PointerEvent) {
+    if (total <= 1 || settling || playingVideo) return;
+    const width = trackContainerRef.current?.offsetWidth || 0;
+    if (!width) return;
+    dragInfoRef.current = { startX: e.clientX, width };
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+  }
+  function onTrackPointerMove(e: React.PointerEvent) {
+    if (!dragInfoRef.current) return;
+    let delta = e.clientX - dragInfoRef.current.startX;
+    // resistência elástica nas pontas (primeiro/último slide)
+    if ((slide === 0 && delta > 0) || (slide === total - 1 && delta < 0)) delta *= 0.35;
+    setDragPx(delta);
+  }
+  function onTrackPointerUp() {
+    const info = dragInfoRef.current;
+    if (!info) return;
+    dragInfoRef.current = null;
+    const threshold = Math.min(90, info.width * 0.2);
+    if (dragPx <= -threshold && slide < total - 1) settleTo(slide + 1, info.width);
+    else if (dragPx >= threshold && slide > 0) settleTo(slide - 1, info.width);
+    else settleTo(slide, info.width);
+  }
+
   // Caption expand
   const [expanded, setExpanded] = useState(false);
 
@@ -247,18 +292,32 @@ export function InstagramPostModal({
 
         {/* LEFT: media (4:5) */}
         <div className="relative bg-black md:flex-[0_0_460px] w-full md:w-[460px]">
-          <div className="relative w-full" style={{ aspectRatio: "4 / 5" }}>
-            {/* Video player */}
+          <div ref={trackContainerRef} className="relative w-full overflow-hidden" style={{ aspectRatio: "4 / 5" }}>
+            {/* Video player — só reels (slide único), não entra na trilha arrastável */}
             {playingVideo && current?.driveFileId ? (
               <div className="absolute inset-0">
                 <VideoPlayer fileId={current.driveFileId} />
               </div>
-            ) : current ? (
-              <FileThumb
-                file={current}
-                mode={mode}
-                fallback={isReel ? item.coverUrl : null}
-              />
+            ) : total > 0 ? (
+              <div
+                className="absolute inset-0 flex h-full"
+                style={{
+                  transform: `translateX(${-(slide * (trackContainerRef.current?.offsetWidth || 0)) + dragPx}px)`,
+                  transition: settling ? "transform 260ms ease-out" : "none",
+                  touchAction: "pan-y",
+                  cursor: total > 1 ? "grab" : undefined,
+                }}
+                onPointerDown={onTrackPointerDown}
+                onPointerMove={onTrackPointerMove}
+                onPointerUp={onTrackPointerUp}
+                onPointerCancel={onTrackPointerUp}
+              >
+                {slides.map((f, i) => (
+                  <div key={f.id} className="h-full shrink-0" style={{ width: trackContainerRef.current?.offsetWidth || "100%" }}>
+                    <FileThumb file={f} mode={mode} fallback={isReel ? item.coverUrl : null} />
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="w-full h-full grid place-items-center text-white/60 text-sm">
                 Sem mídia anexada
