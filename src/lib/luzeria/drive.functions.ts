@@ -1041,6 +1041,30 @@ export const getDriveConfig = createServerFn({ method: "GET" })
     };
   }));
 
+/** Testa a conexão de Drive da org de verdade — chama o mesmo
+ * getAccessToken() que qualquer operação real de Drive usa, então não é
+ * palpite. `connected: false` cobre quem nunca conectou (não é escopo
+ * desse aviso, é do checklist de onboarding). Usado pelo banner de
+ * "reconecte o Drive" no topo do app — só admin (master/setor) importa,
+ * o resto da equipe não decide reconectar nada. */
+export const checkDriveConnectionHealth = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) return { ok: true, connected: false };
+
+    const { data: cred } = await context.supabase
+      .from("org_google_credentials").select("org_id").eq("org_id", context.orgId).maybeSingle();
+    if (!cred) return { ok: true, connected: false };
+
+    try {
+      await withDriveOrg(context.orgId, () => getAccessToken());
+      return { ok: true, connected: true };
+    } catch {
+      return { ok: false, connected: true };
+    }
+  });
+
 export const setDriveRootFolder = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { folderIdOrUrl: string }) =>

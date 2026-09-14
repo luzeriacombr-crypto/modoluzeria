@@ -116,6 +116,18 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
 
   return (
     <>
+        {/* Instagram (master, ou setor com a permissão "Publicar no Instagram") — no topo, é o que mais gente vem checar primeiro */}
+        {canManageInstagram && (
+          <Section label="Instagram">
+            <InstagramSection clientId={client.id} />
+          </Section>
+        )}
+
+        {/* Deliveries folder (Drive) — no topo junto com o Instagram */}
+        <Section label="Pasta de entregas (Drive)">
+          <DeliveriesFolderBlock clientId={client.id} isAdmin={isAdmin} />
+        </Section>
+
         {/* Metrics */}
         <Section label="Métricas">
           <div className="grid grid-cols-2 gap-2">
@@ -173,11 +185,6 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         {/* Configuração do cliente (campos do antigo Perfil) */}
         <Section label="Configuração do cliente">
           <ClientConfigBlock client={client} profiles={profiles} canEdit={isAdmin} isMaster={isMaster} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
-        </Section>
-
-        {/* Deliveries folder (Drive) */}
-        <Section label="Pasta de entregas (Drive)">
-          <DeliveriesFolderBlock clientId={client.id} isAdmin={isAdmin} />
         </Section>
 
         {/* Contract (arquivo pronto, anexado manualmente) */}
@@ -331,13 +338,6 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             <p className="text-[11px] text-foreground/40 mt-1.5">
               Quando ativado, Stories atribuídos deste cliente aparecem na lista de tarefas do responsável — como Posts e Reels.
             </p>
-          </Section>
-        )}
-
-        {/* Instagram (master, ou setor com a permissão "Publicar no Instagram") */}
-        {canManageInstagram && (
-          <Section label="Instagram">
-            <InstagramSection clientId={client.id} />
           </Section>
         )}
 

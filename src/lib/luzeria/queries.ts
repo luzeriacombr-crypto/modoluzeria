@@ -47,6 +47,7 @@ import {
   listItemFiles, attachDriveFile, startDriveUploadSession, uploadDriveChunk, finalizeDriveUpload, detachItemFile, deleteItemFileAndDrive,
   getDriveThumbnail, getDriveFileBytes, reorderItemFiles, getGridThumbnails,
   getClientDeliveriesFolder, setClientDeliveriesFolder, clearClientDeliveriesFolder,
+  checkDriveConnectionHealth,
 } from "./drive.functions";
 import {
   getMyNotificationPreferences, setMyNotificationPreferences,
@@ -116,6 +117,9 @@ export const instagramConnectionSummaryQO = () =>
 
 export const hasUsedInstagramPublishQO = () =>
   queryOptions({ queryKey: ["has-used-instagram-publish"], queryFn: () => hasUsedInstagramPublish(), staleTime: 60_000 });
+
+export const driveConnectionHealthQO = () =>
+  queryOptions({ queryKey: ["drive-connection-health"], queryFn: () => checkDriveConnectionHealth(), staleTime: 10 * 60_000 });
 
 /* ===== BLOG ===== */
 
