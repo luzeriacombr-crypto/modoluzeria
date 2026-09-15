@@ -36,6 +36,13 @@ export function DemoRequestsPanel() {
         <div className="bg-card border border-foreground/7 rounded-xl overflow-hidden divide-y divide-white/[0.05]">
           {requests.map((r: any) => {
             const digits = (r.phone ?? "").replace(/\D/g, "");
+            const demoMessage = `Oi ${r.name}! Aqui é o Junior, do Modo Criador.
+
+Vi que você pediu uma demonstração, muito obrigado pelo interesse!
+
+Queria entender rapidinho como é a rotina da sua agência hoje (quantos clientes, como organizam o conteúdo) pra te mostrar o Modo Criador já aplicado na sua realidade, não uma demo genérica.
+
+Topa marcarmos uns 15-20 minutos essa semana? Me fala os melhores horários que eu encaixo.`;
             return (
               <div key={r.id} className="flex items-center gap-3 px-4 py-3 flex-wrap">
                 <div className="flex-1 min-w-[160px]">
@@ -47,7 +54,7 @@ export function DemoRequestsPanel() {
                 </a>
                 {digits && (
                   <a
-                    href={`https://wa.me/55${digits}`} target="_blank" rel="noopener noreferrer"
+                    href={`https://wa.me/55${digits}?text=${encodeURIComponent(demoMessage)}`} target="_blank" rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full text-black shrink-0"
                     style={{ backgroundColor: "#25D366" }}
                   >
