@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus } from "lucide-react";
+import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper } from "lucide-react";
 import { orgsBillingQO, plansQO } from "@/lib/luzeria/queries";
 import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial } from "@/lib/luzeria/api.functions";
 import { approveReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
@@ -346,7 +346,19 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
     onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar."),
   });
 
-  const digits = (org.whatsapp ?? "").replace(/\D/g, "");
+  // wa.me exige o código do país — sem o "55" na frente, o link abre
+  // quebrado (WhatsApp tenta interpretar como outro país e falha).
+  const rawDigits = (org.whatsapp ?? "").replace(/\D/g, "");
+  const digits = rawDigits && rawDigits.length <= 11 ? `55${rawDigits}` : rawDigits;
+  const welcomeMessage = `${org.ownerName || "Olá"}, bem-vindo ao *Modo Criador*!
+
+Aqui é o Junior Reis, idealizador do sistema.
+
+Criamos ele pra resolver na prática o que toda agência sofre: aprovação lenta, retrabalho sem explicação, cliente perdido no WhatsApp. Foi o que a gente mesmo precisava resolver na Luzeria.
+
+Você tem 30 dias pra testar de verdade: monte seu fluxo, coloque o time pra dentro, mande um link de aprovação pro cliente e sinta como fica mais leve todo o processo!
+
+Qualquer dúvida ou se quiser ajuda na implementação, fico à disposição, ok?`;
 
   const approveResellerMutation = useMutation({
     mutationFn: useServerFn(approveReseller),
@@ -454,15 +466,26 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
         </div>
 
         {!editing && digits && (
-          <a
-            href={`https://wa.me/${digits}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-5 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-black transition"
-            style={{ backgroundColor: "#25D366" }}
-          >
-            <MessageCircle size={15} /> Abrir WhatsApp
-          </a>
+          <div className="mt-5 flex gap-2">
+            <a
+              href={`https://wa.me/${digits}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-black transition"
+              style={{ backgroundColor: "#25D366" }}
+            >
+              <MessageCircle size={15} /> Enviar mensagem
+            </a>
+            <a
+              href={`https://wa.me/${digits}?text=${encodeURIComponent(welcomeMessage)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-black transition border-2"
+              style={{ backgroundColor: "transparent", borderColor: "#25D366", color: "#25D366" }}
+            >
+              <PartyPopper size={15} /> Enviar boas-vindas
+            </a>
+          </div>
         )}
       </div>
     </div>

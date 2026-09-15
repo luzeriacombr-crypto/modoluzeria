@@ -5,6 +5,39 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { MODO_CRIADOR_OWNER_ID } from "./api.functions";
+
+const PLATFORM_SUPPORT_EMAIL = "junioreisfoto2@gmail.com";
+
+/** Avisa o Junior (sino + e-mail) quando uma agência nova se cadastra
+ * sozinha pelo /assinar — mesmo padrão de requestDemo em
+ * demo-request.functions.ts. Best-effort: nunca derruba o signup, que já
+ * terminou com sucesso quando isso roda. */
+async function notifyNewAgencySignup(supabaseAdmin: any, params: { agencyName: string; ownerName: string; ownerEmail: string }) {
+  try {
+    const { sendEmail } = await import("./resend.server");
+    await sendEmail({
+      to: PLATFORM_SUPPORT_EMAIL,
+      subject: `Nova agência no Modo Criador — ${params.agencyName}`,
+      html: `
+        <p><strong>Agência:</strong> ${params.agencyName}</p>
+        <p><strong>Responsável:</strong> ${params.ownerName}</p>
+        <p><strong>E-mail:</strong> ${params.ownerEmail}</p>
+      `,
+    });
+  } catch (e) {
+    console.error("Falha ao enviar e-mail de nova agência:", e);
+  }
+  try {
+    await supabaseAdmin.from("notifications").insert({
+      user_id: MODO_CRIADOR_OWNER_ID,
+      type: "new_agency_signup",
+      message: `Nova agência! ${params.agencyName} acabou de se cadastrar.`,
+    });
+  } catch (e) {
+    console.error("Falha ao criar notificação de nova agência:", e);
+  }
+}
 
 export const getPublicPlans = createServerFn({ method: "GET" })
   .handler(async () => {
@@ -196,6 +229,8 @@ export const publicSignup = createServerFn({ method: "POST" })
         })
         .eq("id", org.id);
 
+      await notifyNewAgencySignup(supabaseAdmin, { agencyName: data.agencyName.trim(), ownerName: data.name.trim(), ownerEmail: data.email });
+
       return { invoiceUrl };
     } catch (e) {
       // Best-effort cleanup so a failed signup doesn't leave an orphaned org behind.
@@ -369,6 +404,8 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
         .update({ role: "master" })
         .eq("user_id", context.userId);
       if (roleErr) throw new Error(roleErr.message);
+
+      await notifyNewAgencySignup(supabaseAdmin, { agencyName: data.agencyName.trim(), ownerName: data.name.trim(), ownerEmail: email });
 
       return { invoiceUrl };
     } catch (e) {
