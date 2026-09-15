@@ -78,6 +78,7 @@ import {
 import {
   getSalesPageBlocks, listSalesPageBlocksAdmin, createSalesPageBlock, updateSalesPageBlock,
   deleteSalesPageBlock, reorderSalesPageBlocks, publishSalesPageBlocks, discardSalesPageDraft,
+  getSiteTrackingSettings, updateSiteTrackingSettings,
 } from "./sales-page.functions";
 import {
   listJourneyStages, upsertJourneyStage, deleteJourneyStage,
@@ -156,6 +157,7 @@ export const calendarItemsQO = (from: string, to: string) =>
 export const platformUpdatesQO = () => queryOptions({ queryKey: ["platform-updates"], queryFn: () => listPlatformUpdates() });
 export const salesPageBlocksQO = () => queryOptions({ queryKey: ["sales-page-blocks"], queryFn: () => getSalesPageBlocks() });
 export const salesPageBlocksAdminQO = () => queryOptions({ queryKey: ["sales-page-blocks-admin"], queryFn: () => listSalesPageBlocksAdmin() });
+export const siteTrackingSettingsQO = () => queryOptions({ queryKey: ["site-tracking-settings"], queryFn: () => getSiteTrackingSettings(), staleTime: 10 * 60_000 });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
 export const memberPayQO = () => queryOptions({ queryKey: ["member-pay"], queryFn: () => listMemberPay() });
 export const clientsQO = () => queryOptions({ queryKey: ["clients"], queryFn: () => listClients() });
@@ -1352,6 +1354,10 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["sales-page-blocks"] });
         qc.invalidateQueries({ queryKey: ["sales-page-blocks-admin"] });
       },
+    }),
+    updateSiteTrackingSettings: useMutation({
+      mutationFn: useServerFn(updateSiteTrackingSettings),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["site-tracking-settings"] }),
     }),
     deleteSalesPageBlock: useMutation({
       mutationFn: useServerFn(deleteSalesPageBlock),

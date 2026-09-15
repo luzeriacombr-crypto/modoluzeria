@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff, Loader2, X,
-  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil, Maximize2, Minimize2, Undo2, ImagePlus, GripVertical,
+  Monitor, Smartphone, Palette, FlipHorizontal, ExternalLink, Rocket, Layers, Pencil, Maximize2, Minimize2, Undo2, ImagePlus, GripVertical, Radar,
 } from "lucide-react";
-import { salesPageBlocksAdminQO, useApi } from "@/lib/luzeria/queries";
+import { salesPageBlocksAdminQO, siteTrackingSettingsQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { BACKGROUND_SWATCHES, HeroSection, renderBlockNode, SalesPageBody, BG_BLUE, useDragReorder } from "./salesPageBlocks";
 import { PreviewFrame } from "./PreviewFrame";
@@ -50,6 +50,19 @@ function headingOf(content: any): string {
 export function SalesPageEditorTab() {
   const { data: blocks = [], isLoading } = useQuery(salesPageBlocksAdminQO());
   const api = useApi();
+  const { data: tracking } = useQuery(siteTrackingSettingsQO());
+  const [pixelDraft, setPixelDraft] = useState<string | null>(null);
+  const pixelValue = pixelDraft ?? tracking?.metaPixelId ?? "";
+  const pixelDirty = pixelDraft !== null && pixelDraft !== (tracking?.metaPixelId ?? "");
+  function savePixel() {
+    api.updateSiteTrackingSettings.mutate(
+      { data: { metaPixelId: pixelValue.trim() || null } },
+      {
+        onSuccess: () => { toast.success("Pixel salvo."); setPixelDraft(null); },
+        onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar o pixel."),
+      },
+    );
+  }
   const [adding, setAdding] = useState(false);
   const [previewWidth, setPreviewWidth] = useState<"desktop" | "mobile">("desktop");
   const [previewMode, setPreviewMode] = useState(false);
@@ -209,6 +222,33 @@ export function SalesPageEditorTab() {
 
   return (
     <div className={fullscreen ? "fixed inset-0 z-[400] bg-background overflow-y-auto p-4 md:p-6" : "max-w-[1200px]"}>
+      {!fullscreen && !previewMode && (
+        <div className="rounded-xl border border-foreground/10 p-4 mb-4">
+          <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">
+            <Radar size={13} /> Rastreamento
+          </div>
+          <label className="block text-xs text-foreground/60 mb-1">Meta Pixel ID (Facebook/Instagram Ads)</label>
+          <div className="flex items-center gap-2 max-w-md">
+            <input
+              value={pixelValue}
+              onChange={(e) => setPixelDraft(e.target.value)}
+              placeholder="Ex.: 3556074894637223"
+              className="flex-1 bg-card border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+            />
+            <button
+              onClick={savePixel}
+              disabled={!pixelDirty || api.updateSiteTrackingSettings.isPending}
+              className="text-xs font-bold px-3 py-2 rounded-md transition-opacity hover:opacity-90 disabled:opacity-40 shrink-0"
+              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+            >
+              {api.updateSiteTrackingSettings.isPending ? "Salvando…" : "Salvar"}
+            </button>
+          </div>
+          <p className="text-[11px] text-foreground/40 mt-1.5 max-w-md">
+            Carrega só nas páginas públicas do site de vendas (nunca dentro do app logado). Dispara PageView ao carregar e um evento StartTrial quando alguém termina o cadastro.
+          </p>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <p className="text-sm text-foreground/50 max-w-md">
           {previewMode

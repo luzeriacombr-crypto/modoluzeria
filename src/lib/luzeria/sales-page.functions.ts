@@ -312,3 +312,42 @@ export const reorderSalesPageBlocks = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+/* =========================================================
+ * TRACKING (Meta Pixel etc.) — configurável em Configurações > Site,
+ * sem precisar de deploy a cada troca de pixel.
+ * ======================================================= */
+
+export type SiteTrackingSettings = { metaPixelId: string | null };
+
+/** Público — o root do site precisa disso pra injetar o pixel mesmo pra
+ * visitante deslogado (mesmo padrão anon-client de getSalesPageBlocks). */
+export const getSiteTrackingSettings = createServerFn({ method: "GET" })
+  .handler(async (): Promise<SiteTrackingSettings> => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
+    // "as any" até a migração de site_tracking_settings rodar e os tipos
+    // do Supabase serem regenerados (mesmo padrão já usado no projeto pra
+    // colunas/tabelas recém-criadas).
+    const { data, error } = await (supabase as any)
+      .from("site_tracking_settings").select("key, value").eq("key", "meta_pixel_id").maybeSingle();
+    if (error) throw new Error(error.message);
+    return { metaPixelId: (data?.value as string | null) ?? null };
+  });
+
+export const updateSiteTrackingSettings = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { metaPixelId: string | null }) =>
+    z.object({ metaPixelId: z.string().trim().max(40).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertLuzeriaMaster(context);
+    const { error } = await (context.supabase as any).from("site_tracking_settings")
+      .upsert({
+        key: "meta_pixel_id",
+        value: data.metaPixelId || null,
+        updated_by: context.userId,
+        updated_at: new Date().toISOString(),
+      });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

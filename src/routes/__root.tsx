@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { setOneSignalUserId } from "@/lib/luzeria/push-notifications";
+import { siteTrackingSettingsQO } from "@/lib/luzeria/queries";
 import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
@@ -131,10 +132,6 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-/** Pixel ID do Meta Ads da Luzeria, pedido pelo gestor de tráfego pra
- * rastrear leads/assinaturas vindas dos anúncios. */
-const META_PIXEL_ID = "3556074894637223";
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   // Só no site de vendas público — nunca dentro do app logado, pra não
@@ -146,22 +143,30 @@ function RootComponent() {
 
   useEffect(() => {
     if (isAuthenticatedRoute) return;
-    if ((window as any).fbq) { (window as any).fbq("track", "PageView"); return; }
-    (function (f: any, b: Document, e: string, v: string) {
-      if (f.fbq) return;
-      const n: any = (f.fbq = function (...args: any[]) {
-        n.callMethod ? n.callMethod.apply(n, args) : n.queue.push(args);
-      });
-      if (!f._fbq) f._fbq = n;
-      n.push = n; n.loaded = true; n.version = "2.0"; n.queue = [];
-      const t = b.createElement(e) as HTMLScriptElement;
-      t.async = true; t.src = v;
-      const s = b.getElementsByTagName(e)[0];
-      s.parentNode?.insertBefore(t, s);
-    })(window, document, "script", "https://connect.facebook.net/en_US/fbevents.js");
-    (window as any).fbq("init", META_PIXEL_ID);
-    (window as any).fbq("track", "PageView");
-  }, [isAuthenticatedRoute]);
+    let cancelled = false;
+    // Pixel ID vem de Configurações > Site (site_tracking_settings) — editável
+    // pelo Junior sem precisar de deploy a cada troca de conta de anúncio.
+    queryClient.fetchQuery(siteTrackingSettingsQO()).then((settings) => {
+      if (cancelled || !settings.metaPixelId) return;
+      const pixelId = settings.metaPixelId;
+      if ((window as any).fbq) { (window as any).fbq("track", "PageView"); return; }
+      (function (f: any, b: Document, e: string, v: string) {
+        if (f.fbq) return;
+        const n: any = (f.fbq = function (...args: any[]) {
+          n.callMethod ? n.callMethod.apply(n, args) : n.queue.push(args);
+        });
+        if (!f._fbq) f._fbq = n;
+        n.push = n; n.loaded = true; n.version = "2.0"; n.queue = [];
+        const t = b.createElement(e) as HTMLScriptElement;
+        t.async = true; t.src = v;
+        const s = b.getElementsByTagName(e)[0];
+        s.parentNode?.insertBefore(t, s);
+      })(window, document, "script", "https://connect.facebook.net/en_US/fbevents.js");
+      (window as any).fbq("init", pixelId);
+      (window as any).fbq("track", "PageView");
+    });
+    return () => { cancelled = true; };
+  }, [isAuthenticatedRoute, queryClient]);
 
   useEffect(() => {
     // Inject OneSignal SDK and init client-side only
