@@ -352,9 +352,9 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
   const digits = rawDigits && rawDigits.length <= 11 ? `55${rawDigits}` : rawDigits;
   const welcomeMessage = `${org.ownerName ? `Oi ${org.ownerName}!` : "Oi, tudo bem?"} Aqui é o Junior, fundador do Modo Criador.
 
-Vi que você acabou de criar sua conta e quis te mandar essa mensagem pessoalmente.
+Vi que você acabou de criar sua conta no Modo Criador e quis te mandar essa mensagem pessoalmente.
 
-O Modo Criador nasceu de uma dor bem real: aqui na Luzeria (minha agência) a gente vivia perdendo post em pasta de Drive, cliente enrolando pra aprovar pelo WhatsApp, ninguém sabendo o que já tava pronto. Construí a ferramenta pra resolver isso pra gente mesmo — hoje uso ela todo dia com meu time.
+O Modo Criador nasceu de uma dor bem real: aqui na Luzeria (minha agência) a gente vivia perdendo post em pasta de Drive, cliente enrolando pra aprovar pelo WhatsApp, ninguém sabendo o que já tava pronto. Construí a ferramenta pra resolver isso pra gente mesmo, hoje uso ela todo dia com meu time.
 
 Você tem 30 dias de teste. Minha sugestão: monta seu fluxo, chama seu time pra dentro, e manda um link de aprovação pro seu primeiro cliente. É aí que a ficha cai de como fica mais leve o dia a dia.
 

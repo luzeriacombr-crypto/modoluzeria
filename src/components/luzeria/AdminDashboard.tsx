@@ -8,7 +8,7 @@ import {
 import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoalQO, useMe, reportExtrasQO, orgCostSettingsQO, profilesQO } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { formatMonth } from "@/lib/luzeria/utils";
+import { formatMonth, shortMonth } from "@/lib/luzeria/utils";
 import { useCountUp, useGrowIn } from "@/lib/luzeria/animation-hooks";
 import { Avatar } from "./Avatar";
 import { SetupChecklist } from "./SetupChecklist";
@@ -33,6 +33,21 @@ function monthRange(monthKey: string) {
   const from = new Date(Date.UTC(y, m - 1, 1)).toISOString();
   const to = new Date(Date.UTC(y, m, 1)).toISOString();
   return { from, to };
+}
+
+/** Mesma lógica de periodRange() em api.functions.ts (backend), só que pra
+ * exibir a data de verdade ao lado do rótulo vago ("Este mês", "Últimos 3
+ * meses"...) — sem isso ninguém confere se o período bate com o que
+ * esperava (pedido do Junior: "de qual período é essa contagem?"). */
+function periodRangeLabel(period: Period, monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const endLabel = `${lastDay}/${shortMonth(monthKey)}`;
+  if (period === "month") return `1 a ${endLabel}`;
+  const monthsBack = period === "3m" ? 2 : period === "6m" ? 5 : m - 1; // year: desde janeiro
+  const startDate = new Date(Date.UTC(y, m - 1 - monthsBack, 1));
+  const startKey = `${startDate.getUTCFullYear()}-${String(startDate.getUTCMonth() + 1).padStart(2, "0")}`;
+  return `1/${shortMonth(startKey)} a ${endLabel}`;
 }
 
 function pctColor(p: number) {
@@ -247,7 +262,7 @@ export function AdminDashboard() {
         <div className="flex items-center justify-start md:justify-between flex-wrap gap-3 mb-5 relative">
           <h2 className="text-foreground font-semibold inline-flex items-center gap-2">
             <Trophy size={16} className="text-[var(--lz-accent-ink)]" />
-            Top Membros <span className="text-foreground/40 font-normal">— {PERIOD_LABEL[period]}</span>
+            Top Membros <span className="text-foreground/40 font-normal">— {PERIOD_LABEL[period]} ({periodRangeLabel(period, selectedMonthKey)})</span>
           </h2>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-1 bg-background rounded-md p-1 text-xs">
@@ -487,6 +502,8 @@ function MemberDetailPanel({
     post: list.filter((t) => t.type === "post").length,
     reel: list.filter((t) => t.type === "reel").length,
     outros: list.filter((t) => t.type === "outros").length,
+    roteiro: list.filter((t) => t.type === "roteiro").length,
+    sistema: list.filter((t) => t.type === "sistema").length,
     // Vídeos gravados, não sessões — mesmo peso usado no total do ranking.
     gravacaoVideos: list
       .filter((t) => t.type === "gravacao")
@@ -547,7 +564,7 @@ function MemberDetailPanel({
             </button>
           </div>
           <p className="text-[12px] text-foreground/60 mt-3">
-            <span className="text-foreground font-semibold">{list.length}</span> demanda{list.length === 1 ? "" : "s"} finalizada{list.length === 1 ? "" : "s"} em <span className="text-foreground/80">{formatMonth(monthKey)}</span>
+            <span className="text-foreground font-semibold">{list.length}</span> demanda{list.length === 1 ? "" : "s"} finalizada{list.length === 1 ? "" : "s"} — <span className="text-foreground/80">{periodRangeLabel(period, monthKey)}</span>
           </p>
           {estimatedTimeLabel && (
             <p className="text-[12px] text-foreground/60 mt-1 flex items-center gap-1">
@@ -631,6 +648,16 @@ function MemberDetailPanel({
             <span className="text-foreground font-bold">{counts.post}</span> posts ·{" "}
             <span className="text-foreground font-bold">{counts.reel}</span> reels ·{" "}
             <span className="text-foreground font-bold">{counts.outros}</span> outros
+            {counts.roteiro > 0 && (
+              <>
+                {" "}· <span className="text-foreground font-bold">{counts.roteiro}</span> roteiro{counts.roteiro === 1 ? "" : "s"}
+              </>
+            )}
+            {counts.sistema > 0 && (
+              <>
+                {" "}· <span className="text-foreground font-bold">{counts.sistema}</span> sistema{counts.sistema === 1 ? "" : "s"}
+              </>
+            )}
             {counts.gravacaoVideos > 0 && (
               <>
                 {" "}· <span className="text-foreground font-bold">{counts.gravacaoVideos}</span> vídeo{counts.gravacaoVideos === 1 ? "" : "s"} gravado{counts.gravacaoVideos === 1 ? "" : "s"}
