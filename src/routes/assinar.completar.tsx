@@ -46,6 +46,7 @@ function CompleteGoogleSignupPage() {
         const r = await complete({ data: payload });
         sessionStorage.removeItem(PENDING_KEY);
         setInvoiceUrl(r.invoiceUrl);
+        (window as any).fbq?.("track", "StartTrial", { value: 0.00, currency: "BRL" });
         if (r.invoiceUrl) window.open(r.invoiceUrl, "_blank");
         setState("done");
       } catch (err: any) {

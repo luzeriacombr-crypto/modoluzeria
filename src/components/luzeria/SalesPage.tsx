@@ -78,6 +78,7 @@ export function SalesPage() {
         },
       });
       setInvoiceUrl(r.invoiceUrl);
+      (window as any).fbq?.("track", "StartTrial", { value: 0.00, currency: "BRL" });
       if (r.invoiceUrl) window.open(r.invoiceUrl, "_blank");
     } catch (err: any) {
       setError(err?.message ?? "Não foi possível concluir seu cadastro. Tente novamente.");
