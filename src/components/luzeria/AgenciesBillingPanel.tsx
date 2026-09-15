@@ -350,7 +350,7 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
   // quebrado (WhatsApp tenta interpretar como outro país e falha).
   const rawDigits = (org.whatsapp ?? "").replace(/\D/g, "");
   const digits = rawDigits && rawDigits.length <= 11 ? `55${rawDigits}` : rawDigits;
-  const welcomeMessage = `${org.ownerName || "Olá"}, bem-vindo ao *Modo Criador*!
+  const welcomeMessage = `${org.ownerName || "Olá"}, quero te dar as boas-vindas ao *Modo Criador*!
 
 Aqui é o Junior Reis, idealizador do sistema.
 
