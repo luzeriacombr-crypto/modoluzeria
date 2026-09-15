@@ -36,6 +36,7 @@ export function ProfilePage() {
 
   if (!me) return null;
   const meUser = me;
+  const isDemoReadOnly = !!me.demoReadOnly && me.role !== "master";
 
   async function onPickFile(file: File) {
     setUploading(true);
@@ -89,40 +90,45 @@ export function ProfilePage() {
           uploading={uploading}
           onPickFile={onPickFile}
           onRemovePhoto={onRemovePhoto}
+          readOnly={isDemoReadOnly}
         />
       </div>
 
-      <div className="mt-8 flex items-center justify-end gap-3">
-        <button
-          onClick={save}
-          disabled={!dirty || updateMyProfile.isPending || uploading}
-          className="text-sm font-bold px-6 py-2.5 rounded-md transition-opacity hover:opacity-90 disabled:opacity-40"
-          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-        >
-          {updateMyProfile.isPending ? "Salvando…" : "Salvar alterações"}
-        </button>
-      </div>
+      {!isDemoReadOnly && (
+        <div className="mt-8 flex items-center justify-end gap-3">
+          <button
+            onClick={save}
+            disabled={!dirty || updateMyProfile.isPending || uploading}
+            className="text-sm font-bold px-6 py-2.5 rounded-md transition-opacity hover:opacity-90 disabled:opacity-40"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+          >
+            {updateMyProfile.isPending ? "Salvando…" : "Salvar alterações"}
+          </button>
+        </div>
+      )}
 
       <p className="text-[11px] text-foreground/30 mt-4 text-center md:text-right">
-        A foto é só visual. Para alterar nome, email ou senha, use a seção abaixo.
+        {isDemoReadOnly ? "Conta de demonstração — perfil somente leitura." : "A foto é só visual. Para alterar nome, email ou senha, use a seção abaixo."}
       </p>
 
-      <AccountSection
-        initialName={me.name}
-        initialEmail={me.email}
-        loading={updateMyAccount.isPending}
-        onSave={(payload) =>
-          updateMyAccount.mutate(
-            { data: payload },
-            {
-              onSuccess: () => toast.success("Dados da conta atualizados."),
-              onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar"),
-            },
-          )
-        }
-      />
+      {!isDemoReadOnly && (
+        <AccountSection
+          initialName={me.name}
+          initialEmail={me.email}
+          loading={updateMyAccount.isPending}
+          onSave={(payload) =>
+            updateMyAccount.mutate(
+              { data: payload },
+              {
+                onSuccess: () => toast.success("Dados da conta atualizados."),
+                onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar"),
+              },
+            )
+          }
+        />
+      )}
 
-      <TwoFactorSection />
+      {!isDemoReadOnly && <TwoFactorSection />}
 
       <div className="mt-6 bg-card rounded-lg p-6 md:p-8">
         <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-5">

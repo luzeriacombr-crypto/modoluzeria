@@ -38,6 +38,7 @@ export function AvatarEditor({
   onPickFile,
   onRemovePhoto,
   size = 128,
+  readOnly = false,
 }: {
   me: Profile;
   draftColor: string;
@@ -46,6 +47,7 @@ export function AvatarEditor({
   onPickFile: (file: File) => void;
   onRemovePhoto: () => void;
   size?: number;
+  readOnly?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [hovering, setHovering] = useState(false);
@@ -86,19 +88,21 @@ export function AvatarEditor({
         }}
       >
         <Avatar profile={previewProfile} size={size} />
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          aria-label="Alterar foto"
-          className="absolute inset-0 flex items-center justify-center rounded-full transition-opacity"
-          style={{
-            backgroundColor: "rgba(0,0,0,0.55)",
-            color: "#FFFFFF",
-            opacity: hovering || uploading || dragging ? 1 : 0,
-          }}
-        >
-          {uploading ? <Loader2 className="animate-spin" size={22} /> : <Camera size={22} />}
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            aria-label="Alterar foto"
+            className="absolute inset-0 flex items-center justify-center rounded-full transition-opacity"
+            style={{
+              backgroundColor: "rgba(0,0,0,0.55)",
+              color: "#FFFFFF",
+              opacity: hovering || uploading || dragging ? 1 : 0,
+            }}
+          >
+            {uploading ? <Loader2 className="animate-spin" size={22} /> : <Camera size={22} />}
+          </button>
+        )}
         <input
           ref={inputRef}
           type="file"
@@ -112,27 +116,29 @@ export function AvatarEditor({
         />
       </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="text-xs font-semibold px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 transition-colors border"
-          style={{ borderColor: "rgba(var(--lz-brand-light-rgb),0.4)", color: "var(--lz-accent-ink)", backgroundColor: "transparent" }}
-        >
-          <Upload size={12} /> {draftAvatarUrl ? "Trocar foto" : "Enviar foto"}
-        </button>
-        {draftAvatarUrl && (
+      {!readOnly && (
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={onRemovePhoto}
-            className="text-xs font-semibold px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 transition-colors border border-foreground/10 text-foreground/60 hover:text-red-400 hover:border-red-400/40"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="text-xs font-semibold px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 transition-colors border"
+            style={{ borderColor: "rgba(var(--lz-brand-light-rgb),0.4)", color: "var(--lz-accent-ink)", backgroundColor: "transparent" }}
           >
-            <Trash2 size={12} /> Remover
+            <Upload size={12} /> {draftAvatarUrl ? "Trocar foto" : "Enviar foto"}
           </button>
-        )}
-      </div>
-      <p className="text-[10px] text-foreground/30">JPG, PNG ou WEBP, até 5MB.</p>
+          {draftAvatarUrl && (
+            <button
+              type="button"
+              onClick={onRemovePhoto}
+              className="text-xs font-semibold px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 transition-colors border border-foreground/10 text-foreground/60 hover:text-red-400 hover:border-red-400/40"
+            >
+              <Trash2 size={12} /> Remover
+            </button>
+          )}
+        </div>
+      )}
+      {!readOnly && <p className="text-[10px] text-foreground/30">JPG, PNG ou WEBP, até 5MB.</p>}
       {cropFile && (
         <ImageCropModal file={cropFile} onCancel={() => setCropFile(null)} onConfirm={handleCropConfirm} />
       )}

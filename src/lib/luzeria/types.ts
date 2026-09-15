@@ -331,6 +331,10 @@ export interface Profile {
    * — keys from OPTIONAL_FEATURE_KEYS. Hides the corresponding UI without
    * touching any underlying data. */
   disabledFeatures?: string[];
+  /** Agência marcada como demo somente-leitura (orgs.demo_read_only) — hoje
+   * usado só na Views Agência, a demo pública. Master fica isento (ver
+   * assertNotDemoReadOnly em require-active.ts). */
+  demoReadOnly?: boolean;
   /** Capabilities this org's Master granted the "setor" role beyond its
    * fixed baseline — keys from SETOR_PERMISSION_KEYS. Present for every
    * profile (not just setor ones) so a Master viewing the Equipe tab can

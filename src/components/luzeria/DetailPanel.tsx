@@ -595,6 +595,7 @@ export function DetailPanel() {
   const prevItemId = navIndex > 0 ? itemNavList![navIndex - 1] : null;
   const nextItemId = navIndex >= 0 && itemNavList && navIndex < itemNavList.length - 1 ? itemNavList[navIndex + 1] : null;
   const isAdmin = me?.role === "master" || me?.role === "setor";
+  const isDemoReadOnly = !!me?.demoReadOnly && me?.role !== "master";
   const canApproveFinalize = hasSetorPermission(me, "approve_finalize");
   const canPublishInstagram = hasSetorPermission(me, "instagram_publish");
 
@@ -983,35 +984,39 @@ export function DetailPanel() {
                   );
                 })}
               </div>
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <MentionInput value={comment}
-                    onChange={(v, ids) => { setComment(v); setCommentMentions(ids); }}
-                    onSubmit={() => {
-                      if (!comment.trim()) return;
+              {isDemoReadOnly ? (
+                <div className="text-xs text-foreground/40 italic py-2">Comentários desativados nesta demonstração.</div>
+              ) : (
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <MentionInput value={comment}
+                      onChange={(v, ids) => { setComment(v); setCommentMentions(ids); }}
+                      onSubmit={() => {
+                        if (!comment.trim()) return;
+                        addCommentWithMentions.mutate({ data: { itemId: item.id, text: comment.trim(), mentionedUserIds: commentMentions } });
+                        setComment(""); setCommentMentions([]);
+                      }}
+                      placeholder="Novo comentário... use @ para mencionar"
+                      rows={2} />
+                    <div className="text-[10px] text-foreground/30 mt-1">Enter envia · Shift+Enter quebra linha · @ menciona</div>
+                  </div>
+                  <AudioCommentRecorder
+                    sending={addAudioComment.isPending}
+                    onSend={(base64, durationSeconds, mimeType) => {
+                      addAudioComment.mutate({ data: { itemId: item.id, audioBase64: base64, durationSeconds, mimeType, mentionedUserIds: commentMentions } });
+                    }}
+                  />
+                  <button disabled={!comment.trim()}
+                    onClick={() => {
                       addCommentWithMentions.mutate({ data: { itemId: item.id, text: comment.trim(), mentionedUserIds: commentMentions } });
                       setComment(""); setCommentMentions([]);
                     }}
-                    placeholder="Novo comentário... use @ para mencionar"
-                    rows={2} />
-                  <div className="text-[10px] text-foreground/30 mt-1">Enter envia · Shift+Enter quebra linha · @ menciona</div>
+                    className="px-3 py-2 rounded-md text-sm font-bold disabled:opacity-30 transition-opacity hover:opacity-90"
+                    style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+                    <Send size={14} />
+                  </button>
                 </div>
-                <AudioCommentRecorder
-                  sending={addAudioComment.isPending}
-                  onSend={(base64, durationSeconds, mimeType) => {
-                    addAudioComment.mutate({ data: { itemId: item.id, audioBase64: base64, durationSeconds, mimeType, mentionedUserIds: commentMentions } });
-                  }}
-                />
-                <button disabled={!comment.trim()}
-                  onClick={() => {
-                    addCommentWithMentions.mutate({ data: { itemId: item.id, text: comment.trim(), mentionedUserIds: commentMentions } });
-                    setComment(""); setCommentMentions([]);
-                  }}
-                  className="px-3 py-2 rounded-md text-sm font-bold disabled:opacity-30 transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
-                  <Send size={14} />
-                </button>
-              </div>
+              )}
               <div className="mt-5">
                 <ItemTimeline itemId={item.id} />
               </div>
@@ -1024,8 +1029,9 @@ export function DetailPanel() {
             <ModalSection label="Status">
               <div className="relative" ref={statusRef}>
                 <button
+                  disabled={isDemoReadOnly}
                   onClick={() => setStatusOpen((o) => !o)}
-                  className="w-full flex items-center justify-between gap-3 rounded-md px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all"
+                  className="w-full flex items-center justify-between gap-3 rounded-md px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all disabled:cursor-default"
                   style={{
                     backgroundColor: getStatusMeta(item.status, labelOverrides).bg,
                     color: getStatusMeta(item.status, labelOverrides).color,
@@ -1106,10 +1112,13 @@ export function DetailPanel() {
               <div key={p.id} className="flex items-center gap-1.5 bg-foreground/5 rounded-full pl-1 pr-2 py-1">
                 <Avatar profile={p} size={22} />
                 <span className="text-xs text-foreground/80">{p.name}</span>
-                <button onClick={() => removeAssignee.mutate({ data: { itemId: item.id, userId: p.id } })}
-                  className="text-foreground/40 hover:text-red-400 ml-0.5"><X size={12} /></button>
+                {!isDemoReadOnly && (
+                  <button onClick={() => removeAssignee.mutate({ data: { itemId: item.id, userId: p.id } })}
+                    className="text-foreground/40 hover:text-red-400 ml-0.5"><X size={12} /></button>
+                )}
               </div>
             ))}
+            {!isDemoReadOnly && (
             <div className="relative">
               <button onClick={() => setAssignOpen((o) => !o)}
                 className="h-8 w-8 rounded-full border border-dashed border-foreground/20 text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] flex items-center justify-center transition-colors">
@@ -1136,6 +1145,7 @@ export function DetailPanel() {
                 </div>
               )}
             </div>
+            )}
           </div>
         </ModalSection>
 

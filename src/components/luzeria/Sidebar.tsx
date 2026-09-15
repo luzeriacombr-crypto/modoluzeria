@@ -120,6 +120,7 @@ export function Sidebar({
   }, [clients]);
 
   const isAdmin = me?.role === "master" || me?.role === "setor";
+  const isDemoReadOnly = !!me?.demoReadOnly && me?.role !== "master";
   const disabled = new Set(me?.disabledFeatures ?? []);
   const clientsActive = pathname.startsWith("/cliente/");
   const isMaster = me?.role === "master";
@@ -160,6 +161,12 @@ export function Sidebar({
           <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-1.5">
             {me?.orgTagline || "Gestão de conteúdo e criação"}
           </p>
+          {isDemoReadOnly && (
+            <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)", color: "var(--lz-accent-ink)" }}>
+              Demonstração — somente visualização
+            </span>
+          )}
         </div>
       )}
       <div className={collapsed ? "mx-3 h-px mt-5" : "mx-5 h-px"} style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)" }} />

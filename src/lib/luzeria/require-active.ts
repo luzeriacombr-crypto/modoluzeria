@@ -45,3 +45,22 @@ export const requireActiveProfile = createMiddleware({ type: "function" })
 
     return next({ context: { ...context, orgId: data.org_id as string } });
   });
+
+/**
+ * Bloqueia mutações numa agência marcada como demo somente-leitura
+ * (orgs.demo_read_only) — usado hoje só na Views Agência, a demo pública.
+ * Master fica isento (conta interna, não a divulgada) pra poder manter os
+ * dados da demo pelo próprio app. Nenhuma outra agência é afetada: a
+ * coluna nasce `false`, então essa checagem some (early return) em todo o
+ * resto do produto.
+ */
+export async function assertNotDemoReadOnly(
+  supabase: any, orgId: string, userId: string,
+): Promise<void> {
+  const { data: org } = await supabase
+    .from("orgs").select("demo_read_only").eq("id", orgId).maybeSingle();
+  if (!org?.demo_read_only) return;
+  const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
+  if (isMaster) return;
+  throw new Error("Esta é uma conta de demonstração — somente visualização, sem alterações.");
+}

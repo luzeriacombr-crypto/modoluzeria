@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { requireActiveProfile } from "./require-active";
+import { requireActiveProfile, assertNotDemoReadOnly } from "./require-active";
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status, WorkSchedule } from "./types";
 import { isActivityType, getStatusMeta, SETOR_PERMISSION_KEYS } from "./types";
@@ -151,7 +151,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -215,6 +215,7 @@ export const getMe = createServerFn({ method: "GET" })
       orgPhotoWatermarkOpacity: ((org as any)?.photo_watermark_opacity ?? 35) as number,
       orgPhotoWatermarkDensity: ((org as any)?.photo_watermark_density ?? "media") as "baixa" | "media" | "alta",
       disabledFeatures: ((org as any)?.disabled_features ?? []) as string[],
+      demoReadOnly: ((org as any)?.demo_read_only ?? false) as boolean,
       setorPermissions: ((org as any)?.setor_permissions ?? []) as string[],
       membersCanSetEditorFormat: ((org as any)?.members_can_set_editor_format ?? false) as boolean,
       finalizadosSeparateTab: ((org as any)?.finalizados_separate_tab ?? false) as boolean,
@@ -721,6 +722,7 @@ export const updateMyProfile = createServerFn({ method: "POST" })
       tourCompleted: z.boolean().optional(),
     }).strict().parse(d))
   .handler(async ({ data, context }) => {
+    await assertNotDemoReadOnly(context.supabase, context.orgId, context.userId);
     const update: {
       name?: string; color?: string; icon?: string | null;
       avatar_url?: string | null; onboarded_at?: string;
@@ -987,6 +989,7 @@ export const updateMyAccount = createServerFn({ method: "POST" })
       password: z.string().min(6).max(128).optional(),
     }).strict().parse(d))
   .handler(async ({ data, context }) => {
+    await assertNotDemoReadOnly(context.supabase, context.orgId, context.userId);
     if (!data.name && !data.email && !data.password) return { ok: true };
     await callAdminEdgeFn("updateUser", {
       targetUserId: context.userId,
@@ -1698,6 +1701,7 @@ export const setItemStatus = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string; status: Status }) => d)
   .handler(async ({ data, context }) => {
+    await assertNotDemoReadOnly(context.supabase, context.orgId, context.userId);
     // Fetch current status + assignees before changing
     const { data: current } = await context.supabase
       .from("content_items")
@@ -1730,6 +1734,7 @@ export const addAssignee = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { itemId: string; userId: string }) => d)
   .handler(async ({ data, context }) => {
+    await assertNotDemoReadOnly(context.supabase, context.orgId, context.userId);
     const { data: assigneeProfile } = await context.supabase
       .from("profiles").select("org_id").eq("id", data.userId).maybeSingle();
     if (!assigneeProfile || assigneeProfile.org_id !== context.orgId) {
@@ -1907,6 +1912,7 @@ export const removeAssignee = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { itemId: string; userId: string }) => d)
   .handler(async ({ data, context }) => {
+    await assertNotDemoReadOnly(context.supabase, context.orgId, context.userId);
     const { error } = await context.supabase.from("item_assignees")
       .delete().eq("item_id", data.itemId).eq("user_id", data.userId);
     if (error) throw new Error(error.message);

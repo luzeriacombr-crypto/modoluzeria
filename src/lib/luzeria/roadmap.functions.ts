@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireActiveProfile } from "./require-active";
+import { requireActiveProfile, assertNotDemoReadOnly } from "./require-active";
 import { z } from "zod";
 import { isDoneStatus } from "./types";
 import type {
@@ -873,6 +873,7 @@ export const addCommentWithMentions = createServerFn({ method: "POST" })
       mentionedUserIds: z.array(z.string().uuid()).max(20).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertNotDemoReadOnly(context.supabase, context.orgId, context.userId);
     const { data: inserted, error } = await context.supabase.from("comments")
       .insert({ item_id: data.itemId, author_id: context.userId, text: data.text, is_system: false })
       .select("id").single();
@@ -922,6 +923,7 @@ export const addAudioComment = createServerFn({ method: "POST" })
       mentionedUserIds: z.array(z.string().uuid()).max(20).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertNotDemoReadOnly(context.supabase, context.orgId, context.userId);
     const path = `${data.itemId}/${Date.now()}.${audioExtFor(data.mimeType)}`;
     const bin = Buffer.from(data.audioBase64, "base64");
     // Alguns Safaris reportam "video/mp4" pra uma gravação só de áudio —
@@ -958,6 +960,7 @@ export const updateComment = createServerFn({ method: "POST" })
       text: z.string().trim().min(1).max(2000),
     }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertNotDemoReadOnly(context.supabase, context.orgId, context.userId);
     // RLS (author-only, non-system) does the real enforcement — .single()
     // just turns "0 rows affected" into a clear error instead of a silent no-op.
     const { error } = await context.supabase
