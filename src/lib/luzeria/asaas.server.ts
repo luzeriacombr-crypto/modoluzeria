@@ -83,6 +83,13 @@ export async function updateAsaasPaymentValue(paymentId: string, valueCents: num
   }) as Promise<{ id: string; value: number }>;
 }
 
+/** Remove uma única fatura pendente (usado pelo saldo de indicação pra
+ * "pular" a cobrança de um mês) sem mexer na assinatura recorrente — o
+ * próximo ciclo continua normal. */
+export async function deleteAsaasPayment(paymentId: string) {
+  return asaasFetch(`/payments/${paymentId}`, { method: "DELETE" }) as Promise<{ deleted: boolean }>;
+}
+
 /** Updates a subscription's recurring value — used for the reseller's
  * consolidated wholesale bill, recalculated every time a resold instance is
  * added/removed. Only changes future charges; also nudges the currently

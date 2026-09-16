@@ -60,7 +60,7 @@ export const TRIAL_DAYS = 30;
 export const publicSignup = createServerFn({ method: "POST" })
   .inputValidator((d: {
     agencyName: string; name: string; email: string; password: string;
-    planId: string; taxId: string; whatsapp: string; website?: string; promoCode?: string; affiliateCode?: string;
+    planId: string; taxId: string; whatsapp: string; website?: string; promoCode?: string; affiliateCode?: string; refCode?: string;
     billingType?: "CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY";
   }) =>
     z.object({
@@ -74,6 +74,7 @@ export const publicSignup = createServerFn({ method: "POST" })
       website: z.string().max(0).optional().or(z.literal("")), // honeypot — must stay empty
       promoCode: z.string().optional(),
       affiliateCode: z.string().optional(),
+      refCode: z.string().trim().toLowerCase().optional(),
       // UNDEFINED lets the customer pick PIX/Boleto/Cartão on Asaas's own
       // invoice page. TRIAL_ONLY ("Vou testar primeiro") skips Asaas
       // entirely at signup — no customer/subscription is created, so
@@ -111,13 +112,33 @@ export const publicSignup = createServerFn({ method: "POST" })
       throw new Error("Já existe uma conta com esse e-mail.");
     }
 
+    // Programa de indicação: só concede o bônus de trial se o código
+    // existir E o e-mail não existir em NENHUMA conta do sistema (dono ou
+    // membro de qualquer agência — email_role_assignments acima só cobre
+    // donos). Código inválido ou e-mail já usado em outro lugar não bloqueia
+    // o cadastro, só não dá o bônus nem cria o registro de indicação.
+    const { emailExistsAnywhere } = await import("./referrals.functions");
+    let referrerOrgId: string | null = null;
+    if (data.refCode) {
+      // "as any": referral_code é uma coluna nova, ainda não presente nos
+      // tipos gerados do Supabase até a migração rodar.
+      const { data: referrer } = await (supabaseAdmin as any)
+        .from("orgs").select("id").eq("referral_code", data.refCode).maybeSingle();
+      if (referrer && !(await emailExistsAnywhere(supabaseAdmin, data.email))) {
+        referrerOrgId = referrer.id;
+      }
+    }
+    const trialDays = referrerOrgId ? TRIAL_DAYS + 15 : TRIAL_DAYS;
+
     const slugBase = data.agencyName.trim().toLowerCase()
       .normalize("NFD").replace(/[̀-ͯ]/g, "")
       .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "agencia";
     const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
+    trialEndsAt.setDate(trialEndsAt.getDate() + trialDays);
 
-    const { data: org, error: orgErr } = await supabaseAdmin
+    // "as any": referred_by_org_id é uma coluna nova, ainda não presente nos
+    // tipos gerados do Supabase até a migração rodar.
+    const { data: org, error: orgErr } = await (supabaseAdmin as any)
       .from("orgs")
       .insert({
         name: data.agencyName.trim(),
@@ -127,6 +148,7 @@ export const publicSignup = createServerFn({ method: "POST" })
         trial_ends_at: trialEndsAt.toISOString(),
         tax_id: data.taxId,
         whatsapp: data.whatsapp,
+        referred_by_org_id: referrerOrgId,
       })
       .select("id").single();
     if (orgErr) throw new Error(orgErr.message);
@@ -200,11 +222,17 @@ export const publicSignup = createServerFn({ method: "POST" })
           valueCents: discountedValueCents,
           description: `Modo Criador — Plano ${plan.name}`,
           billingType: data.billingType ?? "CREDIT_CARD",
-          trialDays: TRIAL_DAYS,
+          trialDays,
         });
         asaasCustomerId = customer.id;
         asaasSubscriptionId = sub.subscriptionId;
         invoiceUrl = sub.invoiceUrl;
+      }
+
+      if (referrerOrgId) {
+        await (supabaseAdmin as any).from("agency_referrals").insert({
+          referrer_org_id: referrerOrgId, referred_org_id: org.id, referral_code_used: data.refCode,
+        });
       }
 
       if (affiliateId) {
@@ -256,7 +284,7 @@ export const publicSignup = createServerFn({ method: "POST" })
  * activates that existing profile into it instead of creating a new user. */
 export const completeGoogleSignup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { agencyName: string; name: string; taxId: string; whatsapp: string; planId: string; promoCode?: string; affiliateCode?: string; billingType?: "CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY" }) =>
+  .inputValidator((d: { agencyName: string; name: string; taxId: string; whatsapp: string; planId: string; promoCode?: string; affiliateCode?: string; refCode?: string; billingType?: "CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY" }) =>
     z.object({
       agencyName: z.string().trim().min(2).max(80),
       name: z.string().trim().min(2).max(80),
@@ -265,6 +293,7 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
       planId: z.string().min(1),
       promoCode: z.string().optional(),
       affiliateCode: z.string().optional(),
+      refCode: z.string().trim().toLowerCase().optional(),
       billingType: z.enum(["CREDIT_CARD", "UNDEFINED", "TRIAL_ONLY"]).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
@@ -289,13 +318,28 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
       throw new Error("Essa conta do Google já está vinculada a uma agência.");
     }
 
+    const { emailExistsAnywhere } = await import("./referrals.functions");
+    let referrerOrgId: string | null = null;
+    if (data.refCode) {
+      // "as any": referral_code é uma coluna nova, ainda não presente nos
+      // tipos gerados do Supabase até a migração rodar.
+      const { data: referrer } = await (supabaseAdmin as any)
+        .from("orgs").select("id").eq("referral_code", data.refCode).maybeSingle();
+      if (referrer && !(await emailExistsAnywhere(supabaseAdmin, email))) {
+        referrerOrgId = referrer.id;
+      }
+    }
+    const trialDays = referrerOrgId ? TRIAL_DAYS + 15 : TRIAL_DAYS;
+
     const slugBase = data.agencyName.trim().toLowerCase()
       .normalize("NFD").replace(/[̀-ͯ]/g, "")
       .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "agencia";
     const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
+    trialEndsAt.setDate(trialEndsAt.getDate() + trialDays);
 
-    const { data: org, error: orgErr } = await supabaseAdmin
+    // "as any": referred_by_org_id é uma coluna nova, ainda não presente nos
+    // tipos gerados do Supabase até a migração rodar.
+    const { data: org, error: orgErr } = await (supabaseAdmin as any)
       .from("orgs")
       .insert({
         name: data.agencyName.trim(),
@@ -305,6 +349,7 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
         trial_ends_at: trialEndsAt.toISOString(),
         tax_id: data.taxId,
         whatsapp: data.whatsapp,
+        referred_by_org_id: referrerOrgId,
       })
       .select("id").single();
     if (orgErr) throw new Error(orgErr.message);
@@ -366,11 +411,17 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
           valueCents: discountedValueCents,
           description: `Modo Criador — Plano ${plan.name}`,
           billingType: data.billingType ?? "CREDIT_CARD",
-          trialDays: TRIAL_DAYS,
+          trialDays,
         });
         asaasCustomerId = customer.id;
         asaasSubscriptionId = sub.subscriptionId;
         invoiceUrl = sub.invoiceUrl;
+      }
+
+      if (referrerOrgId) {
+        await (supabaseAdmin as any).from("agency_referrals").insert({
+          referrer_org_id: referrerOrgId, referred_org_id: org.id, referral_code_used: data.refCode,
+        });
       }
 
       if (affiliateId) {

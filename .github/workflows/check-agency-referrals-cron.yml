@@ -1,0 +1,17 @@
+name: Check agency referrals
+
+on:
+  schedule:
+    # Uma vez por dia, 05:30 UTC (madrugada no Brasil).
+    - cron: "30 5 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call agency referrals check endpoint
+        run: |
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.modocriador.com.br/api/cron/check-agency-referrals

@@ -19,6 +19,7 @@ const IntegrationsTab = lazy(() => import("./IntegrationsTab").then((m) => ({ de
 const MemberGoalsTab = lazy(() => import("./MemberGoalsTab").then((m) => ({ default: m.MemberGoalsTab })));
 const AutomationsTab = lazy(() => import("./AutomationsTab").then((m) => ({ default: m.AutomationsTab })));
 const UpdatesTab = lazy(() => import("./UpdatesTab").then((m) => ({ default: m.UpdatesTab })));
+const ReferralsTab = lazy(() => import("./ReferralsTab").then((m) => ({ default: m.ReferralsTab })));
 const PromotionCodesPanel = lazy(() => import("./PromotionCodesPanel").then((m) => ({ default: m.PromotionCodesPanel })));
 const AffiliateProgramPanel = lazy(() => import("./AffiliateProgramPanel").then((m) => ({ default: m.AffiliateProgramPanel })));
 const ResellerPanel = lazy(() => import("./ResellerPanel").then((m) => ({ default: m.ResellerPanel })));
@@ -40,8 +41,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "auditoria" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "updates" | "site" | "blog" | "journey" | "cliente";
-const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "updates", "site", "blog", "journey", "cliente"];
+type SettingsTab = "team" | "report" | "auditoria" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "indicacoes" | "updates" | "site" | "blog" | "journey" | "cliente";
+const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "indicacoes", "updates", "site", "blog", "journey", "cliente"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -94,6 +95,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
              tab === "automations" ? "Lembretes automáticos e rotinas que o sistema executa sozinho." :
              tab === "cobranca" || tab === "afiliados" || tab === "revenda" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
              tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? "Visão geral, jornada, margem e pagamentos de cada cliente." :
+             tab === "indicacoes" ? "Indique outras agências e ganhe meses grátis." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
              tab === "blog" ? "Escreva e edite os artigos do blog (modocriador.com.br/blog)." :
@@ -109,6 +111,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "automations", label: "Automações" },
           { id: "cliente", label: "Clientes" },
           { id: "cobranca", label: "Plano e Cobrança" },
+          { id: "indicacoes", label: "Indicações" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
           ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }, { id: "blog", label: "Blog" }] : []),
@@ -181,6 +184,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           isAdmin={isAdmin}
         />
        ) :
+       tab === "indicacoes" ? <ReferralsTab /> :
        tab === "updates" ? <UpdatesTab /> :
        tab === "site" ? (me.isPlatformAdmin ? <SalesPageEditorTab /> : null) :
        tab === "blog" ? (me.isPlatformAdmin ? <BlogAdminTab /> : null) :

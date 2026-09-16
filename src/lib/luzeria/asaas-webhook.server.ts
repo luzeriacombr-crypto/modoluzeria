@@ -56,18 +56,58 @@ export async function handleAsaasWebhook(request: Request): Promise<Response> {
       .eq("asaas_subscription_id", subscriptionId)
       .neq("id", LUZERIA_ORG_ID);
     if (updateError) console.error("[asaas-webhook] failed to update org status", updateError);
+
+    // Marca a primeira cobrança confirmada, uma única vez — é a partir daqui
+    // que o programa de indicação conta os 60 dias como pagante ativo antes
+    // de confirmar o crédito de quem indicou (ver runAgencyReferralChecks).
+    // "as any": first_payment_confirmed_at é uma coluna nova, ainda não
+    // presente nos tipos gerados do Supabase até a migração rodar.
+    if (newStatus === "active") {
+      const dbFirstPayment = supabaseAdmin as any;
+      const { data: orgRow } = await dbFirstPayment
+        .from("orgs").select("id, first_payment_confirmed_at")
+        .eq("asaas_subscription_id", subscriptionId).maybeSingle();
+      if (orgRow && !orgRow.first_payment_confirmed_at) {
+        await dbFirstPayment.from("orgs")
+          .update({ first_payment_confirmed_at: new Date().toISOString() }).eq("id", orgRow.id);
+      }
+    }
   }
 
   // A one-time gift discount (see applyPromotionCodeToOrg) may be waiting
   // for this org's next invoice. Apply it now that the invoice exists, then
   // clear it so it never discounts more than that single payment.
   if (payload.event === "PAYMENT_CREATED" && payload.payment?.subscription) {
-    const { data: org } = await supabaseAdmin
+    // "as any": referral_credit_balance e referral_credit_ledger são novos,
+    // ainda não presentes nos tipos gerados do Supabase até a migração rodar.
+    const db = supabaseAdmin as any;
+    const { data: org } = await db
       .from("orgs")
-      .select("id, promotion_code_id")
+      .select("id, promotion_code_id, referral_credit_balance")
       .eq("asaas_subscription_id", payload.payment.subscription)
       .maybeSingle();
-    if (org?.promotion_code_id) {
+
+    // Saldo de indicação tem prioridade sobre cupom — mês grátis de verdade
+    // é melhor que um desconto parcial no mesmo mês.
+    let creditConsumed = false;
+    if (org && org.referral_credit_balance > 0) {
+      try {
+        const { deleteAsaasPayment } = await import("./asaas.server");
+        await deleteAsaasPayment(payload.payment.id);
+        const newBalance = org.referral_credit_balance - 1;
+        await db.from("orgs").update({ referral_credit_balance: newBalance }).eq("id", org.id);
+        await db.from("referral_credit_ledger").insert({
+          org_id: org.id, delta: -1, reason: "billing_cycle_consumed", balance_after: newBalance,
+        });
+        const { notifyOrgMasters } = await import("./promotion-affiliate.functions");
+        await notifyOrgMasters(org.id, "Sua cobrança deste mês foi coberta pelo seu saldo de indicação!", "referral_credit_used");
+        creditConsumed = true;
+      } catch (err) {
+        console.error("[asaas-webhook] failed to consume referral credit", err);
+      }
+    }
+
+    if (!creditConsumed && org?.promotion_code_id) {
       const { data: promo } = await supabaseAdmin
         .from("promotion_codes")
         .select("discount_percent")

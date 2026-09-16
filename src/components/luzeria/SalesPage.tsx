@@ -31,6 +31,7 @@ export function SalesPage() {
   const searchParams = new URLSearchParams(location.search);
   const promoCode = searchParams.get("promoCode") || undefined;
   const affiliateCode = searchParams.get("affiliateCode") || undefined;
+  const refCode = searchParams.get("refCode") || undefined;
 
   const plans = useQuery({ queryKey: ["public-plans"], queryFn: () => getPublicPlans() });
   const { data: blocks = [] } = useQuery(salesPageBlocksQO());
@@ -74,6 +75,7 @@ export function SalesPage() {
           agencyName, name, email, password, planId, taxId: taxId.replace(/\D/g, ""), whatsapp, website,
           promoCode,
           affiliateCode,
+          refCode,
           billingType,
         },
       });
@@ -101,6 +103,7 @@ export function SalesPage() {
         agencyName, name, taxId: taxId.replace(/\D/g, ""), whatsapp, planId,
         promoCode,
         affiliateCode,
+        refCode,
         billingType,
       }));
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({

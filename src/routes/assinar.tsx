@@ -21,6 +21,7 @@ export const Route = createFileRoute("/assinar")({
     z.object({
       promoCode: z.string().optional(),
       affiliateCode: z.string().optional(),
+      refCode: z.string().optional(),
     }).parse(search),
   beforeLoad: async () => {
     const { data } = await supabase.auth.getSession();
