@@ -6,7 +6,6 @@ import { useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { useTheme } from "@/lib/luzeria/theme-store";
 import type { Client } from "@/lib/luzeria/types";
-import { hasPermission, hasSetorPermission } from "@/lib/luzeria/types";
 import { Sidebar } from "./Sidebar";
 import { DetailPanel } from "./DetailPanel";
 import { NotificationsBell } from "./Notifications";
@@ -311,16 +310,6 @@ function Header({ sidebarHidden, onToggleSidebar, sidebarCollapsed, onToggleColl
   const { theme } = useTheme();
   const headerLogoUrl = (theme === "light" && me?.orgLogoUrlLight) || me?.orgLogoUrl;
   const navigate = useNavigate();
-  // Configurações precisa continuar visível pra quem tinha acesso a pelo
-  // menos uma aba de lá antes (isAdmin via cargo/setor, ou uma permissão
-  // específica de jornada/financeiro/equipe) — antes disso dava pra
-  // chegar lá pelos 3 grupos com flyout que saíram da sidebar (Visão
-  // Geral/Financeiro/Equipe); a engrenagem sempre foi só-master, mais
-  // restrita, então virar a ÚNICA porta de entrada sem alargar esse gate
-  // cortava o acesso de quem só tinha uma dessas permissões via cargo.
-  const canReachConfig = me?.role === "master" || me?.role === "setor"
-    || hasSetorPermission(me, "settings_journey") || hasSetorPermission(me, "team_reports")
-    || hasPermission(me, "view_financeiro") || hasPermission(me, "manage_team");
   return (
     <header className="lz-app-header sticky top-0 z-50 px-4 md:px-6 flex items-center gap-2 h-14">
       <button
@@ -351,7 +340,7 @@ function Header({ sidebarHidden, onToggleSidebar, sidebarCollapsed, onToggleColl
       )}
       <div className="flex-1" />
       <NavGridLauncher />
-      {canReachConfig && (
+      {me?.role === "master" && (
         <button
           onClick={() => navigate({ to: "/configuracoes" })}
           title="Configurações"
