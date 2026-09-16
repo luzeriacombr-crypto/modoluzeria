@@ -764,7 +764,11 @@ export function useApi() {
     }, onError: fail("Não consegui salvar o cliente.") }),
     setNotifyStoriesInTasks: useMutation({
       mutationFn: useServerFn(setNotifyStoriesInTasks),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["clients"] }); qc.invalidateQueries({ queryKey: ["my-tasks"] }); },
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["clients"] });
+        qc.invalidateQueries({ queryKey: ["my-tasks"] });
+        toast.success("Preferência salva.");
+      },
     }),
     setWhatsappGroupLink: useMutation({
       mutationFn: useServerFn(setWhatsappGroupLink),
@@ -932,7 +936,7 @@ export function useApi() {
     adminCreateUser: useMutation({ mutationFn: useServerFn(adminCreateUser), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     createAgency: useMutation({ mutationFn: useServerFn(createAgency) }),
     updateMyOrg: useMutation({ mutationFn: useServerFn(updateMyOrg), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
-    updateMyDefaultLanding: useMutation({ mutationFn: useServerFn(updateMyDefaultLanding), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
+    updateMyDefaultLanding: useMutation({ mutationFn: useServerFn(updateMyDefaultLanding), onSuccess: () => { qc.invalidateQueries({ queryKey: ["me"] }); toast.success("Página inicial padrão salva."); } }),
     updateSetorPermissions: useMutation({ mutationFn: useServerFn(updateSetorPermissions), onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }) }),
     subscribeToPlan: useMutation({
       mutationFn: useServerFn(subscribeToPlan),
@@ -977,7 +981,11 @@ export function useApi() {
     }),
     upsertCleaningCell: useMutation({
       mutationFn: useServerFn(upsertCleaningCell),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["cleaning"] });
+        qc.invalidateQueries({ queryKey: ["my-today"] });
+        toast.success("Atribuído.");
+      },
       onError: fail("Não consegui salvar a escala."),
     }),
     setCleaningDone: useMutation({
@@ -1006,7 +1014,11 @@ export function useApi() {
     }),
     addCleaningTask: useMutation({
       mutationFn: useServerFn(addCleaningTask),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning-tasks"] }); qc.invalidateQueries({ queryKey: ["cleaning"] }); },
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["cleaning-tasks"] });
+        qc.invalidateQueries({ queryKey: ["cleaning"] });
+        toast.success("Tarefa criada.");
+      },
       onError: fail("Não consegui adicionar a tarefa."),
     }),
     renameCleaningTask: useMutation({
@@ -1523,12 +1535,12 @@ export function useApi() {
       mutationFn: useServerFn(disconnectGoogleCalendar),
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["my-calendar-connection"] });
-        qc.invalidateQueries({ queryKey: ["today-calendar-events"] });
+        qc.invalidateQueries({ queryKey: ["calendar-items"] });
       },
     }),
     createCalendarEvent: useMutation({
       mutationFn: useServerFn(createCalendarEvent),
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["today-calendar-events"] }),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["calendar-items"] }),
     }),
     /* ===== MARGEM / LUCRATIVIDADE ===== */
     setOrgCostSettings: useMutation({

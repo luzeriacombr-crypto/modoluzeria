@@ -330,6 +330,10 @@ function AddMemberModal({ onClose, onSubmit, loading }: {
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
               className="lz-input" placeholder="email@luzeria.com.br" />
           </Field>
+          <p className="text-[10px] text-foreground/40 -mt-2">
+            Use o email dessa pessoa, não compartilhe um login entre vários — assim as métricas
+            de produtividade (Top Membros, etc) ficam certas para cada um.
+          </p>
           <Field label="Senha provisória">
             <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
               className="lz-input" placeholder="Mínimo 6 caracteres" />
@@ -341,6 +345,10 @@ function AddMemberModal({ onClose, onSubmit, loading }: {
               <option value="master">Adm Master</option>
             </select>
           </Field>
+          <p className="text-[10px] text-foreground/40 -mt-2">
+            Membro: só vê e mexe no que for atribuído a ele. Adm Setor: pode ganhar permissões
+            extras por cargo. Adm Master: acesso total à agência.
+          </p>
           <button type="submit" disabled={loading}
             className="lz-btn-primary w-full rounded-md py-2.5 mt-2 text-sm disabled:opacity-50">
             {loading ? "Criando…" : "Criar membro"}
@@ -669,6 +677,7 @@ function TeamPermissionsPanel({ me }: { me: Profile }) {
   function toggle(key: SetorPermissionKey, on: boolean) {
     const next = on ? [...granted, key] : [...granted].filter((k) => k !== key);
     updateSetorPermissions.mutate({ data: { permissions: next } }, {
+      onSuccess: () => toast.success("Permissões atualizadas."),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
     });
   }

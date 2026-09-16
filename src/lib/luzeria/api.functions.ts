@@ -2366,7 +2366,11 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     };
     const rows: Row[] = (clients ?? []).map((c: any) => {
       const mid = monthByClient.get(c.id);
-      const its = mid ? (items ?? []).filter((it: any) => it.month_id === mid) : [];
+      // "Entregues"/meta só considera post/reel — gravação, roteiro e
+      // outras atividades internas não fazem parte do combinado
+      // (posts_per_week + reels_per_week), então contá-las aqui inflava a
+      // "% batida" sem relação com o que o cliente contratou.
+      const its = mid ? (items ?? []).filter((it: any) => it.month_id === mid && (it.type === "post" || it.type === "reel")) : [];
       const posts = its.filter((i) => i.type === "post").length;
       const reels = its.filter((i) => i.type === "reel").length;
       const total = its.length;
@@ -2404,6 +2408,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     const doneItems: { id: string; title: string; type: string; clientName: string; clientColor: string }[] = [];
     const pendingItems: typeof doneItems = [];
     (items ?? []).forEach((it: any) => {
+      if (it.type !== "post" && it.type !== "reel") return;
       const c = monthIdToClient.get(it.month_id);
       if (!c) return;
       const entry = { id: it.id, title: it.title, type: it.type, clientName: c.name, clientColor: c.color };

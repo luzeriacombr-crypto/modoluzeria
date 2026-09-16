@@ -113,8 +113,8 @@ export function CustomFieldsModal({ client, onClose }: { client: Client | null; 
       <div className="space-y-3">
         <F label="Nicho"><input value={niche} onChange={(e) => setNiche(e.target.value)} className={inp} /></F>
         <div className="grid grid-cols-2 gap-3">
-          <F label="Posts/semana"><input type="number" value={postsPerWeek} onChange={(e) => setPostsPerWeek(+e.target.value)} className={inp} /></F>
-          <F label="Reels/semana"><input type="number" value={reelsPerWeek} onChange={(e) => setReelsPerWeek(+e.target.value)} className={inp} /></F>
+          <F label="Posts / mês"><input type="number" value={postsPerWeek} onChange={(e) => setPostsPerWeek(+e.target.value)} className={inp} /></F>
+          <F label="Reels / mês"><input type="number" value={reelsPerWeek} onChange={(e) => setReelsPerWeek(+e.target.value)} className={inp} /></F>
         </div>
         <F label="Responsável fixo">
           <select value={responsible} onChange={(e) => setResponsible(e.target.value)} className={inp}>

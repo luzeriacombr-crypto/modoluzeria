@@ -378,7 +378,12 @@ export function AdminDashboard() {
                 <th className="text-left px-5 py-2 font-semibold">Cliente</th>
                 <th className="text-left md:text-center px-3 py-2 font-semibold">Posts</th>
                 <th className="text-left md:text-center px-3 py-2 font-semibold">Reels</th>
-                <th className="text-left md:text-center px-3 py-2 font-semibold">Entregues</th>
+                <th className="text-left md:text-center px-3 py-2 font-semibold">
+                  <span className="inline-flex items-center gap-1">
+                    Entregues
+                    <InfoTip text="Conta só posts e reels finalizados/prontos pra publicar (gravação, roteiro etc não entram). A meta é o combinado mensal de Posts + Reels, editável na Ficha do Cliente." />
+                  </span>
+                </th>
                 <th className="text-left md:text-center px-3 py-2 font-semibold">%</th>
                 <th className="text-left px-3 py-2 font-semibold">Status</th>
               </tr>

@@ -231,6 +231,11 @@ export function DriveSettingsTab() {
               Cada agência conecta a própria conta do Google Drive. Os arquivos dessa agência
               ficam só nessa conta — nenhuma outra agência tem acesso a ela.
             </p>
+            <p className="text-xs text-foreground/50 mb-4 leading-relaxed">
+              O Google pode mostrar um aviso dizendo que "o app não foi verificado" — é normal,
+              acontece com qualquer sistema novo. Clique em <b className="text-foreground/70">Avançado</b> e
+              depois em <b className="text-foreground/70">Acessar Modo Criador (não seguro)</b> pra continuar.
+            </p>
             <a
               href="https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw"
               target="_blank" rel="noopener noreferrer"

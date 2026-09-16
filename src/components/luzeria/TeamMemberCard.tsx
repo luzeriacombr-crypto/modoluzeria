@@ -73,7 +73,9 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
       ? selectedCargoIds.filter((id) => id !== cargoId)
       : [...selectedCargoIds, cargoId];
     setSelectedCargoIds(next);
-    setProfileCargos.mutate({ data: { profileId: profile.id, cargoIds: next } });
+    setProfileCargos.mutate({ data: { profileId: profile.id, cargoIds: next } }, {
+      onSuccess: () => toast.success("Cargos atualizados."),
+    });
   }
 
   const { data: allClients = [] } = useQuery(clientsQO());
@@ -192,9 +194,14 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
         <div className="space-y-4">
           <div>
-            <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Função</label>
+            <label className="flex items-center gap-1 text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">
+              Função
+              <InfoTip text="Membro: só vê e mexe no que for atribuído a ele. Adm Setor: pode ter permissões extras configuradas por cargo. Adm Master: acesso total à agência." />
+            </label>
             <select value={profile.role} disabled={isSelf}
-              onChange={(e) => setUserRole.mutate({ data: { userId: profile.id, role: e.target.value as Role } })}
+              onChange={(e) => setUserRole.mutate({ data: { userId: profile.id, role: e.target.value as Role } }, {
+                onSuccess: () => toast.success("Função atualizada."),
+              })}
               className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] disabled:opacity-50 disabled:cursor-not-allowed">
               <option value="member">Membro</option>
               <option value="setor">Adm Setor</option>
@@ -204,7 +211,9 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
 
           <label className="flex items-center gap-2 text-sm text-foreground/70">
             <input type="checkbox" checked={profile.active} disabled={isSelf}
-              onChange={(e) => setUserActive.mutate({ data: { userId: profile.id, active: e.target.checked } })} />
+              onChange={(e) => setUserActive.mutate({ data: { userId: profile.id, active: e.target.checked } }, {
+                onSuccess: (_, vars) => toast.success(vars.data.active ? "Membro ativado." : "Membro desativado."),
+              })} />
             Ativo
           </label>
 

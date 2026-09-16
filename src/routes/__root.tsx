@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import { setOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { siteTrackingSettingsQO } from "@/lib/luzeria/queries";
 import { supabase } from "@/integrations/supabase/client";
+import { InAppBrowserBanner } from "@/components/luzeria/InAppBrowserBanner";
 
 import appCss from "../styles.css?url";
 import { reportAppError } from "../lib/error-reporting";
@@ -189,6 +190,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      {!isAuthenticatedRoute && <InAppBrowserBanner />}
       <Outlet />
     </QueryClientProvider>
   );

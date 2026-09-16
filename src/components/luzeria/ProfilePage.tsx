@@ -427,6 +427,12 @@ function GoogleCalendarSection() {
                 ? `Conectado como ${conn.email}. Seus compromissos de hoje aparecem em Minhas Demandas.`
                 : "Conecte sua Google Agenda pra ver seus compromissos de hoje em Minhas Demandas."}
             </div>
+            {!conn?.connected && (
+              <div className="text-[11px] text-foreground/50 mt-1">
+                O Google pode mostrar um aviso de "app não verificado" — é normal, clique em
+                Avançado e depois em Acessar Modo Criador pra continuar.
+              </div>
+            )}
           </div>
         </div>
         {!isLoading && (
