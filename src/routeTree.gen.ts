@@ -61,6 +61,7 @@ import { Route as AuthenticatedOauthGoogleCalendarCallbackRouteImport } from './
 import { Route as AuthenticatedOauthDriveCallbackRouteImport } from './routes/_authenticated/oauth.drive-callback'
 import { Route as AuthenticatedClienteClientIdRouteImport } from './routes/_authenticated/cliente.$clientId'
 import { Route as AuthenticatedAfiliadoDashboardRouteImport } from './routes/_authenticated/afiliado/dashboard'
+import { Route as ApiSelecaoDownloadTokenFileIdRouteImport } from './routes/api.selecao-download.$token.$fileId'
 
 const TermosRoute = TermosRouteImport.update({
   id: '/termos',
@@ -337,6 +338,12 @@ const AuthenticatedAfiliadoDashboardRoute =
     path: '/afiliado/dashboard',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiSelecaoDownloadTokenFileIdRoute =
+  ApiSelecaoDownloadTokenFileIdRouteImport.update({
+    id: '/api/selecao-download/$token/$fileId',
+    path: '/api/selecao-download/$token/$fileId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -390,6 +397,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
+  '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -443,6 +451,7 @@ export interface FileRoutesByTo {
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
+  '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -498,6 +507,7 @@ export interface FileRoutesById {
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
+  '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -553,6 +563,7 @@ export interface FileRouteTypes {
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-push-notifications'
     | '/api/selecao-og/$token'
+    | '/api/selecao-download/$token/$fileId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -606,6 +617,7 @@ export interface FileRouteTypes {
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-push-notifications'
     | '/api/selecao-og/$token'
+    | '/api/selecao-download/$token/$fileId'
   id:
     | '__root__'
     | '/'
@@ -660,6 +672,7 @@ export interface FileRouteTypes {
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-push-notifications'
     | '/api/selecao-og/$token'
+    | '/api/selecao-download/$token/$fileId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -696,6 +709,7 @@ export interface RootRouteChildren {
   ApiCronRetentionCleanupRoute: typeof ApiCronRetentionCleanupRoute
   ApiCronSendPushNotificationsRoute: typeof ApiCronSendPushNotificationsRoute
   ApiSelecaoOgTokenRoute: typeof ApiSelecaoOgTokenRoute
+  ApiSelecaoDownloadTokenFileIdRoute: typeof ApiSelecaoDownloadTokenFileIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1064,6 +1078,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAfiliadoDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/selecao-download/$token/$fileId': {
+      id: '/api/selecao-download/$token/$fileId'
+      path: '/api/selecao-download/$token/$fileId'
+      fullPath: '/api/selecao-download/$token/$fileId'
+      preLoaderRoute: typeof ApiSelecaoDownloadTokenFileIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1160,6 +1181,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronRetentionCleanupRoute: ApiCronRetentionCleanupRoute,
   ApiCronSendPushNotificationsRoute: ApiCronSendPushNotificationsRoute,
   ApiSelecaoOgTokenRoute: ApiSelecaoOgTokenRoute,
+  ApiSelecaoDownloadTokenFileIdRoute: ApiSelecaoDownloadTokenFileIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

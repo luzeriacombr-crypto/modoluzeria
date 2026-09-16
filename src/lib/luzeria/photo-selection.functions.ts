@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import { parseDriveId, listDriveFolderImages, withDriveOrg, getAccessToken } from "./drive.functions";
-import { protectPhotoBytes, buildPreviewBackground, GRID_THUMB_MAX_DIMENSION, type WatermarkSpec } from "./photo-watermark.server";
+import { protectPhotoBytes, buildPreviewBackground, resizeForSocialMedia, GRID_THUMB_MAX_DIMENSION, type WatermarkSpec } from "./photo-watermark.server";
 
 /** Resolve a config de marca d'água salva pra uma org — usado tanto na
  * proteção real das fotos públicas quanto na pré-visualização das
@@ -119,17 +119,19 @@ export type PhotoSelectionSummary = {
   submissionCount: number;
   photoOrder: "nome" | "horario";
   coverDriveFileId: string | null;
+  mode: "selecao" | "entrega";
 };
 
 export const createPhotoSelection = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { photoClientId: string; title: string; driveFolderLink: string; deadline?: string | null; photoOrder?: "nome" | "horario" }) =>
+  .inputValidator((d: { photoClientId: string; title: string; driveFolderLink: string; deadline?: string | null; photoOrder?: "nome" | "horario"; mode?: "selecao" | "entrega" }) =>
     z.object({
       photoClientId: z.string().uuid(),
       title: z.string().trim().min(1).max(120),
       driveFolderLink: z.string().trim().min(5).max(500),
       deadline: z.string().trim().max(10).optional().nullable(),
       photoOrder: z.enum(["nome", "horario"]).optional(),
+      mode: z.enum(["selecao", "entrega"]).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     await assertAdmin(context.supabase, context.userId);
@@ -145,7 +147,13 @@ export const createPhotoSelection = createServerFn({ method: "POST" })
     }
 
     const token = randomToken(22);
-    const { data: row, error } = await context.supabase
+    // `as any`: coluna `selection_mode` ainda não está nos tipos gerados do
+    // Supabase (migração nova, mesmo padrão já usado em outras colunas
+    // recentes deste projeto até os tipos serem regenerados). Coluna
+    // chamada `selection_mode`, não `mode` — um `mode` puro quebra QUALQUER
+    // query do PostgREST nessa tabela (colide com o agregado mode() WITHIN
+    // GROUP do Postgres, ver a migração de rename).
+    const { data: row, error } = await (context.supabase as any)
       .from("photo_selections")
       .insert({
         org_id: context.orgId,
@@ -155,6 +163,7 @@ export const createPhotoSelection = createServerFn({ method: "POST" })
         drive_folder_link: data.driveFolderLink,
         deadline: data.deadline || null,
         photo_order: data.photoOrder ?? "nome",
+        selection_mode: data.mode ?? "selecao",
         token,
         created_by: context.userId,
       })
@@ -168,9 +177,9 @@ export const listPhotoSelections = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { photoClientId: string }) => z.object({ photoClientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
+    const { data: rows, error } = await (context.supabase as any)
       .from("photo_selections")
-      .select("id, title, status, token, deadline, created_at, photo_order, cover_drive_file_id, photo_selection_submissions(count)")
+      .select("id, title, status, token, deadline, created_at, photo_order, cover_drive_file_id, selection_mode, photo_selection_submissions(count)")
       .eq("photo_client_id", data.photoClientId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -184,6 +193,7 @@ export const listPhotoSelections = createServerFn({ method: "GET" })
       submissionCount: r.photo_selection_submissions?.[0]?.count ?? 0,
       photoOrder: r.photo_order as "nome" | "horario",
       coverDriveFileId: r.cover_drive_file_id as string | null,
+      mode: r.selection_mode as "selecao" | "entrega",
     })) as PhotoSelectionSummary[];
   });
 
@@ -204,9 +214,9 @@ export const getPhotoSelectionDetail = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await (context.supabase as any)
       .from("photo_selections")
-      .select("id, photo_client_id, title, status, token, deadline, drive_folder_link, created_at, photo_order, cover_drive_file_id")
+      .select("id, photo_client_id, title, status, token, deadline, drive_folder_link, created_at, photo_order, cover_drive_file_id, selection_mode")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -242,6 +252,7 @@ export const getPhotoSelectionDetail = createServerFn({ method: "GET" })
       submissionCount: submissions.length,
       photoOrder: row.photo_order as "nome" | "horario",
       coverDriveFileId: row.cover_drive_file_id as string | null,
+      mode: row.selection_mode as "selecao" | "entrega",
     } as PhotoSelectionDetail;
   });
 
@@ -325,6 +336,9 @@ export type PublicPhotoSelection = {
   // Foto escolhida pelo admin pra capa — se não tiver sido escolhida ou
   // não existir mais na pasta, o front cai pra photos[0].
   coverPhotoId: string | null;
+  // "selecao": cliente escolhe favoritas (marca d'água, finalizar com nome).
+  // "entrega": fotos finais pra baixar (sem marca d'água, sem finalizar).
+  mode: "selecao" | "entrega";
 };
 
 export const getPublicPhotoSelection = createServerFn({ method: "GET" })
@@ -361,6 +375,7 @@ export const getPublicPhotoSelection = createServerFn({ method: "GET" })
       deadline: (r.deadline as string) ?? null,
       photos,
       coverPhotoId,
+      mode: (r.mode as "selecao" | "entrega") ?? "selecao",
     };
   });
 
@@ -405,7 +420,9 @@ export const getPublicPhotoSelectionCoverImage = createServerFn({ method: "GET" 
         );
         if (!contentRes.ok) return null;
         const imageBuf = Buffer.from(await contentRes.arrayBuffer());
-        const watermark = await resolveWatermarkSpec(r.orgId as string);
+        // Modo Entrega já é o material final pro cliente — sem marca d'água,
+        // diferente do modo Seleção (que ainda não foi aprovado/pago).
+        const watermark: WatermarkSpec = r.mode === "entrega" ? { mode: "none" } : await resolveWatermarkSpec(r.orgId as string);
         return protectPhotoBytes(imageBuf, watermark);
       } catch (e) {
         console.error("[getPublicPhotoSelectionCoverImage] failed:", e);
@@ -479,7 +496,7 @@ export const getPublicPhotoThumbnails = createServerFn({ method: "POST" })
         return result;
       }
 
-      const watermark = await resolveWatermarkSpec(r.orgId as string);
+      const watermark: WatermarkSpec = r.mode === "entrega" ? { mode: "none" } : await resolveWatermarkSpec(r.orgId as string);
       const maxDim = data.size === "full" ? undefined : GRID_THUMB_MAX_DIMENSION;
 
       await Promise.all(data.fileIds.map(async (fileId) => {
@@ -550,4 +567,69 @@ export const submitPhotoSelectionResponse = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!ok) throw new Error("Link inválido ou essa seleção foi encerrada.");
     return { ok: true };
+  });
+
+/** Único jeito de um arquivo original (ou redimensionado) sair pro
+ * navegador do cliente final no modo Entrega — chamada server-to-server
+ * pela rota crua api.selecao-download.$token.$fileId.tsx (não por
+ * createServerFn direto do client: fotos de verdade passam fácil do
+ * tamanho que uma resposta JSON/base64 aguenta de forma confiável).
+ *
+ * Recusa (retorna null) se a seleção não for modo "entrega" — defesa em
+ * profundidade, já que o botão de baixar só existe nessa UI, mas a
+ * função não pode confiar só nisso pra não virar um jeito de baixar sem
+ * marca d'água uma seleção que ainda não foi aprovada. Mesma validação
+ * de "pertence à pasta" contra a listagem (não contra `parents`) já usada
+ * em getPublicPhotoThumbnails — ver o comentário lá sobre pastas
+ * compartilhadas de mais de uma conta. */
+export const getPublicPhotoDownloadBytes = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string; fileId: string; size: "social" | "original" }) =>
+    z.object({
+      token: z.string().min(8).max(60),
+      fileId: z.string().min(5).max(200),
+      size: z.enum(["social", "original"]),
+    }).parse(d))
+  .handler(async ({ data }): Promise<{ buffer: Buffer; fileName: string; mimeType: string } | null> => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+    );
+    const { data: info, error } = await supabase.rpc("get_public_photo_selection_info", { _token: data.token });
+    if (error || !info) return null;
+    const r = info as any;
+    if (r.mode !== "entrega") return null;
+
+    return withDriveOrg(r.orgId as string, async () => {
+      let file: { id: string; name: string; mimeType: string } | undefined;
+      try {
+        const files = await listDriveFolderImages(r.driveFolderId as string);
+        file = files.find((f) => f.id === data.fileId);
+      } catch (e) {
+        console.error("[getPublicPhotoDownloadBytes] listDriveFolderImages failed:", e);
+        return null;
+      }
+      if (!file) return null;
+
+      try {
+        const accessToken = await getAccessToken();
+        const contentRes = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(data.fileId)}?alt=media&supportsAllDrives=true`,
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        );
+        if (!contentRes.ok) return null;
+        const imageBuf = Buffer.from(await contentRes.arrayBuffer());
+
+        if (data.size === "original") {
+          return { buffer: imageBuf, fileName: file.name, mimeType: file.mimeType };
+        }
+        const resized = await resizeForSocialMedia(imageBuf);
+        const dotIdx = file.name.lastIndexOf(".");
+        const baseName = dotIdx > 0 ? file.name.slice(0, dotIdx) : file.name;
+        return { buffer: resized, fileName: `${baseName}.jpg`, mimeType: "image/jpeg" };
+      } catch (e) {
+        console.error("[getPublicPhotoDownloadBytes] failed:", e);
+        return null;
+      }
+    });
   });

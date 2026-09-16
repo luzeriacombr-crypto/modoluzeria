@@ -124,6 +124,10 @@ export function DriveSettingsTab() {
   const activeStep: WizardStep = manualStep ?? (!step1Done ? 1 : !step2Done ? 2 : 3);
 
   async function connectDrive() {
+    if (!(await requestConfirm(
+      'O Google pode mostrar um aviso dizendo que "o app não foi verificado" — é normal, acontece com qualquer sistema novo. Clique em Avançado e depois em Acessar Modo Criador (não seguro) pra continuar.',
+      { confirmLabel: "Entendi, conectar" },
+    ))) return;
     setConnecting(true);
     try {
       const r: any = await getConnectUrl({ data: { redirectOrigin: window.location.origin } });
@@ -227,14 +231,9 @@ export function DriveSettingsTab() {
 
         {activeStep === 1 && (
           <div>
-            <p className="text-xs text-foreground/50 mb-2 leading-relaxed">
+            <p className="text-xs text-foreground/50 mb-4 leading-relaxed">
               Cada agência conecta a própria conta do Google Drive. Os arquivos dessa agência
               ficam só nessa conta — nenhuma outra agência tem acesso a ela.
-            </p>
-            <p className="text-xs text-foreground/50 mb-4 leading-relaxed">
-              O Google pode mostrar um aviso dizendo que "o app não foi verificado" — é normal,
-              acontece com qualquer sistema novo. Clique em <b className="text-foreground/70">Avançado</b> e
-              depois em <b className="text-foreground/70">Acessar Modo Criador (não seguro)</b> pra continuar.
             </p>
             <a
               href="https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw"

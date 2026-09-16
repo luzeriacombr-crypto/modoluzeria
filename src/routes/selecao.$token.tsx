@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Heart, Lock, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Download, Heart, Lock, X } from "lucide-react";
 import { publicPhotoSelectionQO, publicPhotoThumbsBatchQO } from "@/lib/luzeria/queries";
 import { submitPhotoSelectionResponse } from "@/lib/luzeria/photo-selection.functions";
 
@@ -115,6 +115,11 @@ function PublicPhotoSelectionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submittedAs, setSubmittedAs] = useState<string | null>(null);
 
+  // Modo Entrega: alvo do download em andamento — "all" ou o id de 1 foto,
+  // decide o texto/comportamento da modal de escolha de tamanho.
+  const [downloadTarget, setDownloadTarget] = useState<"all" | string | null>(null);
+  const [zipProgress, setZipProgress] = useState<{ done: number; total: number } | null>(null);
+
   // Hooks não podem vir depois de um return condicional — calculado com
   // array vazio até q.data chegar, sem efeito no resultado.
   const photoIds = useMemo(() => (q.data?.photos ?? []).map((p) => p.id), [q.data?.photos]);
@@ -149,7 +154,8 @@ function PublicPhotoSelectionPage() {
     );
   }
 
-  const { title, clientName, status, deadline, photos } = q.data;
+  const { title, clientName, status, deadline, photos, mode } = q.data;
+  const isEntrega = mode === "entrega";
   const isClosed = status === "encerrada";
   const remainingDays = deadline ? daysUntil(deadline) : null;
   const photosById = new Map(photos.map((p) => [p.id, p]));
@@ -194,6 +200,59 @@ function PublicPhotoSelectionPage() {
 
   function scrollToGallery() {
     document.getElementById("galeria")?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function downloadUrl(fileId: string, size: "social" | "original") {
+    return `/api/selecao-download/${token}/${encodeURIComponent(fileId)}?size=${size}`;
+  }
+
+  function triggerBrowserDownload(url: string, fileName?: string) {
+    const a = document.createElement("a");
+    a.href = url;
+    if (fileName) a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  async function handlePickSize(size: "social" | "original") {
+    const target = downloadTarget;
+    setDownloadTarget(null);
+    if (!target) return;
+
+    if (target !== "all") {
+      triggerBrowserDownload(downloadUrl(target, size));
+      return;
+    }
+
+    setZipProgress({ done: 0, total: photos.length });
+    try {
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      for (const p of photos) {
+        try {
+          const res = await fetch(downloadUrl(p.id, size));
+          if (res.ok) {
+            const blob = await res.blob();
+            const disp = res.headers.get("content-disposition") ?? "";
+            const nameMatch = /filename="([^"]+)"/.exec(disp);
+            const fileName = nameMatch ? decodeURIComponent(nameMatch[1]) : p.name;
+            zip.file(fileName, blob);
+          }
+        } catch { /* pula essa foto, segue as outras */ }
+        setZipProgress((prev) => (prev ? { ...prev, done: prev.done + 1 } : prev));
+      }
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const objectUrl = URL.createObjectURL(zipBlob);
+      const suffix = size === "original" ? "fotos originais" : "redes sociais";
+      triggerBrowserDownload(objectUrl, `${title} - ${suffix}.zip`);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
+      toast.success("Download pronto!");
+    } catch (e: any) {
+      toast.error("Erro ao preparar o zip. Tenta de novo.");
+    } finally {
+      setZipProgress(null);
+    }
   }
 
   return (
@@ -257,7 +316,9 @@ function PublicPhotoSelectionPage() {
       <div id="galeria" className="max-w-[1200px] mx-auto px-4 sm:px-8 pt-6">
         {!isClosed && !submittedAs && (
           <div className="text-white/40 text-[12px] mb-5 leading-snug">
-            Clique nas fotos que você quer escolher e depois clique em "Finalizar seleção" — você vai colocar seu nome.
+            {isEntrega
+              ? "Clique numa foto pra ver em tamanho grande. Use o botão de baixar em cada foto, ou baixe todas de uma vez."
+              : 'Clique nas fotos que você quer escolher e depois clique em "Finalizar seleção" — você vai colocar seu nome.'}
           </div>
         )}
 
@@ -301,11 +362,21 @@ function PublicPhotoSelectionPage() {
                   key={p.id}
                   type="button"
                   onClick={() => setLightboxIndex(idx)}
-                  className="relative block w-full mb-2 overflow-hidden rounded-md break-inside-avoid"
+                  className="group relative block w-full mb-2 overflow-hidden rounded-md break-inside-avoid"
                   style={{ background: "#1C1C1C" }}
                 >
                   <ProtectedPhoto dataUrl={thumbs.get(p.id)} className="w-full h-auto block" />
-                  {isSelected && (
+                  {isEntrega ? (
+                    <span
+                      role="button"
+                      onClick={(e) => { e.stopPropagation(); setDownloadTarget(p.id); }}
+                      className="absolute top-1.5 right-1.5 size-7 rounded-full grid place-items-center opacity-0 group-hover:opacity-100 transition"
+                      style={{ background: "rgba(0,0,0,0.6)" }}
+                      title="Baixar"
+                    >
+                      <Download size={14} color="#fff" />
+                    </span>
+                  ) : isSelected && (
                     <div
                       className="absolute top-1.5 right-1.5 size-6 rounded-full grid place-items-center border-2"
                       style={{ background: "rgb(var(--lz-brand-rgb))", borderColor: "rgb(var(--lz-brand-rgb))" }}
@@ -327,28 +398,59 @@ function PublicPhotoSelectionPage() {
           full={lightboxFull}
           index={lightboxIndex}
           selected={selected}
+          isEntrega={isEntrega}
           onClose={() => setLightboxIndex(null)}
           onNavigate={setLightboxIndex}
           onToggle={toggle}
+          onDownload={(id) => setDownloadTarget(id)}
         />
       )}
 
       {!submittedAs && !isClosed && photos.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-40 px-4 py-3" style={{ background: "rgba(13,13,13,0.95)", borderTop: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(8px)" }}>
           <div className="max-w-[1200px] mx-auto flex items-center gap-3">
-            <span className="text-white text-sm font-semibold flex-1">
-              {selected.size} selecionada{selected.size === 1 ? "" : "s"}
-            </span>
-            <button
-              type="button"
-              onClick={openNamePrompt}
-              className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wide transition"
-              style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-            >
-              Finalizar seleção
-            </button>
+            {isEntrega ? (
+              <>
+                <span className="text-white text-sm font-semibold flex-1">
+                  {photos.length} foto{photos.length === 1 ? "" : "s"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDownloadTarget("all")}
+                  disabled={!!zipProgress}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wide transition disabled:opacity-60"
+                  style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+                >
+                  <Download size={14} />
+                  {zipProgress ? `Preparando ${zipProgress.done} de ${zipProgress.total}…` : "Baixar todas as fotos"}
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-white text-sm font-semibold flex-1">
+                  {selected.size} selecionada{selected.size === 1 ? "" : "s"}
+                </span>
+                <button
+                  type="button"
+                  onClick={openNamePrompt}
+                  className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wide transition"
+                  style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+                >
+                  Finalizar seleção
+                </button>
+              </>
+            )}
           </div>
         </div>
+      )}
+
+      {downloadTarget != null && (
+        <DownloadSizeModal
+          isAll={downloadTarget === "all"}
+          count={downloadTarget === "all" ? photos.length : 1}
+          onCancel={() => setDownloadTarget(null)}
+          onPick={handlePickSize}
+        />
       )}
 
       {showNamePrompt && (
@@ -410,6 +512,52 @@ function NamePromptModal({ count, submitting, onCancel, onConfirm }: {
   );
 }
 
+function DownloadSizeModal({ isAll, count, onCancel, onPick }: {
+  isAll: boolean;
+  count: number;
+  onCancel: () => void;
+  onPick: (size: "social" | "original") => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onCancel}>
+      <div
+        className="w-full max-w-sm rounded-xl p-5"
+        style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.1)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-white text-base font-bold mb-1">
+          {isAll ? `Baixar ${count} foto${count === 1 ? "" : "s"}` : "Baixar foto"}
+        </div>
+        <div className="text-white/50 text-xs mb-4">Em qual tamanho?</div>
+
+        <button
+          type="button"
+          onClick={() => onPick("social")}
+          className="w-full text-left rounded-md px-4 py-3 mb-2 transition hover:opacity-90"
+          style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >
+          <div className="text-sm font-bold">Tamanho para redes sociais</div>
+          <div className="text-[11px] mt-0.5 opacity-80">
+            Ocupa menos espaço no aparelho — não afeta a qualidade da postagem.
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onPick("original")}
+          className="w-full text-left rounded-md px-4 py-3 mb-4 transition"
+          style={{ background: "#0D0D0D", border: "1px solid rgba(255,255,255,0.12)" }}
+        >
+          <div className="text-sm font-bold text-white">Arquivo original</div>
+          <div className="text-[11px] mt-0.5 text-white/50">Tamanho e qualidade exatos do arquivo entregue.</div>
+        </button>
+
+        <button onClick={onCancel} className="w-full text-center text-xs text-white/50 hover:text-white py-1">Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
 /** Única forma de uma foto aparecer nessa página: os bytes já vêm do
  * servidor com a marca d'água da agência queimada (getPublicPhotoThumbnails,
  * em lote — ver comentário lá) — nunca a URL crua do Drive.
@@ -430,15 +578,17 @@ function ProtectedPhoto({ dataUrl, className }: { dataUrl: string | null | undef
   );
 }
 
-function Lightbox({ photos, thumbs, full, index, selected, onClose, onNavigate, onToggle }: {
+function Lightbox({ photos, thumbs, full, index, selected, isEntrega, onClose, onNavigate, onToggle, onDownload }: {
   photos: Array<{ id: string; name: string }>;
   thumbs: Map<string, string | null | undefined>;
   full: Map<string, string | null | undefined>;
   index: number;
   selected: Set<string>;
+  isEntrega: boolean;
   onClose: () => void;
   onNavigate: (index: number) => void;
   onToggle: (id: string) => void;
+  onDownload: (id: string) => void;
 }) {
   const photo = photos[index];
   const isSelected = selected.has(photo.id);
@@ -457,14 +607,24 @@ function Lightbox({ photos, thumbs, full, index, selected, onClose, onNavigate, 
     <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: "#0D0D0D" }}>
       {/* Topo */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 shrink-0">
-        <button
-          type="button"
-          onClick={() => onToggle(photo.id)}
-          className="inline-flex items-center gap-2 text-sm font-medium transition"
-          style={{ color: isSelected ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.8)" }}
-        >
-          <Heart size={18} fill={isSelected ? "currentColor" : "none"} /> {isSelected ? "Selecionada" : "Selecionar"}
-        </button>
+        {isEntrega ? (
+          <button
+            type="button"
+            onClick={() => onDownload(photo.id)}
+            className="inline-flex items-center gap-2 text-sm font-medium transition text-white/80 hover:text-white"
+          >
+            <Download size={18} /> Baixar
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onToggle(photo.id)}
+            className="inline-flex items-center gap-2 text-sm font-medium transition"
+            style={{ color: isSelected ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.8)" }}
+          >
+            <Heart size={18} fill={isSelected ? "currentColor" : "none"} /> {isSelected ? "Selecionada" : "Selecionar"}
+          </button>
+        )}
         <button type="button" onClick={onClose} className="text-white/70 hover:text-white transition" aria-label="Fechar">
           <X size={22} />
         </button>

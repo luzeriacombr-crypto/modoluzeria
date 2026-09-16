@@ -513,10 +513,10 @@ function parseDriveExifTime(t: string | undefined): number {
  * sorts client-side after all pages are collected. */
 export async function listDriveFolderImages(folderId: string, sortBy: "nome" | "horario" = "nome") {
   const q = `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`;
-  const files: Array<{ id: string; name: string; thumbnailUrl: string | null; takenAt?: string }> = [];
+  const files: Array<{ id: string; name: string; thumbnailUrl: string | null; mimeType: string; takenAt?: string }> = [];
   const fields = sortBy === "horario"
-    ? "nextPageToken,files(id,name,thumbnailLink,imageMediaMetadata(time))"
-    : "nextPageToken,files(id,name,thumbnailLink)";
+    ? "nextPageToken,files(id,name,thumbnailLink,mimeType,imageMediaMetadata(time))"
+    : "nextPageToken,files(id,name,thumbnailLink,mimeType)";
   let pageToken: string | undefined;
   do {
     const params = new URLSearchParams({
@@ -530,7 +530,7 @@ export async function listDriveFolderImages(folderId: string, sortBy: "nome" | "
     if (pageToken) params.set("pageToken", pageToken);
     const json: any = await driveFetch(`/drive/v3/files?${params.toString()}`);
     for (const f of json.files ?? []) {
-      files.push({ id: f.id, name: f.name, thumbnailUrl: f.thumbnailLink ?? null, takenAt: f.imageMediaMetadata?.time });
+      files.push({ id: f.id, name: f.name, thumbnailUrl: f.thumbnailLink ?? null, mimeType: f.mimeType ?? "application/octet-stream", takenAt: f.imageMediaMetadata?.time });
     }
     pageToken = json.nextPageToken;
   } while (pageToken);
@@ -541,7 +541,7 @@ export async function listDriveFolderImages(folderId: string, sortBy: "nome" | "
       return diff !== 0 ? diff : a.name.localeCompare(b.name);
     });
   }
-  return files.map(({ id, name, thumbnailUrl }) => ({ id, name, thumbnailUrl }));
+  return files.map(({ id, name, thumbnailUrl, mimeType }) => ({ id, name, thumbnailUrl, mimeType }));
 }
 
 /* ============== ATTACH BY ID/URL ============== */

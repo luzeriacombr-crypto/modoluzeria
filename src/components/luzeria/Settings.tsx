@@ -170,9 +170,6 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             </div>
           )}
           {isMaster && (
-            <GanheComModoCriadorSection initiallyOpen={tab === "afiliados" || tab === "revenda"} isPlatformAdmin={!!me.isPlatformAdmin} />
-          )}
-          {isMaster && (
             <ReferralsSection initiallyOpen={tab === "indicacoes"} />
           )}
         </div>

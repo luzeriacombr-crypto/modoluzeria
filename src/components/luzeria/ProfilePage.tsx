@@ -380,6 +380,10 @@ function GoogleCalendarSection() {
   const [time, setTime] = useState("");
 
   async function connect() {
+    if (!(await requestConfirm(
+      'O Google pode mostrar um aviso dizendo que "o app não foi verificado" — é normal, acontece com qualquer sistema novo. Clique em Avançado e depois em Acessar Modo Criador (não seguro) pra continuar.',
+      { confirmLabel: "Entendi, conectar" },
+    ))) return;
     try {
       const { url } = await getGoogleCalendarAuthUrl.mutateAsync({ data: { redirectOrigin: window.location.origin } });
       window.location.href = withOAuthState(url);
@@ -427,12 +431,6 @@ function GoogleCalendarSection() {
                 ? `Conectado como ${conn.email}. Seus compromissos de hoje aparecem em Minhas Demandas.`
                 : "Conecte sua Google Agenda pra ver seus compromissos de hoje em Minhas Demandas."}
             </div>
-            {!conn?.connected && (
-              <div className="text-[11px] text-foreground/50 mt-1">
-                O Google pode mostrar um aviso de "app não verificado" — é normal, clique em
-                Avançado e depois em Acessar Modo Criador pra continuar.
-              </div>
-            )}
           </div>
         </div>
         {!isLoading && (

@@ -128,6 +128,21 @@ export async function protectPhotoBytes(
   return sharp(resized.data).composite(composites).jpeg(JPEG_OPTS).toBuffer();
 }
 
+/** Máximo pro download "tamanho para redes sociais" no modo Entrega —
+ * pedido explícito do Junior: 2300px na aresta mais longa, ocupa bem menos
+ * espaço no aparelho do cliente sem afetar a qualidade de um post. Sem
+ * marca d'água (diferente de protectPhotoBytes) — é o modo Entrega, fotos
+ * já finais, não precisa proteger contra "roubo". */
+const SOCIAL_DOWNLOAD_MAX_DIMENSION = 2300;
+
+export async function resizeForSocialMedia(imageBuf: Buffer): Promise<Buffer> {
+  return sharp(imageBuf)
+    .rotate()
+    .resize({ width: SOCIAL_DOWNLOAD_MAX_DIMENSION, height: SOCIAL_DOWNLOAD_MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
+    .jpeg(JPEG_OPTS)
+    .toBuffer();
+}
+
 /** Fundo neutro pra pré-visualizar a marca d'água nas Configurações, sem
  * precisar de uma foto real. */
 export async function buildPreviewBackground(width: number, height: number): Promise<Buffer> {

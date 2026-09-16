@@ -333,12 +333,34 @@ function MediaPreview({
         return next;
       });
     }
+    const allSelected = files.length > 0 && selectedIds.size === files.length;
+    function toggleSelectAll() {
+      setSelectedIds(allSelected ? new Set() : new Set(files.map((f) => f.id)));
+    }
+    async function handleDeleteSelected() {
+      const count = selectedIds.size;
+      if (!count) return;
+      if (!(await requestConfirm(
+        `Remover ${count} arquivo${count === 1 ? "" : "s"} do Modo Criador? Os arquivos continuam no Google Drive, só saem daqui.`,
+        { danger: true },
+      ))) return;
+      selectedIds.forEach((id) => detachItemFile.mutate({ data: { id } }));
+      setSelectedIds(new Set());
+      setSelectMode(false);
+    }
     return (
       <div {...dropZoneProps} style={dropZoneStyle}>
         {files.length > 1 && (
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             {selectMode ? (
               <>
+                <button
+                  type="button"
+                  onClick={toggleSelectAll}
+                  className="text-[10.5px] font-semibold text-foreground/70 hover:text-foreground transition"
+                >
+                  {allSelected ? "Desmarcar todas" : "Selecionar todas"}
+                </button>
                 <button
                   type="button"
                   onClick={handleDownloadSelected}
@@ -348,6 +370,17 @@ function MediaPreview({
                   {downloadingAll ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
                   Baixar selecionadas ({selectedIds.size})
                 </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteSelected}
+                    disabled={selectedIds.size === 0}
+                    className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-red-400 hover:text-red-300 transition disabled:opacity-40"
+                  >
+                    <Trash2 size={11} />
+                    Excluir selecionadas ({selectedIds.size})
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}

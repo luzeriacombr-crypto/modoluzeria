@@ -404,13 +404,17 @@ function ActiveMonthToggle({ clientId, monthId }: { clientId: string; monthId: s
 }
 
 function ShareButton({ clientId, monthId }: { clientId: string; monthId: string }) {
-  const { getOrCreateShareToken, rotateShareToken } = useApi();
+  const { getOrCreateShareToken, rotateShareToken, setActiveFeedMonth } = useApi();
   const [open, setOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const PUBLIC_PREVIEW_BASE = import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com.br";
   async function generate() {
+    // Compartilhar já ativa esse mês no link fixo do cliente — sem isso, é
+    // fácil esquecer o botão separado "Ativar esse mês no link" e o cliente
+    // abrir o link e ver o mês errado (ou vazio).
+    setActiveFeedMonth.mutate({ data: { clientId, monthId } });
     const r = await getOrCreateShareToken.mutateAsync({ data: { clientId, monthId } });
     setToken(r.token); setOpen(true);
   }

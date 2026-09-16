@@ -7,6 +7,12 @@ import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
 type PhotoOrder = "nome" | "horario";
 const ORDER_LABEL: Record<PhotoOrder, string> = { nome: "Nome", horario: "Horário" };
+type PhotoMode = "selecao" | "entrega";
+const MODE_LABEL: Record<PhotoMode, string> = { selecao: "Seleção", entrega: "Entrega" };
+const MODE_HELP: Record<PhotoMode, string> = {
+  selecao: "Cliente escolhe favoritas, com marca d'água.",
+  entrega: "Cliente baixa as fotos finais, sem marca d'água.",
+};
 
 const PUBLIC_BASE = import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com.br";
 
@@ -290,18 +296,19 @@ function ChoiceThumb({ fileId, fileName }: { fileId: string; fileName: string })
 
 function NewSelectionModal({ onClose, onCreate, saving }: {
   onClose: () => void;
-  onCreate: (vals: { title: string; driveFolderLink: string; deadline?: string | null; photoOrder: PhotoOrder }) => void;
+  onCreate: (vals: { title: string; driveFolderLink: string; deadline?: string | null; photoOrder: PhotoOrder; mode: PhotoMode }) => void;
   saving: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [link, setLink] = useState("");
   const [deadline, setDeadline] = useState("");
   const [photoOrder, setPhotoOrder] = useState<PhotoOrder>("nome");
+  const [mode, setMode] = useState<PhotoMode>("selecao");
 
   function submit() {
     if (!title.trim()) { toast.error("Dá um título pra essa seleção."); return; }
     if (!link.trim()) { toast.error("Cola o link da pasta do Drive."); return; }
-    onCreate({ title: title.trim(), driveFolderLink: link.trim(), deadline: deadline || null, photoOrder });
+    onCreate({ title: title.trim(), driveFolderLink: link.trim(), deadline: deadline || null, photoOrder, mode });
   }
 
   return (
@@ -328,6 +335,25 @@ function NewSelectionModal({ onClose, onCreate, saving }: {
           type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)}
           className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-4"
         />
+
+        <label className="block text-[11px] font-bold uppercase tracking-wide text-foreground/40 mb-1.5">Uso desse link</label>
+        <div className="flex items-center gap-1.5 mb-1.5">
+          {(["selecao", "entrega"] as PhotoMode[]).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className="flex-1 text-xs font-semibold px-3 py-2 rounded-md border transition"
+              style={{
+                borderColor: mode === m ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 12%, transparent)",
+                color: mode === m ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
+              }}
+            >
+              {MODE_LABEL[m]}
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] text-foreground/40 mb-4">{MODE_HELP[mode]}</p>
 
         <label className="block text-[11px] font-bold uppercase tracking-wide text-foreground/40 mb-1.5">Ordenar fotos por</label>
         <div className="flex items-center gap-1.5 mb-4">
