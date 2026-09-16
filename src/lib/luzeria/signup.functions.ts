@@ -325,7 +325,7 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
       // tipos gerados do Supabase até a migração rodar.
       const { data: referrer } = await (supabaseAdmin as any)
         .from("orgs").select("id").eq("referral_code", data.refCode).maybeSingle();
-      if (referrer && !(await emailExistsAnywhere(supabaseAdmin, email))) {
+      if (referrer && !(await emailExistsAnywhere(supabaseAdmin, email, context.userId))) {
         referrerOrgId = referrer.id;
       }
     }

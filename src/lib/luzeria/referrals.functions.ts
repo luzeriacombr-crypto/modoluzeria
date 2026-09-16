@@ -10,10 +10,17 @@ const REFERRED_VALIDATION_DAYS_ACTIVE = 60;
  * handle_new_user() em todo cadastro (senha ou Google), então cobre os dois
  * casos que o check antigo (email_role_assignments, só donos) não pegava.
  * Precisa do client de service-role: authenticated/anon não tem SELECT na
- * coluna email (REVOKE de 20260629025625), mas service_role ignora RLS. */
-export async function emailExistsAnywhere(supabaseAdmin: any, email: string): Promise<boolean> {
-  const { data } = await supabaseAdmin
-    .from("profiles").select("id").ilike("email", email).limit(1).maybeSingle();
+ * coluna email (REVOKE de 20260629025625), mas service_role ignora RLS.
+ *
+ * `excludeUserId` existe pro fluxo do Google: nesse caso o profile da PRÓPRIA
+ * pessoa já existe (inativo, na org coringa da Luzeria — handle_new_user()
+ * roda antes de completeGoogleSignup) — sem excluir esse id, todo cadastro
+ * via Google acharia o próprio e-mail e bloquearia o bônus mesmo sendo a
+ * primeira vez de verdade. */
+export async function emailExistsAnywhere(supabaseAdmin: any, email: string, excludeUserId?: string): Promise<boolean> {
+  let query = supabaseAdmin.from("profiles").select("id").ilike("email", email);
+  if (excludeUserId) query = query.neq("id", excludeUserId);
+  const { data } = await query.limit(1).maybeSingle();
   return !!data;
 }
 
