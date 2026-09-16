@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import {
   Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ExternalLink,
-  Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown, MessageCircle, Send, X, Mail,
+  Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown, MessageCircle, Send, X, Mail, CalendarDays,
 } from "lucide-react";
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
 import {
@@ -17,6 +17,7 @@ import {
 } from "@/lib/luzeria/instagram.functions";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { POST_FORMAT_LABEL, CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
+import { CalendarioContent } from "./CalendarioPage";
 
 function typeLabel(item: InstagramActivityItem) {
   if (item.type === "post" && item.postFormat) {
@@ -38,6 +39,7 @@ export function InstagramActivityPage() {
   const itemIds = useMemo(() => items.map((i) => i.id), [items]);
   const { data: thumbs } = useQuery({ ...gridThumbnailsQO(itemIds), enabled: isAdmin && itemIds.length > 0 });
 
+  const [tab, setTab] = useState<"atividade" | "calendario">("atividade");
   const [clientFilter, setClientFilter] = useState<string | null>(null);
   const clients = useMemo(() => {
     const map = new Map<string, { id: string; name: string; color: string }>();
@@ -82,6 +84,30 @@ export function InstagramActivityPage() {
         abaixo.
       </p>
 
+      {/* Calendário virou aba daqui — só importa mesmo no contexto de "o que
+       * vai publicar e quando", não precisa mais de item próprio na barra
+       * lateral (feedback de usabilidade, call com Alexsander Felix). */}
+      <div className="inline-flex items-center gap-1 rounded-full bg-card p-1 border border-foreground/10 mb-6">
+        <button
+          onClick={() => setTab("atividade")}
+          className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition"
+          style={tab === "atividade" ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" } : { color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
+        >
+          Atividade
+        </button>
+        <button
+          onClick={() => setTab("calendario")}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition"
+          style={tab === "calendario" ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" } : { color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
+        >
+          <CalendarDays size={13} /> Calendário
+        </button>
+      </div>
+
+      {tab === "calendario" && <CalendarioContent />}
+
+      {tab === "atividade" && (
+      <>
       {clients.length > 0 && (
         <div className="flex items-center gap-2 mb-6">
           <label className="text-[11px] uppercase font-bold tracking-wider text-foreground/40">Cliente</label>
@@ -137,6 +163,8 @@ export function InstagramActivityPage() {
           dateOf={(i) => i.igPublishedAt!}
           datePrefix="Publicado em"
         />
+      )}
+      </>
       )}
     </div>
   );

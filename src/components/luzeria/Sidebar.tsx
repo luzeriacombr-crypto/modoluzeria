@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Plus, Info, CircleHelp, CalendarDays, Instagram, Users, Wallet, UserCog, BookMarked,
+  Plus, Info, CircleHelp, Instagram, Users, Wallet, UserCog, BookMarked,
   Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
@@ -247,11 +247,6 @@ export function Sidebar({
                 )}
               </div>
             ) },
-            ...(!disabled.has("calendar") ? [{ id: "calendario", label: navLabel("calendario", "Calendário"), meta: { icon: <CalendarDays size={17} />, label: navLabel("calendario", "Calendário"), active: pathname === "/calendario", kind: "button" as const, onClick: () => navigate({ to: "/calendario" }) }, node: (
-              <div key="calendario" data-tour="nav-calendario">
-                <NavButton icon={<CalendarDays size={15} />} label={navLabel("calendario", "Calendário")} active={pathname === "/calendario"} onClick={() => navigate({ to: "/calendario" })} />
-              </div>
-            ) }] : []),
             ...(!disabled.has("reference_library") ? [{ id: "biblioteca", label: navLabel("biblioteca", "Biblioteca"), meta: { icon: <BookMarked size={17} />, label: navLabel("biblioteca", "Biblioteca"), active: pathname === "/biblioteca", kind: "button" as const, onClick: () => navigate({ to: "/biblioteca" }) }, node: (
               <div key="biblioteca" data-tour="nav-biblioteca">
                 <NavButton icon={<BookMarked size={15} />} label={navLabel("biblioteca", "Biblioteca")} active={pathname === "/biblioteca"} onClick={() => navigate({ to: "/biblioteca" })} />

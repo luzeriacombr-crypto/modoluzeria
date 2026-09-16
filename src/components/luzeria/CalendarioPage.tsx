@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, X, Inbox, CalendarDays, Image as ImageIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Inbox, Image as ImageIcon } from "lucide-react";
 import { calendarItemsQO, itemFilesQO, driveThumbnailQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { CONTENT_TYPE_LABEL, getStatusMeta, type Status } from "@/lib/luzeria/types";
@@ -57,7 +57,24 @@ function gridRange(monthKey: string) {
   return days;
 }
 
+/** Página própria — mantida por compatibilidade (link direto/histórico),
+ * mas não é mais um item da barra lateral: o Calendário virou uma aba
+ * dentro do Instagram (mesmo conteúdo, ver CalendarioContent abaixo),
+ * porque na prática ele só importa no contexto de "o que vai publicar
+ * no Instagram e quando" — não é algo que o time abre com frequência
+ * sozinho. */
 export function CalendarioPage() {
+  return (
+    <div className="px-5 md:px-10 py-8 max-w-[1400px] mx-auto">
+      <CalendarioContent />
+    </div>
+  );
+}
+
+/** Conteúdo puro do calendário, sem o wrapper de página nem o `<h1>` —
+ * pra poder viver tanto na página própria (acima) quanto embutido como
+ * aba dentro de InstagramActivityPage. */
+export function CalendarioContent() {
   const { selectedMonthKey, selectMonth, openItem, flash } = useUI();
   const navigate = useNavigate();
   const monthKey = selectedMonthKey || currentMonthKey();
@@ -107,13 +124,12 @@ export function CalendarioPage() {
   const dayList = dayOpen ? (byDay.get(dayOpen) ?? []) : [];
 
   return (
-    <div className="px-5 md:px-10 py-8 max-w-[1400px] mx-auto">
+    <div>
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
-        <div className="flex items-center gap-2">
-          <CalendarDays size={20} className="text-[var(--lz-accent-ink)]" />
-          <h1 className="text-[28px] font-bold text-foreground tracking-tight">Calendário</h1>
-        </div>
+        <p className="text-xs text-foreground/40 max-w-md">
+          Todos os posts com data de publicação definida, de todos os clientes — independente do status.
+        </p>
         <div className="flex items-center gap-2">
           <button onClick={() => selectMonth(currentMonthKey())}
             className="px-3 py-1.5 rounded-md text-xs font-semibold text-foreground/70 hover:text-foreground hover:bg-foreground/5 border border-foreground/10 transition">
@@ -134,10 +150,6 @@ export function CalendarioPage() {
           </div>
         </div>
       </div>
-
-      <p className="text-xs text-foreground/40 -mt-4 mb-5">
-        Todos os posts com data de publicação definida, de todos os clientes — independente do status.
-      </p>
 
       {/* Grid */}
       <div className="rounded-xl border border-foreground/7 overflow-hidden bg-card">

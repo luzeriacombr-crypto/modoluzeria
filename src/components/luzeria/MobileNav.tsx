@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart2, Star, Menu, X, CalendarDays, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2, Plus, Search, Images } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Star, Menu, X, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2, Plus, Search, Images } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -173,14 +173,6 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
             </button>
           </div>
           <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-1.5">
-            {!disabledFeatures.has("calendar") && (
-              <MenuLink
-                icon={<CalendarDays size={17} />}
-                label={navLabel("calendario", "Calendário")}
-                dataTour="nav-calendario-mobile"
-                onClick={() => { navigate({ to: "/calendario" }); closeAllSheets(); }}
-              />
-            )}
             {!disabledFeatures.has("reference_library") && (
               <MenuLink
                 icon={<BookMarked size={17} />}
