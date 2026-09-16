@@ -272,7 +272,7 @@ export function App() {
         <PastDueBanner isMaster={me.data?.role === "master"} />
         <InstagramLiveBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
         <DriveReconnectBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
-        <ReferralAnnouncementBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
+        <ReferralAnnouncementBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} firstPaymentConfirmedAt={me.data?.firstPaymentConfirmedAt} />
         <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0">
           <PullToRefresh containerRef={mainRef}>
             <div key={routeId} className="lz-page-in">

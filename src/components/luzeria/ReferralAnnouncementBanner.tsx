@@ -11,17 +11,22 @@ const VIEW_COUNT_KEY = "modocriador:referral-banner-views";
 const MAX_VIEWS = 5;
 
 /** Convite pro Programa de Indicação — mesmo padrão visual do
- * InstagramLiveBanner/DriveReconnectBanner. Some em 3 situações: passou do
+ * InstagramLiveBanner/DriveReconnectBanner. Some em 4 situações: passou do
  * limite de exibições, a agência já indicou alguém (não precisa mais
- * convidar quem já topou), ou a pessoa dispensou manualmente. */
-export function ReferralAnnouncementBanner({ isAdmin }: { isAdmin: boolean }) {
+ * convidar quem já topou), a pessoa dispensou manualmente, ou a agência
+ * ainda não virou pagante de verdade (pedido do Junior — só faz sentido
+ * convidar quem já pagou pelo menos uma vez, não quem ainda está no
+ * trial). `firstPaymentConfirmedAt` é a mesma marca usada pelo programa de
+ * indicação pra saber quando o indicado virou pagante. */
+export function ReferralAnnouncementBanner({ isAdmin, firstPaymentConfirmedAt }: { isAdmin: boolean; firstPaymentConfirmedAt: string | null | undefined }) {
   const { data } = useQuery({ ...myReferralInfoQO(), enabled: isAdmin });
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(DISMISS_KEY) === "1");
   const [viewCount, setViewCount] = useState(() => Number(localStorage.getItem(VIEW_COUNT_KEY) ?? "0"));
   const navigate = useNavigate();
 
   const hasReferred = (data?.referrals?.length ?? 0) > 0;
-  const shouldShow = isAdmin && !dismissed && !hasReferred && viewCount < MAX_VIEWS;
+  const isPayingCustomer = !!firstPaymentConfirmedAt;
+  const shouldShow = isAdmin && isPayingCustomer && !dismissed && !hasReferred && viewCount < MAX_VIEWS;
 
   useEffect(() => {
     if (!shouldShow) return;

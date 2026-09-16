@@ -335,6 +335,11 @@ export interface Profile {
    * usado só na Views Agência, a demo pública. Master fica isento (ver
    * assertNotDemoReadOnly em require-active.ts). */
   demoReadOnly?: boolean;
+  /** Quando a agência pagou a primeira fatura de verdade (orgs.
+   * first_payment_confirmed_at) — null enquanto ainda está no trial ou
+   * nunca chegou a pagar. Usado pra só mostrar o convite do programa de
+   * indicação pra quem já é pagante de verdade. */
+  firstPaymentConfirmedAt?: string | null;
   /** Capabilities this org's Master granted the "setor" role beyond its
    * fixed baseline — keys from SETOR_PERMISSION_KEYS. Present for every
    * profile (not just setor ones) so a Master viewing the Equipe tab can
