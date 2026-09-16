@@ -3,8 +3,8 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
-  Plus, Info, CircleHelp, CalendarDays, Instagram, Users, BookMarked,
-  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, Trash2, Images,
+  Plus, Info, CircleHelp, CalendarDays, Instagram, Users, Wallet, UserCog, BookMarked,
+  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
@@ -14,7 +14,7 @@ import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
 import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { reportAppError } from "@/lib/error-reporting";
 import { toast } from "sonner";
-import { hasPermission, type Client } from "@/lib/luzeria/types";
+import { hasSetorPermission, hasPermission, type Client } from "@/lib/luzeria/types";
 
 export const DEFAULT_NAV_LABELS: Record<string, string> = {
   "minhas-demandas": "Minhas demandas", dashboard: "Dashboard", clientes: "Clientes",
@@ -25,12 +25,6 @@ export const DEFAULT_NAV_LABELS: Record<string, string> = {
   vendas: "Vendas", lixeira: "Lixeira", pagamentos: "Pagamentos", cliente: "Visão Geral", "cliente-overview": "Visão Geral",
   "selecao-de-fotos": "Seleção de Fotos",
 };
-
-/** Itens que continuam fixos na barra lateral — o resto vira o menu em
- * grade no cabeçalho (`NavGridLauncher`, ver App.tsx). Ajuda entra aqui
- * porque continua sempre visível, só que agora é o último item da lista
- * (os 7 que saíram abriam espaço embaixo dela antes). */
-export const SIDEBAR_NAV_IDS = new Set(["minhas-demandas", "dashboard", "clientes", "ajuda"]);
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
@@ -130,9 +124,15 @@ export function Sidebar({
   const disabled = new Set(me?.disabledFeatures ?? []);
   const clientsActive = pathname.startsWith("/cliente/");
   const isMaster = me?.role === "master";
+  const canTeam = isMaster || hasPermission(me, "manage_team");
+  const canReport = isMaster || hasSetorPermission(me, "team_reports");
+  const canJourney = isMaster || hasSetorPermission(me, "settings_journey");
+  const canFinanceiro = isMaster || hasPermission(me, "view_financeiro");
   const canSales = !disabled.has("sales_pipeline") && hasPermission(me, "sales_pipeline");
   const canPhotoSelection = !disabled.has("photo_selection") && isAdmin;
   const rotinaEnabled = !disabled.has("rotina");
+  const configTabActive = (tabId: string) => pathname === "/configuracoes" && routerSearch?.tab === tabId;
+  const goToConfigTab = (tabId: string) => navigate({ to: "/configuracoes", search: { tab: tabId } });
   const [customizingNav, setCustomizingNav] = useState(false);
   const navLabels = me?.navLabels ?? {};
   const navOrder = me?.navOrder ?? {};
@@ -174,6 +174,26 @@ export function Sidebar({
       {/* Nav — single scrollable list so Clientes sits inline with everything else */}
       <div className={collapsed ? "px-2 pt-4 pb-3 flex-1 overflow-y-auto space-y-1.5 flex flex-col items-center" : "px-3 pt-4 pb-3 flex-1 overflow-y-auto space-y-0.5"}>
         {(() => {
+          const clienteItems = orderSection("cliente", [
+            ...(isAdmin ? [{ id: "cliente-overview", label: navLabel("cliente-overview", "Visão Geral"), node: <NavSubButton key="cliente-overview" label={navLabel("cliente-overview", "Visão Geral")} active={configTabActive("cliente")} onClick={() => goToConfigTab("cliente")} /> }] : []),
+            ...(canJourney ? [{ id: "jornada", label: navLabel("jornada", "Jornada do cliente"), node: <NavSubButton key="jornada" label={navLabel("jornada", "Jornada do cliente")} active={configTabActive("journey")} onClick={() => goToConfigTab("journey")} /> }] : []),
+            ...(canFinanceiro ? [{ id: "margem", label: navLabel("margem", "Margem por cliente"), node: <NavSubButton key="margem" label={navLabel("margem", "Margem por cliente")} active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} /> }] : []),
+            ...(canFinanceiro ? [{ id: "pagamentos", label: navLabel("pagamentos", "Pagamentos"), node: <NavSubButton key="pagamentos" label={navLabel("pagamentos", "Pagamentos")} active={configTabActive("pagamentos")} onClick={() => goToConfigTab("pagamentos")} /> }] : []),
+          ]);
+
+          const financeiroItems = canFinanceiro ? orderSection("financeiro", [
+            { id: "cobranca", label: navLabel("cobranca", "Plano e Cobrança"), node: <NavSubButton key="cobranca" label={navLabel("cobranca", "Plano e Cobrança")} active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} /> },
+            { id: "afiliados", label: navLabel("afiliados", "Afiliados"), node: <NavSubButton key="afiliados" label={navLabel("afiliados", "Afiliados")} active={configTabActive("afiliados")} onClick={() => goToConfigTab("afiliados")} /> },
+            { id: "revenda", label: navLabel("revenda", "Revenda"), node: <NavSubButton key="revenda" label={navLabel("revenda", "Revenda")} active={configTabActive("revenda")} onClick={() => goToConfigTab("revenda")} /> },
+          ]) : [];
+
+          const equipeItems = orderSection("equipe", [
+            ...(rotinaEnabled ? [{ id: "rotina", label: navLabel("rotina", "Rotina"), node: <div key="rotina" data-tour="nav-rotina"><NavSubButton label={navLabel("rotina", "Rotina")} active={pathname === "/rotina"} onClick={() => navigate({ to: "/rotina" })} /></div> }] : []),
+            ...(canTeam ? [{ id: "membros", label: navLabel("membros", "Membros"), node: <NavSubButton key="membros" label={navLabel("membros", "Membros")} active={configTabActive("team")} onClick={() => goToConfigTab("team")} /> }] : []),
+            ...(canReport ? [{ id: "relatorio", label: navLabel("relatorio", "Relatório"), node: <NavSubButton key="relatorio" label={navLabel("relatorio", "Relatório")} active={configTabActive("report")} onClick={() => goToConfigTab("report")} /> }] : []),
+            ...(canReport ? [{ id: "auditoria-producao", label: navLabel("auditoria-producao", "Auditoria de Produção"), node: <NavSubButton key="auditoria-producao" label={navLabel("auditoria-producao", "Auditoria de Produção")} active={configTabActive("auditoria")} onClick={() => goToConfigTab("auditoria")} /> }] : []),
+          ]);
+
           const mainItems: { id: string; label: string; node: React.ReactNode; meta: CollapsedMeta }[] = orderSection("main", [
             { id: "minhas-demandas", label: navLabel("minhas-demandas", "Minhas demandas"), node: (
               <NavButton key="minhas-demandas" icon={<LayoutDashboard size={15} />} label={navLabel("minhas-demandas", "Minhas demandas")}
@@ -257,9 +277,28 @@ export function Sidebar({
                 <NavButton icon={<Trash2 size={15} />} label={navLabel("lixeira", "Lixeira")} active={pathname === "/lixeira"} onClick={() => navigate({ to: "/lixeira" })} />
               </div>
             ) }] : []),
-            ...(rotinaEnabled ? [{ id: "rotina", label: navLabel("rotina", "Rotina"), meta: { icon: <RotateCcw size={17} />, label: navLabel("rotina", "Rotina"), active: pathname === "/rotina", kind: "button" as const, onClick: () => navigate({ to: "/rotina" }) }, node: (
-              <div key="rotina" data-tour="nav-rotina">
-                <NavButton icon={<RotateCcw size={15} />} label={navLabel("rotina", "Rotina")} active={pathname === "/rotina"} onClick={() => navigate({ to: "/rotina" })} />
+            ...((isAdmin || canJourney || canFinanceiro) ? [{ id: "cliente", label: navLabel("cliente", "Visão Geral"), meta: { icon: <IdCard size={17} />, label: navLabel("cliente", "Visão Geral"), active: configTabActive("cliente") || configTabActive("journey") || configTabActive("margem") || configTabActive("pagamentos"), kind: "flyout" as const }, node: (
+              <div key="cliente" data-tour="nav-cliente">
+                <NavGroup icon={<IdCard size={15} />} label={navLabel("cliente", "Visão Geral")}
+                  active={configTabActive("cliente") || configTabActive("journey") || configTabActive("margem") || configTabActive("pagamentos")}>
+                  {clienteItems.map((it) => it.node)}
+                </NavGroup>
+              </div>
+            ) }] : []),
+            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Financeiro"), meta: { icon: <Wallet size={17} />, label: navLabel("financeiro", "Financeiro"), active: configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda"), kind: "flyout" as const }, node: (
+              <div key="financeiro" data-tour="nav-financeiro">
+                <NavGroup icon={<Wallet size={15} />} label={navLabel("financeiro", "Financeiro")}
+                  active={configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda")}>
+                  {financeiroItems.map((it) => it.node)}
+                </NavGroup>
+              </div>
+            ) }] : []),
+            ...((canTeam || canReport || rotinaEnabled) ? [{ id: "equipe", label: navLabel("equipe", "Equipe"), meta: { icon: <UserCog size={17} />, label: navLabel("equipe", "Equipe"), active: configTabActive("team") || configTabActive("report") || configTabActive("auditoria") || pathname === "/rotina", kind: "flyout" as const }, node: (
+              <div key="equipe" data-tour="nav-equipe">
+                <NavGroup icon={<UserCog size={15} />} label={navLabel("equipe", "Equipe")}
+                  active={configTabActive("team") || configTabActive("report") || configTabActive("auditoria") || pathname === "/rotina"}>
+                  {equipeItems.map((it) => it.node)}
+                </NavGroup>
               </div>
             ) }] : []),
             { id: "ajuda", label: navLabel("ajuda", "Ajuda"), meta: { icon: <CircleHelp size={17} />, label: navLabel("ajuda", "Ajuda"), active: pathname === "/ajuda", kind: "button", onClick: () => navigate({ to: "/ajuda" }) }, node: (
@@ -269,15 +308,16 @@ export function Sidebar({
             ) },
           ]);
 
-          // Só o que continua fixo na barra — o resto (Calendário, Biblioteca,
-          // Instagram, Vendas, Seleção de Fotos, Lixeira, Rotina) saiu daqui e
-          // vive só no menu em grade do cabeçalho (NavGridLauncher).
-          const sidebarItems = mainItems.filter((it) => SIDEBAR_NAV_IDS.has(it.id));
-          const openItem = sidebarItems.find((it) => it.id === openFlyout);
+          const groupItemsById: Record<string, React.ReactNode> = {
+            cliente: clienteItems.map((it) => it.node),
+            financeiro: financeiroItems.map((it) => it.node),
+            equipe: equipeItems.map((it) => it.node),
+          };
+          const openItem = mainItems.find((it) => it.id === openFlyout);
 
           return (
             <>
-              {sidebarItems.map((it) => collapsed ? (
+              {mainItems.map((it) => collapsed ? (
                 <CollapsedIconButton
                   key={it.id}
                   icon={it.meta.icon}
@@ -298,22 +338,25 @@ export function Sidebar({
                 <NavCustomizeModal
                   onClose={() => setCustomizingNav(false)}
                   mainItems={mainItems}
+                  financeiroItems={financeiroItems}
+                  equipeItems={equipeItems}
                   navLabels={navLabels}
                   navOrder={navOrder}
                 />
               )}
-              {/* "Clientes" é o único item que ainda abre flyout no modo
-               * reduzido — os 3 grupos (Visão Geral/Financeiro/Equipe) que
-               * também usavam esse painel saíram da sidebar. */}
-              {collapsed && openFlyout === "clientes" && flyoutAnchor && openItem && (
+              {collapsed && openFlyout && flyoutAnchor && openItem && (
                 <SidebarFlyout anchor={flyoutAnchor} title={openItem.label} panelRef={flyoutPanelRef}>
-                  <ClientesListBody
-                    search={search} setSearch={setSearch} grouped={grouped} filtered={filtered}
-                    isAdmin={isAdmin} allCategories={allCategories} pathname={pathname}
-                    onCreateClient={onCreateClient} onOpenCustomFields={onOpenCustomFields}
-                    loading={clientsLoading}
-                    error={clientsError}
-                  />
+                  {openFlyout === "clientes" ? (
+                    <ClientesListBody
+                      search={search} setSearch={setSearch} grouped={grouped} filtered={filtered}
+                      isAdmin={isAdmin} allCategories={allCategories} pathname={pathname}
+                      onCreateClient={onCreateClient} onOpenCustomFields={onOpenCustomFields}
+                      loading={clientsLoading}
+                      error={clientsError}
+                    />
+                  ) : (
+                    <div className="px-1 space-y-0.5">{groupItemsById[openFlyout]}</div>
+                  )}
                 </SidebarFlyout>
               )}
             </>
@@ -322,49 +365,6 @@ export function Sidebar({
       </div>
     </aside>
   );
-}
-
-export type SecondaryNavItem = { id: string; label: string; icon: React.ReactNode; active: boolean; onClick: () => void };
-
-/** Os itens que saíram da barra lateral e agora só vivem no menu em grade
- * do cabeçalho (`NavGridLauncher`, em App.tsx). Mesmos gates de permissão
- * de sempre (nada mudou nas regras, só onde cada item renderiza) e mesma
- * ordem/rótulo customizados pelo master (`me.navOrder.main`/`navLabels`) —
- * por isso reaproveita a mesma chave "main" do `orderSection` de dentro da
- * Sidebar, só filtrando pro outro lado do `SIDEBAR_NAV_IDS`. Hook próprio
- * (não um valor exportado do componente `Sidebar`) porque `Sidebar` e o
- * `Header` que usa isso são irmãos na árvore, não pai/filho — cada um
- * chama `useMe()`/`useRouterState()` por conta própria, mesmo padrão já
- * usado no resto do app pra não precisar de contexto/prop-drilling. */
-export function useSecondaryNavItems(): SecondaryNavItem[] {
-  const me = useMe().data;
-  const navigate = useNavigate();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-
-  const isAdmin = me?.role === "master" || me?.role === "setor";
-  const disabled = new Set(me?.disabledFeatures ?? []);
-  const canSales = !disabled.has("sales_pipeline") && hasPermission(me, "sales_pipeline");
-  const canPhotoSelection = !disabled.has("photo_selection") && isAdmin;
-  const rotinaEnabled = !disabled.has("rotina");
-  const navLabels = me?.navLabels ?? {};
-  const navLabel = (id: string, fallback: string) => navLabels[id] || fallback;
-
-  const items: SecondaryNavItem[] = [
-    ...(!disabled.has("calendar") ? [{ id: "calendario", label: navLabel("calendario", "Calendário"), icon: <CalendarDays size={18} />, active: pathname === "/calendario", onClick: () => navigate({ to: "/calendario" }) }] : []),
-    ...(!disabled.has("reference_library") ? [{ id: "biblioteca", label: navLabel("biblioteca", "Biblioteca"), icon: <BookMarked size={18} />, active: pathname === "/biblioteca", onClick: () => navigate({ to: "/biblioteca" }) }] : []),
-    ...(isAdmin && !disabled.has("instagram") ? [{ id: "instagram", label: navLabel("instagram", "Instagram"), icon: <Instagram size={18} />, active: pathname === "/instagram", onClick: () => navigate({ to: "/instagram" }) }] : []),
-    ...(canSales ? [{ id: "vendas", label: navLabel("vendas", "Vendas"), icon: <Handshake size={18} />, active: pathname === "/vendas", onClick: () => navigate({ to: "/vendas" }) }] : []),
-    ...(canPhotoSelection ? [{ id: "selecao-de-fotos", label: navLabel("selecao-de-fotos", "Seleção de Fotos"), icon: <Images size={18} />, active: pathname.startsWith("/selecao-de-fotos"), onClick: () => navigate({ to: "/selecao-de-fotos" }) }] : []),
-    ...(isAdmin ? [{ id: "lixeira", label: navLabel("lixeira", "Lixeira"), icon: <Trash2 size={18} />, active: pathname === "/lixeira", onClick: () => navigate({ to: "/lixeira" }) }] : []),
-    ...(rotinaEnabled ? [{ id: "rotina", label: navLabel("rotina", "Rotina"), icon: <RotateCcw size={18} />, active: pathname === "/rotina", onClick: () => navigate({ to: "/rotina" }) }] : []),
-  ];
-
-  const order = me?.navOrder?.main;
-  if (!order || order.length === 0) return items;
-  const byId = new Map(items.map((it) => [it.id, it]));
-  const ordered = order.map((id) => byId.get(id)).filter((it): it is SecondaryNavItem => !!it);
-  items.forEach((it) => { if (!order.includes(it.id)) ordered.push(it); });
-  return ordered;
 }
 
 /** Ícone sozinho do modo reduzido — mostra o nome num tooltip flutuante ao
@@ -534,16 +534,49 @@ function NavButton({ icon, label, active, onClick, badge, disabled, title }: {
   );
 }
 
-/** Renomear/reordenar os itens do menu — uma lista só (os 4 fixos da
- * barra + os 7 da grade, nessa ordem não importa pro resultado visual:
- * cada item sempre renderiza no mesmo lugar, fixo ou grade, conforme
- * `SIDEBAR_NAV_IDS` — só a posição relativa DENTRO de cada um dos dois
- * muda). Cada item tem um campo de texto (renomear) e setas pra mover.
- * Guarda em orgs.nav_labels/nav_order via updateMyOrg (vale pra agência
- * toda). */
-function NavCustomizeModal({ onClose, mainItems, navLabels, navOrder }: {
+function NavGroup({ icon, label, active, children }: {
+  icon: React.ReactNode; label: string; active: boolean; children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(active);
+  return (
+    <div>
+      <button onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative"
+        style={{
+          backgroundColor: active ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent",
+          color: active ? "#FFFFFF" : "rgba(255,255,255,0.7)",
+        }}>
+        {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
+        <span className="flex items-center gap-2.5">
+          <span className={active ? "text-[rgb(var(--lz-brand-rgb))]" : "text-white/60"}>{icon}</span>
+          {label}
+        </span>
+        {open ? <ChevronDown size={14} className="text-white/40" /> : <ChevronRight size={14} className="text-white/40" />}
+      </button>
+      {open && <div className="mt-0.5 ml-[26px] pl-2 border-l border-white/10 space-y-0.5">{children}</div>}
+    </div>
+  );
+}
+
+function NavSubButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick}
+      className="w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors truncate"
+      style={{ color: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.6)" }}>
+      {label}
+    </button>
+  );
+}
+
+/** Renomear/reordenar os itens fixos do menu lateral — uma lista só, com
+ * seção "Principal" e as duas seções internas (Financeiro/Equipe), cada
+ * item com um campo de texto (renomear) e setas pra mover. Guarda em
+ * orgs.nav_labels/nav_order via updateMyOrg (vale pra agência toda). */
+function NavCustomizeModal({ onClose, mainItems, financeiroItems, equipeItems, navLabels, navOrder }: {
   onClose: () => void;
   mainItems: { id: string; label: string }[];
+  financeiroItems: { id: string; label: string }[];
+  equipeItems: { id: string; label: string }[];
   navLabels: Record<string, string>;
   navOrder: Record<string, string[]>;
 }) {
@@ -551,6 +584,8 @@ function NavCustomizeModal({ onClose, mainItems, navLabels, navOrder }: {
   const [labels, setLabels] = useState<Record<string, string>>(navLabels);
   const [order, setOrder] = useState<Record<string, string[]>>({
     main: navOrder.main?.length ? navOrder.main : mainItems.map((it) => it.id),
+    financeiro: navOrder.financeiro?.length ? navOrder.financeiro : financeiroItems.map((it) => it.id),
+    equipe: navOrder.equipe?.length ? navOrder.equipe : equipeItems.map((it) => it.id),
   });
 
   function orderedIds(section: string, fallbackItems: { id: string }[]) {
@@ -618,11 +653,10 @@ function NavCustomizeModal({ onClose, mainItems, navLabels, navOrder }: {
           <span className="text-sm font-bold text-white">Personalizar menu</span>
           <button onClick={onClose} className="text-white/40 hover:text-white"><X size={16} /></button>
         </div>
-        <p className="text-[11px] text-white/40 mb-4">
-          Renomeie ou reordene qualquer item — vale pra toda a agência. A ordem aqui só vale
-          dentro de onde cada item já aparece (barra lateral ou menu em grade do cabeçalho).
-        </p>
-        {renderSection("Menu", "main", mainItems)}
+        <p className="text-[11px] text-white/40 mb-4">Renomeie ou reordene qualquer item — vale pra toda a agência.</p>
+        {renderSection("Principal", "main", mainItems)}
+        {renderSection("Financeiro", "financeiro", financeiroItems)}
+        {renderSection("Equipe", "equipe", equipeItems)}
         <button
           onClick={save}
           disabled={updateMyOrg.isPending}
