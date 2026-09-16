@@ -93,9 +93,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             {tab === "team" || tab === "report" || tab === "auditoria" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
              tab === "integrations" ? "Conecte o Google Drive da agência e acompanhe o Instagram de cada cliente." :
              tab === "automations" ? "Lembretes automáticos e rotinas que o sistema executa sozinho." :
-             tab === "cobranca" || tab === "afiliados" || tab === "revenda" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
+             tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
              tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? "Visão geral, jornada, margem e pagamentos de cada cliente." :
-             tab === "indicacoes" ? "Indique outras agências e ganhe meses grátis." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
              tab === "blog" ? "Escreva e edite os artigos do blog (modocriador.com.br/blog)." :
@@ -111,7 +110,6 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "automations", label: "Automações" },
           { id: "cliente", label: "Clientes" },
           { id: "cobranca", label: "Plano e Cobrança" },
-          { id: "indicacoes", label: "Indicações" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
           ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }, { id: "blog", label: "Blog" }] : []),
@@ -119,7 +117,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           const active = tab === (t.id as any) ||
             (t.id === "team" && (tab === "report" || tab === "auditoria")) ||
             (t.id === "cliente" && (tab === "margem" || tab === "journey" || tab === "pagamentos")) ||
-            (t.id === "cobranca" && (tab === "afiliados" || tab === "revenda"));
+            (t.id === "cobranca" && (tab === "afiliados" || tab === "revenda" || tab === "indicacoes"));
           return (
             <button key={t.id} onClick={() => setTab(t.id as any)}
               className="shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
@@ -150,7 +148,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
 
       <Suspense fallback={<TabLoadingFallback />}>
       {tab === "general" ? <GeneralSettings /> :
-       tab === "cobranca" || tab === "afiliados" || tab === "revenda" ? (
+       tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" ? (
         <div className="space-y-10">
           <PlanCardSection />
           <div className="pt-2 border-t border-foreground/10">
@@ -174,6 +172,9 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           {isMaster && (
             <GanheComModoCriadorSection initiallyOpen={tab === "afiliados" || tab === "revenda"} isPlatformAdmin={!!me.isPlatformAdmin} />
           )}
+          {isMaster && (
+            <ReferralsSection initiallyOpen={tab === "indicacoes"} />
+          )}
         </div>
        ) :
        tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? (
@@ -184,7 +185,6 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           isAdmin={isAdmin}
         />
        ) :
-       tab === "indicacoes" ? <ReferralsTab /> :
        tab === "updates" ? <UpdatesTab /> :
        tab === "site" ? (me.isPlatformAdmin ? <SalesPageEditorTab /> : null) :
        tab === "blog" ? (me.isPlatformAdmin ? <BlogAdminTab /> : null) :
@@ -1111,6 +1111,27 @@ function GanheComModoCriadorSection({ initiallyOpen, isPlatformAdmin }: { initia
           <div className="pt-2 border-t border-foreground/10">
             <ResellerPanel />
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Programa de indicação entre agências — vive dentro de "Plano e
+ * Cobrança" (não é aba própria, pedido do Junior pra não inflar a barra
+ * de abas) no mesmo molde retrátil de GanheComModoCriadorSection, que fica
+ * bem ao lado. */
+function ReferralsSection({ initiallyOpen }: { initiallyOpen: boolean }) {
+  const [open, setOpen] = useState(initiallyOpen);
+  return (
+    <div className="pt-2 border-t border-foreground/10">
+      <button onClick={() => setOpen((v) => !v)}
+        className="lz-btn-ghost text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
+        <Gift size={14} /> Indique e Ganhe
+      </button>
+      {open && (
+        <div className="mt-6">
+          <ReferralsTab />
         </div>
       )}
     </div>

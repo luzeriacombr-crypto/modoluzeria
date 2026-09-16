@@ -24,6 +24,20 @@ export async function emailExistsAnywhere(supabaseAdmin: any, email: string, exc
   return !!data;
 }
 
+/** Público — a página de convite (/r/<code>) usa isso pra personalizar
+ * "Fulano te chamou pro Modo Criador" e pra montar o preview de
+ * compartilhamento (og:title/og:description). Anon-safe: cliente fresco +
+ * RPC SECURITY DEFINER (get_public_referrer_name) — `orgs` não tem policy
+ * de leitura pra anon, então isso NÃO pode ser um select direto na tabela. */
+export const getReferrerNameByCode = createServerFn({ method: "GET" })
+  .inputValidator((d: { code: string }) => z.object({ code: z.string().trim().toLowerCase().min(1).max(60) }).parse(d))
+  .handler(async ({ data }): Promise<{ referrerName: string | null }> => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
+    const { data: name } = await (supabase as any).rpc("get_public_referrer_name", { _code: data.code });
+    return { referrerName: (name as string | null) ?? null };
+  });
+
 export const getMyReferralInfo = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {

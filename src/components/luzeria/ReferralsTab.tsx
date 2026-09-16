@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Loader2, Gift, Pencil, Check } from "lucide-react";
+import { Copy, Loader2, Pencil, Check } from "lucide-react";
 import { myReferralInfoQO, useApi } from "@/lib/luzeria/queries";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -61,10 +61,7 @@ export function ReferralsTab() {
   return (
     <div className="space-y-8 max-w-2xl">
       <div className="bg-gradient-to-br from-white/[0.08] to-white/[0.03] border border-foreground/15 rounded-2xl p-8 backdrop-blur-sm">
-        <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
-          <Gift size={22} className="text-[var(--lz-accent-ink)]" /> Indique e Ganhe
-        </h2>
-        <p className="text-sm text-foreground/50 mt-1 mb-6">
+        <p className="text-sm text-foreground/50 mb-6">
           Indique outra agência — quando a indicação for confirmada, você ganha 1 mês grátis (até 3
           acumulados). Seu amigo ganha 15 dias extras de teste.{" "}
           <a href="/programa-de-indicacao" target="_blank" rel="noopener noreferrer" className="underline text-[var(--lz-accent-ink)]">
