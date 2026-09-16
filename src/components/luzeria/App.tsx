@@ -1,23 +1,21 @@
 import { useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { PanelLeftClose, PanelLeftOpen, ChevronsLeft, ChevronsRight, Settings as SettingsIcon, Video } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, ChevronsLeft, ChevronsRight, Settings as SettingsIcon } from "lucide-react";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { useTheme } from "@/lib/luzeria/theme-store";
-import { useCallStore } from "@/lib/luzeria/call-store";
 import type { Client } from "@/lib/luzeria/types";
 import { Sidebar } from "./Sidebar";
 import { DetailPanel } from "./DetailPanel";
 import { NotificationsBell } from "./Notifications";
-import { HelpButton } from "./HelpButton";
+import { NavGridLauncher } from "./NavGridLauncher";
 import { NewClientModal, CustomFieldsModal } from "./Modals";
 import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { Avatar } from "./Avatar";
 import { MobileNav } from "./MobileNav";
-import { GlobalSearchButton, GlobalSearchOverlay } from "./GlobalSearch";
+import { GlobalSearchOverlay } from "./GlobalSearch";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { identifyForMonitoring } from "@/lib/luzeria/error-monitoring";
 import { PullToRefresh } from "./PullToRefresh";
@@ -33,7 +31,6 @@ import { ReferralAnnouncementBanner } from "./ReferralAnnouncementBanner";
 import { GlobalConfirmDialog } from "./GlobalConfirmDialog";
 import { IncomingCallModal } from "./IncomingCallModal";
 import { ActiveCallOverlay } from "./ActiveCallOverlay";
-import { CallInvitePicker } from "./CallInvitePicker";
 import { useScreenShareCall } from "@/hooks/use-screen-share-call";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -313,12 +310,6 @@ function Header({ sidebarHidden, onToggleSidebar, sidebarCollapsed, onToggleColl
   const { theme } = useTheme();
   const headerLogoUrl = (theme === "light" && me?.orgLogoUrlLight) || me?.orgLogoUrl;
   const navigate = useNavigate();
-  const disabled = new Set(me?.disabledFeatures ?? []);
-  const canCall = useCallStore((s) => s.canCall);
-  const callStatus = useCallStore((s) => s.status);
-  const [callPickerOpen, setCallPickerOpen] = useState(false);
-  const [callAnchor, setCallAnchor] = useState<DOMRect | null>(null);
-  const callBtnRef = useRef<HTMLButtonElement>(null);
   return (
     <header className="lz-app-header sticky top-0 z-50 px-4 md:px-6 flex items-center gap-2 h-14">
       <button
@@ -348,6 +339,7 @@ function Header({ sidebarHidden, onToggleSidebar, sidebarCollapsed, onToggleColl
         </span>
       )}
       <div className="flex-1" />
+      <NavGridLauncher />
       {me?.role === "master" && (
         <button
           onClick={() => navigate({ to: "/configuracoes" })}
@@ -357,28 +349,6 @@ function Header({ sidebarHidden, onToggleSidebar, sidebarCollapsed, onToggleColl
           <SettingsIcon size={18} />
         </button>
       )}
-      {!disabled.has("video_call") && (
-        <div className="relative">
-          <button
-            ref={callBtnRef}
-            onClick={() => {
-              const rect = callBtnRef.current?.getBoundingClientRect();
-              if (rect) { setCallAnchor(rect); setCallPickerOpen(true); }
-            }}
-            disabled={!canCall || callStatus !== "idle"}
-            title={!canCall ? "Câmera indisponível neste navegador" : callStatus !== "idle" ? "Você já está em uma chamada" : "Vídeo chamada"}
-            className="flex items-center justify-center h-8 w-8 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <Video size={18} />
-          </button>
-          {callPickerOpen && callAnchor && createPortal(
-            <CallInvitePicker anchorRect={callAnchor} onClose={() => setCallPickerOpen(false)} />,
-            document.body,
-          )}
-        </div>
-      )}
-      <GlobalSearchButton />
-      <HelpButton />
       <NotificationsBell />
       {me && (
         <button
