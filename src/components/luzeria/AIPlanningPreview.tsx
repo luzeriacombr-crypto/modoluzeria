@@ -1,12 +1,59 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Trash2 } from "lucide-react";
+import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2 } from "lucide-react";
 import { generateMonthlyPlanPreview, type MonthlyPlanItem, type MonthlyPlanResult } from "@/lib/luzeria/ai-planning.functions";
 import { useApi } from "@/lib/luzeria/queries";
 import { Modal } from "./Modals";
 
 const MONTH_LABEL = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
+// Uma chamada só e sem streaming — pode demorar (principalmente quando a IA
+// pesquisa concorrentes na web). Em vez de um spinner mudo, mostra uma
+// sequência de "etapas" fictícias mas plausíveis, pra pessoa entender que
+// tem trabalho de verdade acontecendo em vez de achar que travou.
+const LOADING_STEPS: { icon: typeof FileText; text: string }[] = [
+  { icon: FileText, text: "Lendo o histórico de posts e reels desse cliente…" },
+  { icon: Layers, text: "Conferindo roteiros e planejamentos anteriores…" },
+  { icon: ImageIcon, text: "Analisando os arquivos de marca no Drive…" },
+  { icon: Search, text: "Pesquisando o que os concorrentes andam postando…" },
+  { icon: Brain, text: "Entendendo os padrões que funcionam com esse cliente…" },
+  { icon: Wand2, text: "Construindo um planejamento incrível pra você…" },
+];
+
+function AILoadingState() {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1));
+    }, 2200);
+    return () => clearInterval(id);
+  }, []);
+  const Current = LOADING_STEPS[step].icon;
+  return (
+    <div className="flex flex-col items-center justify-center gap-5 py-16">
+      <div className="relative w-14 h-14 flex items-center justify-center">
+        <div className="absolute inset-0 rounded-full animate-ping" style={{ background: "rgba(var(--lz-brand-rgb),0.25)" }} />
+        <div className="relative w-14 h-14 rounded-full flex items-center justify-center" style={{ background: "rgba(var(--lz-brand-rgb),0.15)" }}>
+          <Current size={22} style={{ color: "var(--lz-accent-ink)" }} />
+        </div>
+      </div>
+      <p key={step} className="text-sm text-foreground/60 text-center max-w-[280px] leading-relaxed" style={{ animation: "lzKnowledgeFadeIn 0.4s ease" }}>
+        {LOADING_STEPS[step].text}
+      </p>
+      <div className="flex items-center gap-1.5">
+        {LOADING_STEPS.map((_, i) => (
+          <span
+            key={i}
+            className="w-1.5 h-1.5 rounded-full transition-colors duration-500"
+            style={{ backgroundColor: i <= step ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 15%, transparent)" }}
+          />
+        ))}
+      </div>
+      <style>{`@keyframes lzKnowledgeFadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+    </div>
+  );
+}
 
 function buildMarkdown(result: MonthlyPlanResult): string {
   const parts: string[] = [`# Planejamento de ${MONTH_LABEL} (prévia gerada por IA)`];
@@ -65,12 +112,7 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
 
   return (
     <Modal open onClose={onClose} title="Prévia de planejamento com IA" maxWidthClass="max-w-xl">
-      {loading && (
-        <div className="flex flex-col items-center justify-center gap-3 py-14 text-foreground/50">
-          <Loader2 size={22} className="animate-spin" />
-          <p className="text-sm">Lendo histórico, arquivos de marca e concorrentes…</p>
-        </div>
-      )}
+      {loading && <AILoadingState />}
 
       {!loading && error && (
         <div className="py-8 text-center">
