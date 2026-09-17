@@ -1,8 +1,9 @@
+import type { ReactNode } from "react";
 import { create } from "zustand";
 
 type ConfirmRequest = {
   kind: "confirm" | "prompt";
-  message: string;
+  message: ReactNode;
   danger?: boolean;
   confirmLabel?: string;
   cancelLabel?: string;
@@ -12,8 +13,8 @@ type ConfirmRequest = {
 
 interface ConfirmState {
   request: ConfirmRequest | null;
-  requestConfirm: (message: string, opts?: { danger?: boolean; confirmLabel?: string; cancelLabel?: string }) => Promise<boolean>;
-  requestPrompt: (message: string, defaultValue?: string) => Promise<string | null>;
+  requestConfirm: (message: ReactNode, opts?: { danger?: boolean; confirmLabel?: string; cancelLabel?: string }) => Promise<boolean>;
+  requestPrompt: (message: ReactNode, defaultValue?: string) => Promise<string | null>;
 }
 
 export const useConfirmStore = create<ConfirmState>((set) => ({
@@ -32,9 +33,9 @@ export const useConfirmStore = create<ConfirmState>((set) => ({
  * shape (call it, await the answer), but rendered as a themed modal instead
  * of the browser's OS dialog. Standalone functions (not hooks) since most
  * callers are plain event handlers, not component bodies. */
-export function requestConfirm(message: string, opts?: { danger?: boolean; confirmLabel?: string; cancelLabel?: string }) {
+export function requestConfirm(message: ReactNode, opts?: { danger?: boolean; confirmLabel?: string; cancelLabel?: string }) {
   return useConfirmStore.getState().requestConfirm(message, opts);
 }
-export function requestPrompt(message: string, defaultValue?: string) {
+export function requestPrompt(message: ReactNode, defaultValue?: string) {
   return useConfirmStore.getState().requestPrompt(message, defaultValue);
 }

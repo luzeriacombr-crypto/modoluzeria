@@ -125,7 +125,10 @@ export function DriveSettingsTab() {
 
   async function connectDrive() {
     if (!(await requestConfirm(
-      'O Google pode mostrar um aviso dizendo que "o app não foi verificado" — é normal, acontece com qualquer sistema novo. Clique em Avançado e depois em Acessar Modo Criador (não seguro) pra continuar.',
+      <>
+        <p>O Google pode mostrar um aviso dizendo que "o app não foi verificado". Isso é normal, acontece com qualquer sistema novo.</p>
+        <p>Clique em <strong className="text-foreground">Avançado</strong> e depois em <strong className="text-foreground">Acessar Modo Criador (não seguro)</strong> pra continuar.</p>
+      </>,
       { confirmLabel: "Entendi, conectar" },
     ))) return;
     setConnecting(true);

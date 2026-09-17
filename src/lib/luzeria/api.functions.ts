@@ -477,13 +477,47 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
     const { data: ownerProfiles } = await supabaseAdmin
       .from("profiles").select("id, org_id, name, email, created_at")
       .in("org_id", (orgs ?? []).map((o: any) => o.id));
-    const ownerByOrg = new Map<string, { name: string; email: string }>();
+    const ownerByOrg = new Map<string, { id: string; name: string; email: string }>();
     (ownerProfiles ?? [])
       .filter((p: any) => masterIds.has(p.id))
       .sort((a: any, b: any) => a.created_at.localeCompare(b.created_at))
       .forEach((p: any) => {
-        if (!ownerByOrg.has(p.org_id)) ownerByOrg.set(p.org_id, { name: p.name, email: p.email });
+        if (!ownerByOrg.has(p.org_id)) ownerByOrg.set(p.org_id, { id: p.id, name: p.name, email: p.email });
       });
+
+    // Drive conectado — 1 credencial por org.
+    const { data: driveRows } = await supabaseAdmin
+      .from("org_google_credentials").select("org_id");
+    const orgsWithDrive = new Set((driveRows ?? []).map((r: any) => r.org_id as string));
+
+    // Instagram conectado — conta clientes ativos com credencial, por org
+    // (client_instagram_credentials não tem org_id, precisa passar pelos
+    // clientes da própria org pra saber de quem é cada credencial).
+    const { data: igRows } = await supabaseAdmin
+      .from("client_instagram_credentials").select("client_id, clients!client_instagram_credentials_client_id_fkey(org_id)");
+    const igConnectedByOrg = new Map<string, number>();
+    (igRows ?? []).forEach((r: any) => {
+      const orgId = r.clients?.org_id;
+      if (!orgId) return;
+      igConnectedByOrg.set(orgId, (igConnectedByOrg.get(orgId) ?? 0) + 1);
+    });
+
+    // Último acesso — só o dono (master mais antigo) de cada org, via Admin
+    // Auth API por id direto (não auth.admin.listUsers(), que é paginado e
+    // some silenciosamente acima de 50 usuários — mesma pegadinha já
+    // documentada em signup.functions.ts). Roda em paralelo, uma falha
+    // isolada (usuário removido etc.) não derruba a lista inteira.
+    const lastLoginByOrg = new Map<string, string | null>();
+    await Promise.all((orgs ?? []).map(async (o: any) => {
+      const owner = ownerByOrg.get(o.id);
+      if (!owner) return;
+      try {
+        const { data } = await supabaseAdmin.auth.admin.getUserById(owner.id);
+        lastLoginByOrg.set(o.id, data?.user?.last_sign_in_at ?? null);
+      } catch {
+        lastLoginByOrg.set(o.id, null);
+      }
+    }));
 
     // Pra cada revendedor, quantas instâncias ele já revendeu e quanto isso
     // soma no atacado — dá pra ver isso na lista sem abrir org por org.
@@ -524,6 +558,9 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         resellerOrgName: o.reseller_org_id ? (resellerNameById.get(o.reseller_org_id) ?? null) : null,
         resoldCount: o.is_reseller ? (resoldCountByReseller.get(o.id) ?? 0) : 0,
         resoldMonthlyCents: o.is_reseller ? (resoldTotalByReseller.get(o.id) ?? 0) : 0,
+        driveConnected: orgsWithDrive.has(o.id),
+        instagramConnected: igConnectedByOrg.get(o.id) ?? 0,
+        lastLoginAt: lastLoginByOrg.get(o.id) ?? null,
       };
     });
   });

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper } from "lucide-react";
+import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive } from "lucide-react";
 import { orgsBillingQO, plansQO } from "@/lib/luzeria/queries";
 import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial } from "@/lib/luzeria/api.functions";
 import { approveReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
@@ -22,6 +22,16 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
 function daysUntil(iso: string) {
   const diff = Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
   return diff;
+}
+
+function formatLastLogin(iso: string | null) {
+  if (!iso) return "Nunca";
+  const diffDays = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (diffDays <= 0) return "Hoje";
+  if (diffDays === 1) return "Ontem";
+  if (diffDays < 30) return `${diffDays}d atrás`;
+  const months = Math.floor(diffDays / 30);
+  return `${months}${months === 1 ? " mês" : " meses"} atrás`;
 }
 
 export function AgenciesBillingPanel() {
@@ -116,6 +126,9 @@ export function AgenciesBillingPanel() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Status</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Teste / cobrança</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">Clientes</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-foreground/60">Drive</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-foreground/60">Instagram</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Último acesso</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-foreground/60"></th>
               </tr>
             </thead>
@@ -202,6 +215,19 @@ export function AgenciesBillingPanel() {
                           : <span className="text-foreground/30">—</span>}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-foreground/70">{o.clientsUsed}</td>
+                    <td className="px-4 py-3 text-center">
+                      <HardDrive size={14} className={`inline ${o.driveConnected ? "text-[var(--lz-accent-ink)]" : "text-foreground/20"}`} />
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {o.instagramConnected > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--lz-accent-ink)]">
+                          <Instagram size={13} /> {o.instagramConnected}
+                        </span>
+                      ) : (
+                        <Instagram size={14} className="inline text-foreground/20" />
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-foreground/50">{formatLastLogin(o.lastLoginAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
                         {o.subscriptionStatus !== "active" && (

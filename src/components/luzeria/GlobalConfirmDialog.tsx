@@ -38,7 +38,7 @@ export function GlobalConfirmDialog() {
           >
             {danger ? <AlertTriangle size={17} /> : <HelpCircle size={17} />}
           </div>
-          <p className="text-sm text-foreground/85 leading-relaxed pt-1.5">{message}</p>
+          <div className="text-sm text-foreground/85 leading-relaxed pt-1.5 space-y-2">{message}</div>
         </div>
 
         {kind === "prompt" && (
