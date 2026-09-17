@@ -91,7 +91,6 @@ export function SmartImportStep({ onDone, onSkip }: { onDone: () => void; onSkip
         data: {
           clients: selected.map((r) => ({
             name: r.name.trim(),
-            category: r.category?.trim() || undefined,
             niche: r.niche?.trim() || undefined,
             notes: r.notes?.trim() || undefined,
             postsPerWeek: r.postsPerWeek,
@@ -187,7 +186,7 @@ export function SmartImportStep({ onDone, onSkip }: { onDone: () => void; onSkip
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wide text-foreground/40">
-                  <th className="pb-2"></th><th className="pb-2">Cliente</th><th className="pb-2">Categoria</th><th className="pb-2">Notas</th><th className="pb-2"></th>
+                  <th className="pb-2"></th><th className="pb-2">Cliente</th><th className="pb-2">Nicho</th><th className="pb-2">Notas</th><th className="pb-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -202,7 +201,7 @@ export function SmartImportStep({ onDone, onSkip }: { onDone: () => void; onSkip
                         className="w-full bg-transparent border border-transparent hover:border-foreground/10 focus:border-[rgb(var(--lz-brand-rgb))] focus:bg-foreground/5 rounded px-1.5 py-1 outline-none font-semibold text-foreground" />
                     </td>
                     <td className="py-2 pr-2">
-                      <input value={r.category ?? ""} onChange={(e) => updateRow(i, { category: e.target.value })}
+                      <input value={r.niche ?? ""} onChange={(e) => updateRow(i, { niche: e.target.value })}
                         className="w-full bg-transparent border border-transparent hover:border-foreground/10 focus:border-[rgb(var(--lz-brand-rgb))] focus:bg-foreground/5 rounded px-1.5 py-1 outline-none" />
                     </td>
                     <td className="py-2 pr-2">

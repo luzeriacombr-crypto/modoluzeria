@@ -112,14 +112,16 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
           </>
         )}
       </div>
-      <a
-        href="https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-full bg-foreground/[0.06] hover:bg-foreground/10 text-foreground/70 hover:text-foreground transition-colors"
-      >
-        <Video size={13} /> Precisa de ajuda? Assista o tutorial!
-      </a>
+      {step === "profile" && (
+        <a
+          href="https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-full bg-foreground/[0.06] hover:bg-foreground/10 text-foreground/70 hover:text-foreground transition-colors"
+        >
+          <Video size={13} /> Precisa de ajuda? Assista o tutorial!
+        </a>
+      )}
     </div>
   );
 }

@@ -11,7 +11,6 @@ const MAX_FILES = 10;
 
 const ExtractedClientSchema = z.object({
   name: z.string(),
-  category: z.string().optional(),
   niche: z.string().optional(),
   notes: z.string().optional(),
   postsPerWeek: z.number().optional(),
@@ -104,8 +103,7 @@ export const extractClientsFromFiles = createServerFn({ method: "POST" })
               type: "object" as const,
               properties: {
                 name: { type: "string" as const, description: "Nome do cliente/empresa" },
-                category: { type: "string" as const, description: "Ramo/categoria, ex: Social Media, Estética, Gastronomia" },
-                niche: { type: "string" as const },
+                niche: { type: "string" as const, description: "Ramo de atuação do cliente, ex: Estética, Gastronomia, Advocacia — NUNCA 'Social Media' (isso não é um nicho, é o tipo de serviço da agência)" },
                 notes: { type: "string" as const },
                 postsPerWeek: { type: "number" as const, description: "Posts por semana combinados — só se estiver explícito no material" },
                 reelsPerWeek: { type: "number" as const },
@@ -131,7 +129,7 @@ export const extractClientsFromFiles = createServerFn({ method: "POST" })
         content: [
           {
             type: "text",
-            text: "Você está ajudando a importar clientes pro Modo Criador, um sistema de gestão pra agências de social media. Analise os arquivos abaixo (planilha, PDF, print de sistema como Trello/ClickUp/Notion/Monday) e identifique cada cliente/empresa mencionado. Preencha só os campos que encontrar com razoável certeza no material. Se um campo estiver vazio, em branco ou você não tiver certeza, NÃO inclua essa chave no objeto — nunca escreva valores como \"desconhecido\", \"não informado\", \"N/A\", \"unknown\", \"-\" ou qualquer texto de preenchimento; simplesmente omita a chave. Marque confidence 'low' quando a info vier de um print/imagem que pode ter erro de leitura, e 'high' quando vier de texto/planilha clara.",
+            text: "Você está ajudando a importar clientes pro Modo Criador, um sistema de gestão pra agências de social media — todo cliente importado entra na mesma categoria interna 'Social Media' (isso é fixo, não é algo que você define). Analise os arquivos abaixo (planilha, PDF, print de sistema como Trello/ClickUp/Notion/Monday) e identifique cada cliente/empresa mencionado. Preencha só os campos que encontrar com razoável certeza no material. Se um campo estiver vazio, em branco ou você não tiver certeza, NÃO inclua essa chave no objeto — nunca escreva valores como \"desconhecido\", \"não informado\", \"N/A\", \"unknown\", \"-\" ou qualquer texto de preenchimento; simplesmente omita a chave. Marque confidence 'low' quando a info vier de um print/imagem que pode ter erro de leitura, e 'high' quando vier de texto/planilha clara.",
           },
           ...contentBlocks,
         ],
@@ -151,13 +149,12 @@ export const confirmImportedClients = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: {
     clients: {
-      name: string; category?: string; niche?: string; notes?: string;
+      name: string; niche?: string; notes?: string;
       postsPerWeek?: number; reelsPerWeek?: number; whatsapp?: string;
     }[];
   }) => z.object({
     clients: z.array(z.object({
       name: z.string().trim().min(1).max(80),
-      category: z.string().trim().max(40).optional(),
       niche: z.string().trim().max(60).optional(),
       notes: z.string().trim().max(1000).optional(),
       postsPerWeek: z.number().min(0).max(100).optional(),
@@ -175,8 +172,12 @@ export const confirmImportedClients = createServerFn({ method: "POST" })
     for (const c of data.clients) {
       const notes = [c.notes, c.whatsapp ? `Contato: ${c.whatsapp}` : null, "Importado por IA"]
         .filter(Boolean).join(" · ");
+      // Nunca escreve `category` aqui — é o campo que agrupa pastas na
+      // barra lateral (ex: "Social Media"), e um cliente importado deve
+      // sempre cair na mesma pasta de todos os outros, igual criação
+      // manual. O que a IA detecta de ramo/atuação vira `niche` (campo
+      // exibido na Ficha do Cliente), nunca uma pasta nova.
       const insert: any = { name: c.name, org_id: context.orgId, notes };
-      if (c.category) insert.category = c.category;
       if (c.niche) insert.niche = c.niche;
       if (c.postsPerWeek != null) insert.posts_per_week = c.postsPerWeek;
       if (c.reelsPerWeek != null) insert.reels_per_week = c.reelsPerWeek;
