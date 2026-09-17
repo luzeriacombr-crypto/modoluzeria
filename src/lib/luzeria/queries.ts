@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { reportHandledError } from "./error-monitoring";
 import { getClientContract } from "./client-contracts.functions";
 import { getProductionAudit } from "./production-audit.functions";
+import { getPageActivityReport } from "./page-activity.functions";
 import { listClientBrandAssets } from "./client-brand-assets.functions";
 import {
   startClientAssetUploadSession, finalizeClientAssetUpload, deleteClientBrandAsset,
@@ -422,6 +423,8 @@ export const orgsBillingQO = () =>
   queryOptions({ queryKey: ["orgs-billing"], queryFn: () => listOrgsBilling() });
 export const demoRequestsQO = () =>
   queryOptions({ queryKey: ["demo-requests"], queryFn: () => listDemoRequests() });
+export const pageActivityReportQO = (days: number) =>
+  queryOptions({ queryKey: ["page-activity-report", days], queryFn: () => getPageActivityReport({ data: { days } }) });
 
 export const orgCostSettingsQO = () =>
   queryOptions({ queryKey: ["org-cost-settings"], queryFn: () => getOrgCostSettings() });

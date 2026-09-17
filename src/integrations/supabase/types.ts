@@ -2625,6 +2625,48 @@ export type Database = {
           },
         ]
       }
+      page_activity: {
+        Row: {
+          created_at: string
+          duration_seconds: number
+          id: string
+          org_id: string
+          path: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          org_id: string
+          path: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          org_id?: string
+          path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_activity_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "page_activity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       photo_clients: {
         Row: {
           created_at: string
@@ -2896,6 +2938,7 @@ export type Database = {
           hide_goals_widget: boolean
           icon: string | null
           id: string
+          last_active_at: string | null
           name: string
           onboarded_at: string | null
           org_id: string | null
@@ -2913,6 +2956,7 @@ export type Database = {
           hide_goals_widget?: boolean
           icon?: string | null
           id: string
+          last_active_at?: string | null
           name: string
           onboarded_at?: string | null
           org_id?: string | null
@@ -2930,6 +2974,7 @@ export type Database = {
           hide_goals_widget?: boolean
           icon?: string | null
           id?: string
+          last_active_at?: string | null
           name?: string
           onboarded_at?: string | null
           org_id?: string | null

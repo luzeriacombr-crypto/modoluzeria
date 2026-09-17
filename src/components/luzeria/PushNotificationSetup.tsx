@@ -4,7 +4,7 @@ import {
   requestNotificationPermission, getNotificationPermission, getMobileOS, isStandalonePWA, showWelcomeNotification,
 } from "@/lib/luzeria/push-notifications";
 
-function StepList({ children }: { children: React.ReactNode }) {
+export function StepList({ children }: { children: React.ReactNode }) {
   return <ol className="space-y-2 text-[12.5px] text-foreground/70 leading-relaxed list-decimal list-inside">{children}</ol>;
 }
 

@@ -11,12 +11,22 @@ export const requireActiveProfile = createMiddleware({ type: "function" })
   .server(async ({ next, context }) => {
     const { data, error } = await context.supabase
       .from("profiles")
-      .select("active, org_id")
+      .select("active, org_id, last_active_at")
       .eq("id", context.userId)
       .maybeSingle();
     if (error) throw new Error("Unauthorized");
     if (!data || data.active !== true) {
       throw new Error("Unauthorized: account pending approval or deactivated");
+    }
+
+    // Marca "usou o app agora" — trava de 10min pra não virar um UPDATE a
+    // cada chamada de servidor (cada tela dispara várias). Fire-and-forget:
+    // uma falha aqui não pode derrubar a requisição real do usuário.
+    const lastActive = data.last_active_at ? new Date(data.last_active_at as string).getTime() : 0;
+    if (Date.now() - lastActive > 10 * 60 * 1000) {
+      context.supabase
+        .from("profiles").update({ last_active_at: new Date().toISOString() }).eq("id", context.userId)
+        .then(() => {}, () => {});
     }
 
     // requireSupabaseAuth só confere que o token é válido, nunca se a sessão

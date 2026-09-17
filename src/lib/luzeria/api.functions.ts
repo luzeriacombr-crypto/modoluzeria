@@ -475,7 +475,7 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
       .from("user_roles").select("user_id").eq("role", "master");
     const masterIds = new Set((masterRoles ?? []).map((r: any) => r.user_id));
     const { data: ownerProfiles } = await supabaseAdmin
-      .from("profiles").select("id, org_id, name, email, created_at")
+      .from("profiles").select("id, org_id, name, email, created_at, last_active_at")
       .in("org_id", (orgs ?? []).map((o: any) => o.id));
     const ownerByOrg = new Map<string, { id: string; name: string; email: string }>();
     (ownerProfiles ?? [])
@@ -484,6 +484,20 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
       .forEach((p: any) => {
         if (!ownerByOrg.has(p.org_id)) ownerByOrg.set(p.org_id, { id: p.id, name: p.name, email: p.email });
       });
+
+    // Último acesso — o mais recente `last_active_at` entre TODOS os
+    // perfis da org (não só o dono), gravado pelo próprio servidor a cada
+    // uso real do app (requireActiveProfile). Não usamos
+    // auth.users.last_sign_in_at (Admin Auth API) porque esse campo só
+    // atualiza num login novo de verdade — fica parado enquanto a sessão
+    // salva no navegador só renova o token sozinha em segundo plano,
+    // fazendo parecer "sumiu" uma agência que só não relogou.
+    const lastActiveByOrg = new Map<string, string | null>();
+    (ownerProfiles ?? []).forEach((p: any) => {
+      if (!p.last_active_at) return;
+      const current = lastActiveByOrg.get(p.org_id);
+      if (!current || p.last_active_at > current) lastActiveByOrg.set(p.org_id, p.last_active_at);
+    });
 
     // Drive conectado — 1 credencial por org.
     const { data: driveRows } = await supabaseAdmin
@@ -501,23 +515,6 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
       if (!orgId) return;
       igConnectedByOrg.set(orgId, (igConnectedByOrg.get(orgId) ?? 0) + 1);
     });
-
-    // Último acesso — só o dono (master mais antigo) de cada org, via Admin
-    // Auth API por id direto (não auth.admin.listUsers(), que é paginado e
-    // some silenciosamente acima de 50 usuários — mesma pegadinha já
-    // documentada em signup.functions.ts). Roda em paralelo, uma falha
-    // isolada (usuário removido etc.) não derruba a lista inteira.
-    const lastLoginByOrg = new Map<string, string | null>();
-    await Promise.all((orgs ?? []).map(async (o: any) => {
-      const owner = ownerByOrg.get(o.id);
-      if (!owner) return;
-      try {
-        const { data } = await supabaseAdmin.auth.admin.getUserById(owner.id);
-        lastLoginByOrg.set(o.id, data?.user?.last_sign_in_at ?? null);
-      } catch {
-        lastLoginByOrg.set(o.id, null);
-      }
-    }));
 
     // Pra cada revendedor, quantas instâncias ele já revendeu e quanto isso
     // soma no atacado — dá pra ver isso na lista sem abrir org por org.
@@ -560,7 +557,7 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         resoldMonthlyCents: o.is_reseller ? (resoldTotalByReseller.get(o.id) ?? 0) : 0,
         driveConnected: orgsWithDrive.has(o.id),
         instagramConnected: igConnectedByOrg.get(o.id) ?? 0,
-        lastLoginAt: lastLoginByOrg.get(o.id) ?? null,
+        lastLoginAt: lastActiveByOrg.get(o.id) ?? null,
       };
     });
   });

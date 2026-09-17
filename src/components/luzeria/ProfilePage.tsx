@@ -80,55 +80,59 @@ export function ProfilePage() {
       </span>
 
       <div className="mt-8 bg-card rounded-lg p-6 md:p-8">
-        <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-5 text-center md:text-left">
-          Foto de perfil
+        <div className="flex flex-col sm:flex-row gap-6 sm:gap-8">
+          <div className="flex flex-col items-center shrink-0">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-4">
+              Foto de perfil
+            </div>
+            <AvatarEditor
+              me={meUser}
+              draftColor={color}
+              draftAvatarUrl={avatarPreview}
+              uploading={uploading}
+              onPickFile={onPickFile}
+              onRemovePhoto={onRemovePhoto}
+              readOnly={isDemoReadOnly}
+              size={80}
+            />
+          </div>
+
+          <div className="flex-1 min-w-0 sm:border-l sm:border-foreground/10 sm:pl-8">
+            {isDemoReadOnly ? (
+              <p className="text-[11px] text-foreground/30">Conta de demonstração — perfil somente leitura.</p>
+            ) : (
+              <AccountSection
+                initialName={me.name}
+                initialEmail={me.email}
+                loading={updateMyAccount.isPending}
+                onSave={(payload) =>
+                  updateMyAccount.mutate(
+                    { data: payload },
+                    {
+                      onSuccess: () => toast.success("Dados da conta atualizados."),
+                      onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar"),
+                    },
+                  )
+                }
+              />
+            )}
+          </div>
         </div>
-        <AvatarEditor
-          me={meUser}
-          draftColor={color}
-          draftAvatarUrl={avatarPreview}
-          uploading={uploading}
-          onPickFile={onPickFile}
-          onRemovePhoto={onRemovePhoto}
-          readOnly={isDemoReadOnly}
-        />
+
+        {!isDemoReadOnly && (
+          <div className="mt-6 pt-6 border-t border-foreground/10 flex items-center justify-between gap-3">
+            <p className="text-[11px] text-foreground/30">A foto é só visual.</p>
+            <button
+              onClick={save}
+              disabled={!dirty || updateMyProfile.isPending || uploading}
+              className="text-sm font-bold px-6 py-2.5 rounded-md transition-opacity hover:opacity-90 disabled:opacity-40 shrink-0"
+              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+            >
+              {updateMyProfile.isPending ? "Salvando…" : "Salvar foto"}
+            </button>
+          </div>
+        )}
       </div>
-
-      {!isDemoReadOnly && (
-        <div className="mt-8 flex items-center justify-end gap-3">
-          <button
-            onClick={save}
-            disabled={!dirty || updateMyProfile.isPending || uploading}
-            className="text-sm font-bold px-6 py-2.5 rounded-md transition-opacity hover:opacity-90 disabled:opacity-40"
-            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-          >
-            {updateMyProfile.isPending ? "Salvando…" : "Salvar alterações"}
-          </button>
-        </div>
-      )}
-
-      <p className="text-[11px] text-foreground/30 mt-4 text-center md:text-right">
-        {isDemoReadOnly ? "Conta de demonstração — perfil somente leitura." : "A foto é só visual. Para alterar nome, email ou senha, use a seção abaixo."}
-      </p>
-
-      {!isDemoReadOnly && (
-        <AccountSection
-          initialName={me.name}
-          initialEmail={me.email}
-          loading={updateMyAccount.isPending}
-          onSave={(payload) =>
-            updateMyAccount.mutate(
-              { data: payload },
-              {
-                onSuccess: () => toast.success("Dados da conta atualizados."),
-                onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar"),
-              },
-            )
-          }
-        />
-      )}
-
-      {!isDemoReadOnly && <TwoFactorSection />}
 
       <div className="mt-6 bg-card rounded-lg p-6 md:p-8">
         <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-5">
@@ -151,6 +155,8 @@ export function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {!isDemoReadOnly && <TwoFactorSection />}
 
       {!(me.disabledFeatures ?? []).includes("google_calendar") && (
         <div className="mt-6 bg-card rounded-lg p-6 md:p-8">
@@ -525,7 +531,7 @@ function AccountSection({ initialName, initialEmail, loading, onSave }: {
   }
 
   return (
-    <form onSubmit={submit} className="mt-8 bg-card rounded-lg p-6 md:p-8 space-y-5">
+    <form onSubmit={submit} className="space-y-5">
       <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">
         Dados da conta
       </div>

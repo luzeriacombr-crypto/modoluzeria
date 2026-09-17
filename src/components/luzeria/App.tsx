@@ -38,6 +38,7 @@ import { useScreenShareCall } from "@/hooks/use-screen-share-call";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { hexToRgbChannels, readableAccentRgbChannels, deriveSecondaryHex } from "@/lib/luzeria/utils";
+import { usePageActivityTracker } from "@/lib/luzeria/page-activity-tracker";
 
 export function App() {
   const me = useMe();
@@ -50,6 +51,7 @@ export function App() {
   // page; jumping to a genuinely different section does, which is what
   // gets the subtle entrance animation below.
   const routeId = useRouterState({ select: (s) => s.matches.at(-1)?.routeId ?? "" });
+  usePageActivityTracker(routeId, !!me.data);
   const [creating, setCreating] = useState<{ category?: string } | null>(null);
   const [customFor, setCustomFor] = useState<Client | null>(null);
   const mainRef = useRef<HTMLElement>(null);

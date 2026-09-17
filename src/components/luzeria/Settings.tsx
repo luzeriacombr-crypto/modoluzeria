@@ -7,9 +7,10 @@ import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
 import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
 import { toast } from "sonner";
-import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Gift, Archive } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Gift, Archive, PlayCircle } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
 import { ContentStatusesSection } from "./ContentStatusesSection";
+import { InstallAppTutorialModal } from "./InstallAppTutorialModal";
 
 // Cada uma dessas só renderiza dentro de uma aba específica (nunca mais de
 // uma por vez) — lazy pra quem abre Configurações não pagar o download/parse
@@ -24,6 +25,7 @@ const PromotionCodesPanel = lazy(() => import("./PromotionCodesPanel").then((m) 
 const AffiliateProgramPanel = lazy(() => import("./AffiliateProgramPanel").then((m) => ({ default: m.AffiliateProgramPanel })));
 const ResellerPanel = lazy(() => import("./ResellerPanel").then((m) => ({ default: m.ResellerPanel })));
 const AgenciesBillingPanel = lazy(() => import("./AgenciesBillingPanel").then((m) => ({ default: m.AgenciesBillingPanel })));
+const PageActivityReportPanel = lazy(() => import("./PageActivityReportPanel").then((m) => ({ default: m.PageActivityReportPanel })));
 const ClientMarginPanel = lazy(() => import("./ClientMarginPanel").then((m) => ({ default: m.ClientMarginPanel })));
 const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => ({ default: m.DemoRequestsPanel })));
 const SalesPageEditorTab = lazy(() => import("./SalesPageEditorTab").then((m) => ({ default: m.SalesPageEditorTab })));
@@ -167,6 +169,11 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-foreground/10">
               <PromotionCodesPanel />
+            </div>
+          )}
+          {me.isPlatformAdmin && (
+            <div className="pt-2 border-t border-foreground/10">
+              <PageActivityReportPanel />
             </div>
           )}
           {isMaster && (
@@ -1173,6 +1180,7 @@ function OrgBrandingSection({
   const [uploadingLight, setUploadingLight] = useState(false);
   const [uploadingPreview, setUploadingPreview] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [showInstallTutorial, setShowInstallTutorial] = useState(false);
 
   useEffect(() => { setName(orgName); }, [orgName]);
   useEffect(() => { setTagline(orgTagline ?? ""); setHideTagline(orgTagline === ""); }, [orgTagline]);
@@ -1518,7 +1526,16 @@ function OrgBrandingSection({
         <p className="text-[11px] text-foreground/35">
           Tamanho recomendado: 512 x 512px (PNG, quadrado, fundo sólido) · até 3 MB.
         </p>
+        <button
+          type="button"
+          onClick={() => setShowInstallTutorial(true)}
+          className="flex items-center gap-1.5 text-[12px] font-semibold hover:opacity-80 transition"
+          style={{ color: "var(--lz-accent-ink)" }}
+        >
+          <PlayCircle size={14} /> Que tal transformar sua Agência em um "App" no seu celular? Assista o tutorial!
+        </button>
       </div>
+      {showInstallTutorial && <InstallAppTutorialModal onClose={() => setShowInstallTutorial(false)} />}
     </>
   );
 }

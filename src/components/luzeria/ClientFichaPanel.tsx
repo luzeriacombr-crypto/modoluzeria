@@ -193,7 +193,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         </Section>
 
         {/* Contract generation + e-signature */}
-        {isAdmin && (
+        {isAdmin && !(me?.disabledFeatures ?? []).includes("contract") && (
           <Section label="Gerar contrato pra assinatura">
             <GenerateContractBlock client={client} />
           </Section>
