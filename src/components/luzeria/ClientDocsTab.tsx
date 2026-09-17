@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { clientDocsQO, roteiroStatusesQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { CLIENT_DOC_TYPE_LABEL, CLIENT_DOC_PROMPT, type ClientDocType } from "@/lib/luzeria/client-doc-templates";
-import { parseMarkdownLite } from "@/lib/luzeria/markdown-lite";
+import { parseMarkdownLite, type MdBlock } from "@/lib/luzeria/markdown-lite";
 import { formatClientDocWithAI, type ClientDoc } from "@/lib/luzeria/client-docs.functions";
 import { RoteirosView, PlanejamentoView } from "./MarkdownLiteView";
 import { RoteiroControls } from "./RoteiroControls";
@@ -279,9 +279,17 @@ function DocRow({
           {isRoteiro ? (
             <RoteirosView
               blocks={blocks}
-              renderFooter={(g) => (
-                <RoteiroControls docId={doc.id} clientId={clientId} title={g.title} status={statusByTitle.get(g.title)} targetMonthKey={doc.targetMonthKey} />
-              )}
+              renderFooter={(g) => {
+                const blockText = (b: MdBlock) => (b.kind === "ul" ? b.items.map((i) => `- ${i}`).join("\n") : b.text);
+                const body = g.blocks.map(blockText).join("\n\n");
+                const captionDraft = doc.targetMonthKey ? g.blocks.find((b) => b.kind === "p")?.text : undefined;
+                return (
+                  <RoteiroControls
+                    docId={doc.id} clientId={clientId} title={g.title} status={statusByTitle.get(g.title)}
+                    targetMonthKey={doc.targetMonthKey} body={body} captionDraft={captionDraft}
+                  />
+                );
+              }}
             />
           ) : (
             <>

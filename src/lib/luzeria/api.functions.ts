@@ -1803,14 +1803,15 @@ export const addAssignee = createServerFn({ method: "POST" })
 
 export const addContentItem = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string; dueDate?: string | null; notes?: string | null; location?: string | null; quantity?: number | null; campaignId?: string | null; campaignInternal?: boolean }) =>
+  .inputValidator((d: { clientId: string; key: string; type: ContentType; title?: string; dueDate?: string | null; notes?: string | null; caption?: string | null; location?: string | null; quantity?: number | null; campaignId?: string | null; campaignInternal?: boolean }) =>
     z.object({
       clientId: z.string().uuid(),
       key: z.string(),
       type: z.enum(["post", "reel", "story", "outros", "gravacao", "roteiro", "sistema"]),
       title: z.string().trim().max(200).optional(),
       dueDate: z.string().nullable().optional(),
-      notes: z.string().trim().max(2000).nullable().optional(),
+      notes: z.string().trim().max(4000).nullable().optional(),
+      caption: z.string().trim().max(2200).nullable().optional(),
       location: z.string().trim().max(500).nullable().optional(),
       quantity: z.number().int().min(0).max(100000).nullable().optional(),
       campaignId: z.string().uuid().nullable().optional(),
@@ -1838,6 +1839,7 @@ export const addContentItem = createServerFn({ method: "POST" })
     if (isActivityType(data.type)) insertRow.status = "PENDENTE";
     if (data.dueDate) insertRow.due_date = data.dueDate;
     if (data.notes) insertRow.copy = data.notes;
+    if (data.caption) insertRow.caption = data.caption;
     if (data.location) insertRow.activity_location = data.location;
     if (data.quantity !== undefined && data.quantity !== null) insertRow.activity_quantity = data.quantity;
     if (data.campaignId) {

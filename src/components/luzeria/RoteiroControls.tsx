@@ -16,6 +16,8 @@ export function RoteiroControls({
   title,
   status,
   targetMonthKey,
+  body,
+  captionDraft,
 }: {
   docId: string;
   clientId: string;
@@ -25,6 +27,14 @@ export function RoteiroControls({
    * planejamento aprovada — quando setado, clicar "Aprovado" já cria o
    * content_item sozinho nesse mês, sem precisar do botão manual. */
   targetMonthKey?: string | null;
+  /** Texto completo dessa seção do roteiro (tudo abaixo do "## Roteiro N:
+   * título") — vai pro campo Briefing do content_item criado, pra não
+   * nascer vazio. */
+  body?: string;
+  /** Só nos roteiros vindos da prévia de planejamento (primeiro parágrafo
+   * do body, que é literalmente a legenda sugerida) — vai pro campo
+   * Legenda do content_item. */
+  captionDraft?: string;
 }) {
   const { upsertRoteiroStatus, addContentItem } = useApi();
   const { selectedMonthKey, openItem, flash } = useUI();
@@ -53,7 +63,7 @@ export function RoteiroControls({
   function approveAndCreate() {
     const cleanTitle = title.replace(/^Roteiro\s*\d+\s*:\s*/i, "").trim() || title;
     addContentItem.mutate(
-      { data: { clientId, key: targetMonthKey!, type: contentType, title: cleanTitle } },
+      { data: { clientId, key: targetMonthKey!, type: contentType, title: cleanTitle, notes: body, caption: captionDraft } },
       {
         onSuccess: (res: any) => {
           upsertRoteiroStatus.mutate({
@@ -78,7 +88,7 @@ export function RoteiroControls({
   function sendToReels() {
     const cleanTitle = title.replace(/^Roteiro\s*\d+\s*:\s*/i, "").trim() || title;
     addContentItem.mutate(
-      { data: { clientId, key: selectedMonthKey, type: "reel", title: cleanTitle } },
+      { data: { clientId, key: selectedMonthKey, type: "reel", title: cleanTitle, notes: body } },
       {
         onSuccess: (res: any) => {
           upsertRoteiroStatus.mutate({ data: { docId, roteiroTitle: title, contentItemId: res.id } });
