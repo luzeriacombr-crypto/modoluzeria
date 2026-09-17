@@ -2471,6 +2471,7 @@ export type Database = {
           asaas_subscription_id: string | null
           avg_hours_by_type: Json
           border_radius: number
+          client_limit_grace_until: string | null
           color_accent_light: string | null
           color_primary: string | null
           color_primary_light: string | null
@@ -2516,6 +2517,7 @@ export type Database = {
           asaas_subscription_id?: string | null
           avg_hours_by_type?: Json
           border_radius?: number
+          client_limit_grace_until?: string | null
           color_accent_light?: string | null
           color_primary?: string | null
           color_primary_light?: string | null
@@ -2561,6 +2563,7 @@ export type Database = {
           asaas_subscription_id?: string | null
           avg_hours_by_type?: Json
           border_radius?: number
+          client_limit_grace_until?: string | null
           color_accent_light?: string | null
           color_primary?: string | null
           color_primary_light?: string | null

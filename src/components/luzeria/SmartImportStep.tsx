@@ -35,7 +35,7 @@ export function SmartImportStep({ onDone, onSkip }: { onDone: () => void; onSkip
   const [phase, setPhase] = useState<"pick" | "upload" | "processing" | "review" | "done">("pick");
   const [files, setFiles] = useState<File[]>([]);
   const [rows, setRows] = useState<ReviewRow[]>([]);
-  const [result, setResult] = useState<{ imported: number; skipped: number; limitHit: boolean } | null>(null);
+  const [result, setResult] = useState<{ imported: number; overLimit: boolean; graceUntil: string | null } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const extract = useServerFn(extractClientsFromFiles);
@@ -238,8 +238,11 @@ export function SmartImportStep({ onDone, onSkip }: { onDone: () => void; onSkip
             <CheckCircle2 size={26} />
           </div>
           <p className="text-base font-bold text-foreground">{result.imported} cliente{result.imported === 1 ? "" : "s"} importado{result.imported === 1 ? "" : "s"}</p>
-          {result.limitHit && (
-            <p className="text-xs text-amber-400 mt-2">Seu plano atingiu o limite de clientes — {result.skipped} ficaram de fora. Faça upgrade pra trazer o resto.</p>
+          {result.overLimit && result.graceUntil && (
+            <p className="text-xs text-amber-400 mt-2 max-w-xs mx-auto leading-relaxed">
+              Isso passa do limite do seu plano atual — trouxemos todo mundo mesmo assim. Você tem até{" "}
+              <b>{new Date(result.graceUntil).toLocaleDateString("pt-BR")}</b> pra fazer upgrade.
+            </p>
           )}
           <button onClick={onDone} className="mt-6 text-sm font-bold px-6 py-2.5 rounded-md"
             style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>

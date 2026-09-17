@@ -420,18 +420,29 @@ export const getOrgPlanStatus = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const { data: org } = await context.supabase
-      .from("orgs").select("plan_id, subscription_status, trial_ends_at, tax_id, asaas_subscription_id, max_collaborators_override").eq("id", context.orgId).maybeSingle();
+      .from("orgs").select("plan_id, subscription_status, trial_ends_at, tax_id, asaas_subscription_id, max_collaborators_override, client_limit_grace_until").eq("id", context.orgId).maybeSingle();
     const planId = (org as any)?.plan_id ?? "solo";
     const { data: plan } = await context.supabase.from("plans").select("*").eq("id", planId).maybeSingle();
     const { count: clientsUsed } = await context.supabase
       .from("clients").select("id", { count: "exact", head: true }).eq("archived", false).neq("category", "Ex-clientes");
     const { count: collaboratorsUsed } = await context.supabase
       .from("profiles").select("id", { count: "exact", head: true }).eq("active", true);
+
+    // Auto-limpa o prazo de tolerância assim que a contagem volta a caber
+    // no plano (upgrade, ou a pessoa removeu/arquivou clientes) — sem
+    // precisar de cron, só reage na próxima vez que alguém abre o app.
+    const maxClients = (plan as any)?.max_clients ?? null;
+    let clientLimitGraceUntil = (org as any)?.client_limit_grace_until ?? null;
+    if (clientLimitGraceUntil && (maxClients == null || (clientsUsed ?? 0) <= maxClients)) {
+      await context.supabase.from("orgs").update({ client_limit_grace_until: null }).eq("id", context.orgId);
+      clientLimitGraceUntil = null;
+    }
+
     return {
       planId,
       planName: (plan as any)?.name ?? "Solo",
       priceCents: (plan as any)?.price_cents ?? null,
-      maxClients: (plan as any)?.max_clients ?? null,
+      maxClients,
       maxCollaborators: (org as any)?.max_collaborators_override ?? (plan as any)?.max_collaborators ?? null,
       features: ((plan as any)?.features ?? {}) as Record<string, boolean | string | number | null>,
       subscriptionStatus: (org as any)?.subscription_status ?? "trialing",
@@ -440,6 +451,7 @@ export const getOrgPlanStatus = createServerFn({ method: "GET" })
       collaboratorsUsed: collaboratorsUsed ?? 0,
       taxId: (org as any)?.tax_id ?? null,
       hasAsaasSubscription: !!(org as any)?.asaas_subscription_id,
+      clientLimitGraceUntil,
     };
   });
 

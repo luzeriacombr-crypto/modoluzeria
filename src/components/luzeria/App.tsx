@@ -31,6 +31,7 @@ import { InstagramLiveBanner } from "./InstagramLiveBanner";
 import { DriveReconnectBanner } from "./DriveReconnectBanner";
 import { ReferralAnnouncementBanner } from "./ReferralAnnouncementBanner";
 import { SmartImportBanner } from "./SmartImportBanner";
+import { ClientLimitGraceBanner } from "./ClientLimitGraceBanner";
 import { GlobalConfirmDialog } from "./GlobalConfirmDialog";
 import { IncomingCallModal } from "./IncomingCallModal";
 import { ActiveCallOverlay } from "./ActiveCallOverlay";
@@ -273,6 +274,7 @@ export function App() {
         <Header sidebarHidden={sidebarHidden} onToggleSidebar={toggleSidebar} sidebarCollapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebarCollapsed} />
         <TrialEndingBanner isMaster={me.data?.role === "master"} />
         <PastDueBanner isMaster={me.data?.role === "master"} />
+        <ClientLimitGraceBanner isMaster={me.data?.role === "master"} />
         <InstagramLiveBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
         <DriveReconnectBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
         <ReferralAnnouncementBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} firstPaymentConfirmedAt={me.data?.firstPaymentConfirmedAt} />

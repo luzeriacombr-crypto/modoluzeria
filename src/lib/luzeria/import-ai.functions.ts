@@ -169,17 +169,10 @@ export const confirmImportedClients = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
 
-    const { assertClientLimit, monthKey, seedMonth } = await import("./api.functions");
+    const { monthKey, seedMonth, LUZERIA_ORG_ID } = await import("./api.functions");
     const key = monthKey(new Date());
     let imported = 0;
-    let limitHit = false;
     for (const c of data.clients) {
-      try {
-        await assertClientLimit(context.supabase, context.orgId);
-      } catch {
-        limitHit = true;
-        break;
-      }
       const notes = [c.notes, c.whatsapp ? `Contato: ${c.whatsapp}` : null, "Importado por IA"]
         .filter(Boolean).join(" · ");
       const insert: any = { name: c.name, org_id: context.orgId, notes };
@@ -193,5 +186,32 @@ export const confirmImportedClients = createServerFn({ method: "POST" })
       await seedMonth(context.supabase, client.id, key);
       imported++;
     }
-    return { imported, skipped: data.clients.length - imported, limitHit };
+
+    // A importação nunca para no limite do plano — traz todo mundo que a
+    // pessoa confirmou. Se isso deixar a agência acima do limite, abre um
+    // prazo de 30 dias pra fazer upgrade (gravado só na primeira vez;
+    // getOrgPlanStatus limpa sozinho quando a contagem volta a caber).
+    let overLimit = false;
+    let graceUntil: string | null = null;
+    if (context.orgId !== LUZERIA_ORG_ID) {
+      const { data: org } = await context.supabase
+        .from("orgs").select("plan_id, client_limit_grace_until").eq("id", context.orgId).maybeSingle();
+      const { data: plan } = await context.supabase
+        .from("plans").select("max_clients").eq("id", (org as any)?.plan_id ?? "solo").maybeSingle();
+      const maxClients = (plan as any)?.max_clients ?? null;
+      if (maxClients != null) {
+        const { count } = await context.supabase
+          .from("clients").select("id", { count: "exact", head: true }).eq("archived", false).neq("category", "Ex-clientes");
+        if ((count ?? 0) > maxClients) {
+          overLimit = true;
+          graceUntil = (org as any)?.client_limit_grace_until ?? null;
+          if (!graceUntil) {
+            graceUntil = new Date(Date.now() + 30 * 86_400_000).toISOString();
+            await context.supabase.from("orgs").update({ client_limit_grace_until: graceUntil }).eq("id", context.orgId);
+          }
+        }
+      }
+    }
+
+    return { imported, overLimit, graceUntil };
   });
