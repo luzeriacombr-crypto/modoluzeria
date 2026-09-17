@@ -269,7 +269,7 @@ function DocRow({
             <RoteirosView
               blocks={blocks}
               renderFooter={(g) => (
-                <RoteiroControls docId={doc.id} clientId={clientId} title={g.title} status={statusByTitle.get(g.title)} />
+                <RoteiroControls docId={doc.id} clientId={clientId} title={g.title} status={statusByTitle.get(g.title)} targetMonthKey={doc.targetMonthKey} />
               )}
             />
           ) : (

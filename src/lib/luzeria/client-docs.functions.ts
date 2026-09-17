@@ -10,6 +10,11 @@ export type ClientDoc = {
   title: string | null;
   content: string;
   updatedAt: string;
+  /** Setado só quando o doc de Roteiros veio de uma prévia de planejamento
+   * aprovada — o mês pra onde cada roteiro aprovado deve virar publicação
+   * automaticamente (null nos roteiros criados/colados manualmente, que
+   * continuam usando o botão manual "Enviar pro Reels"). */
+  targetMonthKey: string | null;
 };
 
 async function assertAdmin(context: any) {
@@ -22,15 +27,16 @@ export const listClientDocs = createServerFn({ method: "GET" })
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<ClientDoc[]> => {
     await assertAdmin(context);
-    const { data: rows, error } = await context.supabase
+    const { data: rows, error } = await (context.supabase as any)
       .from("client_docs")
-      .select("id, client_id, type, title, content, updated_at")
+      .select("id, client_id, type, title, content, updated_at, target_month_key")
       .eq("client_id", data.clientId)
       .order("updated_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
       id: r.id, clientId: r.client_id, type: r.type as ClientDocType,
       title: r.title, content: r.content, updatedAt: r.updated_at,
+      targetMonthKey: r.target_month_key ?? null,
     }));
   });
 
@@ -114,6 +120,10 @@ export type RoteiroStatus = {
   contentItemId: string | null;
   clientStatus: RoteiroStatusValue;
   clientNote: string | null;
+  /** Tipo de content_item que esse roteiro deve virar ao ser aprovado —
+   * fixado na criação (pela prévia de planejamento), 'reel' por padrão
+   * pros roteiros manuais de sempre. */
+  contentType: "post" | "reel";
 };
 
 /** One row per "## Roteiro N: título" section of a roteiro doc — the
@@ -126,9 +136,9 @@ export const listRoteiroStatuses = createServerFn({ method: "GET" })
   .inputValidator((d: { docId: string }) => z.object({ docId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<RoteiroStatus[]> => {
     await assertAdmin(context);
-    const { data: rows, error } = await context.supabase
+    const { data: rows, error } = await (context.supabase as any)
       .from("client_doc_roteiro_status")
-      .select("roteiro_title, status, adjust_note, gravado, content_item_id, client_status, client_note")
+      .select("roteiro_title, status, adjust_note, gravado, content_item_id, client_status, client_note, content_type")
       .eq("doc_id", data.docId);
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
@@ -139,6 +149,7 @@ export const listRoteiroStatuses = createServerFn({ method: "GET" })
       contentItemId: r.content_item_id,
       clientStatus: r.client_status as RoteiroStatusValue,
       clientNote: r.client_note,
+      contentType: (r.content_type ?? "reel") as "post" | "reel",
     }));
   });
 
@@ -174,4 +185,63 @@ export const upsertRoteiroStatus = createServerFn({ method: "POST" })
       .upsert(row, { onConflict: "doc_id,roteiro_title" });
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+const MESES_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+function formatMonthLabel(key: string) {
+  const [y, m] = key.split("-").map(Number);
+  return `${MESES_PT[(m ?? 1) - 1] ?? key} ${y ?? ""}`.trim();
+}
+
+/** Aprovar a prévia de planejamento por IA cria um doc de Roteiros de
+ * verdade — um "## Roteiro N: título" por sugestão — já com o mês de
+ * destino (target_month_key) e o tipo (post/reel) de cada um pré-gravados
+ * em client_doc_roteiro_status, pra aprovar cada roteiro individual criar
+ * o content_item sozinho (ver RoteiroControls.tsx). */
+export const createRoteirosFromPlan = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: {
+    clientId: string;
+    targetMonthKey: string;
+    items: { title: string; type: "post" | "reel"; captionDraft: string; pillar?: string; rationale?: string }[];
+  }) => z.object({
+    clientId: z.string().uuid(),
+    targetMonthKey: z.string().regex(/^\d{4}-\d{2}$/),
+    items: z.array(z.object({
+      title: z.string().trim().min(1).max(200),
+      type: z.enum(["post", "reel"]),
+      captionDraft: z.string().trim().max(4000),
+      pillar: z.string().trim().max(120).optional(),
+      rationale: z.string().trim().max(500).optional(),
+    })).min(1).max(60),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+
+    const sections = data.items.map((it, i) => {
+      const heading = `Roteiro ${i + 1}: ${it.title}`;
+      const bodyParts = [it.captionDraft, it.pillar ? `Pilar: ${it.pillar}` : null, it.rationale ?? null].filter(Boolean);
+      return { heading, body: bodyParts.join("\n\n") };
+    });
+    const content = sections.map((s) => `## ${s.heading}\n${s.body}`).join("\n\n");
+
+    const { data: doc, error } = await (context.supabase as any)
+      .from("client_docs")
+      .insert({
+        org_id: context.orgId, client_id: data.clientId, type: "roteiro",
+        title: `Roteiros — ${formatMonthLabel(data.targetMonthKey)}`, content,
+        target_month_key: data.targetMonthKey, created_by: context.userId,
+      })
+      .select("id").single();
+    if (error) throw new Error(error.message);
+
+    const statusRows = data.items.map((it, i) => ({
+      doc_id: doc.id, org_id: context.orgId,
+      roteiro_title: sections[i].heading, content_type: it.type,
+    }));
+    const { error: sErr } = await (context.supabase as any)
+      .from("client_doc_roteiro_status").insert(statusRows);
+    if (sErr) throw new Error(sErr.message);
+
+    return { docId: doc.id as string };
   });

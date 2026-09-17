@@ -1369,6 +1369,8 @@ function BrandAssetsBlock({ clientId, isAdmin }: { clientId: string; isAdmin: bo
         Arquivos fixos que a equipe sempre usa desse cliente (logo, marca d'água, vídeos ou docs padrão…) —
         diferente da Biblioteca de Referências, que é pra inspiração. Vai direto pra pasta do cliente no
         Google Drive, em "Arquivo da Marca - {"{cliente}"}" (precisa da pasta de entregas configurada acima).
+        Também vale colocar aqui outros documentos importantes do cliente — como transcrições de reunião,
+        briefings ou anotações — em PDF ou texto: a prévia de planejamento por IA lê tudo que estiver aqui.
       </p>
       {isLoading ? (
         <Loader2 size={14} className="animate-spin text-foreground/40" />

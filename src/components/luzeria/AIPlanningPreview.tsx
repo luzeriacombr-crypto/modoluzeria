@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2 } from "lucide-react";
+import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2, CalendarDays } from "lucide-react";
 import { generateMonthlyPlanPreview, type MonthlyPlanItem, type MonthlyPlanResult } from "@/lib/luzeria/ai-planning.functions";
-import { useApi } from "@/lib/luzeria/queries";
+import { useApi, monthKeysQO } from "@/lib/luzeria/queries";
+import { currentMonthKey, nextMonthKey, formatMonth } from "@/lib/luzeria/utils";
 import { Modal } from "./Modals";
 
 const MONTH_LABEL = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
@@ -77,9 +79,11 @@ function buildMarkdown(result: MonthlyPlanResult): string {
 export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onClose: () => void }) {
   const generate = useServerFn(generateMonthlyPlanPreview);
   const api = useApi();
+  const { data: existingMonthKeys = [] } = useQuery(monthKeysQO(clientId));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<MonthlyPlanResult | null>(null);
+  const [pickingMonth, setPickingMonth] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +112,35 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
     );
   }
 
+  function approveToRoteiros(targetMonthKey: string) {
+    if (!result) return;
+    api.createRoteirosFromPlan.mutate(
+      {
+        data: {
+          clientId, targetMonthKey,
+          items: result.items.map((it) => ({
+            title: it.title, type: it.type, captionDraft: it.captionDraft,
+            pillar: it.pillar, rationale: it.rationale,
+          })),
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success(`Roteiros criados! Aprovar cada um já cria a publicação em ${formatMonth(targetMonthKey)}.`);
+          onClose();
+        },
+      },
+    );
+  }
+
+  const monthOptions = (() => {
+    const start = currentMonthKey();
+    const upcoming: string[] = [start];
+    let k = start;
+    for (let i = 0; i < 5; i++) { k = nextMonthKey(k); upcoming.push(k); }
+    return [...new Set([...existingMonthKeys, ...upcoming])].sort();
+  })();
+
   const inp = "w-full bg-background border border-foreground/8 rounded-md px-2.5 py-1.5 text-[13px] text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
 
   return (
@@ -121,7 +154,32 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
         </div>
       )}
 
-      {!loading && !error && result && (
+      {!loading && !error && result && pickingMonth && (
+        <div>
+          <p className="text-sm text-foreground/60 mb-3">Pra qual mês são essas publicações?</p>
+          <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto mb-3">
+            {monthOptions.map((key) => (
+              <button
+                key={key}
+                onClick={() => approveToRoteiros(key)}
+                disabled={api.createRoteirosFromPlan.isPending}
+                className="flex items-center justify-between rounded-md px-3 py-2.5 text-sm text-left transition disabled:opacity-50"
+                style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}
+              >
+                <span className="flex items-center gap-2 text-foreground"><CalendarDays size={14} className="text-foreground/40" /> {formatMonth(key)}</span>
+                {!existingMonthKeys.includes(key) && (
+                  <span className="text-[10px] uppercase font-bold text-foreground/30">Novo mês</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setPickingMonth(false)} className="text-xs text-foreground/50 hover:text-foreground px-1 py-1">
+            {api.createRoteirosFromPlan.isPending ? "Gerando roteiros…" : "Voltar"}
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && result && !pickingMonth && (
         <div className="space-y-4">
           <div className="rounded-lg p-3.5 text-[13px] text-foreground/80 leading-relaxed" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
             {result.summary}
@@ -171,9 +229,16 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
             <button
               onClick={save}
               disabled={api.upsertClientDoc.isPending || result.items.length === 0}
-              className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50"
+              className="text-xs px-4 py-2.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/25 transition disabled:opacity-50"
             >
               {api.upsertClientDoc.isPending ? "Salvando…" : "Salvar como Planejamento"}
+            </button>
+            <button
+              onClick={() => setPickingMonth(true)}
+              disabled={result.items.length === 0}
+              className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50"
+            >
+              Aprovar e enviar pros Roteiros
             </button>
           </div>
         </div>

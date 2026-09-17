@@ -88,7 +88,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
 
     const { data: historyRows } = await context.supabase
       .from("content_items")
-      .select("title, caption, type, status, months!inner(client_id)")
+      .select("title, caption, type, status, post_format, reel_type, months!inner(client_id)")
       .eq("months.client_id", data.clientId)
       .in("type", ["post", "reel"])
       .is("deleted_at", null)
@@ -96,7 +96,10 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       .limit(60);
     const history = (historyRows ?? []) as any[];
     const historyText = history.length
-      ? history.map((h) => `- [${h.type}] ${h.title || "(sem título)"} (${h.status})${h.caption ? ` — legenda: ${String(h.caption).slice(0, 200)}` : ""}`).join("\n")
+      ? history.map((h) => {
+          const format = h.type === "post" ? h.post_format : h.reel_type;
+          return `- [${h.type}${format ? `/${format}` : ""}] ${h.title || "(sem título)"} (${h.status})${h.caption ? ` — legenda: ${String(h.caption).slice(0, 200)}` : ""}`;
+        }).join("\n")
       : "Nenhum post/reel no histórico ainda.";
 
     const { data: docRows } = await context.supabase

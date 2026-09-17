@@ -104,7 +104,7 @@ import {
 import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
 import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
 import { listTrash, restoreItem, purgeItem } from "./trash.functions";
-import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
+import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus, createRoteirosFromPlan } from "./client-docs.functions";
 import { listOrgKnowledge, saveOrgKnowledgeText, saveOrgKnowledgeFile, deleteOrgKnowledge } from "./org-knowledge.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
 import { listDemoRequests } from "./demo-request.functions";
@@ -1302,6 +1302,11 @@ export function useApi() {
       mutationFn: useServerFn(deleteClientDoc),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover documento."),
+    }),
+    createRoteirosFromPlan: useMutation({
+      mutationFn: useServerFn(createRoteirosFromPlan),
+      onSuccess: (_r, vars: any) => qc.invalidateQueries({ queryKey: ["client-docs", vars.data.clientId] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao gerar os roteiros."),
     }),
     saveOrgKnowledgeText: useMutation({
       mutationFn: useServerFn(saveOrgKnowledgeText),

@@ -15,11 +15,16 @@ export function RoteiroControls({
   clientId,
   title,
   status,
+  targetMonthKey,
 }: {
   docId: string;
   clientId: string;
   title: string;
   status?: RoteiroStatus;
+  /** Presente só nos roteiros criados a partir de uma prévia de
+   * planejamento aprovada — quando setado, clicar "Aprovado" já cria o
+   * content_item sozinho nesse mês, sem precisar do botão manual. */
+  targetMonthKey?: string | null;
 }) {
   const { upsertRoteiroStatus, addContentItem } = useApi();
   const { selectedMonthKey, openItem, flash } = useUI();
@@ -28,9 +33,14 @@ export function RoteiroControls({
   const current = status?.status ?? "pending";
   const gravado = status?.gravado ?? false;
   const contentItemId = status?.contentItemId ?? null;
+  const contentType = status?.contentType ?? "reel";
   const showNote = current === "ajustar";
 
   function setApprovalStatus(next: "aprovado" | "ajustar") {
+    if (next === "aprovado" && targetMonthKey && !contentItemId) {
+      approveAndCreate();
+      return;
+    }
     upsertRoteiroStatus.mutate({
       data: {
         docId, roteiroTitle: title, status: next,
@@ -38,6 +48,22 @@ export function RoteiroControls({
       },
     });
     if (next === "ajustar") setNoteDraft(status?.adjustNote ?? "");
+  }
+
+  function approveAndCreate() {
+    const cleanTitle = title.replace(/^Roteiro\s*\d+\s*:\s*/i, "").trim() || title;
+    addContentItem.mutate(
+      { data: { clientId, key: targetMonthKey!, type: contentType, title: cleanTitle } },
+      {
+        onSuccess: (res: any) => {
+          upsertRoteiroStatus.mutate({
+            data: { docId, roteiroTitle: title, status: "aprovado", adjustNote: null, contentItemId: res.id },
+          });
+          toast.success(`Aprovado e criado em ${contentType === "post" ? "Posts" : "Reels"} de ${formatMonth(targetMonthKey!)}.`);
+        },
+        onError: () => toast.error("Não consegui aprovar e enviar pro quadro. Tenta de novo."),
+      },
+    );
   }
 
   function saveNote() {
@@ -122,9 +148,9 @@ export function RoteiroControls({
             className={chipBase}
             style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}
           >
-            <CheckCircle2 size={12} /> Enviado pro Reels — abrir
+            <CheckCircle2 size={12} /> Enviado pro {contentType === "post" ? "Posts" : "Reels"} — abrir
           </button>
-        ) : (
+        ) : !targetMonthKey ? (
           <button
             type="button"
             onClick={sendToReels}
@@ -134,7 +160,7 @@ export function RoteiroControls({
           >
             <Send size={12} /> Enviar pro Reels ({formatMonth(selectedMonthKey)})
           </button>
-        )}
+        ) : null}
       </div>
       {showNote && (
         <div className="mt-2 rounded-lg p-2.5" style={{ background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.18)" }}>
