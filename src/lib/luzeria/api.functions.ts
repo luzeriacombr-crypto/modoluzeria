@@ -1054,7 +1054,7 @@ export const listClients = createServerFn({ method: "GET" })
     // colunas novas — cast até os tipos do Supabase serem regenerados
     // depois da migração rodar.
     const { data, error } = await (context.supabase as any).from("clients")
-      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, hidden_tabs, cnpj_cpf, address, legal_responsible_name, legal_responsible_cpf")
+      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, hidden_tabs, cnpj_cpf, address, legal_responsible_name, legal_responsible_cpf, ai_planning_enabled, competitors")
       .order("name");
     if (error) throw new Error(error.message);
     const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
@@ -1073,7 +1073,9 @@ export const listClients = createServerFn({ method: "GET" })
         fixedResponsibleId: c.fixed_responsible_id,
         reviewDay: c.review_day ?? "",
         notes: c.notes ?? "",
+        competitors: c.competitors ?? "",
       },
+      aiPlanningEnabled: c.ai_planning_enabled ?? false,
       cnpjCpf: c.cnpj_cpf ?? null,
       address: c.address ?? null,
       legalResponsibleName: c.legal_responsible_name ?? null,

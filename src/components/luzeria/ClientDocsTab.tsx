@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers } from "lucide-react";
+import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { clientDocsQO, roteiroStatusesQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -9,12 +9,14 @@ import { parseMarkdownLite } from "@/lib/luzeria/markdown-lite";
 import type { ClientDoc } from "@/lib/luzeria/client-docs.functions";
 import { RoteirosView, PlanejamentoView } from "./MarkdownLiteView";
 import { RoteiroControls } from "./RoteiroControls";
+import { AIPlanningPreview } from "./AIPlanningPreview";
 
 const DOC_TYPES: ClientDocType[] = ["roteiro", "planejamento"];
 
-export function ClientDocsTab({ clientId }: { clientId: string }) {
+export function ClientDocsTab({ clientId, aiPlanningEnabled }: { clientId: string; aiPlanningEnabled?: boolean }) {
   const { data: docs = [] } = useQuery(clientDocsQO(clientId));
   const { upsertClientDoc, deleteClientDoc } = useApi();
+  const [showAiPlanning, setShowAiPlanning] = useState(false);
   const [activeType, setActiveType] = useState<ClientDocType>("roteiro");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -62,6 +64,19 @@ export function ClientDocsTab({ clientId }: { clientId: string }) {
 
   return (
     <div className="max-w-2xl">
+      {aiPlanningEnabled && (
+        <button
+          onClick={() => setShowAiPlanning(true)}
+          className="w-full mb-5 flex items-center gap-2.5 rounded-xl p-4 text-left transition hover:opacity-90"
+          style={{ background: "rgba(var(--lz-brand-rgb),0.1)", border: "1px solid rgba(var(--lz-brand-rgb),0.25)" }}
+        >
+          <Sparkles size={16} className="shrink-0" style={{ color: "var(--lz-accent-ink)" }} />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-foreground">Gerar prévia de planejamento com IA</div>
+            <div className="text-[11px] text-foreground/45">Lê o histórico, arquivos de marca e concorrentes — em teste, só nesse cliente.</div>
+          </div>
+        </button>
+      )}
       {/* Tutorial */}
       <div className="rounded-xl p-4 mb-5" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
         <div className="text-[11px] font-bold uppercase tracking-wide text-foreground/35 mb-3">Como funciona</div>
@@ -157,6 +172,8 @@ export function ClientDocsTab({ clientId }: { clientId: string }) {
           ))}
         </div>
       )}
+
+      {showAiPlanning && <AIPlanningPreview clientId={clientId} onClose={() => setShowAiPlanning(false)} />}
     </div>
   );
 }

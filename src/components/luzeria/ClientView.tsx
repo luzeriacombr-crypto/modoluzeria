@@ -509,7 +509,9 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             {maisSubTab === "campanhas" && (
               <CampanhasTab clientId={client.id} monthKey={effectiveMonthKey} isAdmin={isAdmin} />
             )}
-            {maisSubTab === "docs" && showDocsSubTab && <ClientDocsTab clientId={client.id} />}
+            {maisSubTab === "docs" && showDocsSubTab && (
+              <ClientDocsTab clientId={client.id} aiPlanningEnabled={!!client.aiPlanningEnabled} />
+            )}
             {maisSubTab === "biblioteca" && showBibliotecaSubTab && <ClientReferenceLibraryTab clientId={client.id} />}
           </div>
         )}

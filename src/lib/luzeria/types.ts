@@ -231,6 +231,9 @@ export interface CustomFields {
   fixedResponsibleId: string | null;
   reviewDay: string;
   notes: string;
+  /** Lista livre de concorrentes (um por linha) — contexto pra prévia de
+   * planejamento gerada por IA pesquisar na web antes de sugerir conteúdo. */
+  competitors: string;
 }
 
 export interface Client {
@@ -268,6 +271,9 @@ export interface Client {
   address?: string | null;
   legalResponsibleName?: string | null;
   legalResponsibleCpf?: string | null;
+  /** Feature em teste (prévia de planejamento por IA) — liberada por
+   * cliente, não por org; hoje só true na Luzeria Estúdio. */
+  aiPlanningEnabled?: boolean;
 }
 
 export type Role = "master" | "setor" | "member";

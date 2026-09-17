@@ -1014,6 +1014,31 @@ export const getDriveFileBytes = createServerFn({ method: "GET" })
     return { dataUrl: `data:${ct};base64,${buf.toString("base64")}`, mimeType: ct, name: meta?.name ?? "video" };
   }));
 
+/** Baixa um arquivo do Drive inteiro (bytes + mimeType) pra uso interno,
+ * server-to-server — não é uma rota pública, é chamada por outra função do
+ * backend (ex: planejamento por IA lendo arquivos de marca). Mesmo padrão
+ * de fetch de getDriveFileBytes, só que como função comum. Callers are
+ * responsible for already being inside withDriveOrg(orgId, ...). */
+export async function downloadDriveFileBase64(
+  fileId: string,
+): Promise<{ base64: string; mimeType: string; name: string } | null> {
+  try {
+    const meta: any = await driveFetch(
+      `/drive/v3/files/${encodeURIComponent(fileId)}?fields=mimeType,size,name&supportsAllDrives=true`,
+    );
+    const res = await fetch(
+      `${DRIVE_BASE}/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
+      { headers: await driveHeaders() },
+    );
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const ct = meta?.mimeType ?? res.headers.get("content-type") ?? "application/octet-stream";
+    return { base64: buf.toString("base64"), mimeType: ct, name: meta?.name ?? fileId };
+  } catch {
+    return null;
+  }
+}
+
 /* ============== DRIVE CONFIG + ORGANIZE ============== */
 
 async function assertMaster(supabase: any, userId: string) {

@@ -368,6 +368,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
   const [responsible, setResponsible] = useState<string>(client.customFields.fixedResponsibleId ?? "");
   const [reviewDay, setReviewDay] = useState<string>(client.customFields.reviewDay ?? "");
   const [notes, setNotes] = useState<string>(client.customFields.notes ?? "");
+  const [competitors, setCompetitors] = useState<string>(client.customFields.competitors ?? "");
   const [cnpjCpf, setCnpjCpf] = useState<string>(client.cnpjCpf ?? "");
   const [address, setAddress] = useState<string>(client.address ?? "");
   const [legalResponsibleName, setLegalResponsibleName] = useState<string>(client.legalResponsibleName ?? "");
@@ -386,6 +387,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     setResponsible(client.customFields.fixedResponsibleId ?? "");
     setReviewDay(client.customFields.reviewDay ?? "");
     setNotes(client.customFields.notes ?? "");
+    setCompetitors(client.customFields.competitors ?? "");
     setContractValue(client.contractValue ?? "");
     setPaymentDueDay(client.paymentDueDay ?? "");
     setPhotoPreview(client.photoUrl ?? null);
@@ -430,7 +432,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       niche, posts_per_week: Number(postsPerWeek) || 0,
       reels_per_week: Number(reelsPerWeek) || 0,
       fixed_responsible_id: responsible || null,
-      review_day: reviewDay, notes,
+      review_day: reviewDay, notes, competitors,
       cnpj_cpf: cnpjCpf.trim() || null,
       address: address.trim() || null,
       legal_responsible_name: legalResponsibleName.trim() || null,
@@ -552,6 +554,15 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       <div className="sm:col-span-2">
         <ConfigField label="Observações">
           <textarea value={notes} disabled={!canEdit} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} />
+        </ConfigField>
+      </div>
+      <div className="sm:col-span-2">
+        <ConfigField label="Concorrentes">
+          <textarea
+            value={competitors} disabled={!canEdit} onChange={(e) => setCompetitors(e.target.value)}
+            placeholder={"Um por linha, ex: @perfil_concorrente ou nome da empresa"}
+            rows={3} className={inp + " resize-none"}
+          />
         </ConfigField>
       </div>
       {canEdit && (
