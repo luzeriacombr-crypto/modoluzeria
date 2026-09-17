@@ -17,7 +17,6 @@ export function RoteiroControls({
   status,
   targetMonthKey,
   body,
-  captionDraft,
 }: {
   docId: string;
   clientId: string;
@@ -31,10 +30,6 @@ export function RoteiroControls({
    * título") — vai pro campo Briefing do content_item criado, pra não
    * nascer vazio. */
   body?: string;
-  /** Só nos roteiros vindos da prévia de planejamento (primeiro parágrafo
-   * do body, que é literalmente a legenda sugerida) — vai pro campo
-   * Legenda do content_item. */
-  captionDraft?: string;
 }) {
   const { upsertRoteiroStatus, addContentItem } = useApi();
   const { selectedMonthKey, openItem, flash } = useUI();
@@ -63,7 +58,13 @@ export function RoteiroControls({
   function approveAndCreate() {
     const cleanTitle = title.replace(/^Roteiro\s*\d+\s*:\s*/i, "").trim() || title;
     addContentItem.mutate(
-      { data: { clientId, key: targetMonthKey!, type: contentType, title: cleanTitle, notes: body, caption: captionDraft } },
+      {
+        data: {
+          clientId, key: targetMonthKey!, type: contentType, title: cleanTitle,
+          notes: body, caption: status?.publishCaption ?? undefined,
+          postFormat: contentType === "post" ? status?.postFormat ?? undefined : undefined,
+        },
+      },
       {
         onSuccess: (res: any) => {
           upsertRoteiroStatus.mutate({

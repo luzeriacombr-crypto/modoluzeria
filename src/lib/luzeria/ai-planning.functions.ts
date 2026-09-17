@@ -12,6 +12,10 @@ import { requireActiveProfile } from "./require-active";
 
 // Formato de casa da Luzeria, exatamente como o Junior manda — a IA deve
 // escrever `captionDraft` já pronto nesse formato, não um resumo genérico.
+// IMPORTANTE: captionDraft é o TEXTO DE PRODUÇÃO (roteiro/slides/imagem) —
+// vira o Briefing do content_item. publishCaption é a legenda de verdade
+// que vai publicada junto com o post/reel — são coisas diferentes, nunca
+// repita o mesmo texto nos dois.
 const HOUSE_STYLE_GUIDE = `FORMATO DE CASA — captionDraft precisa sair PRONTO PRA USAR, no formato exato abaixo (nunca um resumo genérico):
 
 Se for POST estático (format: "estático"):
@@ -43,7 +47,9 @@ Exemplos reais (observe o tom: direto, frase curta, sem enrolação, nada de emo
 
 "Doutor, fiz PRP e ainda sinto dor. Isso é normal? É, pode ser. PRP não é resultado imediato — o corpo precisa de tempo pra responder ao estímulo, geralmente algumas semanas. E outra coisa importante: raramente o PRP é usado sozinho, ele costuma vir junto de fisioterapia e acompanhamento clínico de perto. Sentir dor residual nas primeiras semanas não significa que o tratamento falhou. Se você já fez PRP e tem dúvida sobre o resultado, comenta aqui que eu respondo."
 
-REGRA FIXA: nunca escreva a palavra "GRAVADO" em nenhum título ou texto — isso é só uma marcação de controle interna da agência, não faz parte do conteúdo.`;
+REGRA FIXA: nunca escreva a palavra "GRAVADO" em nenhum título ou texto — isso é só uma marcação de controle interna da agência, não faz parte do conteúdo.
+
+publishCaption é OUTRO texto, sempre — a legenda de verdade que vai publicada junto com o post/reel no Instagram (o que aparece embaixo da mídia). Curta, no mesmo tom direto, geralmente uma frase de gancho/resumo + uma chamada pra ação — nunca repita captionDraft ali (não cole o roteiro/slides inteiro como legenda).`;
 
 const WEB_SEARCH_TOOL = {
   type: "web_search_20260209",
@@ -69,11 +75,13 @@ const REPORT_PLAN_TOOL = {
             title: { type: "string" as const, description: "Título curto da publicação sugerida — NUNCA inclua a palavra 'GRAVADO'" },
             type: { type: "string" as const, enum: ["post", "reel"] },
             pillar: { type: "string" as const, description: "Pilar/tema de conteúdo, ex: bastidores, prova social, educativo" },
-            captionDraft: { type: "string" as const, description: "Texto PRONTO pra usar, no formato de casa exato (TEXTO:/SLIDE N:/roteiro de reel — ver instrução), não um resumo" },
-            format: { type: "string" as const, description: "Pra type=post: 'estático' ou 'carrossel' (decide o formato de captionDraft). Pra type=reel: descrição livre do formato (ex: vlog, lista, POV)." },
+            captionDraft: { type: "string" as const, description: "TEXTO DE PRODUÇÃO pronto pra usar, no formato de casa exato (TEXTO:/SLIDE N:/roteiro de reel — ver instrução) — isso vira o Briefing, não a legenda publicada." },
+            publishCaption: { type: "string" as const, description: "A LEGENDA DE VERDADE que vai publicada junto com o post/reel — curta, gancho + CTA, no tom da marca. NUNCA igual a captionDraft." },
+            postFormat: { type: "string" as const, enum: ["estatico", "carrossel"], description: "OBRIGATÓRIO quando type=post — decide o botão de formato real do post no sistema. Precisa bater com o formato usado em captionDraft (TEXTO: → estatico, SLIDE N: → carrossel). Não usar quando type=reel." },
+            format: { type: "string" as const, description: "Descrição livre do formato/estilo, pra contexto humano (ex: 'vlog', 'lista', 'POV', 'carrossel educativo') — não substitui postFormat." },
             rationale: { type: "string" as const, description: "Por que essa publicação faz sentido agora, em 1 frase" },
           },
-          required: ["title", "type", "captionDraft"],
+          required: ["title", "type", "captionDraft", "publishCaption"],
         },
       },
       competitorNotes: {
@@ -90,6 +98,8 @@ const PlanItemSchema = z.object({
   type: z.enum(["post", "reel"]),
   pillar: z.string().optional(),
   captionDraft: z.string(),
+  publishCaption: z.string(),
+  postFormat: z.enum(["estatico", "carrossel"]).optional(),
   format: z.string().optional(),
   rationale: z.string().optional(),
 });

@@ -282,11 +282,10 @@ function DocRow({
               renderFooter={(g) => {
                 const blockText = (b: MdBlock) => (b.kind === "ul" ? b.items.map((i) => `- ${i}`).join("\n") : b.text);
                 const body = g.blocks.map(blockText).join("\n\n");
-                const captionDraft = doc.targetMonthKey ? g.blocks.find((b) => b.kind === "p")?.text : undefined;
                 return (
                   <RoteiroControls
                     docId={doc.id} clientId={clientId} title={g.title} status={statusByTitle.get(g.title)}
-                    targetMonthKey={doc.targetMonthKey} body={body} captionDraft={captionDraft}
+                    targetMonthKey={doc.targetMonthKey} body={body}
                   />
                 );
               }}

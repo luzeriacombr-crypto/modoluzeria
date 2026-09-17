@@ -7,6 +7,8 @@ const PlanItemLiteSchema = z.object({
   title: z.string().trim().min(1).max(200),
   type: z.enum(["post", "reel"]),
   captionDraft: z.string().trim().max(4000),
+  publishCaption: z.string().trim().max(2200).optional(),
+  postFormat: z.enum(["estatico", "carrossel"]).optional(),
   pillar: z.string().trim().max(120).optional(),
   format: z.string().trim().max(120).optional(),
   rationale: z.string().trim().max(500).optional(),
@@ -141,6 +143,12 @@ export type RoteiroStatus = {
    * fixado na criação (pela prévia de planejamento), 'reel' por padrão
    * pros roteiros manuais de sempre. */
   contentType: "post" | "reel";
+  /** Só quando contentType='post' e veio da prévia — estatico/carrossel,
+   * grava direto no botão de formato real do content_item ao aprovar. */
+  postFormat: "estatico" | "carrossel" | null;
+  /** Legenda de verdade a publicar — diferente do corpo do roteiro/doc
+   * (que é o texto de produção/Briefing). Null nos roteiros manuais. */
+  publishCaption: string | null;
 };
 
 /** One row per "## Roteiro N: título" section of a roteiro doc — the
@@ -155,7 +163,7 @@ export const listRoteiroStatuses = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { data: rows, error } = await (context.supabase as any)
       .from("client_doc_roteiro_status")
-      .select("roteiro_title, status, adjust_note, gravado, content_item_id, client_status, client_note, content_type")
+      .select("roteiro_title, status, adjust_note, gravado, content_item_id, client_status, client_note, content_type, post_format, publish_caption")
       .eq("doc_id", data.docId);
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
@@ -167,6 +175,8 @@ export const listRoteiroStatuses = createServerFn({ method: "GET" })
       clientStatus: r.client_status as RoteiroStatusValue,
       clientNote: r.client_note,
       contentType: (r.content_type ?? "reel") as "post" | "reel",
+      postFormat: (r.post_format ?? null) as "estatico" | "carrossel" | null,
+      publishCaption: r.publish_caption ?? null,
     }));
   });
 
@@ -220,7 +230,7 @@ export const createRoteirosFromPlan = createServerFn({ method: "POST" })
   .inputValidator((d: {
     clientId: string;
     targetMonthKey: string;
-    items: { title: string; type: "post" | "reel"; captionDraft: string; pillar?: string; rationale?: string }[];
+    items: { title: string; type: "post" | "reel"; captionDraft: string; publishCaption?: string; postFormat?: "estatico" | "carrossel"; pillar?: string; rationale?: string }[];
   }) => z.object({
     clientId: z.string().uuid(),
     targetMonthKey: z.string().regex(/^\d{4}-\d{2}$/),
@@ -228,6 +238,8 @@ export const createRoteirosFromPlan = createServerFn({ method: "POST" })
       title: z.string().trim().min(1).max(200),
       type: z.enum(["post", "reel"]),
       captionDraft: z.string().trim().max(4000),
+      publishCaption: z.string().trim().max(2200).optional(),
+      postFormat: z.enum(["estatico", "carrossel"]).optional(),
       pillar: z.string().trim().max(120).optional(),
       rationale: z.string().trim().max(500).optional(),
     })).min(1).max(60),
@@ -237,7 +249,12 @@ export const createRoteirosFromPlan = createServerFn({ method: "POST" })
 
     const sections = data.items.map((it, i) => {
       const heading = `Roteiro ${i + 1}: ${it.title}`;
-      const bodyParts = [it.captionDraft, it.pillar ? `Pilar: ${it.pillar}` : null, it.rationale ?? null].filter(Boolean);
+      const bodyParts = [
+        it.captionDraft,
+        it.pillar ? `Pilar: ${it.pillar}` : null,
+        it.rationale ?? null,
+        it.publishCaption ? `Legenda: ${it.publishCaption}` : null,
+      ].filter(Boolean);
       return { heading, body: bodyParts.join("\n\n") };
     });
     const content = sections.map((s) => `## ${s.heading}\n${s.body}`).join("\n\n");
@@ -255,6 +272,8 @@ export const createRoteirosFromPlan = createServerFn({ method: "POST" })
     const statusRows = data.items.map((it, i) => ({
       doc_id: doc.id, org_id: context.orgId,
       roteiro_title: sections[i].heading, content_type: it.type,
+      post_format: it.type === "post" ? (it.postFormat ?? null) : null,
+      publish_caption: it.publishCaption ?? null,
     }));
     const { error: sErr } = await (context.supabase as any)
       .from("client_doc_roteiro_status").insert(statusRows);

@@ -65,8 +65,9 @@ function buildMarkdown(result: MonthlyPlanResult): string {
       const bits = [`**${it.title}** (${it.type === "reel" ? "Reel" : "Post"}${it.format ? ` — ${it.format}` : ""})`];
       if (it.pillar) bits.push(`Pilar: ${it.pillar}`);
       if (it.rationale) bits.push(it.rationale);
-      const caption = it.captionDraft ? `\n  Legenda: ${it.captionDraft}` : "";
-      return `- ${bits.join(" — ")}${caption}`;
+      const script = it.captionDraft ? `\n  Roteiro/texto: ${it.captionDraft}` : "";
+      const caption = it.publishCaption ? `\n  Legenda: ${it.publishCaption}` : "";
+      return `- ${bits.join(" — ")}${script}${caption}`;
     });
     parts.push(`## Publicações sugeridas\n${lines.join("\n")}`);
   }
@@ -124,6 +125,7 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
           clientId, targetMonthKey,
           items: result.items.map((it) => ({
             title: it.title, type: it.type, captionDraft: it.captionDraft,
+            publishCaption: it.publishCaption, postFormat: it.postFormat,
             pillar: it.pillar, rationale: it.rationale,
           })),
         },
@@ -184,12 +186,24 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
                 {(it.pillar || it.format) && (
                   <p className="text-[11px] text-foreground/40">{[it.pillar, it.format].filter(Boolean).join(" · ")}</p>
                 )}
-                <textarea
-                  value={it.captionDraft}
-                  onChange={(e) => updateItem(idx, { captionDraft: e.target.value })}
-                  rows={2}
-                  className={inp + " resize-none"}
-                />
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-foreground/30 mb-1 block">Texto de produção (Briefing)</label>
+                  <textarea
+                    value={it.captionDraft}
+                    onChange={(e) => updateItem(idx, { captionDraft: e.target.value })}
+                    rows={3}
+                    className={inp + " resize-none font-mono"}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-foreground/30 mb-1 block">Legenda a publicar</label>
+                  <textarea
+                    value={it.publishCaption ?? ""}
+                    onChange={(e) => updateItem(idx, { publishCaption: e.target.value })}
+                    rows={2}
+                    className={inp + " resize-none"}
+                  />
+                </div>
                 {it.rationale && <p className="text-[11px] text-foreground/35 italic">{it.rationale}</p>}
               </div>
             ))}
