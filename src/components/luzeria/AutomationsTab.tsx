@@ -153,6 +153,25 @@ function AutomationRulesSection() {
     return profiles.find((p) => p.id === userId)?.name ?? "—";
   }
 
+  // Cada pessoa atribuída é uma linha própria no banco (o gatilho já soma
+  // todas as regras que baterem no mesmo status), mas na tela agrupamos por
+  // gatilho+ação pra "atribuir pra 3 pessoas" aparecer como 1 linha só, não 3
+  // repetidas — só muda o que aprece, o dado por trás continua 1 regra por pessoa.
+  const grouped = (() => {
+    const map = new Map<string, { rule: (typeof rules)[number]; ids: string[]; userIds: string[] }>();
+    for (const r of rules) {
+      const key = `${r.onCreate}|${r.triggerStatus}|${r.actionType}|${r.actionStatus}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.ids.push(r.id);
+        if (r.actionUserId) existing.userIds.push(r.actionUserId);
+      } else {
+        map.set(key, { rule: r, ids: [r.id], userIds: r.actionUserId ? [r.actionUserId] : [] });
+      }
+    }
+    return [...map.values()];
+  })();
+
   return (
     <div>
       <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
@@ -162,24 +181,28 @@ function AutomationRulesSection() {
         {rules.length === 0 && !adding && (
           <div className="px-5 py-6 text-sm text-foreground/40">Nenhuma automação criada ainda.</div>
         )}
-        {rules.map((r) => (
-          <div key={r.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-foreground/5 last:border-b-0">
+        {grouped.map((g) => (
+          <div key={g.ids.join(",")} className="flex items-center gap-3 px-5 py-3.5 border-b border-foreground/5 last:border-b-0">
             <span className="text-sm text-foreground/85 flex-1 min-w-0">
-              {r.onCreate ? (
+              {g.rule.onCreate ? (
                 <>Quando o item for <strong>criado</strong></>
               ) : (
-                <>Quando o status virar <strong style={{ color: getStatusMeta(r.triggerStatus as Status).color }}>{getStatusMeta(r.triggerStatus as Status).label}</strong></>
+                <>Quando o status virar <strong style={{ color: getStatusMeta(g.rule.triggerStatus as Status).color }}>{getStatusMeta(g.rule.triggerStatus as Status).label}</strong></>
               )}
               {" → "}
-              {r.actionType === "set_status" ? (
-                <>alterar status para <strong style={{ color: getStatusMeta(r.actionStatus as Status).color }}>{getStatusMeta(r.actionStatus as Status).label}</strong></>
+              {g.rule.actionType === "set_status" ? (
+                <>alterar status para <strong style={{ color: getStatusMeta(g.rule.actionStatus as Status).color }}>{getStatusMeta(g.rule.actionStatus as Status).label}</strong></>
               ) : (
-                <>atribuir para <strong>{memberName(r.actionUserId)}</strong></>
+                <>atribuir para <strong>{g.userIds.map(memberName).join(", ")}</strong></>
               )}
             </span>
             {isMaster && (
               <button
-                onClick={async () => { if (await requestConfirm("Excluir essa automação?", { danger: true })) deleteAutomationRule.mutate({ data: { id: r.id } }); }}
+                onClick={async () => {
+                  if (await requestConfirm(g.ids.length > 1 ? "Excluir essa automação pra todas as pessoas atribuídas?" : "Excluir essa automação?", { danger: true })) {
+                    g.ids.forEach((id) => deleteAutomationRule.mutate({ data: { id } }));
+                  }
+                }}
                 className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 shrink-0"
               ><Trash2 size={13} /></button>
             )}
@@ -190,7 +213,13 @@ function AutomationRulesSection() {
             <NewRuleForm
               profiles={profiles}
               onCancel={() => setAdding(false)}
-              onSubmit={(payload) => createAutomationRule.mutate({ data: payload }, { onSuccess: () => setAdding(false) })}
+              onSubmit={(payload) => {
+                const { actionUserIds, ...rest } = payload;
+                const ids = actionUserIds && actionUserIds.length > 0 ? actionUserIds : [undefined];
+                Promise.all(ids.map((actionUserId) =>
+                  createAutomationRule.mutateAsync({ data: { ...rest, actionUserId } }),
+                )).then(() => setAdding(false));
+              }}
             />
           ) : (
             <button
@@ -212,13 +241,17 @@ function NewRuleForm({
 }: {
   profiles: { id: string; name: string }[];
   onCancel: () => void;
-  onSubmit: (payload: { triggerStatus?: string; onCreate?: boolean; actionType: "set_status" | "assign_member"; actionStatus?: string; actionUserId?: string }) => void;
+  onSubmit: (payload: { triggerStatus?: string; onCreate?: boolean; actionType: "set_status" | "assign_member"; actionStatus?: string; actionUserIds?: string[] }) => void;
 }) {
   const [triggerMode, setTriggerMode] = useState<"status" | "create">("status");
   const [triggerStatus, setTriggerStatus] = useState<Status>(STATUS_OPTIONS[0]);
   const [actionType, setActionType] = useState<"set_status" | "assign_member">("set_status");
   const [actionStatus, setActionStatus] = useState<Status>(STATUS_OPTIONS[0]);
-  const [actionUserId, setActionUserId] = useState(profiles[0]?.id ?? "");
+  const [actionUserIds, setActionUserIds] = useState<string[]>(profiles[0] ? [profiles[0].id] : []);
+
+  function toggleUser(id: string) {
+    setActionUserIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  }
 
   const selectClass = "bg-background border border-foreground/10 rounded-md px-2.5 py-2 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
 
@@ -244,21 +277,42 @@ function NewRuleForm({
             {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
           </select>
         ) : (
-          <select value={actionUserId} onChange={(e) => setActionUserId(e.target.value)} className={selectClass}>
-            {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          <span className="text-foreground/40">(escolha abaixo)</span>
         )}
       </div>
+      {actionType === "assign_member" && (
+        <div className="flex flex-wrap gap-1.5">
+          {profiles.map((p) => {
+            const selected = actionUserIds.includes(p.id);
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => toggleUser(p.id)}
+                className={`px-2.5 py-1.5 rounded-md text-xs font-semibold border transition ${
+                  selected
+                    ? "border-transparent text-[#0D0D0D]"
+                    : "border-foreground/10 text-foreground/60 hover:text-foreground hover:border-foreground/20"
+                }`}
+                style={selected ? { backgroundColor: "rgb(var(--lz-brand-rgb))" } : undefined}
+              >
+                {p.name}
+              </button>
+            );
+          })}
+          <p className="w-full text-[10.5px] text-foreground/35 mt-0.5">Pode escolher mais de uma pessoa — cria uma atribuição pra cada.</p>
+        </div>
+      )}
       <div className="flex items-center justify-end gap-2">
         <button onClick={onCancel} className="px-3 py-1.5 text-xs text-foreground/60 hover:text-foreground">Cancelar</button>
         <button
-          disabled={actionType === "assign_member" && !actionUserId}
+          disabled={actionType === "assign_member" && actionUserIds.length === 0}
           onClick={() => onSubmit({
             triggerStatus: triggerMode === "status" ? triggerStatus : undefined,
             onCreate: triggerMode === "create" ? true : undefined,
             actionType,
             actionStatus: actionType === "set_status" ? actionStatus : undefined,
-            actionUserId: actionType === "assign_member" ? actionUserId : undefined,
+            actionUserIds: actionType === "assign_member" ? actionUserIds : undefined,
           })}
           className="px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-40"
           style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}

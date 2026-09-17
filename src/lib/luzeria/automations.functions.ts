@@ -91,7 +91,12 @@ export const runDailyDigestNow = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     await ensureMaster(context);
-    const { data, error } = await context.supabase.rpc("send_daily_digest" as any);
+    // send_daily_digest() é REVOKE'd de authenticated/anon (só service_role
+    // executa — ver 20260629235056) porque manda notificação pra QUALQUER
+    // usuário do sistema, não só quem chamou; precisa do client admin, o
+    // client normal do usuário sempre dá "permission denied".
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.rpc("send_daily_digest" as any);
     if (error) throw new Error(error.message);
     return { ok: true, sent: data ?? 0 };
   });
@@ -100,7 +105,8 @@ export const runDeadlineRemindersNow = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     await ensureMaster(context);
-    const { data, error } = await context.supabase.rpc("send_deadline_reminders" as any);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.rpc("send_deadline_reminders" as any);
     if (error) throw new Error(error.message);
     return { ok: true, sent: data ?? 0 };
   });
