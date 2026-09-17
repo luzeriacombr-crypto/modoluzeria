@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CheckCircle2, Circle, Palette, HardDrive, Instagram, Users, X } from "lucide-react";
 import { setupChecklistQO, useMe } from "@/lib/luzeria/queries";
-import { ImportClientsStep } from "./ImportClientsStep";
+import { SmartImportStep } from "./SmartImportStep";
 
 export function SetupChecklist() {
   const me = useMe().data;
@@ -110,7 +110,7 @@ export function SetupChecklist() {
               <h2 className="text-foreground text-lg font-bold">Traga seus clientes</h2>
               <button onClick={closeImport} className="text-foreground/40 hover:text-foreground transition"><X size={18} /></button>
             </div>
-            <ImportClientsStep onDone={closeImport} onSkip={closeImport} />
+            <SmartImportStep onDone={closeImport} onSkip={closeImport} />
           </div>
         </div>
       )}

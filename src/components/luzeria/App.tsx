@@ -30,6 +30,7 @@ import { PastDueBanner } from "./PastDueBanner";
 import { InstagramLiveBanner } from "./InstagramLiveBanner";
 import { DriveReconnectBanner } from "./DriveReconnectBanner";
 import { ReferralAnnouncementBanner } from "./ReferralAnnouncementBanner";
+import { SmartImportBanner } from "./SmartImportBanner";
 import { GlobalConfirmDialog } from "./GlobalConfirmDialog";
 import { IncomingCallModal } from "./IncomingCallModal";
 import { ActiveCallOverlay } from "./ActiveCallOverlay";
@@ -275,6 +276,7 @@ export function App() {
         <InstagramLiveBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
         <DriveReconnectBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
         <ReferralAnnouncementBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} firstPaymentConfirmedAt={me.data?.firstPaymentConfirmedAt} />
+        <SmartImportBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
         <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0">
           <PullToRefresh containerRef={mainRef}>
             <div key={routeId} className="lz-page-in">

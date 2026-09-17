@@ -4,7 +4,7 @@ import { Video } from "lucide-react";
 import { useApi } from "@/lib/luzeria/queries";
 import type { Profile } from "@/lib/luzeria/types";
 import { AvatarEditor, ColorPicker, showAvatarError, uploadAvatar } from "./AvatarEditor";
-import { ImportClientsStep } from "./ImportClientsStep";
+import { SmartImportStep } from "./SmartImportStep";
 
 export function WelcomeOnboarding({ me }: { me: Profile }) {
   const { updateMyProfile } = useApi();
@@ -108,7 +108,7 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
             <h1 className="text-foreground text-[24px] font-bold leading-tight mb-6">
               Traga seus clientes
             </h1>
-            <ImportClientsStep onDone={completeOnboarding} onSkip={completeOnboarding} />
+            <SmartImportStep onDone={completeOnboarding} onSkip={completeOnboarding} />
           </>
         )}
       </div>
