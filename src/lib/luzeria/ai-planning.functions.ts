@@ -10,6 +10,41 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
 
+// Formato de casa da Luzeria, exatamente como o Junior manda — a IA deve
+// escrever `captionDraft` já pronto nesse formato, não um resumo genérico.
+const HOUSE_STYLE_GUIDE = `FORMATO DE CASA — captionDraft precisa sair PRONTO PRA USAR, no formato exato abaixo (nunca um resumo genérico):
+
+Se for POST estático (format: "estático"):
+TEXTO:
+<texto do post, direto, sem enrolação>
+
+Exemplo real:
+TEXTO:
+Cuidar de você também é a nossa forma de agradecer.
+Feliz dia do Cliente.
+
+Se for POST carrossel (format: "carrossel"):
+SLIDE 1: <texto do slide 1>
+SLIDE 2: <texto do slide 2>
+(continue "SLIDE N:" pra cada slide, geralmente 5 a 8 slides — o último costuma ser a chamada pra ação)
+
+Exemplo real:
+SLIDE 1: Aos 30, seu rosto já começa a perder o que sustenta ele.
+SLIDE 2: A pele não faz isso sozinha. O osso também vai reabsorvendo aos poucos essa sustentação.
+SLIDE 3: E o preenchimento sozinho sem entender essa base, quase nunca resolve.
+SLIDE 4: Por isso meu trabalho começa entendendo o que o rosto perdeu, não o que ele "precisa ganhar".
+SLIDE 5: Meu trabalho é repor estrutura, não só volume.
+SLIDE 6: Quer saber o que o seu rosto precisa? Me manda uma mensagem.
+
+Se for REEL: roteiro completo, pronto pra gravar — gancho forte na primeira linha, corpo desenvolvendo o argumento (pode ter lista numerada por extenso tipo "Primeiro:... Segundo:..." e notas de direção entre parênteses quando ajudar, tipo "(aparece a imagem de X)"), terminando SEMPRE com uma chamada pra comentário/compartilhamento.
+
+Exemplos reais (observe o tom: direto, frase curta, sem enrolação, nada de emoji forçado):
+"Três sinais do joelho que, se fossem meus, eu não deixaria passar. Primeiro: estalo com dor — diferente de estalo sem dor, que é comum. Segundo: inchaço que aparece depois do esforço e demora a sumir. Terceiro: sensação de falseio, quando o joelho parece que vai ceder. Nenhum desses é motivo pra pânico. Mas todos são motivo pra avaliação."
+
+"Doutor, fiz PRP e ainda sinto dor. Isso é normal? É, pode ser. PRP não é resultado imediato — o corpo precisa de tempo pra responder ao estímulo, geralmente algumas semanas. E outra coisa importante: raramente o PRP é usado sozinho, ele costuma vir junto de fisioterapia e acompanhamento clínico de perto. Sentir dor residual nas primeiras semanas não significa que o tratamento falhou. Se você já fez PRP e tem dúvida sobre o resultado, comenta aqui que eu respondo."
+
+REGRA FIXA: nunca escreva a palavra "GRAVADO" em nenhum título ou texto — isso é só uma marcação de controle interna da agência, não faz parte do conteúdo.`;
+
 const WEB_SEARCH_TOOL = {
   type: "web_search_20260209",
   name: "web_search",
@@ -31,11 +66,11 @@ const REPORT_PLAN_TOOL = {
         items: {
           type: "object" as const,
           properties: {
-            title: { type: "string" as const, description: "Título curto da publicação sugerida" },
+            title: { type: "string" as const, description: "Título curto da publicação sugerida — NUNCA inclua a palavra 'GRAVADO'" },
             type: { type: "string" as const, enum: ["post", "reel"] },
             pillar: { type: "string" as const, description: "Pilar/tema de conteúdo, ex: bastidores, prova social, educativo" },
-            captionDraft: { type: "string" as const, description: "Rascunho curto de legenda em português, no tom real da marca" },
-            format: { type: "string" as const, description: "Formato sugerido, ex: carrossel, vídeo lo-fi, estático" },
+            captionDraft: { type: "string" as const, description: "Texto PRONTO pra usar, no formato de casa exato (TEXTO:/SLIDE N:/roteiro de reel — ver instrução), não um resumo" },
+            format: { type: "string" as const, description: "Pra type=post: 'estático' ou 'carrossel' (decide o formato de captionDraft). Pra type=reel: descrição livre do formato (ex: vlog, lista, POV)." },
             rationale: { type: "string" as const, description: "Por que essa publicação faz sentido agora, em 1 frase" },
           },
           required: ["title", "type", "captionDraft"],
@@ -199,6 +234,8 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       competitorsText
         ? `\n\nConcorrentes informados pela agência — pesquise na web (use a tool web_search) o que cada um tem postado recentemente, formatos e temas em alta, ANTES de sugerir o planejamento, e cite o que encontrou em competitorNotes:\n${competitorsText}`
         : "\n\nNenhum concorrente foi informado — não pesquise nada, deixe competitorNotes vazio.",
+      "",
+      HOUSE_STYLE_GUIDE,
       "",
       `Gere entre 4 e 12 sugestões de posts/reels pro próximo mês, com a mistura de tipos batendo aproximadamente com a meta mensal informada acima. Escreva tudo em português do Brasil, com tom real e específico do nicho do cliente — nunca genérico ou clichê. Termine SEMPRE chamando a tool report_monthly_plan com o resultado final.`,
     ].filter(Boolean).join("\n");
