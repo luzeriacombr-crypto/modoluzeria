@@ -178,6 +178,18 @@ export const publicSignup = createServerFn({ method: "POST" })
       const { error: resendErr } = await supabaseAdmin.auth.resend({ type: "signup", email: data.email });
       if (resendErr) console.error("Falha ao enviar e-mail de confirmação:", resendErr.message);
 
+      try {
+        const { sendEmail } = await import("./resend.server");
+        const { buildWelcomeEmailHtml } = await import("./welcome-email.server");
+        await sendEmail({
+          to: data.email,
+          subject: "Bem-vindo(a) ao Modo Criador 🎉",
+          html: buildWelcomeEmailHtml({ name: data.name.trim() }),
+        });
+      } catch (e) {
+        console.error("Falha ao enviar e-mail de boas-vindas:", e);
+      }
+
       let promotionCodeId: string | undefined;
       let affiliateReferralId: string | undefined;
       let discountedValueCents = plan.price_cents;
@@ -366,6 +378,18 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
       });
       if (earErr) throw new Error(earErr.message);
       earInserted = true;
+
+      try {
+        const { sendEmail } = await import("./resend.server");
+        const { buildWelcomeEmailHtml } = await import("./welcome-email.server");
+        await sendEmail({
+          to: email,
+          subject: "Bem-vindo(a) ao Modo Criador 🎉",
+          html: buildWelcomeEmailHtml({ name: data.name.trim() }),
+        });
+      } catch (e) {
+        console.error("Falha ao enviar e-mail de boas-vindas:", e);
+      }
 
       let promotionCodeId: string | undefined;
       let affiliateReferralId: string | undefined;
