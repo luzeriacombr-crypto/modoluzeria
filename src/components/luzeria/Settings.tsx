@@ -1529,10 +1529,18 @@ function OrgBrandingSection({
         <button
           type="button"
           onClick={() => setShowInstallTutorial(true)}
-          className="flex items-center gap-1.5 text-[12px] font-semibold hover:opacity-80 transition"
-          style={{ color: "var(--lz-accent-ink)" }}
+          className="w-full flex items-center gap-4 rounded-xl p-4 text-left transition hover:brightness-110"
+          style={{ background: "linear-gradient(135deg, rgba(var(--lz-brand-rgb),0.18), rgba(var(--lz-brand-rgb),0.05))", border: "1px solid rgba(var(--lz-brand-rgb),0.3)" }}
         >
-          <PlayCircle size={14} /> Que tal transformar sua Agência em um "App" no seu celular? Assista o tutorial!
+          <img src="/tutorials/app-icon-preview.png" alt="" className="h-14 w-14 rounded-xl shrink-0 shadow-lg" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold text-foreground">Que tal transformar sua agência num "app" no celular?</div>
+            <div className="text-[11px] text-foreground/60 mt-0.5">Com o ícone acima configurado, fica igualzinho um app de verdade. Veja como, em 1 minuto.</div>
+          </div>
+          <div className="shrink-0 h-10 w-10 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+            <PlayCircle size={20} />
+          </div>
         </button>
       </div>
       {showInstallTutorial && <InstallAppTutorialModal onClose={() => setShowInstallTutorial(false)} />}

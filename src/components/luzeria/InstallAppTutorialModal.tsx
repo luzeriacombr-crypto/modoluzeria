@@ -24,6 +24,13 @@ export function InstallAppTutorialModal({ onClose }: { onClose: () => void }) {
           igual um app de verdade, com o ícone e o nome da sua agência.
         </p>
 
+        <video
+          src="/tutorials/instalar-como-app.mp4"
+          controls
+          playsInline
+          className="w-full rounded-xl border border-foreground/10 mb-4 bg-black"
+        />
+
         <div className="space-y-4">
           <div className="rounded-xl bg-card border border-foreground/6 p-3.5">
             <div className="flex items-center gap-1.5 text-xs font-bold text-foreground mb-2.5">
