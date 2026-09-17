@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
-import type { ClientDocType } from "./client-doc-templates";
+import { CLIENT_DOC_PROMPT, type ClientDocType } from "./client-doc-templates";
 
 export type ClientDoc = {
   id: string;
@@ -32,6 +32,35 @@ export const listClientDocs = createServerFn({ method: "GET" })
       id: r.id, clientId: r.client_id, type: r.type as ClientDocType,
       title: r.title, content: r.content, updatedAt: r.updated_at,
     }));
+  });
+
+// Mesmo prompt que CLIENT_DOC_PROMPT oferece pra colar numa IA externa —
+// aqui só substitui o placeholder final e manda direto pra Anthropic, sem
+// a pessoa precisar sair do Modo Criador. O "copiar modelo" continua
+// existindo pra quem preferir usar a IA de fora mesmo assim.
+export const formatClientDocWithAI = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { type: ClientDocType; rawMaterial: string }) =>
+    z.object({
+      type: z.enum(["roteiro", "planejamento"]),
+      rawMaterial: z.string().trim().min(1).max(50000),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { getAnthropicClient, IMPORT_MODEL } = await import("./ai-client.server");
+    const anthropic = getAnthropicClient();
+    const prompt = CLIENT_DOC_PROMPT[data.type].replace(
+      "[COLE AQUI O TEXTO OU ANEXE O ARQUIVO]",
+      data.rawMaterial,
+    );
+    const response = await anthropic.messages.create({
+      model: IMPORT_MODEL,
+      max_tokens: 8000,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const textBlock = response.content.find((b: any) => b.type === "text") as any;
+    if (!textBlock?.text?.trim()) throw new Error("Não consegui formatar — tenta de novo.");
+    return { content: textBlock.text.trim() };
   });
 
 export const upsertClientDoc = createServerFn({ method: "POST" })

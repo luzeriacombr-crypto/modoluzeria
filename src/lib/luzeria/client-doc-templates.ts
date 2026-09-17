@@ -1,8 +1,9 @@
-// Prompts prontos pra colar numa IA (ChatGPT, Claude, Gemini etc.) junto
-// com o material bruto do cliente. A IA devolve o texto já em Markdown —
-// exatamente no formato que markdown-lite.ts sabe interpretar — e esse
-// resultado é colado direto no Modo Criador, sem passar por nenhuma IA
-// dentro do app.
+// Prompts que definem o formato Markdown esperado (o que markdown-lite.ts
+// sabe interpretar). Usados de duas formas: (1) copiados pra colar numa IA
+// externa (ChatGPT, Claude, Gemini etc.) junto com o material bruto, pra
+// quem prefere formatar fora — ou (2) mandados direto pra Anthropic de
+// dentro do app via formatClientDocWithAI (client-docs.functions.ts), só
+// substituindo o placeholder final pelo material colado.
 export type ClientDocType = "roteiro" | "planejamento";
 
 export const CLIENT_DOC_TYPE_LABEL: Record<ClientDocType, { label: string; description: string }> = {

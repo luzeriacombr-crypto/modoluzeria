@@ -35,6 +35,7 @@ const JourneyStagesTab = lazy(() => import("./JourneyStagesTab").then((m) => ({ 
 const ClientPaymentsPanel = lazy(() => import("./ClientPaymentsPanel").then((m) => ({ default: m.ClientPaymentsPanel })));
 const ClientOperationsOverview = lazy(() => import("./ClientOperationsOverview").then((m) => ({ default: m.ClientOperationsOverview })));
 const ProductionAuditTab = lazy(() => import("./ProductionAuditTab").then((m) => ({ default: m.ProductionAuditTab })));
+const OrgKnowledgeSettings = lazy(() => import("./OrgKnowledgeSettings").then((m) => ({ default: m.OrgKnowledgeSettings })));
 
 function TabLoadingFallback() {
   return (
@@ -44,8 +45,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "auditoria" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "indicacoes" | "updates" | "site" | "blog" | "journey" | "cliente";
-const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "indicacoes", "updates", "site", "blog", "journey", "cliente"];
+type SettingsTab = "team" | "report" | "auditoria" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "indicacoes" | "updates" | "site" | "blog" | "journey" | "cliente" | "knowledge";
+const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "indicacoes", "updates", "site", "blog", "journey", "cliente", "knowledge"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -101,6 +102,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
              tab === "blog" ? "Escreva e edite os artigos do blog (modocriador.com.br/blog)." :
+             tab === "knowledge" ? "Texto e arquivos que ensinam a IA como sua agência cria conteúdo." :
              "Ajustes gerais da operação."}
           </p>
         </div>
@@ -115,6 +117,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "cobranca", label: "Plano e Cobrança" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
+          { id: "knowledge", label: "Base de conhecimento" },
           ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }, { id: "blog", label: "Blog" }] : []),
         ].filter((t) => allowedTabs.includes(t.id as SettingsTab)).map((t) => {
           const active = tab === (t.id as any) ||
@@ -195,6 +198,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "blog" ? (me.isPlatformAdmin ? <BlogAdminTab /> : null) :
        tab === "integrations" ? <IntegrationsTab disabledFeatures={me.disabledFeatures ?? []} /> :
        tab === "automations" ? <AutomationsTab /> :
+       tab === "knowledge" ? <OrgKnowledgeSettings /> :
        tab === "team" || tab === "report" || tab === "auditoria" ? (
         <>
       {(allowedTabs.includes("report") || allowedTabs.includes("auditoria")) && (

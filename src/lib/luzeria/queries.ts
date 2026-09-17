@@ -105,6 +105,7 @@ import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setIt
 import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
 import { listTrash, restoreItem, purgeItem } from "./trash.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus } from "./client-docs.functions";
+import { listOrgKnowledge, saveOrgKnowledgeText, saveOrgKnowledgeFile, deleteOrgKnowledge } from "./org-knowledge.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
 import { listDemoRequests } from "./demo-request.functions";
 import { getOrgCostSettings, setOrgCostSettings, getClientMargins, getClientMarginBreakdown } from "./margin.functions";
@@ -336,6 +337,9 @@ export const clientDocsQO = (clientId: string) =>
     queryFn: () => listClientDocs({ data: { clientId } }),
     enabled: !!clientId,
   });
+
+export const orgKnowledgeQO = () =>
+  queryOptions({ queryKey: ["org-knowledge"], queryFn: () => listOrgKnowledge() });
 
 export const referenceLibraryQO = (clientId?: string | null) =>
   queryOptions({
@@ -1298,6 +1302,21 @@ export function useApi() {
       mutationFn: useServerFn(deleteClientDoc),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover documento."),
+    }),
+    saveOrgKnowledgeText: useMutation({
+      mutationFn: useServerFn(saveOrgKnowledgeText),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["org-knowledge"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar."),
+    }),
+    saveOrgKnowledgeFile: useMutation({
+      mutationFn: useServerFn(saveOrgKnowledgeFile),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["org-knowledge"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar arquivo."),
+    }),
+    deleteOrgKnowledge: useMutation({
+      mutationFn: useServerFn(deleteOrgKnowledge),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["org-knowledge"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover."),
     }),
     upsertReferenceLibraryItem: useMutation({
       mutationFn: useServerFn(upsertReferenceLibraryItem),

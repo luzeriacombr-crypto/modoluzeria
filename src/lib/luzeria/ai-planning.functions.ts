@@ -134,6 +134,46 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       });
     }
 
+    // Banco de conhecimento da agência (texto livre + arquivos) — ensina a
+    // IA como essa agência cria conteúdo, além do histórico específico
+    // desse cliente. PDF entra como document block (a Anthropic extrai
+    // sozinha); Markdown/texto entra direto como texto; .doc/.docx é
+    // guardado mas ainda não é lido (sem lib de extração instalada).
+    const { data: knowledgeRows } = await (context.supabase as any)
+      .from("org_content_knowledge")
+      .select("kind, title, text_content, storage_path, file_name, mime_type")
+      .eq("org_id", context.orgId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    const knowledge = (knowledgeRows ?? []) as any[];
+    const knowledgeTextParts: string[] = [];
+    const knowledgeBlocks: any[] = [];
+    for (const k of knowledge) {
+      if (k.kind === "text" && k.text_content) {
+        knowledgeTextParts.push(`### ${k.title || "Nota"}\n${String(k.text_content).slice(0, 8000)}`);
+        continue;
+      }
+      if (k.kind === "file" && k.storage_path) {
+        const isReadableText = k.mime_type === "text/markdown" || k.mime_type === "text/plain"
+          || /\.(md|txt)$/i.test(k.file_name ?? "");
+        const isPdf = k.mime_type === "application/pdf" || /\.pdf$/i.test(k.file_name ?? "");
+        if (!isReadableText && !isPdf) continue; // .doc/.docx etc — guardado, não lido ainda
+        const { data: fileBlob } = await context.supabase.storage.from("org-knowledge").download(k.storage_path);
+        if (!fileBlob) continue;
+        if (isReadableText) {
+          const text = await fileBlob.text();
+          knowledgeTextParts.push(`### ${k.title || k.file_name}\n${text.slice(0, 8000)}`);
+        } else {
+          const buf = Buffer.from(await fileBlob.arrayBuffer());
+          knowledgeBlocks.push({ type: "text", text: `Documento da base de conhecimento: ${k.title || k.file_name}` });
+          knowledgeBlocks.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") } });
+        }
+      }
+    }
+    const knowledgeText = knowledgeTextParts.length
+      ? `\n\nBase de conhecimento da agência (como ela costuma criar conteúdo, guias de voz/estilo etc — use isso pra escrever no tom certo):\n${knowledgeTextParts.join("\n\n")}`
+      : "";
+
     const briefText = [
       `Cliente: ${c.name}`,
       c.niche ? `Nicho: ${c.niche}` : null,
@@ -152,6 +192,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       "Histórico recente de posts/reels já produzidos pro cliente (use pra manter o tom de voz e não repetir temas recentes):",
       historyText,
       lastDocContent ? `\n\nDocumento de roteiro/planejamento mais recente já escrito pro cliente (contexto de tom de voz e temas já tratados):\n${lastDocContent.slice(0, 6000)}` : "",
+      knowledgeText,
       competitorsText
         ? `\n\nConcorrentes informados pela agência — pesquise na web (use a tool web_search) o que cada um tem postado recentemente, formatos e temas em alta, ANTES de sugerir o planejamento, e cite o que encontrou em competitorNotes:\n${competitorsText}`
         : "\n\nNenhum concorrente foi informado — não pesquise nada, deixe competitorNotes vazio.",
@@ -169,7 +210,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       tool_choice: { type: "auto" },
       messages: [{
         role: "user",
-        content: [{ type: "text", text: instruction }, ...assetBlocks],
+        content: [{ type: "text", text: instruction }, ...assetBlocks, ...knowledgeBlocks],
       }],
     } as any);
 
