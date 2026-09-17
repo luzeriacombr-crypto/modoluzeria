@@ -11,6 +11,7 @@ import { formatClientDocWithAI, type ClientDoc } from "@/lib/luzeria/client-docs
 import { RoteirosView, PlanejamentoView } from "./MarkdownLiteView";
 import { RoteiroControls } from "./RoteiroControls";
 import { AIPlanningPreview } from "./AIPlanningPreview";
+import { MonthPickerList } from "./MonthPickerList";
 
 const DOC_TYPES: ClientDocType[] = ["roteiro", "planejamento"];
 
@@ -241,6 +242,16 @@ function DocRow({
   const isRoteiro = doc.type === "roteiro";
   const { data: statuses = [] } = useQuery({ ...roteiroStatusesQO(doc.id), enabled: isOpen && isRoteiro });
   const statusByTitle = new Map(statuses.map((s) => [s.roteiroTitle, s]));
+  const { createRoteirosFromPlan } = useApi();
+  const [pickingMonth, setPickingMonth] = useState(false);
+
+  function approveToRoteiros(targetMonthKey: string) {
+    if (!doc.planItems?.length) return;
+    createRoteirosFromPlan.mutate(
+      { data: { clientId, targetMonthKey, items: doc.planItems } },
+      { onSuccess: () => { toast.success("Roteiros criados! Aprovar cada um já cria a publicação."); setPickingMonth(false); } },
+    );
+  }
 
   return (
     <div className="rounded-lg overflow-hidden" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
@@ -273,7 +284,26 @@ function DocRow({
               )}
             />
           ) : (
-            <PlanejamentoView blocks={blocks} />
+            <>
+              <PlanejamentoView blocks={blocks} />
+              {doc.planItems && doc.planItems.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-foreground/6">
+                  {pickingMonth ? (
+                    <div>
+                      <p className="text-xs text-foreground/50 mb-2.5">Pra qual mês são essas publicações?</p>
+                      <MonthPickerList clientId={clientId} onSelect={approveToRoteiros} pending={createRoteirosFromPlan.isPending} />
+                      <button onClick={() => setPickingMonth(false)} className="text-xs text-foreground/50 hover:text-foreground px-1 py-2">
+                        {createRoteirosFromPlan.isPending ? "Gerando roteiros…" : "Cancelar"}
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setPickingMonth(true)} className="lz-btn-primary text-xs px-4 py-2.5 rounded-md">
+                      Aprovar e enviar pros Roteiros
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

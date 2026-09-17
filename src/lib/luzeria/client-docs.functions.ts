@@ -3,6 +3,16 @@ import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import { CLIENT_DOC_PROMPT, type ClientDocType } from "./client-doc-templates";
 
+const PlanItemLiteSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  type: z.enum(["post", "reel"]),
+  captionDraft: z.string().trim().max(4000),
+  pillar: z.string().trim().max(120).optional(),
+  format: z.string().trim().max(120).optional(),
+  rationale: z.string().trim().max(500).optional(),
+});
+export type PlanItemLite = z.infer<typeof PlanItemLiteSchema>;
+
 export type ClientDoc = {
   id: string;
   clientId: string;
@@ -15,6 +25,11 @@ export type ClientDoc = {
    * automaticamente (null nos roteiros criados/colados manualmente, que
    * continuam usando o botão manual "Enviar pro Reels"). */
   targetMonthKey: string | null;
+  /** Itens estruturados da prévia de planejamento por IA, se esse doc veio
+   * de lá — permite "Aprovar e enviar pros Roteiros" num Planejamento (IA)
+   * já salvo, sem depender de reconstruir os itens a partir do Markdown
+   * (que pode ter sido editado). Null pra qualquer planejamento manual/colado. */
+  planItems: PlanItemLite[] | null;
 };
 
 async function assertAdmin(context: any) {
@@ -29,7 +44,7 @@ export const listClientDocs = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { data: rows, error } = await (context.supabase as any)
       .from("client_docs")
-      .select("id, client_id, type, title, content, updated_at, target_month_key")
+      .select("id, client_id, type, title, content, updated_at, target_month_key, plan_items")
       .eq("client_id", data.clientId)
       .order("updated_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -37,6 +52,7 @@ export const listClientDocs = createServerFn({ method: "GET" })
       id: r.id, clientId: r.client_id, type: r.type as ClientDocType,
       title: r.title, content: r.content, updatedAt: r.updated_at,
       targetMonthKey: r.target_month_key ?? null,
+      planItems: r.plan_items ?? null,
     }));
   });
 
@@ -71,29 +87,30 @@ export const formatClientDocWithAI = createServerFn({ method: "POST" })
 
 export const upsertClientDoc = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { id?: string; clientId: string; type: ClientDocType; title?: string | null; content: string }) =>
+  .inputValidator((d: { id?: string; clientId: string; type: ClientDocType; title?: string | null; content: string; planItems?: PlanItemLite[] }) =>
     z.object({
       id: z.string().uuid().optional(),
       clientId: z.string().uuid(),
       type: z.enum(["roteiro", "planejamento"]),
       title: z.string().trim().max(160).nullable().optional(),
       content: z.string().trim().min(1).max(20000),
+      planItems: z.array(PlanItemLiteSchema).max(60).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     if (data.id) {
-      const { error } = await context.supabase
-        .from("client_docs")
-        .update({ type: data.type, title: data.title ?? null, content: data.content })
-        .eq("id", data.id);
+      const patch: Record<string, any> = { type: data.type, title: data.title ?? null, content: data.content };
+      if (data.planItems !== undefined) patch.plan_items = data.planItems;
+      const { error } = await (context.supabase as any).from("client_docs").update(patch).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await (context.supabase as any)
       .from("client_docs")
       .insert({
         org_id: context.orgId, client_id: data.clientId, type: data.type,
         title: data.title ?? null, content: data.content, created_by: context.userId,
+        plan_items: data.planItems ?? null,
       })
       .select("id").single();
     if (error) throw new Error(error.message);

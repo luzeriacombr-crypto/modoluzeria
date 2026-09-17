@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2, CalendarDays } from "lucide-react";
+import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2 } from "lucide-react";
 import { generateMonthlyPlanPreview, type MonthlyPlanItem, type MonthlyPlanResult } from "@/lib/luzeria/ai-planning.functions";
-import { useApi, monthKeysQO } from "@/lib/luzeria/queries";
-import { currentMonthKey, nextMonthKey, formatMonth } from "@/lib/luzeria/utils";
+import { useApi } from "@/lib/luzeria/queries";
+import { formatMonth } from "@/lib/luzeria/utils";
 import { Modal } from "./Modals";
+import { MonthPickerList } from "./MonthPickerList";
 
 const MONTH_LABEL = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
@@ -79,7 +79,6 @@ function buildMarkdown(result: MonthlyPlanResult): string {
 export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onClose: () => void }) {
   const generate = useServerFn(generateMonthlyPlanPreview);
   const api = useApi();
-  const { data: existingMonthKeys = [] } = useQuery(monthKeysQO(clientId));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<MonthlyPlanResult | null>(null);
@@ -107,8 +106,13 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
   function save() {
     if (!result) return;
     api.upsertClientDoc.mutate(
-      { data: { clientId, type: "planejamento", title: `Planejamento (IA) — ${MONTH_LABEL}`, content: buildMarkdown(result) } },
-      { onSuccess: () => { toast.success("Prévia salva como Planejamento."); onClose(); } },
+      {
+        data: {
+          clientId, type: "planejamento", title: `Planejamento (IA) — ${MONTH_LABEL}`,
+          content: buildMarkdown(result), planItems: result.items,
+        },
+      },
+      { onSuccess: () => { toast.success("Prévia salva como Planejamento — pode aprovar depois quando quiser."); onClose(); } },
     );
   }
 
@@ -133,14 +137,6 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
     );
   }
 
-  const monthOptions = (() => {
-    const start = currentMonthKey();
-    const upcoming: string[] = [start];
-    let k = start;
-    for (let i = 0; i < 5; i++) { k = nextMonthKey(k); upcoming.push(k); }
-    return [...new Set([...existingMonthKeys, ...upcoming])].sort();
-  })();
-
   const inp = "w-full bg-background border border-foreground/8 rounded-md px-2.5 py-1.5 text-[13px] text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
 
   return (
@@ -157,21 +153,8 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
       {!loading && !error && result && pickingMonth && (
         <div>
           <p className="text-sm text-foreground/60 mb-3">Pra qual mês são essas publicações?</p>
-          <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto mb-3">
-            {monthOptions.map((key) => (
-              <button
-                key={key}
-                onClick={() => approveToRoteiros(key)}
-                disabled={api.createRoteirosFromPlan.isPending}
-                className="flex items-center justify-between rounded-md px-3 py-2.5 text-sm text-left transition disabled:opacity-50"
-                style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}
-              >
-                <span className="flex items-center gap-2 text-foreground"><CalendarDays size={14} className="text-foreground/40" /> {formatMonth(key)}</span>
-                {!existingMonthKeys.includes(key) && (
-                  <span className="text-[10px] uppercase font-bold text-foreground/30">Novo mês</span>
-                )}
-              </button>
-            ))}
+          <div className="mb-3">
+            <MonthPickerList clientId={clientId} onSelect={approveToRoteiros} pending={api.createRoteirosFromPlan.isPending} />
           </div>
           <button onClick={() => setPickingMonth(false)} className="text-xs text-foreground/50 hover:text-foreground px-1 py-1">
             {api.createRoteirosFromPlan.isPending ? "Gerando roteiros…" : "Voltar"}
