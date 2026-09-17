@@ -504,7 +504,7 @@ function GeneralSettings() {
         <OrgBrandingSection
           orgId={me.orgId}
           orgName={me.orgName ?? ""}
-          orgTagline={me.orgTagline ?? ""}
+          orgTagline={me.orgTagline ?? null}
           orgLogoUrl={me.orgLogoUrl ?? null}
           orgLogoUrlLight={me.orgLogoUrlLight ?? null}
           orgColorPrimary={me.orgColorPrimary ?? "#C8D44E"}
@@ -1148,14 +1148,20 @@ function OrgBrandingSection({
   orgId, orgName, orgTagline, orgLogoUrl, orgLogoUrlLight, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar,
   orgColorAccentLight, orgFeedPreviewImageUrl, orgFaviconUrl, borderRadius, heroGradientFrom, heroGradientTo,
 }: {
-  orgId: string; orgName: string; orgTagline: string; orgLogoUrl: string | null; orgLogoUrlLight: string | null;
+  orgId: string; orgName: string; orgTagline: string | null; orgLogoUrl: string | null; orgLogoUrlLight: string | null;
   orgColorPrimary: string; orgColorPrimaryLight: string; orgColorSidebar: string; orgColorAccentLight: string | null;
   orgFeedPreviewImageUrl: string | null; orgFaviconUrl: string | null; borderRadius: number;
   heroGradientFrom: string | null; heroGradientTo: string | null;
 }) {
   const { updateMyOrg } = useApi();
   const [name, setName] = useState(orgName);
-  const [tagline, setTagline] = useState(orgTagline);
+  // "" (string vazia, salva de propósito) e null (nunca configurado) são
+  // estados diferentes — só assim dá pra remover o slogan de verdade em vez
+  // de só voltar pro nome genérico "Gestão de conteúdo e criação" (pedido
+  // de usabilidade real, veio de feedback numa call). O checkbox abaixo
+  // decide qual dos dois vai ser salvo quando o campo estiver vazio.
+  const [tagline, setTagline] = useState(orgTagline ?? "");
+  const [hideTagline, setHideTagline] = useState(orgTagline === "");
   const [colorPrimary, setColorPrimary] = useState(orgColorPrimary);
   const [colorPrimaryLight, setColorPrimaryLight] = useState(orgColorPrimaryLight);
   const [colorSidebar, setColorSidebar] = useState(orgColorSidebar);
@@ -1169,7 +1175,7 @@ function OrgBrandingSection({
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
 
   useEffect(() => { setName(orgName); }, [orgName]);
-  useEffect(() => { setTagline(orgTagline); }, [orgTagline]);
+  useEffect(() => { setTagline(orgTagline ?? ""); setHideTagline(orgTagline === ""); }, [orgTagline]);
   useEffect(() => { setColorPrimary(orgColorPrimary); }, [orgColorPrimary]);
   useEffect(() => { setColorPrimaryLight(orgColorPrimaryLight); }, [orgColorPrimaryLight]);
   useEffect(() => { setColorSidebar(orgColorSidebar); }, [orgColorSidebar]);
@@ -1182,7 +1188,7 @@ function OrgBrandingSection({
     updateMyOrg.mutate({
       data: {
         name: name.trim(),
-        tagline: tagline.trim() || null,
+        tagline: hideTagline ? "" : (tagline.trim() || null),
         colorPrimary: colorPrimary || null,
         colorPrimaryLight: colorPrimaryLight || null,
         colorSidebar: colorSidebar || null,
@@ -1387,8 +1393,12 @@ function OrgBrandingSection({
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} className="lz-input" />
         </Field>
         <Field label="Slogan (opcional)">
-          <input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={120} className="lz-input"
-            placeholder="Ex: Conteúdo que conecta" />
+          <input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={120} disabled={hideTagline}
+            className="lz-input disabled:opacity-40" placeholder="Ex: Conteúdo que conecta" />
+          <label className="flex items-center gap-2 mt-2 text-xs text-foreground/50 cursor-pointer">
+            <input type="checkbox" checked={hideTagline} onChange={(e) => setHideTagline(e.target.checked)} />
+            Não mostrar nenhum slogan (fica só o nome da agência, sem o texto padrão)
+          </label>
         </Field>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-foreground/6">

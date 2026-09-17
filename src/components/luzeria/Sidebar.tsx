@@ -158,9 +158,14 @@ export function Sidebar({
               {me?.orgName ?? "Modo Criador"}
             </div>
           )}
-          <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-1.5">
-            {me?.orgTagline || "Gestão de conteúdo e criação"}
-          </p>
+          {/* `??` (não `||`) de propósito: uma string vazia salva de propósito
+           * (o master removeu o slogan em Configurações) precisa continuar
+           * vazia — só null/undefined (nunca configurado) cai no padrão. */}
+          {(me?.orgTagline ?? "Gestão de conteúdo e criação") && (
+            <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-1.5">
+              {me?.orgTagline ?? "Gestão de conteúdo e criação"}
+            </p>
+          )}
           {isDemoReadOnly && (
             <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
               style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)", color: "var(--lz-accent-ink)" }}>

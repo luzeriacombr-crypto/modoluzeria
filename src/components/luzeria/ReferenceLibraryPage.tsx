@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BookMarked, Plus, Search, ExternalLink, Pencil, Trash2, X, ChevronLeft, Folder, Link2 } from "lucide-react";
+import { BookMarked, Plus, Search, ExternalLink, Pencil, Trash2, X, ChevronLeft, Folder, Link2, Chrome } from "lucide-react";
 import { clientsQO, referenceLibraryQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
 const GENERAL_KEY = "__general__";
+const EXTENSION_URL = "https://chromewebstore.google.com/detail/modo-criador-%E2%80%94-salvar-ref/maclpnkcmfnbglfeiiijkccnghhcedcc";
+const EXTENSION_DISMISS_KEY = "modocriador:extension-banner-dismissed";
 
 export type LibraryLink = { label: string | null; url: string };
 
@@ -112,6 +114,8 @@ export function ReferenceLibraryPage() {
           <Plus size={14} /> Nova referência
         </button>
       </div>
+
+      <ExtensionBanner />
 
       {isLoading ? (
         <div className="text-foreground/40 text-sm py-10 text-center">Carregando…</div>
@@ -273,6 +277,57 @@ export function ReferenceBlockCards({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Destaque da extensão do Chrome — salva a página aberta como referência
+ * em 2 cliques, sem precisar copiar link/título na mão. Mesmo padrão de
+ * "dispensar guarda no localStorage" já usado em outros banners do app
+ * (ex: InstagramLiveBanner) — some depois que a pessoa fecha, mas continua
+ * disponível (não é um passo obrigatório de onboarding). */
+function ExtensionBanner() {
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem(EXTENSION_DISMISS_KEY) === "1"; } catch { return false; }
+  });
+  if (dismissed) return null;
+
+  function dismiss() {
+    try { localStorage.setItem(EXTENSION_DISMISS_KEY, "1"); } catch {}
+    setDismissed(true);
+  }
+
+  return (
+    <div className="relative rounded-xl border p-5 mb-6 overflow-hidden"
+      style={{ borderColor: "rgba(var(--lz-brand-light-rgb),0.3)", background: "linear-gradient(135deg, rgba(var(--lz-brand-light-rgb),0.1), transparent)" }}>
+      <button onClick={dismiss} title="Dispensar" className="absolute top-3 right-3 text-foreground/40 hover:text-foreground transition">
+        <X size={15} />
+      </button>
+      <div className="flex items-start gap-3.5 pr-6">
+        <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
+          <Chrome size={20} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-foreground font-semibold text-sm mb-1">
+            Novidade: extensão do Chrome pra salvar referências
+          </div>
+          <p className="text-foreground/50 text-xs leading-relaxed mb-3 max-w-lg">
+            Viu um vídeo, post ou site que serve de referência? Salve direto de onde você está, sem trocar
+            de aba: abra a extensão, título e link já vêm preenchidos, escolha se é geral ou de um cliente
+            específico e pronto — aparece na hora aqui na Biblioteca.
+          </p>
+          <a
+            href={EXTENSION_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide px-3 py-2 rounded-md text-black transition hover:opacity-90"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+          >
+            <Chrome size={13} /> Instalar extensão <ExternalLink size={12} />
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
