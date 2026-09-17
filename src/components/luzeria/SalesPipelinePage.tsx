@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Trash2, Handshake, MessageCircle, Snowflake, PhoneCall, Check, UserPlus, Users, Phone, CalendarClock, CheckCircle2, XCircle, X, Info } from "lucide-react";
-import { leadsQO, leadContactsQO, profilesQO, clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { leadsQO, leadContactsQO, profilesQO, clientsQO, clientCategoriesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { Modal } from "./Modals";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -745,6 +745,11 @@ type WonStep = "choice" | "new" | "existing";
 function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onClose: () => void }) {
   const api = useApi();
   const { data: clients = [] } = useQuery({ ...clientsQO(), enabled: open });
+  const { data: customCategories = [] } = useQuery({ ...clientCategoriesQO(), enabled: open });
+  const clientCategories = useMemo(
+    () => [...CLIENT_CATEGORIES, ...customCategories.map((c) => c.name)],
+    [customCategories],
+  );
   const [step, setStep] = useState<WonStep>("choice");
   const [clientName, setClientName] = useState("");
   const [category, setCategory] = useState("Avulsos");
@@ -761,7 +766,7 @@ function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onCl
     if (!open) return;
     setStep("choice");
     setClientName(lead.name);
-    setCategory(lead.product && CLIENT_CATEGORIES.includes(lead.product) ? lead.product : "Avulsos");
+    setCategory(lead.product && clientCategories.includes(lead.product) ? lead.product : "Avulsos");
     setColor(PRESET_COLORS[0]);
     setIcon("");
     setExistingClientId("");
@@ -862,7 +867,7 @@ function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onCl
         <F label="Nome do cliente"><input value={clientName} onChange={(e) => setClientName(e.target.value)} autoFocus className={inp} /></F>
         <F label="Categoria">
           <select value={category} onChange={(e) => setCategory(e.target.value)} className={inp}>
-            {CLIENT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {clientCategories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </F>
         <div>

@@ -139,6 +139,11 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 :root {
+  /* Sem isso, o navegador desenha popups de controles nativos (a lista de
+   * opções de um <select>, o seletor de data/hora) com o tema claro padrão
+   * do sistema — texto claro em fundo branco, ilegível sobre o app escuro.
+   * .light (abaixo) sobrescreve pra "light" quando a pessoa troca o tema. */
+  color-scheme: dark;
   --radius: 0.5rem;
   /* Shared "premium" easing for hover/press micro-interactions — smooth
    * deceleration instead of linear-ish `ease`. Already used by the slide-in
@@ -261,6 +266,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
  * variam por tema. Cor de marca, sidebar e raio continuam vindo do :root —
  * a sidebar é sempre "colorida" (a cor da agência), independente do tema. */
 .light {
+  color-scheme: light;
   --background: #F7F7F5;
   --foreground: #16171B;
   --card: #FFFFFF;

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Gift, Archive, PlayCircle } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
 import { ContentStatusesSection } from "./ContentStatusesSection";
+import { ClientCategoriesSection } from "./ClientCategoriesSection";
 import { InstallAppTutorialModal } from "./InstallAppTutorialModal";
 
 // Cada uma dessas só renderiza dentro de uma aba específica (nunca mais de
@@ -583,6 +584,11 @@ function GeneralSettings() {
             <SettingsIcon size={12} /> Status
           </h2>
           <ContentStatusesSection />
+
+          <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
+            <SettingsIcon size={12} /> Categorias de clientes
+          </h2>
+          <ClientCategoriesSection />
         </>
       )}
 

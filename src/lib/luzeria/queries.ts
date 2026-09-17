@@ -90,6 +90,7 @@ import {
 import { getClientBlockedItems } from "./blocked-items.functions";
 import { listCargos, upsertCargo, deleteCargo, setProfileCargos } from "./cargos.functions";
 import { listContentStatuses, upsertContentStatus, deleteContentStatus, setContentStatusHidden } from "./content-statuses.functions";
+import { listClientCategories, createClientCategory, renameClientCategory, deleteClientCategory } from "./client-categories.functions";
 import { setProfileClientAccess } from "./client-access.functions";
 import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, setContractTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
 import {
@@ -285,6 +286,8 @@ export const journeyStagesQO = () =>
 
 export const contentStatusesQO = () =>
   queryOptions({ queryKey: ["content-statuses"], queryFn: () => listContentStatuses() });
+export const clientCategoriesQO = () =>
+  queryOptions({ queryKey: ["client-categories"], queryFn: () => listClientCategories() });
 
 export const cargosQO = () =>
   queryOptions({ queryKey: ["cargos"], queryFn: () => listCargos() });
@@ -1122,6 +1125,24 @@ export function useApi() {
       mutationFn: useServerFn(setContentStatusHidden),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["content-statuses"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao ocultar status."),
+    }),
+    createClientCategory: useMutation({
+      mutationFn: useServerFn(createClientCategory),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-categories"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao criar categoria."),
+    }),
+    renameClientCategory: useMutation({
+      mutationFn: useServerFn(renameClientCategory),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["client-categories"] });
+        qc.invalidateQueries({ queryKey: ["clients"] });
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao renomear categoria."),
+    }),
+    deleteClientCategory: useMutation({
+      mutationFn: useServerFn(deleteClientCategory),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-categories"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover categoria."),
     }),
     upsertCargo: useMutation({
       mutationFn: useServerFn(upsertCargo),

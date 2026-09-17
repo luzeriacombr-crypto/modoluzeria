@@ -7,7 +7,7 @@ import {
   Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { clientsQO, clientCategoriesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
@@ -49,9 +49,17 @@ export function Sidebar({
 }: { collapsed?: boolean; onOpenCustomFields: (c: Client) => void; onCreateClient: (category?: string) => void }) {
   const me = useMe().data;
   const { data: clients = [], isLoading: clientsLoading, isError: clientsError, error: clientsErrObj } = useQuery(clientsQO());
+  const { data: customCategories = [] } = useQuery(clientCategoriesQO());
+  const { createClientCategory } = useApi();
   useEffect(() => {
     if (clientsError) reportAppError(clientsErrObj, { consulta: "listClients" });
   }, [clientsError, clientsErrObj]);
+
+  async function handleCreateCategory() {
+    const name = await requestPrompt("Nome da nova categoria:");
+    if (!name?.trim()) return;
+    createClientCategory.mutate({ data: { name: name.trim() } });
+  }
   const [search, setSearch] = useState("");
   const [clientsOpen, setClientsOpen] = useState(true);
   const { selectedClientId } = useUI();
@@ -105,19 +113,27 @@ export function Sidebar({
     for (const arr of byCat.values()) {
       arr.sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name));
     }
-    // Always render Avulsos (even when empty) so admin can use the + button.
+    // Always render Avulsos (even when empty) so admin can use the + button
+    // — same reasoning pra categoria customizada recém-criada, sem cliente
+    // nenhum ainda: precisa aparecer como pasta pra poder usar o +.
     const known = CATEGORY_ORDER
       .filter((k) => byCat.has(k) || k === "Avulsos")
       .map((k) => [k, byCat.get(k) ?? []] as const);
-    const extras = [...byCat.entries()].filter(([k]) => !(CATEGORY_ORDER as readonly string[]).includes(k));
-    return [...known, ...extras] as Array<readonly [string, Client[]]>;
-  }, [filtered]);
+    const customKnown = customCategories
+      .map((c) => c.name)
+      .filter((n) => !(CATEGORY_ORDER as readonly string[]).includes(n))
+      .map((n) => [n, byCat.get(n) ?? []] as const);
+    const customNames = new Set(customCategories.map((c) => c.name));
+    const extras = [...byCat.entries()].filter(([k]) => !(CATEGORY_ORDER as readonly string[]).includes(k) && !customNames.has(k));
+    return [...known, ...customKnown, ...extras] as Array<readonly [string, Client[]]>;
+  }, [filtered, customCategories]);
 
   const allCategories = useMemo(() => {
     const set = new Set<string>(CATEGORY_ORDER);
+    customCategories.forEach((c) => set.add(c.name));
     clients.forEach((c) => c.category && set.add(c.category));
     return [...set];
-  }, [clients]);
+  }, [clients, customCategories]);
 
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const isDemoReadOnly = !!me?.demoReadOnly && me?.role !== "master";
@@ -244,7 +260,7 @@ export function Sidebar({
                     <ClientesListBody
                       search={search} setSearch={setSearch} grouped={grouped} filtered={filtered}
                       isAdmin={isAdmin} allCategories={allCategories} pathname={pathname}
-                      onCreateClient={onCreateClient} onOpenCustomFields={onOpenCustomFields}
+                      onCreateClient={onCreateClient} onCreateCategory={handleCreateCategory} onOpenCustomFields={onOpenCustomFields}
                       loading={clientsLoading}
                       error={clientsError}
                     />
@@ -350,7 +366,7 @@ export function Sidebar({
                     <ClientesListBody
                       search={search} setSearch={setSearch} grouped={grouped} filtered={filtered}
                       isAdmin={isAdmin} allCategories={allCategories} pathname={pathname}
-                      onCreateClient={onCreateClient} onOpenCustomFields={onOpenCustomFields}
+                      onCreateClient={onCreateClient} onCreateCategory={handleCreateCategory} onOpenCustomFields={onOpenCustomFields}
                       loading={clientsLoading}
                       error={clientsError}
                     />
@@ -437,11 +453,11 @@ function SidebarFlyout({ anchor, title, children, panelRef }: {
 /** Busca + grupos por categoria + lista de clientes — conteúdo compartilhado
  * entre o modo expandido (inline, sob o botão "Clientes") e o painel
  * flutuante do modo reduzido. */
-function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCategories, pathname, onCreateClient, onOpenCustomFields, loading, error }: {
+function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCategories, pathname, onCreateClient, onCreateCategory, onOpenCustomFields, loading, error }: {
   search: string; setSearch: (v: string) => void;
   grouped: Array<readonly [string, Client[]]>; filtered: Client[];
   isAdmin: boolean; allCategories: string[]; pathname: string;
-  onCreateClient: (category?: string) => void; onOpenCustomFields: (c: Client) => void;
+  onCreateClient: (category?: string) => void; onCreateCategory: () => void; onOpenCustomFields: (c: Client) => void;
   loading?: boolean; error?: boolean;
 }) {
   return (
@@ -484,6 +500,14 @@ function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCa
           )}
         </CategoryGroup>
       ))}
+      {isAdmin && (
+        <button
+          onClick={onCreateCategory}
+          className="w-full flex items-center gap-1.5 px-2 py-1.5 mt-0.5 rounded-md text-[11px] font-semibold text-white/40 hover:text-white/80 hover:bg-white/5 transition"
+        >
+          <Plus size={12} /> Nova categoria
+        </button>
+      )}
       {/* Sem o gate de loading, a lista renderizava "Sem clientes ainda"
        * enquanto ainda estava carregando — quem entrava pela primeira vez
        * via um app que parecia vazio. */}
