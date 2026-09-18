@@ -44,7 +44,12 @@ export function SalesPage() {
   const [password, setPassword] = useState("");
   const [taxId, setTaxId] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [billingType, setBillingType] = useState<"CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY">("CREDIT_CARD");
+  // "Vou testar primeiro" como padrão — o botão de cadastro chama de "teste
+  // grátis", mas as outras opções já criam assinatura de verdade na Asaas e
+  // abrem a fatura dela automaticamente, sem repetir o aviso de "sem
+  // cobrança agora". Quem não mexe no seletor precisa mesmo assim não ser
+  // cobrado — bug real que já cobrou um cliente sem ele perceber.
+  const [billingType, setBillingType] = useState<"CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY">("TRIAL_ONLY");
   const [website, setWebsite] = useState(""); // honeypot
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
