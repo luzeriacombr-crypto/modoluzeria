@@ -1017,8 +1017,11 @@ function PlanCardSection() {
 function BillingSection() {
   const { data: status, isLoading } = useQuery(orgPlanStatusQO());
   const { data: plans } = useQuery(plansQO());
-  const { updateMyOrg, subscribeToPlan } = useApi();
+  const { updateMyOrg, subscribeToPlan, cancelMySubscription } = useApi();
+  const me = useMe().data;
   const [taxId, setTaxId] = useState("");
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   useEffect(() => { if (status?.taxId) setTaxId(status.taxId); }, [status?.taxId]);
 
@@ -1039,6 +1042,16 @@ function BillingSection() {
         if (r?.invoiceUrl) window.open(r.invoiceUrl, "_blank");
       },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao assinar o plano."),
+    });
+  }
+
+  function confirmCancel() {
+    cancelMySubscription.mutate({ data: { reason: cancelReason.trim() || undefined } }, {
+      onSuccess: () => {
+        toast.success("Assinatura cancelada — você não será cobrado de novo.");
+        setShowCancelForm(false);
+        setCancelReason("");
+      },
     });
   }
 
@@ -1083,6 +1096,42 @@ function BillingSection() {
             </div>
           ))}
         </div>
+
+        {me?.role === "master" && status.hasAsaasSubscription && status.subscriptionStatus !== "canceled" && (
+          <div className="pt-3 border-t border-foreground/6">
+            {!showCancelForm ? (
+              <button onClick={() => setShowCancelForm(true)} className="text-xs text-red-400/70 hover:text-red-400">
+                Cancelar assinatura
+              </button>
+            ) : (
+              <div className="rounded-lg p-3" style={{ background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.18)" }}>
+                <p className="text-xs text-foreground/70 mb-2.5">
+                  Isso cancela a cobrança recorrente na Asaas — sua agência e seus dados continuam aqui, só sem assinatura ativa. Você pode assinar de novo quando quiser.
+                </p>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Por que está cancelando? (opcional, nos ajuda a melhorar)"
+                  rows={2}
+                  className="lz-input w-full resize-none mb-2.5"
+                />
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setShowCancelForm(false)} className="text-xs text-foreground/50 hover:text-foreground px-2 py-1.5">
+                    Voltar
+                  </button>
+                  <button
+                    onClick={confirmCancel}
+                    disabled={cancelMySubscription.isPending}
+                    className="text-xs font-bold px-3 py-1.5 rounded-md disabled:opacity-50"
+                    style={{ backgroundColor: "#f87171", color: "#1A0D0D" }}
+                  >
+                    {cancelMySubscription.isPending ? "Cancelando…" : "Confirmar cancelamento"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

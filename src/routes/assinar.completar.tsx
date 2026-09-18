@@ -20,8 +20,6 @@ function CompleteGoogleSignupPage() {
   const ran = useRef(false);
   const [state, setState] = useState<"loading" | "error" | "done">("loading");
   const [error, setError] = useState<string | null>(null);
-  const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
-  const [billingType, setBillingType] = useState<"CREDIT_CARD" | "UNDEFINED">("CREDIT_CARD");
 
   useEffect(() => {
     if (ran.current) return;
@@ -42,12 +40,9 @@ function CompleteGoogleSignupPage() {
       }
       try {
         const payload = JSON.parse(raw);
-        setBillingType(payload.billingType === "UNDEFINED" ? "UNDEFINED" : "CREDIT_CARD");
-        const r = await complete({ data: payload });
+        await complete({ data: payload });
         sessionStorage.removeItem(PENDING_KEY);
-        setInvoiceUrl(r.invoiceUrl);
         (window as any).fbq?.("track", "StartTrial", { value: 0.00, currency: "BRL" });
-        if (r.invoiceUrl) window.open(r.invoiceUrl, "_blank");
         setState("done");
       } catch (err: any) {
         setError(err?.message ?? "Não foi possível concluir seu cadastro. Tente novamente.");
@@ -81,18 +76,9 @@ function CompleteGoogleSignupPage() {
               </span>
             </div>
             <div className="font-bold text-lg mb-2">Cadastro criado!</div>
-            {invoiceUrl ? (
-              <>
-                <p className="text-[#0A0E23]/70 text-sm mb-4">
-                  {billingType === "UNDEFINED"
-                    ? "Abrimos numa nova aba o link seguro com sua primeira fatura, onde dá pra escolher PIX, boleto ou cartão (sem cobrança agora — só depois dos 30 dias de teste)."
-                    : "Abrimos numa nova aba o link seguro pra você cadastrar o cartão (sem cobrança agora — só depois dos 30 dias de teste)."}
-                </p>
-                <a href={invoiceUrl} target="_blank" rel="noreferrer" className="font-bold uppercase text-sm px-5 py-3 rounded-full inline-block mb-4" style={{ background: LIME, color: "#0A0E23" }}>
-                  Abrir cadastro de pagamento
-                </a>
-              </>
-            ) : null}
+            <p className="text-[#0A0E23]/70 text-sm mb-4">
+              Você já pode usar o Modo Criador por 30 dias sem cadastrar pagamento. Quando quiser, é só adicionar a forma de pagamento em Configurações.
+            </p>
             <p>
               <Link to="/minhas-tarefas" className="text-sm underline text-[#0A0E23]/70">Ir pro Modo Criador →</Link>
             </p>

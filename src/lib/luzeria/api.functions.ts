@@ -737,6 +737,64 @@ export const subscribeToPlan = createServerFn({ method: "POST" })
     return { invoiceUrl };
   });
 
+/** Cancelamento self-service — antes só existia via deleteOrg (admin da
+ * plataforma, apaga a agência inteira). Aqui só cancela a recorrência na
+ * Asaas e marca o status, sem apagar nada; a agência continua existindo
+ * (dados, histórico) só sem cobrança futura. */
+export const cancelMySubscription = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { reason?: string }) => z.object({ reason: z.string().trim().max(500).optional() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+
+    const { data: org } = await context.supabase
+      .from("orgs").select("name, asaas_subscription_id").eq("id", context.orgId).maybeSingle();
+    if (!org?.asaas_subscription_id) {
+      throw new Error("Não encontramos uma assinatura ativa pra cancelar — se você ainda está no período de teste, não tem nada cobrando.");
+    }
+
+    const { cancelAsaasSubscription } = await import("./asaas.server");
+    await cancelAsaasSubscription(org.asaas_subscription_id);
+
+    // "as any": canceled_at/cancellation_reason são colunas novas, ainda não
+    // presentes nos tipos gerados do Supabase até a migração rodar.
+    const { error } = await (context.supabase as any)
+      .from("orgs")
+      .update({
+        subscription_status: "canceled",
+        canceled_at: new Date().toISOString(),
+        cancellation_reason: data.reason || null,
+      })
+      .eq("id", context.orgId);
+    if (error) throw new Error(error.message);
+
+    try {
+      const { sendEmail } = await import("./resend.server");
+      await sendEmail({
+        to: "junioreisfoto2@gmail.com",
+        subject: `Assinatura cancelada — ${org.name}`,
+        html: `
+          <p><strong>Agência:</strong> ${org.name}</p>
+          <p><strong>Motivo informado:</strong> ${data.reason ? data.reason : "(não informado)"}</p>
+        `,
+      });
+    } catch (e) {
+      console.error("Falha ao enviar e-mail de cancelamento:", e);
+    }
+    try {
+      await context.supabase.from("notifications").insert({
+        user_id: MODO_CRIADOR_OWNER_ID,
+        type: "org_canceled",
+        message: `${org.name} cancelou a assinatura.${data.reason ? ` Motivo: ${data.reason}` : ""}`,
+      });
+    } catch (e) {
+      console.error("Falha ao criar notificação de cancelamento:", e);
+    }
+
+    return { ok: true };
+  });
+
 /** Throws a friendly error if the org is at/over its plan's client cap.
  * Luzeria itself is exempt (not a customer of its own platform). */
 export async function assertClientLimit(supabase: any, orgId: string) {

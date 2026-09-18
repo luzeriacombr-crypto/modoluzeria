@@ -44,12 +44,6 @@ export function SalesPage() {
   const [password, setPassword] = useState("");
   const [taxId, setTaxId] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  // "Vou testar primeiro" como padrão — o botão de cadastro chama de "teste
-  // grátis", mas as outras opções já criam assinatura de verdade na Asaas e
-  // abrem a fatura dela automaticamente, sem repetir o aviso de "sem
-  // cobrança agora". Quem não mexe no seletor precisa mesmo assim não ser
-  // cobrado — bug real que já cobrou um cliente sem ele perceber.
-  const [billingType, setBillingType] = useState<"CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY">("TRIAL_ONLY");
   const [website, setWebsite] = useState(""); // honeypot
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -81,12 +75,10 @@ export function SalesPage() {
           promoCode,
           affiliateCode,
           refCode,
-          billingType,
         },
       });
       setInvoiceUrl(r.invoiceUrl);
       (window as any).fbq?.("track", "StartTrial", { value: 0.00, currency: "BRL" });
-      if (r.invoiceUrl) window.open(r.invoiceUrl, "_blank");
     } catch (err: any) {
       setError(err?.message ?? "Não foi possível concluir seu cadastro. Tente novamente.");
     } finally {
@@ -109,7 +101,6 @@ export function SalesPage() {
         promoCode,
         affiliateCode,
         refCode,
-        billingType,
       }));
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -304,27 +295,10 @@ export function SalesPage() {
               </span>
             </div>
             <div className="font-bold text-lg mb-2">Cadastro criado!</div>
-            {invoiceUrl ? (
-              <>
-                <p className="text-[#0A0E23]/70 text-sm mb-4">
-                  {billingType === "UNDEFINED"
-                    ? "Abrimos numa nova aba o link seguro com sua primeira fatura, onde dá pra escolher PIX, boleto ou cartão (sem cobrança agora — só depois dos 30 dias de teste)."
-                    : "Abrimos numa nova aba o link seguro pra você cadastrar o cartão (sem cobrança agora — só depois dos 30 dias de teste)."}
-                </p>
-                <a href={invoiceUrl} target="_blank" rel="noreferrer" className="font-bold uppercase text-sm px-5 py-3 rounded-full inline-block" style={{ background: LIME, color: "#0A0E23" }}>
-                  Abrir cadastro de pagamento
-                </a>
-              </>
-            ) : (
-              <>
-                <p className="text-[#0A0E23]/70 text-sm">Enviamos um e-mail de confirmação — clique no link pra ativar sua conta.</p>
-                {billingType === "TRIAL_ONLY" && (
-                  <p className="text-[#0A0E23]/50 text-xs mt-2">
-                    Você já pode usar o Modo Criador por 30 dias sem cadastrar pagamento. Quando quiser, é só adicionar a forma de pagamento em Configurações.
-                  </p>
-                )}
-              </>
-            )}
+            <p className="text-[#0A0E23]/70 text-sm">Enviamos um e-mail de confirmação — clique no link pra ativar sua conta.</p>
+            <p className="text-[#0A0E23]/50 text-xs mt-2">
+              Você já pode usar o Modo Criador por 30 dias sem cadastrar pagamento. Quando quiser, é só adicionar a forma de pagamento em Configurações.
+            </p>
             <p className="text-[#0A0E23]/50 text-xs mt-6">
               Também mandamos um e-mail de confirmação — confirme antes de tentar entrar em <Link to="/auth" className="underline">/auth</Link>.
             </p>
@@ -350,34 +324,9 @@ export function SalesPage() {
             <Field label="CNPJ ou CPF da agência">
               <input required value={taxId} onChange={(e) => setTaxId(e.target.value)} className="lz-input-onlight" placeholder="Somente números" maxLength={18} />
             </Field>
-            <Field label="Forma de pagamento">
-              <div className="flex gap-2">
-                {([
-                  { id: "CREDIT_CARD" as const, label: "Cartão de crédito" },
-                  { id: "UNDEFINED" as const, label: "PIX ou Boleto" },
-                  { id: "TRIAL_ONLY" as const, label: "Vou testar primeiro" },
-                ]).map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setBillingType(opt.id)}
-                    className="flex-1 px-3 py-2.5 rounded-lg text-sm font-semibold border transition"
-                    style={{
-                      borderColor: billingType === opt.id ? "#0A0E23" : "rgba(10,14,35,0.15)",
-                      background: billingType === opt.id ? "#0A0E23" : "transparent",
-                      color: billingType === opt.id ? "#fff" : "#0A0E23",
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-              {billingType === "TRIAL_ONLY" && (
-                <p className="text-[#0A0E23]/50 text-xs mt-2">
-                  Sem cartão, sem PIX, sem nada agora. No último dia do teste avisamos você pra decidir se quer continuar.
-                </p>
-              )}
-            </Field>
+            <p className="text-[#0A0E23]/50 text-xs -mt-1">
+              Sem cartão, sem PIX, sem nada agora. No último dia do teste avisamos você pra decidir se quer continuar.
+            </p>
             {/* Honeypot — invisible to real users, bots tend to fill every field */}
             <input
               type="text" value={website} onChange={(e) => setWebsite(e.target.value)}

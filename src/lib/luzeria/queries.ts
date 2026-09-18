@@ -19,7 +19,7 @@ import {
   setItemEditor, setItemReelType, setItemPostFormat,
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   addCleaningTask, renameCleaningTask, deleteCleaningTask,
-  adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations, getMyWorkStats,
+  adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, cancelMySubscription, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations, getMyWorkStats,
   listOrgsBilling, getOrgNextInvoice,
   updateMyAccount,
   getReport, getDeliveryTrend, getMemberReportDetail, getMemberVelocity, getFileUploadsReport,
@@ -965,6 +965,11 @@ export function useApi() {
     subscribeToPlan: useMutation({
       mutationFn: useServerFn(subscribeToPlan),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["org-plan-status"] }); qc.invalidateQueries({ queryKey: ["me"] }); },
+    }),
+    cancelMySubscription: useMutation({
+      mutationFn: useServerFn(cancelMySubscription),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["org-plan-status"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao cancelar assinatura."),
     }),
     adminSendPasswordReset: useMutation({ mutationFn: useServerFn(adminSendPasswordReset) }),
     adminSetUserPassword: useMutation({ mutationFn: useServerFn(adminSetUserPassword) }),

@@ -222,24 +222,17 @@ export const publicSignup = createServerFn({ method: "POST" })
         }
       }
 
-      let invoiceUrl: string | null = null;
-      let asaasCustomerId: string | undefined;
-      let asaasSubscriptionId: string | undefined;
-
-      if (data.billingType !== "TRIAL_ONLY") {
-        const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
-        const customer = await createAsaasCustomer({ name: data.agencyName.trim(), cpfCnpj: data.taxId, email: data.email });
-        const sub = await createAsaasSubscription({
-          customerId: customer.id,
-          valueCents: discountedValueCents,
-          description: `Modo Criador — Plano ${plan.name}`,
-          billingType: data.billingType ?? "CREDIT_CARD",
-          trialDays,
-        });
-        asaasCustomerId = customer.id;
-        asaasSubscriptionId = sub.subscriptionId;
-        invoiceUrl = sub.invoiceUrl;
-      }
+      // Nunca cria cliente/assinatura na Asaas aqui — isso criava uma fatura
+      // de verdade, pagável a qualquer momento (a data de vencimento não
+      // impede pagamento antecipado do lado da Asaas), e já cobrou um
+      // cliente que só queria testar. Todo cadastro agora é 100% sem
+      // cobrança nos 30 dias de teste; o cartão só é pedido depois, perto do
+      // fim do teste (ver subscribeToPlan), quando a cobrança é imediata de
+      // propósito porque a pessoa já decidiu continuar.
+      const invoiceUrl: string | null = null;
+      const asaasCustomerId: string | undefined = undefined;
+      const asaasSubscriptionId: string | undefined = undefined;
+      void discountedValueCents; // mantido calculado — promotion_code_id abaixo carrega o desconto pra quando a pessoa assinar de verdade
 
       if (referrerOrgId) {
         await (supabaseAdmin as any).from("agency_referrals").insert({
@@ -423,24 +416,12 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
         }
       }
 
-      let invoiceUrl: string | null = null;
-      let asaasCustomerId: string | undefined;
-      let asaasSubscriptionId: string | undefined;
-
-      if (data.billingType !== "TRIAL_ONLY") {
-        const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
-        const customer = await createAsaasCustomer({ name: data.agencyName.trim(), cpfCnpj: data.taxId, email });
-        const sub = await createAsaasSubscription({
-          customerId: customer.id,
-          valueCents: discountedValueCents,
-          description: `Modo Criador — Plano ${plan.name}`,
-          billingType: data.billingType ?? "CREDIT_CARD",
-          trialDays,
-        });
-        asaasCustomerId = customer.id;
-        asaasSubscriptionId = sub.subscriptionId;
-        invoiceUrl = sub.invoiceUrl;
-      }
+      // Ver comentário equivalente em publicSignup — nunca cria assinatura
+      // na Asaas no cadastro, sempre 100% sem cobrança nos 30 dias de teste.
+      const invoiceUrl: string | null = null;
+      const asaasCustomerId: string | undefined = undefined;
+      const asaasSubscriptionId: string | undefined = undefined;
+      void discountedValueCents;
 
       if (referrerOrgId) {
         await (supabaseAdmin as any).from("agency_referrals").insert({
