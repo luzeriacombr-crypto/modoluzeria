@@ -289,6 +289,11 @@ function csvEscape(v: string) {
  * Instagram de verdade (Visão geral / Conteúdo / Público), só que nas cores
  * do Modo Criador. Direct fica como uma 4ª aba (não existe no Instagram
  * "Insights", mas é a mesma funcionalidade que já existia aqui). */
+// Direct escondido até a Meta aprovar `instagram_business_manage_messages`
+// (o envio de resposta falha com código 10/2534022 enquanto o app está em
+// acesso Standard). Voltar pra true quando a permissão for aprovada.
+const SHOW_DIRECT_TAB = false;
+
 function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; clientName: string }) {
   const [pane, setPane] = useState<"geral" | "conteudo" | "publico" | "direct">("geral");
   const mediaState = useAccountMediaWithInsights(clientId);
@@ -297,7 +302,7 @@ function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; cli
     { key: "geral", label: "Visão geral" },
     { key: "conteudo", label: "Conteúdo" },
     { key: "publico", label: "Público" },
-    { key: "direct", label: "Direct" },
+    ...(SHOW_DIRECT_TAB ? [{ key: "direct" as const, label: "Direct" }] : []),
   ];
 
   return (
@@ -325,7 +330,7 @@ function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; cli
       {pane === "geral" && <VisaoGeralPane clientId={clientId} mediaState={mediaState} />}
       {pane === "conteudo" && <ConteudoPane clientId={clientId} clientName={clientName} mediaState={mediaState} />}
       {pane === "publico" && <PublicoPane clientId={clientId} />}
-      {pane === "direct" && <DirectMessagesPanel clientId={clientId} />}
+      {SHOW_DIRECT_TAB && pane === "direct" && <DirectMessagesPanel clientId={clientId} />}
     </div>
   );
 }
