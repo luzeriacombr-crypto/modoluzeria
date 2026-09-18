@@ -83,7 +83,9 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
   const submitFeedback = useServerFn(submitAiPlanningFeedback);
   const navigate = useNavigate();
   const api = useApi();
-  const [loading, setLoading] = useState(true);
+  const [started, setStarted] = useState(false);
+  const [extraContext, setExtraContext] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<MonthlyPlanResult | null>(null);
   const [pickingMonth, setPickingMonth] = useState(false);
@@ -107,15 +109,16 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
   }
 
   useEffect(() => {
+    if (!started) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
-    generate({ data: { clientId } })
+    generate({ data: { clientId, extraContext: extraContext.trim() || undefined } })
       .then((r) => { if (!cancelled) setResult(r); })
       .catch((e: any) => { if (!cancelled) setError(e?.message ?? "Não consegui gerar a prévia."); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [clientId]);
+  }, [started, clientId]);
 
   function updateItem(idx: number, patch: Partial<MonthlyPlanItem>) {
     setResult((r) => r ? { ...r, items: r.items.map((it, i) => (i === idx ? { ...it, ...patch } : it)) } : r);
@@ -164,7 +167,29 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
 
   return (
     <Modal open onClose={onClose} title="Prévia de planejamento com IA (versão beta)" maxWidthClass="max-w-xl">
-      {loading && <AILoadingState />}
+      {!started && (
+        <div className="space-y-3">
+          <p className="text-sm text-foreground/70">
+            Pra esse próximo planejamento, teve alguma reunião com o cliente? Você tem algum briefing específico do mês ou transcrição? Cola aqui embaixo — isso conta mais do que o histórico antigo.
+          </p>
+          <textarea
+            value={extraContext}
+            onChange={(e) => setExtraContext(e.target.value)}
+            placeholder="Cole aqui o que foi combinado na reunião, transcrição ou briefing desse mês (opcional)…"
+            rows={7}
+            autoFocus
+            className={inp + " resize-none"}
+          />
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
+            <button onClick={() => setStarted(true)} className="lz-btn-primary text-xs px-5 py-2.5 rounded-md">
+              {extraContext.trim() ? "Gerar prévia com esse contexto" : "Gerar prévia sem contexto extra"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {started && loading && <AILoadingState />}
 
       {!loading && error && (
         <div className="py-8 text-center">

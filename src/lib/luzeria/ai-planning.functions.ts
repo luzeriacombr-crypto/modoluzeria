@@ -130,7 +130,15 @@ export type MonthlyPlanResult = z.infer<typeof PlanResultSchema> & {
 
 export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .inputValidator((d: { clientId: string; extraContext?: string }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      // Colado na hora, só pra essa geração — reunião recente, transcrição,
+      // briefing pontual do mês. Não é persistido (diferente do briefing
+      // fixo salvo na Ficha do Cliente).
+      extraContext: z.string().trim().max(12000).optional(),
+    }).parse(d),
+  )
   .handler(async ({ data, context }): Promise<MonthlyPlanResult> => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
@@ -262,6 +270,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       contentBriefingText ? `\n\nBriefing/sistema de conteúdo específico desse cliente (siga isso à risca, é o manual de como criar pra ele):\n${safeTruncate(contentBriefingText, 8000)}` : "",
       recentRoteirosText ? `\n\nRoteiros recentes já escritos pra esse cliente (use pra aprender o padrão e o tom exatos já usados, não repita os mesmos temas):\n${safeTruncate(recentRoteirosText, 8000)}` : "",
       knowledgeText,
+      data.extraContext ? `\n\nContexto informado agora, específico pra ESSE planejamento (reunião recente, transcrição, briefing pontual do mês — prioridade alta, é a informação mais atual que existe, siga isso de perto):\n${safeTruncate(data.extraContext, 12000)}` : "",
       competitorsText
         ? `\n\nConcorrentes informados pela agência — pesquise na web (use a tool web_search) o que cada um tem postado recentemente, formatos e temas em alta, ANTES de sugerir o planejamento, e cite o que encontrou em competitorNotes:\n${competitorsText}`
         : "\n\nNenhum concorrente foi informado — não pesquise nada, deixe competitorNotes vazio.",
