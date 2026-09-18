@@ -386,7 +386,12 @@ function DocRow({
                   if (b.kind === "slides") return b.items.map((s) => `SLIDE ${s.n}: ${s.text}`).join("\n");
                   return b.text;
                 };
-                const body = g.blocks.map(blockText).join("\n\n");
+                // A linha "Legenda: ..." já vira o campo de legenda de verdade
+                // separadamente (status.publishCaption, abaixo) — não duplicar
+                // ela dentro do Briefing.
+                const body = g.blocks
+                  .filter((b) => !(b.kind === "p" && /^legenda:/i.test(b.text.trim())))
+                  .map(blockText).join("\n\n");
                 return (
                   <RoteiroControls
                     docId={doc.id} clientId={clientId} title={g.title} status={statusByTitle.get(g.title)}
