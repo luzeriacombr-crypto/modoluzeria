@@ -276,7 +276,11 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
 
     const response = await anthropic.messages.create({
       model: PLANNING_MODEL,
-      max_tokens: 8000,
+      // Até 12 itens com captionDraft completo no formato de casa (carrossel
+      // pode ter 5-8 slides) mais o texto de busca de concorrentes já
+      // estourava os 8000 tokens antigos antes de fechar a tool_use final —
+      // margem generosa pra não cortar a resposta no meio.
+      max_tokens: 16000,
       tools: [WEB_SEARCH_TOOL as any, REPORT_PLAN_TOOL],
       tool_choice: { type: "auto" },
       messages: [{
@@ -288,7 +292,14 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     const toolUse = [...response.content].reverse().find(
       (b: any) => b.type === "tool_use" && b.name === "report_monthly_plan",
     ) as any;
-    if (!toolUse) throw new Error("Não consegui gerar a prévia — tenta de novo.");
+    if (!toolUse) {
+      console.error("generateMonthlyPlanPreview: sem tool_use", { stopReason: (response as any).stop_reason, clientId: data.clientId });
+      throw new Error(
+        (response as any).stop_reason === "max_tokens"
+          ? "A prévia ficou grande demais e foi cortada — tenta gerar de novo."
+          : "Não consegui gerar a prévia — tenta de novo.",
+      );
+    }
     const parsed = PlanResultSchema.parse(toolUse.input);
     return { ...parsed, knowledgeItemsCount: knowledge.length };
   });
