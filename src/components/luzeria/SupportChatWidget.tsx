@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { MessageCircle, X, Send, CheckCircle2 } from "lucide-react";
 import { useMe, useApi, mySupportThreadQO, openSupportThreadsQO, supportThreadMessagesQO } from "@/lib/luzeria/queries";
@@ -12,6 +13,48 @@ const WELCOME: SupportMessage = {
   content: "Oi! Sou o chat de suporte do Modo Criador. Me conta sua dúvida que eu te ajudo.",
   createdAt: "",
 };
+
+/** Renderiza **negrito** e [texto](link) dentro de uma mensagem do chat — um
+ * link interno (começa com "/") navega pela SPA e fecha o painel do chat
+ * pra pessoa ver a tela de destino; um link externo abre em nova aba. */
+function ChatText({ text }: { text: string }) {
+  const navigate = useNavigate();
+  const { setSupportChatOpen } = useUI();
+  const parts = text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g).filter(Boolean);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return <strong key={i} className="font-bold">{part.slice(2, -2)}</strong>;
+        }
+        const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        if (linkMatch) {
+          const [, label, href] = linkMatch;
+          if (href.startsWith("/")) {
+            const [path, query] = href.split("?");
+            const search = query ? Object.fromEntries(new URLSearchParams(query)) : undefined;
+            return (
+              <button
+                key={i}
+                onClick={() => { setSupportChatOpen(false); navigate({ to: path as any, search: search as any }); }}
+                className="underline font-semibold hover:opacity-80"
+                style={{ color: "inherit" }}
+              >
+                {label}
+              </button>
+            );
+          }
+          return (
+            <a key={i} href={href} target="_blank" rel="noreferrer" className="underline font-semibold hover:opacity-80">
+              {label}
+            </a>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
 
 /** Bolha de chat flutuante, visível pra qualquer usuário autenticado — o
  * canal pensado pra substituir contato direto no WhatsApp pessoal do
@@ -131,7 +174,7 @@ function MessageBubble({ message }: { message: SupportMessage }) {
             : { background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "var(--foreground)", borderBottomLeftRadius: 4 }
         }
       >
-        {message.content}
+        <ChatText text={message.content} />
       </div>
     </div>
   );
@@ -226,7 +269,7 @@ export function SupportChatAdminPanel() {
                         : { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }
                     }
                   >
-                    {m.content}
+                    <ChatText text={m.content} />
                   </div>
                 </div>
               </div>

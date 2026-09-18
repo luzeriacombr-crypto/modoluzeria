@@ -94,6 +94,27 @@ export const TUTORIALS: HelpTutorial[] = [
   },
 ];
 
+/** Rotas reais do app que o Chat do Modo Criador pode linkar — a IA só pode
+ * usar caminhos desta lista (nunca inventar uma URL), pra nunca mandar a
+ * pessoa pra um link quebrado. */
+export const INTERNAL_LINKS: { label: string; path: string }[] = [
+  { label: "Minhas demandas", path: "/minhas-tarefas" },
+  { label: "Dashboard", path: "/admin" },
+  { label: "Calendário", path: "/calendario" },
+  { label: "Biblioteca", path: "/biblioteca" },
+  { label: "Instagram (Insights)", path: "/instagram" },
+  { label: "Rotina", path: "/rotina" },
+  { label: "Vendas", path: "/vendas" },
+  { label: "Seleção de Fotos", path: "/selecao-de-fotos" },
+  { label: "Central de Ajuda — Tutoriais", path: "/ajuda?tab=tutoriais" },
+  { label: "Configurações — Equipe", path: "/configuracoes?tab=team" },
+  { label: "Configurações — Integrações (Google Drive/Instagram)", path: "/configuracoes?tab=integrations" },
+  { label: "Configurações — Automações", path: "/configuracoes?tab=automations" },
+  { label: "Configurações — Base de conhecimento", path: "/configuracoes?tab=knowledge" },
+  { label: "Configurações — Plano e Cobrança", path: "/configuracoes?tab=cobranca" },
+  { label: "Configurações — Geral", path: "/configuracoes?tab=general" },
+];
+
 /** Achata FAQ + Tutoriais num bloco de texto simples pro prompt da IA do chat de suporte. */
 export function buildHelpKnowledgeText(): string {
   const faqText = FAQ.map((group) =>
@@ -102,5 +123,6 @@ export function buildHelpKnowledgeText(): string {
   const tutorialsText = TUTORIALS.map((t) =>
     `## ${t.title}\n` + t.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")
   ).join("\n\n");
-  return `PERGUNTAS FREQUENTES:\n\n${faqText}\n\nTUTORIAIS PASSO A PASSO:\n\n${tutorialsText}`;
+  const linksText = INTERNAL_LINKS.map((l) => `${l.label} => ${l.path}`).join("\n");
+  return `PERGUNTAS FREQUENTES:\n\n${faqText}\n\nTUTORIAIS PASSO A PASSO:\n\n${tutorialsText}\n\nLINKS REAIS DO APP (use só estes, nunca invente um caminho):\n\n${linksText}`;
 }
