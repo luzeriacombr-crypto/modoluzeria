@@ -1017,6 +1017,28 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       role: data.role,
       orgId: context.orgId,
     });
+
+    // Avisa o convidado por e-mail — antes disso não existia entrega
+    // nenhuma, o admin tinha que passar login/senha por fora (WhatsApp
+    // etc). Best-effort: nunca derruba a criação do usuário se falhar.
+    try {
+      const [{ data: inviter }, { data: org }] = await Promise.all([
+        context.supabase.from("profiles").select("name").eq("id", context.userId).maybeSingle(),
+        context.supabase.from("orgs").select("name").eq("id", context.orgId).maybeSingle(),
+      ]);
+      if (inviter?.name && org?.name) {
+        const { sendEmail } = await import("./resend.server");
+        const { buildTeamInviteEmailHtml } = await import("./team-invite-email.server");
+        await sendEmail({
+          to: data.email,
+          subject: `${inviter.name.trim().split(" ")[0]} te convidou pro Modo Criador`,
+          html: buildTeamInviteEmailHtml({ name: data.name, email: data.email, inviterName: inviter.name, agencyName: org.name }),
+        });
+      }
+    } catch (e) {
+      console.error("Falha ao enviar e-mail de convite pro time:", e);
+    }
+
     return { ok: true, id: result?.id };
   });
 
