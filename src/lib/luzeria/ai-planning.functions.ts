@@ -49,7 +49,25 @@ Exemplos reais (observe o tom: direto, frase curta, sem enrolação, nada de emo
 
 REGRA FIXA: nunca escreva a palavra "GRAVADO" em nenhum título ou texto — isso é só uma marcação de controle interna da agência, não faz parte do conteúdo.
 
-publishCaption é OUTRO texto, sempre — a legenda de verdade que vai publicada junto com o post/reel no Instagram (o que aparece embaixo da mídia). Curta, no mesmo tom direto, geralmente uma frase de gancho/resumo + uma chamada pra ação — nunca repita captionDraft ali (não cole o roteiro/slides inteiro como legenda).`;
+publishCaption é OUTRO texto, sempre — a legenda de verdade que vai publicada junto com o post/reel no Instagram (o que aparece embaixo da mídia). VARIE o tamanho de post pra post — nunca deixe todas as legendas do lote com uma frase só, isso fica repetitivo e genérico. Use o que fizer mais sentido pra cada conteúdo:
+- Curtíssima (1 frase, gancho + CTA) — só quando o conteúdo já fala por si (promoção pontual, aviso rápido, humor).
+- Média (2-4 linhas curtas, com quebra de linha entre elas) — padrão pra maioria dos posts educativos/institucionais.
+- Longa (parágrafos curtos com quebra de linha entre eles, pode ter 1-3 linhas com "- " no meio) — quando o post pede contexto, storytelling ou prova social (depoimento, case, explicação mais completa).
+Numa leva de sugestões, misture os três tamanhos — não repita o mesmo padrão em todas. Nunca repita captionDraft ali (não cole o roteiro/slides inteiro como legenda) — é um texto PRÓPRIO, pensado pra funcionar sozinho embaixo do post.
+
+Exemplos reais de legenda (repare a variação de tamanho):
+Curta: "Joelho estalando com dor? Não é normal. Comenta aqui que eu te explico."
+Média: "Fez PRP e ainda sente dor?
+Isso pode ser normal nas primeiras semanas — o corpo precisa de tempo pra responder.
+Se tiver dúvida sobre o seu caso, comenta aqui."
+Longa: "Três sinais do joelho que eu não deixaria passar:
+
+- Estalo COM dor (diferente do estalo sem dor, que é comum)
+- Inchaço que demora a sumir depois do esforço
+- Sensação de falseio, como se o joelho fosse ceder
+
+Nenhum desses é motivo pra pânico. Mas todos são motivo pra avaliação.
+Se identificou algum, comenta aqui que eu te oriento."`;
 
 const WEB_SEARCH_TOOL = {
   type: "web_search_20260209",
@@ -76,7 +94,7 @@ const REPORT_PLAN_TOOL = {
             type: { type: "string" as const, enum: ["post", "reel"] },
             pillar: { type: "string" as const, description: "Pilar/tema de conteúdo, ex: bastidores, prova social, educativo" },
             captionDraft: { type: "string" as const, description: "TEXTO DE PRODUÇÃO pronto pra usar, no formato de casa exato (TEXTO:/SLIDE N:/roteiro de reel — ver instrução) — isso vira o Briefing, não a legenda publicada." },
-            publishCaption: { type: "string" as const, description: "A LEGENDA DE VERDADE que vai publicada junto com o post/reel — curta, gancho + CTA, no tom da marca. NUNCA igual a captionDraft." },
+            publishCaption: { type: "string" as const, description: "A LEGENDA DE VERDADE que vai publicada junto com o post/reel, no tom da marca. VARIE o tamanho entre as sugestões (curta/média/longa — ver instrução), nunca uma frase só toda vez. NUNCA igual a captionDraft." },
             postFormat: { type: "string" as const, enum: ["estatico", "carrossel"], description: "OBRIGATÓRIO quando type=post — decide o botão de formato real do post no sistema. Precisa bater com o formato usado em captionDraft (TEXTO: → estatico, SLIDE N: → carrossel). Não usar quando type=reel." },
             format: { type: "string" as const, description: "Descrição livre do formato/estilo, pra contexto humano (ex: 'vlog', 'lista', 'POV', 'carrossel educativo') — não substitui postFormat." },
             rationale: { type: "string" as const, description: "Por que essa publicação faz sentido agora, em 1 frase" },
@@ -279,7 +297,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       "",
       HOUSE_STYLE_GUIDE,
       "",
-      `Gere entre 4 e 12 sugestões de posts/reels pro próximo mês, com a mistura de tipos batendo aproximadamente com a meta mensal informada acima. Escreva tudo em português do Brasil, com tom real e específico do nicho do cliente — nunca genérico ou clichê. Termine SEMPRE chamando a tool report_monthly_plan com o resultado final.`,
+      `Gere entre 4 e 12 sugestões de posts/reels pro próximo mês, com a mistura de tipos batendo aproximadamente com a meta mensal informada acima. Escreva tudo em português do Brasil, com tom real e específico do nicho do cliente — nunca genérico ou clichê. As legendas (publishCaption) precisam variar de tamanho entre si — misture curtas, médias e longas na mesma leva, não entregue tudo com uma frase só. Termine SEMPRE chamando a tool report_monthly_plan com o resultado final.`,
     ].filter(Boolean).join("\n");
 
     const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
