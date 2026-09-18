@@ -578,6 +578,13 @@ function TwoFactorSection() {
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
+    // getSession() espera a hidratação da sessão salva terminar antes de
+    // resolver — sem isso, logo depois de abrir/recarregar a página (comum
+    // no Safari do iPhone ao voltar de segundo plano), o SDK ainda não tem
+    // o access_token pronto e as chamadas de MFA saem sem nenhum
+    // Authorization, batendo no erro genérico "This endpoint requires a
+    // valid Bearer token" do GoTrue.
+    await supabase.auth.getSession();
     const { data, error } = await supabase.auth.mfa.listFactors();
     if (error || !data) { setStatus("off"); return; }
     const verified = data.totp[0];
@@ -590,6 +597,13 @@ function TwoFactorSection() {
   async function startEnroll() {
     setBusy(true);
     try {
+      // Mesmo motivo de refresh() acima: garante que a sessão local já foi
+      // restaurada antes de qualquer chamada de MFA.
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        toast.error("Sua sessão expirou — atualiza a página e tenta de novo.");
+        return;
+      }
       // Clean up any unverified attempts left over from a previous try —
       // Supabase lets multiple TOTP factors coexist, but only one should
       // ever be "the" pending enrollment at a time. listFactors()'s totp[]
