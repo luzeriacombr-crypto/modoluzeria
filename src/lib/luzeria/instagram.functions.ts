@@ -19,7 +19,10 @@ const IG_SCOPES = [
   "instagram_business_content_publish",
   "instagram_business_manage_insights",
   "instagram_business_manage_comments",
-  "instagram_business_manage_messages",
+  // Reativar junto com SHOW_DIRECT_TAB (InstagramActivityPage) quando a Meta
+  // aprovar `instagram_business_manage_messages`. Fora do login até lá pra
+  // tela de autorização bater com o que foi pedido no App Review.
+  // "instagram_business_manage_messages",
 ].join(",");
 // Fixo — precisa bater byte a byte com o redirect_uri cadastrado em Meta
 // for Developers > Modo Criador > Casos de uso > Instagram Business >
