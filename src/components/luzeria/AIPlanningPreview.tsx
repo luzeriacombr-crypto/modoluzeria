@@ -75,12 +75,14 @@ function buildMarkdown(result: MonthlyPlanResult): string {
     // carrossel com "SLIDE N:", o parser reconhece e renderiza em caixinhas
     // em vez de virar um blocão emendado atrás de "Roteiro/texto: ".
     const sections = result.items.map((it, i) => {
-      const heading = `### ${i + 1}. ${it.title} (${it.type === "reel" ? "Reel" : "Post"}${it.format ? ` — ${it.format}` : ""})`;
+      const heading = `### ${i + 1}. ${it.title} (${it.type === "reel" ? "Reel" : "Post"}${it.format ? `: ${it.format}` : ""})`;
+      // Pilar e rationale são anotação estratégica INTERNA (referencia "a
+      // reunião", "o briefing" etc) — nunca embutir no content, que é o
+      // mesmo texto mostrado no link público pro cliente. Ficam só em
+      // plan_items (estruturado), fora da vista do cliente.
       const bodyParts = [
-        it.pillar ? `Pilar: ${it.pillar}` : null,
         it.captionDraft || null,
         it.publishCaption ? `Legenda: ${it.publishCaption}` : null,
-        it.rationale || null,
       ].filter(Boolean);
       return `${heading}\n${bodyParts.join("\n\n")}`;
     });

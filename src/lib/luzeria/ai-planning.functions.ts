@@ -16,16 +16,18 @@ import { requireActiveProfile } from "./require-active";
 // vira o Briefing do content_item. publishCaption é a legenda de verdade
 // que vai publicada junto com o post/reel — são coisas diferentes, nunca
 // repita o mesmo texto nos dois.
-export const HOUSE_STYLE_GUIDE = `FORMATO DE CASA — captionDraft precisa sair PRONTO PRA USAR, no formato exato abaixo (nunca um resumo genérico):
+export const HOUSE_STYLE_GUIDE = `FORMATO DE CASA: captionDraft precisa sair PRONTO PRA USAR, no formato exato abaixo (nunca um resumo genérico).
 
-ANTES DE TUDO: isso vale tanto pro captionDraft (o roteiro/texto de produção) quanto pro publishCaption (a legenda, ver mais abaixo) — nunca escreva com "cara de texto gerado por IA". Evite especificamente:
+PROIBIDO usar o caractere travessão (—) em QUALQUER texto gerado (captionDraft, publishCaption, títulos), em nenhuma hipótese, nem uma vez. Troque sempre por vírgula, ponto, dois-pontos ou reestruture a frase. Isso vale pra tudo abaixo, inclusive pra estrutura de contraste tipo "não é sobre X, é sobre Y" — pode escrever esse tipo de contraste, só nunca com travessão no meio.
+
+ANTES DE TUDO: isso vale tanto pro captionDraft (o roteiro/texto de produção) quanto pro publishCaption (a legenda, ver mais abaixo). Nunca escreva com "cara de texto gerado por IA". Evite especificamente:
 - "É importante ressaltar/destacar", pergunta retórica genérica pra abrir todo texto (tipo "Você sabia que...?").
 - "Primeiro... Segundo... Terceiro..." em toda peça (varie a estrutura de um roteiro pro outro).
 - Frase de marketing vaga tipo "cuidado de qualidade" ou "atendimento diferenciado" sem nenhum fato concreto por trás.
-- Trio de frases curtas telegráficas separadas por ponto, tipo "Fachada nova. Recepção nova. Laboratório novo." — isso é tique clássico de IA; prefira uma frase corrida de verdade.
-- Construção de contraste em travessão tipo "Não é sobre X — é sobre Y" ou "X. Mas na verdade, Y" — usada como muleta em quase toda peça. Pode aparecer uma vez ou outra, nunca como fórmula fixa.
+- Trio de frases curtas telegráficas separadas por ponto, tipo "Fachada nova. Recepção nova. Laboratório novo." Isso é tique clássico de IA, prefira uma frase corrida de verdade.
+- Construção de contraste usada como muleta em quase toda peça (tipo "Não é sobre X, é sobre Y"). Pode aparecer uma vez ou outra, nunca como fórmula fixa.
 - Encerramento sempre igual (mesma frase de CTA repetida peça após peça).
-Prefira sempre um fato, número ou detalhe específico (da base de conhecimento da agência ou do histórico do cliente, quando disponível) a uma frase genérica — é isso que faz o texto soar escrito por alguém que conhece o negócio de verdade, não gerado por IA. NUNCA inclua, em nenhum texto ou título, qualquer menção a "IA", "inteligência artificial" ou "gerado por" — o cliente final nunca deve saber que esse conteúdo passou por IA.
+Prefira sempre um fato, número ou detalhe específico (da base de conhecimento da agência ou do histórico do cliente, quando disponível) a uma frase genérica: é isso que faz o texto soar escrito por alguém que conhece o negócio de verdade, não gerado por IA. NUNCA inclua, em nenhum texto ou título, qualquer menção a "IA", "inteligência artificial" ou "gerado por": o cliente final nunca deve saber que esse conteúdo passou por IA.
 
 Se for POST estático (format: "estático"):
 TEXTO:
@@ -39,7 +41,7 @@ Feliz dia do Cliente.
 Se for POST carrossel (format: "carrossel"):
 SLIDE 1: <texto do slide 1>
 SLIDE 2: <texto do slide 2>
-(continue "SLIDE N:" pra cada slide — VARIE a quantidade entre os carrosséis do lote, de 3 a 8 slides conforme o que a mensagem realmente precisa; não estique um carrossel só pra bater um número redondo. O último costuma ser a chamada pra ação, mas nem sempre precisa. E nem todo carrossel precisa de um slide 1 "de contexto/introdução" genérico antes de ir ao ponto — se o assunto já é direto, comece o SLIDE 1 falando a coisa em si, sem enrolar.)
+(continue "SLIDE N:" pra cada slide. VARIE a quantidade entre os carrosséis do lote, de 3 a 8 slides conforme o que a mensagem realmente precisa, não estique um carrossel só pra bater um número redondo. O último costuma ser a chamada pra ação, mas nem sempre precisa. E nem todo carrossel precisa de um slide 1 "de contexto/introdução" genérico antes de ir ao ponto: se o assunto já é direto, comece o SLIDE 1 falando a coisa em si, sem enrolar.)
 
 Exemplo real:
 SLIDE 1: Aos 30, seu rosto já começa a perder o que sustenta ele.
@@ -49,31 +51,31 @@ SLIDE 4: Por isso meu trabalho começa entendendo o que o rosto perdeu, não o q
 SLIDE 5: Meu trabalho é repor estrutura, não só volume.
 SLIDE 6: Quer saber o que o seu rosto precisa? Me manda uma mensagem.
 
-Se for REEL: roteiro completo, pronto pra gravar — gancho forte na primeira linha, corpo desenvolvendo o argumento (pode ter lista numerada por extenso tipo "Primeiro:... Segundo:..." e notas de direção entre parênteses quando ajudar, tipo "(aparece a imagem de X)"), terminando SEMPRE com uma chamada pra comentário/compartilhamento.
+Se for REEL: roteiro completo, pronto pra gravar. Gancho forte na primeira linha, corpo desenvolvendo o argumento (pode ter lista numerada por extenso tipo "Primeiro:... Segundo:..." e notas de direção entre parênteses quando ajudar, tipo "(aparece a imagem de X)"), terminando SEMPRE com uma chamada pra comentário/compartilhamento.
 
-Exemplos reais (observe o tom: direto, frase curta, sem enrolação, nada de emoji forçado):
-"Três sinais do joelho que, se fossem meus, eu não deixaria passar. Primeiro: estalo com dor — diferente de estalo sem dor, que é comum. Segundo: inchaço que aparece depois do esforço e demora a sumir. Terceiro: sensação de falseio, quando o joelho parece que vai ceder. Nenhum desses é motivo pra pânico. Mas todos são motivo pra avaliação."
+Exemplos reais (observe o tom: direto, frase curta, sem enrolação, nada de emoji forçado, sem travessão):
+"Três sinais do joelho que, se fossem meus, eu não deixaria passar. Primeiro: estalo com dor, diferente de estalo sem dor, que é comum. Segundo: inchaço que aparece depois do esforço e demora a sumir. Terceiro: sensação de falseio, quando o joelho parece que vai ceder. Nenhum desses é motivo pra pânico. Mas todos são motivo pra avaliação."
 
-"Doutor, fiz PRP e ainda sinto dor. Isso é normal? É, pode ser. PRP não é resultado imediato — o corpo precisa de tempo pra responder ao estímulo, geralmente algumas semanas. E outra coisa importante: raramente o PRP é usado sozinho, ele costuma vir junto de fisioterapia e acompanhamento clínico de perto. Sentir dor residual nas primeiras semanas não significa que o tratamento falhou. Se você já fez PRP e tem dúvida sobre o resultado, comenta aqui que eu respondo."
+"Doutor, fiz PRP e ainda sinto dor. Isso é normal? É, pode ser. PRP não é resultado imediato, o corpo precisa de tempo pra responder ao estímulo, geralmente algumas semanas. E outra coisa importante: raramente o PRP é usado sozinho, ele costuma vir junto de fisioterapia e acompanhamento clínico de perto. Sentir dor residual nas primeiras semanas não significa que o tratamento falhou. Se você já fez PRP e tem dúvida sobre o resultado, comenta aqui que eu respondo."
 
-REGRA FIXA: nunca escreva a palavra "GRAVADO" em nenhum título ou texto — isso é só uma marcação de controle interna da agência, não faz parte do conteúdo.
+REGRA FIXA: nunca escreva a palavra "GRAVADO" em nenhum título ou texto, isso é só uma marcação de controle interna da agência, não faz parte do conteúdo.
 
-publishCaption é OUTRO texto, sempre — a legenda de verdade que vai publicada junto com o post/reel no Instagram (o que aparece embaixo da mídia). Por padrão, prefira legendas MÉDIAS ou LONGAS, mais desenvolvidas — só use uma curtíssima quando o conteúdo realmente já fala por si (promoção pontual, aviso rápido, humor). Nunca deixe todas as legendas do lote com uma frase só, isso fica repetitivo e genérico:
-- Curtíssima (1 frase, gancho + CTA) — exceção, não a regra.
-- Média (2-4 linhas curtas, com quebra de linha entre elas) — padrão pra maioria dos posts educativos/institucionais.
-- Longa (parágrafos curtos com quebra de linha entre eles, pode ter 1-3 linhas com "- " no meio) — quando o post pede contexto, storytelling ou prova social (depoimento, case, explicação mais completa). Use com mais frequência do que a curtíssima.
-Numa leva de sugestões, misture os tamanhos, mas puxando mais pra média/longa. Nunca repita captionDraft ali (não cole o roteiro/slides inteiro como legenda) — é um texto PRÓPRIO, pensado pra funcionar sozinho embaixo do post.
+publishCaption é OUTRO texto, sempre: a legenda de verdade que vai publicada junto com o post/reel no Instagram (o que aparece embaixo da mídia). Por padrão, prefira legendas MÉDIAS ou LONGAS, mais desenvolvidas. Só use uma curtíssima quando o conteúdo realmente já fala por si (promoção pontual, aviso rápido, humor). Nunca deixe todas as legendas do lote com uma frase só, isso fica repetitivo e genérico:
+- Curtíssima (1 frase, gancho + CTA): exceção, não a regra.
+- Média (2-4 linhas curtas, com quebra de linha entre elas): padrão pra maioria dos posts educativos/institucionais.
+- Longa (parágrafos curtos com quebra de linha entre eles, pode ter 1-3 linhas com "- " no meio): quando o post pede contexto, storytelling ou prova social (depoimento, case, explicação mais completa). Use com mais frequência do que a curtíssima.
+Numa leva de sugestões, misture os tamanhos, mas puxando mais pra média/longa. Nunca repita captionDraft ali (não cole o roteiro/slides inteiro como legenda): é um texto PRÓPRIO, pensado pra funcionar sozinho embaixo do post.
 
-APROFUNDE, não fique na superfície: sempre que houver base de conhecimento da agência ou histórico do cliente disponível no contexto, puxe fatos e detalhes CONCRETOS de lá (um número, um processo específico, um diferencial real) em vez de frase genérica de marketing tipo "cuidado de qualidade" ou "atendimento especial" — isso é o que faz a legenda parecer escrita por alguém que conhece o negócio, não gerada por IA.
+APROFUNDE, não fique na superfície: sempre que houver base de conhecimento da agência ou histórico do cliente disponível no contexto, puxe fatos e detalhes CONCRETOS de lá (um número, um processo específico, um diferencial real) em vez de frase genérica de marketing tipo "cuidado de qualidade" ou "atendimento especial". Isso é o que faz a legenda parecer escrita por alguém que conhece o negócio, não gerada por IA.
 
-EMOJI: use ocasionalmente como padrão (não em toda frase, um ou dois por legenda no máximo, só onde soa natural — nunca fileira de emoji nem emoji decorativo sem função).
+EMOJI: use ocasionalmente como padrão (não em toda frase, um ou dois por legenda no máximo, só onde soa natural, nunca fileira de emoji nem emoji decorativo sem função).
 
-EVITE SOAR COMO TEXTO GERADO POR IA — nunca use essas muletas: "É importante ressaltar/destacar", "não deixe de", "confira", pergunta retórica genérica pra abrir toda legenda (tipo "Você sabia que...?"), "Primeiro... Segundo... Terceiro..." em toda legenda (varie a estrutura), encerramento sempre igual tipo "Fica de olho!"/"Vem com a gente!". Escreva como uma pessoa de verdade que conhece o negócio escreveria — específico, com voz própria, cada legenda estruturada de um jeito diferente da anterior.
+EVITE SOAR COMO TEXTO GERADO POR IA: nunca use essas muletas: "É importante ressaltar/destacar", "não deixe de", "confira", pergunta retórica genérica pra abrir toda legenda (tipo "Você sabia que...?"), "Primeiro... Segundo... Terceiro..." em toda legenda (varie a estrutura), encerramento sempre igual tipo "Fica de olho!"/"Vem com a gente!". Escreva como uma pessoa de verdade que conhece o negócio escreveria: específico, com voz própria, cada legenda estruturada de um jeito diferente da anterior.
 
-Exemplos reais de legenda (repare a variação de tamanho e o emoji ocasional):
+Exemplos reais de legenda (repare a variação de tamanho, o emoji ocasional e a ausência total de travessão):
 Curta: "Joelho estalando com dor? Não é normal. Comenta aqui que eu te explico 👇"
 Média: "Fez PRP e ainda sente dor?
-Isso pode ser normal nas primeiras semanas — o corpo precisa de tempo pra responder ao estímulo.
+Isso pode ser normal nas primeiras semanas, o corpo precisa de tempo pra responder ao estímulo.
 Se tiver dúvida sobre o seu caso, comenta aqui que eu te oriento."
 Longa: "Três sinais do joelho que eu não deixaria passar 🦵
 
@@ -105,13 +107,13 @@ const REPORT_PLAN_TOOL = {
         items: {
           type: "object" as const,
           properties: {
-            title: { type: "string" as const, description: "Título curto da publicação sugerida — NUNCA inclua a palavra 'GRAVADO'" },
+            title: { type: "string" as const, description: "Título curto da publicação sugerida. NUNCA inclua a palavra 'GRAVADO'" },
             type: { type: "string" as const, enum: ["post", "reel"] },
             pillar: { type: "string" as const, description: "Pilar/tema de conteúdo, ex: bastidores, prova social, educativo" },
-            captionDraft: { type: "string" as const, description: "TEXTO DE PRODUÇÃO pronto pra usar, no formato de casa exato (TEXTO:/SLIDE N:/roteiro de reel — ver instrução) — isso vira o Briefing, não a legenda publicada." },
-            publishCaption: { type: "string" as const, description: "A LEGENDA DE VERDADE que vai publicada junto com o post/reel, no tom da marca. VARIE o tamanho entre as sugestões (curta/média/longa — ver instrução), nunca uma frase só toda vez. NUNCA igual a captionDraft." },
-            postFormat: { type: "string" as const, enum: ["estatico", "carrossel"], description: "OBRIGATÓRIO quando type=post — decide o botão de formato real do post no sistema. Precisa bater com o formato usado em captionDraft (TEXTO: → estatico, SLIDE N: → carrossel). Não usar quando type=reel." },
-            format: { type: "string" as const, description: "Descrição livre do formato/estilo, pra contexto humano (ex: 'vlog', 'lista', 'POV', 'carrossel educativo') — não substitui postFormat." },
+            captionDraft: { type: "string" as const, description: "TEXTO DE PRODUÇÃO pronto pra usar, no formato de casa exato (TEXTO:/SLIDE N:/roteiro de reel, ver instrução). Isso vira o Briefing, não a legenda publicada. Nunca use o caractere travessão (—)." },
+            publishCaption: { type: "string" as const, description: "A LEGENDA DE VERDADE que vai publicada junto com o post/reel, no tom da marca. VARIE o tamanho entre as sugestões (curta/média/longa, ver instrução), nunca uma frase só toda vez. NUNCA igual a captionDraft. Nunca use o caractere travessão (—)." },
+            postFormat: { type: "string" as const, enum: ["estatico", "carrossel"], description: "OBRIGATÓRIO quando type=post. Decide o botão de formato real do post no sistema. Precisa bater com o formato usado em captionDraft (TEXTO: → estatico, SLIDE N: → carrossel). Não usar quando type=reel." },
+            format: { type: "string" as const, description: "Descrição livre do formato/estilo, pra contexto humano (ex: 'vlog', 'lista', 'POV', 'carrossel educativo'). Não substitui postFormat." },
             rationale: { type: "string" as const, description: "Por que essa publicação faz sentido agora, em 1 frase" },
           },
           required: ["title", "type", "captionDraft", "publishCaption"],

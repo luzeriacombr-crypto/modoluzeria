@@ -248,13 +248,14 @@ export const createRoteirosFromPlan = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
 
+    // Pilar e rationale são anotação estratégica INTERNA (referencia "a
+    // reunião", "o briefing" etc) — nunca embutir no content, que é o mesmo
+    // texto mostrado no link público pro cliente.
     const sections = data.items.map((it, i) => {
       const formatLabel = it.type === "reel" ? "Reel" : it.postFormat === "carrossel" ? "Carrossel" : "Post";
       const heading = `Roteiro ${i + 1}: ${it.title} (${formatLabel})`;
       const bodyParts = [
         it.captionDraft,
-        it.pillar ? `Pilar: ${it.pillar}` : null,
-        it.rationale ?? null,
         it.publishCaption ? `Legenda: ${it.publishCaption}` : null,
       ].filter(Boolean);
       return { heading, body: bodyParts.join("\n\n") };
@@ -324,7 +325,7 @@ export const regenerateRoteiroDoc = createServerFn({ method: "POST" })
       .filter((k) => k.text_content)
       .map((k) => `### ${k.title || "Nota"}\n${safeTruncate(String(k.text_content), 6000)}`);
     const knowledgeText = knowledgeParts.length
-      ? `\n\nBase de conhecimento da agência (como ela costuma criar conteúdo — use fatos e detalhes concretos daqui pra aprofundar, não só o tom):\n${knowledgeParts.join("\n\n")}`
+      ? `\n\nBase de conhecimento da agência (como ela costuma criar conteúdo, use fatos e detalhes concretos daqui pra aprofundar, não só o tom):\n${knowledgeParts.join("\n\n")}`
       : "";
 
     const instruction = [
@@ -334,9 +335,9 @@ export const regenerateRoteiroDoc = createServerFn({ method: "POST" })
       knowledgeText,
       "",
       "REGRAS OBRIGATÓRIAS pra essa reescrita:",
-      '- Mantenha exatamente os mesmos "## Roteiro N: título" de cada seção, na mesma ordem e quantidade — só ajuste o sufixo de formato entre parênteses no final do título se necessário: " (Carrossel)" se o roteiro usa SLIDE N:, " (Post)" se usa TEXTO:, ou " (Reel)" se for roteiro corrido de vídeo sem SLIDE/TEXTO.',
-      '- Mantenha a linha "Pilar: ..." de cada roteiro EXATAMENTE como está, sem mudar.',
-      '- Reescreva o corpo do roteiro (captionDraft, no mesmo formato TEXTO:/SLIDE N:/roteiro corrido que já está usado) e a linha "Legenda: ..." de cada um — mesmo tema/fatos de cada roteiro, mas seguindo à risca o formato de casa acima (tom natural, aprofundado com fatos concretos, emoji ocasional, sem cara de texto gerado por IA).',
+      '- Mantenha exatamente os mesmos "## Roteiro N: título" de cada seção, na mesma ordem e quantidade. Só ajuste o sufixo de formato entre parênteses no final do título se necessário: " (Carrossel)" se o roteiro usa SLIDE N:, " (Post)" se usa TEXTO:, ou " (Reel)" se for roteiro corrido de vídeo sem SLIDE/TEXTO.',
+      '- Se houver uma linha "Pilar: ..." ou qualquer nota interna de racional/estratégia (referenciando reunião, briefing etc) no corpo do roteiro, REMOVA essa linha por completo. Esse documento é visível pro cliente final, nada de anotação interna nele.',
+      '- Reescreva o corpo do roteiro (captionDraft, no mesmo formato TEXTO:/SLIDE N:/roteiro corrido que já está usado) e a linha "Legenda: ..." de cada um. Mesmo tema/fatos de cada roteiro, mas seguindo à risca o formato de casa acima (tom natural, aprofundado com fatos concretos, emoji ocasional, sem cara de texto gerado por IA, sem travessão).',
       "- Não mude a quantidade de roteiros, não adicione nem remova nenhum.",
       "- Não use blocos de código (```), não escreva nada fora da estrutura dos roteiros (sem introdução, sem comentários, sem despedida).",
       "",
