@@ -1593,10 +1593,18 @@ export const sendInstagramDirectMessage = createServerFn({ method: "POST" })
     });
     const json: any = await res.json();
     if (!res.ok) {
-      throw new Error(
-        json?.error?.message ??
-          "Falha ao enviar a mensagem. O Instagram só permite responder dentro de 24h da última mensagem do seguidor, salvo algumas exceções.",
-      );
+      const err = json?.error;
+      const base =
+        err?.message ??
+          "Falha ao enviar a mensagem. O Instagram só permite responder dentro de 24h da última mensagem do seguidor, salvo algumas exceções.";
+      // Código/subcódigo da Meta e id do destinatário — pra diagnosticar erros genéricos
+      // (ex.: "fora do período permitido" vale pra vários problemas diferentes).
+      const detail = [
+        err?.code != null ? `código ${err.code}` : null,
+        err?.error_subcode != null ? `subcódigo ${err.error_subcode}` : null,
+        `destinatário ${data.recipientId}`,
+      ].filter(Boolean).join(", ");
+      throw new Error(`${base} (${detail})`);
     }
     return { ok: true };
   });
