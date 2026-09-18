@@ -231,20 +231,6 @@ export type PublicFeedItem = {
   stageLabel: string;
   blockedReason: string | null;
 };
-export type PublicClientDoc = {
-  id: string;
-  type: "roteiro" | "planejamento";
-  title: string | null;
-  content: string;
-};
-
-export type PublicRoteiroClientStatus = {
-  docId: string;
-  roteiroTitle: string;
-  clientStatus: "pending" | "aprovado" | "ajustar";
-  clientNote: string | null;
-};
-
 export type PublicFeedPayload = {
   client: { name: string; color: string; description: string | null; photoUrl: string | null };
   month: { key: string };
@@ -254,8 +240,6 @@ export type PublicFeedPayload = {
   orgName: string | null;
   feedPreviewImageUrl: string | null;
   orgLogoUrl: string | null;
-  docs: PublicClientDoc[];
-  roteiroClientStatuses: PublicRoteiroClientStatus[];
 };
 
 export const getPublicFeed = createServerFn({ method: "GET" })
@@ -283,31 +267,6 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       orgName = org?.name ?? null;
       feedPreviewImagePath = (org as any)?.feed_preview_image_path ?? null;
       orgLogoPath = (org as any)?.logo_path ?? null;
-    }
-
-    // Roteiros/planejamento — mesma lógica de resolver o dono do token sem
-    // profile logado (ver get_org_id_for_token acima).
-    const { data: docClientId } = await supabase.rpc("get_client_id_for_token", { _token: data.token });
-    let docs: PublicClientDoc[] = [];
-    if (docClientId) {
-      const { data: docRows } = await supabaseAdmin
-        .from("client_docs")
-        .select("id, type, title, content")
-        .eq("client_id", docClientId as string)
-        .order("created_at", { ascending: true });
-      docs = (docRows ?? []).map((d: any) => ({ id: d.id, type: d.type, title: d.title, content: d.content }));
-    }
-    const roteiroDocIds = docs.filter((d) => d.type === "roteiro").map((d) => d.id);
-    let roteiroClientStatuses: PublicRoteiroClientStatus[] = [];
-    if (roteiroDocIds.length > 0) {
-      const { data: statusRows } = await supabaseAdmin
-        .from("client_doc_roteiro_status")
-        .select("doc_id, roteiro_title, client_status, client_note")
-        .in("doc_id", roteiroDocIds);
-      roteiroClientStatuses = (statusRows ?? []).map((r: any) => ({
-        docId: r.doc_id, roteiroTitle: r.roteiro_title,
-        clientStatus: r.client_status, clientNote: r.client_note,
-      }));
     }
 
     const r = result as any;
@@ -509,8 +468,6 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       orgName,
       feedPreviewImageUrl,
       orgLogoUrl,
-      docs,
-      roteiroClientStatuses,
     };
   });
 
@@ -643,38 +600,6 @@ export const addPublicFeedback = createServerFn({ method: "POST" })
       text: r.text as string,
       createdAt: r.created_at as string,
     };
-  });
-
-/* ============ PUBLIC: roteiro client approval ============ */
-
-export const setRoteiroClientStatus = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string; docId: string; roteiroTitle: string; clientStatus: "aprovado" | "ajustar"; clientNote?: string }) =>
-    z.object({
-      token: z.string().min(8).max(60),
-      docId: z.string().uuid(),
-      roteiroTitle: z.string().trim().min(1).max(300),
-      clientStatus: z.enum(["aprovado", "ajustar"]),
-      clientNote: z.string().trim().max(1000).optional(),
-    }).parse(d))
-  .handler(async ({ data }) => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_PUBLISHABLE_KEY!,
-    );
-    // set_roteiro_client_status: SECURITY DEFINER function that validates
-    // token + doc ownership (doc must belong to the token's client and be
-    // type "roteiro") before upserting client_status/client_note.
-    const { data: row, error } = await supabase.rpc("set_roteiro_client_status", {
-      _token: data.token,
-      _doc_id: data.docId,
-      _roteiro_title: data.roteiroTitle,
-      _client_status: data.clientStatus,
-      _client_note: data.clientNote ?? null,
-    });
-    if (error) throw new Error(error.message);
-    if (!row) throw new Error("Link inválido ou roteiro não encontrado.");
-    return { ok: true };
   });
 
 /* ============ PUBLIC: approve single item ============ */

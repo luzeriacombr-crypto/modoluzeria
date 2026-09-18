@@ -23,7 +23,7 @@ function BlockRenderer({ block }: { block: MdBlock }) {
     case "h3":
       return <h4 className="text-foreground/80 font-semibold text-[13px] mt-4 mb-1.5">{block.text}</h4>;
     case "p":
-      return <p className="text-foreground/70 text-[13.5px] leading-relaxed mb-3"><MdInline text={block.text} /></p>;
+      return <p className="text-foreground/70 text-[13.5px] leading-relaxed mb-3" style={{ whiteSpace: "pre-line" }}><MdInline text={block.text} /></p>;
     case "ul":
       return (
         <ul className="mb-3 space-y-1.5">
@@ -34,6 +34,25 @@ function BlockRenderer({ block }: { block: MdBlock }) {
             </li>
           ))}
         </ul>
+      );
+    case "slides":
+      return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-3">
+          {block.items.map((s) => (
+            <div
+              key={s.n}
+              className="rounded-lg p-3 flex flex-col"
+              style={{ aspectRatio: "4/5", background: "color-mix(in srgb, var(--foreground) 3%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wide mb-1.5 shrink-0" style={{ color: "var(--lz-accent-ink)" }}>
+                Slide {s.n}
+              </span>
+              <p className="text-foreground/75 text-[12.5px] leading-relaxed flex-1 overflow-y-auto" style={{ whiteSpace: "pre-line" }}>
+                {s.text}
+              </p>
+            </div>
+          ))}
+        </div>
       );
   }
 }
@@ -125,6 +144,7 @@ function SectionBody({ blocks }: { blocks: MdBlock[] }) {
         <p
           key={i}
           className={isLead ? "text-foreground/85 text-[15px] leading-relaxed mb-3 font-medium" : "text-foreground/70 text-[13.5px] leading-relaxed mb-3"}
+          style={{ whiteSpace: "pre-line" }}
         >
           <MdInline text={b.text} />
         </p>,

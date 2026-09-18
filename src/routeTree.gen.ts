@@ -32,6 +32,7 @@ import { Route as SelecaoTokenRouteImport } from './routes/selecao.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PromoSlugRouteImport } from './routes/promo/$slug'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
+import { Route as PlanejamentoTokenRouteImport } from './routes/planejamento.$token'
 import { Route as OauthInstagramCallbackClienteRouteImport } from './routes/oauth.instagram-callback-cliente'
 import { Route as ContratoTokenRouteImport } from './routes/contrato.$token'
 import { Route as ConectarInstagramTokenRouteImport } from './routes/conectar-instagram.$token'
@@ -179,6 +180,11 @@ const PromoSlugRoute = PromoSlugRouteImport.update({
 const PreviewTokenRoute = PreviewTokenRouteImport.update({
   id: '/preview/$token',
   path: '/preview/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanejamentoTokenRoute = PlanejamentoTokenRouteImport.update({
+  id: '/planejamento/$token',
+  path: '/planejamento/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OauthInstagramCallbackClienteRoute =
@@ -387,6 +393,7 @@ export interface FileRoutesByFullPath {
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
+  '/planejamento/$token': typeof PlanejamentoTokenRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
   '/r/$code': typeof RCodeRoute
@@ -442,6 +449,7 @@ export interface FileRoutesByTo {
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
+  '/planejamento/$token': typeof PlanejamentoTokenRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
   '/r/$code': typeof RCodeRoute
@@ -499,6 +507,7 @@ export interface FileRoutesById {
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
+  '/planejamento/$token': typeof PlanejamentoTokenRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
   '/r/$code': typeof RCodeRoute
@@ -556,6 +565,7 @@ export interface FileRouteTypes {
     | '/conectar-instagram/$token'
     | '/contrato/$token'
     | '/oauth/instagram-callback-cliente'
+    | '/planejamento/$token'
     | '/preview/$token'
     | '/promo/$slug'
     | '/r/$code'
@@ -611,6 +621,7 @@ export interface FileRouteTypes {
     | '/conectar-instagram/$token'
     | '/contrato/$token'
     | '/oauth/instagram-callback-cliente'
+    | '/planejamento/$token'
     | '/preview/$token'
     | '/promo/$slug'
     | '/r/$code'
@@ -667,6 +678,7 @@ export interface FileRouteTypes {
     | '/conectar-instagram/$token'
     | '/contrato/$token'
     | '/oauth/instagram-callback-cliente'
+    | '/planejamento/$token'
     | '/preview/$token'
     | '/promo/$slug'
     | '/r/$code'
@@ -711,6 +723,7 @@ export interface RootRouteChildren {
   ConectarInstagramTokenRoute: typeof ConectarInstagramTokenRoute
   ContratoTokenRoute: typeof ContratoTokenRoute
   OauthInstagramCallbackClienteRoute: typeof OauthInstagramCallbackClienteRoute
+  PlanejamentoTokenRoute: typeof PlanejamentoTokenRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
   PromoSlugRoute: typeof PromoSlugRoute
   RCodeRoute: typeof RCodeRoute
@@ -886,6 +899,13 @@ declare module '@tanstack/react-router' {
       path: '/preview/$token'
       fullPath: '/preview/$token'
       preLoaderRoute: typeof PreviewTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planejamento/$token': {
+      id: '/planejamento/$token'
+      path: '/planejamento/$token'
+      fullPath: '/planejamento/$token'
+      preLoaderRoute: typeof PlanejamentoTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/oauth/instagram-callback-cliente': {
@@ -1191,6 +1211,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConectarInstagramTokenRoute: ConectarInstagramTokenRoute,
   ContratoTokenRoute: ContratoTokenRoute,
   OauthInstagramCallbackClienteRoute: OauthInstagramCallbackClienteRoute,
+  PlanejamentoTokenRoute: PlanejamentoTokenRoute,
   PreviewTokenRoute: PreviewTokenRoute,
   PromoSlugRoute: PromoSlugRoute,
   RCodeRoute: RCodeRoute,

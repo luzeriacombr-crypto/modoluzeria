@@ -62,15 +62,21 @@ function buildMarkdown(result: MonthlyPlanResult): string {
   const parts: string[] = [`# Planejamento de ${MONTH_LABEL} (prévia gerada por IA)`];
   parts.push(`## Resumo da estratégia\n${result.summary}`);
   if (result.items.length) {
-    const lines = result.items.map((it) => {
-      const bits = [`**${it.title}** (${it.type === "reel" ? "Reel" : "Post"}${it.format ? ` — ${it.format}` : ""})`];
-      if (it.pillar) bits.push(`Pilar: ${it.pillar}`);
-      if (it.rationale) bits.push(it.rationale);
-      const script = it.captionDraft ? `\n  Roteiro/texto: ${it.captionDraft}` : "";
-      const caption = it.publishCaption ? `\n  Legenda: ${it.publishCaption}` : "";
-      return `- ${bits.join(" — ")}${script}${caption}`;
+    // Cada publicação vira sua própria subseção (### ), não um item de
+    // bullet — assim o captionDraft começa numa linha limpa e, se for um
+    // carrossel com "SLIDE N:", o parser reconhece e renderiza em caixinhas
+    // em vez de virar um blocão emendado atrás de "Roteiro/texto: ".
+    const sections = result.items.map((it, i) => {
+      const heading = `### ${i + 1}. ${it.title} (${it.type === "reel" ? "Reel" : "Post"}${it.format ? ` — ${it.format}` : ""})`;
+      const bodyParts = [
+        it.pillar ? `Pilar: ${it.pillar}` : null,
+        it.captionDraft || null,
+        it.publishCaption ? `Legenda: ${it.publishCaption}` : null,
+        it.rationale || null,
+      ].filter(Boolean);
+      return `${heading}\n${bodyParts.join("\n\n")}`;
     });
-    parts.push(`## Publicações sugeridas\n${lines.join("\n")}`);
+    parts.push(`## Publicações sugeridas\n${sections.join("\n\n")}`);
   }
   if (result.competitorNotes?.trim()) {
     parts.push(`## O que vimos dos concorrentes\n${result.competitorNotes.trim()}`);

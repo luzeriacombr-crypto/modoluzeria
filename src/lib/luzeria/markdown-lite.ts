@@ -8,7 +8,8 @@ export type MdBlock =
   | { kind: "h2"; text: string }
   | { kind: "h3"; text: string }
   | { kind: "p"; text: string }
-  | { kind: "ul"; items: string[] };
+  | { kind: "ul"; items: string[] }
+  | { kind: "slides"; items: { n: number; text: string }[] };
 
 export function parseMarkdownLite(md: string): MdBlock[] {
   const lines = md.replace(/\r\n/g, "\n").split("\n");
@@ -16,6 +17,7 @@ export function parseMarkdownLite(md: string): MdBlock[] {
   let i = 0;
   const isHeading = (l: string) => /^#{1,3}\s/.test(l);
   const isBullet = (l: string) => /^[-*]\s/.test(l);
+  const isSlide = (l: string) => /^slide\s*\d+\s*:/i.test(l);
 
   while (i < lines.length) {
     const trimmed = lines[i].trim();
@@ -35,12 +37,38 @@ export function parseMarkdownLite(md: string): MdBlock[] {
       continue;
     }
 
+    // "SLIDE N: texto" em linhas seguidas (formato de casa pra carrossel) —
+    // cada uma vira um item separado, renderizado como caixinha 4:5 em vez
+    // de virar um parágrafo emendado com o resto. Uma linha de continuação
+    // (sem "SLIDE N:" na frente) gruda no texto do último slide.
+    if (isSlide(trimmed)) {
+      const items: { n: number; text: string }[] = [];
+      while (i < lines.length && lines[i].trim() && !isHeading(lines[i].trim()) && !isBullet(lines[i].trim())) {
+        const t = lines[i].trim();
+        const m = t.match(/^slide\s*(\d+)\s*:\s*(.*)$/i);
+        if (m) {
+          items.push({ n: Number(m[1]), text: m[2].trim() });
+        } else if (items.length > 0) {
+          items[items.length - 1].text = [items[items.length - 1].text, t].filter(Boolean).join(" ");
+        } else {
+          break;
+        }
+        i++;
+      }
+      blocks.push({ kind: "slides", items });
+      continue;
+    }
+
     const paraLines: string[] = [];
-    while (i < lines.length && lines[i].trim() && !isHeading(lines[i].trim()) && !isBullet(lines[i].trim())) {
+    while (i < lines.length && lines[i].trim() && !isHeading(lines[i].trim()) && !isBullet(lines[i].trim()) && !isSlide(lines[i].trim())) {
       paraLines.push(lines[i].trim());
       i++;
     }
-    if (paraLines.length > 0) blocks.push({ kind: "p", text: paraLines.join(" ") });
+    // Preserva a quebra de linha original (em vez de emendar tudo com
+    // espaço) — o texto só vira um parágrafo novo de verdade quando tem
+    // linha em branco entre um trecho e outro; dentro do mesmo bloco, a
+    // quebra do usuário é visual (renderizado com white-space: pre-line).
+    if (paraLines.length > 0) blocks.push({ kind: "p", text: paraLines.join("\n") });
   }
   return blocks;
 }

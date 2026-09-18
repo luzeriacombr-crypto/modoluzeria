@@ -31,6 +31,7 @@ Sua tarefa: identificar cada roteiro individual dentro do material e reescrever 
 
 Regras importantes:
 - Use exatamente "## Roteiro N: " no início de cada roteiro (dois #, espaço, "Roteiro", o número, dois pontos, espaço, e o título).
+- Se o roteiro for um carrossel (várias imagens/slides em sequência), separe o texto de cada slide na sua própria linha começando com "SLIDE N: " (ex: "SLIDE 1: ...", "SLIDE 2: ...") — isso faz aparecer como caixinhas separadas pro cliente, em vez de um texto corrido só.
 - Não invente conteúdo que não está no material original — só reorganize e formate o que já existe.
 - Não use blocos de código (\`\`\`), não use links nem imagens.
 - Pode usar **negrito** pra destacar palavras-chave dentro do texto, se ajudar.

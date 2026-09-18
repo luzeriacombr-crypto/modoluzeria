@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles } from "lucide-react";
+import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { clientDocsQO, roteiroStatusesQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -209,6 +209,10 @@ export function ClientDocsTab({ clientId, aiPlanningEnabled }: { clientId: strin
         </div>
       ) : (
         <div className="space-y-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-foreground/35">Documentos salvos</span>
+            <DocsShareButton clientId={clientId} />
+          </div>
           {docs.map((doc) => (
             <DocRow
               key={doc.id}
@@ -224,6 +228,83 @@ export function ClientDocsTab({ clientId, aiPlanningEnabled }: { clientId: strin
       )}
 
       {showAiPlanning && <AIPlanningPreview clientId={clientId} onClose={() => setShowAiPlanning(false)} />}
+    </div>
+  );
+}
+
+function DocsShareButton({ clientId }: { clientId: string }) {
+  const { getOrCreateDocsShareToken, rotateDocsShareToken } = useApi();
+  const [open, setOpen] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const PUBLIC_BASE = import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com.br";
+
+  async function generate() {
+    const r = await getOrCreateDocsShareToken.mutateAsync({ data: { clientId } });
+    setToken(r.token); setOpen(true);
+  }
+  async function rotate() {
+    const r = await rotateDocsShareToken.mutateAsync({ data: { clientId } });
+    setToken(r.token); setCopied(false);
+  }
+  function copyLink() {
+    if (!token) return;
+    navigator.clipboard.writeText(`${PUBLIC_BASE}/planejamento/${token}`);
+    setCopied(true); setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={generate}
+        disabled={getOrCreateDocsShareToken.isPending}
+        className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full transition"
+        style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+      >
+        <Share2 size={12} /> Compartilhar
+      </button>
+      {open && token && (
+        <div
+          className="absolute right-0 mt-2 z-50 w-[320px] rounded-xl p-3 shadow-2xl"
+          style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}
+        >
+          <div className="text-[11px] uppercase tracking-wider text-foreground/40 font-semibold mb-2">
+            Link público — Roteiros/Planejamento
+          </div>
+          <div className="flex items-stretch gap-1.5">
+            <input
+              readOnly
+              value={`${PUBLIC_BASE}/planejamento/${token}`}
+              onFocus={(e) => e.currentTarget.select()}
+              className="flex-1 text-[12px] px-2.5 py-2 rounded-md outline-none"
+              style={{ background: "var(--background)", color: "var(--foreground)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}
+            />
+            <button
+              onClick={copyLink}
+              className="px-2.5 rounded-md text-[12px] font-semibold inline-flex items-center gap-1"
+              style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? "Copiado" : "Copiar"}
+            </button>
+          </div>
+          <div className="mt-2 flex items-center justify-between">
+            <button
+              onClick={rotate}
+              disabled={rotateDocsShareToken.isPending}
+              className="text-[11px] text-foreground/60 hover:text-foreground inline-flex items-center gap-1"
+            >
+              <RefreshCw size={11} /> Gerar novo link (revoga o anterior)
+            </button>
+            <button onClick={() => setOpen(false)} className="text-[11px] text-foreground/40 hover:text-foreground">Fechar</button>
+          </div>
+          <div className="mt-2 text-[10.5px] text-foreground/40 leading-snug">
+            Link separado do preview do feed — mostra só Roteiros e Planejamento, sempre o mais recente de cada.
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -280,7 +361,11 @@ function DocRow({
             <RoteirosView
               blocks={blocks}
               renderFooter={(g) => {
-                const blockText = (b: MdBlock) => (b.kind === "ul" ? b.items.map((i) => `- ${i}`).join("\n") : b.text);
+                const blockText = (b: MdBlock) => {
+                  if (b.kind === "ul") return b.items.map((i) => `- ${i}`).join("\n");
+                  if (b.kind === "slides") return b.items.map((s) => `SLIDE ${s.n}: ${s.text}`).join("\n");
+                  return b.text;
+                };
                 const body = g.blocks.map(blockText).join("\n\n");
                 return (
                   <RoteiroControls

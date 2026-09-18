@@ -61,6 +61,9 @@ import {
   getActiveFeedMonth, setActiveFeedMonth,
   getPublicFeed, getPublicDriveThumbnail, addPublicFeedback,
 } from "./feed-share.functions";
+import {
+  getOrCreateDocsShareToken, rotateDocsShareToken, getPublicClientDocs,
+} from "./client-docs-share.functions";
 import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from "./platform-updates.functions";
 import {
   listPhotoClients, getPhotoClient, createPhotoClient, deletePhotoClient,
@@ -640,6 +643,14 @@ export const publicFeedQO = (token: string | null) =>
   queryOptions({
     queryKey: ["public-feed", token],
     queryFn: () => getPublicFeed({ data: { token: token! } }),
+    enabled: !!token,
+    staleTime: 30_000,
+  });
+
+export const publicClientDocsQO = (token: string | null) =>
+  queryOptions({
+    queryKey: ["public-client-docs", token],
+    queryFn: () => getPublicClientDocs({ data: { token: token! } }),
     enabled: !!token,
     staleTime: 30_000,
   });
@@ -1604,6 +1615,9 @@ export function useApi() {
     /* ===== FEED SHARE ===== */
     getOrCreateShareToken: useMutation({ mutationFn: useServerFn(getOrCreateShareToken) }),
     rotateShareToken: useMutation({ mutationFn: useServerFn(rotateShareToken) }),
+    /* ===== ROTEIROS/PLANEJAMENTO SHARE ===== */
+    getOrCreateDocsShareToken: useMutation({ mutationFn: useServerFn(getOrCreateDocsShareToken) }),
+    rotateDocsShareToken: useMutation({ mutationFn: useServerFn(rotateDocsShareToken) }),
     setActiveFeedMonth: useMutation({
       mutationFn: useServerFn(setActiveFeedMonth),
       onSuccess: (_d, vars: any) => qc.invalidateQueries({ queryKey: ["active-feed-month", vars?.data?.clientId] }),

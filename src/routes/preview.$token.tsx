@@ -12,9 +12,6 @@ import { Hammer, ClipboardCheck, Rocket, CheckCheck } from "lucide-react";
 import { InstagramPostModal, type IGModalItem } from "@/components/luzeria/InstagramPostModal";
 import { PublicProgressBar } from "@/components/luzeria/PublicProgressBar";
 import { CLIENT_STAGE_META, type ClientStage } from "@/lib/luzeria/client-stage";
-import { RoteirosView, PlanejamentoView } from "@/components/luzeria/MarkdownLiteView";
-import { ClientRoteiroApproval } from "@/components/luzeria/ClientRoteiroApproval";
-import { parseMarkdownLite } from "@/lib/luzeria/markdown-lite";
 
 const STAGE_ICONS: Record<string, LucideIcon> = { Hammer, AlertTriangle, ClipboardCheck, Rocket, CheckCheck };
 
@@ -63,7 +60,7 @@ function PublicPreviewPage() {
   const { token } = Route.useParams();
   const q = useQuery(publicFeedQO(token));
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"feed" | "stories" | "roteiro" | "planejamento">("feed");
+  const [activeTab, setActiveTab] = useState<"feed" | "stories">("feed");
   const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
   const [savedName, setSavedName] = useState<string>(() => {
     if (typeof window === "undefined") return "";
@@ -91,22 +88,13 @@ function PublicPreviewPage() {
     );
   }
 
-  const { client, items, stories, orgName, orgLogoUrl, stageCounts, docs, roteiroClientStatuses } = q.data;
+  const { client, items, stories, orgName, orgLogoUrl, stageCounts } = q.data;
   const initial = client.name.charAt(0).toUpperCase();
   const activeItem = items.find((i) => i.id === activeId) ?? null;
   const blockedCount = items.filter((it) => it.stage === "blocked").length;
   const producingCount = stageCounts.find((s) => s.stage === "producing")?.count ?? 0;
   const canApproveMonth = producingCount === 0;
-
-  const roteiroDocs = docs.filter((d) => d.type === "roteiro");
-  const planejamentoDocs = docs.filter((d) => d.type === "planejamento");
-  const roteiroBlocks = roteiroDocs.length > 0 ? parseMarkdownLite(roteiroDocs.map((d) => d.content).join("\n\n")) : [];
-  const hasExtraTabs = roteiroDocs.length > 0 || planejamentoDocs.length > 0 || stories.length > 0;
-  // Multiple roteiro docs get merged into one block stream above, so their
-  // groups can't be traced back to a specific doc — approval targets the
-  // first roteiro doc's id, which covers the common case of one doc per client.
-  const roteiroDocId = roteiroDocs[0]?.id ?? null;
-  const roteiroStatusByTitle = new Map((roteiroClientStatuses ?? []).map((s) => [s.roteiroTitle, s]));
+  const hasExtraTabs = stories.length > 0;
 
   const igModalItem: IGModalItem | null = activeItem ? {
     id: activeItem.id,
@@ -160,12 +148,6 @@ function PublicPreviewPage() {
             <PreviewTabPill active={activeTab === "feed"} onClick={() => setActiveTab("feed")}>Feed</PreviewTabPill>
             {stories.length > 0 && (
               <PreviewTabPill active={activeTab === "stories"} onClick={() => setActiveTab("stories")}>Stories</PreviewTabPill>
-            )}
-            {roteiroDocs.length > 0 && (
-              <PreviewTabPill active={activeTab === "roteiro"} onClick={() => setActiveTab("roteiro")}>Roteiros</PreviewTabPill>
-            )}
-            {planejamentoDocs.length > 0 && (
-              <PreviewTabPill active={activeTab === "planejamento"} onClick={() => setActiveTab("planejamento")}>Planejamento</PreviewTabPill>
             )}
           </div>
         )}
@@ -228,27 +210,6 @@ function PublicPreviewPage() {
 
         {activeTab === "stories" && (
           <PublicStoriesTray stories={stories} onOpen={(i) => setActiveStoryIndex(i)} />
-        )}
-
-        {activeTab === "roteiro" && (
-          <RoteirosView
-            blocks={roteiroBlocks}
-            renderFooter={(g) => roteiroDocId ? (
-              <ClientRoteiroApproval
-                token={token}
-                docId={roteiroDocId}
-                title={g.title}
-                current={roteiroStatusByTitle.get(g.title)}
-                onDone={() => q.refetch()}
-              />
-            ) : null}
-          />
-        )}
-
-        {activeTab === "planejamento" && (
-          <div className="space-y-4">
-            {planejamentoDocs.map((d) => <PlanejamentoView key={d.id} blocks={parseMarkdownLite(d.content)} />)}
-          </div>
         )}
 
         <div className="mt-8 flex flex-col items-center gap-2">

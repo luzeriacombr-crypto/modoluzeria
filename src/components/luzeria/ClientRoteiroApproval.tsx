@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, PencilLine } from "lucide-react";
-import { setRoteiroClientStatus } from "@/lib/luzeria/feed-share.functions";
-import type { PublicRoteiroClientStatus } from "@/lib/luzeria/feed-share.functions";
+import { setRoteiroClientStatus } from "@/lib/luzeria/client-docs-share.functions";
+import type { PublicRoteiroClientStatus } from "@/lib/luzeria/client-docs-share.functions";
 
 /** Client-facing approve/ajustar control for a roteiro, on the public
  * preview page — separate from the team's own review (RoteiroControls),
