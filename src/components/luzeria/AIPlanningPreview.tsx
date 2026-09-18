@@ -67,7 +67,7 @@ function AILoadingState() {
 }
 
 function buildMarkdown(result: MonthlyPlanResult): string {
-  const parts: string[] = [`# Planejamento de ${MONTH_LABEL} (prévia gerada por IA)`];
+  const parts: string[] = [`# Planejamento de ${MONTH_LABEL}`];
   parts.push(`## Resumo da estratégia\n${result.summary}`);
   if (result.items.length) {
     // Cada publicação vira sua própria subseção (### ), não um item de

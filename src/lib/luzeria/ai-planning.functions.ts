@@ -18,7 +18,14 @@ import { requireActiveProfile } from "./require-active";
 // repita o mesmo texto nos dois.
 export const HOUSE_STYLE_GUIDE = `FORMATO DE CASA — captionDraft precisa sair PRONTO PRA USAR, no formato exato abaixo (nunca um resumo genérico):
 
-ANTES DE TUDO: isso vale tanto pro captionDraft (o roteiro/texto de produção) quanto pro publishCaption (a legenda, ver mais abaixo) — nunca escreva com "cara de texto gerado por IA". Evite: "É importante ressaltar/destacar", pergunta retórica genérica pra abrir todo texto (tipo "Você sabia que...?"), "Primeiro... Segundo... Terceiro..." em toda peça (varie a estrutura de um roteiro pro outro), frase de marketing vaga tipo "cuidado de qualidade" ou "atendimento diferenciado" sem nenhum fato concreto por trás, encerramento sempre igual. Prefira sempre um fato, número ou detalhe específico (da base de conhecimento da agência ou do histórico do cliente, quando disponível) a uma frase genérica — é isso que faz o texto soar escrito por alguém que conhece o negócio de verdade.
+ANTES DE TUDO: isso vale tanto pro captionDraft (o roteiro/texto de produção) quanto pro publishCaption (a legenda, ver mais abaixo) — nunca escreva com "cara de texto gerado por IA". Evite especificamente:
+- "É importante ressaltar/destacar", pergunta retórica genérica pra abrir todo texto (tipo "Você sabia que...?").
+- "Primeiro... Segundo... Terceiro..." em toda peça (varie a estrutura de um roteiro pro outro).
+- Frase de marketing vaga tipo "cuidado de qualidade" ou "atendimento diferenciado" sem nenhum fato concreto por trás.
+- Trio de frases curtas telegráficas separadas por ponto, tipo "Fachada nova. Recepção nova. Laboratório novo." — isso é tique clássico de IA; prefira uma frase corrida de verdade.
+- Construção de contraste em travessão tipo "Não é sobre X — é sobre Y" ou "X. Mas na verdade, Y" — usada como muleta em quase toda peça. Pode aparecer uma vez ou outra, nunca como fórmula fixa.
+- Encerramento sempre igual (mesma frase de CTA repetida peça após peça).
+Prefira sempre um fato, número ou detalhe específico (da base de conhecimento da agência ou do histórico do cliente, quando disponível) a uma frase genérica — é isso que faz o texto soar escrito por alguém que conhece o negócio de verdade, não gerado por IA. NUNCA inclua, em nenhum texto ou título, qualquer menção a "IA", "inteligência artificial" ou "gerado por" — o cliente final nunca deve saber que esse conteúdo passou por IA.
 
 Se for POST estático (format: "estático"):
 TEXTO:
@@ -32,7 +39,7 @@ Feliz dia do Cliente.
 Se for POST carrossel (format: "carrossel"):
 SLIDE 1: <texto do slide 1>
 SLIDE 2: <texto do slide 2>
-(continue "SLIDE N:" pra cada slide, geralmente 5 a 8 slides — o último costuma ser a chamada pra ação)
+(continue "SLIDE N:" pra cada slide — VARIE a quantidade entre os carrosséis do lote, de 3 a 8 slides conforme o que a mensagem realmente precisa; não estique um carrossel só pra bater um número redondo. O último costuma ser a chamada pra ação, mas nem sempre precisa. E nem todo carrossel precisa de um slide 1 "de contexto/introdução" genérico antes de ir ao ponto — se o assunto já é direto, comece o SLIDE 1 falando a coisa em si, sem enrolar.)
 
 Exemplo real:
 SLIDE 1: Aos 30, seu rosto já começa a perder o que sustenta ele.
