@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2 } from "lucide-react";
-import { generateMonthlyPlanPreview, type MonthlyPlanItem, type MonthlyPlanResult } from "@/lib/luzeria/ai-planning.functions";
+import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2, Star, BookMarked } from "lucide-react";
+import { generateMonthlyPlanPreview, submitAiPlanningFeedback, type MonthlyPlanItem, type MonthlyPlanResult } from "@/lib/luzeria/ai-planning.functions";
 import { useApi } from "@/lib/luzeria/queries";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { Modal } from "./Modals";
@@ -79,11 +80,31 @@ function buildMarkdown(result: MonthlyPlanResult): string {
 
 export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onClose: () => void }) {
   const generate = useServerFn(generateMonthlyPlanPreview);
+  const submitFeedback = useServerFn(submitAiPlanningFeedback);
+  const navigate = useNavigate();
   const api = useApi();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<MonthlyPlanResult | null>(null);
   const [pickingMonth, setPickingMonth] = useState(false);
+  const [rating, setRating] = useState<number | null>(null);
+  const [reasonDraft, setReasonDraft] = useState("");
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [sendingFeedback, setSendingFeedback] = useState(false);
+
+  async function sendFeedback() {
+    if (rating === null) return;
+    setSendingFeedback(true);
+    try {
+      await submitFeedback({ data: { clientId, rating, reason: reasonDraft.trim() || undefined } });
+      setFeedbackSent(true);
+      toast.success("Valeu pela avaliação!");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Não consegui enviar a avaliação.");
+    } finally {
+      setSendingFeedback(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -142,7 +163,7 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
   const inp = "w-full bg-background border border-foreground/8 rounded-md px-2.5 py-1.5 text-[13px] text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
 
   return (
-    <Modal open onClose={onClose} title="Prévia de planejamento com IA" maxWidthClass="max-w-xl">
+    <Modal open onClose={onClose} title="Prévia de planejamento com IA (versão beta)" maxWidthClass="max-w-xl">
       {loading && <AILoadingState />}
 
       {!loading && error && (
@@ -166,6 +187,19 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
 
       {!loading && !error && result && !pickingMonth && (
         <div className="space-y-4">
+          {result.knowledgeItemsCount === 0 && (
+            <button
+              onClick={() => { onClose(); navigate({ to: "/configuracoes", search: { tab: "knowledge" } }); }}
+              className="w-full flex items-center gap-2.5 rounded-lg p-3 text-left transition hover:opacity-90"
+              style={{ background: "rgba(var(--lz-brand-rgb),0.08)", border: "1px solid rgba(var(--lz-brand-rgb),0.2)" }}
+            >
+              <BookMarked size={15} className="shrink-0" style={{ color: "var(--lz-accent-ink)" }} />
+              <div className="text-[12px] text-foreground/70 leading-relaxed">
+                <span className="font-semibold text-foreground">Sua Base de Conhecimento está vazia.</span> A prévia fica melhor com contexto de como sua agência cria conteúdo — clique pra preencher.
+              </div>
+            </button>
+          )}
+
           <div className="rounded-lg p-3.5 text-[13px] text-foreground/80 leading-relaxed" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
             {result.summary}
           </div>
@@ -220,6 +254,45 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
               {result.competitorNotes}
             </div>
           )}
+
+          <div className="rounded-lg p-3.5" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)" }}>
+            {feedbackSent ? (
+              <p className="text-[12.5px] text-foreground/60">Valeu pela avaliação — isso ajuda a gente a melhorar essa feature em beta. 🙌</p>
+            ) : (
+              <>
+                <p className="text-[12.5px] font-semibold text-foreground mb-2">Avise-nos sua satisfação com o resultado</p>
+                <div className="flex items-center gap-1 mb-2">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button key={n} type="button" onClick={() => setRating(n)} className="p-0.5">
+                      <Star
+                        size={20}
+                        fill={rating !== null && n <= rating ? "rgb(var(--lz-brand-rgb))" : "none"}
+                        color={rating !== null && n <= rating ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 30%, transparent)"}
+                      />
+                    </button>
+                  ))}
+                </div>
+                {rating !== null && (
+                  <div className="space-y-2">
+                    <textarea
+                      value={reasonDraft}
+                      onChange={(e) => setReasonDraft(e.target.value)}
+                      placeholder="Por quê? (opcional)"
+                      rows={2}
+                      className={inp + " resize-none"}
+                    />
+                    <button
+                      onClick={sendFeedback}
+                      disabled={sendingFeedback}
+                      className="lz-btn-primary text-xs px-4 py-1.5 rounded-md disabled:opacity-50"
+                    >
+                      {sendingFeedback ? "Enviando…" : "Enviar avaliação"}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
           <div className="flex items-center justify-end gap-2 pt-1">
             <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Descartar</button>

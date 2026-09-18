@@ -27,6 +27,7 @@ const AffiliateProgramPanel = lazy(() => import("./AffiliateProgramPanel").then(
 const ResellerPanel = lazy(() => import("./ResellerPanel").then((m) => ({ default: m.ResellerPanel })));
 const AgenciesBillingPanel = lazy(() => import("./AgenciesBillingPanel").then((m) => ({ default: m.AgenciesBillingPanel })));
 const PageActivityReportPanel = lazy(() => import("./PageActivityReportPanel").then((m) => ({ default: m.PageActivityReportPanel })));
+const AiPlanningFeedbackPanel = lazy(() => import("./AiPlanningFeedbackPanel").then((m) => ({ default: m.AiPlanningFeedbackPanel })));
 const ClientMarginPanel = lazy(() => import("./ClientMarginPanel").then((m) => ({ default: m.ClientMarginPanel })));
 const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => ({ default: m.DemoRequestsPanel })));
 const SalesPageEditorTab = lazy(() => import("./SalesPageEditorTab").then((m) => ({ default: m.SalesPageEditorTab })));
@@ -178,6 +179,11 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-foreground/10">
               <PageActivityReportPanel />
+            </div>
+          )}
+          {me.isPlatformAdmin && (
+            <div className="pt-2 border-t border-foreground/10">
+              <AiPlanningFeedbackPanel />
             </div>
           )}
           {isMaster && (

@@ -106,6 +106,7 @@ import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLo
 import { listTrash, restoreItem, purgeItem } from "./trash.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus, createRoteirosFromPlan } from "./client-docs.functions";
 import { listOrgKnowledge, saveOrgKnowledgeText, saveOrgKnowledgeFile, deleteOrgKnowledge } from "./org-knowledge.functions";
+import { listAiPlanningFeedback } from "./ai-planning.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
 import { listDemoRequests } from "./demo-request.functions";
 import { getOrgCostSettings, setOrgCostSettings, getClientMargins, getClientMarginBreakdown } from "./margin.functions";
@@ -430,6 +431,8 @@ export const orgsBillingQO = () =>
   queryOptions({ queryKey: ["orgs-billing"], queryFn: () => listOrgsBilling() });
 export const demoRequestsQO = () =>
   queryOptions({ queryKey: ["demo-requests"], queryFn: () => listDemoRequests() });
+export const aiPlanningFeedbackQO = () =>
+  queryOptions({ queryKey: ["ai-planning-feedback"], queryFn: () => listAiPlanningFeedback() });
 export const pageActivityReportQO = (days: number) =>
   queryOptions({ queryKey: ["page-activity-report", days], queryFn: () => getPageActivityReport({ data: { days } }) });
 

@@ -94,7 +94,7 @@ export function ClientDocsTab({ clientId, aiPlanningEnabled }: { clientId: strin
         >
           <Sparkles size={16} className="shrink-0" style={{ color: "var(--lz-accent-ink)" }} />
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-foreground">Gerar prévia de planejamento com IA</div>
+            <div className="text-sm font-semibold text-foreground">Gerar prévia de planejamento com IA <span className="text-foreground/40 font-normal">(versão beta)</span></div>
             <div className="text-[11px] text-foreground/45">Lê o histórico, arquivos de marca e concorrentes — em teste, só nesse cliente.</div>
           </div>
         </button>

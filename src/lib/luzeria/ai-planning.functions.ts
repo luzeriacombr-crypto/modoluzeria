@@ -109,7 +109,12 @@ const PlanResultSchema = z.object({
   competitorNotes: z.string().optional(),
 });
 export type MonthlyPlanItem = z.infer<typeof PlanItemSchema>;
-export type MonthlyPlanResult = z.infer<typeof PlanResultSchema>;
+export type MonthlyPlanResult = z.infer<typeof PlanResultSchema> & {
+  /** Quantas entradas a base de conhecimento da agência tinha na hora
+   * dessa geração — usado pra sugerir preencher a base quando estiver
+   * vazia (feature em beta, quanto mais contexto melhor o resultado). */
+  knowledgeItemsCount: number;
+};
 
 export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
@@ -268,5 +273,60 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       (b: any) => b.type === "tool_use" && b.name === "report_monthly_plan",
     ) as any;
     if (!toolUse) throw new Error("Não consegui gerar a prévia — tenta de novo.");
-    return PlanResultSchema.parse(toolUse.input);
+    const parsed = PlanResultSchema.parse(toolUse.input);
+    return { ...parsed, knowledgeItemsCount: knowledge.length };
+  });
+
+/** Avaliação de satisfação da prévia (feature em beta) — 0 a 5 estrelas +
+ * motivo opcional. Admin-only, uma linha por avaliação. */
+export const submitAiPlanningFeedback = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; rating: number; reason?: string }) =>
+    z.object({
+      clientId: z.string().uuid(),
+      rating: z.number().int().min(0).max(5),
+      reason: z.string().trim().max(1000).optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await (context.supabase as any).from("ai_planning_feedback").insert({
+      org_id: context.orgId, client_id: data.clientId,
+      rating: data.rating, reason: data.reason || null, created_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export type AiPlanningFeedbackRow = {
+  id: string;
+  rating: number;
+  reason: string | null;
+  createdAt: string;
+  orgName: string;
+  clientName: string;
+};
+
+/** Platform-admin only: todas as avaliações de satisfação da feature em
+ * beta, de todas as agências — pra acompanhar a recepção em Configurações
+ * → Plano e Cobrança. */
+export const listAiPlanningFeedback = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }): Promise<AiPlanningFeedbackRow[]> => {
+    const { LUZERIA_ORG_ID } = await import("./api.functions");
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await (supabaseAdmin as any)
+      .from("ai_planning_feedback")
+      .select("id, rating, reason, created_at, orgs(name), clients(name)")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r: any) => ({
+      id: r.id, rating: r.rating, reason: r.reason, createdAt: r.created_at,
+      orgName: r.orgs?.name ?? "—", clientName: r.clients?.name ?? "—",
+    }));
   });
