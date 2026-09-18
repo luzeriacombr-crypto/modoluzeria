@@ -127,7 +127,11 @@ export const sendSupportMessage = createServerFn({ method: "POST" })
       replyText = replyText.slice(ESCALATE_TAG.length).trim();
     }
 
-    const { error: replyErr } = await db
+    // A RLS de support_messages só deixa a própria pessoa inserir role='user'
+    // (de propósito, pra ninguém forjar uma mensagem 'assistant'/'admin' via
+    // API direta) — a resposta da IA precisa do client admin pra gravar.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: replyErr } = await (supabaseAdmin as any)
       .from("support_messages").insert({ thread_id: threadId, role: "assistant", content: replyText });
     if (replyErr) throw new Error(replyErr.message);
 
