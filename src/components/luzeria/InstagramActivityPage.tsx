@@ -132,15 +132,7 @@ export function InstagramActivityPage() {
       )}
 
       {clientFilter && (
-        <AccountOverviewDashboard key={clientFilter} clientId={clientFilter} clientName={clients.find((c) => c.id === clientFilter)?.name ?? ""} />
-      )}
-
-      {clientFilter && (
-        <FeedGridPanel key={`feed-${clientFilter}`} clientId={clientFilter} clientName={clients.find((c) => c.id === clientFilter)?.name ?? ""} />
-      )}
-
-      {clientFilter && (
-        <DirectMessagesPanel key={`direct-${clientFilter}`} clientId={clientFilter} />
+        <InstagramInsightsTabs key={clientFilter} clientId={clientFilter} clientName={clients.find((c) => c.id === clientFilter)?.name ?? ""} />
       )}
 
       {scheduled.length > 0 && (
@@ -170,91 +162,211 @@ export function InstagramActivityPage() {
   );
 }
 
-function KpiCard({ icon, label, value, changePct }: { icon: React.ReactNode; label: string; value: number; changePct: number | null }) {
+function KpiTile({ label, value, changePct }: { label: string; value: number; changePct: number | null }) {
   return (
-    <div className="rounded-lg border border-foreground/8 bg-card p-3.5">
-      <div className="flex items-center gap-1.5 text-foreground/40 mb-1.5">
-        {icon}
-        <span className="text-[10px] uppercase font-bold tracking-wider">{label}</span>
-      </div>
-      <div className="flex items-end justify-between gap-2">
-        <span className="text-2xl font-bold text-foreground tabular-nums">{value.toLocaleString("pt-BR")}</span>
-        {changePct !== null && (
-          <span
-            className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded"
-            style={{
-              color: changePct >= 0 ? "#7ED957" : "#FF6B6B",
-              backgroundColor: changePct >= 0 ? "rgba(126,217,87,0.12)" : "rgba(255,107,107,0.12)",
-            }}
-          >
-            {changePct >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-            {Math.abs(changePct)}%
-          </span>
-        )}
-      </div>
+    <div className="rounded-lg border border-foreground/8 bg-card p-3 text-center">
+      <div className="text-[9.5px] uppercase font-bold tracking-wider text-foreground/35 mb-1.5 truncate" title={label}>{label}</div>
+      <div className="text-lg font-extrabold text-foreground tabular-nums">{value.toLocaleString("pt-BR")}</div>
+      {changePct !== null && (
+        <div
+          className="mt-1 inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded"
+          style={{
+            color: changePct >= 0 ? "#7ED957" : "#FF6B6B",
+            backgroundColor: changePct >= 0 ? "rgba(126,217,87,0.12)" : "rgba(255,107,107,0.12)",
+          }}
+        >
+          {changePct >= 0 ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+          {Math.abs(changePct)}%
+        </div>
+      )}
     </div>
   );
 }
 
-function DemographicBar({ label, pct }: { label: string; pct: number }) {
+function ThinBar({ label, pct }: { label: string; pct: number }) {
   return (
-    <div className="flex items-center gap-2 text-xs">
+    <div className="flex items-center gap-2.5 text-xs mb-2.5">
       <span className="w-24 shrink-0 text-foreground/60 truncate">{label}</span>
       <div className="flex-1 h-1.5 rounded-full bg-foreground/8 overflow-hidden">
         <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "rgb(var(--lz-brand-rgb))" }} />
       </div>
-      <span className="w-9 shrink-0 text-right text-foreground/50 tabular-nums">{pct}%</span>
+      <span className="w-10 shrink-0 text-right text-foreground/50 tabular-nums">{pct}%</span>
     </div>
   );
 }
 
-/** Dashboard estilo "Insights do Instagram" — carrega sozinho ao escolher
- * um cliente (poucas chamadas: perfil, métricas de conta em série e
- * demografia), diferente do painel de desempenho por publicação abaixo
- * (que é sob demanda porque faz 1 chamada por post). */
-function AccountOverviewDashboard({ clientId, clientName }: { clientId: string; clientName: string }) {
+/** Barra de faixa etária dividida por gênero (mesmo dado de demographics.age,
+ * só desenhado como duas cores lado a lado) — imita o "Faixa etária" do
+ * Instagram, sem precisar de nenhuma chamada nova. */
+function AgeGenderBar({ label, female, male, other, pct }: { label: string; female: number; male: number; other: number; pct: number }) {
+  const total = female + male + other || 1;
+  return (
+    <div className="flex items-center gap-2.5 text-xs mb-2.5">
+      <span className="w-12 shrink-0 text-foreground/60">{label}</span>
+      <div className="flex-1 h-1.5 rounded-full bg-foreground/8 overflow-hidden flex">
+        <div className="h-full" style={{ width: `${(female / total) * 100}%`, background: "rgb(var(--lz-brand-rgb))" }} />
+        <div className="h-full" style={{ width: `${(male / total) * 100}%`, background: "rgba(var(--lz-brand-rgb),0.35)" }} />
+      </div>
+      <span className="w-10 shrink-0 text-right text-foreground/50 tabular-nums">{pct}%</span>
+    </div>
+  );
+}
+
+/** Carrega mídia real da conta + insights por post (1 chamada por post, com
+ * pausa entre elas pra não estourar limite de taxa da Meta) — compartilhado
+ * entre a aba "Conteúdo" (lista completa) e "Visão geral" ("conteúdo mais
+ * relevante"), pra não duplicar a busca ao trocar de aba. */
+function useAccountMediaWithInsights(clientId: string) {
+  const getMedia = useServerFn(getInstagramAccountMedia);
+  const getInsights = useServerFn(getInstagramAccountMediaInsights);
+  const [loadingMedia, setLoadingMedia] = useState(true);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [media, setMedia] = useState<InstagramAccountMedia[] | null>(null);
+  const [loadingInsights, setLoadingInsights] = useState(false);
+  const [results, setResults] = useState<Map<string, InstagramMediaInsights & { error?: string }>>(new Map());
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAll() {
+      setLoadingMedia(true);
+      setMediaError(null);
+      setResults(new Map());
+      let items: InstagramAccountMedia[] = [];
+      try {
+        const r = await getMedia({ data: { clientId } });
+        if (cancelled) return;
+        items = r.items;
+        setMedia(items);
+      } catch (e: any) {
+        if (!cancelled) { setMediaError(e?.message ?? "Falha ao listar publicações do Instagram."); setLoadingMedia(false); }
+        return;
+      }
+      setLoadingMedia(false);
+      if (items.length === 0) return;
+      setLoadingInsights(true);
+      for (const m of items) {
+        if (cancelled) return;
+        try {
+          const insights = await getInsights({ data: { clientId, mediaId: m.id, mediaProductType: m.mediaProductType } });
+          if (!cancelled) setResults((prev) => new Map(prev).set(m.id, insights));
+        } catch (e: any) {
+          if (!cancelled) setResults((prev) => new Map(prev).set(m.id, {
+            itemId: m.id, reach: null, likes: null, comments: null, saved: null, shares: null, views: null,
+            totalInteractions: null, degradedReason: null, error: e?.message ?? "Falha ao buscar",
+          }));
+        }
+        // Pequena pausa entre chamadas pra não estourar limite de taxa da Meta.
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      if (!cancelled) setLoadingInsights(false);
+    }
+    loadAll();
+    return () => { cancelled = true; };
+  }, [clientId]);
+
+  return { media, mediaError, loadingMedia, loadingInsights, results };
+}
+
+const CONTENT_METRIC_PILLS: { key: keyof InstagramMediaInsights; label: string }[] = [
+  { key: "views", label: "Visualizações" },
+  { key: "likes", label: "Curtidas" },
+  { key: "comments", label: "Comentários" },
+  { key: "saved", label: "Salvamentos" },
+  { key: "shares", label: "Compart." },
+];
+const CONTENT_TYPE_FILTERS = [
+  { key: "ALL", label: "Todos os conteúdos" },
+  { key: "REELS", label: "Reels" },
+  { key: "FEED", label: "Posts" },
+  { key: "STORY", label: "Stories" },
+];
+
+function csvEscape(v: string) {
+  return `"${v.replace(/"/g, '""')}"`;
+}
+
+/** Painel de insights de um cliente — mesma organização de abas do
+ * Instagram de verdade (Visão geral / Conteúdo / Público), só que nas cores
+ * do Modo Criador. Direct fica como uma 4ª aba (não existe no Instagram
+ * "Insights", mas é a mesma funcionalidade que já existia aqui). */
+function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; clientName: string }) {
+  const [pane, setPane] = useState<"geral" | "conteudo" | "publico" | "direct">("geral");
+  const mediaState = useAccountMediaWithInsights(clientId);
+
+  const TABS: { key: typeof pane; label: string }[] = [
+    { key: "geral", label: "Visão geral" },
+    { key: "conteudo", label: "Conteúdo" },
+    { key: "publico", label: "Público" },
+    { key: "direct", label: "Direct" },
+  ];
+
+  return (
+    <div className="mb-8 rounded-lg border border-foreground/8 bg-card p-4">
+      <div className="flex items-center gap-1.5 mb-3 text-foreground/60">
+        <BarChart3 size={14} />
+        <span className="text-[11px] uppercase font-bold tracking-wider">Insights de {clientName}</span>
+      </div>
+      <div className="flex items-center gap-1 border-b border-foreground/8 mb-4 -mt-1">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setPane(t.key)}
+            className="px-3 py-2.5 text-xs font-semibold relative shrink-0"
+            style={{ color: pane === t.key ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 35%, transparent)" }}
+          >
+            {t.label}
+            {pane === t.key && (
+              <span className="absolute left-2 right-2 -bottom-px h-[2px] rounded-full" style={{ background: "rgb(var(--lz-brand-rgb))" }} />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {pane === "geral" && <VisaoGeralPane clientId={clientId} mediaState={mediaState} />}
+      {pane === "conteudo" && <ConteudoPane clientId={clientId} clientName={clientName} mediaState={mediaState} />}
+      {pane === "publico" && <PublicoPane clientId={clientId} />}
+      {pane === "direct" && <DirectMessagesPanel clientId={clientId} />}
+    </div>
+  );
+}
+
+function VisaoGeralPane({ clientId, mediaState }: { clientId: string; mediaState: ReturnType<typeof useAccountMediaWithInsights> }) {
   const getOverview = useServerFn(getInstagramAccountOverview);
   const { data, isLoading, error } = useQuery({
     queryKey: ["instagram-account-overview", clientId],
     queryFn: () => getOverview({ data: { clientId } }),
   });
 
-  if (isLoading) {
-    return (
-      <div className="mb-6 rounded-lg border border-foreground/8 bg-card p-8 text-center">
-        <Loader2 size={18} className="animate-spin mx-auto text-foreground/30" />
-      </div>
-    );
-  }
-  if (error || !data) {
-    return (
-      <div className="mb-6 rounded-lg border border-foreground/8 bg-card p-4 text-xs text-red-400/80">
-        {(error as any)?.message ?? "Não foi possível carregar o painel de insights."}
-      </div>
-    );
-  }
+  if (isLoading) return <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>;
+  if (error || !data) return <p className="text-xs text-red-400/80 py-4">{(error as any)?.message ?? "Não foi possível carregar o painel de insights."}</p>;
 
   const maxReach = Math.max(...data.reachSeries.map((r) => r.value), 1);
   const maxFreq = Math.max(...data.postingFrequency.map((d) => d.count), 1);
   const maxOnline = Math.max(...(data.onlineFollowers?.map((h) => h.value) ?? []), 1);
   const bestHour = data.onlineFollowers ? [...data.onlineFollowers].sort((a, b) => b.value - a.value)[0] : null;
 
+  // "Conteúdo mais relevante" — reaproveita o que a aba Conteúdo já carregou
+  // (sem chamada extra), ordenado por visualizações (ou alcance, se o tipo
+  // de mídia não tiver "views").
+  const topContent = (mediaState.media ?? [])
+    .map((m) => ({ m, r: mediaState.results.get(m.id) }))
+    .filter((x): x is { m: InstagramAccountMedia; r: InstagramMediaInsights & { error?: string } } =>
+      !!x.r && !x.r.error && (x.r.views != null || x.r.reach != null))
+    .sort((a, b) => (b.r.views ?? b.r.reach ?? 0) - (a.r.views ?? a.r.reach ?? 0))
+    .slice(0, 8);
+
   return (
-    <div className="mb-6">
-      <div className="flex items-center gap-1.5 mb-3 text-foreground/60">
-        <BarChart3 size={14} />
-        <span className="text-[11px] uppercase font-bold tracking-wider">Insights de {clientName}</span>
-        {data.username && <span className="text-[11px] text-foreground/35">@{data.username}</span>}
+    <div>
+      {data.username && <p className="text-[11px] text-foreground/35 mb-3">@{data.username}</p>}
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5">
+        <KpiTile label="Seguidores" value={data.followersCount} changePct={data.followersChangePct} />
+        <KpiTile label="Alcance (30d)" value={data.kpis.reach} changePct={data.kpis.reachChangePct} />
+        <KpiTile label="Visitas ao perfil" value={data.kpis.profileViews} changePct={data.kpis.profileViewsChangePct} />
+        <KpiTile label="Interações" value={data.kpis.totalInteractions} changePct={data.kpis.totalInteractionsChangePct} />
       </div>
 
-      <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
-        <KpiCard icon={<Users size={12} />} label="Seguidores" value={data.followersCount} changePct={data.followersChangePct} />
-        <KpiCard icon={<Eye size={12} />} label="Alcance (30d)" value={data.kpis.reach} changePct={data.kpis.reachChangePct} />
-        <KpiCard icon={<Sparkles size={12} />} label="Visitas ao perfil" value={data.kpis.profileViews} changePct={data.kpis.profileViewsChangePct} />
-        <KpiCard icon={<Heart size={12} />} label="Interações" value={data.kpis.totalInteractions} changePct={data.kpis.totalInteractionsChangePct} />
-      </div>
-
-      <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+      <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
         <div className="rounded-lg border border-foreground/8 bg-card p-4">
           <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Alcance por dia (30 dias)</span>
           <div className="h-40 mt-2 -ml-2">
@@ -304,7 +416,25 @@ function AccountOverviewDashboard({ clientId, clientName }: { clientId: string; 
             </ResponsiveContainer>
           </div>
         </div>
+      </div>
 
+      {topContent.length > 0 && (
+        <div className="mb-5">
+          <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-2.5">Conteúdo mais relevante</span>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {topContent.map(({ m, r }) => (
+              <div key={m.id} className="relative shrink-0 w-[84px] aspect-[9/16] rounded-md overflow-hidden bg-foreground/5">
+                {m.thumbnailUrl && <img src={m.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />}
+                <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 text-[9px] font-bold text-white bg-black/60 rounded px-1.5 py-0.5">
+                  <Eye size={9} /> {(r.views ?? r.reach ?? 0).toLocaleString("pt-BR")}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
         <div className="rounded-lg border border-foreground/8 bg-card p-4">
           <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Frequência de postagem</span>
           <div className="h-40 mt-2 -ml-2">
@@ -329,135 +459,60 @@ function AccountOverviewDashboard({ clientId, clientName }: { clientId: string; 
             </ResponsiveContainer>
           </div>
         </div>
+
+        {data.onlineFollowers && (
+          <div className="rounded-lg border border-foreground/8 bg-card p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Seguidores online por horário</span>
+              {bestHour && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ color: "var(--lz-accent-ink)", backgroundColor: "rgba(var(--lz-brand-rgb),0.12)" }}>
+                  Melhor: {String(bestHour.hour).padStart(2, "0")}h
+                </span>
+              )}
+            </div>
+            <div className="h-32 mt-2 -ml-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.onlineFollowers.map((h) => ({ ...h, label: `${String(h.hour).padStart(2, "0")}h` }))}>
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} interval={2}
+                    tick={{ fill: "color-mix(in srgb, var(--foreground) 40%, transparent)", fontSize: 9 }} />
+                  <Tooltip
+                    cursor={{ fill: "rgba(var(--lz-brand-light-rgb),0.08)" }}
+                    content={({ active, payload }: any) => active && payload?.length ? (
+                      <div className="bg-background border border-foreground/10 rounded-md px-2 py-1 text-[10px] text-foreground/80 shadow-xl">
+                        {payload[0].payload.label}: <b>{payload[0].value.toLocaleString("pt-BR")}</b> online
+                      </div>
+                    ) : null}
+                  />
+                  <Bar dataKey="value" radius={[3, 3, 0, 0]}>
+                    {data.onlineFollowers.map((h, i) => (
+                      <Cell key={i} fill={h.value === maxOnline && maxOnline > 0 ? "var(--lz-accent-ink)" : "rgba(var(--lz-brand-light-rgb),0.4)"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
       </div>
-
-      {data.onlineFollowers && (
-        <div className="rounded-lg border border-foreground/8 bg-card p-4 mb-4">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Seguidores online por horário</span>
-            {bestHour && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ color: "var(--lz-accent-ink)", backgroundColor: "rgba(var(--lz-brand-rgb),0.12)" }}>
-                Melhor horário: {String(bestHour.hour).padStart(2, "0")}h
-              </span>
-            )}
-          </div>
-          <div className="h-32 mt-2 -ml-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.onlineFollowers.map((h) => ({ ...h, label: `${String(h.hour).padStart(2, "0")}h` }))}>
-                <XAxis dataKey="label" axisLine={false} tickLine={false} interval={2}
-                  tick={{ fill: "color-mix(in srgb, var(--foreground) 40%, transparent)", fontSize: 9 }} />
-                <Tooltip
-                  cursor={{ fill: "rgba(var(--lz-brand-light-rgb),0.08)" }}
-                  content={({ active, payload }: any) => active && payload?.length ? (
-                    <div className="bg-background border border-foreground/10 rounded-md px-2 py-1 text-[10px] text-foreground/80 shadow-xl">
-                      {payload[0].payload.label}: <b>{payload[0].value.toLocaleString("pt-BR")}</b> online
-                    </div>
-                  ) : null}
-                />
-                <Bar dataKey="value" radius={[3, 3, 0, 0]}>
-                  {data.onlineFollowers.map((h, i) => (
-                    <Cell key={i} fill={h.value === maxOnline && maxOnline > 0 ? "var(--lz-accent-ink)" : "rgba(var(--lz-brand-light-rgb),0.4)"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
-
-      {data.demographics && (
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
-          <div className="rounded-lg border border-foreground/8 bg-card p-4">
-            <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-3">Gênero</span>
-            <div className="space-y-2">
-              {data.demographics.gender.map((g) => <DemographicBar key={g.label} label={g.label} pct={g.pct} />)}
-            </div>
-          </div>
-          <div className="rounded-lg border border-foreground/8 bg-card p-4">
-            <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-3">Idade</span>
-            <div className="space-y-2">
-              {data.demographics.age.map((a) => <DemographicBar key={a.label} label={a.label} pct={a.pct} />)}
-            </div>
-          </div>
-          <div className="rounded-lg border border-foreground/8 bg-card p-4">
-            <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-3">País</span>
-            <div className="space-y-2">
-              {data.demographics.countries.map((c) => <DemographicBar key={c.label} label={c.label} pct={c.pct} />)}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-const METRIC_COLUMNS: { key: keyof InstagramMediaInsights; label: string }[] = [
-  { key: "reach", label: "Alcance" },
-  { key: "likes", label: "Curtidas" },
-  { key: "comments", label: "Comentários" },
-  { key: "saved", label: "Salvamentos" },
-  { key: "shares", label: "Compart." },
-  { key: "views", label: "Visualizações" },
-];
-
-function csvEscape(v: string) {
-  return `"${v.replace(/"/g, '""')}"`;
-}
-
-/** Feed da conta do cliente, no estilo grade do próprio Instagram — busca
- * TODAS as publicações reais (direto na Meta, não só o que passou pelo
- * Modo Criador), com curtidas/comentários aparecendo ao passar o mouse, e
- * abre o post com comentários ao lado ao clicar. Depende da permissão
- * `instagram_business_manage_insights`, ainda não aprovada pela Meta —
- * enquanto isso, os números da grade ficam em "—" com o erro real da Meta
- * disponível no CSV. */
-function FeedGridPanel({ clientId, clientName }: { clientId: string; clientName: string }) {
-  const getMedia = useServerFn(getInstagramAccountMedia);
-  const getInsights = useServerFn(getInstagramAccountMediaInsights);
-  const [loadingMedia, setLoadingMedia] = useState(true);
-  const [mediaError, setMediaError] = useState<string | null>(null);
-  const [media, setMedia] = useState<InstagramAccountMedia[] | null>(null);
-  const [loadingInsights, setLoadingInsights] = useState(false);
-  const [results, setResults] = useState<Map<string, InstagramMediaInsights & { error?: string }>>(new Map());
+/** Lista de conteúdo no estilo Instagram: miniatura + legenda + horário +
+ * ícones de engajamento, número grande à direita conforme a métrica
+ * escolhida nas pills. Clicar abre o detalhe (comentários + resposta). */
+function ConteudoPane({ clientId, clientName, mediaState }: { clientId: string; clientName: string; mediaState: ReturnType<typeof useAccountMediaWithInsights> }) {
+  const { media, mediaError, loadingMedia, loadingInsights, results } = mediaState;
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [metric, setMetric] = useState<keyof InstagramMediaInsights>("views");
   const [selected, setSelected] = useState<InstagramAccountMedia | null>(null);
 
-  async function loadAll() {
-    setLoadingMedia(true);
-    setMediaError(null);
-    setResults(new Map());
-    let items: InstagramAccountMedia[] = [];
-    try {
-      const r = await getMedia({ data: { clientId } });
-      items = r.items;
-      setMedia(items);
-    } catch (e: any) {
-      setMediaError(e?.message ?? "Falha ao listar publicações do Instagram.");
-      setLoadingMedia(false);
-      return;
-    }
-    setLoadingMedia(false);
-    if (items.length === 0) return;
-    setLoadingInsights(true);
-    for (const m of items) {
-      try {
-        const insights = await getInsights({ data: { clientId, mediaId: m.id, mediaProductType: m.mediaProductType } });
-        setResults((prev) => new Map(prev).set(m.id, insights));
-      } catch (e: any) {
-        setResults((prev) => new Map(prev).set(m.id, {
-          itemId: m.id, reach: null, likes: null, comments: null, saved: null, shares: null, views: null,
-          totalInteractions: null, degradedReason: null, error: e?.message ?? "Falha ao buscar",
-        }));
-      }
-      // Pequena pausa entre chamadas pra não estourar limite de taxa da Meta.
-      await new Promise((r) => setTimeout(r, 250));
-    }
-    setLoadingInsights(false);
-  }
-  useEffect(() => { loadAll(); }, [clientId]);
+  const filtered = (media ?? []).filter((m) => typeFilter === "ALL" || m.mediaProductType === typeFilter);
+  const metricLabel = CONTENT_METRIC_PILLS.find((p) => p.key === metric)?.label ?? "";
 
   function exportCsv() {
     if (!media) return;
-    const header = ["Legenda", "Tipo", "Publicado em", "Pelo Modo Criador", ...METRIC_COLUMNS.map((c) => c.label), "Erro"];
+    const header = ["Legenda", "Tipo", "Publicado em", "Pelo Modo Criador", ...CONTENT_METRIC_PILLS.map((c) => c.label), "Erro"];
     const lines = [header.map(csvEscape).join(",")];
     for (const m of media) {
       const r = results.get(m.id);
@@ -466,7 +521,7 @@ function FeedGridPanel({ clientId, clientName }: { clientId: string; clientName:
         productTypeLabel(m.mediaProductType),
         new Date(m.timestamp).toLocaleString("pt-BR"),
         m.publishedByApp ? "Sim" : "Não",
-        ...METRIC_COLUMNS.map((c) => String(r?.[c.key] ?? "")),
+        ...CONTENT_METRIC_PILLS.map((c) => String(r?.[c.key] ?? "")),
         r?.error ?? r?.degradedReason ?? "",
       ];
       lines.push(row.map((v) => csvEscape(String(v))).join(","));
@@ -481,13 +536,15 @@ function FeedGridPanel({ clientId, clientName }: { clientId: string; clientName:
   }
 
   return (
-    <div className="mb-8 rounded-lg border border-foreground/8 bg-card p-4">
+    <div>
       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-        <div className="flex items-center gap-1.5 text-foreground/60">
-          <Instagram size={14} />
-          <span className="text-[11px] uppercase font-bold tracking-wider">Feed</span>
-          <span className="text-[10px] text-foreground/35 normal-case font-normal">— toda a conta, não só o que passou pelo app</span>
-        </div>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className="bg-background border border-foreground/10 rounded-md px-2.5 py-1.5 text-xs font-bold text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+        >
+          {CONTENT_TYPE_FILTERS.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+        </select>
         {media && media.length > 0 && (
           <button onClick={exportCsv} className="text-xs px-3 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground inline-flex items-center gap-1.5">
             <Download size={13} /> Exportar CSV
@@ -495,57 +552,101 @@ function FeedGridPanel({ clientId, clientName }: { clientId: string; clientName:
         )}
       </div>
 
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mb-3">
+        {CONTENT_METRIC_PILLS.map((p) => (
+          <button
+            key={p.key}
+            onClick={() => setMetric(p.key)}
+            className="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition"
+            style={metric === p.key
+              ? { background: "rgba(var(--lz-brand-rgb),0.16)", color: "var(--lz-accent-ink)" }
+              : { background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 50%, transparent)" }}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {loadingMedia && <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>}
       {mediaError && <p className="text-xs text-red-400/80">{mediaError}</p>}
-      {!loadingMedia && media && media.length === 0 && <p className="text-xs text-foreground/40">Nenhuma publicação encontrada nessa conta do Instagram.</p>}
+      {!loadingMedia && filtered.length === 0 && <p className="text-xs text-foreground/40 text-center py-6">Nenhuma publicação encontrada nessa conta do Instagram.</p>}
 
-      {media && media.length > 0 && (
-        <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))" }}>
-          {media.map((m) => {
-            const r = results.get(m.id);
-            return (
-              <button
-                key={m.id}
-                onClick={() => setSelected(m)}
-                className="relative aspect-square group overflow-hidden bg-foreground/5"
-              >
+      <div className="divide-y divide-foreground/8">
+        {filtered.map((m) => {
+          const r = results.get(m.id);
+          const bigValue = r?.error ? null : r?.[metric] ?? null;
+          return (
+            <button key={m.id} onClick={() => setSelected(m)} className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-foreground/[0.02] transition-colors">
+              <div className="relative w-12 h-12 rounded-md overflow-hidden bg-foreground/5 shrink-0">
                 {m.thumbnailUrl ? (
                   <img src={m.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center"><ImageIcon size={20} className="text-foreground/15" /></div>
+                  <div className="absolute inset-0 flex items-center justify-center"><ImageIcon size={16} className="text-foreground/15" /></div>
                 )}
-                {m.mediaProductType !== "FEED" && (
-                  <span
-                    className="absolute top-1.5 left-1.5 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
-                    style={{ backgroundColor: "rgba(0,0,0,0.6)", color: "#FFFFFF", backdropFilter: "blur(2px)" }}
-                  >
-                    {productTypeLabel(m.mediaProductType)}
-                  </span>
-                )}
-                {m.publishedByApp && (
-                  <span className="absolute top-1.5 right-1.5 text-white drop-shadow" title="Publicado pelo Modo Criador">
-                    <Sparkles size={12} />
-                  </span>
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100">
-                  <span className="flex items-center gap-1.5 text-white font-bold text-sm">
-                    <Heart size={15} fill="white" />
-                    {r?.error ? "—" : r?.likes ?? (loadingInsights ? <Loader2 size={11} className="animate-spin" /> : "—")}
-                  </span>
-                  <span className="flex items-center gap-1.5 text-white font-bold text-sm">
-                    <MessageCircle size={15} fill="white" />
-                    {r?.error ? "—" : r?.comments ?? (loadingInsights ? <Loader2 size={11} className="animate-spin" /> : "—")}
-                  </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] text-foreground truncate">
+                  {m.caption ? m.caption.slice(0, 42) + (m.caption.length > 42 ? "…" : "") : "(sem legenda)"}
+                  <span className="text-foreground/35 text-[11px] ml-1.5">{timeAgo(m.timestamp)}</span>
+                </p>
+                <div className="flex items-center gap-3 text-[11px] text-foreground/35 mt-1">
+                  <span className="flex items-center gap-1"><Heart size={11} />{r?.error ? "—" : r?.likes ?? "—"}</span>
+                  <span className="flex items-center gap-1"><MessageCircle size={11} />{r?.error ? "—" : r?.comments ?? "—"}</span>
+                  <span className="flex items-center gap-1"><Send size={11} />{r?.error ? "—" : r?.shares ?? "—"}</span>
                 </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-[15px] font-extrabold tabular-nums text-foreground">
+                  {r ? (r.error ? "—" : bigValue != null ? bigValue.toLocaleString("pt-BR") : "—") : (loadingInsights ? <Loader2 size={13} className="animate-spin inline" /> : "—")}
+                </div>
+                <div className="text-[9.5px] text-foreground/35">{metricLabel}</div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
 
       {selected && (
         <PostDetailModal clientId={clientId} media={selected} insights={results.get(selected.id) ?? null} onClose={() => setSelected(null)} />
       )}
+    </div>
+  );
+}
+
+/** Público (demografia dos seguidores) — mesmos dados de sempre
+ * (getInstagramAccountOverview), reaproveitando o cache da aba Visão geral
+ * (mesma queryKey) — trocar de aba não refaz a chamada. */
+function PublicoPane({ clientId }: { clientId: string }) {
+  const getOverview = useServerFn(getInstagramAccountOverview);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["instagram-account-overview", clientId],
+    queryFn: () => getOverview({ data: { clientId } }),
+  });
+
+  if (isLoading) return <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>;
+  if (error || !data) return <p className="text-xs text-red-400/80 py-4">{(error as any)?.message ?? "Não foi possível carregar o painel de insights."}</p>;
+  if (!data.demographics) return <p className="text-xs text-foreground/40 text-center py-8">Essa conta ainda não tem seguidores suficientes pra Meta liberar dados de público.</p>;
+
+  return (
+    <div>
+      <div className="mb-6">
+        <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-3">Gênero</span>
+        {data.demographics.gender.map((g) => <ThinBar key={g.label} label={g.label} pct={g.pct} />)}
+      </div>
+
+      <div className="mb-6">
+        <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-2">Faixa etária</span>
+        <div className="flex items-center gap-3 text-[10.5px] text-foreground/40 mb-3">
+          <span className="flex items-center gap-1.5"><i className="inline-block w-2 h-2 rounded-full" style={{ background: "rgb(var(--lz-brand-rgb))" }} />Mulheres</span>
+          <span className="flex items-center gap-1.5"><i className="inline-block w-2 h-2 rounded-full" style={{ background: "rgba(var(--lz-brand-rgb),0.35)" }} />Homens</span>
+        </div>
+        {data.demographics.age.map((a) => <AgeGenderBar key={a.label} {...a} />)}
+      </div>
+
+      <div>
+        <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-3">Principais localizações</span>
+        {data.demographics.countries.map((c) => <ThinBar key={c.label} label={c.label} pct={c.pct} />)}
+      </div>
     </div>
   );
 }

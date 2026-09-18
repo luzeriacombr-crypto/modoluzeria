@@ -1138,7 +1138,10 @@ export type InstagramAccountOverview = {
   onlineFollowers: { hour: number; value: number }[] | null;
   demographics: {
     gender: { label: string; value: number; pct: number }[];
-    age: { label: string; value: number; pct: number }[];
+    /** Faixa etária já cruzada com gênero (mesma resposta da API, só
+     * reorganizada) — dá pra desenhar a barra dividida por gênero dentro de
+     * cada faixa, igual o Instagram mostra. */
+    age: { label: string; female: number; male: number; other: number; pct: number }[];
     countries: { label: string; value: number; pct: number }[];
   } | null;
 };
@@ -1243,12 +1246,14 @@ export const getInstagramAccountOverview = createServerFn({ method: "GET" })
       const results: { dimension_values: string[]; value: number }[] =
         ageGenderJson.data?.[0]?.total_value?.breakdowns?.[0]?.results ?? [];
       const genderTotals = new Map<string, number>();
-      const ageTotals = new Map<string, number>();
+      const ageByGender = new Map<string, { F: number; M: number; U: number }>();
       let grandTotal = 0;
       for (const r of results) {
         const [age, gender] = r.dimension_values;
         genderTotals.set(gender, (genderTotals.get(gender) ?? 0) + r.value);
-        ageTotals.set(age, (ageTotals.get(age) ?? 0) + r.value);
+        const bucket = ageByGender.get(age) ?? { F: 0, M: 0, U: 0 };
+        if (gender === "F" || gender === "M" || gender === "U") bucket[gender] += r.value;
+        ageByGender.set(age, bucket);
         grandTotal += r.value;
       }
       const genderLabel: Record<string, string> = { F: "Mulheres", M: "Homens", U: "Não informado" };
@@ -1260,9 +1265,12 @@ export const getInstagramAccountOverview = createServerFn({ method: "GET" })
         gender: [...genderTotals.entries()]
           .sort((a, b) => b[1] - a[1])
           .map(([k, v]) => ({ label: genderLabel[k] ?? k, value: v, pct: grandTotal ? Math.round((v / grandTotal) * 100) : 0 })),
-        age: [...ageTotals.entries()]
+        age: [...ageByGender.entries()]
           .sort((a, b) => a[0].localeCompare(b[0]))
-          .map(([k, v]) => ({ label: k, value: v, pct: grandTotal ? Math.round((v / grandTotal) * 100) : 0 })),
+          .map(([label, g]) => ({
+            label, female: g.F, male: g.M, other: g.U,
+            pct: grandTotal ? Math.round(((g.F + g.M + g.U) / grandTotal) * 100) : 0,
+          })),
         countries: topCountries.map((r) => ({
           label: r.dimension_values[0], value: r.value,
           pct: grandTotal ? Math.round((r.value / grandTotal) * 100) : 0,
