@@ -1,17 +1,48 @@
-// Server-only: HTML do e-mail de "ainda não vi seus clientes aqui" —
-// disparado uma única vez, 3 dias depois do cadastro, só pra quem ainda
-// não importou nenhum cliente de verdade (ver runActivationNudges em
+// Server-only: HTML do e-mail diário de ativação — lista só o que ainda
+// falta (cliente cadastrado / Google Drive / Instagram), com o benefício
+// de cada um. Mandado 1x/dia enquanto faltar pelo menos um item e a
+// agência ainda estiver dentro do trial (ver runActivationNudges em
 // activation.functions.ts). Mesmo padrão visual/inline do welcome-email.
 
 function esc(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-export function buildActivationNudgeEmailHtml(params: { name: string }) {
+export type ActivationChecklistItem = "client" | "drive" | "instagram";
+
+const ITEM_COPY: Record<ActivationChecklistItem, { title: string; benefit: string }> = {
+  client: {
+    title: "Cadastre seus clientes",
+    benefit: "Sem eles, o board e a IA de planejamento não têm o que organizar. Leva menos de 2 minutos com o nosso importador — manda até um print de tela.",
+  },
+  drive: {
+    title: "Conecte o Google Drive",
+    benefit: "Cada arquivo do cliente (roteiro, imagem, entrega) fica organizado sozinho, sem precisar subir nada na mão nem procurar pasta.",
+  },
+  instagram: {
+    title: "Conecte o Instagram dos clientes",
+    benefit: "Publica direto pelo Modo Criador, sem abrir o Instagram — e ainda acompanha o que performou melhor, tudo num lugar só.",
+  },
+};
+
+export function buildActivationNudgeEmailHtml(params: { name: string; missing: ActivationChecklistItem[] }) {
   const firstName = esc(params.name.trim().split(" ")[0] || params.name.trim());
   const appUrl = "https://www.modocriador.com.br/auth";
   const lime = "#C8D44E";
   const ink = "#16171B";
+
+  const items = params.missing
+    .map((key) => ITEM_COPY[key])
+    .map(
+      (it) => `
+        <tr>
+          <td style="padding:14px 0; border-bottom:1px solid #E1E8C4;">
+            <div style="font-size:13px; font-weight:800; color:${ink};">☐ ${esc(it.title)}</div>
+            <p style="font-size:12.5px; line-height:1.55; color:#3C3F33; margin:6px 0 0 0;">${esc(it.benefit)}</p>
+          </td>
+        </tr>`,
+    )
+    .join("");
 
   return `
 <!doctype html>
@@ -31,26 +62,17 @@ export function buildActivationNudgeEmailHtml(params: { name: string }) {
 
             <tr>
               <td style="padding:16px 32px 0 32px;">
-                <div style="font-size:22px; font-weight:800; color:${ink}; line-height:1.3;">${firstName}, ainda não vi seus clientes por aqui 👀</div>
+                <div style="font-size:22px; font-weight:800; color:${ink}; line-height:1.3;">${firstName}, falta pouco pra aproveitar tudo</div>
                 <p style="font-size:14px; line-height:1.6; color:#3C3F33; margin:12px 0 0 0;">
-                  Sua agência já está pronta, mas sem os clientes de verdade dentro do Modo Criador é difícil sentir o valor. Boa notícia: migrar leva menos de 2 minutos.
+                  Essas ${params.missing.length === 1 ? "coisa deixa" : "coisas deixam"} o Modo Criador muito mais útil pra você — nada disso leva mais que alguns minutos.
                 </p>
               </td>
             </tr>
 
             <tr>
               <td style="padding:20px 32px 0 32px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5F7E8; border-radius:12px; border:1px solid #E1E8C4;">
-                  <tr>
-                    <td style="padding:18px 20px;">
-                      <div style="font-size:13px; font-weight:800; color:${ink};">✨ É só mandar um print, planilha ou arquivo</div>
-                      <p style="font-size:13px; line-height:1.55; color:#3C3F33; margin:8px 0 0 0;">
-                        Dentro do app, clique em <strong>Gerar prévia com IA</strong> na tela de Clientes e manda qualquer
-                        coisa que você já tenha — print de tela, planilha, contrato. A IA lê, organiza tudo e mostra pra
-                        você revisar antes de confirmar. Sem digitar nada na mão.
-                      </p>
-                    </td>
-                  </tr>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5F7E8; border-radius:12px; border:1px solid #E1E8C4; padding:4px 18px;">
+                  ${items}
                 </table>
               </td>
             </tr>
@@ -58,7 +80,7 @@ export function buildActivationNudgeEmailHtml(params: { name: string }) {
             <tr>
               <td style="padding:24px 32px 0 32px;" align="center">
                 <a href="${appUrl}" style="display:inline-block; background-color:${lime}; color:${ink}; font-size:14px; font-weight:800; text-decoration:none; padding:13px 28px; border-radius:8px;">
-                  Importar meus clientes agora
+                  Resolver agora
                 </a>
               </td>
             </tr>

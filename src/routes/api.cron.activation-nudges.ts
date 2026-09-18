@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// Confere uma vez por dia quem se cadastrou há 3+ dias e ainda não
-// importou nenhum cliente, e manda o e-mail de nudge (uma única vez por
-// org). Mesmo padrão de /api/cron/retention-cleanup. Protegido por
-// CRON_SECRET.
+// Confere uma vez por dia quem ainda está dentro do trial e não completou
+// os 3 passos básicos (cliente cadastrado, Drive conectado, Instagram
+// conectado) — manda o e-mail de nudge listando só o que falta, uma vez
+// por dia por org, até completar tudo ou o trial acabar. Mesmo padrão de
+// /api/cron/retention-cleanup. Protegido por CRON_SECRET.
 export const Route = createFileRoute("/api/cron/activation-nudges")({
   server: {
     handlers: {
