@@ -369,6 +369,8 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
   const [reviewDay, setReviewDay] = useState<string>(client.customFields.reviewDay ?? "");
   const [notes, setNotes] = useState<string>(client.customFields.notes ?? "");
   const [competitors, setCompetitors] = useState<string>(client.customFields.competitors ?? "");
+  const [contentBriefing, setContentBriefing] = useState<string>(client.customFields.contentBriefing ?? "");
+  const [recentRoteiros, setRecentRoteiros] = useState<string>(client.customFields.recentRoteiros ?? "");
   const [cnpjCpf, setCnpjCpf] = useState<string>(client.cnpjCpf ?? "");
   const [address, setAddress] = useState<string>(client.address ?? "");
   const [legalResponsibleName, setLegalResponsibleName] = useState<string>(client.legalResponsibleName ?? "");
@@ -388,6 +390,8 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     setReviewDay(client.customFields.reviewDay ?? "");
     setNotes(client.customFields.notes ?? "");
     setCompetitors(client.customFields.competitors ?? "");
+    setContentBriefing(client.customFields.contentBriefing ?? "");
+    setRecentRoteiros(client.customFields.recentRoteiros ?? "");
     setContractValue(client.contractValue ?? "");
     setPaymentDueDay(client.paymentDueDay ?? "");
     setPhotoPreview(client.photoUrl ?? null);
@@ -433,6 +437,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       reels_per_week: Number(reelsPerWeek) || 0,
       fixed_responsible_id: responsible || null,
       review_day: reviewDay, notes, competitors,
+      content_briefing: contentBriefing, recent_roteiros: recentRoteiros,
       cnpj_cpf: cnpjCpf.trim() || null,
       address: address.trim() || null,
       legal_responsible_name: legalResponsibleName.trim() || null,
@@ -562,6 +567,24 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
             value={competitors} disabled={!canEdit} onChange={(e) => setCompetitors(e.target.value)}
             placeholder={"Um por linha, ex: @perfil_concorrente ou nome da empresa"}
             rows={3} className={inp + " resize-none"}
+          />
+        </ConfigField>
+      </div>
+      <div className="sm:col-span-2">
+        <ConfigField label="Briefing / sistema de conteúdo">
+          <textarea
+            value={contentBriefing} disabled={!canEdit} onChange={(e) => setContentBriefing(e.target.value)}
+            placeholder={"Cole aqui o briefing/manual de como criar conteúdo pra esse cliente — alimenta a prévia de planejamento por IA."}
+            rows={5} className={inp + " resize-none"}
+          />
+        </ConfigField>
+      </div>
+      <div className="sm:col-span-2">
+        <ConfigField label="Roteiros recentes">
+          <textarea
+            value={recentRoteiros} disabled={!canEdit} onChange={(e) => setRecentRoteiros(e.target.value)}
+            placeholder={"Cole os últimos roteiros já escritos pra esse cliente — ajuda a IA a aprender o padrão e o tom já usado."}
+            rows={5} className={inp + " resize-none"}
           />
         </ConfigField>
       </div>

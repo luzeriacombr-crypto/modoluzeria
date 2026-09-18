@@ -93,6 +93,18 @@ const REPORT_PLAN_TOOL = {
   },
 };
 
+// Corta uma string sem quebrar um par substituto UTF-16 (emoji etc) ao
+// meio — .slice(0,N) puro pode cortar exatamente entre as duas metades de
+// um emoji e gerar uma string inválida que a API da Anthropic recusa com
+// "no low surrogate in string".
+function safeTruncate(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  let end = maxLen;
+  const code = text.charCodeAt(end - 1);
+  if (code >= 0xd800 && code <= 0xdbff) end -= 1;
+  return text.slice(0, end);
+}
+
 const PlanItemSchema = z.object({
   title: z.string(),
   type: z.enum(["post", "reel"]),
@@ -127,7 +139,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     // do Supabase serem regenerados depois da migração rodar.
     const { data: client, error: clientError } = await (context.supabase as any)
       .from("clients")
-      .select("id, name, niche, posts_per_week, reels_per_week, description, notes, competitors, ai_planning_enabled")
+      .select("id, name, niche, posts_per_week, reels_per_week, description, notes, competitors, ai_planning_enabled, content_briefing, recent_roteiros")
       .eq("id", data.clientId)
       .maybeSingle();
     if (clientError) throw new Error(clientError.message);
@@ -148,7 +160,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     const historyText = history.length
       ? history.map((h) => {
           const format = h.type === "post" ? h.post_format : h.reel_type;
-          return `- [${h.type}${format ? `/${format}` : ""}] ${h.title || "(sem título)"} (${h.status})${h.caption ? ` — legenda: ${String(h.caption).slice(0, 200)}` : ""}`;
+          return `- [${h.type}${format ? `/${format}` : ""}] ${h.title || "(sem título)"} (${h.status})${h.caption ? ` — legenda: ${safeTruncate(String(h.caption), 200)}` : ""}`;
         }).join("\n")
       : "Nenhum post/reel no histórico ainda.";
 
@@ -203,7 +215,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     const knowledgeBlocks: any[] = [];
     for (const k of knowledge) {
       if (k.kind === "text" && k.text_content) {
-        knowledgeTextParts.push(`### ${k.title || "Nota"}\n${String(k.text_content).slice(0, 8000)}`);
+        knowledgeTextParts.push(`### ${k.title || "Nota"}\n${safeTruncate(String(k.text_content), 8000)}`);
         continue;
       }
       if (k.kind === "file" && k.storage_path) {
@@ -215,7 +227,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
         if (!fileBlob) continue;
         if (isReadableText) {
           const text = await fileBlob.text();
-          knowledgeTextParts.push(`### ${k.title || k.file_name}\n${text.slice(0, 8000)}`);
+          knowledgeTextParts.push(`### ${k.title || k.file_name}\n${safeTruncate(text, 8000)}`);
         } else {
           const buf = Buffer.from(await fileBlob.arrayBuffer());
           knowledgeBlocks.push({ type: "text", text: `Documento da base de conhecimento: ${k.title || k.file_name}` });
@@ -236,6 +248,8 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     ].filter(Boolean).join("\n");
 
     const competitorsText: string | null = c.competitors?.trim() || null;
+    const contentBriefingText: string | null = c.content_briefing?.trim() || null;
+    const recentRoteirosText: string | null = c.recent_roteiros?.trim() || null;
 
     const instruction = [
       "Você é um estrategista de conteúdo de uma agência de social media, ajudando a montar uma PRÉVIA (rascunho pra revisão, não versão final) de planejamento de conteúdo do próximo mês pra um cliente.",
@@ -244,7 +258,9 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       "",
       "Histórico recente de posts/reels já produzidos pro cliente (use pra manter o tom de voz e não repetir temas recentes):",
       historyText,
-      lastDocContent ? `\n\nDocumento de roteiro/planejamento mais recente já escrito pro cliente (contexto de tom de voz e temas já tratados):\n${lastDocContent.slice(0, 6000)}` : "",
+      lastDocContent ? `\n\nDocumento de roteiro/planejamento mais recente já escrito pro cliente (contexto de tom de voz e temas já tratados):\n${safeTruncate(lastDocContent, 6000)}` : "",
+      contentBriefingText ? `\n\nBriefing/sistema de conteúdo específico desse cliente (siga isso à risca, é o manual de como criar pra ele):\n${safeTruncate(contentBriefingText, 8000)}` : "",
+      recentRoteirosText ? `\n\nRoteiros recentes já escritos pra esse cliente (use pra aprender o padrão e o tom exatos já usados, não repita os mesmos temas):\n${safeTruncate(recentRoteirosText, 8000)}` : "",
       knowledgeText,
       competitorsText
         ? `\n\nConcorrentes informados pela agência — pesquise na web (use a tool web_search) o que cada um tem postado recentemente, formatos e temas em alta, ANTES de sugerir o planejamento, e cite o que encontrou em competitorNotes:\n${competitorsText}`

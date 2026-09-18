@@ -234,6 +234,13 @@ export interface CustomFields {
   /** Lista livre de concorrentes (um por linha) — contexto pra prévia de
    * planejamento gerada por IA pesquisar na web antes de sugerir conteúdo. */
   competitors: string;
+  /** Briefing/sistema de conteúdo desse cliente específico (texto colado,
+   * não link de Drive) — alimenta a prévia de planejamento por IA e serve
+   * de manual pra outras agências entenderem como criar pra ele. */
+  contentBriefing: string;
+  /** Últimos roteiros já escritos pra esse cliente, colados como texto —
+   * ensina a IA o padrão/tom já usado, sem precisar ler o Drive. */
+  recentRoteiros: string;
 }
 
 export interface Client {
