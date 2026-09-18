@@ -1582,7 +1582,9 @@ export const sendInstagramDirectMessage = createServerFn({ method: "POST" })
     if (!isAdmin) throw new Error("Forbidden");
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const creds = await getClientInstagramCreds(context.supabase, data.clientId);
-    const res = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/messages`, {
+    // "me" resolve pra conta dona do token — evita depender do id salvo, que às
+    // vezes vem em formato diferente do que o endpoint de mensagens espera.
+    const res = await fetch(`${IG_GRAPH_API}/me/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
