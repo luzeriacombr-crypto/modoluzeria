@@ -11,6 +11,14 @@ import { MonthPickerList } from "./MonthPickerList";
 
 const MONTH_LABEL = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
+// Erro de validação (zod) chega como o array de issues em JSON puro no
+// .message — nunca mostra isso pro usuário, cai num texto legível.
+function friendlyError(e: any, fallback: string): string {
+  const msg = e?.message;
+  if (typeof msg === "string" && msg.trim().startsWith("[") && msg.includes('"code"')) return fallback;
+  return msg ?? fallback;
+}
+
 // Uma chamada só e sem streaming — pode demorar (principalmente quando a IA
 // pesquisa concorrentes na web). Em vez de um spinner mudo, mostra uma
 // sequência de "etapas" fictícias mas plausíveis, pra pessoa entender que
@@ -108,7 +116,7 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
       setFeedbackSent(true);
       toast.success("Valeu pela avaliação!");
     } catch (e: any) {
-      toast.error(e?.message ?? "Não consegui enviar a avaliação.");
+      toast.error(friendlyError(e, "Não consegui enviar a avaliação."));
     } finally {
       setSendingFeedback(false);
     }
@@ -119,9 +127,10 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
     let cancelled = false;
     setLoading(true);
     setError(null);
-    generate({ data: { clientId, extraContext: extraContext.trim() || undefined } })
+    const trimmedContext = extraContext.trim().slice(0, 60000);
+    generate({ data: { clientId, extraContext: trimmedContext || undefined } })
       .then((r) => { if (!cancelled) setResult(r); })
-      .catch((e: any) => { if (!cancelled) setError(e?.message ?? "Não consegui gerar a prévia."); })
+      .catch((e: any) => { if (!cancelled) setError(friendlyError(e, "Não consegui gerar a prévia.")); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [started, clientId]);
@@ -180,12 +189,15 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
           </p>
           <textarea
             value={extraContext}
-            onChange={(e) => setExtraContext(e.target.value)}
+            onChange={(e) => setExtraContext(e.target.value.slice(0, 60000))}
             placeholder="Cole aqui o que foi combinado na reunião, transcrição ou briefing desse mês (opcional)…"
             rows={7}
             autoFocus
             className={inp + " resize-none"}
           />
+          {extraContext.length > 50000 && (
+            <p className="text-[11px] text-foreground/40 text-right -mt-1.5">{extraContext.length.toLocaleString("pt-BR")} / 60.000 caracteres</p>
+          )}
           <div className="flex items-center justify-end gap-2 pt-1">
             <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
             <button onClick={() => setStarted(true)} className="lz-btn-primary text-xs px-5 py-2.5 rounded-md">
