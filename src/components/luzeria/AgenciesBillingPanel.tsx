@@ -50,6 +50,18 @@ export function AgenciesBillingPanel() {
     !!o.resellerOrgId
   );
 
+  // Funil de ativação — sempre calculado sobre todas as agências orgânicas
+  // (fora revenda), independente do filtro acima, pra não mudar de
+  // significado quando a pessoa troca o filtro da tabela.
+  const organicOrgs = orgs.filter((o: any) => !o.isReseller && !o.resellerOrgId);
+  const daysSince = (iso: string) => (Date.now() - new Date(iso).getTime()) / 86_400_000;
+  const cohort7d = organicOrgs.filter((o: any) => daysSince(o.createdAt) <= 7);
+  const withClient = cohort7d.filter((o: any) => o.clientsUsed >= 1).length;
+  const withActiveClients = cohort7d.filter((o: any) => o.clientsUsed >= 2).length;
+  const withTeam = cohort7d.filter((o: any) => o.teamCount > 1).length;
+  const cold3d = organicOrgs.filter((o: any) => daysSince(o.createdAt) >= 3 && o.clientsUsed === 0);
+  const pct = (n: number) => (cohort7d.length ? Math.round((100 * n) / cohort7d.length) : 0);
+
   const fetchInvoice = useMutation({
     mutationFn: useServerFn(getOrgNextInvoice),
   });
@@ -110,6 +122,28 @@ export function AgenciesBillingPanel() {
             <Plus size={13} /> Nova revenda
           </button>
         </div>
+      </div>
+
+      <div className="bg-card border border-foreground/7 rounded-xl p-4">
+        <h3 className="text-xs font-bold uppercase tracking-wide text-foreground/40 mb-3">Funil de ativação — últimos 7 dias</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Cadastros", value: cohort7d.length, sub: null },
+            { label: "Importaram cliente", value: withClient, sub: `${pct(withClient)}%` },
+            { label: "Já ativos (2+ clientes)", value: withActiveClients, sub: `${pct(withActiveClients)}%` },
+            { label: "Chamaram equipe", value: withTeam, sub: `${pct(withTeam)}%` },
+          ].map((s) => (
+            <div key={s.label} className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
+              <div className="text-lg font-bold text-foreground">{s.value}{s.sub && <span className="text-xs font-semibold text-foreground/40 ml-1.5">{s.sub}</span>}</div>
+              <div className="text-[11px] text-foreground/50 mt-0.5">{s.label}</div>
+            </div>
+          ))}
+        </div>
+        {cold3d.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-foreground/6 text-xs text-foreground/60">
+            <span className="font-semibold text-foreground/80">{cold3d.length}</span> agência{cold3d.length > 1 ? "s" : ""} com 3+ dias e nenhum cliente cadastrado: {cold3d.map((o: any) => o.name).join(", ")}
+          </div>
+        )}
       </div>
 
       {visibleOrgs.length === 0 ? (

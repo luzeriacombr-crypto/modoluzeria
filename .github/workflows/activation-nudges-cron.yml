@@ -1,0 +1,17 @@
+name: Activation nudges
+
+on:
+  schedule:
+    # Uma vez por dia, 12:00 UTC (~09:00 no Brasil).
+    - cron: "0 12 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  nudge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call activation nudges endpoint
+        run: |
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.modocriador.com.br/api/cron/activation-nudges

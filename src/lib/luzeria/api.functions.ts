@@ -487,8 +487,16 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
       .from("user_roles").select("user_id").eq("role", "master");
     const masterIds = new Set((masterRoles ?? []).map((r: any) => r.user_id));
     const { data: ownerProfiles } = await supabaseAdmin
-      .from("profiles").select("id, org_id, name, email, created_at, last_active_at")
+      .from("profiles").select("id, org_id, name, email, created_at, last_active_at, active")
       .in("org_id", (orgs ?? []).map((o: any) => o.id));
+    // Equipe convidada — quantos perfis ATIVOS a org já tem, contando o
+    // próprio dono (>1 = já chamou alguém pra equipe). Usado no funil de
+    // ativação (AgenciesBillingPanel).
+    const teamCountByOrg = new Map<string, number>();
+    (ownerProfiles ?? []).forEach((p: any) => {
+      if (!p.active) return;
+      teamCountByOrg.set(p.org_id, (teamCountByOrg.get(p.org_id) ?? 0) + 1);
+    });
     const ownerByOrg = new Map<string, { id: string; name: string; email: string }>();
     (ownerProfiles ?? [])
       .filter((p: any) => masterIds.has(p.id))
@@ -570,6 +578,7 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         driveConnected: orgsWithDrive.has(o.id),
         instagramConnected: igConnectedByOrg.get(o.id) ?? 0,
         lastLoginAt: lastActiveByOrg.get(o.id) ?? null,
+        teamCount: teamCountByOrg.get(o.id) ?? 0,
       };
     });
   });

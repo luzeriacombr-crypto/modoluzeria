@@ -55,6 +55,7 @@ import { Route as ApiCronRetentionCleanupRouteImport } from './routes/api.cron.r
 import { Route as ApiCronRefreshInstagramTokensRouteImport } from './routes/api.cron.refresh-instagram-tokens'
 import { Route as ApiCronPublishInstagramRouteImport } from './routes/api.cron.publish-instagram'
 import { Route as ApiCronCheckAgencyReferralsRouteImport } from './routes/api.cron.check-agency-referrals'
+import { Route as ApiCronActivationNudgesRouteImport } from './routes/api.cron.activation-nudges'
 import { Route as AuthenticatedSelecaoDeFotosClientIdRouteImport } from './routes/_authenticated/selecao-de-fotos_.$clientId'
 import { Route as AuthenticatedOauthInstagramCallbackRouteImport } from './routes/_authenticated/oauth.instagram-callback'
 import { Route as AuthenticatedOauthGoogleCalendarCallbackRouteImport } from './routes/_authenticated/oauth.google-calendar-callback'
@@ -302,6 +303,11 @@ const ApiCronCheckAgencyReferralsRoute =
     path: '/api/cron/check-agency-referrals',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiCronActivationNudgesRoute = ApiCronActivationNudgesRouteImport.update({
+  id: '/api/cron/activation-nudges',
+  path: '/api/cron/activation-nudges',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSelecaoDeFotosClientIdRoute =
   AuthenticatedSelecaoDeFotosClientIdRouteImport.update({
     id: '/selecao-de-fotos_/$clientId',
@@ -391,6 +397,7 @@ export interface FileRoutesByFullPath {
   '/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/selecao-de-fotos/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
+  '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/refresh-instagram-tokens': typeof ApiCronRefreshInstagramTokensRoute
@@ -445,6 +452,7 @@ export interface FileRoutesByTo {
   '/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/selecao-de-fotos/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
+  '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/refresh-instagram-tokens': typeof ApiCronRefreshInstagramTokensRoute
@@ -501,6 +509,7 @@ export interface FileRoutesById {
   '/_authenticated/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/_authenticated/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/_authenticated/selecao-de-fotos_/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
+  '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/refresh-instagram-tokens': typeof ApiCronRefreshInstagramTokensRoute
@@ -557,6 +566,7 @@ export interface FileRouteTypes {
     | '/oauth/google-calendar-callback'
     | '/oauth/instagram-callback'
     | '/selecao-de-fotos/$clientId'
+    | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
     | '/api/cron/publish-instagram'
     | '/api/cron/refresh-instagram-tokens'
@@ -611,6 +621,7 @@ export interface FileRouteTypes {
     | '/oauth/google-calendar-callback'
     | '/oauth/instagram-callback'
     | '/selecao-de-fotos/$clientId'
+    | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
     | '/api/cron/publish-instagram'
     | '/api/cron/refresh-instagram-tokens'
@@ -666,6 +677,7 @@ export interface FileRouteTypes {
     | '/_authenticated/oauth/google-calendar-callback'
     | '/_authenticated/oauth/instagram-callback'
     | '/_authenticated/selecao-de-fotos_/$clientId'
+    | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
     | '/api/cron/publish-instagram'
     | '/api/cron/refresh-instagram-tokens'
@@ -703,6 +715,7 @@ export interface RootRouteChildren {
   PromoSlugRoute: typeof PromoSlugRoute
   RCodeRoute: typeof RCodeRoute
   SelecaoTokenRoute: typeof SelecaoTokenRoute
+  ApiCronActivationNudgesRoute: typeof ApiCronActivationNudgesRoute
   ApiCronCheckAgencyReferralsRoute: typeof ApiCronCheckAgencyReferralsRoute
   ApiCronPublishInstagramRoute: typeof ApiCronPublishInstagramRoute
   ApiCronRefreshInstagramTokensRoute: typeof ApiCronRefreshInstagramTokensRoute
@@ -1036,6 +1049,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronCheckAgencyReferralsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/activation-nudges': {
+      id: '/api/cron/activation-nudges'
+      path: '/api/cron/activation-nudges'
+      fullPath: '/api/cron/activation-nudges'
+      preLoaderRoute: typeof ApiCronActivationNudgesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/selecao-de-fotos_/$clientId': {
       id: '/_authenticated/selecao-de-fotos_/$clientId'
       path: '/selecao-de-fotos/$clientId'
@@ -1175,6 +1195,7 @@ const rootRouteChildren: RootRouteChildren = {
   PromoSlugRoute: PromoSlugRoute,
   RCodeRoute: RCodeRoute,
   SelecaoTokenRoute: SelecaoTokenRoute,
+  ApiCronActivationNudgesRoute: ApiCronActivationNudgesRoute,
   ApiCronCheckAgencyReferralsRoute: ApiCronCheckAgencyReferralsRoute,
   ApiCronPublishInstagramRoute: ApiCronPublishInstagramRoute,
   ApiCronRefreshInstagramTokensRoute: ApiCronRefreshInstagramTokensRoute,
