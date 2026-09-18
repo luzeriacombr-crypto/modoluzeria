@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import { CLIENT_DOC_PROMPT, type ClientDocType } from "./client-doc-templates";
+import { HOUSE_STYLE_GUIDE, safeTruncate } from "./ai-planning.functions";
 
 const PlanItemLiteSchema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -248,7 +249,8 @@ export const createRoteirosFromPlan = createServerFn({ method: "POST" })
     await assertAdmin(context);
 
     const sections = data.items.map((it, i) => {
-      const heading = `Roteiro ${i + 1}: ${it.title}`;
+      const formatLabel = it.type === "reel" ? "Reel" : it.postFormat === "carrossel" ? "Carrossel" : "Post";
+      const heading = `Roteiro ${i + 1}: ${it.title} (${formatLabel})`;
       const bodyParts = [
         it.captionDraft,
         it.pillar ? `Pilar: ${it.pillar}` : null,
@@ -280,4 +282,100 @@ export const createRoteirosFromPlan = createServerFn({ method: "POST" })
     if (sErr) throw new Error(sErr.message);
 
     return { docId: doc.id as string };
+  });
+
+/** Reescreve um documento de Roteiros já salvo — mesmo formato de casa e
+ * base de conhecimento da agência usados na prévia de planejamento por IA,
+ * pra melhorar tom/profundidade sem precisar recriar do zero. Mantém os
+ * mesmos "## Roteiro N: título" e a linha "Pilar:" de cada um; só reescreve
+ * o corpo (captionDraft) e a "Legenda:" (publishCaption). Recusa se algum
+ * item já foi gravado/virou content_item — nesse caso a reescrita em massa
+ * pisaria em trabalho já feito. */
+export const regenerateRoteiroDoc = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { docId: string }) => z.object({ docId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+
+    const { data: doc, error: docErr } = await (context.supabase as any)
+      .from("client_docs")
+      .select("id, type, content")
+      .eq("id", data.docId).single();
+    if (docErr || !doc) throw new Error("Documento não encontrado.");
+    if (doc.type !== "roteiro") throw new Error("Só dá pra regenerar documentos de Roteiros.");
+
+    const { data: statusRows } = await (context.supabase as any)
+      .from("client_doc_roteiro_status")
+      .select("roteiro_title, gravado, content_item_id")
+      .eq("doc_id", data.docId);
+    const alreadyStarted = ((statusRows ?? []) as any[]).some((r) => r.gravado || r.content_item_id);
+    if (alreadyStarted) {
+      throw new Error("Algum roteiro desse documento já foi gravado ou virou publicação — não dá pra reescrever tudo de uma vez. Edite manualmente o que ainda não avançou.");
+    }
+
+    const { data: knowledgeRows } = await (context.supabase as any)
+      .from("org_content_knowledge")
+      .select("title, text_content")
+      .eq("org_id", context.orgId)
+      .eq("kind", "text")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    const knowledgeParts = ((knowledgeRows ?? []) as any[])
+      .filter((k) => k.text_content)
+      .map((k) => `### ${k.title || "Nota"}\n${safeTruncate(String(k.text_content), 6000)}`);
+    const knowledgeText = knowledgeParts.length
+      ? `\n\nBase de conhecimento da agência (como ela costuma criar conteúdo — use fatos e detalhes concretos daqui pra aprofundar, não só o tom):\n${knowledgeParts.join("\n\n")}`
+      : "";
+
+    const instruction = [
+      "Você vai REESCREVER um documento de roteiros já existente, melhorando a qualidade sem perder a substância de cada um.",
+      "",
+      HOUSE_STYLE_GUIDE,
+      knowledgeText,
+      "",
+      "REGRAS OBRIGATÓRIAS pra essa reescrita:",
+      '- Mantenha exatamente os mesmos "## Roteiro N: título" de cada seção, na mesma ordem e quantidade — só ajuste o sufixo de formato entre parênteses no final do título se necessário: " (Carrossel)" se o roteiro usa SLIDE N:, " (Post)" se usa TEXTO:, ou " (Reel)" se for roteiro corrido de vídeo sem SLIDE/TEXTO.',
+      '- Mantenha a linha "Pilar: ..." de cada roteiro EXATAMENTE como está, sem mudar.',
+      '- Reescreva o corpo do roteiro (captionDraft, no mesmo formato TEXTO:/SLIDE N:/roteiro corrido que já está usado) e a linha "Legenda: ..." de cada um — mesmo tema/fatos de cada roteiro, mas seguindo à risca o formato de casa acima (tom natural, aprofundado com fatos concretos, emoji ocasional, sem cara de texto gerado por IA).',
+      "- Não mude a quantidade de roteiros, não adicione nem remova nenhum.",
+      "- Não use blocos de código (```), não escreva nada fora da estrutura dos roteiros (sem introdução, sem comentários, sem despedida).",
+      "",
+      "Documento atual (reescreva a partir dele):",
+      doc.content,
+    ].filter(Boolean).join("\n");
+
+    const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
+    const anthropic = getAnthropicClient();
+    const response = await anthropic.messages.create({
+      model: PLANNING_MODEL,
+      max_tokens: 16000,
+      messages: [{ role: "user", content: instruction }],
+    });
+    const textBlock = response.content.find((b: any) => b.type === "text") as any;
+    const newContent: string | undefined = textBlock?.text?.trim();
+    if (!newContent) throw new Error("Não consegui regenerar — tenta de novo.");
+
+    const oldTitles = [...doc.content.matchAll(/^## (.+)$/gm)].map((m: any) => m[1].trim());
+    const newTitles = [...newContent.matchAll(/^## (.+)$/gm)].map((m: any) => m[1].trim());
+    if (newTitles.length !== oldTitles.length) {
+      throw new Error(`A reescrita saiu com número de roteiros diferente (${newTitles.length} em vez de ${oldTitles.length}) — tenta de novo.`);
+    }
+
+    const { error: updErr } = await (context.supabase as any)
+      .from("client_docs").update({ content: newContent }).eq("id", data.docId);
+    if (updErr) throw new Error(updErr.message);
+
+    // O sufixo de formato pode mudar o texto do título — sincroniza
+    // client_doc_roteiro_status casando pela ORDEM (mesma contagem já
+    // validada acima), não por igualdade de string.
+    for (let i = 0; i < oldTitles.length; i++) {
+      if (oldTitles[i] !== newTitles[i]) {
+        await (context.supabase as any)
+          .from("client_doc_roteiro_status")
+          .update({ roteiro_title: newTitles[i] })
+          .eq("doc_id", data.docId).eq("roteiro_title", oldTitles[i]);
+      }
+    }
+
+    return { content: newContent };
   });

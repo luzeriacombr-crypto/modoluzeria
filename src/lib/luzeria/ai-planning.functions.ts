@@ -16,7 +16,9 @@ import { requireActiveProfile } from "./require-active";
 // vira o Briefing do content_item. publishCaption é a legenda de verdade
 // que vai publicada junto com o post/reel — são coisas diferentes, nunca
 // repita o mesmo texto nos dois.
-const HOUSE_STYLE_GUIDE = `FORMATO DE CASA — captionDraft precisa sair PRONTO PRA USAR, no formato exato abaixo (nunca um resumo genérico):
+export const HOUSE_STYLE_GUIDE = `FORMATO DE CASA — captionDraft precisa sair PRONTO PRA USAR, no formato exato abaixo (nunca um resumo genérico):
+
+ANTES DE TUDO: isso vale tanto pro captionDraft (o roteiro/texto de produção) quanto pro publishCaption (a legenda, ver mais abaixo) — nunca escreva com "cara de texto gerado por IA". Evite: "É importante ressaltar/destacar", pergunta retórica genérica pra abrir todo texto (tipo "Você sabia que...?"), "Primeiro... Segundo... Terceiro..." em toda peça (varie a estrutura de um roteiro pro outro), frase de marketing vaga tipo "cuidado de qualidade" ou "atendimento diferenciado" sem nenhum fato concreto por trás, encerramento sempre igual. Prefira sempre um fato, número ou detalhe específico (da base de conhecimento da agência ou do histórico do cliente, quando disponível) a uma frase genérica — é isso que faz o texto soar escrito por alguém que conhece o negócio de verdade.
 
 Se for POST estático (format: "estático"):
 TEXTO:
@@ -49,18 +51,24 @@ Exemplos reais (observe o tom: direto, frase curta, sem enrolação, nada de emo
 
 REGRA FIXA: nunca escreva a palavra "GRAVADO" em nenhum título ou texto — isso é só uma marcação de controle interna da agência, não faz parte do conteúdo.
 
-publishCaption é OUTRO texto, sempre — a legenda de verdade que vai publicada junto com o post/reel no Instagram (o que aparece embaixo da mídia). VARIE o tamanho de post pra post — nunca deixe todas as legendas do lote com uma frase só, isso fica repetitivo e genérico. Use o que fizer mais sentido pra cada conteúdo:
-- Curtíssima (1 frase, gancho + CTA) — só quando o conteúdo já fala por si (promoção pontual, aviso rápido, humor).
+publishCaption é OUTRO texto, sempre — a legenda de verdade que vai publicada junto com o post/reel no Instagram (o que aparece embaixo da mídia). Por padrão, prefira legendas MÉDIAS ou LONGAS, mais desenvolvidas — só use uma curtíssima quando o conteúdo realmente já fala por si (promoção pontual, aviso rápido, humor). Nunca deixe todas as legendas do lote com uma frase só, isso fica repetitivo e genérico:
+- Curtíssima (1 frase, gancho + CTA) — exceção, não a regra.
 - Média (2-4 linhas curtas, com quebra de linha entre elas) — padrão pra maioria dos posts educativos/institucionais.
-- Longa (parágrafos curtos com quebra de linha entre eles, pode ter 1-3 linhas com "- " no meio) — quando o post pede contexto, storytelling ou prova social (depoimento, case, explicação mais completa).
-Numa leva de sugestões, misture os três tamanhos — não repita o mesmo padrão em todas. Nunca repita captionDraft ali (não cole o roteiro/slides inteiro como legenda) — é um texto PRÓPRIO, pensado pra funcionar sozinho embaixo do post.
+- Longa (parágrafos curtos com quebra de linha entre eles, pode ter 1-3 linhas com "- " no meio) — quando o post pede contexto, storytelling ou prova social (depoimento, case, explicação mais completa). Use com mais frequência do que a curtíssima.
+Numa leva de sugestões, misture os tamanhos, mas puxando mais pra média/longa. Nunca repita captionDraft ali (não cole o roteiro/slides inteiro como legenda) — é um texto PRÓPRIO, pensado pra funcionar sozinho embaixo do post.
 
-Exemplos reais de legenda (repare a variação de tamanho):
-Curta: "Joelho estalando com dor? Não é normal. Comenta aqui que eu te explico."
+APROFUNDE, não fique na superfície: sempre que houver base de conhecimento da agência ou histórico do cliente disponível no contexto, puxe fatos e detalhes CONCRETOS de lá (um número, um processo específico, um diferencial real) em vez de frase genérica de marketing tipo "cuidado de qualidade" ou "atendimento especial" — isso é o que faz a legenda parecer escrita por alguém que conhece o negócio, não gerada por IA.
+
+EMOJI: use ocasionalmente como padrão (não em toda frase, um ou dois por legenda no máximo, só onde soa natural — nunca fileira de emoji nem emoji decorativo sem função).
+
+EVITE SOAR COMO TEXTO GERADO POR IA — nunca use essas muletas: "É importante ressaltar/destacar", "não deixe de", "confira", pergunta retórica genérica pra abrir toda legenda (tipo "Você sabia que...?"), "Primeiro... Segundo... Terceiro..." em toda legenda (varie a estrutura), encerramento sempre igual tipo "Fica de olho!"/"Vem com a gente!". Escreva como uma pessoa de verdade que conhece o negócio escreveria — específico, com voz própria, cada legenda estruturada de um jeito diferente da anterior.
+
+Exemplos reais de legenda (repare a variação de tamanho e o emoji ocasional):
+Curta: "Joelho estalando com dor? Não é normal. Comenta aqui que eu te explico 👇"
 Média: "Fez PRP e ainda sente dor?
-Isso pode ser normal nas primeiras semanas — o corpo precisa de tempo pra responder.
-Se tiver dúvida sobre o seu caso, comenta aqui."
-Longa: "Três sinais do joelho que eu não deixaria passar:
+Isso pode ser normal nas primeiras semanas — o corpo precisa de tempo pra responder ao estímulo.
+Se tiver dúvida sobre o seu caso, comenta aqui que eu te oriento."
+Longa: "Três sinais do joelho que eu não deixaria passar 🦵
 
 - Estalo COM dor (diferente do estalo sem dor, que é comum)
 - Inchaço que demora a sumir depois do esforço
@@ -115,7 +123,7 @@ const REPORT_PLAN_TOOL = {
 // meio — .slice(0,N) puro pode cortar exatamente entre as duas metades de
 // um emoji e gerar uma string inválida que a API da Anthropic recusa com
 // "no low surrogate in string".
-function safeTruncate(text: string, maxLen: number): string {
+export function safeTruncate(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;
   let end = maxLen;
   const code = text.charCodeAt(end - 1);

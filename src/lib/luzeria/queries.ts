@@ -107,7 +107,7 @@ import {
 import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
 import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
 import { listTrash, restoreItem, purgeItem } from "./trash.functions";
-import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus, createRoteirosFromPlan } from "./client-docs.functions";
+import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus, createRoteirosFromPlan, regenerateRoteiroDoc } from "./client-docs.functions";
 import { listOrgKnowledge, saveOrgKnowledgeText, saveOrgKnowledgeFile, deleteOrgKnowledge } from "./org-knowledge.functions";
 import { listAiPlanningFeedback } from "./ai-planning.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
@@ -1316,6 +1316,11 @@ export function useApi() {
       mutationFn: useServerFn(deleteClientDoc),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao remover documento."),
+    }),
+    regenerateRoteiroDoc: useMutation({
+      mutationFn: useServerFn(regenerateRoteiroDoc),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao regenerar documento."),
     }),
     createRoteirosFromPlan: useMutation({
       mutationFn: useServerFn(createRoteirosFromPlan),

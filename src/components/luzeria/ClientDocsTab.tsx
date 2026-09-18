@@ -323,8 +323,19 @@ function DocRow({
   const isRoteiro = doc.type === "roteiro";
   const { data: statuses = [] } = useQuery({ ...roteiroStatusesQO(doc.id), enabled: isOpen && isRoteiro });
   const statusByTitle = new Map(statuses.map((s) => [s.roteiroTitle, s]));
-  const { createRoteirosFromPlan } = useApi();
+  const { createRoteirosFromPlan, regenerateRoteiroDoc } = useApi();
   const [pickingMonth, setPickingMonth] = useState(false);
+
+  async function regenerate() {
+    if (!(await requestConfirm(
+      "Reescrever todos os roteiros desse documento com IA — tom mais natural, mais aprofundado e com emoji ocasional? Isso substitui o texto atual (o Pilar de cada um é mantido). Não dá pra desfazer.",
+      { danger: true },
+    ))) return;
+    regenerateRoteiroDoc.mutate(
+      { data: { docId: doc.id } },
+      { onSuccess: () => toast.success("Roteiros reescritos!") },
+    );
+  }
 
   function approveToRoteiros(targetMonthKey: string) {
     if (!doc.planItems?.length) return;
@@ -345,6 +356,15 @@ function DocRow({
         <span className="text-[10px] font-bold uppercase tracking-wide text-foreground/30 shrink-0">
           {CLIENT_DOC_TYPE_LABEL[doc.type].label}
         </span>
+        {isRoteiro && (
+          <span
+            onClick={(e) => { e.stopPropagation(); if (!regenerateRoteiroDoc.isPending) regenerate(); }}
+            title="Reescrever com IA — tom mais natural e aprofundado"
+            className={"p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0" + (regenerateRoteiroDoc.isPending ? " opacity-40" : "")}
+          >
+            <Sparkles size={13} />
+          </span>
+        )}
         <span onClick={(e) => { e.stopPropagation(); onEdit(); }}
           className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0">
           <Pencil size={13} />
