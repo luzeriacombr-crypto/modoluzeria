@@ -33,6 +33,7 @@ import { ReferralAnnouncementBanner } from "./ReferralAnnouncementBanner";
 import { SmartImportBanner } from "./SmartImportBanner";
 import { ClientLimitGraceBanner } from "./ClientLimitGraceBanner";
 import { GlobalConfirmDialog } from "./GlobalConfirmDialog";
+import { SupportChatWidget } from "./SupportChatWidget";
 import { IncomingCallModal } from "./IncomingCallModal";
 import { ActiveCallOverlay } from "./ActiveCallOverlay";
 import { CallInvitePicker } from "./CallInvitePicker";
@@ -304,6 +305,7 @@ export function App() {
       <MobileNav onCreateClient={(category) => setCreating({ category })} />
       <AppTour />
       <GlobalConfirmDialog />
+      <SupportChatWidget />
       <IncomingCallModal call={call} />
       <ActiveCallOverlay call={call} />
       <NewClientModal open={!!creating} category={creating?.category} onClose={() => setCreating(null)} />

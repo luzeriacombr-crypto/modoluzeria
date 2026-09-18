@@ -56,6 +56,7 @@ import {
 } from "./automations.functions";
 import { listAutomationRules, createAutomationRule, deleteAutomationRule } from "./automation-rules.functions";
 import { listMyBugReports, listAllBugReports, updateBugReportStatus, sendBugReportMessage } from "./bug-reports.functions";
+import { getMySupportThread, sendSupportMessage, listOpenSupportThreads, getSupportThreadMessages, replyToSupportThread, closeSupportThread } from "./support-chat.functions";
 import {
   getOrCreateShareToken, rotateShareToken, listClientFeedback, getFeedApprovalSummary,
   getActiveFeedMonth, setActiveFeedMonth,
@@ -631,6 +632,19 @@ export const myBugReportsQO = () =>
 export const allBugReportsQO = () =>
   queryOptions({ queryKey: ["bug-reports", "all"], queryFn: () => listAllBugReports() });
 
+export const mySupportThreadQO = () =>
+  queryOptions({ queryKey: ["support-chat", "mine"], queryFn: () => getMySupportThread() });
+
+export const openSupportThreadsQO = () =>
+  queryOptions({ queryKey: ["support-chat", "open"], queryFn: () => listOpenSupportThreads(), refetchInterval: 60_000 });
+
+export const supportThreadMessagesQO = (threadId: string | null) =>
+  queryOptions({
+    queryKey: ["support-chat", "thread-messages", threadId],
+    queryFn: () => getSupportThreadMessages({ data: { threadId: threadId! } }),
+    enabled: !!threadId,
+  });
+
 export const clientFeedbackQO = (itemId: string | null) =>
   queryOptions({
     queryKey: ["client-feedback", itemId],
@@ -956,6 +970,21 @@ export function useApi() {
     adminUpdateMemberAvatar: useMutation({ mutationFn: useServerFn(adminUpdateMemberAvatar), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     updateBugReportStatus: useMutation({ mutationFn: useServerFn(updateBugReportStatus), onSuccess: () => qc.invalidateQueries({ queryKey: ["bug-reports"] }) }),
     sendBugReportMessage: useMutation({ mutationFn: useServerFn(sendBugReportMessage) }),
+    sendSupportMessage: useMutation({
+      mutationFn: useServerFn(sendSupportMessage),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["support-chat", "mine"] }),
+    }),
+    replyToSupportThread: useMutation({
+      mutationFn: useServerFn(replyToSupportThread),
+      onSuccess: (_r, vars: any) => {
+        qc.invalidateQueries({ queryKey: ["support-chat", "open"] });
+        qc.invalidateQueries({ queryKey: ["support-chat", "thread-messages", vars.data.threadId] });
+      },
+    }),
+    closeSupportThread: useMutation({
+      mutationFn: useServerFn(closeSupportThread),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["support-chat", "open"] }),
+    }),
     deleteUser: useMutation({ mutationFn: useServerFn(deleteUser), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     adminCreateUser: useMutation({ mutationFn: useServerFn(adminCreateUser), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     createAgency: useMutation({ mutationFn: useServerFn(createAgency) }),

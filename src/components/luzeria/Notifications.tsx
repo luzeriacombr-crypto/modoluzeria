@@ -17,7 +17,7 @@ export function NotificationsBell() {
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
-  const { selectMonth, openItem, flash, openFicha, openStageComposer } = useUI();
+  const { selectMonth, openItem, flash, openFicha, openStageComposer, setSupportChatOpen } = useUI();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -118,6 +118,10 @@ export function NotificationsBell() {
                     navigate({ to: "/selecao-de-fotos/$clientId", params: { clientId: n.photoClientId } });
                   } else if (n.type === "contract_signed" && n.clientId) {
                     openFicha(n.clientId);
+                  } else if (n.type === "support_chat_escalated") {
+                    navigate({ to: "/ajuda", search: { tab: "chats" } });
+                  } else if (n.type === "support_chat_reply") {
+                    setSupportChatOpen(true);
                   }
                 }}
                 className="w-full text-left px-4 py-3 border-b border-foreground/4 hover:bg-foreground/[0.04] transition-colors block"

@@ -17,3 +17,6 @@ export const IMPORT_MODEL = "claude-sonnet-5";
 // Constante irmã da acima — mesmo modelo hoje, mas nome próprio pra não
 // acoplar a feature de planejamento a mudanças futuras da importação.
 export const PLANNING_MODEL = "claude-sonnet-5";
+
+// Idem, pro Chat do Modo Criador (suporte).
+export const SUPPORT_MODEL = "claude-sonnet-5";

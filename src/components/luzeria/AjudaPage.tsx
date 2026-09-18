@@ -5,116 +5,37 @@ import { ChevronDown, ExternalLink, Image as ImageIcon, MessageCircle, Video, Se
 import { useMe, useApi, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/queries";
 import type { MyBugReport, AllBugReport, BugReportStatus } from "@/lib/luzeria/bug-reports.functions";
 import { ForumTab } from "./ForumTab";
+import { SupportChatAdminPanel } from "./SupportChatWidget";
+import { FAQ, TUTORIALS as TUTORIALS_BASE } from "@/lib/luzeria/help-content";
 import tutorialAddPost from "@/assets/tutorials/tutorial-add-post.png";
 import tutorialFormato from "@/assets/tutorials/tutorial-formato.png";
 import tutorialNovaAutomacao from "@/assets/tutorials/tutorial-nova-automacao.png";
 import tutorialEquipeCard from "@/assets/tutorials/tutorial-equipe-card.png";
 import tutorialEnviarFoto from "@/assets/tutorials/tutorial-enviar-foto.png";
 
-type Tab = "faq" | "tutoriais" | "minhas" | "todas" | "forum";
+type Tab = "faq" | "tutoriais" | "minhas" | "todas" | "chats" | "forum";
 
-const FAQ: { category: string; items: { q: string; a: string }[] }[] = [
-  {
-    category: "Conteúdo (Posts, Reels e Rotina)",
-    items: [
-      { q: "Como funcionam os cards de Posts e Reels?", a: "Cada post ou reel aparece como um card com capa, status, responsável e prazo. Clique no card pra abrir os detalhes completos (copy, checklist, comentários, arquivos)." },
-      { q: "O que é o campo Estático/Carrossel?", a: "É o formato do post. No resumo em cards só aparece o formato já escolhido — pra mudar, abra o post clicando nele e use a seção \"Formato\"." },
-      { q: "Como funciona a Rotina?", a: "É a lista de tarefas de organização/limpeza da agência, com um calendário por dia. O Admin Master pode editar a lista de tarefas direto na tela." },
-    ],
-  },
-  {
-    category: "Equipe e automações",
-    items: [
-      { q: "Como envio uma foto de perfil pra um colega que ainda não tem?", a: "Em Configurações → Equipe, clique no card do colaborador — abre um modal onde o Admin Master pode enviar ou trocar a foto dele." },
-      { q: "Esqueci minha senha, e agora?", a: "Peça pro Admin Master da sua agência: Configurações → Equipe → clique no seu card → \"Resetar senha\". Você recebe um link por e-mail." },
-      { q: "Como funcionam as Automações?", a: "Em Configurações → Automações, o Admin Master pode criar regras do tipo \"quando o status virar X, então alterar status para Y (ou atribuir para alguém)\". Elas rodam sozinhas, mesmo sem ninguém com a tela aberta." },
-    ],
-  },
-  {
-    category: "Clientes e arquivos",
-    items: [
-      { q: "Como meu cliente aprova um post sem ter conta?", a: "Cada cliente tem um link público (aba \"Preview de Feed\" dentro do cliente). Manda esse link — o cliente aprova ou comenta direto, sem login." },
-      { q: "Como funciona o backup no Google Drive?", a: "Conecte sua conta do Drive em Configurações → Drive. Os arquivos enviados nos posts/reels são organizados automaticamente lá, por cliente e mês." },
-    ],
-  },
-  {
-    category: "Suporte",
-    items: [
-      { q: "Como reporto um problema ou peço uma sugestão?", a: "Use o ícone de interrogação (?) ao lado do sino de notificações, em qualquer tela. Você também pode acompanhar o que já reportou na aba \"Minhas solicitações\" aqui em cima." },
-    ],
-  },
-];
-
-const TUTORIALS: { title: string; steps: string[]; images?: { src: string; alt: string }[]; videoUrl?: string }[] = [
-  {
-    title: "Criar um novo post ou reel",
-    steps: [
-      "Abra o cliente e escolha a aba Posts ou Reels.",
-      "Clique no card tracejado \"Adicionar Post/Reel\" no fim da lista.",
-      "Clique no título do card pra dar um nome a ele.",
-      "Defina status, responsável e prazo direto pelo card.",
-    ],
-    images: [{ src: tutorialAddPost, alt: "Card tracejado \"Adicionar Posts\" no fim do grid" }],
-  },
-  {
-    title: "Marcar um post como Estático ou Carrossel",
-    steps: [
-      "Clique no card do post pra abrir os detalhes.",
-      "Na seção \"Formato\", escolha Estático ou Carrossel.",
-      "Isso só pode ser mudado dentro do post — no resumo em cards ele só aparece pra leitura.",
-    ],
-    images: [{ src: tutorialFormato, alt: "Seção Formato dentro do post, com as opções Estático e Carrossel" }],
-  },
-  {
-    title: "Conectar o Google Drive",
-    steps: [
-      "Vá em Configurações → Integrações → Google Drive. É um assistente de 3 passos.",
-      "Passo 1: clique em conectar e faça login com a conta Google da agência.",
-      "Passo 2: escolha a pasta que vai guardar as pastas de todos os clientes — navega clicando, ou cola o link/ID se já souber.",
-      "Passo 3: confira as sugestões de pasta pra cada cliente (a gente já compara o nome) e confirme — o que não tiver pasta, é criado do zero.",
-      "Pronto — os arquivos enviados nos posts passam a ser organizados lá automaticamente.",
-    ],
-    videoUrl: "https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw",
-  },
-  {
-    title: "Conectar o Instagram de um cliente",
-    steps: [
-      "Abra a Ficha do Cliente e ache a seção \"Instagram\".",
-      "Clique em \"Conectar Instagram\" — a tela de login que abre é a do próprio Instagram, não a do Modo Criador.",
-      "Faça login com a conta do Instagram do cliente (Business ou Criador de Conteúdo) — não a sua conta de administrador.",
-      "Não precisa de Página do Facebook vinculada — só a conta do Instagram já resolve.",
-      "Depois de conectado, aparece \"✓ Conectado — @usuario\" e já dá pra publicar/programar direto pelos posts e reels desse cliente.",
-    ],
-  },
-  {
-    title: "Criar uma automação",
-    steps: [
-      "Vá em Configurações → Automações (só Admin Master).",
-      "Clique em \"Nova automação\".",
-      "Escolha o status de gatilho e a ação (alterar status ou atribuir membro).",
-      "Salve — a regra passa a rodar sozinha a partir daí.",
-    ],
-    images: [{ src: tutorialNovaAutomacao, alt: "Botão \"Nova automação\" na aba Automações" }],
-  },
-  {
-    title: "Adicionar foto de um colaborador",
-    steps: [
-      "Vá em Configurações → Equipe (só Admin Master).",
-      "Clique no card da pessoa.",
-      "Clique em \"Enviar foto\" e escolha a imagem.",
-    ],
+// Mídia (imagens/vídeo) é só visual — fica aqui, fora da base de conhecimento
+// compartilhada com o Chat do Modo Criador (help-content.ts).
+const TUTORIAL_MEDIA: Record<string, { images?: { src: string; alt: string }[]; videoUrl?: string }> = {
+  "Criar um novo post ou reel": { images: [{ src: tutorialAddPost, alt: "Card tracejado \"Adicionar Posts\" no fim do grid" }] },
+  "Marcar um post como Estático ou Carrossel": { images: [{ src: tutorialFormato, alt: "Seção Formato dentro do post, com as opções Estático e Carrossel" }] },
+  "Conectar o Google Drive": { videoUrl: "https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw" },
+  "Criar uma automação": { images: [{ src: tutorialNovaAutomacao, alt: "Botão \"Nova automação\" na aba Automações" }] },
+  "Adicionar foto de um colaborador": {
     images: [
       { src: tutorialEquipeCard, alt: "Grid de cards da equipe — clique no card de um colaborador" },
       { src: tutorialEnviarFoto, alt: "Botão \"Enviar foto\" dentro do modal do colaborador" },
     ],
   },
-];
+};
+const TUTORIALS = TUTORIALS_BASE.map((t) => ({ ...t, ...TUTORIAL_MEDIA[t.title] }));
 
 export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
   const me = useMe().data;
   const disabled = new Set(me?.disabledFeatures ?? []);
   const forumEnabled = me?.role === "master" && !disabled.has("forum");
-  const validTabs = ["faq", "tutoriais", "minhas", "todas", ...(forumEnabled ? ["forum"] : [])];
+  const validTabs = ["faq", "tutoriais", "minhas", "todas", "chats", ...(forumEnabled ? ["forum"] : [])];
   const [tab, setTab] = useState<Tab>(validTabs.includes(initialTab ?? "") ? (initialTab as Tab) : "faq");
 
   const tabs: { id: Tab; label: string }[] = [
@@ -122,11 +43,12 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
     { id: "tutoriais", label: "Tutoriais" },
     { id: "minhas", label: "Minhas solicitações" },
     ...(me?.isPlatformAdmin ? [{ id: "todas" as Tab, label: "Todas as solicitações" }] : []),
+    ...(me?.isPlatformAdmin ? [{ id: "chats" as Tab, label: "Chats" }] : []),
     ...(forumEnabled ? [{ id: "forum" as Tab, label: "Fórum" }] : []),
   ];
 
   return (
-    <div className={`p-10 mx-auto ${tab === "forum" ? "max-w-6xl" : "max-w-4xl"}`}>
+    <div className={`p-10 mx-auto ${tab === "forum" || tab === "chats" ? "max-w-6xl" : "max-w-4xl"}`}>
       <h1 className="text-[32px] font-bold text-foreground tracking-tight">Central de ajuda</h1>
       <p className="text-sm text-foreground/50 mt-2">Dúvidas frequentes, tutoriais, o histórico do que você já reportou e o fórum entre agências.</p>
 
@@ -193,6 +115,7 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
 
       {tab === "minhas" && <MinhasSolicitacoes />}
       {tab === "todas" && me?.isPlatformAdmin && <TodasSolicitacoes />}
+      {tab === "chats" && me?.isPlatformAdmin && <SupportChatAdminPanel />}
       {tab === "forum" && forumEnabled && <ForumTab />}
     </div>
   );

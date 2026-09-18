@@ -36,7 +36,9 @@ interface UI {
   fichaClientId: string | null;
   stageComposerClientId: string | null;
   searchOpen: boolean;
+  supportChatOpen: boolean;
   setSearchOpen: (v: boolean) => void;
+  setSupportChatOpen: (v: boolean) => void;
   selectClient: (id: string | null) => void;
   selectMonth: (key: string) => void;
   openItem: (id: string | null, navList?: string[] | null) => void;
@@ -69,7 +71,9 @@ export const useUI = create<UI>((set) => ({
   fichaClientId: null,
   stageComposerClientId: null,
   searchOpen: false,
+  supportChatOpen: false,
   setSearchOpen: (v) => set({ searchOpen: v }),
+  setSupportChatOpen: (v) => set({ supportChatOpen: v }),
   selectClient: (id) =>
     set({ selectedClientId: id, selectedItemId: null, itemNavList: null, view: id ? "client" : "my" }),
   selectMonth: (key) => set({ selectedMonthKey: key }),
