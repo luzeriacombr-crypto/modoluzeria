@@ -505,10 +505,30 @@ function ConteudoPane({ clientId, clientName, mediaState }: { clientId: string; 
   const { media, mediaError, loadingMedia, loadingInsights, results } = mediaState;
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [metric, setMetric] = useState<keyof InstagramMediaInsights>("views");
+  // "date" é a ordem padrão (mais recente primeiro, igual a Meta já devolve)
+  // — clicar numa pill de métrica passa a ordenar por ela também, igual o
+  // Instagram de verdade faz.
+  const [sortBy, setSortBy] = useState<keyof InstagramMediaInsights | "date">("date");
   const [selected, setSelected] = useState<InstagramAccountMedia | null>(null);
 
   const filtered = (media ?? []).filter((m) => typeFilter === "ALL" || m.mediaProductType === typeFilter);
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === "date") return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    const ra = results.get(a.id);
+    const rb = results.get(b.id);
+    const va = ra?.error ? null : ra?.[sortBy] ?? null;
+    const vb = rb?.error ? null : rb?.[sortBy] ?? null;
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    return (vb as number) - (va as number);
+  });
   const metricLabel = CONTENT_METRIC_PILLS.find((p) => p.key === metric)?.label ?? "";
+
+  function selectMetric(key: keyof InstagramMediaInsights) {
+    setMetric(key);
+    setSortBy(key);
+  }
 
   function exportCsv() {
     if (!media) return;
@@ -552,27 +572,39 @@ function ConteudoPane({ clientId, clientName, mediaState }: { clientId: string; 
         )}
       </div>
 
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mb-3">
-        {CONTENT_METRIC_PILLS.map((p) => (
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+          {CONTENT_METRIC_PILLS.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => selectMetric(p.key)}
+              title={`Mostrar e ordenar por ${p.label.toLowerCase()}`}
+              className="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition"
+              style={sortBy === p.key
+                ? { background: "rgba(var(--lz-brand-rgb),0.16)", color: "var(--lz-accent-ink)" }
+                : { background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 50%, transparent)" }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        {sortBy !== "date" && (
           <button
-            key={p.key}
-            onClick={() => setMetric(p.key)}
-            className="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition"
-            style={metric === p.key
-              ? { background: "rgba(var(--lz-brand-rgb),0.16)", color: "var(--lz-accent-ink)" }
-              : { background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 50%, transparent)" }}
+            onClick={() => setSortBy("date")}
+            title="Voltar pra ordem de publicação (mais recente primeiro)"
+            className="shrink-0 text-[11px] font-semibold text-foreground/50 hover:text-foreground inline-flex items-center gap-1"
           >
-            {p.label}
+            <Clock size={11} /> Ordem de publicação
           </button>
-        ))}
+        )}
       </div>
 
       {loadingMedia && <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>}
       {mediaError && <p className="text-xs text-red-400/80">{mediaError}</p>}
-      {!loadingMedia && filtered.length === 0 && <p className="text-xs text-foreground/40 text-center py-6">Nenhuma publicação encontrada nessa conta do Instagram.</p>}
+      {!loadingMedia && sorted.length === 0 && <p className="text-xs text-foreground/40 text-center py-6">Nenhuma publicação encontrada nessa conta do Instagram.</p>}
 
       <div className="divide-y divide-foreground/8">
-        {filtered.map((m) => {
+        {sorted.map((m) => {
           const r = results.get(m.id);
           const bigValue = r?.error ? null : r?.[metric] ?? null;
           return (
