@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive } from "lucide-react";
 import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, useApi } from "@/lib/luzeria/queries";
-import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial } from "@/lib/luzeria/api.functions";
+import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { approveReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
@@ -113,6 +113,20 @@ export function AgenciesBillingPanel() {
   // não) — não mudam com o seletor de período, é "agora", não uma coorte.
   const totalUsers = orgs.reduce((sum: number, o: any) => sum + (o.teamCount ?? 0), 0);
   const totalClients = orgs.reduce((sum: number, o: any) => sum + (o.clientsUsed ?? 0), 0);
+
+  // Receita: só orgânicas (fora Luzeria e revenda, que tem preço próprio
+  // por fora) e só "active" com assinatura de verdade na Asaas —
+  // `subscription_status='active'` sozinho não basta, porque a Views
+  // Agência (conta demo) fica marcada como "active" sem nunca ter passado
+  // pela Asaas. "Previsto" assume 100% de conversão de quem tá em teste —
+  // é o teto, não uma estimativa realista (não temos histórico de
+  // conversão ainda pra calcular uma taxa de verdade).
+  const revenueOrgs = organicOrgs.filter((o: any) => o.id !== LUZERIA_ORG_ID);
+  const payingOrgs = revenueOrgs.filter((o: any) => o.subscriptionStatus === "active" && o.hasAsaasSubscription);
+  const trialOrgs = revenueOrgs.filter((o: any) => o.subscriptionStatus === "trialing");
+  const realRevenueCents = payingOrgs.reduce((s: number, o: any) => s + (o.priceCents ?? 0), 0);
+  const trialRevenueCents = trialOrgs.reduce((s: number, o: any) => s + (o.priceCents ?? 0), 0);
+  const fmtBRL = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const stateCounts = new Map<string, number>();
   orgs.forEach((o: any) => {
     const uf = ufFromWhatsapp(o.whatsapp);
@@ -219,6 +233,23 @@ export function AgenciesBillingPanel() {
             <span className="font-semibold text-foreground/80">{cold3d.length}</span> agência{cold3d.length > 1 ? "s" : ""} com 3+ dias e nenhum cliente cadastrado: {cold3d.map((o: any) => o.name).join(", ")}
           </div>
         )}
+
+        <div className="mt-4 pt-4 border-t border-foreground/6">
+          <div className="text-[11px] text-foreground/50 mb-2">Receita mensal</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
+              <div className="text-lg font-bold text-foreground">{fmtBRL(realRevenueCents)}</div>
+              <div className="text-[11px] text-foreground/50 mt-0.5">Real — {payingOrgs.length} pagante{payingOrgs.length === 1 ? "" : "s"}</div>
+            </div>
+            <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
+              <div className="text-lg font-bold text-foreground">{fmtBRL(realRevenueCents + trialRevenueCents)}</div>
+              <div className="text-[11px] text-foreground/50 mt-0.5">Previsto — +{trialOrgs.length} em teste</div>
+            </div>
+          </div>
+          <p className="text-[10.5px] text-foreground/35 mt-2 leading-relaxed">
+            "Previsto" assume 100% de conversão de quem está em teste — é o teto, não uma estimativa realista (ainda não temos histórico pra calcular uma taxa de conversão de verdade).
+          </p>
+        </div>
 
         <div className="mt-4 pt-4 border-t border-foreground/6 grid grid-cols-2 gap-3">
           <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
