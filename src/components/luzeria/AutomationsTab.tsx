@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Bell, Calendar, Plus, PlayCircle, Repeat, Sparkles, Timer, Trash2, Zap } from "lucide-react";
+import { Bell, Calendar, Plus, Repeat, Sparkles, Timer, Trash2, Zap } from "lucide-react";
 import { cronJobsQO, automationRulesQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { STATUS_META, getStatusMeta, type Status, type BuiltinStatus } from "@/lib/luzeria/types";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -56,7 +56,6 @@ function relativeTime(iso: string | null) {
 
 export function AutomationsTab() {
   const { data: jobs = [], isLoading } = useQuery(cronJobsQO());
-  const { runDailyDigestNow, runDeadlineRemindersNow } = useApi();
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -108,35 +107,6 @@ export function AutomationsTab() {
       </div>
 
       <AutomationRulesSection />
-
-      <div>
-        <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
-          <PlayCircle size={12} /> Disparar agora
-        </h2>
-        <div className="bg-card rounded-lg p-5 grid sm:grid-cols-2 gap-3">
-          <button
-            disabled={runDeadlineRemindersNow.isPending}
-            onClick={() => runDeadlineRemindersNow.mutate({} as any, {
-              onSuccess: (r: any) => toast.success(`Alertas enviados: ${r.sent}`),
-              onError: (e: any) => toast.error(e?.message ?? "Falhou"),
-            })}
-            className="lz-btn-primary rounded-md py-2.5 text-xs disabled:opacity-50">
-            {runDeadlineRemindersNow.isPending ? "Enviando…" : "Rodar alertas de prazo"}
-          </button>
-          <button
-            disabled={runDailyDigestNow.isPending}
-            onClick={() => runDailyDigestNow.mutate({} as any, {
-              onSuccess: (r: any) => toast.success(`Resumos enviados: ${r.sent}`),
-              onError: (e: any) => toast.error(e?.message ?? "Falhou"),
-            })}
-            className="lz-btn-primary rounded-md py-2.5 text-xs disabled:opacity-50">
-            {runDailyDigestNow.isPending ? "Enviando…" : "Rodar resumo diário"}
-          </button>
-        </div>
-        <p className="text-[11px] text-foreground/30 mt-3">
-          Útil para testar. As notificações respeitam as preferências de cada colaborador (configuráveis no perfil).
-        </p>
-      </div>
     </div>
   );
 }

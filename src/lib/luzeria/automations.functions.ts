@@ -87,30 +87,6 @@ async function ensureMaster(context: any) {
   if (!data) throw new Error("Forbidden");
 }
 
-export const runDailyDigestNow = createServerFn({ method: "POST" })
-  .middleware([requireActiveProfile])
-  .handler(async ({ context }) => {
-    await ensureMaster(context);
-    // send_daily_digest() é REVOKE'd de authenticated/anon (só service_role
-    // executa — ver 20260629235056) porque manda notificação pra QUALQUER
-    // usuário do sistema, não só quem chamou; precisa do client admin, o
-    // client normal do usuário sempre dá "permission denied".
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.rpc("send_daily_digest" as any);
-    if (error) throw new Error(error.message);
-    return { ok: true, sent: data ?? 0 };
-  });
-
-export const runDeadlineRemindersNow = createServerFn({ method: "POST" })
-  .middleware([requireActiveProfile])
-  .handler(async ({ context }) => {
-    await ensureMaster(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.rpc("send_deadline_reminders" as any);
-    if (error) throw new Error(error.message);
-    return { ok: true, sent: data ?? 0 };
-  });
-
 export type CronJobInfo = {
   jobname: string;
   schedule: string;

@@ -52,7 +52,7 @@ import {
 } from "./drive.functions";
 import {
   getMyNotificationPreferences, setMyNotificationPreferences,
-  runDailyDigestNow, runDeadlineRemindersNow, listCronJobs,
+  listCronJobs,
 } from "./automations.functions";
 import { listAutomationRules, createAutomationRule, deleteAutomationRule } from "./automation-rules.functions";
 import { listMyBugReports, listAllBugReports, updateBugReportStatus, sendBugReportMessage } from "./bug-reports.functions";
@@ -1615,20 +1615,6 @@ export function useApi() {
     deleteAutomationRule: useMutation({
       mutationFn: useServerFn(deleteAutomationRule),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["automation-rules"] }),
-    }),
-    runDailyDigestNow: useMutation({
-      mutationFn: useServerFn(runDailyDigestNow),
-      onSuccess: () => {
-        qc.invalidateQueries({ queryKey: ["notifications"] });
-        qc.invalidateQueries({ queryKey: ["cron-jobs"] });
-      },
-    }),
-    runDeadlineRemindersNow: useMutation({
-      mutationFn: useServerFn(runDeadlineRemindersNow),
-      onSuccess: () => {
-        qc.invalidateQueries({ queryKey: ["notifications"] });
-        qc.invalidateQueries({ queryKey: ["cron-jobs"] });
-      },
     }),
     /* ===== GOOGLE AGENDA ===== */
     getGoogleCalendarAuthUrl: useMutation({ mutationFn: useServerFn(getGoogleCalendarAuthUrl) }),
