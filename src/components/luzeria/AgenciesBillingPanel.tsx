@@ -24,6 +24,51 @@ function daysUntil(iso: string) {
   return diff;
 }
 
+// DDD -> UF (plano de numeração da Anatel, estável) — usado só pra estimar
+// "Estados com mais agências" a partir do WhatsApp já cadastrado no
+// cadastro, sem precisar pedir um campo de estado novo (que também não
+// preencheria retroativamente as agências que já existem).
+const DDD_TO_UF: Record<string, string> = {
+  "11": "SP", "12": "SP", "13": "SP", "14": "SP", "15": "SP", "16": "SP", "17": "SP", "18": "SP", "19": "SP",
+  "21": "RJ", "22": "RJ", "24": "RJ",
+  "27": "ES", "28": "ES",
+  "31": "MG", "32": "MG", "33": "MG", "34": "MG", "35": "MG", "37": "MG", "38": "MG",
+  "41": "PR", "42": "PR", "43": "PR", "44": "PR", "45": "PR", "46": "PR",
+  "47": "SC", "48": "SC", "49": "SC",
+  "51": "RS", "53": "RS", "54": "RS", "55": "RS",
+  "61": "DF",
+  "62": "GO", "64": "GO",
+  "63": "TO",
+  "65": "MT", "66": "MT",
+  "67": "MS",
+  "68": "AC",
+  "69": "RO",
+  "71": "BA", "73": "BA", "74": "BA", "75": "BA", "77": "BA",
+  "79": "SE",
+  "81": "PE", "87": "PE",
+  "82": "AL",
+  "83": "PB",
+  "84": "RN",
+  "85": "CE", "88": "CE",
+  "86": "PI", "89": "PI",
+  "91": "PA", "93": "PA", "94": "PA",
+  "92": "AM", "97": "AM",
+  "95": "RR",
+  "96": "AP",
+  "98": "MA", "99": "MA",
+};
+
+function ufFromWhatsapp(whatsapp: string | null): string | null {
+  if (!whatsapp) return null;
+  const digits = whatsapp.replace(/\D/g, "");
+  // Aceita com ou sem "55" de país e com ou sem o 9 extra do celular —
+  // o DDD são sempre os 2 dígitos logo depois do "55" (se vier) e antes
+  // do número de 8-9 dígitos.
+  const withoutCountry = digits.startsWith("55") && digits.length > 11 ? digits.slice(2) : digits;
+  const ddd = withoutCountry.slice(0, 2);
+  return DDD_TO_UF[ddd] ?? null;
+}
+
 function formatLastLogin(iso: string | null) {
   if (!iso) return "Nunca";
   const diffDays = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
@@ -43,6 +88,7 @@ export function AgenciesBillingPanel() {
   const [resettingId, setResettingId] = useState<string | null>(null);
   const [resellerFilter, setResellerFilter] = useState<"all" | "resellers" | "resold">("all");
   const [creatingReseller, setCreatingReseller] = useState(false);
+  const [infoPeriod, setInfoPeriod] = useState<"7d" | "30d" | "total">("7d");
 
   const visibleOrgs = orgs.filter((o: any) =>
     resellerFilter === "all" ? true :
@@ -55,12 +101,24 @@ export function AgenciesBillingPanel() {
   // significado quando a pessoa troca o filtro da tabela.
   const organicOrgs = orgs.filter((o: any) => !o.isReseller && !o.resellerOrgId);
   const daysSince = (iso: string) => (Date.now() - new Date(iso).getTime()) / 86_400_000;
-  const cohort7d = organicOrgs.filter((o: any) => daysSince(o.createdAt) <= 7);
-  const withClient = cohort7d.filter((o: any) => o.clientsUsed >= 1).length;
-  const withActiveClients = cohort7d.filter((o: any) => o.clientsUsed >= 2).length;
-  const withTeam = cohort7d.filter((o: any) => o.teamCount > 1).length;
+  const infoPeriodDays = infoPeriod === "7d" ? 7 : infoPeriod === "30d" ? 30 : Infinity;
+  const cohort = organicOrgs.filter((o: any) => daysSince(o.createdAt) <= infoPeriodDays);
+  const withClient = cohort.filter((o: any) => o.clientsUsed >= 1).length;
+  const withActiveClients = cohort.filter((o: any) => o.clientsUsed >= 2).length;
+  const withTeam = cohort.filter((o: any) => o.teamCount > 1).length;
   const cold3d = organicOrgs.filter((o: any) => daysSince(o.createdAt) >= 3 && o.clientsUsed === 0);
-  const pct = (n: number) => (cohort7d.length ? Math.round((100 * n) / cohort7d.length) : 0);
+  const pct = (n: number) => (cohort.length ? Math.round((100 * n) / cohort.length) : 0);
+
+  // Totais gerais da plataforma inteira (todas as agências, orgânicas ou
+  // não) — não mudam com o seletor de período, é "agora", não uma coorte.
+  const totalUsers = orgs.reduce((sum: number, o: any) => sum + (o.teamCount ?? 0), 0);
+  const totalClients = orgs.reduce((sum: number, o: any) => sum + (o.clientsUsed ?? 0), 0);
+  const stateCounts = new Map<string, number>();
+  orgs.forEach((o: any) => {
+    const uf = ufFromWhatsapp(o.whatsapp);
+    if (uf) stateCounts.set(uf, (stateCounts.get(uf) ?? 0) + 1);
+  });
+  const topStates = [...stateCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
 
   const fetchInvoice = useMutation({
     mutationFn: useServerFn(getOrgNextInvoice),
@@ -125,10 +183,27 @@ export function AgenciesBillingPanel() {
       </div>
 
       <div className="bg-card border border-foreground/7 rounded-xl p-4">
-        <h3 className="text-xs font-bold uppercase tracking-wide text-foreground/40 mb-3">Funil de ativação — últimos 7 dias</h3>
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+          <h3 className="text-xs font-bold uppercase tracking-wide text-foreground/40">Informações</h3>
+          <div className="inline-flex items-center gap-1 bg-background rounded-md p-1 text-xs">
+            {([
+              ["7d", "Últimos 7 dias"],
+              ["30d", "Últimos 30 dias"],
+              ["total", "Total"],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setInfoPeriod(key)}
+                className={`px-2.5 py-1 rounded font-semibold transition ${infoPeriod === key ? "bg-foreground/10 text-foreground" : "text-foreground/40 hover:text-foreground/70"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Cadastros", value: cohort7d.length, sub: null },
+            { label: "Cadastros", value: cohort.length, sub: null },
             { label: "Importaram cliente", value: withClient, sub: `${pct(withClient)}%` },
             { label: "Já ativos (2+ clientes)", value: withActiveClients, sub: `${pct(withActiveClients)}%` },
             { label: "Chamaram equipe", value: withTeam, sub: `${pct(withTeam)}%` },
@@ -142,6 +217,31 @@ export function AgenciesBillingPanel() {
         {cold3d.length > 0 && (
           <div className="mt-3 pt-3 border-t border-foreground/6 text-xs text-foreground/60">
             <span className="font-semibold text-foreground/80">{cold3d.length}</span> agência{cold3d.length > 1 ? "s" : ""} com 3+ dias e nenhum cliente cadastrado: {cold3d.map((o: any) => o.name).join(", ")}
+          </div>
+        )}
+
+        <div className="mt-4 pt-4 border-t border-foreground/6 grid grid-cols-2 gap-3">
+          <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
+            <div className="text-lg font-bold text-foreground">{totalUsers}</div>
+            <div className="text-[11px] text-foreground/50 mt-0.5">Usuários no total</div>
+          </div>
+          <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
+            <div className="text-lg font-bold text-foreground">{totalClients}</div>
+            <div className="text-[11px] text-foreground/50 mt-0.5">Clientes no total</div>
+          </div>
+        </div>
+
+        {topStates.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-foreground/6">
+            <div className="text-[11px] text-foreground/50 mb-2">Estados com mais agências</div>
+            <div className="flex flex-wrap gap-2">
+              {topStates.map(([uf, count]) => (
+                <span key={uf} className="inline-flex items-center gap-1.5 bg-foreground/[0.03] rounded-full px-2.5 py-1 text-xs">
+                  <span className="font-bold text-foreground">{uf}</span>
+                  <span className="text-foreground/40">{count}</span>
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
