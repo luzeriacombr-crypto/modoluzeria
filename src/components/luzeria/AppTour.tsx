@@ -21,8 +21,9 @@ type Step = {
   /** Short label shown as a chip under the text, naming what's highlighted. Skipped for centered steps (no target). */
   spotLabel?: string;
   target?: string;
-  view?: "my" | "admin" | "settings";
-  settingsTab?: string;
+  /** Route to navigate to before this step shows, when it needs a real page (not just global chrome like the sidebar/bell, which are visible everywhere already). */
+  to?: string;
+  search?: Record<string, string>;
   roles?: Role[];
   /** Overrides `target` on mobile, when the feature lives in a different spot (bottom nav vs sidebar). */
   mobileTarget?: string;
@@ -63,7 +64,7 @@ const STEPS: Step[] = [
     title: "Seu checklist de início",
     desc: "Mostra exatamente o que falta pra sua agência ficar redonda: marca, Google Drive, seus clientes. Risque um por um — ele some sozinho quando terminar.",
     spotLabel: "Checklist \"Primeiros passos\"",
-    view: "admin",
+    to: "/admin",
     target: '[data-tour="setup-checklist"]',
     roles: ["master"],
   },
@@ -85,7 +86,7 @@ const STEPS: Step[] = [
     title: "Minhas demandas",
     desc: "Tudo que está atribuído a você aparece aqui, agrupado por status, com uma pílula colorida avisando o prazo — de \"atrasado\" até \"tranquilo\" (na cor da sua marca). É a tela que você vai abrir todo dia.",
     spotLabel: "Minhas demandas",
-    view: "my",
+    to: "/minhas-tarefas",
     target: '[data-tour="my-tasks"]',
   },
   {
@@ -94,10 +95,9 @@ const STEPS: Step[] = [
     icon: Instagram,
     title: "Publique sem sair daqui",
     desc: "Conecte a conta do cliente e publique post, reel ou story direto pelo app — na hora ou agendado. Tem até uma aba de Calendário aqui dentro, juntando tudo que está programado num mês só.",
-    descMobile: "Conecte a conta do cliente e publique direto pelo app. No celular, toque no menu (☰) aqui embaixo e escolha Instagram.",
     spotLabel: "Instagram",
-    target: '[data-tour="nav-instagram"]',
-    mobileTarget: '[data-tour="mobile-menu-btn"]',
+    to: "/instagram",
+    target: '[data-tour="instagram-page"]',
     roles: ["master", "setor"],
     hideIfDisabled: "instagram",
   },
@@ -107,10 +107,10 @@ const STEPS: Step[] = [
     icon: Users,
     title: "Cargos, permissões e metas",
     desc: "Aprove quem entra, defina o que cada pessoa vê e faz (Membro, Adm Setor ou Adm Master), e acompanhe a produtividade de todo mundo.",
-    descMobile: "Aprove quem entra, defina cargo, permissões e metas. No celular, toque no menu (☰) aqui embaixo e escolha Equipe.",
-    spotLabel: "Equipe",
-    target: '[data-tour="nav-equipe"]',
-    mobileTarget: '[data-tour="mobile-menu-btn"]',
+    spotLabel: "Configurações → Equipe",
+    to: "/configuracoes",
+    search: { tab: "team" },
+    target: '[data-tour="team-tab"]',
     roles: ["master", "setor"],
   },
   {
@@ -120,7 +120,7 @@ const STEPS: Step[] = [
     title: "Dashboard geral",
     desc: "Métricas do mês e ranking de produtividade num piscar de olhos — clique num número (Entregues/Falta) pra ver a lista de itens por trás dele.",
     spotLabel: "Dashboard",
-    view: "admin",
+    to: "/admin",
     target: '[data-tour="dashboard-hero"]',
     roles: ["master", "setor"],
   },
@@ -131,8 +131,8 @@ const STEPS: Step[] = [
     title: "Personalize a sua agência",
     desc: "Troque a cor principal e o logo da sua agência bem aqui — com uma versão pro modo escuro e outra pro claro. O Modo Criador veste a camisa da sua marca, inclusive quando o cliente abre o link de aprovação.",
     spotLabel: "Configurações → Geral → Marca da agência",
-    view: "settings",
-    settingsTab: "general",
+    to: "/configuracoes",
+    search: { tab: "general" },
     target: '[data-tour="org-branding"]',
     roles: ["master"],
   },
@@ -206,11 +206,14 @@ export function AppTour() {
     return () => window.removeEventListener("lz:start-tour", handler);
   }, []);
 
-  // Switch view when step requires it.
+  // Navigate to the step's real page — every step that needs one (not just
+  // global chrome like the sidebar/bell, always visible) sets `to`, so the
+  // person actually lands on the screen being described, not just a
+  // floating card with nothing behind it (fixed after this silently never
+  // fired for `view: "my"` steps in the old tour).
   useEffect(() => {
-    if (!open || !step) return;
-    if (step.view === "admin") navigate({ to: "/admin" });
-    else if (step.view === "settings") navigate({ to: "/configuracoes", search: { tab: step.settingsTab ?? "general" } });
+    if (!open || !step?.to) return;
+    navigate({ to: step.to as any, search: step.search as any });
   }, [open, step, navigate]);
 
   // Track target rect.

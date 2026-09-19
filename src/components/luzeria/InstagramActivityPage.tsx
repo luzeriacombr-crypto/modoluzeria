@@ -73,7 +73,7 @@ export function InstagramActivityPage() {
   }
 
   return (
-    <div className="px-5 md:px-10 py-8 max-w-[1400px] mx-auto">
+    <div className="px-5 md:px-10 py-8 max-w-[1400px] mx-auto" data-tour="instagram-page">
       <div className="flex items-center gap-2 mb-1">
         <Instagram size={20} className="text-[var(--lz-accent-ink)]" />
         <h1 className="text-[28px] font-bold text-foreground tracking-tight">Instagram</h1>

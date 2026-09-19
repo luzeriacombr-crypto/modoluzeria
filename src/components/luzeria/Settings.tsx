@@ -139,7 +139,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
       </div>
 
       {tab === "team" && (
-        <div className="flex items-center justify-end gap-2 mb-6">
+        <div className="flex items-center justify-end gap-2 mb-6" data-tour="team-tab">
           {me.isPlatformAdmin && (
             <button onClick={() => setCreatingAgency(true)}
               className="lz-btn-ghost text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
