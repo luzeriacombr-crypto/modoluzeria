@@ -2090,6 +2090,7 @@ export const listNotifications = createServerFn({ method: "GET" })
       clientId: n.client_id ?? n.content_items?.months?.client_id ?? null,
       monthKey: n.content_items?.months?.key ?? null,
       photoClientId: n.photo_client_id ?? null,
+      whatsappPhone: n.whatsapp_phone ?? null,
     }));
   });
 

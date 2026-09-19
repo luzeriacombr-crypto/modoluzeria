@@ -1,12 +1,62 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Bell, Calendar, Plus, Repeat, Sparkles, Timer, Trash2, Zap } from "lucide-react";
 import { cronJobsQO, automationRulesQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { STATUS_META, getStatusMeta, type Status, type BuiltinStatus } from "@/lib/luzeria/types";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { TRIGGER_TYPES, ACTION_TYPES, type AutomationRule, type TriggerType, type ActionType } from "@/lib/luzeria/automation-rules.functions";
 
 const STATUS_OPTIONS = Object.keys(STATUS_META) as BuiltinStatus[];
+
+const TRIGGER_LABEL: Record<TriggerType, string> = {
+  on_create: "Quando o item for criado",
+  status_change: "Quando o status virar",
+  deadline_days_before: "N dias antes do prazo",
+  deadline_overdue: "Quando o prazo vencer",
+  stale_days: "Quando ficar parado N dias",
+  feed_approved: "Quando o cliente aprovar o feed",
+  feed_feedback: "Quando o cliente pedir ajuste",
+  file_attached: "Quando anexarem um arquivo",
+};
+
+const ACTION_LABEL: Record<ActionType, string> = {
+  set_status: "Alterar status para",
+  assign_member: "Atribuir para",
+  notify: "Notificar",
+  whatsapp_link: "Deixar mensagem de WhatsApp pronta",
+  schedule_instagram: "Programar no Instagram",
+};
+
+// Ações que aceitam escolher uma ou mais pessoas (vazio = "os responsáveis
+// atuais do item", só faz sentido pra notify/whatsapp_link).
+const USER_SELECT_ACTIONS: ActionType[] = ["assign_member", "notify", "whatsapp_link"];
+const MESSAGE_ACTIONS: ActionType[] = ["notify", "whatsapp_link"];
+const DAYS_TRIGGERS: TriggerType[] = ["deadline_days_before", "stale_days"];
+
+function describeTrigger(rule: AutomationRule): ReactNode {
+  switch (rule.triggerType) {
+    case "on_create": return <>Quando o item for <strong>criado</strong></>;
+    case "status_change": return <>Quando o status virar <strong style={{ color: getStatusMeta(rule.triggerStatus as Status).color }}>{getStatusMeta(rule.triggerStatus as Status).label}</strong></>;
+    case "deadline_days_before": return <><strong>{rule.triggerDays}</strong> dia(s) antes do prazo</>;
+    case "deadline_overdue": return <>Quando o prazo <strong>vencer</strong></>;
+    case "stale_days": return <>Quando ficar <strong>{rule.triggerDays} dia(s)</strong> parado no mesmo status</>;
+    case "feed_approved": return <>Quando o cliente <strong>aprovar o feed</strong></>;
+    case "feed_feedback": return <>Quando o cliente <strong>pedir ajuste</strong> num post</>;
+    case "file_attached": return <>Quando <strong>anexarem um arquivo</strong></>;
+  }
+}
+
+function describeAction(rule: AutomationRule, userNames: string): ReactNode {
+  switch (rule.actionType) {
+    case "set_status": return <>alterar status para <strong style={{ color: getStatusMeta(rule.actionStatus as Status).color }}>{getStatusMeta(rule.actionStatus as Status).label}</strong></>;
+    case "assign_member": return <>atribuir para <strong>{userNames}</strong></>;
+    case "notify": return <>notificar <strong>{userNames || "os responsáveis do item"}</strong></>;
+    case "whatsapp_link": return <>deixar mensagem de WhatsApp pronta pra <strong>{userNames || "os responsáveis do item"}</strong></>;
+    case "schedule_instagram": return <>programar publicação no <strong>Instagram</strong></>;
+  }
+}
 
 const JOB_META: Record<string, { label: string; description: string; icon: React.ComponentType<any> }> = {
   luzeria_deadline_reminders: {
@@ -130,7 +180,7 @@ function AutomationRulesSection() {
   const grouped = (() => {
     const map = new Map<string, { rule: (typeof rules)[number]; ids: string[]; userIds: string[] }>();
     for (const r of rules) {
-      const key = `${r.onCreate}|${r.triggerStatus}|${r.actionType}|${r.actionStatus}`;
+      const key = `${r.triggerType}|${r.triggerStatus}|${r.triggerDays}|${r.actionType}|${r.actionStatus}|${r.actionMessage}`;
       const existing = map.get(key);
       if (existing) {
         existing.ids.push(r.id);
@@ -154,17 +204,9 @@ function AutomationRulesSection() {
         {grouped.map((g) => (
           <div key={g.ids.join(",")} className="flex items-center gap-3 px-5 py-3.5 border-b border-foreground/5 last:border-b-0">
             <span className="text-sm text-foreground/85 flex-1 min-w-0">
-              {g.rule.onCreate ? (
-                <>Quando o item for <strong>criado</strong></>
-              ) : (
-                <>Quando o status virar <strong style={{ color: getStatusMeta(g.rule.triggerStatus as Status).color }}>{getStatusMeta(g.rule.triggerStatus as Status).label}</strong></>
-              )}
+              {describeTrigger(g.rule)}
               {" → "}
-              {g.rule.actionType === "set_status" ? (
-                <>alterar status para <strong style={{ color: getStatusMeta(g.rule.actionStatus as Status).color }}>{getStatusMeta(g.rule.actionStatus as Status).label}</strong></>
-              ) : (
-                <>atribuir para <strong>{g.userIds.map(memberName).join(", ")}</strong></>
-              )}
+              {describeAction(g.rule, g.userIds.map(memberName).join(", "))}
             </span>
             {isMaster && (
               <button
@@ -188,7 +230,7 @@ function AutomationRulesSection() {
                 const ids = actionUserIds && actionUserIds.length > 0 ? actionUserIds : [undefined];
                 Promise.all(ids.map((actionUserId) =>
                   createAutomationRule.mutateAsync({ data: { ...rest, actionUserId } }),
-                )).then(() => setAdding(false));
+                )).then(() => setAdding(false)).catch((e: any) => toast.error(e?.message ?? "Erro ao criar automação"));
               }}
             />
           ) : (
@@ -211,46 +253,61 @@ function NewRuleForm({
 }: {
   profiles: { id: string; name: string }[];
   onCancel: () => void;
-  onSubmit: (payload: { triggerStatus?: string; onCreate?: boolean; actionType: "set_status" | "assign_member"; actionStatus?: string; actionUserIds?: string[] }) => void;
+  onSubmit: (payload: {
+    triggerType: TriggerType; triggerStatus?: string; triggerDays?: number;
+    actionType: ActionType; actionStatus?: string; actionUserIds?: string[]; actionMessage?: string;
+  }) => void;
 }) {
-  const [triggerMode, setTriggerMode] = useState<"status" | "create">("status");
+  const [triggerType, setTriggerType] = useState<TriggerType>("status_change");
   const [triggerStatus, setTriggerStatus] = useState<Status>(STATUS_OPTIONS[0]);
-  const [actionType, setActionType] = useState<"set_status" | "assign_member">("set_status");
+  const [triggerDays, setTriggerDays] = useState(3);
+  const [actionType, setActionType] = useState<ActionType>("set_status");
   const [actionStatus, setActionStatus] = useState<Status>(STATUS_OPTIONS[0]);
   const [actionUserIds, setActionUserIds] = useState<string[]>(profiles[0] ? [profiles[0].id] : []);
+  const [actionMessage, setActionMessage] = useState("");
 
   function toggleUser(id: string) {
     setActionUserIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   }
 
   const selectClass = "bg-background border border-foreground/10 rounded-md px-2.5 py-2 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
+  const showUserSelect = USER_SELECT_ACTIONS.includes(actionType);
+  const showMessage = MESSAGE_ACTIONS.includes(actionType);
+  const requiresUser = actionType === "assign_member";
 
   return (
     <div className="px-5 py-4 border-t border-foreground/6 space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/70">
-        <select value={triggerMode} onChange={(e) => setTriggerMode(e.target.value as any)} className={selectClass}>
-          <option value="status">Quando o status virar</option>
-          <option value="create">Quando o item for criado</option>
+        <select value={triggerType} onChange={(e) => setTriggerType(e.target.value as TriggerType)} className={selectClass}>
+          {TRIGGER_TYPES.map((t) => <option key={t} value={t}>{TRIGGER_LABEL[t]}</option>)}
         </select>
-        {triggerMode === "status" && (
+        {triggerType === "status_change" && (
           <select value={triggerStatus} onChange={(e) => setTriggerStatus(e.target.value as Status)} className={selectClass}>
             {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
           </select>
         )}
+        {DAYS_TRIGGERS.includes(triggerType) && (
+          <span className="inline-flex items-center gap-1.5">
+            <input
+              type="number" min={0} max={365} value={triggerDays}
+              onChange={(e) => setTriggerDays(Math.max(0, Number(e.target.value) || 0))}
+              className={`${selectClass} w-16`}
+            />
+            <span className="text-foreground/40">dia(s)</span>
+          </span>
+        )}
         <span>então</span>
-        <select value={actionType} onChange={(e) => setActionType(e.target.value as any)} className={selectClass}>
-          <option value="set_status">Alterar status para</option>
-          <option value="assign_member">Atribuir para</option>
+        <select value={actionType} onChange={(e) => setActionType(e.target.value as ActionType)} className={selectClass}>
+          {ACTION_TYPES.map((a) => <option key={a} value={a}>{ACTION_LABEL[a]}</option>)}
         </select>
-        {actionType === "set_status" ? (
+        {actionType === "set_status" && (
           <select value={actionStatus} onChange={(e) => setActionStatus(e.target.value as Status)} className={selectClass}>
             {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
           </select>
-        ) : (
-          <span className="text-foreground/40">(escolha abaixo)</span>
         )}
+        {showUserSelect && <span className="text-foreground/40">(escolha abaixo)</span>}
       </div>
-      {actionType === "assign_member" && (
+      {showUserSelect && (
         <div className="flex flex-wrap gap-1.5">
           {profiles.map((p) => {
             const selected = actionUserIds.includes(p.id);
@@ -270,19 +327,37 @@ function NewRuleForm({
               </button>
             );
           })}
-          <p className="w-full text-[10.5px] text-foreground/35 mt-0.5">Pode escolher mais de uma pessoa — cria uma atribuição pra cada.</p>
+          <p className="w-full text-[10.5px] text-foreground/35 mt-0.5">
+            {requiresUser
+              ? "Pode escolher mais de uma pessoa — cria uma atribuição pra cada."
+              : "Deixe sem ninguém selecionado pra avisar os responsáveis atuais do item, ou escolha pessoas específicas."}
+          </p>
+        </div>
+      )}
+      {showMessage && (
+        <div>
+          <textarea
+            value={actionMessage}
+            onChange={(e) => setActionMessage(e.target.value)}
+            placeholder={actionType === "whatsapp_link" ? 'Oi {cliente}! Sobre "{titulo}"...' : "Mensagem da notificação (opcional)"}
+            rows={2}
+            className="w-full bg-background border border-foreground/10 rounded-md px-2.5 py-2 text-xs text-foreground placeholder:text-foreground/30 outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
+          />
+          <p className="text-[10.5px] text-foreground/35 mt-1">Pode usar {"{cliente}"} e {"{titulo}"} — são trocados pelo nome do cliente e o título do item.</p>
         </div>
       )}
       <div className="flex items-center justify-end gap-2">
         <button onClick={onCancel} className="px-3 py-1.5 text-xs text-foreground/60 hover:text-foreground">Cancelar</button>
         <button
-          disabled={actionType === "assign_member" && actionUserIds.length === 0}
+          disabled={requiresUser && actionUserIds.length === 0}
           onClick={() => onSubmit({
-            triggerStatus: triggerMode === "status" ? triggerStatus : undefined,
-            onCreate: triggerMode === "create" ? true : undefined,
+            triggerType,
+            triggerStatus: triggerType === "status_change" ? triggerStatus : undefined,
+            triggerDays: DAYS_TRIGGERS.includes(triggerType) ? triggerDays : undefined,
             actionType,
             actionStatus: actionType === "set_status" ? actionStatus : undefined,
-            actionUserIds: actionType === "assign_member" ? actionUserIds : undefined,
+            actionUserIds: showUserSelect ? actionUserIds : undefined,
+            actionMessage: showMessage ? (actionMessage.trim() || undefined) : undefined,
           })}
           className="px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-40"
           style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}

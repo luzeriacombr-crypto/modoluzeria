@@ -8,6 +8,16 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PushNotificationButton } from "./PushNotificationSetup";
 
+// Mesma lógica de src/components/luzeria/ClientPaymentsPanel.tsx — link
+// wa.me pronto (sem nenhuma API de envio, é só o link que o navegador abre).
+function waLink(phone: string | null | undefined, text: string): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) return null;
+  const withCountry = digits.length <= 11 ? `55${digits}` : digits;
+  return `https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`;
+}
+
 export function NotificationsBell() {
   const { data: list = [] } = useQuery(notificationsQO());
   const unread = list.filter((n) => !n.read).length;
@@ -94,6 +104,9 @@ export function NotificationsBell() {
                 onClick={() => {
                   if (!n.read) markNotificationRead.mutate({ data: { id: n.id } });
                   setOpen(false);
+                  if (n.type === "automation_whatsapp_ready" && n.whatsappPhone) {
+                    window.open(waLink(n.whatsappPhone, n.message) ?? undefined, "_blank", "noopener,noreferrer");
+                  }
                   if (n.clientId && n.monthKey && n.itemId) {
                     navigate({ to: "/cliente/$clientId", params: { clientId: n.clientId } });
                     selectMonth(n.monthKey);
