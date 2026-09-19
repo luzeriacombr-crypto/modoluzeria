@@ -6,7 +6,7 @@ const TITLE = "Backup Automático de Conteúdo no Google Drive — Modo Criador"
 const DESCRIPTION =
   "Todo post que passa pelo Modo Criador vai organizado sozinho pro Google Drive da sua agência, por cliente e por mês. Nunca mais perca um arquivo. Teste grátis.";
 
-const CONTENT: FeatureLandingContent = {
+export const CONTENT: FeatureLandingContent = {
   badgeIcon: Cloud,
   badgeLabel: "Backup automático",
   heroLines: [

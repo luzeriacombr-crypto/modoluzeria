@@ -6,7 +6,7 @@ const TITLE = "Seleção de Fotos pra Fotógrafos — Modo Criador";
 const DESCRIPTION =
   "Cliente escolhe as fotos favoritas por um link, sem criar conta, direto da sua pasta do Google Drive — com marca d'água automática contra roubo. Teste grátis.";
 
-const CONTENT: FeatureLandingContent = {
+export const CONTENT: FeatureLandingContent = {
   badgeIcon: Image,
   badgeLabel: "Seleção de fotos por link",
   heroLines: [

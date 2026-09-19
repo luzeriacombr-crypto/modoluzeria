@@ -6,7 +6,7 @@ const TITLE = "Biblioteca de Referências com Extensão de Chrome — Modo Criad
 const DESCRIPTION =
   "Salve qualquer vídeo, post ou site como referência direto de onde você está, com a extensão do Modo Criador pro Chrome. Organiza geral ou por cliente. Teste grátis.";
 
-const CONTENT: FeatureLandingContent = {
+export const CONTENT: FeatureLandingContent = {
   badgeIcon: BookMarked,
   badgeLabel: "Biblioteca de Referências",
   heroLines: [

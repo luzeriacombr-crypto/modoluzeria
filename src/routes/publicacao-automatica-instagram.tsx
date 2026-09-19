@@ -6,7 +6,7 @@ const TITLE = "Publicação Automática no Instagram — Modo Criador";
 const DESCRIPTION =
   "Agenda o post aprovado e ele vai sozinho pro Instagram do cliente, no feed ou nos reels, sem precisar copiar, colar ou publicar na mão. Teste grátis.";
 
-const CONTENT: FeatureLandingContent = {
+export const CONTENT: FeatureLandingContent = {
   badgeIcon: Instagram,
   badgeLabel: "Publicação automática",
   heroLines: [

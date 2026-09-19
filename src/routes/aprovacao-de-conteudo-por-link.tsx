@@ -6,7 +6,7 @@ const TITLE = "Aprovação de Conteúdo por Link, Sem o Cliente Criar Conta — 
 const DESCRIPTION =
   "Seu cliente aprova ou pede ajuste em cada post por um link, sem senha e sem app. Chega de aprovação perdida no meio de conversa de WhatsApp. Teste grátis.";
 
-const CONTENT: FeatureLandingContent = {
+export const CONTENT: FeatureLandingContent = {
   badgeIcon: Link2,
   badgeLabel: "Aprovação por link",
   heroLines: [
