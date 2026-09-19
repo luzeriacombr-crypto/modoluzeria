@@ -193,17 +193,38 @@ function PlanejamentoComIaPage() {
         </Reveal>
       </section>
 
-      <section className="px-5 sm:px-10 max-w-[720px] mx-auto py-14">
+      <section className="px-5 sm:px-10 max-w-[640px] mx-auto py-14">
         <div className="text-[11px] font-black uppercase tracking-wider text-white/40 mb-3">Como funciona</div>
-        <h2 className="font-criador-serif normal-case text-2xl sm:text-3xl mb-8">Da agenda vazia ao mês planejado</h2>
-        <div className="grid sm:grid-cols-2 gap-3.5">
+        <h2 className="font-criador-serif normal-case text-2xl sm:text-3xl mb-10">Da agenda vazia ao mês planejado</h2>
+        <style>{`
+          @media (prefers-reduced-motion: no-preference) {
+            @keyframes piaFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+            @keyframes piaPulse { 0%, 100% { box-shadow: 0 0 0 5px rgba(215,255,63,0.08); } 50% { box-shadow: 0 0 0 9px rgba(215,255,63,0.14); } }
+            .pia-float-0 { animation: piaFloat 5.2s ease-in-out infinite; }
+            .pia-float-1 { animation: piaFloat 6s ease-in-out infinite; animation-delay: -1.5s; }
+            .pia-float-2 { animation: piaFloat 5.6s ease-in-out infinite; animation-delay: -3.2s; }
+            .pia-float-3 { animation: piaFloat 6.4s ease-in-out infinite; animation-delay: -4.6s; }
+            .pia-node { animation: piaPulse 3.6s ease-in-out infinite; }
+          }
+        `}</style>
+        <div className="flex flex-col">
           {HOW_IT_WORKS.map((s, i) => (
-            <div key={s.title} className="rounded-2xl p-4.5 border" style={{ background: BG_GRAY, borderColor: "rgba(255,255,255,0.08)" }}>
-              <div className="w-9 h-9 rounded-[10px] flex items-center justify-center mb-3" style={{ background: "rgba(215,255,63,0.12)", color: LIME }}>
-                <s.icon size={17} />
+            <div key={s.title} className="flex gap-4 sm:gap-5">
+              <div className="flex flex-col items-center shrink-0">
+                <div
+                  className="pia-node w-11 h-11 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(215,255,63,0.12)", color: LIME, boxShadow: "0 0 0 5px rgba(215,255,63,0.08)" }}
+                >
+                  <s.icon size={18} />
+                </div>
+                {i < HOW_IT_WORKS.length - 1 && (
+                  <div className="w-px flex-1 my-1" style={{ background: "linear-gradient(180deg, rgba(215,255,63,0.35), rgba(215,255,63,0.05))", minHeight: 36 }} />
+                )}
               </div>
-              <div className="text-[13.5px] font-black mb-1.5">{i + 1}. {s.title}</div>
-              <div className="text-[12px] text-white/40 leading-relaxed">{s.desc}</div>
+              <div className={`pb-10 pt-1.5 pia-float-${i % 4}`}>
+                <div className="text-[13.5px] font-black mb-1.5">{s.title}</div>
+                <div className="text-[12.5px] text-white/40 leading-relaxed max-w-[440px]">{s.desc}</div>
+              </div>
             </div>
           ))}
         </div>
