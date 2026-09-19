@@ -52,7 +52,6 @@ import {
 } from "./drive.functions";
 import {
   getMyNotificationPreferences, setMyNotificationPreferences,
-  listCronJobs,
 } from "./automations.functions";
 import { listAutomationRules, createAutomationRule, deleteAutomationRule } from "./automation-rules.functions";
 import { listMyBugReports, listAllBugReports, updateBugReportStatus, sendBugReportMessage } from "./bug-reports.functions";
@@ -614,13 +613,6 @@ export const upcomingCalendarEventsQO = (userId?: string) =>
     queryKey: ["upcoming-calendar-events", userId ?? "self"],
     queryFn: () => getUpcomingCalendarEvents({ data: { userId } }),
     staleTime: 60_000,
-  });
-
-export const cronJobsQO = () =>
-  queryOptions({
-    queryKey: ["cron-jobs"],
-    queryFn: () => listCronJobs(),
-    staleTime: 30_000,
   });
 
 export const automationRulesQO = () =>

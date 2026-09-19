@@ -2,8 +2,8 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Bell, Calendar, Plus, Repeat, Sparkles, Timer, Trash2, Zap } from "lucide-react";
-import { cronJobsQO, automationRulesQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { Pencil, Plus, Trash2, Zap } from "lucide-react";
+import { automationRulesQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { STATUS_META, getStatusMeta, type Status, type BuiltinStatus } from "@/lib/luzeria/types";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { TRIGGER_TYPES, ACTION_TYPES, type AutomationRule, type TriggerType, type ActionType } from "@/lib/luzeria/automation-rules.functions";
@@ -58,104 +58,9 @@ function describeAction(rule: AutomationRule, userNames: string): ReactNode {
   }
 }
 
-const JOB_META: Record<string, { label: string; description: string; icon: React.ComponentType<any> }> = {
-  luzeria_deadline_reminders: {
-    label: "Alertas de prazo",
-    description: "Avisa responsáveis sobre demandas que vencem hoje, amanhã ou estão atrasadas.",
-    icon: Bell,
-  },
-  luzeria_daily_digest: {
-    label: "Resumo diário",
-    description: "Envia 1 notificação por colaborador com a agenda do dia (demandas, stories e limpeza).",
-    icon: Calendar,
-  },
-  luzeria_recurring_daily: {
-    label: "Geração de recorrências",
-    description: "Cria automaticamente os itens recorrentes do mês para cada cliente.",
-    icon: Repeat,
-  },
-  "auto-mark-missed-daily": {
-    label: "Marcar não-feitos",
-    description: "Marca como 'não feito' stories e limpeza do dia anterior que não foram concluídos.",
-    icon: Timer,
-  },
-};
-
-function humanCron(expr: string) {
-  // very small helper for the few crons we use
-  const map: Record<string, string> = {
-    "0 12 * * *": "Todo dia às 09:00 (Brasília)",
-    "0 11 * * *": "Todo dia às 08:00 (Brasília)",
-    "0 6 * * *":  "Todo dia às 03:00 (Brasília)",
-    "59 2 * * *": "Todo dia às 23:59 (Brasília)",
-  };
-  return map[expr] ?? expr;
-}
-
-function relativeTime(iso: string | null) {
-  if (!iso) return "—";
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.round(diff / 60_000);
-  if (min < 1) return "agora";
-  if (min < 60) return `há ${min} min`;
-  const h = Math.round(min / 60);
-  if (h < 24) return `há ${h}h`;
-  const d = Math.round(h / 24);
-  return `há ${d}d`;
-}
-
 export function AutomationsTab() {
-  const { data: jobs = [], isLoading } = useQuery(cronJobsQO());
-
   return (
     <div className="space-y-8 max-w-3xl">
-      <div>
-        <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
-          <Sparkles size={12} /> Automações ativas
-        </h2>
-        <div className="bg-card rounded-lg overflow-hidden">
-          {isLoading && (
-            <div className="px-5 py-6 text-sm text-foreground/40">Carregando…</div>
-          )}
-          {!isLoading && jobs.length === 0 && (
-            <div className="px-5 py-6 text-sm text-foreground/40">Nenhuma automação encontrada.</div>
-          )}
-          {jobs.map((j) => {
-            const meta = JOB_META[j.jobname] ?? {
-              label: j.jobname, description: "", icon: Sparkles,
-            };
-            const Icon = meta.icon;
-            return (
-              <div key={j.jobname}
-                className="flex items-start gap-4 px-5 py-4 border-b border-foreground/5 last:border-b-0">
-                <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0 mt-0.5"
-                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
-                  <Icon size={16} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-semibold text-foreground truncate">{meta.label}</div>
-                    {j.active ? (
-                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded"
-                        style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>Ativa</span>
-                    ) : (
-                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-foreground/10 text-foreground/50">Pausada</span>
-                    )}
-                  </div>
-                  {meta.description && (
-                    <div className="text-[11px] text-foreground/50 mt-1">{meta.description}</div>
-                  )}
-                  <div className="text-[11px] text-foreground/40 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span>⏱ {humanCron(j.schedule)}</span>
-                    <span>Última execução: {relativeTime(j.lastStart)}{j.lastStatus ? ` · ${j.lastStatus}` : ""}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       <AutomationRulesSection />
     </div>
   );
@@ -167,7 +72,8 @@ function AutomationRulesSection() {
   const { data: rules = [] } = useQuery(automationRulesQO());
   const { data: profiles = [] } = useQuery(profilesQO());
   const { createAutomationRule, deleteAutomationRule } = useApi();
-  const [adding, setAdding] = useState(false);
+  // null = fechado, "add" = criando nova, ou a chave do grupo sendo editado.
+  const [formTarget, setFormTarget] = useState<null | "add" | string>(null);
 
   function memberName(userId: string | null) {
     return profiles.find((p) => p.id === userId)?.name ?? "—";
@@ -178,7 +84,7 @@ function AutomationRulesSection() {
   // gatilho+ação pra "atribuir pra 3 pessoas" aparecer como 1 linha só, não 3
   // repetidas — só muda o que aprece, o dado por trás continua 1 regra por pessoa.
   const grouped = (() => {
-    const map = new Map<string, { rule: (typeof rules)[number]; ids: string[]; userIds: string[] }>();
+    const map = new Map<string, { key: string; rule: (typeof rules)[number]; ids: string[]; userIds: string[] }>();
     for (const r of rules) {
       const key = `${r.triggerType}|${r.triggerStatus}|${r.triggerDays}|${r.actionType}|${r.actionStatus}|${r.actionMessage}`;
       const existing = map.get(key);
@@ -186,11 +92,23 @@ function AutomationRulesSection() {
         existing.ids.push(r.id);
         if (r.actionUserId) existing.userIds.push(r.actionUserId);
       } else {
-        map.set(key, { rule: r, ids: [r.id], userIds: r.actionUserId ? [r.actionUserId] : [] });
+        map.set(key, { key, rule: r, ids: [r.id], userIds: r.actionUserId ? [r.actionUserId] : [] });
       }
     }
     return [...map.values()];
   })();
+
+  function submitCreate(payload: RulePayload) {
+    const { actionUserIds, ...rest } = payload;
+    const ids = actionUserIds && actionUserIds.length > 0 ? actionUserIds : [undefined];
+    return Promise.all(ids.map((actionUserId) =>
+      createAutomationRule.mutateAsync({ data: { ...rest, actionUserId } }),
+    ));
+  }
+
+  const editingGroup = typeof formTarget === "string" && formTarget !== "add"
+    ? grouped.find((g) => g.key === formTarget) ?? null
+    : null;
 
   return (
     <div>
@@ -198,47 +116,70 @@ function AutomationRulesSection() {
         <Zap size={12} /> Minhas automações
       </h2>
       <div className="bg-card rounded-lg overflow-hidden">
-        {rules.length === 0 && !adding && (
+        {rules.length === 0 && formTarget === null && (
           <div className="px-5 py-6 text-sm text-foreground/40">Nenhuma automação criada ainda.</div>
         )}
         {grouped.map((g) => (
-          <div key={g.ids.join(",")} className="flex items-center gap-3 px-5 py-3.5 border-b border-foreground/5 last:border-b-0">
-            <span className="text-sm text-foreground/85 flex-1 min-w-0">
-              {describeTrigger(g.rule)}
-              {" → "}
-              {describeAction(g.rule, g.userIds.map(memberName).join(", "))}
-            </span>
-            {isMaster && (
-              <button
-                onClick={async () => {
-                  if (await requestConfirm(g.ids.length > 1 ? "Excluir essa automação pra todas as pessoas atribuídas?" : "Excluir essa automação?", { danger: true })) {
-                    g.ids.forEach((id) => deleteAutomationRule.mutate({ data: { id } }));
-                  }
-                }}
-                className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 shrink-0"
-              ><Trash2 size={13} /></button>
-            )}
-          </div>
-        ))}
-        {isMaster && (
-          adding ? (
+          editingGroup?.key === g.key ? (
             <NewRuleForm
+              key={g.key}
               profiles={profiles}
-              onCancel={() => setAdding(false)}
+              submitLabel="Salvar alterações"
+              initial={{
+                triggerType: g.rule.triggerType, triggerStatus: g.rule.triggerStatus ?? undefined,
+                triggerDays: g.rule.triggerDays ?? undefined, actionType: g.rule.actionType,
+                actionStatus: g.rule.actionStatus ?? undefined, actionUserIds: g.userIds,
+                actionMessage: g.rule.actionMessage ?? undefined,
+              }}
+              onCancel={() => setFormTarget(null)}
               onSubmit={(payload) => {
-                const { actionUserIds, ...rest } = payload;
-                const ids = actionUserIds && actionUserIds.length > 0 ? actionUserIds : [undefined];
-                Promise.all(ids.map((actionUserId) =>
-                  createAutomationRule.mutateAsync({ data: { ...rest, actionUserId } }),
-                )).then(() => setAdding(false)).catch((e: any) => toast.error(e?.message ?? "Erro ao criar automação"));
+                Promise.all(g.ids.map((id) => deleteAutomationRule.mutateAsync({ data: { id } })))
+                  .then(() => submitCreate(payload))
+                  .then(() => setFormTarget(null))
+                  .catch((e: any) => toast.error(e?.message ?? "Erro ao salvar automação"));
               }}
             />
           ) : (
+            <div key={g.key} className="flex items-center gap-3 px-5 py-3.5 border-b border-foreground/5 last:border-b-0">
+              <span className="text-sm text-foreground/85 flex-1 min-w-0">
+                {describeTrigger(g.rule)}
+                {" → "}
+                {describeAction(g.rule, g.userIds.map(memberName).join(", "))}
+              </span>
+              {isMaster && (
+                <>
+                  <button
+                    onClick={() => setFormTarget(g.key)}
+                    className="p-1.5 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5 shrink-0"
+                  ><Pencil size={13} /></button>
+                  <button
+                    onClick={async () => {
+                      if (await requestConfirm(g.ids.length > 1 ? "Excluir essa automação pra todas as pessoas atribuídas?" : "Excluir essa automação?", { danger: true })) {
+                        g.ids.forEach((id) => deleteAutomationRule.mutate({ data: { id } }));
+                      }
+                    }}
+                    className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 shrink-0"
+                  ><Trash2 size={13} /></button>
+                </>
+              )}
+            </div>
+          )
+        ))}
+        {isMaster && (
+          formTarget === "add" ? (
+            <NewRuleForm
+              profiles={profiles}
+              onCancel={() => setFormTarget(null)}
+              onSubmit={(payload) => {
+                submitCreate(payload).then(() => setFormTarget(null)).catch((e: any) => toast.error(e?.message ?? "Erro ao criar automação"));
+              }}
+            />
+          ) : formTarget === null ? (
             <button
-              onClick={() => setAdding(true)}
+              onClick={() => setFormTarget("add")}
               className="w-full flex items-center justify-center gap-1.5 px-5 py-3.5 text-xs font-semibold text-foreground/60 hover:text-foreground hover:bg-foreground/[0.03] transition-colors"
             ><Plus size={13} /> Nova automação</button>
-          )
+          ) : null
         )}
       </div>
       <p className="text-[11px] text-foreground/30 mt-3">
@@ -248,23 +189,27 @@ function AutomationRulesSection() {
   );
 }
 
+type RulePayload = {
+  triggerType: TriggerType; triggerStatus?: string; triggerDays?: number;
+  actionType: ActionType; actionStatus?: string; actionUserIds?: string[]; actionMessage?: string;
+};
+
 function NewRuleForm({
-  profiles, onCancel, onSubmit,
+  profiles, initial, submitLabel, onCancel, onSubmit,
 }: {
   profiles: { id: string; name: string }[];
+  initial?: RulePayload;
+  submitLabel?: string;
   onCancel: () => void;
-  onSubmit: (payload: {
-    triggerType: TriggerType; triggerStatus?: string; triggerDays?: number;
-    actionType: ActionType; actionStatus?: string; actionUserIds?: string[]; actionMessage?: string;
-  }) => void;
+  onSubmit: (payload: RulePayload) => void;
 }) {
-  const [triggerType, setTriggerType] = useState<TriggerType>("status_change");
-  const [triggerStatus, setTriggerStatus] = useState<Status>(STATUS_OPTIONS[0]);
-  const [triggerDays, setTriggerDays] = useState(3);
-  const [actionType, setActionType] = useState<ActionType>("set_status");
-  const [actionStatus, setActionStatus] = useState<Status>(STATUS_OPTIONS[0]);
-  const [actionUserIds, setActionUserIds] = useState<string[]>(profiles[0] ? [profiles[0].id] : []);
-  const [actionMessage, setActionMessage] = useState("");
+  const [triggerType, setTriggerType] = useState<TriggerType>(initial?.triggerType ?? "status_change");
+  const [triggerStatus, setTriggerStatus] = useState<Status>((initial?.triggerStatus as Status) ?? STATUS_OPTIONS[0]);
+  const [triggerDays, setTriggerDays] = useState(initial?.triggerDays ?? 3);
+  const [actionType, setActionType] = useState<ActionType>(initial?.actionType ?? "set_status");
+  const [actionStatus, setActionStatus] = useState<Status>((initial?.actionStatus as Status) ?? STATUS_OPTIONS[0]);
+  const [actionUserIds, setActionUserIds] = useState<string[]>(initial?.actionUserIds ?? (profiles[0] ? [profiles[0].id] : []));
+  const [actionMessage, setActionMessage] = useState(initial?.actionMessage ?? "");
 
   function toggleUser(id: string) {
     setActionUserIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -361,7 +306,7 @@ function NewRuleForm({
           })}
           className="px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-40"
           style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-        >Salvar</button>
+        >{submitLabel ?? "Salvar"}</button>
       </div>
     </div>
   );

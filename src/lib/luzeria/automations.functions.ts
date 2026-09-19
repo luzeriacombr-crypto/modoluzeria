@@ -82,30 +82,3 @@ export const setMyNotificationPreferences = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-async function ensureMaster(context: any) {
-  const { data } = await context.supabase.rpc("is_master", { _user_id: context.userId });
-  if (!data) throw new Error("Forbidden");
-}
-
-export type CronJobInfo = {
-  jobname: string;
-  schedule: string;
-  active: boolean;
-  lastStart: string | null;
-  lastStatus: string | null;
-};
-
-export const listCronJobs = createServerFn({ method: "GET" })
-  .middleware([requireActiveProfile])
-  .handler(async ({ context }): Promise<CronJobInfo[]> => {
-    await ensureMaster(context);
-    const { data, error } = await context.supabase.rpc("luzeria_admin_list_cron_jobs" as any);
-    if (error) throw new Error(error.message);
-    return ((data ?? []) as any[]).map((r) => ({
-      jobname: r.jobname,
-      schedule: r.schedule,
-      active: r.active,
-      lastStart: r.last_start ? new Date(r.last_start).toISOString() : null,
-      lastStatus: r.last_status,
-    }));
-  });
