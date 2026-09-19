@@ -7,27 +7,14 @@ import type { MyBugReport, AllBugReport, BugReportStatus } from "@/lib/luzeria/b
 import { ForumTab } from "./ForumTab";
 import { SupportChatAdminPanel } from "./SupportChatWidget";
 import { FAQ, TUTORIALS as TUTORIALS_BASE } from "@/lib/luzeria/help-content";
-import tutorialAddPost from "@/assets/tutorials/tutorial-add-post.png";
-import tutorialFormato from "@/assets/tutorials/tutorial-formato.png";
-import tutorialNovaAutomacao from "@/assets/tutorials/tutorial-nova-automacao.png";
-import tutorialEquipeCard from "@/assets/tutorials/tutorial-equipe-card.png";
-import tutorialEnviarFoto from "@/assets/tutorials/tutorial-enviar-foto.png";
 
 type Tab = "faq" | "tutoriais" | "minhas" | "todas" | "chats" | "forum";
 
 // Mídia (imagens/vídeo) é só visual — fica aqui, fora da base de conhecimento
 // compartilhada com o Chat do Modo Criador (help-content.ts).
 const TUTORIAL_MEDIA: Record<string, { images?: { src: string; alt: string }[]; videoUrl?: string }> = {
-  "Criar um novo post ou reel": { images: [{ src: tutorialAddPost, alt: "Card tracejado \"Adicionar Posts\" no fim do grid" }] },
-  "Marcar um post como Estático ou Carrossel": { images: [{ src: tutorialFormato, alt: "Seção Formato dentro do post, com as opções Estático e Carrossel" }] },
   "Conectar o Google Drive": { videoUrl: "https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw" },
-  "Criar uma automação": { images: [{ src: tutorialNovaAutomacao, alt: "Botão \"Nova automação\" na aba Automações" }] },
-  "Adicionar foto de um colaborador": {
-    images: [
-      { src: tutorialEquipeCard, alt: "Grid de cards da equipe — clique no card de um colaborador" },
-      { src: tutorialEnviarFoto, alt: "Botão \"Enviar foto\" dentro do modal do colaborador" },
-    ],
-  },
+  "Instalar o Modo Criador como app no celular": { videoUrl: "/tutorials/instalar-como-app.mp4" },
 };
 const TUTORIALS = TUTORIALS_BASE.map((t) => ({ ...t, ...TUTORIAL_MEDIA[t.title] }));
 
@@ -98,7 +85,7 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mt-4 text-xs font-semibold rounded-full transition-opacity hover:opacity-80"
                   style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
                 >
-                  <Video size={13} /> Vídeo: como conectar o Google Drive
+                  <Video size={13} /> Assistir vídeo
                 </a>
               )}
               {t.images && t.images.length > 0 && (

@@ -20,6 +20,8 @@ export const FAQ: HelpFaqGroup[] = [
       { q: "Como envio uma foto de perfil pra um colega que ainda não tem?", a: "Em Configurações → Equipe, clique no card do colaborador — abre um modal onde o Admin Master pode enviar ou trocar a foto dele." },
       { q: "Esqueci minha senha, e agora?", a: "Peça pro Admin Master da sua agência: Configurações → Equipe → clique no seu card → \"Resetar senha\". Você recebe um link por e-mail." },
       { q: "Como funcionam as Automações?", a: "Em Configurações → Automações, o Admin Master pode criar regras do tipo \"quando o status virar X, então alterar status para Y (ou atribuir para alguém)\". Elas rodam sozinhas, mesmo sem ninguém com a tela aberta." },
+      { q: "Adicionei um colaborador, mas ele não tem acesso de Admin — o que eu esqueci?", a: "Adicionar o colaborador e definir a função dele são duas etapas separadas. Depois de adicionar, clique no card da pessoa em Configurações → Equipe e escolha a Função certa: Membro, Adm Setor ou Adm Master." },
+      { q: "Dá pra restringir o acesso à aba financeira só pros sócios?", a: "Sim, pela Função de cada pessoa. \"Membro\" só vê e mexe no que for atribuído a ele, \"Adm Setor\" pode ter permissões extras configuradas por cargo, e \"Adm Master\" tem acesso total, inclusive ao financeiro. Escolha a função certa pra cada colaborador em Configurações → Equipe." },
     ],
   },
   {
@@ -27,6 +29,25 @@ export const FAQ: HelpFaqGroup[] = [
     items: [
       { q: "Como meu cliente aprova um post sem ter conta?", a: "Cada cliente tem um link público (aba \"Preview de Feed\" dentro do cliente). Manda esse link — o cliente aprova ou comenta direto, sem login." },
       { q: "Como funciona o backup no Google Drive?", a: "Conecte sua conta do Drive em Configurações → Drive. Os arquivos enviados nos posts/reels são organizados automaticamente lá, por cliente e mês." },
+      { q: "Dá pra importar vários clientes de uma vez, sem cadastrar um por um?", a: "Sim. Assim que você tem menos de 2 clientes cadastrados aparece um banner \"Traga seus clientes de onde já estão\" — clique nele (ou no item correspondente do checklist \"Primeiros passos\") e escolha entre mandar uma planilha/CSV/PDF, prints de tela da sua organização atual, ou conectar direto com Trello, ClickUp ou Notion. A IA lê e monta uma lista pra você revisar e confirmar antes de importar de verdade." },
+      { q: "Deu erro de permissão ao conectar o Google Drive, o que eu faço?", a: "O mais comum é estar conectando com uma conta do Google diferente da dona da pasta (por exemplo, uma conta pessoal quando a pasta é de uma conta Workspace da agência) — refaça a conexão escolhendo a conta certa. Confira também se o link da pasta raiz foi copiado com permissão de compartilhamento, não só de visualização restrita." },
+      { q: "Preciso criar a pasta de cada cliente manualmente no Google Drive?", a: "Não. No passo 3 (\"Vincular clientes\") do assistente de conexão do Drive, em Configurações → Drive, o Modo Criador já sugere a pasta certa pra cada cliente comparando os nomes — você só confirma, e o que não tiver pasta ainda é criado automaticamente." },
+      { q: "Como registro um cliente que pausou o contrato, mas não cancelou de vez?", a: "Use a categoria \"Avulso\" pra esse caso. \"Arquivado\" é só pra quem realmente encerrou com a agência." },
+    ],
+  },
+  {
+    category: "Instagram e outras redes",
+    items: [
+      { q: "Preciso pedir login e senha do Instagram do meu cliente?", a: "Não necessariamente. Na Ficha do Cliente, seção Instagram, tem um botão \"Gerar link\" — ele cria um link com a marca da sua agência pro próprio cliente conectar o Instagram dele, sem passar a senha pra você. Se preferir, ainda dá pra conectar direto fazendo login com a conta do cliente." },
+      { q: "Dá pra editar a bio ou a foto de perfil do Instagram do cliente pelo Modo Criador?", a: "Não — essa é uma limitação da própria API da Meta, não dá pra fazer isso por nenhum app de terceiros. Precisa ser direto no aplicativo do Instagram." },
+      { q: "Além do Instagram, dá pra publicar em outra rede social?", a: "Sim, já dá pra publicar no Facebook também (Página do cliente, posts de feed). TikTok e LinkedIn ainda não estão disponíveis." },
+      { q: "Os relatórios de alcance, curtidas e outras métricas do Instagram do meu cliente aparecem no Modo Criador?", a: "Ainda não pra contas de cliente — essa permissão específica de insights depende de uma aprovação separada da Meta, que ainda está em análise. Assim que for liberada, passa a funcionar pra todas as agências automaticamente." },
+    ],
+  },
+  {
+    category: "Conta e assinatura",
+    items: [
+      { q: "Preciso cadastrar cartão de crédito pra testar o Modo Criador?", a: "Não. Os 30 dias de teste grátis não pedem cartão nem PIX. No último dia do teste avisamos você pra decidir se quer continuar." },
     ],
   },
   {
@@ -40,57 +61,61 @@ export const FAQ: HelpFaqGroup[] = [
 
 export const TUTORIALS: HelpTutorial[] = [
   {
-    title: "Criar um novo post ou reel",
+    title: "Importar vários clientes de uma vez",
     steps: [
-      "Abra o cliente e escolha a aba Posts ou Reels.",
-      "Clique no card tracejado \"Adicionar Post/Reel\" no fim da lista.",
-      "Clique no título do card pra dar um nome a ele.",
-      "Defina status, responsável e prazo direto pelo card.",
-    ],
-  },
-  {
-    title: "Marcar um post como Estático ou Carrossel",
-    steps: [
-      "Clique no card do post pra abrir os detalhes.",
-      "Na seção \"Formato\", escolha Estático ou Carrossel.",
-      "Isso só pode ser mudado dentro do post — no resumo em cards ele só aparece pra leitura.",
+      "Enquanto você tiver menos de 2 clientes cadastrados, aparece um banner \"Traga seus clientes de onde já estão\" no topo — ou acesse pelo item correspondente no checklist \"Primeiros passos\".",
+      "Escolha a origem: Arquivo (planilha, CSV ou PDF), Prints de tela da sua organização atual, ou conectar direto com Trello, ClickUp ou Notion.",
+      "Se for arquivo ou print, arraste ou selecione os arquivos e clique em \"Ler arquivos\" — a IA identifica os clientes automaticamente.",
+      "Revise a lista antes de confirmar: dá pra editar nome, nicho e frequência de cada cliente, ou desmarcar quem não quer importar.",
+      "Confirme — os clientes selecionados são criados de uma vez.",
     ],
   },
   {
     title: "Conectar o Google Drive",
     steps: [
-      "Vá em Configurações → Integrações → Google Drive. É um assistente de 3 passos.",
+      "Vá em Configurações → Drive. É um assistente de 3 passos: Conectar conta, Pasta raiz, Vincular clientes.",
       "Passo 1: clique em conectar e faça login com a conta Google da agência.",
       "Passo 2: escolha a pasta que vai guardar as pastas de todos os clientes — navega clicando, ou cola o link/ID se já souber.",
-      "Passo 3: confira as sugestões de pasta pra cada cliente (a gente já compara o nome) e confirme — o que não tiver pasta, é criado do zero.",
+      "Passo 3: confira as sugestões de pasta pra cada cliente (a gente já compara o nome) e confirme — o que não tiver pasta, é criado automaticamente.",
       "Pronto — os arquivos enviados nos posts passam a ser organizados lá automaticamente.",
     ],
   },
   {
-    title: "Conectar o Instagram de um cliente",
+    title: "Resolver erro de permissão ao conectar o Google Drive",
+    steps: [
+      "O erro mais comum acontece quando a conta Google usada pra conectar é diferente da dona da pasta (por exemplo, uma conta pessoal quando a pasta é de uma conta Workspace da agência).",
+      "Refaça a conexão em Configurações → Drive, e na tela de login do Google escolha a conta certa (se aparecer mais de uma opção salva no navegador).",
+      "Confira também se o link da pasta raiz foi copiado com permissão de compartilhamento (\"qualquer pessoa com o link\"), não de visualização restrita só pra quem já tem acesso.",
+      "Se continuar dando erro, desconecte em Configurações → Drive e conecte de novo do zero.",
+    ],
+  },
+  {
+    title: "Conectar o Instagram de um cliente sem pedir a senha dele",
     steps: [
       "Abra a Ficha do Cliente e ache a seção \"Instagram\".",
-      "Clique em \"Conectar Instagram\" — a tela de login que abre é a do próprio Instagram, não a do Modo Criador.",
-      "Faça login com a conta do Instagram do cliente (Business ou Criador de Conteúdo) — não a sua conta de administrador.",
-      "Não precisa de Página do Facebook vinculada — só a conta do Instagram já resolve.",
-      "Depois de conectado, aparece \"✓ Conectado — @usuario\" e já dá pra publicar/programar direto pelos posts e reels desse cliente.",
+      "Clique em \"Gerar link\" — isso cria um link com a marca da sua agência.",
+      "Copie o link (ou mande direto pelo WhatsApp) pro próprio cliente conectar o Instagram dele — sem precisar te passar login e senha.",
+      "Assim que o cliente conectar do lado dele, a Ficha do Cliente já mostra \"Conectado\" e libera publicar/programar direto pelos posts e reels.",
+      "Se preferir, ainda dá pra conectar direto fazendo login com a conta do Instagram do cliente (Business ou Criador de Conteúdo) — não precisa de Página do Facebook vinculada.",
     ],
   },
   {
-    title: "Criar uma automação",
+    title: "Definir a função de um colaborador (Membro, Adm Setor ou Adm Master)",
     steps: [
-      "Vá em Configurações → Automações (só Admin Master).",
-      "Clique em \"Nova automação\".",
-      "Escolha o status de gatilho e a ação (alterar status ou atribuir membro).",
-      "Salve — a regra passa a rodar sozinha a partir daí.",
+      "Adicionar o colaborador na equipe e definir a função dele são duas etapas separadas — é fácil esquecer a segunda.",
+      "Vá em Configurações → Equipe e clique no card da pessoa.",
+      "No campo \"Função\", escolha: Membro (só vê e mexe no que for atribuído a ele), Adm Setor (pode ter permissões extras configuradas por cargo) ou Adm Master (acesso total à agência, inclusive financeiro).",
+      "A mudança é salva na hora — não precisa nenhum outro passo.",
     ],
   },
   {
-    title: "Adicionar foto de um colaborador",
+    title: "Instalar o Modo Criador como app no celular",
     steps: [
-      "Vá em Configurações → Equipe (só Admin Master).",
-      "Clique no card da pessoa.",
-      "Clique em \"Enviar foto\" e escolha a imagem.",
+      "No iPhone (Safari): toque no botão de compartilhar na barra do navegador, role até \"Adicionar à Tela de Início\", confira o nome e toque em Adicionar.",
+      "No Android (Chrome): toque no menu de três pontinhos no canto superior direito, depois em \"Instalar aplicativo\" ou \"Adicionar à tela inicial\".",
+      "Pronto — o ícone da sua agência aparece na tela inicial, abrindo igual um app de verdade.",
+      "Isso só funciona nesse aparelho e navegador específico — repita em cada celular que a equipe da agência usar.",
+      "Depois de instalado, ative as notificações no sininho dentro do app pra saber na hora de comentário novo, prazo próximo ou aprovação de cliente.",
     ],
   },
 ];
