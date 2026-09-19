@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus, Play, Film } from "lucide-react";
 import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -117,7 +117,7 @@ function CarouselThumb({
   file, onClick, canEdit, selectMode, selected, onToggleSelect, onRemoveAppOnly, onRemoveEverywhere,
   draggable, dragging, onReorderDragStart, onReorderDragOver, onReorderDrop, onReorderDragEnd,
 }: {
-  file: { id: string; driveFileId: string; name: string; webViewUrl: string };
+  file: { id: string; driveFileId: string; name: string; webViewUrl: string; mimeType?: string | null };
   onClick: () => void;
   canEdit: boolean;
   selectMode: boolean;
@@ -134,6 +134,7 @@ function CarouselThumb({
 }) {
   const { data, isLoading } = useQuery(driveThumbnailQO(file.driveFileId, true));
   const url = data?.dataUrl ?? null;
+  const isVideo = (file.mimeType ?? "").startsWith("video/");
   const fetchDriveToken = useServerFn(getDriveVideoToken);
   const [downloading, setDownloading] = useState(false);
 
@@ -173,8 +174,17 @@ function CarouselThumb({
           <img src={url} alt={file.name} className="w-full h-full object-cover pointer-events-none" loading="lazy" draggable={false} />
         ) : isLoading ? (
           <Loader2 size={12} className="animate-spin text-foreground/30" />
+        ) : isVideo ? (
+          <Film size={14} className="text-foreground/20" />
         ) : (
           <ImageIcon size={14} className="text-foreground/20" />
+        )}
+        {url && isVideo && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ background: "rgba(0,0,0,0.15)" }}>
+            <div className="h-5 w-5 rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.55)" }}>
+              <Play size={9} className="text-white fill-white ml-px" />
+            </div>
+          </div>
         )}
       </button>
       {selectMode ? (
@@ -495,10 +505,20 @@ function MediaPreview({
   }
 
   const opensLightbox = isEstatico && files.length > 0;
+  const firstIsVideo = (first?.mimeType ?? "").startsWith("video/");
   const thumbContent = (
     <>
       {thumb ? (
-        <img src={thumb} alt={first?.name ?? "Preview"} className="w-full h-full object-cover" loading="lazy" />
+        <>
+          <img src={thumb} alt={first?.name ?? "Preview"} className="w-full h-full object-cover" loading="lazy" />
+          {firstIsVideo && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ background: "rgba(0,0,0,0.15)" }}>
+              <div className="h-6 w-6 rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.55)" }}>
+                <Play size={11} className="text-white fill-white ml-px" />
+              </div>
+            </div>
+          )}
+        </>
       ) : thumbLoading || filesLoading ? (
         <div className="w-full h-full flex items-center justify-center">
           <Loader2 size={14} className="animate-spin text-foreground/30" />

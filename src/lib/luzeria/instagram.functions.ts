@@ -473,19 +473,20 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     .eq("item_id", itemId)
     .eq("kind", "media")
     .order("sort_order").order("created_at");
+  // Reel continua exigindo vídeo — Post e Story aceitam imagem OU vídeo,
+  // livremente misturados num carrossel (a Meta processa cada item do
+  // carrossel pelo media_type dele, ver o loop abaixo).
   const wantVideo = item.type === "reel";
-  const wantImage = item.type === "post";
   const relevantFiles = (files ?? []).filter((f: any) => {
     const mime = f.mime_type ?? "";
     if (wantVideo) return mime.startsWith("video/");
-    if (wantImage) return mime.startsWith("image/");
-    return mime.startsWith("image/") || mime.startsWith("video/"); // story
+    return mime.startsWith("image/") || mime.startsWith("video/"); // post ou story
   });
   if (relevantFiles.length === 0) {
     throw new Error(
       item.type === "reel" ? "Anexe um vídeo ao reel antes de publicar."
         : item.type === "story" ? "Anexe uma imagem ou vídeo à story antes de publicar."
-        : "Anexe uma imagem ao post antes de publicar.",
+        : "Anexe uma imagem ou vídeo ao post antes de publicar.",
     );
   }
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ExternalLink, Upload, Link2, Trash2, Loader2, FileText, Image as ImageIcon,
-  Film, FolderOpen, Plus, Check, GripVertical, ChevronUp, ChevronDown, ArrowDownAZ,
+  Film, FolderOpen, Plus, Check, GripVertical, ChevronUp, ChevronDown, ArrowDownAZ, Play,
 } from "lucide-react";
 import { itemFilesQO, driveThumbnailQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { useItemFileUpload, parseDriveError } from "@/lib/luzeria/use-item-file-upload";
@@ -35,14 +35,22 @@ function FileThumb({ fileId, mime, name }: { fileId: string; mime?: string | nul
   const enabled = isThumbnailable(mime);
   const { data, isLoading } = useQuery(driveThumbnailQO(fileId, enabled));
   const url = data?.dataUrl ?? null;
+  const isVideo = (mime ?? "").startsWith("video/");
   return (
-    <div className="w-10 h-10 shrink-0 rounded-md overflow-hidden bg-background border border-foreground/8 flex items-center justify-center">
+    <div className="relative w-10 h-10 shrink-0 rounded-md overflow-hidden bg-background border border-foreground/8 flex items-center justify-center">
       {url ? (
         <img src={url} alt={name} className="w-full h-full object-cover" loading="lazy" />
       ) : isLoading && enabled ? (
         <Loader2 size={12} className="animate-spin text-foreground/30" />
       ) : (
         <MimeIcon mime={mime} />
+      )}
+      {url && isVideo && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ background: "rgba(0,0,0,0.15)" }}>
+          <div className="h-4 w-4 rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.55)" }}>
+            <Play size={7} className="text-white fill-white ml-px" />
+          </div>
+        </div>
       )}
     </div>
   );
