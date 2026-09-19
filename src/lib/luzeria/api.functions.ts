@@ -609,14 +609,21 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
 export const getMyAgencyLevelInputs = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
+    // Filtro de org_id explícito em cada consulta, de propósito — não confia
+    // só no RLS. Achado ao vivo: sem o filtro explícito, quem é admin da
+    // plataforma (o Junior, via Luzeria) via um total de "conteúdo
+    // entregue" inflado, somando de outras agências também, porque a
+    // policy de content_items tem uma cláusula de bypass pra admin de
+    // plataforma que essa consulta sozinha não esperava.
     const [{ data: org }, { count: clientsCount }, { count: finalizedCount }, { data: driveRow }, { count: profilesCount }] = await Promise.all([
       context.supabase.from("orgs").select("subscription_status, asaas_subscription_id").eq("id", context.orgId).maybeSingle(),
-      context.supabase.from("clients").select("id", { count: "exact", head: true }).eq("archived", false).neq("category", "Ex-clientes"),
+      context.supabase.from("clients").select("id", { count: "exact", head: true }).eq("archived", false).neq("category", "Ex-clientes").eq("org_id", context.orgId),
       (context.supabase as any)
         .from("content_items")
-        .select("id", { count: "exact", head: true })
+        .select("id, months!inner(clients!inner(org_id))", { count: "exact", head: true })
         .in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"])
-        .in("type", ["post", "reel", "story"]),
+        .in("type", ["post", "reel", "story"])
+        .eq("months.clients.org_id", context.orgId),
       context.supabase.from("org_google_credentials").select("org_id").eq("org_id", context.orgId).maybeSingle(),
       context.supabase.from("profiles").select("id", { count: "exact", head: true }).eq("org_id", context.orgId).eq("active", true),
     ]);
