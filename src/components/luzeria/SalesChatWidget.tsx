@@ -80,14 +80,24 @@ export function SalesChatWidget() {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(!open)}
-        aria-label="Chat do Modo Criador"
-        className="fixed bottom-5 right-5 z-50 flex items-center justify-center rounded-full shadow-2xl transition hover:opacity-90"
-        style={{ width: 56, height: 56, background: LIME, color: ACCENT_ON_LIGHT }}
-      >
-        {open ? <X size={22} /> : <MessageCircle size={22} />}
-      </button>
+      <div className="fixed bottom-5 right-5 z-50 group">
+        {!open && (
+          <span
+            className="absolute bottom-1/2 translate-y-1/2 right-[64px] whitespace-nowrap rounded-full px-3.5 py-2 text-xs font-semibold opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-100"
+            style={{ background: BG_BLUE, color: "white", border: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            Pergunte ao Chat do Modo Criador
+          </span>
+        )}
+        <button
+          onClick={() => setOpen(!open)}
+          aria-label="Chat do Modo Criador"
+          className="flex items-center justify-center rounded-full shadow-2xl transition hover:opacity-90"
+          style={{ width: 56, height: 56, background: LIME, color: ACCENT_ON_LIGHT }}
+        >
+          {open ? <X size={22} /> : <MessageCircle size={22} />}
+        </button>
+      </div>
 
       {open && (
         <div

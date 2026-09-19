@@ -94,19 +94,28 @@ export function SupportChatWidget() {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(!open)}
-        aria-label="Chat do Modo Criador"
-        className="fixed z-[9997] flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 bottom-[88px] right-4 md:bottom-6 md:right-6"
-        style={{
-          width: 52,
-          height: 52,
-          background: "rgb(var(--lz-brand-rgb))",
-          color: "#0D0D0D",
-        }}
-      >
-        {open ? <X size={22} /> : <MessageCircle size={22} />}
-      </button>
+      <div className="fixed z-[9997] bottom-[88px] right-4 md:bottom-6 md:right-6 group">
+        {!open && (
+          <span
+            className="absolute bottom-1/2 translate-y-1/2 right-[60px] whitespace-nowrap rounded-full px-3.5 py-2 text-xs font-semibold opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-100 bg-card border border-foreground/10 text-foreground"
+          >
+            Pergunte ao Chat do Modo Criador
+          </span>
+        )}
+        <button
+          onClick={() => setOpen(!open)}
+          aria-label="Chat do Modo Criador"
+          className="flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105"
+          style={{
+            width: 52,
+            height: 52,
+            background: "rgb(var(--lz-brand-rgb))",
+            color: "#0D0D0D",
+          }}
+        >
+          {open ? <X size={22} /> : <MessageCircle size={22} />}
+        </button>
+      </div>
 
       {open && (
         <div
