@@ -118,7 +118,7 @@ export function AgenciesBillingPanel() {
     const uf = ufFromWhatsapp(o.whatsapp);
     if (uf) stateCounts.set(uf, (stateCounts.get(uf) ?? 0) + 1);
   });
-  const topStates = [...stateCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const topStates = [...stateCounts.entries()].sort((a, b) => b[1] - a[1]);
 
   const fetchInvoice = useMutation({
     mutationFn: useServerFn(getOrgNextInvoice),
@@ -233,7 +233,7 @@ export function AgenciesBillingPanel() {
 
         {topStates.length > 0 && (
           <div className="mt-4 pt-4 border-t border-foreground/6">
-            <div className="text-[11px] text-foreground/50 mb-2">Estados com mais agências</div>
+            <div className="text-[11px] text-foreground/50 mb-2">Estados com mais agências ({topStates.length})</div>
             <div className="flex flex-wrap gap-2">
               {topStates.map(([uf, count]) => (
                 <span key={uf} className="inline-flex items-center gap-1.5 bg-foreground/[0.03] rounded-full px-2.5 py-1 text-xs">

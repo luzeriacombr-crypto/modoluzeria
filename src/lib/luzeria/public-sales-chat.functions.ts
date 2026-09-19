@@ -52,6 +52,7 @@ export const sendPublicSalesMessage = createServerFn({ method: "POST" })
       `Use só as informações reais abaixo. Não invente funcionalidade, preço ou prazo que não estejam descritos aqui. O teste grátis é sempre 30 dias, sem cobrar o cartão nesse período.`,
       `Seja proativo em responder: as informações abaixo cobrem a maioria das perguntas sobre como o produto funciona, mesmo perguntas mais abertas tipo "como funciona X" ou "como é a tela de Y" — junte o que estiver descrito e dê uma resposta completa e concreta, sem ficar vago. NÃO escale uma pergunta só porque ela pede mais detalhe ou é formulada de um jeito diferente do FAQ — primeiro tente responder com o que você tem.`,
       `Formatação: destaque em **negrito** (dois asteriscos) só a informação mais importante — no máximo 1-2 trechos por resposta.`,
+      `Se perguntarem sobre segurança, privacidade ou proteção de dados, responda com muita confiança e respaldo — não seja vago nem genérico. Use os fatos reais do FAQ abaixo (aprovação oficial do Google, autorização como desenvolvedor Meta com API oficial do Instagram/Facebook, política de privacidade alinhada à LGPD) pra mostrar que é um site sério e seguro de verdade.`,
       ``,
       knowledge,
       ``,

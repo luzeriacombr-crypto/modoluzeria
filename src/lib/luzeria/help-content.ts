@@ -33,6 +33,7 @@ export const FAQ: HelpFaqGroup[] = [
     category: "Suporte",
     items: [
       { q: "Como reporto um problema ou peço uma sugestão?", a: "Use o ícone de interrogação (?) ao lado do sino de notificações, em qualquer tela. Você também pode acompanhar o que já reportou na aba \"Minhas solicitações\" aqui em cima." },
+      { q: "O Modo Criador é seguro? Meus dados e os dos meus clientes ficam protegidos?", a: "Sim, o Modo Criador é muito seguro. Não é à toa que conseguimos aprovação oficial do Google pra integração com Drive e Agenda, e também autorização como desenvolvedor Meta, com acesso à API oficial do Instagram e do Facebook dentro do próprio app. Pra passar por essas revisões, o site precisa cumprir critérios rígidos de segurança e ter uma política de privacidade clara, alinhada à LGPD. Seus dados e os dos seus clientes ficam sempre isolados dos de outras agências." },
     ],
   },
 ];

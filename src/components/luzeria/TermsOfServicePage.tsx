@@ -41,11 +41,23 @@ export function TermsOfServicePage() {
           <section>
             <h2 className="text-lg font-bold text-foreground mb-2">3. Assinatura e pagamento</h2>
             <p>
-              O acesso à plataforma é feito por assinatura mensal, com um período de teste gratuito de 7
+              O acesso à plataforma é feito por assinatura mensal, com um período de teste gratuito de 30
               dias. Os pagamentos são processados pelo nosso parceiro de cobrança (Asaas); não armazenamos
               dados completos de cartão de crédito. A assinatura renova automaticamente a cada ciclo, salvo
               cancelamento antes da próxima cobrança. Você pode cancelar a qualquer momento nas
               Configurações da sua conta.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-foreground mb-2">3.1. Inatividade durante o teste gratuito</h2>
+            <p>
+              Pra manter a qualidade do serviço pra quem está usando de verdade, contas que não avançarem no
+              período de teste podem ser desativadas automaticamente. Consideramos que uma conta avançou
+              quando, dentro dos 30 dias de teste, pelo menos um cliente foi cadastrado e a conta do Google
+              Drive foi conectada. Antes de qualquer desativação, avisamos por e-mail com alguns dias de
+              antecedência. A desativação é sempre reversível: nenhum dado é apagado, e basta entrar em
+              contato com o nosso suporte pra reativar a conta a qualquer momento.
             </p>
           </section>
 

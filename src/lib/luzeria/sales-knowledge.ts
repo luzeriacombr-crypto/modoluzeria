@@ -11,7 +11,7 @@ export const SALES_FAQ: [string, string][] = [
   ["Funciona pra qualquer tipo de agência?", "Sim, foi feito pra qualquer agência ou social media que gerencia múltiplos clientes."],
   ["Posso trocar de plano depois?", "Sim, a qualquer momento nas configurações da sua conta."],
   ["O que acontece se eu não cancelar antes do teste acabar?", "A cobrança do plano escolhido começa automaticamente no cartão cadastrado, depois dos 30 dias."],
-  ["Meus dados ficam seguros?", "Sim. Seus dados e os dos seus clientes ficam isolados dos de outras agências, com infraestrutura segura."],
+  ["Meus dados ficam seguros?", "Sim, o Modo Criador é muito seguro. Não é à toa que conseguimos aprovação oficial do Google pra integração com Drive e Agenda, e também autorização como desenvolvedor Meta, com acesso à API oficial do Instagram e do Facebook dentro do próprio app. Pra passar por essas revisões, o site precisa cumprir critérios rígidos de segurança e ter uma política de privacidade clara, alinhada à LGPD. Seus dados e os dos seus clientes ficam sempre isolados dos de outras agências."],
 ];
 
 /** Recursos reais do produto que não têm página de SEO própria (ao

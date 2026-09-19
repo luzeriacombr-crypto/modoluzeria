@@ -30,6 +30,9 @@ export function buildActivationNudgeEmailHtml(params: { name: string; missing: A
   const appUrl = "https://www.modocriador.com.br/auth";
   const lime = "#C8D44E";
   const ink = "#16171B";
+  const blue = "#2563EB";
+  const blueBg = "#EEF3FF";
+  const isSingle = params.missing.length === 1;
 
   const items = params.missing
     .map((key) => ITEM_COPY[key])
@@ -61,10 +64,18 @@ export function buildActivationNudgeEmailHtml(params: { name: string; missing: A
             </tr>
 
             <tr>
-              <td style="padding:16px 32px 0 32px;">
+              <td style="padding:18px 32px 0 32px;">
+                <span style="display:inline-block; background-color:${blueBg}; color:${blue}; font-size:11px; font-weight:800; letter-spacing:0.02em; padding:5px 12px; border-radius:999px;">
+                  Sentimos sua falta por aqui
+                </span>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:14px 32px 0 32px;">
                 <div style="font-size:22px; font-weight:800; color:${ink}; line-height:1.3;">${firstName}, falta pouco pra aproveitar tudo</div>
                 <p style="font-size:14px; line-height:1.6; color:#3C3F33; margin:12px 0 0 0;">
-                  Essas ${params.missing.length === 1 ? "coisa deixa" : "coisas deixam"} o Modo Criador muito mais útil pra você — nada disso leva mais que alguns minutos.
+                  Você já criou sua conta, mas ${isSingle ? "ainda falta um passo simples" : "ainda faltam alguns passos simples"} pra tudo funcionar de verdade — sem isso, o board e a IA de planejamento ficam sem nada pra organizar. ${isSingle ? "Essa coisa leva" : "Essas coisas levam"} só alguns minutos, e depois é só usar.
                 </p>
               </td>
             </tr>
@@ -78,9 +89,23 @@ export function buildActivationNudgeEmailHtml(params: { name: string; missing: A
             </tr>
 
             <tr>
+              <td style="padding:16px 32px 0 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${blueBg}; border-radius:10px; border-left:3px solid ${blue};">
+                  <tr>
+                    <td style="padding:12px 16px;">
+                      <p style="font-size:12.5px; line-height:1.55; color:#1E3A8A; margin:0;">
+                        <strong>Volte quando quiser</strong> — sua conta continua aberta esperando por você, e o time de suporte ajuda se travar em qualquer parte.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
               <td style="padding:24px 32px 0 32px;" align="center">
-                <a href="${appUrl}" style="display:inline-block; background-color:${lime}; color:${ink}; font-size:14px; font-weight:800; text-decoration:none; padding:13px 28px; border-radius:8px;">
-                  Resolver agora
+                <a href="${appUrl}" style="display:inline-block; background-color:${lime}; color:${ink}; font-size:14px; font-weight:800; text-decoration:none; padding:13px 30px; border-radius:8px;">
+                  Voltar e resolver agora →
                 </a>
               </td>
             </tr>
