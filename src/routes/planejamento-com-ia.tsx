@@ -121,18 +121,15 @@ function PlanejamentoComIaPage() {
           <div className="grid sm:grid-cols-2 gap-3.5">
             <ExampleCard
               tag="Post · Carrossel"
-              title="Acho chique, acho brega"
-              brief={`SLIDE 1: Lista rápida do que acho chique e do que acho brega. Vê se concorda comigo.
-SLIDE 2: Brega é comprar sem saber se aquilo serve pra sua rotina.
-SLIDE 3: Chique é sentar com um especialista e sair com algo pensado pra você.
-SLIDE 4: Brega é seguir a mesma dose que a internet manda todo mundo seguir.
-SLIDE 5: Chique é ter o ajuste certo pro seu caso, com acompanhamento de perto.
-SLIDE 6: Brega é pagar caro só pela embalagem bonita.
-SLIDE 7: Chique é pagar o preço justo por algo feito sob medida, do início ao fim.
-SLIDE 8: O certo não é caro, é feito sob medida. Fala com a nossa equipe.`}
-              caption={`Fizemos essa lista pensando em quanta gente ainda confunde preço alto com qualidade.
-Chique, pra gente, é sentar com um especialista e sair com algo pensado pro seu caso, do seu jeito.
-Concorda com algum item da lista? Conta aqui embaixo 👇`}
+              title="A conversa antes de qualquer entrega"
+              brief={`SLIDE 1: Antes de qualquer entrega sair daqui, existe uma conversa que faz toda diferença.
+SLIDE 2: A nossa equipe escuta rotina, objetivo e histórico de quem chega até nós.
+SLIDE 3: Só depois dessa escuta a gente decide o que realmente faz sentido pro seu caso.
+SLIDE 4: É esse cuidado que garante um atendimento pensado pra você, não pra qualquer pessoa.
+SLIDE 5: Vem conversar com a nossa equipe.`}
+              caption={`Antes de qualquer entrega sair daqui, tem uma conversa que muda tudo.
+A gente escuta rotina, objetivo e histórico de quem chega até nós, e só depois disso decide o que faz mais sentido pro seu caso.
+Vem conversar com a gente 👇`}
             />
             <ExampleCard
               tag="Reel · Direto pra câmera"
