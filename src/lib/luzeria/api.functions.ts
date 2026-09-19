@@ -481,6 +481,21 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
     const clientsByOrg = new Map<string, number>();
     (clientRows ?? []).forEach((c: any) => clientsByOrg.set(c.org_id, (clientsByOrg.get(c.org_id) ?? 0) + 1));
 
+    // Total de posts/reels/stories já finalizados por org, histórico
+    // completo — usado só pro nível de gamificação (AgenciesBillingPanel),
+    // não afeta metas/relatórios que já existem.
+    const { data: finalizedRows } = await supabaseAdmin
+      .from("content_items")
+      .select("months!inner(clients!inner(org_id))")
+      .in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"])
+      .in("type", ["post", "reel", "story"]);
+    const finalizedByOrg = new Map<string, number>();
+    (finalizedRows ?? []).forEach((r: any) => {
+      const orgId = r.months?.clients?.org_id;
+      if (!orgId) return;
+      finalizedByOrg.set(orgId, (finalizedByOrg.get(orgId) ?? 0) + 1);
+    });
+
     // Owner contact (name + email) — the earliest-created "master" profile
     // in each org, same as who received the signup confirmation email.
     const { data: masterRoles } = await supabaseAdmin
@@ -579,6 +594,7 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         instagramConnected: igConnectedByOrg.get(o.id) ?? 0,
         lastLoginAt: lastActiveByOrg.get(o.id) ?? null,
         teamCount: teamCountByOrg.get(o.id) ?? 0,
+        finalizedCount: finalizedByOrg.get(o.id) ?? 0,
       };
     });
   });
