@@ -433,7 +433,10 @@ export const appSettingsQO = () =>
 export const orgPlanStatusQO = () =>
   queryOptions({ queryKey: ["org-plan-status"], queryFn: () => getOrgPlanStatus() });
 export const orgsBillingQO = () =>
-  queryOptions({ queryKey: ["orgs-billing"], queryFn: () => listOrgsBilling() });
+  // refetchInterval curto de propósito: "usuários online agora" (onlineCount
+  // por org) só faz sentido se o painel se atualizar sozinho enquanto está
+  // aberto, não só quando a pessoa recarrega a página.
+  queryOptions({ queryKey: ["orgs-billing"], queryFn: () => listOrgsBilling(), refetchInterval: 60_000 });
 export const myAgencyLevelInputsQO = () =>
   queryOptions({ queryKey: ["my-agency-level-inputs"], queryFn: () => getMyAgencyLevelInputs(), staleTime: 5 * 60_000 });
 export const demoRequestsQO = () =>

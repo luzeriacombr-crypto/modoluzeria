@@ -150,6 +150,8 @@ export function AgenciesBillingPanel() {
   // não) — não mudam com o seletor de período, é "agora", não uma coorte.
   const totalUsers = orgs.reduce((sum: number, o: any) => sum + (o.teamCount ?? 0), 0);
   const totalClients = orgs.reduce((sum: number, o: any) => sum + (o.clientsUsed ?? 0), 0);
+  const totalOnline = orgs.reduce((sum: number, o: any) => sum + (o.onlineCount ?? 0), 0);
+  const onlineOrgs = orgs.filter((o: any) => (o.onlineCount ?? 0) > 0).sort((a: any, b: any) => b.onlineCount - a.onlineCount);
 
   // Receita: só orgânicas (fora Luzeria e revenda, que tem preço próprio
   // por fora) e só "active" com assinatura de verdade na Asaas —
@@ -298,7 +300,7 @@ export function AgenciesBillingPanel() {
           </p>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-foreground/6 grid grid-cols-2 gap-3">
+        <div className="mt-4 pt-4 border-t border-foreground/6 grid grid-cols-3 gap-3">
           <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
             <div className="text-lg font-bold text-foreground">{totalUsers}</div>
             <div className="text-[11px] text-foreground/50 mt-0.5">Usuários no total</div>
@@ -307,7 +309,32 @@ export function AgenciesBillingPanel() {
             <div className="text-lg font-bold text-foreground">{totalClients}</div>
             <div className="text-[11px] text-foreground/50 mt-0.5">Clientes no total</div>
           </div>
+          <div className="relative group bg-foreground/[0.03] rounded-lg px-3 py-2.5 cursor-default">
+            <div className="flex items-center gap-1.5">
+              {totalOnline > 0 && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style={{ background: "#4ADE80" }} />
+                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: "#4ADE80" }} />
+                </span>
+              )}
+              <div className="text-lg font-bold text-foreground">{totalOnline}</div>
+            </div>
+            <div className="text-[11px] text-foreground/50 mt-0.5">Online agora</div>
+            {onlineOrgs.length > 0 && (
+              <div className="absolute left-0 top-full mt-1.5 z-20 w-max max-w-xs bg-card border border-foreground/10 rounded-lg shadow-xl px-3 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">
+                {onlineOrgs.map((o: any) => (
+                  <div key={o.id} className="flex items-center gap-4 justify-between text-xs py-0.5">
+                    <span className="text-foreground/80 font-medium">{o.name}</span>
+                    <span className="text-foreground/50 font-semibold tabular-nums">{o.onlineCount}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+        <p className="text-[10.5px] text-foreground/35 mt-2 leading-relaxed">
+          "Online agora" é aproximado (uso real nos últimos ~15min) — atualiza sozinho a cada 1min, passe o mouse pra ver por agência.
+        </p>
 
         {topStates.length > 0 && (
           <div className="mt-4 pt-4 border-t border-foreground/6">

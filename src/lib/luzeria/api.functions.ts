@@ -512,6 +512,17 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
       if (!p.active) return;
       teamCountByOrg.set(p.org_id, (teamCountByOrg.get(p.org_id) ?? 0) + 1);
     });
+    // "Online agora" — aproximado a partir do mesmo last_active_at (grava
+    // no máximo a cada 10min, requireActiveProfile.ts), então na prática é
+    // "usou o app nos últimos ~15min", não um presence em tempo real de
+    // verdade. Suficiente pro pedido do Junior sem precisar de
+    // infraestrutura de realtime/heartbeat nova.
+    const onlineCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const onlineByOrg = new Map<string, number>();
+    (ownerProfiles ?? []).forEach((p: any) => {
+      if (!p.active || !p.last_active_at || p.last_active_at < onlineCutoff) return;
+      onlineByOrg.set(p.org_id, (onlineByOrg.get(p.org_id) ?? 0) + 1);
+    });
     const ownerByOrg = new Map<string, { id: string; name: string; email: string }>();
     (ownerProfiles ?? [])
       .filter((p: any) => masterIds.has(p.id))
@@ -595,6 +606,7 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         lastLoginAt: lastActiveByOrg.get(o.id) ?? null,
         teamCount: teamCountByOrg.get(o.id) ?? 0,
         finalizedCount: finalizedByOrg.get(o.id) ?? 0,
+        onlineCount: onlineByOrg.get(o.id) ?? 0,
       };
     });
   });
