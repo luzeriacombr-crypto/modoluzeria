@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { LIME, BG_BLUE, BG_GRAY, Reveal } from "@/components/luzeria/salesPageBlocks";
 import { AGENCY_TIER_NAMES, computeAgencyPoints, getAgencyLevel, type AgencyLevelInput } from "@/lib/luzeria/agency-level";
+import agencyLevelsHero from "@/assets/agency-levels-hero.png";
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
 
 export const Route = createFileRoute("/programa-de-niveis")({
@@ -186,8 +187,11 @@ function AgencyLevelsPage() {
       </header>
 
       <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -top-40 -right-24 w-[420px] h-[420px] rounded-full blur-[110px] opacity-[0.14]" style={{ background: "#4A6BFF" }} />
-        <div className="pointer-events-none absolute -bottom-32 -left-24 w-[360px] h-[360px] rounded-full blur-[120px] opacity-[0.1]" style={{ background: LIME }} />
+        <div
+          className="pointer-events-none absolute inset-0 bg-center bg-cover opacity-70"
+          style={{ backgroundImage: `url(${agencyLevelsHero})` }}
+        />
+        <div className="pointer-events-none absolute inset-0" style={{ background: `linear-gradient(180deg, ${BG_BLUE}00 0%, ${BG_BLUE}CC 65%, ${BG_BLUE} 100%)` }} />
         <Reveal className="relative px-5 sm:px-10 max-w-[720px] mx-auto pt-16 pb-14 text-center">
           <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full mb-6" style={{ background: LIME, color: BG_BLUE }}>
             Programa de Níveis
