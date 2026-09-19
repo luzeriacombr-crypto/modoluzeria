@@ -7,7 +7,9 @@ import {
   Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { clientsQO, clientCategoriesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { clientsQO, clientCategoriesQO, useApi, useMe, myAgencyLevelInputsQO } from "@/lib/luzeria/queries";
+import { computeAgencyPoints, getAgencyLevel } from "@/lib/luzeria/agency-level";
+import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "./AgencyLevelIcons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { PRESET_COLORS, glassCardStyle } from "@/lib/luzeria/utils";
@@ -48,6 +50,7 @@ export function Sidebar({
   onCreateClient,
 }: { collapsed?: boolean; onOpenCustomFields: (c: Client) => void; onCreateClient: (category?: string) => void }) {
   const me = useMe().data;
+  const { data: levelInputs } = useQuery({ ...myAgencyLevelInputsQO(), enabled: !!me });
   const { data: clients = [], isLoading: clientsLoading, isError: clientsError, error: clientsErrObj } = useQuery(clientsQO());
   const { data: customCategories = [] } = useQuery(clientCategoriesQO());
   const { createClientCategory } = useApi();
@@ -182,6 +185,23 @@ export function Sidebar({
               {me?.orgTagline ?? "Gestão de conteúdo e criação"}
             </p>
           )}
+          {levelInputs && (() => {
+            const points = computeAgencyPoints(levelInputs);
+            const level = getAgencyLevel(points);
+            const color = TIER_COLOR[level.tier as AgencyTierName] ?? "#9AA4B2";
+            const Icon = TIER_ICON[level.tier as AgencyTierName];
+            return (
+              <Link
+                to="/programa-de-niveis"
+                className="inline-flex items-center gap-1.5 mt-2 px-2 py-1 rounded-full text-[10px] font-bold transition hover:brightness-110"
+                style={{ backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`, color }}
+                title={`${points} pts — faltam ${level.pointsToNext ?? 0} pra próxima`}
+              >
+                {Icon && <Icon size={11} />}
+                {level.label}
+              </Link>
+            );
+          })()}
           {isDemoReadOnly && (
             <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
               style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)", color: "var(--lz-accent-ink)" }}>

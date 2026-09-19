@@ -599,6 +599,42 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
     });
   });
 
+/** Insumos pro selo de nível (gamificação) da PRÓPRIA agência — qualquer
+ * perfil ativo pode chamar (diferente de listOrgsBilling, que é só pro
+ * admin da plataforma ver todas as agências). Usa context.supabase (RLS
+ * já restringe tudo à própria org, não precisa de supabaseAdmin aqui).
+ * Devolve os números crus, não o nível calculado — computeAgencyPoints/
+ * getAgencyLevel (agency-level.ts) rodam no client, mesma lógica usada
+ * no painel admin e na página pública /programa-de-niveis. */
+export const getMyAgencyLevelInputs = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const [{ data: org }, { count: clientsCount }, { count: finalizedCount }, { data: driveRow }, { count: profilesCount }] = await Promise.all([
+      context.supabase.from("orgs").select("subscription_status, asaas_subscription_id").eq("id", context.orgId).maybeSingle(),
+      context.supabase.from("clients").select("id", { count: "exact", head: true }).eq("archived", false).neq("category", "Ex-clientes"),
+      (context.supabase as any)
+        .from("content_items")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"])
+        .in("type", ["post", "reel", "story"]),
+      context.supabase.from("org_google_credentials").select("org_id").eq("org_id", context.orgId).maybeSingle(),
+      context.supabase.from("profiles").select("id", { count: "exact", head: true }).eq("org_id", context.orgId).eq("active", true),
+    ]);
+    const { count: instagramCount } = await context.supabase
+      .from("client_instagram_credentials")
+      .select("client_id, clients!client_instagram_credentials_client_id_fkey!inner(org_id)", { count: "exact", head: true })
+      .eq("clients.org_id", context.orgId);
+
+    return {
+      activeClients: clientsCount ?? 0,
+      finalizedCount: finalizedCount ?? 0,
+      isPayingCustomer: (org as any)?.subscription_status === "active" && !!(org as any)?.asaas_subscription_id,
+      driveConnected: !!driveRow,
+      instagramConnectedCount: instagramCount ?? 0,
+      teamSize: Math.max(0, (profilesCount ?? 1) - 1),
+    };
+  });
+
 /** Platform-admin only: gives an agency another trial window (TRIAL_DAYS) — for
  * when someone signs up but doesn't actually try the product in time, and
  * Junior wants to give them a second shot. Also revives a trial that had

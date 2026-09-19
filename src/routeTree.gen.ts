@@ -15,6 +15,7 @@ import { Route as SelecaoDeFotosParaFotografosRouteImport } from './routes/selec
 import { Route as RevendaRouteImport } from './routes/revenda'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as PublicacaoAutomaticaInstagramRouteImport } from './routes/publicacao-automatica-instagram'
+import { Route as ProgramaDeNiveisRouteImport } from './routes/programa-de-niveis'
 import { Route as ProgramaDeIndicacaoRouteImport } from './routes/programa-de-indicacao'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as MfaRouteImport } from './routes/mfa'
@@ -99,6 +100,11 @@ const PublicacaoAutomaticaInstagramRoute =
     path: '/publicacao-automatica-instagram',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ProgramaDeNiveisRoute = ProgramaDeNiveisRouteImport.update({
+  id: '/programa-de-niveis',
+  path: '/programa-de-niveis',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProgramaDeIndicacaoRoute = ProgramaDeIndicacaoRouteImport.update({
   id: '/programa-de-indicacao',
   path: '/programa-de-indicacao',
@@ -383,6 +389,7 @@ export interface FileRoutesByFullPath {
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/programa-de-indicacao': typeof ProgramaDeIndicacaoRoute
+  '/programa-de-niveis': typeof ProgramaDeNiveisRoute
   '/publicacao-automatica-instagram': typeof PublicacaoAutomaticaInstagramRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/revenda': typeof RevendaRoute
@@ -441,6 +448,7 @@ export interface FileRoutesByTo {
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/programa-de-indicacao': typeof ProgramaDeIndicacaoRoute
+  '/programa-de-niveis': typeof ProgramaDeNiveisRoute
   '/publicacao-automatica-instagram': typeof PublicacaoAutomaticaInstagramRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/revenda': typeof RevendaRoute
@@ -501,6 +509,7 @@ export interface FileRoutesById {
   '/mfa': typeof MfaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/programa-de-indicacao': typeof ProgramaDeIndicacaoRoute
+  '/programa-de-niveis': typeof ProgramaDeNiveisRoute
   '/publicacao-automatica-instagram': typeof PublicacaoAutomaticaInstagramRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/revenda': typeof RevendaRoute
@@ -561,6 +570,7 @@ export interface FileRouteTypes {
     | '/mfa'
     | '/privacidade'
     | '/programa-de-indicacao'
+    | '/programa-de-niveis'
     | '/publicacao-automatica-instagram'
     | '/redefinir-senha'
     | '/revenda'
@@ -619,6 +629,7 @@ export interface FileRouteTypes {
     | '/mfa'
     | '/privacidade'
     | '/programa-de-indicacao'
+    | '/programa-de-niveis'
     | '/publicacao-automatica-instagram'
     | '/redefinir-senha'
     | '/revenda'
@@ -678,6 +689,7 @@ export interface FileRouteTypes {
     | '/mfa'
     | '/privacidade'
     | '/programa-de-indicacao'
+    | '/programa-de-niveis'
     | '/publicacao-automatica-instagram'
     | '/redefinir-senha'
     | '/revenda'
@@ -738,6 +750,7 @@ export interface RootRouteChildren {
   MfaRoute: typeof MfaRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   ProgramaDeIndicacaoRoute: typeof ProgramaDeIndicacaoRoute
+  ProgramaDeNiveisRoute: typeof ProgramaDeNiveisRoute
   PublicacaoAutomaticaInstagramRoute: typeof PublicacaoAutomaticaInstagramRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   RevendaRoute: typeof RevendaRoute
@@ -806,6 +819,13 @@ declare module '@tanstack/react-router' {
       path: '/publicacao-automatica-instagram'
       fullPath: '/publicacao-automatica-instagram'
       preLoaderRoute: typeof PublicacaoAutomaticaInstagramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/programa-de-niveis': {
+      id: '/programa-de-niveis'
+      path: '/programa-de-niveis'
+      fullPath: '/programa-de-niveis'
+      preLoaderRoute: typeof ProgramaDeNiveisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/programa-de-indicacao': {
@@ -1244,6 +1264,7 @@ const rootRouteChildren: RootRouteChildren = {
   MfaRoute: MfaRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   ProgramaDeIndicacaoRoute: ProgramaDeIndicacaoRoute,
+  ProgramaDeNiveisRoute: ProgramaDeNiveisRoute,
   PublicacaoAutomaticaInstagramRoute: PublicacaoAutomaticaInstagramRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   RevendaRoute: RevendaRoute,

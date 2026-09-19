@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive } from "lucide-react";
 import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, useApi } from "@/lib/luzeria/queries";
 import { computeAgencyPoints, getAgencyLevel } from "@/lib/luzeria/agency-level";
+import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
 import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { approveReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -20,15 +21,6 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   canceled: { label: "Cancelada", color: "#9AA4B2" },
 };
 
-const TIER_COLOR: Record<string, string> = {
-  "Bronze": "#B87A4B",
-  "Prata": "#C7CDD6",
-  "Ouro": "#E8C34A",
-  "Platina": "#7EE0D1",
-  "Diamante": "#6FC3FF",
-  "Lendária": "rgb(var(--lz-brand-rgb))",
-};
-
 function AgencyLevelBadge({ o }: { o: any }) {
   const points = computeAgencyPoints({
     activeClients: o.clientsUsed ?? 0,
@@ -39,13 +31,15 @@ function AgencyLevelBadge({ o }: { o: any }) {
     teamSize: Math.max(0, (o.teamCount ?? 1) - 1),
   });
   const level = getAgencyLevel(points);
-  const color = TIER_COLOR[level.tier] ?? "#9AA4B2";
+  const color = TIER_COLOR[level.tier as AgencyTierName] ?? "#9AA4B2";
+  const Icon = TIER_ICON[level.tier as AgencyTierName];
   return (
     <div className="group relative inline-block cursor-default">
       <span
         className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10.5px] font-bold whitespace-nowrap"
         style={{ backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)`, color }}
       >
+        {Icon && <Icon size={12} />}
         {level.label}
       </span>
       <div className="absolute left-0 top-full mt-1.5 z-20 w-max max-w-[220px] bg-card border border-foreground/10 rounded-lg shadow-xl px-3 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">

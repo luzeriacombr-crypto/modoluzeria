@@ -20,7 +20,7 @@ import {
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   addCleaningTask, renameCleaningTask, deleteCleaningTask,
   adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, cancelMySubscription, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations, getMyWorkStats,
-  listOrgsBilling, getOrgNextInvoice,
+  listOrgsBilling, getOrgNextInvoice, getMyAgencyLevelInputs,
   updateMyAccount,
   getReport, getDeliveryTrend, getMemberReportDetail, getMemberVelocity, getFileUploadsReport,
   updateFeedOrder,
@@ -434,6 +434,8 @@ export const orgPlanStatusQO = () =>
   queryOptions({ queryKey: ["org-plan-status"], queryFn: () => getOrgPlanStatus() });
 export const orgsBillingQO = () =>
   queryOptions({ queryKey: ["orgs-billing"], queryFn: () => listOrgsBilling() });
+export const myAgencyLevelInputsQO = () =>
+  queryOptions({ queryKey: ["my-agency-level-inputs"], queryFn: () => getMyAgencyLevelInputs(), staleTime: 5 * 60_000 });
 export const demoRequestsQO = () =>
   queryOptions({ queryKey: ["demo-requests"], queryFn: () => listDemoRequests() });
 export const aiPlanningFeedbackQO = () =>
