@@ -1,4 +1,3 @@
-import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { hexToRgbChannels } from "@/lib/luzeria/utils";
 import { useTheme } from "@/lib/luzeria/theme-store";
 
@@ -40,15 +39,19 @@ export function LuzeriaLoader({ fullScreen = true }: { fullScreen?: boolean }) {
         .lz-logo { animation: lz-fade 0.4s ease-out both; }
       `}</style>
 
-      {logoUrl ? (
+      {/* Sem logo alguma quando não tem nada em cache ainda (primeiro
+       * acesso deste navegador, ou cache limpo) — melhor um espaço vazio
+       * por um instante do que mostrar a marca genérica do Modo Criador e
+       * trocar pela da agência alguns segundos depois: pra quem já tem
+       * marca própria configurada, aquilo lia como bug, não como
+       * placeholder (feedback direto do Junior). */}
+      {logoUrl && (
         <img
           src={logoUrl}
           alt={cached?.name ?? "Logo"}
           className="lz-logo"
           style={{ height: 32, maxWidth: 200, width: "auto", objectFit: "contain" }}
         />
-      ) : (
-        <ModoCriadorLogo variant={theme === "light" ? "black" : "white"} className="lz-logo" style={{ height: 32, width: "auto" }} />
       )}
 
       <div style={{ width: 128, height: 2, borderRadius: 9999, overflow: "hidden", background: trackRgb ? `rgba(${trackRgb},0.15)` : "rgba(var(--lz-brand-light-rgb),0.15)" }}>
