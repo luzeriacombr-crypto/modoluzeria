@@ -3,7 +3,8 @@ import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List, CheckSqu
 import { useEffect, useMemo, useState } from "react";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { reportAppError } from "@/lib/error-reporting";
-import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi } from "@/lib/luzeria/queries";
+import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi, myAgencyLevelInputsQO } from "@/lib/luzeria/queries";
+import { computeAgencyPoints, getAgencyLevel } from "@/lib/luzeria/agency-level";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { CONTENT_TYPE_LABEL, type ContentItem } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
@@ -189,6 +190,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
 
   const showDocsSubTab = isAdmin;
   const showBibliotecaSubTab = !disabledFeatures.has("reference_library");
+
+  // Prévia de planejamento com IA — liberada a partir do nível Prata
+  // (Programa de Níveis), independente do toggle de exibir o selo.
+  const { data: agencyLevelInputs } = useQuery({ ...myAgencyLevelInputsQO(), enabled: !!me });
+  const agencyLevel = agencyLevelInputs ? getAgencyLevel(computeAgencyPoints(agencyLevelInputs)) : null;
+  const aiPlanningUnlocked = (agencyLevel?.index ?? -1) >= 3;
   const tabs = visibleTabs;
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
@@ -510,7 +517,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
               <CampanhasTab clientId={client.id} monthKey={effectiveMonthKey} isAdmin={isAdmin} />
             )}
             {maisSubTab === "docs" && showDocsSubTab && (
-              <ClientDocsTab clientId={client.id} aiPlanningEnabled={!!client.aiPlanningEnabled} />
+              <ClientDocsTab
+                clientId={client.id}
+                aiPlanningEnabled={aiPlanningUnlocked}
+                aiPlanningLocked={!aiPlanningUnlocked && !disabledFeatures.has("agency_levels")}
+                aiPlanningCurrentLevelLabel={agencyLevel?.label}
+              />
             )}
             {maisSubTab === "biblioteca" && showBibliotecaSubTab && <ClientReferenceLibraryTab clientId={client.id} />}
           </div>

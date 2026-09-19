@@ -18,6 +18,7 @@ import { Route as PublicacaoAutomaticaInstagramRouteImport } from './routes/publ
 import { Route as ProgramaDeNiveisRouteImport } from './routes/programa-de-niveis'
 import { Route as ProgramaDeIndicacaoRouteImport } from './routes/programa-de-indicacao'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as PlanejamentoComIaRouteImport } from './routes/planejamento-com-ia'
 import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as ExclusaoDeDadosRouteImport } from './routes/exclusao-de-dados'
 import { Route as BlogRouteImport } from './routes/blog'
@@ -113,6 +114,11 @@ const ProgramaDeIndicacaoRoute = ProgramaDeIndicacaoRouteImport.update({
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
   id: '/privacidade',
   path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanejamentoComIaRoute = PlanejamentoComIaRouteImport.update({
+  id: '/planejamento-com-ia',
+  path: '/planejamento-com-ia',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MfaRoute = MfaRouteImport.update({
@@ -387,6 +393,7 @@ export interface FileRoutesByFullPath {
   '/blog': typeof BlogRoute
   '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
   '/mfa': typeof MfaRoute
+  '/planejamento-com-ia': typeof PlanejamentoComIaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/programa-de-indicacao': typeof ProgramaDeIndicacaoRoute
   '/programa-de-niveis': typeof ProgramaDeNiveisRoute
@@ -446,6 +453,7 @@ export interface FileRoutesByTo {
   '/blog': typeof BlogRoute
   '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
   '/mfa': typeof MfaRoute
+  '/planejamento-com-ia': typeof PlanejamentoComIaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/programa-de-indicacao': typeof ProgramaDeIndicacaoRoute
   '/programa-de-niveis': typeof ProgramaDeNiveisRoute
@@ -507,6 +515,7 @@ export interface FileRoutesById {
   '/blog': typeof BlogRoute
   '/exclusao-de-dados': typeof ExclusaoDeDadosRoute
   '/mfa': typeof MfaRoute
+  '/planejamento-com-ia': typeof PlanejamentoComIaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/programa-de-indicacao': typeof ProgramaDeIndicacaoRoute
   '/programa-de-niveis': typeof ProgramaDeNiveisRoute
@@ -568,6 +577,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/exclusao-de-dados'
     | '/mfa'
+    | '/planejamento-com-ia'
     | '/privacidade'
     | '/programa-de-indicacao'
     | '/programa-de-niveis'
@@ -627,6 +637,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/exclusao-de-dados'
     | '/mfa'
+    | '/planejamento-com-ia'
     | '/privacidade'
     | '/programa-de-indicacao'
     | '/programa-de-niveis'
@@ -687,6 +698,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/exclusao-de-dados'
     | '/mfa'
+    | '/planejamento-com-ia'
     | '/privacidade'
     | '/programa-de-indicacao'
     | '/programa-de-niveis'
@@ -748,6 +760,7 @@ export interface RootRouteChildren {
   BlogRoute: typeof BlogRoute
   ExclusaoDeDadosRoute: typeof ExclusaoDeDadosRoute
   MfaRoute: typeof MfaRoute
+  PlanejamentoComIaRoute: typeof PlanejamentoComIaRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   ProgramaDeIndicacaoRoute: typeof ProgramaDeIndicacaoRoute
   ProgramaDeNiveisRoute: typeof ProgramaDeNiveisRoute
@@ -840,6 +853,13 @@ declare module '@tanstack/react-router' {
       path: '/privacidade'
       fullPath: '/privacidade'
       preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planejamento-com-ia': {
+      id: '/planejamento-com-ia'
+      path: '/planejamento-com-ia'
+      fullPath: '/planejamento-com-ia'
+      preLoaderRoute: typeof PlanejamentoComIaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mfa': {
@@ -1262,6 +1282,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogRoute: BlogRoute,
   ExclusaoDeDadosRoute: ExclusaoDeDadosRoute,
   MfaRoute: MfaRoute,
+  PlanejamentoComIaRoute: PlanejamentoComIaRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   ProgramaDeIndicacaoRoute: ProgramaDeIndicacaoRoute,
   ProgramaDeNiveisRoute: ProgramaDeNiveisRoute,

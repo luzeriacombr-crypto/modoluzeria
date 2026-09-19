@@ -109,6 +109,19 @@ export const TUTORIALS: HelpTutorial[] = [
     ],
   },
   {
+    title: "Gerar uma prévia de planejamento com IA (novidade, a partir do nível Prata)",
+    steps: [
+      "Essa função é exclusiva de agências que já chegaram no nível Prata do Programa de Níveis — veja em /programa-de-niveis como está o seu nível e o que falta pra subir.",
+      "Abra a Ficha de um cliente e vá na aba \"Roteiros & Planejamento\".",
+      "Clique no card \"Gerar prévia de planejamento com IA\", no topo da aba.",
+      "Se teve reunião com o cliente recentemente, cola as anotações ou a transcrição inteira no campo de contexto extra — isso conta mais do que qualquer histórico antigo, mas é opcional.",
+      "Clique em gerar e aguarde — a IA lê o histórico de posts/reels do cliente, o último roteiro ou planejamento escrito, os arquivos de marca no Drive, a base de conhecimento da agência e, se houver concorrentes cadastrados na Ficha do Cliente, pesquisa o que eles andam postando.",
+      "Revise cada sugestão: cada uma vem com o \"Texto de produção (Briefing)\" pronto pro editor gravar/produzir e a \"Legenda a publicar\" separada — edite o que quiser antes de continuar.",
+      "Avalie o resultado com as estrelas (isso ajuda a Luzeria a melhorar a IA) e escolha: \"Salvar como Planejamento\" (vira um documento normal, visível pro cliente) ou \"Aprovar e enviar pros Roteiros\" (escolhe um mês e já cria os roteiros de verdade no quadro).",
+      "Quanto mais preenchida a Ficha do Cliente (nicho, briefing, roteiros recentes, concorrentes) e a Base de Conhecimento da agência (Configurações → Base de conhecimento), melhor fica o resultado.",
+    ],
+  },
+  {
     title: "Instalar o Modo Criador como app no celular",
     steps: [
       "No iPhone (Safari): toque no botão de compartilhar na barra do navegador, role até \"Adicionar à Tela de Início\", confira o nome e toque em Adicionar.",
@@ -133,6 +146,8 @@ export const INTERNAL_LINKS: { label: string; path: string }[] = [
   { label: "Vendas", path: "/vendas" },
   { label: "Seleção de Fotos", path: "/selecao-de-fotos" },
   { label: "Central de Ajuda — Tutoriais", path: "/ajuda?tab=tutoriais" },
+  { label: "Programa de Níveis (Bronze a Lendária)", path: "/programa-de-niveis" },
+  { label: "Novidade — Prévia de planejamento com IA", path: "/planejamento-com-ia" },
   { label: "Configurações — Equipe", path: "/configuracoes?tab=team" },
   { label: "Configurações — Integrações (Google Drive/Instagram)", path: "/configuracoes?tab=integrations" },
   { label: "Configurações — Automações", path: "/configuracoes?tab=automations" },

@@ -1,6 +1,8 @@
-// Prévia de planejamento do próximo mês gerada por IA — feature em teste,
-// liberada só por cliente (clients.ai_planning_enabled), não por org. Lê
-// histórico real de conteúdo, o roteiro/planejamento mais recente já
+// Prévia de planejamento do próximo mês gerada por IA. Validada primeiro
+// só com os clientes da própria Luzeria (clients.ai_planning_enabled) —
+// agora liberada pra qualquer agência que já tenha chegado no nível Prata
+// (Programa de Níveis), como uma novidade a desbloquear evoluindo no app.
+// Lê histórico real de conteúdo, o roteiro/planejamento mais recente já
 // escrito, os arquivos de marca do Drive e a lista de concorrentes
 // informada, e pede pra IA pesquisar os concorrentes na web (tool nativo
 // da Anthropic) antes de sugerir a prévia. Nunca escreve nada sozinha —
@@ -9,6 +11,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
+import { computeAgencyPoints, getAgencyLevel } from "./agency-level";
+
+// Índice de "Prata I" em AGENCY_TIER_NAMES/THRESHOLDS (agency-level.ts):
+// Bronze ocupa os índices 0-2, Prata começa no 3. Combinado com o Junior:
+// essa função é a primeira "novidade" travada por nível do app.
+const MIN_LEVEL_INDEX_FOR_AI_PLANNING = 3;
 
 // Formato de casa da Luzeria, exatamente como o Junior manda — a IA deve
 // escrever `captionDraft` já pronto nesse formato, não um resumo genérico.
@@ -180,17 +188,27 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
 
-    // ai_planning_enabled/competitors são colunas novas — cast até os tipos
-    // do Supabase serem regenerados depois da migração rodar.
+    // Gate por nível — substitui a liberação manual por cliente que valia
+    // só durante o teste na Luzeria. Continua fail-closed: se não der pra
+    // calcular o nível por qualquer motivo, a função fica bloqueada.
+    const { fetchAgencyLevelInputs, LUZERIA_ORG_ID } = await import("./api.functions");
+    if (context.orgId !== LUZERIA_ORG_ID) {
+      const levelInputs = await fetchAgencyLevelInputs(context.supabase, context.orgId);
+      const level = getAgencyLevel(computeAgencyPoints(levelInputs));
+      if (level.index < MIN_LEVEL_INDEX_FOR_AI_PLANNING) {
+        throw new Error(`Essa novidade é liberada a partir do nível Prata — sua agência está em ${level.label}. Continue usando o Modo Criador pra subir de nível.`);
+      }
+    }
+
+    // competitors/content_briefing/recent_roteiros são colunas novas —
+    // cast até os tipos do Supabase serem regenerados depois da migração.
     const { data: client, error: clientError } = await (context.supabase as any)
       .from("clients")
-      .select("id, name, niche, posts_per_week, reels_per_week, description, notes, competitors, ai_planning_enabled, content_briefing, recent_roteiros")
+      .select("id, name, niche, posts_per_week, reels_per_week, description, notes, competitors, content_briefing, recent_roteiros")
       .eq("id", data.clientId)
       .maybeSingle();
     if (clientError) throw new Error(clientError.message);
-    if (!client || !client.ai_planning_enabled) {
-      throw new Error("Essa feature ainda não está liberada pra esse cliente.");
-    }
+    if (!client) throw new Error("Cliente não encontrado.");
     const c: any = client;
 
     const { data: historyRows } = await context.supabase

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw } from "lucide-react";
+import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw, Lock } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { clientDocsQO, roteiroStatusesQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -15,7 +16,13 @@ import { MonthPickerList } from "./MonthPickerList";
 
 const DOC_TYPES: ClientDocType[] = ["roteiro", "planejamento"];
 
-export function ClientDocsTab({ clientId, aiPlanningEnabled }: { clientId: string; aiPlanningEnabled?: boolean }) {
+export function ClientDocsTab({ clientId, aiPlanningEnabled, aiPlanningLocked, aiPlanningCurrentLevelLabel }: {
+  clientId: string;
+  aiPlanningEnabled?: boolean;
+  /** Agência ainda não chegou no nível Prata — mostra a novidade travada, em vez de esconder. */
+  aiPlanningLocked?: boolean;
+  aiPlanningCurrentLevelLabel?: string;
+}) {
   const { data: docs = [] } = useQuery(clientDocsQO(clientId));
   const { upsertClientDoc, deleteClientDoc } = useApi();
   const formatWithAI = useServerFn(formatClientDocWithAI);
@@ -94,10 +101,25 @@ export function ClientDocsTab({ clientId, aiPlanningEnabled }: { clientId: strin
         >
           <Sparkles size={16} className="shrink-0" style={{ color: "var(--lz-accent-ink)" }} />
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-foreground">Gerar prévia de planejamento com IA <span className="text-foreground/40 font-normal">(versão beta)</span></div>
-            <div className="text-[11px] text-foreground/45">Lê o histórico, arquivos de marca e concorrentes — em teste, só nesse cliente.</div>
+            <div className="text-sm font-semibold text-foreground">Gerar prévia de planejamento com IA <span className="text-foreground/40 font-normal">(novidade)</span></div>
+            <div className="text-[11px] text-foreground/45">Lê o histórico, arquivos de marca e concorrentes pra montar uma prévia do próximo mês.</div>
           </div>
         </button>
+      )}
+      {!aiPlanningEnabled && aiPlanningLocked && (
+        <Link
+          to="/planejamento-com-ia"
+          className="w-full mb-5 flex items-center gap-2.5 rounded-xl p-4 text-left transition hover:opacity-90"
+          style={{ background: "color-mix(in srgb, var(--foreground) 4%, transparent)", border: "1px dashed color-mix(in srgb, var(--foreground) 15%, transparent)" }}
+        >
+          <Lock size={15} className="shrink-0 text-foreground/40" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-foreground/70">Prévia de planejamento com IA <span className="text-foreground/35 font-normal">(novidade — a partir do nível Prata)</span></div>
+            <div className="text-[11px] text-foreground/40">
+              Sua agência está em {aiPlanningCurrentLevelLabel ?? "carregamento…"}. Toque aqui pra ver como funciona e como desbloquear.
+            </div>
+          </div>
+        </Link>
       )}
       {/* Tutorial */}
       <div className="rounded-xl p-4 mb-5" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>

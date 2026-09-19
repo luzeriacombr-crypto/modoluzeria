@@ -599,6 +599,49 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
     });
   });
 
+/** Insumos crus pro cálculo de nível (gamificação) de uma org — extraído
+ * de getMyAgencyLevelInputs pra também ser chamado server-to-server (ex:
+ * o gate por nível da prévia de planejamento com IA, ai-planning.functions.ts)
+ * sem precisar passar pela camada de createServerFn/context de request. */
+export async function fetchAgencyLevelInputs(supabase: any, orgId: string) {
+  // Filtro de org_id explícito em cada consulta, de propósito — não confia
+  // só no RLS. Achado ao vivo: sem o filtro explícito, quem é admin da
+  // plataforma (o Junior, via Luzeria) via um total de "conteúdo
+  // entregue" inflado, somando de outras agências também, porque a
+  // policy de content_items tem uma cláusula de bypass pra admin de
+  // plataforma que essa consulta sozinha não esperava.
+  const [{ data: org }, { count: clientsCount }, { count: finalizedCount }, { data: driveRow }, { count: profilesCount }] = await Promise.all([
+    supabase.from("orgs").select("subscription_status, asaas_subscription_id, plan_id").eq("id", orgId).maybeSingle(),
+    supabase.from("clients").select("id", { count: "exact", head: true }).eq("archived", false).neq("category", "Ex-clientes").eq("org_id", orgId),
+    supabase
+      .from("content_items")
+      .select("id, months!inner(clients!inner(org_id))", { count: "exact", head: true })
+      .in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"])
+      .in("type", ["post", "reel", "story"])
+      .eq("months.clients.org_id", orgId),
+    supabase.from("org_google_credentials").select("org_id").eq("org_id", orgId).maybeSingle(),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("active", true),
+  ]);
+  const [{ count: instagramCount }, { data: plan }] = await Promise.all([
+    supabase
+      .from("client_instagram_credentials")
+      .select("client_id, clients!client_instagram_credentials_client_id_fkey!inner(org_id)", { count: "exact", head: true })
+      .eq("clients.org_id", orgId),
+    supabase.from("plans").select("max_clients, max_collaborators").eq("id", (org as any)?.plan_id ?? "").maybeSingle(),
+  ]);
+
+  return {
+    activeClients: clientsCount ?? 0,
+    planMaxClients: (plan as any)?.max_clients ?? 10,
+    finalizedCount: finalizedCount ?? 0,
+    isPayingCustomer: (org as any)?.subscription_status === "active" && !!(org as any)?.asaas_subscription_id,
+    driveConnected: !!driveRow,
+    instagramConnectedCount: instagramCount ?? 0,
+    teamSize: Math.max(0, (profilesCount ?? 1) - 1),
+    planMaxCollaborators: (plan as any)?.max_collaborators ?? 2,
+  };
+}
+
 /** Insumos pro selo de nível (gamificação) da PRÓPRIA agência — qualquer
  * perfil ativo pode chamar (diferente de listOrgsBilling, que é só pro
  * admin da plataforma ver todas as agências). Usa context.supabase (RLS
@@ -608,44 +651,7 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
  * no painel admin e na página pública /programa-de-niveis. */
 export const getMyAgencyLevelInputs = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .handler(async ({ context }) => {
-    // Filtro de org_id explícito em cada consulta, de propósito — não confia
-    // só no RLS. Achado ao vivo: sem o filtro explícito, quem é admin da
-    // plataforma (o Junior, via Luzeria) via um total de "conteúdo
-    // entregue" inflado, somando de outras agências também, porque a
-    // policy de content_items tem uma cláusula de bypass pra admin de
-    // plataforma que essa consulta sozinha não esperava.
-    const [{ data: org }, { count: clientsCount }, { count: finalizedCount }, { data: driveRow }, { count: profilesCount }] = await Promise.all([
-      context.supabase.from("orgs").select("subscription_status, asaas_subscription_id, plan_id").eq("id", context.orgId).maybeSingle(),
-      context.supabase.from("clients").select("id", { count: "exact", head: true }).eq("archived", false).neq("category", "Ex-clientes").eq("org_id", context.orgId),
-      (context.supabase as any)
-        .from("content_items")
-        .select("id, months!inner(clients!inner(org_id))", { count: "exact", head: true })
-        .in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"])
-        .in("type", ["post", "reel", "story"])
-        .eq("months.clients.org_id", context.orgId),
-      context.supabase.from("org_google_credentials").select("org_id").eq("org_id", context.orgId).maybeSingle(),
-      context.supabase.from("profiles").select("id", { count: "exact", head: true }).eq("org_id", context.orgId).eq("active", true),
-    ]);
-    const [{ count: instagramCount }, { data: plan }] = await Promise.all([
-      context.supabase
-        .from("client_instagram_credentials")
-        .select("client_id, clients!client_instagram_credentials_client_id_fkey!inner(org_id)", { count: "exact", head: true })
-        .eq("clients.org_id", context.orgId),
-      context.supabase.from("plans").select("max_clients, max_collaborators").eq("id", (org as any)?.plan_id ?? "").maybeSingle(),
-    ]);
-
-    return {
-      activeClients: clientsCount ?? 0,
-      planMaxClients: (plan as any)?.max_clients ?? 10,
-      finalizedCount: finalizedCount ?? 0,
-      isPayingCustomer: (org as any)?.subscription_status === "active" && !!(org as any)?.asaas_subscription_id,
-      driveConnected: !!driveRow,
-      instagramConnectedCount: instagramCount ?? 0,
-      teamSize: Math.max(0, (profilesCount ?? 1) - 1),
-      planMaxCollaborators: (plan as any)?.max_collaborators ?? 2,
-    };
-  });
+  .handler(async ({ context }) => fetchAgencyLevelInputs(context.supabase, context.orgId));
 
 /** Platform-admin only: gives an agency another trial window (TRIAL_DAYS) — for
  * when someone signs up but doesn't actually try the product in time, and
