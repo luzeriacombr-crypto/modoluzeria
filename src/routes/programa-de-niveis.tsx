@@ -233,6 +233,13 @@ function AgencyLevelsPage() {
         <Calculator />
       </section>
 
+      <section className="px-5 sm:px-10 max-w-[560px] mx-auto py-4 text-center">
+        <p className="text-white/35 text-[12.5px] leading-relaxed">
+          Não curtiu a ideia? Sem problema — dá pra sair do Programa de Níveis quando quiser, em{" "}
+          <b className="text-white/55">Configurações → Geral → Recursos → Programa de Níveis</b>. O selo some da barra lateral e ninguém mais é avaliado.
+        </p>
+      </section>
+
       <footer className="px-5 sm:px-10 py-10 text-center text-white/30 text-xs">
         Modo <span className="font-criador-serif">Criador</span> — o nível é só um jogo pra celebrar o que sua agência já faz de verdade.
       </footer>

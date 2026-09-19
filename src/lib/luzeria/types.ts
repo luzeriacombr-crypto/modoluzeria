@@ -512,7 +512,7 @@ export function hasPermission(
 
 export const OPTIONAL_FEATURE_KEYS = [
   "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call", "google_calendar", "forum", "reference_library", "sales_pipeline",
-  "posts", "reels", "mais", "feed", "photo_selection", "contract",
+  "posts", "reels", "mais", "feed", "photo_selection", "contract", "agency_levels",
 ] as const;
 export type OptionalFeatureKey = (typeof OPTIONAL_FEATURE_KEYS)[number];
 export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string; description: string }> = {
@@ -591,6 +591,10 @@ export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string;
   contract: {
     label: "Gerar contrato pra assinatura",
     description: "Bloco na Ficha do Cliente pra gerar um contrato a partir do modelo e mandar link pro cliente assinar.",
+  },
+  agency_levels: {
+    label: "Programa de Níveis",
+    description: "Selo de nível (Bronze a Lendária) na barra lateral, baseado no quanto sua agência usa o Modo Criador.",
   },
 };
 

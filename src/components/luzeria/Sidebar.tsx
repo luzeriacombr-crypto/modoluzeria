@@ -50,7 +50,7 @@ export function Sidebar({
   onCreateClient,
 }: { collapsed?: boolean; onOpenCustomFields: (c: Client) => void; onCreateClient: (category?: string) => void }) {
   const me = useMe().data;
-  const { data: levelInputs } = useQuery({ ...myAgencyLevelInputsQO(), enabled: !!me });
+  const { data: levelInputs } = useQuery({ ...myAgencyLevelInputsQO(), enabled: !!me && !(me?.disabledFeatures ?? []).includes("agency_levels") });
   const { data: clients = [], isLoading: clientsLoading, isError: clientsError, error: clientsErrObj } = useQuery(clientsQO());
   const { data: customCategories = [] } = useQuery(clientCategoriesQO());
   const { createClientCategory } = useApi();
@@ -185,7 +185,7 @@ export function Sidebar({
               {me?.orgTagline ?? "Gestão de conteúdo e criação"}
             </p>
           )}
-          {levelInputs && <AgencyLevelSidebarBadge inputs={levelInputs} />}
+          {levelInputs && !disabled.has("agency_levels") && <AgencyLevelSidebarBadge inputs={levelInputs} />}
           {isDemoReadOnly && (
             <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
               style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)", color: "var(--lz-accent-ink)" }}>
