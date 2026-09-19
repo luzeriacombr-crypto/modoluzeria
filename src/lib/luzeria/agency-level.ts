@@ -13,13 +13,19 @@ export type AgencyLevelInput = {
   teamSize: number;
 };
 
+/** Conteúdo entregue tem teto de propósito — sem isso, uma agência antiga
+ * com histórico gigante de posts chegaria em Lendária sozinha, só no
+ * volume, sem nunca ter conectado Instagram, crescido a equipe ou tido
+ * mais de 1 cliente. O teto (2500 pts) fica sempre abaixo do primeiro
+ * degrau de Lendária (3250) — só combinando com os outros critérios dá
+ * pra chegar lá (ajustado a pedido do Junior, que testou isso na prática). */
 export function computeAgencyPoints(i: AgencyLevelInput): number {
-  const clientPts = Math.min(i.activeClients, 20) * 10;
-  const deliveryPts = i.finalizedCount;
+  const clientPts = Math.min(i.activeClients, 20) * 15;
+  const deliveryPts = Math.min(i.finalizedCount, 2500);
   const payingPts = i.isPayingCustomer ? 150 : 0;
   const drivePts = i.driveConnected ? 25 : 0;
   const igPts = Math.min(i.instagramConnectedCount, 20) * 15;
-  const teamPts = Math.min(i.teamSize, 10) * 10;
+  const teamPts = Math.min(i.teamSize, 15) * 20;
   return clientPts + deliveryPts + payingPts + drivePts + igPts + teamPts;
 }
 
