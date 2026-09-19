@@ -1401,7 +1401,7 @@ function OrgBrandingSection({
       <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
         <Star size={12} /> Marca da agência
       </h2>
-      <div className="bg-card rounded-lg p-5 mb-8 space-y-4">
+      <div className="bg-card rounded-lg p-5 mb-8 space-y-4" data-tour="org-branding">
         <p className="text-[11px] text-foreground/50 leading-relaxed">
           Aparece na barra lateral e no título da aba, depois que sua equipe faz login.
           A tela de login em si continua igual pra todas as agências.

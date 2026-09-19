@@ -1732,7 +1732,7 @@ export function HeroSection({ content, onChange, onCtaClick }: { content: any; o
           <div className="flex items-center gap-3 mt-3 max-w-[480px]">
             <img src={clickupTrelloLogos} alt="Logos do ClickUp e do Trello" className="h-9 w-auto shrink-0 opacity-80" />
             <p className="text-foreground/40 text-xs">
-              Usava o ClickUp ou Trello? Sem problemas, você pode migrar todo o seu fluxo com facilidade.
+              Vem de ClickUp, Trello ou de qualquer lugar? Migre todos os seus clientes com a nossa <strong className="text-foreground/70 font-semibold">IA de importação</strong> — manda uma planilha ou até um print, e ela organiza tudo pra você.
             </p>
           </div>
         </div>
