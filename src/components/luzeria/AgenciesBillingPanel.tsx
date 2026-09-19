@@ -237,9 +237,19 @@ export function AgenciesBillingPanel() {
         <div className="mt-4 pt-4 border-t border-foreground/6">
           <div className="text-[11px] text-foreground/50 mb-2">Receita mensal</div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
+            <div className="relative group bg-foreground/[0.03] rounded-lg px-3 py-2.5 cursor-default">
               <div className="text-lg font-bold text-foreground">{fmtBRL(realRevenueCents)}</div>
               <div className="text-[11px] text-foreground/50 mt-0.5">Real — {payingOrgs.length} pagante{payingOrgs.length === 1 ? "" : "s"}</div>
+              {payingOrgs.length > 0 && (
+                <div className="absolute left-0 top-full mt-1.5 z-20 w-max max-w-xs bg-card border border-foreground/10 rounded-lg shadow-xl px-3 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">
+                  {payingOrgs.map((o: any) => (
+                    <div key={o.id} className="flex items-center gap-4 justify-between text-xs py-0.5">
+                      <span className="text-foreground/80 font-medium">{o.name}</span>
+                      <span className="text-foreground/50 font-semibold tabular-nums">{fmtBRL(o.priceCents ?? 0)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
               <div className="text-lg font-bold text-foreground">{fmtBRL(realRevenueCents + trialRevenueCents)}</div>
