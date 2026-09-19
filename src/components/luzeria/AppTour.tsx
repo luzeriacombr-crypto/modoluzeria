@@ -370,7 +370,7 @@ export function AppTour() {
               boxShadow: "0 0 0 6px rgba(var(--lz-brand-rgb),0.14), 0 10px 26px -6px rgba(var(--lz-brand-rgb),0.5)",
             }}
           >
-            <Icon size={22} color="var(--lz-accent-ink)" />
+            <Icon size={22} color="#0D0D0D" />
           </div>
         ) : (
           <div className="flex items-center gap-2.5 mb-3">
@@ -435,7 +435,7 @@ export function AppTour() {
           <button
             onClick={next}
             className="inline-flex items-center gap-1.5 text-[12px] font-bold px-4 py-2.5 rounded-lg transition-transform active:scale-95"
-            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "var(--lz-accent-ink)", boxShadow: "0 4px 18px -4px rgba(var(--lz-brand-rgb),0.55)" }}
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D", boxShadow: "0 4px 18px -4px rgba(var(--lz-brand-rgb),0.55)" }}
           >
             {step.finale ? <>Concluir <PartyPopper size={13} /></> : stepIdx >= visibleSteps.length - 2 ? <>Última página <ArrowRight size={13} /></> : <>Próximo <ArrowRight size={13} /></>}
           </button>
