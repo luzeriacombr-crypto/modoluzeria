@@ -14,6 +14,17 @@ export const SALES_FAQ: [string, string][] = [
   ["Meus dados ficam seguros?", "Sim. Seus dados e os dos seus clientes ficam isolados dos de outras agências, com infraestrutura segura."],
 ];
 
+/** Recursos reais do produto que não têm página de SEO própria (ao
+ * contrário dos 5 de `buildSalesKnowledgeText` abaixo) — descritos aqui
+ * direto, baseado no comportamento real do app (não é copy de marketing
+ * publicada em lugar nenhum, mas é fiel ao que o produto faz). */
+export const EXTRA_FEATURES: [string, string][] = [
+  [
+    "Como é o Preview de Feed dentro do Modo Criador?",
+    "É a tela que o cliente vê quando abre o link de aprovação: uma grade de 3 colunas, igual o feed do Instagram, mostrando os posts programados daquele mês na ordem que vão ser publicados — dá pra ver como o feed vai ficar visualmente antes mesmo de postar. Tem uma aba separada pra Stories, num carrossel de círculos. O cliente pode aprovar o feed inteiro do mês com um clique, ou comentar post por post pedindo ajuste — tudo isso sem precisar criar conta nem senha.",
+  ],
+];
+
 /** Achata o FAQ de vendas + os benefícios/FAQ das 5 páginas de recurso num
  * bloco de texto pro system prompt do chat público. Import dinâmico das 5
  * páginas de recurso (feito só dentro da function, nunca no topo do
@@ -28,6 +39,7 @@ export async function buildSalesKnowledgeText(): Promise<string> {
   ]);
 
   const faqText = SALES_FAQ.map(([q, a]) => `P: ${q}\nR: ${a}`).join("\n\n");
+  const extraText = EXTRA_FEATURES.map(([q, a]) => `P: ${q}\nR: ${a}`).join("\n\n");
 
   const features = [aprovacao.CONTENT, drive.CONTENT, instagram.CONTENT, selecao.CONTENT, biblioteca.CONTENT];
   const featuresText = features.map((f) => {
@@ -36,5 +48,5 @@ export async function buildSalesKnowledgeText(): Promise<string> {
     return `## ${f.badgeLabel}\n${f.heroSubtitle}\n\nBenefícios:\n${benefits}\n\n${faq}`;
   }).join("\n\n");
 
-  return `DÚVIDAS FREQUENTES GERAIS:\n\n${faqText}\n\nRECURSOS DO MODO CRIADOR:\n\n${featuresText}`;
+  return `DÚVIDAS FREQUENTES GERAIS:\n\n${faqText}\n\n${extraText}\n\nRECURSOS DO MODO CRIADOR:\n\n${featuresText}`;
 }
