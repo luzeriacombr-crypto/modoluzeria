@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, clientCategoriesQO, useApi, useMe, myAgencyLevelInputsQO } from "@/lib/luzeria/queries";
-import { computeAgencyPoints, getAgencyLevel } from "@/lib/luzeria/agency-level";
+import { computeAgencyPoints, getAgencyLevel, type AgencyLevelInput } from "@/lib/luzeria/agency-level";
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "./AgencyLevelIcons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
@@ -185,23 +185,7 @@ export function Sidebar({
               {me?.orgTagline ?? "Gestão de conteúdo e criação"}
             </p>
           )}
-          {levelInputs && (() => {
-            const points = computeAgencyPoints(levelInputs);
-            const level = getAgencyLevel(points);
-            const color = TIER_COLOR[level.tier as AgencyTierName] ?? "#9AA4B2";
-            const Icon = TIER_ICON[level.tier as AgencyTierName];
-            return (
-              <Link
-                to="/programa-de-niveis"
-                className="inline-flex items-center gap-1.5 mt-2 px-2 py-1 rounded-full text-[10px] font-bold transition hover:brightness-110"
-                style={{ backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`, color }}
-                title={`${points} pts — faltam ${level.pointsToNext ?? 0} pra próxima`}
-              >
-                {Icon && <Icon size={11} />}
-                {level.label}
-              </Link>
-            );
-          })()}
+          {levelInputs && <AgencyLevelSidebarBadge inputs={levelInputs} />}
           {isDemoReadOnly && (
             <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
               style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)", color: "var(--lz-accent-ink)" }}>
@@ -452,6 +436,74 @@ function CollapsedIconButton({ icon, label, active, onClick }: {
 /** Painel flutuante do modo reduzido, ancorado ao lado do ícone clicado —
  * usado pra "Clientes" e pros grupos com submenu (Visão Geral, Plano e
  * Cobrança, Equipe), que têm conteúdo demais pra caber num tooltip. */
+/** Selo de nível no topo da sidebar (perto do nome da agência, tipo
+ * reputação do Mercado Livre) — clique abre um resumo rápido com a
+ * pontuação e um link "Saiba mais" pra página completa, em vez de já
+ * navegar direto (pedido do Junior). */
+function AgencyLevelSidebarBadge({ inputs }: { inputs: AgencyLevelInput }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  const points = computeAgencyPoints(inputs);
+  const level = getAgencyLevel(points);
+  const color = TIER_COLOR[level.tier as AgencyTierName] ?? "#9AA4B2";
+  const Icon = TIER_ICON[level.tier as AgencyTierName];
+
+  return (
+    <div ref={wrapRef} className="relative mt-2 inline-block">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold transition hover:brightness-110"
+        style={{ backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`, color }}
+      >
+        {Icon && <Icon size={11} />}
+        Agência {level.label}
+      </button>
+      {open && (
+        <div
+          className="absolute left-0 top-full mt-1.5 z-[999] w-[240px] rounded-xl bg-[#1C1C1C] border border-white/10 shadow-2xl p-3.5 lz-modal-in"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`, color }}>
+              {Icon && <Icon size={16} />}
+            </div>
+            <div>
+              <div className="text-white text-[13px] font-black">Agência {level.label}</div>
+              <div className="text-white/40 text-[10.5px] tabular-nums">{points} pts</div>
+            </div>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ background: "rgba(255,255,255,0.1)" }}>
+            <div className="h-full rounded-full transition-all" style={{ width: `${level.progressPct}%`, background: color }} />
+          </div>
+          <div className="text-white/45 text-[11px] leading-relaxed mb-3">
+            {level.pointsToNext != null
+              ? `Faltam ${level.pointsToNext} pts pro próximo nível.`
+              : "Nível máximo — sua agência é uma potência."}
+            {" "}É o Programa de Níveis: quanto mais você usa o Modo Criador de verdade, mais sobe.
+          </div>
+          <Link
+            to="/programa-de-niveis"
+            className="text-[11px] font-bold hover:underline"
+            style={{ color }}
+            onClick={() => setOpen(false)}
+          >
+            Saiba mais →
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SidebarFlyout({ anchor, title, children, panelRef }: {
   anchor: DOMRect; title: string; children: React.ReactNode; panelRef: React.RefObject<HTMLDivElement | null>;
 }) {
