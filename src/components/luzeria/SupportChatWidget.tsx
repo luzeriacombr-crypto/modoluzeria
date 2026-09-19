@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { MessageCircle, X, Send, CheckCircle2 } from "lucide-react";
+import { X, Send, CheckCircle2 } from "lucide-react";
+import { ChatBubbleIcon } from "./ChatBubbleIcon";
 import { useMe, useApi, mySupportThreadQO, openSupportThreadsQO, supportThreadMessagesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { SupportMessage } from "@/lib/luzeria/support-chat.functions";
@@ -113,7 +114,7 @@ export function SupportChatWidget() {
             color: "#0D0D0D",
           }}
         >
-          {open ? <X size={22} /> : <MessageCircle size={22} />}
+          {open ? <X size={22} /> : <ChatBubbleIcon size={22} />}
         </button>
       </div>
 
@@ -126,7 +127,7 @@ export function SupportChatWidget() {
           }}
         >
           <div className="px-4 py-3 border-b border-foreground/10 flex items-center gap-2 shrink-0">
-            <MessageCircle size={16} style={{ color: "var(--lz-accent-ink)" }} />
+            <ChatBubbleIcon size={16} style={{ color: "var(--lz-accent-ink)" }} />
             <span className="text-sm font-bold text-foreground">Chat do Modo Criador</span>
           </div>
 

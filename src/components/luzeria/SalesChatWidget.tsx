@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { MessageCircle, X, Send } from "lucide-react";
+import { X, Send } from "lucide-react";
+import { ChatBubbleIcon } from "./ChatBubbleIcon";
 import { sendPublicSalesMessage, type PublicSalesChatMessage } from "@/lib/luzeria/public-sales-chat.functions";
 import { LIME, BG_BLUE, ACCENT_ON_LIGHT } from "./salesPageBlocks";
 
@@ -95,7 +96,7 @@ export function SalesChatWidget() {
           className="flex items-center justify-center rounded-full shadow-2xl transition hover:opacity-90"
           style={{ width: 56, height: 56, background: LIME, color: ACCENT_ON_LIGHT }}
         >
-          {open ? <X size={22} /> : <MessageCircle size={22} />}
+          {open ? <X size={22} /> : <ChatBubbleIcon size={22} />}
         </button>
       </div>
 
@@ -105,7 +106,7 @@ export function SalesChatWidget() {
           style={{ width: "min(360px, calc(100vw - 32px))", height: "min(500px, calc(100vh - 140px))", background: BG_BLUE, border: "1px solid rgba(255,255,255,0.1)" }}
         >
           <div className="px-4 py-3.5 flex items-center gap-2 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-            <MessageCircle size={16} style={{ color: LIME }} />
+            <ChatBubbleIcon size={16} style={{ color: LIME }} />
             <span className="text-sm font-bold text-white">Chat do Modo Criador</span>
           </div>
 
