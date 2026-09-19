@@ -83,7 +83,7 @@ import {
 import {
   getSalesPageBlocks, listSalesPageBlocksAdmin, createSalesPageBlock, updateSalesPageBlock,
   deleteSalesPageBlock, reorderSalesPageBlocks, publishSalesPageBlocks, discardSalesPageDraft,
-  getSiteTrackingSettings, updateSiteTrackingSettings,
+  getSiteTrackingSettings, updateSiteTrackingSettings, getAgencyWelcomeMessage, updateAgencyWelcomeMessage,
 } from "./sales-page.functions";
 import { getMyReferralInfo, setMyReferralCode } from "./referrals.functions";
 import {
@@ -167,6 +167,7 @@ export const platformUpdatesQO = () => queryOptions({ queryKey: ["platform-updat
 export const salesPageBlocksQO = () => queryOptions({ queryKey: ["sales-page-blocks"], queryFn: () => getSalesPageBlocks() });
 export const salesPageBlocksAdminQO = () => queryOptions({ queryKey: ["sales-page-blocks-admin"], queryFn: () => listSalesPageBlocksAdmin() });
 export const siteTrackingSettingsQO = () => queryOptions({ queryKey: ["site-tracking-settings"], queryFn: () => getSiteTrackingSettings(), staleTime: 10 * 60_000 });
+export const agencyWelcomeMessageQO = () => queryOptions({ queryKey: ["agency-welcome-message"], queryFn: () => getAgencyWelcomeMessage(), staleTime: 10 * 60_000 });
 export const myReferralInfoQO = () => queryOptions({ queryKey: ["my-referral-info"], queryFn: () => getMyReferralInfo() });
 export const profilesQO = () => queryOptions({ queryKey: ["profiles"], queryFn: () => listProfiles() });
 export const memberPayQO = () => queryOptions({ queryKey: ["member-pay"], queryFn: () => listMemberPay() });
@@ -1474,6 +1475,10 @@ export function useApi() {
     updateSiteTrackingSettings: useMutation({
       mutationFn: useServerFn(updateSiteTrackingSettings),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["site-tracking-settings"] }),
+    }),
+    updateAgencyWelcomeMessage: useMutation({
+      mutationFn: useServerFn(updateAgencyWelcomeMessage),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["agency-welcome-message"] }),
     }),
     setMyReferralCode: useMutation({
       mutationFn: useServerFn(setMyReferralCode),

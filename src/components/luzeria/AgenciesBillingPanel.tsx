@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive } from "lucide-react";
-import { orgsBillingQO, plansQO } from "@/lib/luzeria/queries";
+import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, useApi } from "@/lib/luzeria/queries";
 import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial } from "@/lib/luzeria/api.functions";
 import { approveReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -491,10 +491,21 @@ function CreateResellerModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+const DEFAULT_WELCOME_TEMPLATE = `Oi{nome}, tudo bem? Aqui é o Junior, fundador do Modo Criador! Vi que você acabou de criar sua conta e quis te mandar um oi.
+
+Espero que você curta bastante — aproveita os 30 dias de teste, tem muita funcionalidade boa aí dentro que tenho certeza que você vai gostar.
+
+Qualquer dúvida no começo, é só me chamar por aqui mesmo 🙂`;
+
 function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
   const queryClient = useQueryClient();
+  const api = useApi();
   const [editing, setEditing] = useState(false);
   const [whatsapp, setWhatsapp] = useState(org.whatsapp ?? "");
+  const [editingTemplate, setEditingTemplate] = useState(false);
+
+  const { data: customTemplate } = useQuery(agencyWelcomeMessageQO());
+  const [templateDraft, setTemplateDraft] = useState(customTemplate ?? DEFAULT_WELCOME_TEMPLATE);
 
   const saveWhatsapp = useMutation({
     mutationFn: useServerFn(updateOrgWhatsapp),
@@ -506,13 +517,23 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
     onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar."),
   });
 
+  function openTemplateEditor() {
+    setTemplateDraft(customTemplate ?? DEFAULT_WELCOME_TEMPLATE);
+    setEditingTemplate(true);
+  }
+  function saveTemplate() {
+    api.updateAgencyWelcomeMessage.mutate({ data: { message: templateDraft } }, {
+      onSuccess: () => { toast.success("Mensagem padrão atualizada."); setEditingTemplate(false); },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar."),
+    });
+  }
+
   // wa.me exige o código do país — sem o "55" na frente, o link abre
   // quebrado (WhatsApp tenta interpretar como outro país e falha).
   const rawDigits = (org.whatsapp ?? "").replace(/\D/g, "");
   const digits = rawDigits && rawDigits.length <= 11 ? `55${rawDigits}` : rawDigits;
-  const welcomeMessage = `${org.ownerName ? `Oi ${org.ownerName}, tudo bem?` : "Oi, tudo bem?"} Aqui é o Junior, fundador do Modo Criador! Vi que você acabou de criar sua conta e quis te mandar um oi.
-
-Qualquer dúvida no começo, é só me chamar por aqui mesmo 🙂`;
+  const namePart = org.ownerName ? ` ${org.ownerName}` : "";
+  const welcomeMessage = (customTemplate ?? DEFAULT_WELCOME_TEMPLATE).replaceAll("{nome}", namePart);
 
   const approveResellerMutation = useMutation({
     mutationFn: useServerFn(approveReseller),
@@ -639,6 +660,38 @@ Qualquer dúvida no começo, é só me chamar por aqui mesmo 🙂`;
             >
               <PartyPopper size={15} /> Enviar boas-vindas
             </a>
+          </div>
+        )}
+
+        {!editing && digits && (
+          <button onClick={openTemplateEditor} className="mt-2 text-[11px] text-foreground/40 hover:text-foreground transition inline-flex items-center gap-1">
+            <Pencil size={11} /> Editar mensagem de boas-vindas (vale pra todas as agências)
+          </button>
+        )}
+
+        {editingTemplate && (
+          <div className="mt-3 bg-background rounded-lg border border-foreground/10 p-3">
+            <p className="text-[11px] text-foreground/50 mb-2">
+              Esse texto é usado no botão "Enviar boas-vindas" de qualquer agência. Use <code className="text-foreground/70">{"{nome}"}</code> onde
+              quiser que apareça o nome de quem cadastrou (fica vazio se não tiver nome).
+            </p>
+            <textarea
+              value={templateDraft}
+              onChange={(e) => setTemplateDraft(e.target.value)}
+              rows={7}
+              className="w-full bg-card border border-foreground/10 rounded-md p-3 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
+            />
+            <div className="flex items-center justify-end gap-2 mt-2">
+              <button onClick={() => setEditingTemplate(false)} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
+              <button
+                onClick={saveTemplate}
+                disabled={api.updateAgencyWelcomeMessage.isPending}
+                className="text-xs font-bold px-4 py-2 rounded-md disabled:opacity-50"
+                style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+              >
+                {api.updateAgencyWelcomeMessage.isPending ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
           </div>
         )}
       </div>

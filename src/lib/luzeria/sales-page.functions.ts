@@ -351,3 +351,35 @@ export const updateSiteTrackingSettings = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** Mensagem que o botão "Enviar boas-vindas" do painel de agências
+ * (AgenciesBillingPanel) prefiladas no wa.me — mora na mesma tabela
+ * genérica key/value de site_tracking_settings, sem migração nova. `null`
+ * cai no texto padrão hardcoded no componente. `{nome}` é trocado pelo
+ * primeiro nome do dono da agência (ou removido se não tiver). */
+export const getAgencyWelcomeMessage = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }): Promise<string | null> => {
+    await assertLuzeriaMaster(context);
+    const { data, error } = await (context.supabase as any)
+      .from("site_tracking_settings").select("value").eq("key", "agency_welcome_message").maybeSingle();
+    if (error) throw new Error(error.message);
+    return (data?.value as string | null) ?? null;
+  });
+
+export const updateAgencyWelcomeMessage = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { message: string | null }) =>
+    z.object({ message: z.string().trim().max(1000).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertLuzeriaMaster(context);
+    const { error } = await (context.supabase as any).from("site_tracking_settings")
+      .upsert({
+        key: "agency_welcome_message",
+        value: data.message || null,
+        updated_by: context.userId,
+        updated_at: new Date().toISOString(),
+      });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
