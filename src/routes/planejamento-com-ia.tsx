@@ -1,8 +1,104 @@
+import { useEffect, useRef } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Sparkles, FileText, MessageSquareText, PenLine, CheckCircle2, Star, Lock } from "lucide-react";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { LIME, BG_BLUE, BG_GRAY, Reveal } from "@/components/luzeria/salesPageBlocks";
 import { TIER_COLOR, TIER_ICON } from "@/components/luzeria/AgencyLevelIcons";
+
+// Fundo animado do hero — pontos derivando devagar, conectados por linhas
+// quando próximos (lembra rede neural). Aprovado pelo Junior via mockup
+// (duas opções testadas: essa "constelação" e uma "varredura HUD").
+// Desenhado num <canvas> em vez de SVG/DOM por performance (dezenas de
+// elementos animados por frame). Não anima se o usuário pediu menos
+// movimento (prefers-reduced-motion) — desenha só 1 frame parado.
+function ConstellationBackground() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const PARTICLE_COUNT = 40;
+    const LINK_DIST = 130;
+    let width = 0;
+    let height = 0;
+    let particles: { x: number; y: number; vx: number; vy: number; r: number }[] = [];
+    let raf = 0;
+
+    function seed() {
+      particles = Array.from({ length: PARTICLE_COUNT }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.18,
+        vy: (Math.random() - 0.5) * 0.18,
+        r: 1 + Math.random() * 1.6,
+      }));
+    }
+
+    function resize() {
+      const parent = canvas!.parentElement;
+      width = parent?.clientWidth ?? window.innerWidth;
+      height = parent?.clientHeight ?? 480;
+      canvas!.width = width * dpr;
+      canvas!.height = height * dpr;
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      seed();
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    function drawFrame() {
+      ctx!.clearRect(0, 0, width, height);
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < -20) p.x = width + 20;
+        if (p.x > width + 20) p.x = -20;
+        if (p.y < -20) p.y = height + 20;
+        if (p.y > height + 20) p.y = -20;
+      }
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const a = particles[i], b = particles[j];
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < LINK_DIST) {
+            const op = (1 - dist / LINK_DIST) * 0.22;
+            ctx!.strokeStyle = `rgba(215,255,63,${op.toFixed(3)})`;
+            ctx!.lineWidth = 1;
+            ctx!.beginPath();
+            ctx!.moveTo(a.x, a.y);
+            ctx!.lineTo(b.x, b.y);
+            ctx!.stroke();
+          }
+        }
+      }
+      for (const p of particles) {
+        ctx!.beginPath();
+        ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx!.fillStyle = "rgba(215,255,63,0.55)";
+        ctx!.fill();
+      }
+    }
+
+    function loop() {
+      drawFrame();
+      raf = requestAnimationFrame(loop);
+    }
+    if (reduced) drawFrame();
+    else raf = requestAnimationFrame(loop);
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 w-full h-full" aria-hidden="true" />;
+}
 
 export const Route = createFileRoute("/planejamento-com-ia")({
   component: PlanejamentoComIaPage,
@@ -80,7 +176,9 @@ function PlanejamentoComIaPage() {
       </header>
 
       <section className="relative overflow-hidden">
+        <ConstellationBackground />
         <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse 80% 60% at 50% 0%, rgba(215,255,63,0.12), transparent)` }} />
+        <div className="pointer-events-none absolute inset-0" style={{ background: `linear-gradient(180deg, ${BG_BLUE}00 0%, ${BG_BLUE}00 55%, ${BG_BLUE} 100%)` }} />
         <Reveal className="relative px-5 sm:px-10 max-w-[720px] mx-auto pt-16 pb-14 text-center">
           <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full mb-6" style={{ background: LIME, color: BG_BLUE }}>
             <Sparkles size={12} /> Novidade
