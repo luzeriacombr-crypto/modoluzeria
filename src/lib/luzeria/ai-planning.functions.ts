@@ -11,7 +11,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
-import { computeAgencyPoints, getAgencyLevel } from "./agency-level";
+import { computeAgencyPoints, getAgencyLevel, computeAiPlanningQuota } from "./agency-level";
 
 // Índice de "Prata I" em AGENCY_TIER_NAMES/THRESHOLDS (agency-level.ts):
 // Bronze ocupa os índices 0-2, Prata começa no 3. Combinado com o Junior:
@@ -188,9 +188,23 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
 
-    // Gate por nível — substitui a liberação manual por cliente que valia
-    // só durante o teste na Luzeria. Continua fail-closed: se não der pra
-    // calcular o nível por qualquer motivo, a função fica bloqueada.
+    // competitors/content_briefing/recent_roteiros/ai_planning_enabled são
+    // colunas novas — cast até os tipos do Supabase serem regenerados.
+    const { data: client, error: clientError } = await (context.supabase as any)
+      .from("clients")
+      .select("id, name, niche, posts_per_week, reels_per_week, description, notes, competitors, content_briefing, recent_roteiros, ai_planning_enabled")
+      .eq("id", data.clientId)
+      .maybeSingle();
+    if (clientError) throw new Error(clientError.message);
+    if (!client) throw new Error("Cliente não encontrado.");
+    const c: any = client;
+
+    // Gate em duas camadas — substitui a liberação manual por cliente que
+    // valia só durante o teste na Luzeria: (1) a AGÊNCIA precisa ter
+    // chegado no nível Prata, (2) dentro da cota que o nível+plano dão,
+    // esse CLIENTE específico precisa estar marcado (setClientAiPlanningEnabled,
+    // escolhido pela própria agência na Ficha do Cliente). Fail-closed: se
+    // não der pra calcular o nível por qualquer motivo, fica bloqueado.
     const { fetchAgencyLevelInputs, LUZERIA_ORG_ID } = await import("./api.functions");
     if (context.orgId !== LUZERIA_ORG_ID) {
       const levelInputs = await fetchAgencyLevelInputs(context.supabase, context.orgId);
@@ -198,18 +212,10 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       if (level.index < MIN_LEVEL_INDEX_FOR_AI_PLANNING) {
         throw new Error(`Essa novidade é liberada a partir do nível Prata — sua agência está em ${level.label}. Continue usando o Modo Criador pra subir de nível.`);
       }
+      if (!c.ai_planning_enabled) {
+        throw new Error("Esse cliente ainda não foi ativado pra IA de planejamento — ative na Ficha do Cliente (dentro da cota do seu nível).");
+      }
     }
-
-    // competitors/content_briefing/recent_roteiros são colunas novas —
-    // cast até os tipos do Supabase serem regenerados depois da migração.
-    const { data: client, error: clientError } = await (context.supabase as any)
-      .from("clients")
-      .select("id, name, niche, posts_per_week, reels_per_week, description, notes, competitors, content_briefing, recent_roteiros")
-      .eq("id", data.clientId)
-      .maybeSingle();
-    if (clientError) throw new Error(clientError.message);
-    if (!client) throw new Error("Cliente não encontrado.");
-    const c: any = client;
 
     const { data: historyRows } = await context.supabase
       .from("content_items")
@@ -366,6 +372,48 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     }
     const parsed = PlanResultSchema.parse(toolUse.input);
     return { ...parsed, knowledgeItemsCount: knowledge.length };
+  });
+
+/** Liga/desliga a IA de planejamento pra UM cliente específico — a própria
+ * agência escolhe quais clientes usam sua cota (computeAiPlanningQuota,
+ * agency-level.ts), em vez de um número fixo/automático. Só valida a cota
+ * ao LIGAR (desligar sempre é permitido); se o nível cair depois e a
+ * agência ficar acima da cota, os clientes já ativados continuam
+ * funcionando até alguém desativar manualmente — evita um "desliga sozinho
+ * no meio da noite" surpreendente. */
+export const setClientAiPlanningEnabled = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; enabled: boolean }) =>
+    z.object({ clientId: z.string().uuid(), enabled: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { fetchAgencyLevelInputs, LUZERIA_ORG_ID } = await import("./api.functions");
+    if (data.enabled && context.orgId !== LUZERIA_ORG_ID) {
+      const levelInputs = await fetchAgencyLevelInputs(context.supabase, context.orgId);
+      const level = getAgencyLevel(computeAgencyPoints(levelInputs));
+      const quota = computeAiPlanningQuota(level, levelInputs.planMaxClients);
+      if (quota <= 0) {
+        throw new Error(`Essa novidade é liberada a partir do nível Prata — sua agência está em ${level.label}.`);
+      }
+      const { count } = await (context.supabase as any)
+        .from("clients")
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", context.orgId)
+        .eq("ai_planning_enabled", true);
+      if ((count ?? 0) >= quota) {
+        throw new Error(`Sua agência já usou toda a cota de ${quota} cliente(s) liberado(s) no nível ${level.label}. Desative em outro cliente primeiro, ou suba de nível.`);
+      }
+    }
+
+    const { error } = await (context.supabase as any)
+      .from("clients")
+      .update({ ai_planning_enabled: data.enabled })
+      .eq("id", data.clientId)
+      .eq("org_id", context.orgId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 /** Avaliação de satisfação da prévia (feature em beta) — 0 a 5 estrelas +

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
 import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
@@ -9,7 +10,10 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, driveThumbnailQO, journeyStagesQO, contractRequestsQO, instagramConnectRequestsQO } from "@/lib/luzeria/queries";
+import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, driveThumbnailQO, journeyStagesQO, contractRequestsQO, instagramConnectRequestsQO, myAgencyLevelInputsQO } from "@/lib/luzeria/queries";
+import { computeAgencyPoints, getAgencyLevel, computeAiPlanningQuota } from "@/lib/luzeria/agency-level";
+import { setClientAiPlanningEnabled } from "@/lib/luzeria/ai-planning.functions";
+import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { useClientAssetUpload } from "@/lib/luzeria/use-client-asset-upload";
 import { useClientContractUpload } from "@/lib/luzeria/use-client-contract-upload";
 import { CONTENT_TYPE_LABEL, hasSetorPermission } from "@/lib/luzeria/types";
@@ -103,6 +107,30 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
   const isMaster = me?.role === "master";
   const canManageInstagram = hasSetorPermission(me, "instagram_publish");
   const api = useApi();
+  const qc = useQueryClient();
+  const setAiPlanningEnabled = useServerFn(setClientAiPlanningEnabled);
+  const [savingAiPlanning, setSavingAiPlanning] = useState(false);
+  const { data: agencyLevelInputs } = useQuery({ ...myAgencyLevelInputsQO(), enabled: isAdmin });
+  const agencyLevel = agencyLevelInputs ? getAgencyLevel(computeAgencyPoints(agencyLevelInputs)) : null;
+  // Luzeria é isenta do gate por nível/cota (mesma isenção do servidor,
+  // ai-planning.functions.ts) — já usa a feature em produção com todos os
+  // clientes desde a fase de teste, antes da cota por nível existir.
+  const isLuzeriaOrg = me?.orgId === LUZERIA_ORG_ID;
+  const aiPlanningQuota = isLuzeriaOrg ? Infinity : (agencyLevel && agencyLevelInputs ? computeAiPlanningQuota(agencyLevel, agencyLevelInputs.planMaxClients) : 0);
+  const aiPlanningUsed = clients.filter((c: any) => c.aiPlanningEnabled).length;
+
+  async function toggleAiPlanning(enabled: boolean) {
+    setSavingAiPlanning(true);
+    try {
+      await setAiPlanningEnabled({ data: { clientId, enabled } });
+      qc.invalidateQueries({ queryKey: ["clients"] });
+      toast.success(enabled ? "IA de planejamento ativada pra esse cliente." : "IA de planejamento desativada pra esse cliente.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Não consegui atualizar a IA de planejamento.");
+    } finally {
+      setSavingAiPlanning(false);
+    }
+  }
 
   const [description, setDescription] = useState("");
   useEffect(() => { setDescription(ficha?.description ?? ""); }, [ficha?.description]);
@@ -347,6 +375,37 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             <p className="text-[11px] text-foreground/40 mt-1.5">
               Quando ativado, Stories atribuídos deste cliente aparecem na lista de tarefas do responsável — como Posts e Reels.
             </p>
+          </Section>
+        )}
+
+        {/* IA de planejamento (novidade, gate por nível + cota) */}
+        {isAdmin && (
+          <Section label="Novidade: IA de planejamento">
+            {aiPlanningQuota <= 0 ? (
+              <p className="text-[12px] text-foreground/40 leading-relaxed">
+                Disponível a partir do nível Prata do Programa de Níveis
+                {agencyLevel ? <> — sua agência está em <b className="text-foreground/60">{agencyLevel.label}</b></> : null}.{" "}
+                <Link to="/planejamento-com-ia" className="underline hover:text-foreground/60">Saiba mais →</Link>
+              </p>
+            ) : (
+              <>
+                <label className="flex items-center gap-2 text-sm text-foreground/70">
+                  <input
+                    type="checkbox"
+                    checked={client.aiPlanningEnabled ?? false}
+                    disabled={savingAiPlanning || (!client.aiPlanningEnabled && aiPlanningUsed >= aiPlanningQuota)}
+                    onChange={(e) => toggleAiPlanning(e.target.checked)}
+                  />
+                  Ativar prévia de planejamento com IA pra esse cliente
+                </label>
+                <p className="text-[11px] text-foreground/40 mt-1.5">
+                  {isLuzeriaOrg
+                    ? "Liberado pra todos os clientes (conta interna)."
+                    : <>{aiPlanningUsed} de {aiPlanningQuota} cliente(s) liberado(s) no seu nível ({agencyLevel?.label}).</>}{" "}
+                  <Link to="/planejamento-com-ia" className="underline hover:text-foreground/60">Saiba mais →</Link>
+                </p>
+              </>
+            )}
           </Section>
         )}
 

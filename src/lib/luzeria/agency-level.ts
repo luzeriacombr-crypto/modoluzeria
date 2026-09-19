@@ -68,6 +68,27 @@ export type AgencyLevel = {
   progressPct: number;
 };
 
+/** Cota de clientes que podem ter a IA de planejamento ativada, combinando
+ * nível + plano (não nível puro) — pelo mesmo motivo da pontuação ser
+ * relativa ao plano: uma agência Solo não pode ficar travada num número
+ * absoluto pensado pra uma Agência/Enterprise. É um percentual do teto de
+ * clientes do PRÓPRIO plano, crescendo por tier (não por sub-nível — I/II/III
+ * do mesmo tier dão a mesma cota, só o tier importa aqui). Abaixo de Prata
+ * a função inteira fica bloqueada (cota 0), combinado com o Junior. */
+const AI_PLANNING_QUOTA_FRACTION: Record<string, number> = {
+  Bronze: 0,
+  Prata: 0.25,
+  Ouro: 0.5,
+  Platina: 0.75,
+  Diamante: 1,
+  Lendária: 1,
+};
+export function computeAiPlanningQuota(level: AgencyLevel, planMaxClients: number): number {
+  const fraction = AI_PLANNING_QUOTA_FRACTION[level.tier] ?? 0;
+  if (fraction <= 0) return 0;
+  return Math.max(1, Math.ceil(fraction * planMaxClients));
+}
+
 export function getAgencyLevel(points: number): AgencyLevel {
   let idx = 0;
   for (let i = THRESHOLDS.length - 1; i >= 0; i--) {

@@ -16,12 +16,19 @@ import { MonthPickerList } from "./MonthPickerList";
 
 const DOC_TYPES: ClientDocType[] = ["roteiro", "planejamento"];
 
-export function ClientDocsTab({ clientId, aiPlanningEnabled, aiPlanningLocked, aiPlanningCurrentLevelLabel }: {
+export function ClientDocsTab({
+  clientId, aiPlanningEnabled, aiPlanningLocked, aiPlanningCurrentLevelLabel,
+  aiPlanningOrgUnlocked, aiPlanningUsed, aiPlanningQuota,
+}: {
   clientId: string;
   aiPlanningEnabled?: boolean;
-  /** Agência ainda não chegou no nível Prata — mostra a novidade travada, em vez de esconder. */
+  /** Agência não desbloqueou (nível) OU não ativou esse cliente (cota) — mostra a novidade travada, em vez de esconder. */
   aiPlanningLocked?: boolean;
   aiPlanningCurrentLevelLabel?: string;
+  /** true = agência já chegou em Prata (só falta ativar ESSE cliente, não o nível). */
+  aiPlanningOrgUnlocked?: boolean;
+  aiPlanningUsed?: number;
+  aiPlanningQuota?: number;
 }) {
   const { data: docs = [] } = useQuery(clientDocsQO(clientId));
   const { upsertClientDoc, deleteClientDoc } = useApi();
@@ -116,7 +123,9 @@ export function ClientDocsTab({ clientId, aiPlanningEnabled, aiPlanningLocked, a
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold text-foreground/70">Prévia de planejamento com IA <span className="text-foreground/35 font-normal">(novidade — a partir do nível Prata)</span></div>
             <div className="text-[11px] text-foreground/40">
-              Sua agência está em {aiPlanningCurrentLevelLabel ?? "carregamento…"}. Toque aqui pra ver como funciona e como desbloquear.
+              {aiPlanningOrgUnlocked
+                ? <>Sua agência já desbloqueou essa novidade ({aiPlanningUsed ?? 0} de {aiPlanningQuota ?? 0} clientes liberados) — falta ativar pra esse cliente na Ficha do Cliente.</>
+                : <>Sua agência está em {aiPlanningCurrentLevelLabel ?? "carregamento…"}. Toque aqui pra ver como funciona e como desbloquear.</>}
             </div>
           </div>
         </Link>

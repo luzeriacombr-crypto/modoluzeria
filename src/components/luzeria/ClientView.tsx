@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { reportAppError } from "@/lib/error-reporting";
 import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi, myAgencyLevelInputsQO } from "@/lib/luzeria/queries";
-import { computeAgencyPoints, getAgencyLevel } from "@/lib/luzeria/agency-level";
+import { computeAgencyPoints, getAgencyLevel, computeAiPlanningQuota } from "@/lib/luzeria/agency-level";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { CONTENT_TYPE_LABEL, type ContentItem } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
@@ -191,11 +191,17 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   const showDocsSubTab = isAdmin;
   const showBibliotecaSubTab = !disabledFeatures.has("reference_library");
 
-  // Prévia de planejamento com IA — liberada a partir do nível Prata
-  // (Programa de Níveis), independente do toggle de exibir o selo.
+  // Prévia de planejamento com IA — duas camadas: a agência precisa ter
+  // chegado no nível Prata (libera uma cota de clientes, % do teto do
+  // plano), e dentro dessa cota, ESSE cliente precisa estar marcado
+  // (client.aiPlanningEnabled, escolhido na Ficha do Cliente).
   const { data: agencyLevelInputs } = useQuery({ ...myAgencyLevelInputsQO(), enabled: !!me });
   const agencyLevel = agencyLevelInputs ? getAgencyLevel(computeAgencyPoints(agencyLevelInputs)) : null;
-  const aiPlanningUnlocked = (agencyLevel?.index ?? -1) >= 3;
+  const aiPlanningOrgUnlocked = (agencyLevel?.index ?? -1) >= 3;
+  const aiPlanningQuota = agencyLevel && agencyLevelInputs ? computeAiPlanningQuota(agencyLevel, agencyLevelInputs.planMaxClients) : 0;
+  const aiPlanningUsed = clients.filter((c: any) => c.aiPlanningEnabled).length;
+  const aiPlanningClientEnabled = !!(client as any)?.aiPlanningEnabled;
+  const aiPlanningEnabled = aiPlanningOrgUnlocked && aiPlanningClientEnabled;
   const tabs = visibleTabs;
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
@@ -519,9 +525,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             {maisSubTab === "docs" && showDocsSubTab && (
               <ClientDocsTab
                 clientId={client.id}
-                aiPlanningEnabled={aiPlanningUnlocked}
-                aiPlanningLocked={!aiPlanningUnlocked && !disabledFeatures.has("agency_levels")}
+                aiPlanningEnabled={aiPlanningEnabled}
+                aiPlanningLocked={!aiPlanningEnabled && !disabledFeatures.has("agency_levels")}
                 aiPlanningCurrentLevelLabel={agencyLevel?.label}
+                aiPlanningOrgUnlocked={aiPlanningOrgUnlocked}
+                aiPlanningUsed={aiPlanningUsed}
+                aiPlanningQuota={aiPlanningQuota}
               />
             )}
             {maisSubTab === "biblioteca" && showBibliotecaSubTab && <ClientReferenceLibraryTab clientId={client.id} />}
