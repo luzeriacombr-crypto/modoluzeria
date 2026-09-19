@@ -403,11 +403,14 @@ function ActiveMonthToggle({ clientId, monthId }: { clientId: string; monthId: s
   );
 }
 
+const FIRST_LINK_CONFETTI_COLORS = ["rgb(var(--lz-brand-rgb))", "#6FA8DC", "#FF6B6B", "#B892FF", "rgba(var(--lz-brand-rgb),0.5)"];
+
 function ShareButton({ clientId, monthId }: { clientId: string; monthId: string }) {
   const { getOrCreateShareToken, rotateShareToken, setActiveFeedMonth } = useApi();
   const [open, setOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isFirstLink, setIsFirstLink] = useState(false);
 
   const PUBLIC_PREVIEW_BASE = import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com.br";
   async function generate() {
@@ -416,7 +419,7 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
     // abrir o link e ver o mês errado (ou vazio).
     setActiveFeedMonth.mutate({ data: { clientId, monthId } });
     const r = await getOrCreateShareToken.mutateAsync({ data: { clientId, monthId } });
-    setToken(r.token); setOpen(true);
+    setToken(r.token); setOpen(true); setIsFirstLink(r.isFirstEver);
   }
   async function rotate() {
     const r = await rotateShareToken.mutateAsync({ data: { clientId, monthId } });
@@ -443,9 +446,32 @@ function ShareButton({ clientId, monthId }: { clientId: string; monthId: string 
       </button>
       {open && token && (
         <div
-          className="absolute right-0 mt-2 z-50 w-[340px] rounded-xl p-3 shadow-2xl"
+          className="absolute right-0 mt-2 z-50 w-[340px] rounded-xl p-3 shadow-2xl overflow-hidden"
           style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}
         >
+          {isFirstLink && (
+            <>
+              <div className="absolute inset-0 pointer-events-none" aria-hidden>
+                {Array.from({ length: 18 }, (_, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      position: "absolute", top: -12, left: `${(i / 18) * 100 + Math.random() * 5}%`,
+                      width: 6, height: 9, borderRadius: 1,
+                      backgroundColor: FIRST_LINK_CONFETTI_COLORS[i % FIRST_LINK_CONFETTI_COLORS.length],
+                      animation: `lz-tour-confetti 1.4s ease-in ${Math.random() * 0.3}s forwards`,
+                    }}
+                  />
+                ))}
+              </div>
+              <div
+                className="text-[11.5px] font-semibold mb-2 rounded-lg px-2.5 py-2"
+                style={{ backgroundColor: "rgba(var(--lz-brand-rgb),0.14)", color: "var(--lz-accent-ink)" }}
+              >
+                🎉 Seu primeiro link de aprovação! É assim que o cliente vai ver e aprovar o conteúdo, sem precisar de conta.
+              </div>
+            </>
+          )}
           <div className="text-[11px] uppercase tracking-wider text-foreground/40 font-semibold mb-2">
             Link público do preview
           </div>

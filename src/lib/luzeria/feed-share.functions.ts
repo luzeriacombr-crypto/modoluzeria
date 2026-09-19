@@ -61,13 +61,25 @@ export const getOrCreateShareToken = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string; monthId: string }) =>
     z.object({ clientId: z.string().uuid(), monthId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<{ token: string; isFirstEver: boolean }> => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Apenas admins podem compartilhar o preview.");
     const { data: existing } = await context.supabase
       .from("feed_share_tokens").select("token, revoked_at")
       .eq("client_id", data.clientId).maybeSingle();
-    if (existing && !existing.revoked_at) return { token: existing.token as string };
+    if (existing && !existing.revoked_at) return { token: existing.token as string, isFirstEver: false };
+
+    // Checado ANTES de criar o link novo — se a org ainda não tem nenhum
+    // link gerado em nenhum cliente, esse é o primeiro de verdade (momento
+    // "aha" do produto: agência mandando o preview pro cliente dela pela
+    // primeira vez). Vira um confete discreto no front, não afeta nada
+    // funcional se a contagem falhar por algum motivo.
+    const { count: existingCount } = await context.supabase
+      .from("feed_share_tokens")
+      .select("id, clients!inner(org_id)", { count: "exact", head: true })
+      .eq("clients.org_id", context.orgId);
+    const isFirstEver = !existing && (existingCount ?? 0) === 0;
+
     const token = randomToken(22);
     if (existing) {
       const { error } = await context.supabase
@@ -81,7 +93,7 @@ export const getOrCreateShareToken = createServerFn({ method: "POST" })
         .insert({ client_id: data.clientId, month_id: data.monthId, token, created_by: context.userId });
       if (error) throw new Error(error.message);
     }
-    return { token };
+    return { token, isFirstEver };
   });
 
 export const rotateShareToken = createServerFn({ method: "POST" })
