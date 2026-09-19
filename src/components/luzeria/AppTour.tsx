@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  X, ArrowLeft, ArrowRight, Check, Sparkles, ListChecks, Search, ClipboardList, Folder,
-  LayoutGrid, Link2, CalendarDays, Instagram, Users, BarChart3, Palette, PartyPopper, Bell,
+  X, ArrowLeft, ArrowRight, Check, Sparkles, ListChecks, ClipboardList, Folder,
+  Instagram, Users, BarChart3, Palette, PartyPopper, Bell,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMe, useApi } from "@/lib/luzeria/queries";
@@ -33,13 +33,20 @@ type Step = {
   finale?: boolean;
 };
 
-// 14 passos — enxugado dos 22 de antes pra só o que carrega o produto no
-// dia a dia (redesenhado a partir de feedback direto do Junior: o tour
-// antigo era "pequenininho" e mostrava "coisas bobas"). Cortados: atividades
-// registradas, Minha Semana, organizar o mês, lixeira, biblioteca, vendas,
-// visão geral admin, financeiro, rotina, ajuda (agora só citado no fechamento),
-// sino de notificações e perfil — todos autoexplicativos ou secundários pra
-// um primeiro contato, ainda descobríveis na Central de Ajuda depois.
+// Enxugado dos 22 passos originais pra só o que carrega o produto no dia a
+// dia (redesenhado a partir de feedback direto do Junior). Cortados por
+// serem autoexplicativos/secundários: atividades registradas, Minha Semana,
+// organizar o mês, lixeira, biblioteca, vendas, visão geral admin,
+// financeiro, rotina, ajuda (citado só no fechamento) e perfil — ainda
+// descobríveis na Central de Ajuda depois. Busca também saiu por pedido
+// direto (não precisa de tanto destaque assim). "Board do cliente" e
+// "Preview de Feed" saíram porque essas telas literalmente não existem sem
+// um cliente escolhido antes — pra quem acabou de se cadastrar (zero
+// clientes) não tem nada real pra apontar ali, diferente do Dashboard, que
+// sempre existe (só com números zerados). Calendário deixou de ser passo
+// próprio porque não é mais item de menu — virou uma aba dentro da própria
+// tela de Instagram (ver CalendarioContent em InstagramActivityPage.tsx) —
+// citado ali dentro em vez de apontar pra um alvo que não existe mais.
 const STEPS: Step[] = [
   {
     id: "intro",
@@ -61,72 +68,32 @@ const STEPS: Step[] = [
     roles: ["master"],
   },
   {
-    id: "busca",
-    eyebrow: "Ache qualquer coisa",
-    icon: Search,
-    title: "Busca inteligente",
-    desc: "Digite do jeito que vier na cabeça — \"pagar assinatura\", \"apaguei sem querer\", ou o nome de um cliente. Ela entende sinônimo e aguenta erro de digitação.",
-    descMobile: "Toque na lupa aqui em cima e digite do jeito que vier na cabeça — \"pagar assinatura\", \"apaguei sem querer\", ou o nome de um cliente.",
-    spotLabel: "Busca global",
-    target: '[data-tour="global-search"]',
+    id: "sidebar",
+    eyebrow: "Sua carteira",
+    icon: Folder,
+    title: "Seus clientes",
+    desc: "É aqui que a sua lista de clientes vai aparecer, separada por categoria. Ainda não tem nenhum? Use o + pra cadastrar o primeiro — ou importe vários de uma vez pelo checklist.",
+    descMobile: "É aqui que a sua lista de clientes vai aparecer, separada por categoria. Ainda não tem nenhum? Use o + pra cadastrar o primeiro.",
+    spotLabel: "Clientes",
+    target: '[data-tour="sidebar"]',
+    mobileTarget: '[data-tour="mobile-clients-btn"]',
   },
   {
     id: "tasks",
     eyebrow: "Sua base diária",
     icon: ClipboardList,
     title: "Minhas demandas",
-    desc: "Tudo que está atribuído a você, agrupado por status, com a urgência do prazo colorida (🔴 urgente, 🟡 atenção, 🟢 tranquilo). É a tela que você vai abrir todo dia.",
+    desc: "Tudo que está atribuído a você aparece aqui, agrupado por status, com uma pílula colorida avisando o prazo — de \"atrasado\" até \"tranquilo\" (na cor da sua marca). É a tela que você vai abrir todo dia.",
     spotLabel: "Minhas demandas",
     view: "my",
     target: '[data-tour="my-tasks"]',
-  },
-  {
-    id: "sidebar",
-    eyebrow: "Sua carteira",
-    icon: Folder,
-    title: "Seus clientes",
-    desc: "Aqui ficam os clientes da agência, separados por categoria. Clique num pra abrir o mês dele — é dali que sai todo o resto.",
-    descMobile: "Aqui ficam os clientes da agência, separados por categoria. Toque num pra abrir o mês dele — e use o + pra cadastrar um novo.",
-    spotLabel: "Clientes",
-    target: '[data-tour="sidebar"]',
-    mobileTarget: '[data-tour="mobile-clients-btn"]',
-  },
-  {
-    id: "cliente-board",
-    eyebrow: "O coração do app",
-    icon: LayoutGrid,
-    title: "O board que organiza tudo",
-    desc: "Dentro de cada cliente, todo post e reel vira um card com prazo, responsável e status. Arraste, comente (inclusive por áudio), aprove — sem planilha, sem se perder no WhatsApp.",
-    spotLabel: "Board de conteúdo do cliente",
-    target: '[data-tour="client-board"]',
-  },
-  {
-    id: "cliente-feed",
-    eyebrow: "Aprovação sem atrito",
-    icon: Link2,
-    title: "Seu cliente aprova em segundos",
-    desc: "A aba \"Preview de Feed\" monta a grade como vai ficar no Instagram e gera um link público — o cliente aprova ou pede ajuste sem precisar de conta no sistema.",
-    spotLabel: "Preview de Feed",
-    target: '[data-tour="client-feed-tab"]',
-  },
-  {
-    id: "calendario",
-    eyebrow: "Visão geral",
-    icon: CalendarDays,
-    title: "Todo mundo, num calendário só",
-    desc: "Visão mensal com todas as publicações da agência juntas. Passe o mouse num dia pra ver a miniatura e o cliente.",
-    descMobile: "Visão mensal com todas as publicações da agência juntas. No celular, toque no menu (☰) aqui embaixo e escolha Calendário.",
-    spotLabel: "Calendário",
-    target: '[data-tour="nav-calendario"]',
-    mobileTarget: '[data-tour="mobile-menu-btn"]',
-    hideIfDisabled: "calendar",
   },
   {
     id: "instagram",
     eyebrow: "Publicação",
     icon: Instagram,
     title: "Publique sem sair daqui",
-    desc: "Conecte a conta do cliente e publique post, reel ou story direto pelo app — na hora ou agendado. Sem abrir o Instagram, sem outro app.",
+    desc: "Conecte a conta do cliente e publique post, reel ou story direto pelo app — na hora ou agendado. Tem até uma aba de Calendário aqui dentro, juntando tudo que está programado num mês só.",
     descMobile: "Conecte a conta do cliente e publique direto pelo app. No celular, toque no menu (☰) aqui embaixo e escolha Instagram.",
     spotLabel: "Instagram",
     target: '[data-tour="nav-instagram"]',
@@ -162,7 +129,7 @@ const STEPS: Step[] = [
     eyebrow: "Deixa com a sua cara",
     icon: Palette,
     title: "Personalize a sua agência",
-    desc: "Troque a cor principal, o logo e o modo claro/escuro bem aqui. O Modo Criador veste a camisa da sua marca — inclusive quando o cliente abre o link de aprovação.",
+    desc: "Troque a cor principal e o logo da sua agência bem aqui — com uma versão pro modo escuro e outra pro claro. O Modo Criador veste a camisa da sua marca, inclusive quando o cliente abre o link de aprovação.",
     spotLabel: "Configurações → Geral → Marca da agência",
     view: "settings",
     settingsTab: "general",

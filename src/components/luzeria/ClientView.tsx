@@ -260,7 +260,6 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         <div className="flex items-center gap-6 overflow-x-auto overflow-y-hidden lz-no-scrollbar flex-1 min-w-0">
           {tabs.map((t) => (
             <button key={t} onClick={() => setTab(t as any)}
-              data-tour={t === "feed" ? "client-feed-tab" : undefined}
               className="relative py-3 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap"
               style={{ color: tab === t ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>
               {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
@@ -288,7 +287,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         />
       )}
 
-      <div className="mt-2" data-tour="client-board">
+      <div className="mt-2">
         {(tab in TAB_CONFIG) && (() => {
           const cfg = TAB_CONFIG[tab as keyof typeof TAB_CONFIG];
           const items = orderMode === "cronologica" ? [...cfg.items].sort(byScheduledAt(orderDirection)) : applyLocalOrder(cfg.items);
