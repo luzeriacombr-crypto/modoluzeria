@@ -442,12 +442,17 @@ function CollapsedIconButton({ icon, label, active, onClick }: {
  * navegar direto (pedido do Junior). */
 function AgencyLevelSidebarBadge({ inputs }: { inputs: AgencyLevelInput }) {
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     function onClick(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        btnRef.current && !btnRef.current.contains(e.target as Node)
+      ) setOpen(false);
     }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
@@ -459,18 +464,21 @@ function AgencyLevelSidebarBadge({ inputs }: { inputs: AgencyLevelInput }) {
   const Icon = TIER_ICON[level.tier as AgencyTierName];
 
   return (
-    <div ref={wrapRef} className="relative mt-2 inline-block">
+    <div className="mt-2 inline-block">
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={btnRef}
+        onClick={() => { setAnchor(btnRef.current?.getBoundingClientRect() ?? null); setOpen((v) => !v); }}
         className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold transition hover:brightness-110"
         style={{ backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`, color }}
       >
         {Icon && <Icon size={11} />}
         Agência {level.label}
       </button>
-      {open && (
+      {open && anchor && createPortal(
         <div
-          className="absolute left-0 top-full mt-1.5 z-[999] w-[240px] rounded-xl bg-[#1C1C1C] border border-white/10 shadow-2xl p-3.5 lz-modal-in"
+          ref={panelRef}
+          style={{ position: "fixed", top: anchor.bottom + 6, left: anchor.left, width: 240 }}
+          className="z-[999] rounded-xl bg-[#1C1C1C] border border-white/10 shadow-2xl p-3.5 lz-modal-in"
         >
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`, color }}>
@@ -498,7 +506,8 @@ function AgencyLevelSidebarBadge({ inputs }: { inputs: AgencyLevelInput }) {
           >
             Saiba mais →
           </Link>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
