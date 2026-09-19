@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
-  Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save, Camera, Instagram,
+  Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save, Camera, Instagram, Facebook,
   MessageCircle, Milestone, Users, Upload, Download, Film, Image as ImageIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { ImageCropModal } from "./ImageCropModal";
 import { ClientBlockedItemsModal } from "./ClientBlockedItemsModal";
 import { getInstagramConnectionStatus, getInstagramConnectUrl, disconnectInstagram } from "@/lib/luzeria/instagram.functions";
+import { getFacebookConnectionStatus, getFacebookConnectUrl, disconnectFacebook } from "@/lib/luzeria/facebook.functions";
 
 function formatHours(h: number | null) {
   if (h == null) return "—";
@@ -120,6 +121,14 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         {canManageInstagram && (
           <Section label="Instagram">
             <InstagramSection clientId={client.id} />
+          </Section>
+        )}
+
+        {/* Facebook — mesma permissão do Instagram (v1 trata publicação em
+            rede social como um balde só de permissão) */}
+        {canManageInstagram && (
+          <Section label="Facebook">
+            <FacebookSection clientId={client.id} />
           </Section>
         )}
 
@@ -840,6 +849,73 @@ function InstagramSection({ clientId }: { clientId: string }) {
             <GenerateInstagramLinkBlock clientId={clientId} />
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function FacebookSection({ clientId }: { clientId: string }) {
+  const getConnStatus = useServerFn(getFacebookConnectionStatus);
+  const getConnectUrl = useServerFn(getFacebookConnectUrl);
+  const disconnect = useServerFn(disconnectFacebook);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  const status = useQuery({
+    queryKey: ["facebook-connection-status", clientId],
+    queryFn: () => getConnStatus({ data: { clientId } }),
+  });
+
+  async function connect() {
+    setConnecting(true);
+    try {
+      const r: any = await getConnectUrl({ data: { clientId } });
+      window.location.href = r.url;
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao iniciar conexão com o Facebook");
+      setConnecting(false);
+    }
+  }
+
+  async function handleDisconnect() {
+    if (!(await requestConfirm("Desconectar o Facebook desse cliente? A publicação automática para de funcionar até reconectar.", { danger: true }))) return;
+    setDisconnecting(true);
+    try {
+      await disconnect({ data: { clientId } });
+      toast.success("Facebook desconectado.");
+      status.refetch();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao desconectar");
+    } finally {
+      setDisconnecting(false);
+    }
+  }
+
+  const data = status.data;
+
+  return (
+    <div>
+      <p className="text-[11px] text-foreground/40 mb-3">
+        Conecte a Página do Facebook desse cliente pra poder publicar Posts direto pelo Modo Criador. V1 só cobre post de feed (foto, vídeo único ou álbum) — sem Stories nem Reels do Facebook por enquanto.
+      </p>
+      {status.isLoading ? (
+        <div className="text-foreground/40 text-sm">Verificando…</div>
+      ) : data?.connected ? (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-[var(--lz-accent-ink)] font-medium flex items-center gap-1.5">
+            <Facebook size={14} /> Conectado{data.pageName ? ` — ${data.pageName}` : ""}
+          </div>
+          <button onClick={handleDisconnect} disabled={disconnecting}
+            className="text-[11px] text-foreground/50 hover:text-red-400 transition disabled:opacity-50">
+            Desconectar
+          </button>
+        </div>
+      ) : (
+        <button onClick={connect} disabled={connecting}
+          className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 disabled:opacity-50">
+          {connecting ? <Loader2 size={14} className="animate-spin" /> : <Facebook size={14} />}
+          Conectar Facebook
+        </button>
       )}
     </div>
   );

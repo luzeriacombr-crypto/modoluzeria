@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus, Play, Film } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Facebook, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus, Play, Film } from "lucide-react";
 import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getInstagramConnectionStatus, getStoryRepeatStatus, setStoryRepeatRule } from "@/lib/luzeria/instagram.functions";
+import { getFacebookConnectionStatus } from "@/lib/luzeria/facebook.functions";
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
 import { downloadDriveFile, downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
 import { FileActionsMenu } from "./FileActionsMenu";
@@ -635,7 +636,7 @@ export function DetailPanel() {
   const effectiveMonthKey = isAvulso && monthKeys.length > 0 ? monthKeys[0] : selectedMonthKey;
   const { data: month } = useQuery({ ...monthQO(selectedClientId ?? "", effectiveMonthKey), enabled: !!selectedClientId && !!selectedItemId });
   const me = useMe().data;
-  const { setItemStatus, updateItem, setItemEditor, setItemReelType, setItemPostFormat, addAssignee, removeAssignee, addCommentWithMentions, addAudioComment, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish, setItemCampaign } = useApi();
+  const { setItemStatus, updateItem, setItemEditor, setItemReelType, setItemPostFormat, addAssignee, removeAssignee, addCommentWithMentions, addAudioComment, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish, publishToFacebook, setFacebookAutoPublish, setItemCampaign } = useApi();
   const { data: appSettings } = useQuery(appSettingsQO());
   const { data: campaigns = [] } = useQuery({ ...campaignsQO(selectedClientId ?? ""), enabled: !!selectedClientId });
   const { data: contentStatuses = [] } = useQuery(contentStatusesQO());
@@ -659,6 +660,14 @@ export function DetailPanel() {
     enabled: !!selectedClientId,
   });
   const clientInstagramConnected = !!instagramStatus.data?.connected;
+
+  const getFacebookStatus = useServerFn(getFacebookConnectionStatus);
+  const facebookStatus = useQuery({
+    queryKey: ["facebook-connection-status", selectedClientId],
+    queryFn: () => getFacebookStatus({ data: { clientId: selectedClientId! } }),
+    enabled: !!selectedClientId,
+  });
+  const clientFacebookConnected = !!facebookStatus.data?.connected;
 
   useEffect(() => {
     if (!selectedItemId) return;
@@ -1456,6 +1465,97 @@ export function DetailPanel() {
                 </button>
                 <button disabled
                   title="Esse cliente ainda não conectou o Instagram — conecte na Ficha do Cliente"
+                  className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold opacity-40 cursor-not-allowed border border-foreground/8 text-foreground/60">
+                  <Clock size={14} />
+                  Programar publicação
+                </button>
+              </div>
+            )}
+          </ModalSection>
+        )}
+
+        {/* Publicar no Facebook (v1: só Posts, mesma permissão do Instagram) */}
+        {item.type === "post" && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && (
+          <ModalSection label="Publicar no Facebook">
+            {clientFacebookConnected ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      if (!item.caption?.trim()) {
+                        if (!(await requestConfirm("Vai publicar sem legenda mesmo?", {
+                          confirmLabel: "Publicar mesmo assim", cancelLabel: "Ops, vou colocar a legenda",
+                        }))) return;
+                      }
+                      if (!(await requestConfirm('Publicar esse post na Página do Facebook do cliente agora? Isso é uma ação real e pública.'))) return;
+                      publishToFacebook.mutate({ data: { itemId: item.id } }, {
+                        onSuccess: () => toast.success("Publicado no Facebook!"),
+                        onError: (e: any) => toast.error(e?.message ?? "Falha ao publicar no Facebook"),
+                      });
+                    }}
+                    disabled={publishToFacebook.isPending}
+                    className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold disabled:opacity-50"
+                    style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+                  >
+                    {publishToFacebook.isPending ? <Loader2 size={14} className="animate-spin" /> : <Facebook size={14} />}
+                    Publicar no Facebook agora
+                  </button>
+                  {item.fbAutoPublish ? (
+                    <button
+                      onClick={() => {
+                        setFacebookAutoPublish.mutate({ data: { itemId: item.id, enabled: false } }, {
+                          onSuccess: () => toast.success("Publicação programada cancelada."),
+                          onError: (e: any) => toast.error(e?.message ?? "Falha ao cancelar programação"),
+                        });
+                      }}
+                      disabled={setFacebookAutoPublish.isPending}
+                      className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold border border-foreground/8 text-foreground/70 hover:text-foreground disabled:opacity-50"
+                    >
+                      <Clock size={14} />
+                      Cancelar programação
+                    </button>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        if (!item.caption?.trim()) {
+                          if (!(await requestConfirm("Vai programar sem legenda mesmo?", {
+                            confirmLabel: "Programar mesmo assim", cancelLabel: "Ops, vou colocar a legenda",
+                          }))) return;
+                        }
+                        setFacebookAutoPublish.mutate({ data: { itemId: item.id, enabled: true } }, {
+                          onSuccess: () => toast.success("Publicação programada!"),
+                          onError: (e: any) => toast.error(e?.message ?? "Defina data e horário de publicação futuros antes de programar."),
+                        });
+                      }}
+                      disabled={setFacebookAutoPublish.isPending || !item.scheduledAt}
+                      title={!item.scheduledAt ? "Defina uma data e horário em Data de publicação primeiro" : undefined}
+                      className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold border border-foreground/8 text-foreground/70 hover:text-foreground disabled:opacity-50"
+                    >
+                      <Clock size={14} />
+                      Programar publicação
+                    </button>
+                  )}
+                </div>
+                {item.fbAutoPublish && item.scheduledAt && (
+                  <p className="text-[11px] mt-2" style={{ color: "var(--lz-accent-ink)" }}>
+                    Programado pra publicar sozinho em {new Date(item.scheduledAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}.
+                  </p>
+                )}
+                <p className="text-[11px] text-foreground/40 mt-2">
+                  Publica direto na Página do cliente e marca o item como Finalizado. "Programar" usa a data e horário
+                  definidos em "Data de publicação" abaixo.
+                </p>
+              </>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <button disabled
+                  title="Esse cliente ainda não conectou o Facebook — conecte na Ficha do Cliente"
+                  className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold opacity-40 cursor-not-allowed border border-foreground/8 text-foreground/60">
+                  <Facebook size={14} />
+                  Publicar no Facebook agora
+                </button>
+                <button disabled
+                  title="Esse cliente ainda não conectou o Facebook — conecte na Ficha do Cliente"
                   className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold opacity-40 cursor-not-allowed border border-foreground/8 text-foreground/60">
                   <Clock size={14} />
                   Programar publicação

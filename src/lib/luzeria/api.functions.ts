@@ -1351,10 +1351,13 @@ export const getMonth = createServerFn({ method: "GET" })
     const { data: month } = await context.supabase
       .from("months").select("id, key, feed_order_mode, feed_order_direction").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
     if (!month) return null;
-    const { data: items } = await context.supabase
+    // fb_auto_publish ainda não está nos tipos gerados do Supabase — cast só
+    // no resultado final (não em context.supabase inteiro), pra manter o
+    // resto da função com os tipos normais.
+    const { data: items } = (await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, ig_collaborators, activity_location, activity_quantity, campaign_id, campaign_internal")
-      .eq("month_id", month.id).order("type").order("idx");
+      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, ig_collaborators, fb_auto_publish, activity_location, activity_quantity, campaign_id, campaign_internal")
+      .eq("month_id", month.id).order("type").order("idx")) as any as { data: any[] | null };
     const itemIds = (items ?? []).map((it: any) => it.id);
     const [{ data: assignees }, { data: comments }] = await Promise.all([
       context.supabase.from("item_assignees").select("item_id, user_id").in("item_id", itemIds),
@@ -1401,6 +1404,7 @@ export const getMonth = createServerFn({ method: "GET" })
       scheduledAt: ((it as any).scheduled_at ?? null) as any,
       igAutoPublish: ((it as any).ig_auto_publish ?? false) as any,
       igCollaborators: ((it as any).ig_collaborators ?? null) as any,
+      fbAutoPublish: ((it as any).fb_auto_publish ?? false) as any,
       startedAt: ((it as any).started_at ?? null) as any,
       finishedAt: ((it as any).finished_at ?? null) as any,
       blockedReason: ((it as any).blocked_reason ?? null) as any,

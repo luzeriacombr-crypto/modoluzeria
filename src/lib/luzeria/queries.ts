@@ -75,6 +75,7 @@ import {
   publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications, hasUsedInstagramPublish, getInstagramConnectionSummary,
   createInstagramConnectRequest, listInstagramConnectRequests, cancelInstagramConnectRequest, getPublicInstagramConnectInfo,
 } from "./instagram.functions";
+import { publishToFacebook, setFacebookAutoPublish } from "./facebook.functions";
 import {
   getCalendarItems, getGoogleCalendarAuthUrl, disconnectGoogleCalendar,
   getMyCalendarConnection, getUpcomingCalendarEvents, createCalendarEvent,
@@ -946,6 +947,14 @@ export function useApi() {
     }),
     setInstagramAutoPublish: useMutation({
       mutationFn: useServerFn(setInstagramAutoPublish),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
+    }),
+    publishToFacebook: useMutation({
+      mutationFn: useServerFn(publishToFacebook),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
+    }),
+    setFacebookAutoPublish: useMutation({
+      mutationFn: useServerFn(setFacebookAutoPublish),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["month"] }),
     }),
     setUserRole: useMutation({ mutationFn: useServerFn(setUserRole), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }), onError: fail("Não consegui mudar a função.") }),
