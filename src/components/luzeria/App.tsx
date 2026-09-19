@@ -29,6 +29,7 @@ import { TrialEndingBanner } from "./TrialEndingBanner";
 import { PastDueBanner } from "./PastDueBanner";
 import { InstagramLiveBanner } from "./InstagramLiveBanner";
 import { DriveReconnectBanner } from "./DriveReconnectBanner";
+import { LevelUpCelebration } from "./LevelUpCelebration";
 import { ReferralAnnouncementBanner } from "./ReferralAnnouncementBanner";
 import { SmartImportBanner } from "./SmartImportBanner";
 import { ClientLimitGraceBanner } from "./ClientLimitGraceBanner";
@@ -278,6 +279,7 @@ export function App() {
         <ClientLimitGraceBanner isMaster={me.data?.role === "master"} />
         <InstagramLiveBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
         <DriveReconnectBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
+        <LevelUpCelebration />
         <ReferralAnnouncementBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} firstPaymentConfirmedAt={me.data?.firstPaymentConfirmedAt} />
         <SmartImportBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
         <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0">

@@ -639,8 +639,44 @@ export async function fetchAgencyLevelInputs(supabase: any, orgId: string) {
     instagramConnectedCount: instagramCount ?? 0,
     teamSize: Math.max(0, (profilesCount ?? 1) - 1),
     planMaxCollaborators: (plan as any)?.max_collaborators ?? 2,
+    // Consulta separada e isolada de propósito (não no Promise.all de cima):
+    // orgs.last_seen_level_index é coluna nova (popup de subiu de nível) —
+    // se a migração ainda não rodou em produção, essa query falha sozinha
+    // sem derrubar o resto do cálculo de nível (mesma lição do incidente
+    // de fb_auto_publish: nunca deixar uma coluna não confirmada quebrar
+    // um caminho que já funciona). null = não sabe/não inicializado, o
+    // popup de comemoração simplesmente não dispara nesse caso.
+    lastSeenLevelIndex: await (async () => {
+      const { data, error } = await (supabase as any)
+        .from("orgs").select("last_seen_level_index").eq("id", orgId).maybeSingle();
+      return error ? null : (data?.last_seen_level_index ?? null);
+    })(),
   };
 }
+
+/** Grava que a agência já viu o popup de "subiu de nível" pro índice dado
+ * (THRESHOLDS, agency-level.ts) — chamado pelo componente de celebração
+ * assim que ele detecta e mostra o popup, e também (sem popup) na primeira
+ * vez que a org é checada, pra não comemorar um nível que ela já tinha
+ * antes dessa feature existir. Qualquer perfil ativo pode chamar (não só
+ * admin/master) — quem primeiro abrir o app depois de subir de nível é
+ * quem vê a comemoração. Usa supabaseAdmin de propósito: a RLS de orgs só
+ * deixa master escrever, mas essa é uma escrita benigna de bookkeeping,
+ * não teria sentido travar pra role. Nunca deixa o índice regredir (só
+ * sobe), pra não recomemorar o mesmo nível se os pontos oscilarem. */
+export const acknowledgeAgencyLevel = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { index: number }) => z.object({ index: z.number().int().min(0).max(17) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: org } = await (supabaseAdmin as any)
+      .from("orgs").select("last_seen_level_index").eq("id", context.orgId).maybeSingle();
+    const current = org?.last_seen_level_index as number | null | undefined;
+    if (current == null || data.index > current) {
+      await (supabaseAdmin as any).from("orgs").update({ last_seen_level_index: data.index }).eq("id", context.orgId);
+    }
+    return { ok: true };
+  });
 
 /** Insumos pro selo de nível (gamificação) da PRÓPRIA agência — qualquer
  * perfil ativo pode chamar (diferente de listOrgsBilling, que é só pro
