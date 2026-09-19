@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   X, ArrowLeft, ArrowRight, Check, Sparkles, ListChecks, Search, ClipboardList, Folder,
-  LayoutGrid, Link2, CalendarDays, Instagram, Users, BarChart3, Palette, PartyPopper,
+  LayoutGrid, Link2, CalendarDays, Instagram, Users, BarChart3, Palette, PartyPopper, Bell,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMe, useApi } from "@/lib/luzeria/queries";
@@ -33,7 +33,7 @@ type Step = {
   finale?: boolean;
 };
 
-// 13 passos — enxugado dos 22 de antes pra só o que carrega o produto no
+// 14 passos — enxugado dos 22 de antes pra só o que carrega o produto no
 // dia a dia (redesenhado a partir de feedback direto do Junior: o tour
 // antigo era "pequenininho" e mostrava "coisas bobas"). Cortados: atividades
 // registradas, Minha Semana, organizar o mês, lixeira, biblioteca, vendas,
@@ -46,7 +46,7 @@ const STEPS: Step[] = [
     eyebrow: "Começando agora",
     icon: Sparkles,
     title: "Bem-vindo ao Modo Criador",
-    desc: "13 passos rápidos e só o que importa — sem enrolação. Pode avançar, voltar ou pular quando quiser.",
+    desc: "Alguns passos rápidos e só o que importa — sem enrolação. Pode avançar, voltar ou pular quando quiser.",
     serif: true,
   },
   {
@@ -168,6 +168,15 @@ const STEPS: Step[] = [
     settingsTab: "general",
     target: '[data-tour="org-branding"]',
     roles: ["master"],
+  },
+  {
+    id: "bell",
+    eyebrow: "Fique de olho",
+    icon: Bell,
+    title: "Notificações",
+    desc: "Avisos de prazo, menções (@nome) e demandas novas chegam por aqui. Clicar leva direto pro item — nada se perde.",
+    spotLabel: "Notificações",
+    target: '[data-tour="notifications"]',
   },
   {
     id: "done",
