@@ -665,6 +665,21 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     await supabaseAdmin.from("content_item_publishes").insert({ content_item_id: itemId, ig_media_id: publishJson.id });
 
     return { ok: true as const, instagramMediaId: publishJson.id as string };
+  } catch (e: any) {
+    // Grava o erro de verdade mesmo na publicação manual ("Publicar
+    // agora") — antes só o cron persistia isso (runScheduledInstagramPublishes,
+    // linha ~841), então clicar manual e falhar não deixava rastro nenhum
+    // no banco, só um toast que sumia. Sem isso, um post com colaborador
+    // que a Meta recusa (@ errado, conta que não aceita convite, etc.)
+    // não dava pra diagnosticar depois — o toast já tinha sumido e
+    // ig_last_error continuava null. Não mexe no comportamento pro
+    // usuário (o erro ainda sobe pro caller normalmente), só passa a
+    // ficar visível também na aba Instagram (tag "Falhou").
+    await (supabaseAdmin as any).from("content_items").update({
+      ig_last_error: e?.message ?? "Falha ao publicar no Instagram.",
+      ig_last_error_at: new Date().toISOString(),
+    }).eq("id", itemId).catch(() => {});
+    throw e;
   } finally {
     if (tempPaths.length > 0) {
       await supabaseAdmin.storage.from("instagram-publish-temp").remove(tempPaths).catch(() => {});
