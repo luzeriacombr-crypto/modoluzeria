@@ -6,27 +6,40 @@
 
 export type AgencyLevelInput = {
   activeClients: number;
+  /** Teto de clientes do plano atual (Solo=10, Pro=20, Agência=30, Enterprise=50). */
+  planMaxClients: number;
   finalizedCount: number;
   isPayingCustomer: boolean;
   driveConnected: boolean;
   instagramConnectedCount: number;
   teamSize: number;
+  /** Teto de colaboradores do plano atual (Solo=2, Pro=10, Agência=20, Enterprise=50). */
+  planMaxCollaborators: number;
 };
 
-/** Conteúdo entregue tem teto de propósito — sem isso, uma agência antiga
- * com histórico gigante de posts chegaria em Lendária sozinha, só no
- * volume, sem nunca ter conectado Instagram, crescido a equipe ou tido
- * mais de 1 cliente. O teto (2500 pts) fica sempre abaixo do primeiro
- * degrau de Lendária (3250) — só combinando com os outros critérios dá
- * pra chegar lá (ajustado a pedido do Junior, que testou isso na prática). */
+/** Clientes, equipe e Instagram pontuam por PERCENTUAL do que o plano da
+ * agência permite, não número absoluto — pedido direto do Junior: uma
+ * agência Solo (teto de 10 clientes) precisa conseguir chegar em Lendária
+ * lotando o próprio plano, do mesmo jeito que uma Agência (teto de 30)
+ * lotando o dela. Com número absoluto, Solo nunca alcançava o teto de
+ * pontos só por ter um plano menor — o que não tem nada a ver com o
+ * quanto ela realmente usa o produto.
+ *
+ * Conteúdo entregue continua sendo contagem absoluta (com teto de 2500) —
+ * ele não favorece agência grande do mesmo jeito: uma Solo consistente ao
+ * longo dos anos acumula tanto post/reel quanto uma agência maior num
+ * período mais curto, então não precisa ser relativo ao plano. */
 export function computeAgencyPoints(i: AgencyLevelInput): number {
-  const clientPts = Math.min(i.activeClients, 20) * 15;
+  const clientFill = i.planMaxClients > 0 ? Math.min(1, i.activeClients / i.planMaxClients) : 0;
+  const clientPts = clientFill * 300;
+  const teamFill = i.planMaxCollaborators > 0 ? Math.min(1, i.teamSize / i.planMaxCollaborators) : 0;
+  const teamPts = teamFill * 300;
+  const igFill = i.activeClients > 0 ? Math.min(1, i.instagramConnectedCount / i.activeClients) : 0;
+  const igPts = igFill * 300;
   const deliveryPts = Math.min(i.finalizedCount, 2500);
   const payingPts = i.isPayingCustomer ? 150 : 0;
   const drivePts = i.driveConnected ? 25 : 0;
-  const igPts = Math.min(i.instagramConnectedCount, 20) * 15;
-  const teamPts = Math.min(i.teamSize, 15) * 20;
-  return clientPts + deliveryPts + payingPts + drivePts + igPts + teamPts;
+  return Math.round(clientPts + teamPts + igPts + deliveryPts + payingPts + drivePts);
 }
 
 export const AGENCY_TIER_NAMES = ["Bronze", "Prata", "Ouro", "Platina", "Diamante", "Lendária"] as const;

@@ -616,7 +616,7 @@ export const getMyAgencyLevelInputs = createServerFn({ method: "GET" })
     // policy de content_items tem uma cláusula de bypass pra admin de
     // plataforma que essa consulta sozinha não esperava.
     const [{ data: org }, { count: clientsCount }, { count: finalizedCount }, { data: driveRow }, { count: profilesCount }] = await Promise.all([
-      context.supabase.from("orgs").select("subscription_status, asaas_subscription_id").eq("id", context.orgId).maybeSingle(),
+      context.supabase.from("orgs").select("subscription_status, asaas_subscription_id, plan_id").eq("id", context.orgId).maybeSingle(),
       context.supabase.from("clients").select("id", { count: "exact", head: true }).eq("archived", false).neq("category", "Ex-clientes").eq("org_id", context.orgId),
       (context.supabase as any)
         .from("content_items")
@@ -627,18 +627,23 @@ export const getMyAgencyLevelInputs = createServerFn({ method: "GET" })
       context.supabase.from("org_google_credentials").select("org_id").eq("org_id", context.orgId).maybeSingle(),
       context.supabase.from("profiles").select("id", { count: "exact", head: true }).eq("org_id", context.orgId).eq("active", true),
     ]);
-    const { count: instagramCount } = await context.supabase
-      .from("client_instagram_credentials")
-      .select("client_id, clients!client_instagram_credentials_client_id_fkey!inner(org_id)", { count: "exact", head: true })
-      .eq("clients.org_id", context.orgId);
+    const [{ count: instagramCount }, { data: plan }] = await Promise.all([
+      context.supabase
+        .from("client_instagram_credentials")
+        .select("client_id, clients!client_instagram_credentials_client_id_fkey!inner(org_id)", { count: "exact", head: true })
+        .eq("clients.org_id", context.orgId),
+      context.supabase.from("plans").select("max_clients, max_collaborators").eq("id", (org as any)?.plan_id ?? "").maybeSingle(),
+    ]);
 
     return {
       activeClients: clientsCount ?? 0,
+      planMaxClients: (plan as any)?.max_clients ?? 10,
       finalizedCount: finalizedCount ?? 0,
       isPayingCustomer: (org as any)?.subscription_status === "active" && !!(org as any)?.asaas_subscription_id,
       driveConnected: !!driveRow,
       instagramConnectedCount: instagramCount ?? 0,
       teamSize: Math.max(0, (profilesCount ?? 1) - 1),
+      planMaxCollaborators: (plan as any)?.max_collaborators ?? 2,
     };
   });
 

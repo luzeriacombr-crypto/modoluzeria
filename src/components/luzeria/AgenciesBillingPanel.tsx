@@ -22,13 +22,17 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
 };
 
 function AgencyLevelBadge({ o }: { o: any }) {
+  const { data: plans = [] } = useQuery(plansQO());
+  const plan = plans.find((p: any) => p.id === o.planId);
   const points = computeAgencyPoints({
     activeClients: o.clientsUsed ?? 0,
+    planMaxClients: plan?.maxClients ?? 10,
     finalizedCount: o.finalizedCount ?? 0,
     isPayingCustomer: o.subscriptionStatus === "active" && o.hasAsaasSubscription,
     driveConnected: !!o.driveConnected,
     instagramConnectedCount: o.instagramConnected ?? 0,
     teamSize: Math.max(0, (o.teamCount ?? 1) - 1),
+    planMaxCollaborators: plan?.maxCollaborators ?? 2,
   });
   const level = getAgencyLevel(points);
   const color = TIER_COLOR[level.tier as AgencyTierName] ?? "#9AA4B2";
@@ -335,6 +339,7 @@ export function AgenciesBillingPanel() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Status</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Teste / cobrança</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">Clientes</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">Equipe</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-foreground/60">Drive</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-foreground/60">Instagram</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Último acesso</th>
@@ -427,6 +432,7 @@ export function AgenciesBillingPanel() {
                           : <span className="text-foreground/30">—</span>}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-foreground/70">{o.clientsUsed}</td>
+                    <td className="px-4 py-3 text-sm text-right text-foreground/70">{o.teamCount ?? 0}</td>
                     <td className="px-4 py-3 text-center">
                       <HardDrive size={14} className={`inline ${o.driveConnected ? "text-[var(--lz-accent-ink)]" : "text-foreground/20"}`} />
                     </td>

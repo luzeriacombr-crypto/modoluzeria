@@ -104,25 +104,68 @@ function CritIcon({ icon, size = 17 }: { icon: string; size?: number }) {
   }
 }
 
+const PLANS = [
+  { id: "solo", name: "Solo", maxClients: 10, maxCollaborators: 2 },
+  { id: "pro", name: "Pro", maxClients: 20, maxCollaborators: 10 },
+  { id: "agencia", name: "Agência", maxClients: 30, maxCollaborators: 20 },
+  { id: "enterprise", name: "Enterprise", maxClients: 50, maxCollaborators: 50 },
+] as const;
+
 function Calculator() {
-  const [state, setState] = useState<AgencyLevelInput>({
+  const [planId, setPlanId] = useState<(typeof PLANS)[number]["id"]>("solo");
+  const plan = PLANS.find((p) => p.id === planId) ?? PLANS[0];
+  const [state, setState] = useState({
     activeClients: 5, finalizedCount: 60, isPayingCustomer: true, driveConnected: true, instagramConnectedCount: 3, teamSize: 1,
   });
-  const points = computeAgencyPoints(state);
+  const input: AgencyLevelInput = { ...state, planMaxClients: plan.maxClients, planMaxCollaborators: plan.maxCollaborators };
+  const points = computeAgencyPoints(input);
   const level = getAgencyLevel(points);
   const color = TIER_COLOR[level.tier as AgencyTierName];
   const Icon = TIER_ICON[level.tier as AgencyTierName];
 
-  const sliders: { key: keyof AgencyLevelInput; label: string; min: number; max: number }[] = [
-    { key: "activeClients", label: "Clientes ativos", min: 0, max: 20 },
+  function selectPlan(id: (typeof PLANS)[number]["id"]) {
+    const p = PLANS.find((pl) => pl.id === id) ?? PLANS[0];
+    setPlanId(id);
+    // Clampa os valores atuais pro teto do novo plano, senão trocar pra um
+    // plano menor deixa o slider com um valor "impossível" parado lá.
+    setState((prev) => ({
+      ...prev,
+      activeClients: Math.min(prev.activeClients, p.maxClients),
+      instagramConnectedCount: Math.min(prev.instagramConnectedCount, p.maxClients),
+      teamSize: Math.min(prev.teamSize, p.maxCollaborators),
+    }));
+  }
+
+  const sliders: { key: keyof typeof state; label: string; min: number; max: number }[] = [
+    { key: "activeClients", label: "Clientes ativos", min: 0, max: plan.maxClients },
     { key: "finalizedCount", label: "Posts/reels entregues (total)", min: 0, max: 2500 },
-    { key: "instagramConnectedCount", label: "Clientes com Instagram conectado", min: 0, max: 20 },
-    { key: "teamSize", label: "Pessoas na equipe (além de você)", min: 0, max: 15 },
+    { key: "instagramConnectedCount", label: "Clientes com Instagram conectado", min: 0, max: plan.maxClients },
+    { key: "teamSize", label: "Pessoas na equipe (além de você)", min: 0, max: plan.maxCollaborators },
   ];
 
   return (
     <div className="rounded-3xl border p-6 sm:p-7 grid sm:grid-cols-[1fr_280px] gap-7" style={{ background: `linear-gradient(180deg, ${BG_GRAY}, ${BG_BLUE})`, borderColor: "rgba(255,255,255,0.14)" }}>
       <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-2">
+          <span className="text-[12.5px] font-bold text-white/70">Seu plano</span>
+          <div className="inline-flex flex-wrap items-center gap-1.5">
+            {PLANS.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => selectPlan(p.id)}
+                className="px-3 py-1.5 rounded-full text-[11.5px] font-bold transition"
+                style={planId === p.id
+                  ? { background: LIME, color: BG_BLUE }
+                  : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+          <p className="text-white/30 text-[10.5px]">
+            Até {plan.maxClients} clientes, até {plan.maxCollaborators} colaboradores — o teto de clientes/equipe/Instagram abaixo é sempre relativo ao seu plano, não um número fixo. Uma Solo lotada chega no mesmo topo que uma Agência lotada.
+          </p>
+        </div>
         {sliders.map((s) => (
           <div key={s.key} className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
