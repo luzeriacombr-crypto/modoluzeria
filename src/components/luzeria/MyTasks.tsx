@@ -6,7 +6,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, useMemo, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send } from "lucide-react";
+import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send, Video as VideoIcon, MapPin, Users } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { MyWeekView } from "./MyWeekView";
 import { getDailyVerse } from "@/lib/luzeria/daily-verse";
@@ -118,10 +118,49 @@ export function MyTasks() {
     enabled: !!targetId,
   });
 
+  const [filter, setFilter] = useState<"all" | "late" | "today" | "week">("all");
+  const [clientFilter, setClientFilter] = useState<string | null>(null);
+  const [groupBy, setGroupBy] = useState<"status" | "due">("status");
+  const daysOf = (t: any): number | null => deadlineInfo(t.dueDate, t.status).days;
+  const kpi = {
+    late: tasks.filter((t: any) => (daysOf(t) ?? 0) < 0).length,
+    today: tasks.filter((t: any) => daysOf(t) === 0).length,
+    week: tasks.filter((t: any) => { const d = daysOf(t); return d !== null && d >= 0 && d <= 6; }).length,
+    all: tasks.length,
+  };
+  const clientChips = useMemo(() => {
+    const m = new Map<string, { id: string; name: string; color: string; n: number }>();
+    tasks.forEach((t: any) => {
+      const c = m.get(t.clientId) ?? { id: t.clientId, name: t.clientName, color: t.clientColor, n: 0 };
+      c.n += 1; m.set(t.clientId, c);
+    });
+    return [...m.values()].sort((a, b) => b.n - a.n);
+  }, [tasks]);
+  const filteredTasks = tasks.filter((t: any) => {
+    if (clientFilter && t.clientId !== clientFilter) return false;
+    const d = daysOf(t);
+    if (filter === "late") return d !== null && d < 0;
+    if (filter === "today") return d === 0;
+    if (filter === "week") return d !== null && d >= 0 && d <= 6;
+    return true;
+  });
+  const dueGroups = [
+    { id: "due:late", label: "Atrasadas", color: "#FF4444", test: (d: number | null) => d !== null && d < 0 },
+    { id: "due:today", label: "Hoje", color: "#F5A623", test: (d: number | null) => d === 0 },
+    { id: "due:week", label: "Esta semana", color: "#4A9EFF", test: (d: number | null) => d !== null && d > 0 && d <= 6 },
+    { id: "due:later", label: "Mais pra frente", color: "#8A8A8A", test: (d: number | null) => d !== null && d > 6 },
+    { id: "due:none", label: "Sem prazo", color: "#8A8A8A", test: (d: number | null) => d === null },
+  ].map((g) => ({
+    ...g,
+    items: filteredTasks
+      .filter((t: any) => g.test(daysOf(t)))
+      .sort((a: any, b: any) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999")),
+  })).filter((g) => g.items.length > 0);
+
   const grouped: Record<Status, typeof tasks> = Object.fromEntries(
     effectiveStatusOrder.map((s) => [s, [] as typeof tasks])
   ) as Record<Status, typeof tasks>;
-  tasks.forEach((t) => {
+  filteredTasks.forEach((t) => {
     const s = t.status as Status;
     if (grouped[s]) grouped[s].push(t);
   });
@@ -141,7 +180,7 @@ export function MyTasks() {
   const dailyVerse = getDailyVerse();
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-5xl mx-auto" data-tour="my-tasks">
+    <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-[1240px] mx-auto" data-tour="my-tasks">
       {!isMeView && targetProfile && (
         <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-4 px-3 py-2 rounded-lg text-[12.5px]"
           style={{ backgroundColor: "rgba(74,158,255,0.12)", color: "#7EB3FF" }}>
@@ -156,44 +195,31 @@ export function MyTasks() {
           </button>
         </div>
       )}
-      <div className="mb-4">
-        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[15px] font-semibold uppercase tracking-wide mb-1.5"
-          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
-          Olá, {(() => {
-            const raw = ((isMeView ? me?.name : targetProfile?.name) ?? "você").trim().split(" ")[0];
-            return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
-          })()}! 🤩
-        </div>
-        {!disabledFeatures.has("daily_verse") && (
-          <div className="max-w-sm">
-            <p className="italic text-foreground/60 text-[13px] leading-relaxed text-balance">
-              "{dailyVerse.text}"
-            </p>
-            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "color-mix(in srgb, var(--lz-accent-ink) 80%, transparent)" }}>
-              {dailyVerse.reference}
-            </p>
-          </div>
-        )}
-      </div>
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-9">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7">
         <div>
-          <h1 className="text-[24px] sm:text-[32px] font-semibold text-foreground leading-none tracking-tight whitespace-nowrap">Minhas demandas</h1>
-          <p className="text-sm text-foreground/50 mt-2.5">
-            {tasks.length} {tasks.length === 1 ? "demanda atribuída" : "demandas atribuídas"}
-          </p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-foreground/40 mb-2">Minhas demandas</p>
+          <h1 className="text-[32px] sm:text-[44px] font-semibold text-foreground leading-[1.02] tracking-tight">
+            Olá,{" "}
+            <span className="font-criador-serif italic font-normal normal-case" style={{ color: "var(--lz-accent-ink)" }}>
+              {(() => {
+                const raw = ((isMeView ? me?.name : targetProfile?.name) ?? "você").trim().split(" ")[0];
+                return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+              })()}
+            </span>! 🤩
+          </h1>
+          {!disabledFeatures.has("daily_verse") && (
+            <div className="max-w-sm mt-3">
+              <p className="italic text-foreground/60 text-[13px] leading-relaxed text-balance">"{dailyVerse.text}"</p>
+              <p className="mt-1 text-[10.5px] font-bold uppercase tracking-[0.09em]" style={{ color: "var(--lz-accent-ink)" }}>{dailyVerse.reference}</p>
+            </div>
+          )}
         </div>
         {isAdmin && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <button
-              onClick={() => setShowNovaDemanda(true)}
-              className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-1.5 shrink-0 self-start"
-            >
-              <Plus size={14} /> Nova demanda
-            </button>
             <div className="flex items-center gap-2">
               <span className="text-xs text-foreground/40 shrink-0">Ver como:</span>
               <select value={viewAs} onChange={(e) => setViewAs(e.target.value)}
-                className="bg-card border border-foreground/10 text-sm text-foreground rounded-md px-3 py-1.5 outline-none focus:border-[rgb(var(--lz-brand-rgb))] min-w-0 flex-1 sm:flex-none">
+                className="bg-card border border-foreground/10 text-sm text-foreground rounded-lg px-3 py-2 outline-none focus:border-[rgb(var(--lz-brand-rgb))] min-w-0 flex-1 sm:flex-none">
                 <option value="">{me?.name} (eu)</option>
                 {profiles.filter((p) => p.id !== me?.id).map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -201,191 +227,44 @@ export function MyTasks() {
               </select>
               {targetProfile && targetId !== me?.id && <Avatar profile={targetProfile} size={28} />}
             </div>
+            <button
+              onClick={() => setShowNovaDemanda(true)}
+              className="lz-btn-primary text-[13px] font-bold px-5 py-2.5 rounded-full inline-flex items-center gap-1.5 shrink-0 self-start"
+            >
+              <Plus size={14} /> Nova demanda
+            </button>
           </div>
         )}
       </div>
 
       {showNovaDemanda && <NovaDemandaModal onClose={() => setShowNovaDemanda(false)} />}
 
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-7 lg:items-start">
+      <div className="min-w-0">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" data-tour="my-kpis">
+        {([
+          { id: "late", label: "Atrasadas", n: kpi.late, danger: true },
+          { id: "today", label: "Para hoje", n: kpi.today },
+          { id: "week", label: "Próximos 7 dias", n: kpi.week },
+          { id: "all", label: "Todas abertas", n: kpi.all },
+        ] as const).map((k) => {
+          const on = filter === k.id;
+          return (
+            <button key={k.id} type="button" aria-pressed={on}
+              onClick={() => setFilter(on && k.id !== "all" ? "all" : k.id)}
+              className="text-left rounded-2xl bg-card border px-4 py-3.5 transition hover:-translate-y-0.5"
+              style={{ borderColor: on ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 7%, transparent)", boxShadow: on ? "0 0 0 1px rgb(var(--lz-brand-rgb)) inset" : undefined }}>
+              <span className="block text-[30px] font-extrabold leading-none tabular-nums tracking-tight"
+                style={{ color: "danger" in k && k.danger && k.n > 0 ? "#FF5A47" : undefined }}>{k.n}</span>
+              <span className="block mt-1.5 text-[11.5px] font-medium text-foreground/60">{k.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {targetId && <ActivityCountsWidget monthKey={monthKey} userId={targetId} />}
 
       {targetId && <WorkStatsWidget monthKey={monthKey} userId={targetId} />}
-
-      {isMeView && googleCalendarEnabled && <UpcomingCalendarWidget />}
-
-      {isMeView && todayPublications.length > 0 && (
-        <div className="mb-6">
-          <SectionHeader
-            icon={<Instagram size={11} />}
-            iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="var(--lz-accent-ink)"
-            label="Publicações de hoje" count={todayPublications.length}
-            open={isSectionOpen("today-publications")} onToggle={() => toggleSection("today-publications")}
-          />
-          {isSectionOpen("today-publications") && (
-          <div className="bg-card rounded-lg overflow-hidden lz-stagger">
-            {todayPublications.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => {
-                  navigate({ to: "/cliente/$clientId", params: { clientId: p.clientId } });
-                  selectMonth(p.monthKey);
-                  setTimeout(() => { openItem(p.id); flash(p.id); }, 30);
-                  setTimeout(() => flash(null), 2050);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-foreground/[0.03] transition-colors text-left border-b border-foreground/5 last:border-b-0"
-              >
-                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
-                  style={{ backgroundColor: p.clientColor + "33", color: p.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : p.clientColor }}>
-                  {p.clientName}
-                </span>
-                <span className="text-[11px] text-foreground/50 uppercase font-semibold shrink-0">
-                  {p.type === "post" && p.postFormat
-                    ? (POST_FORMAT_LABEL[p.postFormat as keyof typeof POST_FORMAT_LABEL] ?? p.postFormat)
-                    : (CONTENT_TYPE_LABEL[p.type as keyof typeof CONTENT_TYPE_LABEL] ?? p.type)}
-                </span>
-                <span className="text-sm text-foreground/90 truncate flex-1">{p.title}</span>
-                <span className="text-[10px] text-foreground/40 shrink-0 tabular-nums">
-                  {new Date(p.scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              </button>
-            ))}
-          </div>
-          )}
-        </div>
-      )}
-
-      {isAdmin && isMeView && whatsappRemindersEnabled && weeklyReminders.length > 0 && (
-        <div className="mb-6">
-          <SectionHeader
-            icon={<MessageCircle size={11} />}
-            iconBg="rgba(37,211,102,0.18)" iconColor="#25D366"
-            label="Avisar clientes no WhatsApp" count={weeklyReminders.length}
-            open={isSectionOpen("weekly-reminders")} onToggle={() => toggleSection("weekly-reminders")}
-          />
-          {isSectionOpen("weekly-reminders") && (
-          <div className="bg-card rounded-lg overflow-hidden lz-stagger">
-            {weeklyReminders.map((r) => (
-              <div key={r.clientId} className="flex items-center gap-3 px-4 py-3 border-b border-foreground/5 last:border-b-0">
-                <button
-                  onClick={() => { openFicha(r.clientId); openStageComposer(r.clientId); }}
-                  className="flex-1 min-w-0 flex items-center gap-2 text-left hover:opacity-80 transition"
-                >
-                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
-                    style={{ backgroundColor: r.clientColor + "33", color: r.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : r.clientColor }}>
-                    {r.clientName}
-                  </span>
-                  <span className="text-sm text-foreground/70 truncate">{r.stageName ?? "Sem etapa definida"}</span>
-                </button>
-                <button
-                  onClick={() => logClientStageUpdate.mutate({
-                    data: {
-                      clientId: r.clientId, stageId: r.stageId ?? undefined,
-                      message: r.stageDescription ?? "Atualização enviada.", trigger: "weekly_nudge",
-                    },
-                  })}
-                  className="shrink-0 text-[11px] font-semibold px-3 py-1.5 rounded-md inline-flex items-center gap-1.5"
-                  style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-                >
-                  <Check size={12} strokeWidth={3} /> Marcar feito
-                </button>
-              </div>
-            ))}
-          </div>
-          )}
-        </div>
-      )}
-
-      {canFinanceiro && isMeView && upcomingPayments.length > 0 && (
-        <div className="mb-6">
-          <SectionHeader
-            icon={<Wallet size={11} />}
-            iconBg="rgba(91,168,138,0.18)" iconColor="#5BA88A"
-            label="Pagamentos próximos" count={upcomingPayments.length}
-            open={isSectionOpen("upcoming-payments")} onToggle={() => toggleSection("upcoming-payments")}
-          />
-          {isSectionOpen("upcoming-payments") && (
-          <div className="bg-card rounded-lg overflow-hidden lz-stagger">
-            {upcomingPayments.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => navigate({ to: "/configuracoes", search: { tab: "pagamentos" } })}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-foreground/[0.03] transition-colors text-left border-b border-foreground/5 last:border-b-0"
-              >
-                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
-                  style={{ backgroundColor: p.color + "33", color: p.color.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : p.color }}>
-                  {p.name}
-                </span>
-                <span className="text-sm text-foreground/70 flex-1">
-                  {p.daysUntil < 0 ? `Atrasado há ${Math.abs(p.daysUntil)}d` : p.daysUntil === 0 ? "Vence hoje" : `Vence em ${p.daysUntil}d`}
-                </span>
-                <span className="text-[11px] text-foreground/40 shrink-0 tabular-nums">
-                  {new Date(p.nextDueDate + "T00:00:00").toLocaleDateString("pt-BR")}
-                </span>
-              </button>
-            ))}
-          </div>
-          )}
-        </div>
-      )}
-
-      {isMeView && mentions.length > 0 && (
-        <div className="mb-6">
-          <SectionHeader
-            icon={<AtSign size={11} />}
-            iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="var(--lz-accent-ink)"
-            label="Mencionado em" count={mentions.length}
-            open={isSectionOpen("mentions")} onToggle={() => toggleSection("mentions")}
-          />
-          {isSectionOpen("mentions") && (
-          <div className="bg-card rounded-lg overflow-hidden lz-stagger">
-            {mentions.map((m: any) => (
-              <button
-                key={m.mentionId}
-                onClick={() => {
-                  markMentionRead.mutate({ data: { mentionId: m.mentionId } });
-                  navigate({ to: "/cliente/$clientId", params: { clientId: m.clientId } });
-                  selectMonth(m.monthKey);
-                  setTimeout(() => { openItem(m.itemId); flash(m.itemId); }, 30);
-                  setTimeout(() => flash(null), 2050);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-foreground/[0.03] transition-colors text-left border-b border-foreground/5 last:border-b-0"
-              >
-                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider shrink-0"
-                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
-                  @MENÇÃO
-                </span>
-                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
-                  style={{ backgroundColor: m.clientColor + "33", color: m.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : m.clientColor }}>
-                  {m.clientName}
-                </span>
-                <span className="text-[11px] text-foreground/50 uppercase font-semibold shrink-0">
-                  {CONTENT_TYPE_LABEL[m.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item"} {String(m.idx).padStart(2, "0")}
-                </span>
-                <span className="text-sm text-foreground/90 truncate flex-1">
-                  {m.authorName ? <span className="text-foreground/50">{m.authorName}: </span> : null}{m.snippet || m.title}
-                </span>
-                <span className="text-[10px] text-foreground/40 shrink-0 tabular-nums">
-                  {new Date(m.mentionedAt).toLocaleDateString("pt-BR")}
-                </span>
-              </button>
-            ))}
-          </div>
-          )}
-        </div>
-      )}
-
-      <div className="inline-flex bg-card border border-foreground/6 rounded-lg p-1 mb-6" data-tour="my-week">
-        {[
-          { id: "list" as const, label: "Lista", Icon: List },
-          { id: "week" as const, label: "Minha Semana", Icon: CalendarDays },
-        ].map((v) => (
-          <button key={v.id} onClick={() => setView(v.id)}
-            className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md transition-colors ${
-              view === v.id ? "bg-[rgb(var(--lz-brand-rgb))] text-black" : "text-foreground/60 hover:text-foreground"}`}>
-            <v.Icon size={12} /> {v.label}
-          </button>
-        ))}
-      </div>
 
       {storiesHoje.length > 0 && (
         <div className="space-y-3 mb-8 lz-stagger">
@@ -434,6 +313,51 @@ export function MyTasks() {
         </div>
       )}
 
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div className="inline-flex bg-card border border-foreground/6 rounded-xl p-1" data-tour="my-week">
+          {[
+            { id: "list" as const, label: "Lista", Icon: List },
+            { id: "week" as const, label: "Minha Semana", Icon: CalendarDays },
+          ].map((v) => (
+            <button key={v.id} onClick={() => setView(v.id)}
+              className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg transition-colors ${
+                view === v.id ? "bg-[rgb(var(--lz-brand-rgb))] text-black" : "text-foreground/60 hover:text-foreground"}`}>
+              <v.Icon size={12} /> {v.label}
+            </button>
+          ))}
+        </div>
+        {view === "list" && (
+          <div className="inline-flex bg-card border border-foreground/6 rounded-xl p-1">
+            {([{ id: "status", label: "Por etapa" }, { id: "due", label: "Por prazo" }] as const).map((g) => (
+              <button key={g.id} onClick={() => setGroupBy(g.id)}
+                className={`text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg transition-colors ${
+                  groupBy === g.id ? "bg-[rgb(var(--lz-brand-rgb))] text-black" : "text-foreground/60 hover:text-foreground"}`}>
+                {g.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {clientChips.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 mb-5 -mx-1 px-1" style={{ scrollbarWidth: "none" }}>
+          {[{ id: null as string | null, name: "Todos os clientes", color: "", n: tasks.length }, ...clientChips].map((c) => {
+            const on = clientFilter === c.id;
+            return (
+              <button key={c.id ?? "all"} onClick={() => setClientFilter(c.id)} aria-pressed={on}
+                className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition"
+                style={{
+                  background: on ? "var(--foreground)" : "var(--card)",
+                  color: on ? "var(--background)" : "color-mix(in srgb, var(--foreground) 65%, transparent)",
+                  borderColor: on ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 8%, transparent)",
+                }}>
+                {c.color && <span className="w-[7px] h-[7px] rounded-full" style={{ background: c.color }} />}
+                {c.name} <span className="text-[10.5px] opacity-70">{c.n}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {view === "week" ? (
         <MyWeekView userId={isAdmin && viewAs ? viewAs : undefined} />
       ) : tasksError ? (
@@ -447,48 +371,35 @@ export function MyTasks() {
           ))}
         </div>
       ) : tasks.length === 0 ? (
-        <div className="border border-dashed border-foreground/10 rounded-lg p-16 text-center">
+        <div className="border border-dashed border-foreground/10 rounded-2xl p-16 text-center">
           <p className="text-foreground/50 text-sm">Tudo em dia — nenhuma demanda aberta pra você.</p>
         </div>
+      ) : filteredTasks.length === 0 ? (
+        <div className="border border-dashed border-foreground/10 rounded-2xl p-12 text-center">
+          <p className="text-foreground/50 text-sm">Nenhuma demanda com esse filtro.</p>
+          <button onClick={() => { setFilter("all"); setClientFilter(null); }} className="mt-3 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--lz-accent-ink)" }}>Limpar filtros</button>
+        </div>
       ) : (
-        <div className="space-y-6 lz-stagger">
-          {effectiveStatusOrder.map((s) => {
-            if (!grouped[s].length) return null;
-            const m = getStatusMeta(s, labelOverrides); const I = getStatusIcon(s);
-            const sectionId = `status:${s}`;
-            const open = isSectionOpen(sectionId);
+        <div className="space-y-5 lz-stagger">
+          {(groupBy === "status"
+            ? effectiveStatusOrder.filter((s) => grouped[s].length).map((s) => {
+                const m = getStatusMeta(s, labelOverrides); const I = getStatusIcon(s);
+                return { id: `status:${s}`, label: m.label, bg: m.bg, color: m.color, icon: <I size={11} />, items: grouped[s], showStage: false };
+              })
+            : dueGroups.map((g) => ({ id: g.id, label: g.label, bg: hexA(g.color, 0.18), color: g.color, icon: <Clock size={11} />, items: g.items, showStage: true }))
+          ).map((g) => {
+            const open = isSectionOpen(g.id);
             return (
-              <div key={s}>
-                <SectionHeader
-                  icon={<I size={11} />}
-                  iconBg={m.bg} iconColor={m.color}
-                  label={m.label} count={grouped[s].length}
-                  open={open} onToggle={() => toggleSection(sectionId)}
-                />
+              <div key={g.id}>
+                <SectionHeader icon={g.icon} iconBg={g.bg} iconColor={g.color} label={g.label} count={g.items.length}
+                  open={open} onToggle={() => toggleSection(g.id)} />
                 {open && (
-                <div className="bg-card rounded-lg overflow-hidden lz-stagger">
-                  {grouped[s].map((t) => (
-                    <button key={t.id}
-                      onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId } }); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-foreground/[0.03] transition-colors text-left border-b border-foreground/5 last:border-b-0">
-                      <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
-                        style={{ backgroundColor: t.clientColor + "33", color: t.clientColor.toUpperCase() === "#FFFFFF" ? "#FFFFFF" : t.clientColor }}>
-                        {t.clientName}
-                      </span>
-                      {t.clientCategory === "Avulsos" && (
-                        <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
-                          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
-                          Avulso
-                        </span>
-                      )}
-                      <span className="text-[11px] text-foreground/50 uppercase font-semibold">
-                        {t.type === "post" ? "Post" : t.type === "reel" ? "Reels" : "Item"} {String(t.idx).padStart(2, "0")}
-                      </span>
-                      <span className="text-sm text-foreground truncate flex-1">{t.title}</span>
-                      <DeadlinePill dueDate={(t as any).dueDate} status={t.status} />
-                    </button>
-                  ))}
-                </div>
+                  <div className="grid gap-2 lz-stagger">
+                    {g.items.map((t: any) => (
+                      <TaskRow key={t.id} t={t} showStage={g.showStage} labelOverrides={labelOverrides}
+                        onOpen={() => { navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId } }); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }} />
+                    ))}
+                  </div>
                 )}
               </div>
             );
@@ -501,6 +412,87 @@ export function MyTasks() {
           <ProductivityBlock prod={prod} monthKey={monthKey} />
         </Suspense>
       )}
+      </div>
+      <aside className="space-y-4 mt-8 lg:mt-0 lg:sticky lg:top-4">
+        {isMeView && googleCalendarEnabled && <AgendaRail />}
+
+        {isMeView && todayPublications.length > 0 && (
+          <RailCard icon={<Instagram size={11} />} iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="var(--lz-accent-ink)"
+            label="Publicações de hoje" count={todayPublications.length}
+            open={isSectionOpen("today-publications")} onToggle={() => toggleSection("today-publications")}>
+            {todayPublications.map((p) => (
+              <RailRow key={p.id}
+                lead={new Date(p.scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                title={p.title}
+                sub={<><span style={{ color: p.clientColor }}>{p.clientName}</span> · {p.type === "post" && p.postFormat
+                  ? (POST_FORMAT_LABEL[p.postFormat as keyof typeof POST_FORMAT_LABEL] ?? p.postFormat)
+                  : (CONTENT_TYPE_LABEL[p.type as keyof typeof CONTENT_TYPE_LABEL] ?? p.type)}</>}
+                onClick={() => {
+                  navigate({ to: "/cliente/$clientId", params: { clientId: p.clientId } });
+                  selectMonth(p.monthKey);
+                  setTimeout(() => { openItem(p.id); flash(p.id); }, 30);
+                  setTimeout(() => flash(null), 2050);
+                }} />
+            ))}
+          </RailCard>
+        )}
+
+        {isAdmin && isMeView && whatsappRemindersEnabled && weeklyReminders.length > 0 && (
+          <RailCard icon={<MessageCircle size={11} />} iconBg="rgba(37,211,102,0.18)" iconColor="#25D366"
+            label="Avisar clientes no WhatsApp" count={weeklyReminders.length}
+            open={isSectionOpen("weekly-reminders")} onToggle={() => toggleSection("weekly-reminders")}>
+            {weeklyReminders.map((r) => (
+              <div key={r.clientId} className="flex items-center gap-2.5 px-1.5 py-2">
+                <button onClick={() => { openFicha(r.clientId); openStageComposer(r.clientId); }} className="flex-1 min-w-0 text-left hover:opacity-80 transition">
+                  <span className="block text-[12.5px] font-semibold truncate" style={{ color: r.clientColor }}>{r.clientName}</span>
+                  <span className="block text-[11px] text-foreground/45 truncate">{r.stageName ?? "Sem etapa definida"}</span>
+                </button>
+                <button
+                  onClick={() => logClientStageUpdate.mutate({ data: { clientId: r.clientId, stageId: r.stageId ?? undefined, message: r.stageDescription ?? "Atualização enviada.", trigger: "weekly_nudge" } })}
+                  className="shrink-0 text-[10.5px] font-extrabold px-2.5 py-1.5 rounded-full inline-flex items-center gap-1"
+                  style={{ backgroundColor: "#25D366", color: "#06210F" }}>
+                  <Check size={11} strokeWidth={3} /> Marcar feito
+                </button>
+              </div>
+            ))}
+          </RailCard>
+        )}
+
+        {canFinanceiro && isMeView && upcomingPayments.length > 0 && (
+          <RailCard icon={<Wallet size={11} />} iconBg="rgba(91,168,138,0.18)" iconColor="#5BA88A"
+            label="Pagamentos próximos" count={upcomingPayments.length}
+            open={isSectionOpen("upcoming-payments")} onToggle={() => toggleSection("upcoming-payments")}>
+            {upcomingPayments.map((p) => (
+              <RailRow key={p.id}
+                title={p.name} titleColor={p.color}
+                sub={new Date(p.nextDueDate + "T00:00:00").toLocaleDateString("pt-BR")}
+                trail={<span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "rgba(245,166,35,0.14)", color: "#F5A623" }}>
+                  {p.daysUntil < 0 ? `Atrasado ${Math.abs(p.daysUntil)}d` : p.daysUntil === 0 ? "Vence hoje" : `em ${p.daysUntil}d`}</span>}
+                onClick={() => navigate({ to: "/configuracoes", search: { tab: "pagamentos" } })} />
+            ))}
+          </RailCard>
+        )}
+
+        {isMeView && mentions.length > 0 && (
+          <RailCard icon={<AtSign size={11} />} iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="var(--lz-accent-ink)"
+            label="Mencionado em" count={mentions.length}
+            open={isSectionOpen("mentions")} onToggle={() => toggleSection("mentions")}>
+            {mentions.map((m: any) => (
+              <RailRow key={m.mentionId}
+                title={<>{m.authorName ? <span className="text-foreground/50">{m.authorName}: </span> : null}{m.snippet || m.title}</>}
+                sub={<><span style={{ color: m.clientColor }}>{m.clientName}</span> · {CONTENT_TYPE_LABEL[m.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item"} {String(m.idx).padStart(2, "0")}</>}
+                onClick={() => {
+                  markMentionRead.mutate({ data: { mentionId: m.mentionId } });
+                  navigate({ to: "/cliente/$clientId", params: { clientId: m.clientId } });
+                  selectMonth(m.monthKey);
+                  setTimeout(() => { openItem(m.itemId); flash(m.itemId); }, 30);
+                  setTimeout(() => flash(null), 2050);
+                }} />
+            ))}
+          </RailCard>
+        )}
+      </aside>
+      </div>
     </div>
   );
 }
@@ -652,60 +644,163 @@ function groupEventsByDay(events: any[]): { dateStr: string; events: any[] }[] {
   return groups;
 }
 
-const COLLAPSED_EVENT_COUNT = 5;
+function RailCard({ icon, iconBg, iconColor, label, count, open, onToggle, children }: {
+  icon: React.ReactNode; iconBg: string; iconColor: string; label: string; count: number;
+  open: boolean; onToggle: () => void; children: React.ReactNode;
+}) {
+  return (
+    <section className="bg-card border border-foreground/6 rounded-2xl p-3.5">
+      <SectionHeader icon={icon} iconBg={iconBg} iconColor={iconColor} label={label} count={count} open={open} onToggle={onToggle} />
+      {open && <div className="-mt-1 divide-y divide-foreground/5">{children}</div>}
+    </section>
+  );
+}
 
-function UpcomingCalendarWidget() {
+function RailRow({ lead, title, titleColor, sub, trail, onClick }: {
+  lead?: string; title: React.ReactNode; titleColor?: string; sub?: React.ReactNode; trail?: React.ReactNode; onClick: () => void;
+}) {
+  return (
+    <button onClick={onClick} className="w-full flex items-center gap-2.5 px-1.5 py-2 rounded-lg text-left hover:bg-foreground/[0.04] transition-colors">
+      {lead && <span className="text-[11px] font-bold text-foreground/50 tabular-nums w-10 shrink-0">{lead}</span>}
+      <span className="min-w-0 flex-1">
+        <span className="block text-[12.5px] font-semibold truncate" style={titleColor ? { color: titleColor } : undefined}>{title}</span>
+        {sub && <span className="block text-[11px] text-foreground/45 truncate">{sub}</span>}
+      </span>
+      {trail}
+    </button>
+  );
+}
+
+function TaskRow({ t, showStage, labelOverrides, onOpen }: {
+  t: any; showStage: boolean; labelOverrides: Map<string, string>; onOpen: () => void;
+}) {
+  const sm = getStatusMeta(t.status as Status, labelOverrides);
+  return (
+    <button onClick={onOpen}
+      className="w-full grid grid-cols-[5px_minmax(0,1fr)_auto] gap-3.5 items-center bg-card border border-foreground/6 rounded-[14px] py-3 pr-3.5 text-left overflow-hidden transition hover:translate-x-[3px] hover:border-foreground/15">
+      <span className="self-stretch rounded-r" style={{ background: t.clientColor }} />
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-foreground truncate">{t.title}</span>
+        <span className="flex flex-wrap items-center gap-2 mt-1 text-[11.5px]">
+          <span className="inline-flex items-center gap-1.5 font-bold" style={{ color: t.clientColor }}>
+            <i className="w-[7px] h-[7px] rounded-full" style={{ background: t.clientColor }} />{t.clientName}
+          </span>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-foreground/[0.06] text-foreground/55">
+            {t.type === "post" ? "Post" : t.type === "reel" ? "Reels" : "Item"} {String(t.idx).padStart(2, "0")}
+          </span>
+          {t.clientCategory === "Avulsos" && (
+            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider"
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>Avulso</span>
+          )}
+          {showStage && (
+            <span className="text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ background: sm.bg, color: sm.color }}>{sm.label}</span>
+          )}
+        </span>
+      </span>
+      <DeadlinePill dueDate={t.dueDate} status={t.status} />
+    </button>
+  );
+}
+
+const BR_FMT = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" });
+function eventDay(ev: any): string {
+  return ev.allDay ? String(ev.start).slice(0, 10) : BR_FMT.format(new Date(ev.start));
+}
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+/** Agenda do Google em linha do tempo: tira dos próximos 7 dias + eventos do
+ * dia escolhido, com marcador de "agora" e destaque pro que está rolando. */
+function AgendaRail() {
   const { data } = useQuery(upcomingCalendarEventsQO());
   const [openEvent, setOpenEvent] = useState<any | null>(null);
-  const [expanded, setExpanded] = useState(false);
-  if (!data?.connected || !data.events?.length) return null;
-  const hasMore = data.events.length > COLLAPSED_EVENT_COUNT;
-  const visibleEvents = expanded ? data.events : data.events.slice(0, COLLAPSED_EVENT_COUNT);
-  const groups = groupEventsByDay(visibleEvents);
+  const [picked, setPicked] = useState<string | null>(null);
+  const events: any[] = data?.events ?? [];
+  const days = useMemo(() => {
+    const today = BR_FMT.format(new Date());
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(`${today}T12:00:00-03:00`);
+      d.setDate(d.getDate() + i);
+      const str = BR_FMT.format(d);
+      return {
+        str, isToday: i === 0,
+        wd: i === 0 ? "hoje" : d.toLocaleDateString("pt-BR", { weekday: "short", timeZone: "America/Sao_Paulo" }).replace(".", ""),
+        num: Number(str.slice(8, 10)),
+      };
+    });
+  }, []);
+  if (!data?.connected || !events.length) return null;
+  const byDay = new Map<string, any[]>();
+  events.forEach((e) => { const k = eventDay(e); byDay.set(k, [...(byDay.get(k) ?? []), e]); });
+  const selected = picked ?? days.find((d) => byDay.has(d.str))?.str ?? days[0].str;
+  const list = (byDay.get(selected) ?? []).slice().sort((a, b) => (a.allDay === b.allDay ? 0 : a.allDay ? -1 : 1));
+  const isToday = selected === days[0].str;
+  const nowMs = Date.now();
+  const nextIdx = isToday ? list.findIndex((e) => !e.allDay && new Date(e.start).getTime() > nowMs) : -1;
+
   return (
-    <div className="mb-6 bg-card rounded-lg overflow-hidden">
-      <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-        <span className="rounded p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}>
-          <CalendarClock size={11} />
+    <section className="bg-card border border-foreground/6 rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="rounded-md p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}><CalendarClock size={11} /></span>
+        <h2 className="text-[11.5px] uppercase font-semibold tracking-wide text-foreground/60">Agenda</h2>
+        <span className="ml-auto inline-flex items-center gap-1.5 text-[10.5px] font-bold px-2 py-0.5 rounded-full" style={{ color: "#5BC48A", background: "rgba(91,196,138,0.14)" }}>
+          <i className="w-1.5 h-1.5 rounded-full" style={{ background: "#5BC48A" }} />Google Agenda
         </span>
-        <h2 className="text-[11px] uppercase font-bold tracking-wider text-foreground/60">Agenda</h2>
       </div>
-      {groups.map((group) => (
-        <div key={group.dateStr}>
-          <div className="px-4 pt-2.5 pb-1 text-[11px] font-bold text-foreground/70">
-            {dayGroupLabel(group.dateStr)}
-          </div>
-          <div className="divide-y divide-white/[0.05] lz-stagger">
-            {group.events.map((ev: any) => (
-              <button
-                key={ev.id}
-                onClick={() => setOpenEvent(ev)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-foreground/[0.03] transition-colors text-left"
-              >
-                <span className="text-[11px] text-foreground/40 tabular-nums shrink-0">
-                  {ev.allDay ? "Dia todo" : new Date(ev.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="text-sm text-foreground/90 truncate block">{ev.title}</span>
-                  {ev.attendees?.length > 0 && (
-                    <span className="text-[11px] text-foreground/40 truncate block">com {ev.attendees.join(", ")}</span>
-                  )}
-                </span>
-              </button>
-            ))}
-          </div>
+      <div className="grid grid-cols-7 gap-1 mb-4">
+        {days.map((d) => {
+          const on = d.str === selected, has = byDay.has(d.str);
+          return (
+            <button key={d.str} onClick={() => setPicked(d.str)} aria-pressed={on}
+              className="rounded-xl py-1.5 text-center transition-colors hover:bg-foreground/[0.05]"
+              style={on ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" } : undefined}>
+              <span className="block text-[9.5px] font-bold uppercase tracking-wide" style={{ opacity: on ? 0.65 : 0.4 }}>{d.wd}</span>
+              <span className="block text-[15px] font-bold tabular-nums leading-tight">{d.num}</span>
+              <i className="block w-1 h-1 rounded-full mx-auto mt-1" style={{ background: on ? "#0D0D0D" : "rgb(var(--lz-brand-rgb))", opacity: has ? 1 : 0 }} />
+            </button>
+          );
+        })}
+      </div>
+      {list.length === 0 ? (
+        <p className="text-center text-[12.5px] text-foreground/40 py-5">Dia livre. Nenhum compromisso.</p>
+      ) : (
+        <div className="grid gap-2">
+          {list.map((ev, i) => {
+            const endMs = ev.end ? new Date(ev.end).getTime() : null;
+            const past = isToday && !ev.allDay && endMs !== null && endMs < nowMs;
+            const live = isToday && !ev.allDay && new Date(ev.start).getTime() <= nowMs && (endMs ?? 0) > nowMs;
+            return (
+              <div key={ev.id}>
+                {i === nextIdx && (
+                  <div className="grid grid-cols-[44px_1fr] gap-2.5 items-center mb-2 text-[10px] font-extrabold tracking-wider" style={{ color: "#FF5A47" }}>
+                    <span>AGORA</span><span className="h-[2px] rounded" style={{ background: "#FF5A47" }} />
+                  </div>
+                )}
+                <button onClick={() => setOpenEvent(ev)} className={`w-full grid grid-cols-[44px_minmax(0,1fr)] gap-2.5 text-left group ${past ? "opacity-50" : ""}`}>
+                  <span className="text-[11.5px] font-bold text-foreground/55 tabular-nums pt-2.5">{ev.allDay ? "Dia todo" : fmtTime(ev.start)}</span>
+                  <span className="rounded-xl px-3 py-2 border-l-[3px] transition-transform group-hover:translate-x-0.5"
+                    style={{
+                      borderColor: "rgb(var(--lz-brand-rgb))",
+                      background: live ? "rgba(var(--lz-brand-light-rgb),0.16)" : "color-mix(in srgb, var(--foreground) 5%, transparent)",
+                      boxShadow: live ? "0 0 0 1px rgb(var(--lz-brand-rgb)) inset" : undefined,
+                    }}>
+                    <b className="block text-[13px] font-semibold leading-tight text-foreground">{ev.title}</b>
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[11px] text-foreground/55">
+                      {!ev.allDay && ev.end && <span className="tabular-nums">{fmtTime(ev.start)} – {fmtTime(ev.end)}</span>}
+                      {ev.attendees?.length > 0 && <span className="inline-flex items-center gap-1"><Users size={10} />{ev.attendees.length === 1 ? ev.attendees[0] : `${ev.attendees[0]} +${ev.attendees.length - 1}`}</span>}
+                      {ev.meetLink && <span className="inline-flex items-center gap-1 font-bold px-1.5 py-0.5 rounded-full" style={{ color: "#6FA4FF", background: "rgba(111,164,255,0.14)" }}><VideoIcon size={10} />Meet</span>}
+                      {ev.location && <span className="inline-flex items-center gap-1 truncate max-w-[140px]"><MapPin size={10} />{String(ev.location).split(",")[0]}</span>}
+                    </span>
+                  </span>
+                </button>
+              </div>
+            );
+          })}
         </div>
-      ))}
-      {hasMore && (
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-foreground/50 hover:text-foreground/80 transition-colors border-t border-white/[0.05]"
-        >
-          {expanded ? <>Mostrar menos <ChevronUp size={12} /></> : <>Mostrar mais ({data.events.length - COLLAPSED_EVENT_COUNT}) <ChevronDown size={12} /></>}
-        </button>
       )}
       {openEvent && <CalendarEventModal event={openEvent} onClose={() => setOpenEvent(null)} />}
-    </div>
+    </section>
   );
 }
 
@@ -731,6 +826,13 @@ function CalendarEventModal({ event, onClose }: { event: any; onClose: () => voi
         )}
         {event.description && (
           <p className="text-[13px] text-foreground/70 mt-4 leading-relaxed whitespace-pre-wrap">{event.description}</p>
+        )}
+        {event.meetLink && (
+          <a href={event.meetLink} target="_blank" rel="noopener noreferrer"
+            className="mt-6 mr-2 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+            <VideoIcon size={12} /> Entrar no Meet
+          </a>
         )}
         {event.link && (
           <a

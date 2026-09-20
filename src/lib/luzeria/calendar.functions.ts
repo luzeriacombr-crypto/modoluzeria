@@ -237,6 +237,7 @@ export const getUpcomingCalendarEvents = createServerFn({ method: "GET" })
         location: e.location ?? null,
         description: e.description ?? null,
         link: e.htmlLink ?? null,
+        meetLink: e.hangoutLink ?? null,
         // Exclui o próprio dono (é óbvio que ele "vai" ao próprio
         // compromisso) e quem recusou o convite.
         attendees: ((e.attendees ?? []) as any[])
