@@ -4,13 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link, useLocation } from "@tanstack/react-router";
 import { Check, ChevronDown, Lock } from "lucide-react";
 import { getPublicPlans, publicSignup } from "@/lib/luzeria/signup.functions";
-import { salesPageBlocksQO } from "@/lib/luzeria/queries";
 import { SALES_FAQ } from "@/lib/luzeria/sales-knowledge";
 import { SalesChatWidget } from "./SalesChatWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { DemoRequestModal } from "./DemoRequestModal";
-import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, Reveal, HeroSection, renderBlockNode, useReveal, staggerStyle } from "./salesPageBlocks";
+import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, Reveal, useReveal, staggerStyle } from "./salesPageBlocks";
+import { SalesHero, SalesNumbers, SalesBeforeAfter, SalesFeatures, SalesAiSpotlight, SalesStickyCta } from "./SalesLanding";
 import { InteractiveDashboardDemo } from "./SalesInteractiveDashboard";
 import { PasswordInput } from "./PasswordInput";
 
@@ -36,7 +36,6 @@ export function SalesPage() {
   const refCode = searchParams.get("refCode") || undefined;
 
   const plans = useQuery({ queryKey: ["public-plans"], queryFn: () => getPublicPlans() });
-  const { data: blocks = [] } = useQuery(salesPageBlocksQO());
   const signup = useServerFn(publicSignup);
 
   const [planId, setPlanId] = useState<string | null>(null);
@@ -56,8 +55,6 @@ export function SalesPage() {
 
   const plansReveal = useReveal<HTMLDivElement>();
   const selectablePlans = (plans.data ?? []).filter((p) => p.priceCents != null);
-  const hero = blocks.find((b) => b.type === "hero");
-  const restBlocks = blocks.filter((b) => b.type !== "hero");
 
   function scrollToForm(id?: string) {
     if (id) setPlanId(id);
@@ -200,19 +197,27 @@ export function SalesPage() {
               Blog
             </Link>
           </div>
+          <nav className="hidden md:flex items-center gap-7 text-sm font-semibold text-foreground/70">
+            <a href="#funcoes" className="hover:text-foreground transition">Funções</a>
+            <a href="#ia" className="hover:text-foreground transition">IA</a>
+            <a href="#planos" className="hover:text-foreground transition">Planos</a>
+            <a href="#duvidas" className="hover:text-foreground transition">Dúvidas</a>
+          </nav>
           <Link to="/auth" className="text-sm text-foreground/70 hover:text-foreground transition">
             Já tem conta? Entrar →
           </Link>
         </div>
       </header>
 
-      {/* Hero + blocos de conteúdo, editáveis em Configurações > Site */}
-      {hero && <HeroSection content={hero.content} onCtaClick={() => scrollToForm()} />}
+      <SalesHero onCta={() => scrollToForm()} />
+      <SalesNumbers />
+      <SalesBeforeAfter />
+      <SalesFeatures />
+      <SalesAiSpotlight onCta={() => scrollToForm()} />
       <InteractiveDashboardDemo />
-      {restBlocks.map((b) => renderBlockNode(b))}
 
       {/* Planos */}
-      <section style={{ background: BG_BLUE_2 }} className="border-t border-foreground/10">
+      <section id="planos" style={{ background: BG_BLUE_2 }} className="border-t border-foreground/10">
         <Reveal className="px-5 sm:px-10 max-w-[1100px] mx-auto py-14">
           <div className="flex justify-center mb-3">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full"
@@ -258,7 +263,7 @@ export function SalesPage() {
                     </div>
                     <div className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide px-2 py-1 rounded-full mb-4"
                       style={{ background: "rgba(215,255,63,0.15)", color: LIME }}>
-                      🎟️ Cupom de estreia aplicado · -30%
+                      🎟️ Preço de estreia · -{Math.round((1 - 1 / 1.3) * 100)}%
                     </div>
                     <div className="text-foreground/50 text-sm mb-6">
                       até {p.maxClients} clientes · até {p.maxCollaborators} colaboradores
@@ -380,7 +385,7 @@ export function SalesPage() {
       </section>
 
       {/* FAQ */}
-      <section style={{ background: BG_GRAY }} className="border-t border-foreground/10">
+      <section id="duvidas" style={{ background: BG_GRAY }} className="border-t border-foreground/10">
         <div className="px-5 sm:px-10 max-w-[720px] mx-auto py-14">
         <h2 className="font-criador-serif normal-case text-3xl sm:text-4xl mb-8">Dúvidas frequentes</h2>
         <div className="space-y-3">
@@ -391,7 +396,7 @@ export function SalesPage() {
         </div>
       </section>
 
-      <footer style={{ background: BG_BLUE }} className="px-5 sm:px-10 py-10 text-center text-foreground/30 text-xs">
+      <footer style={{ background: BG_BLUE }} className="px-5 sm:px-10 py-10 pb-24 sm:pb-10 text-center text-foreground/30 text-xs">
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mb-4 max-w-2xl mx-auto">
           <Link to="/blog" className="underline hover:text-foreground/50 transition">Blog</Link>
           <Link to="/selecao-de-fotos-para-fotografos" className="underline hover:text-foreground/50 transition">Seleção de Fotos</Link>
@@ -407,6 +412,7 @@ export function SalesPage() {
         <Link to="/termos" className="underline hover:text-foreground/50 transition">Termos de Uso</Link>
       </footer>
 
+      <SalesStickyCta onCta={() => scrollToForm()} />
       <SalesChatWidget />
 
       {showDemoModal && <DemoRequestModal onClose={() => setShowDemoModal(false)} />}
