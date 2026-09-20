@@ -53,7 +53,7 @@ import {
 import {
   getMyNotificationPreferences, setMyNotificationPreferences,
 } from "./automations.functions";
-import { listAutomationRules, createAutomationRule, deleteAutomationRule } from "./automation-rules.functions";
+import { listAutomationRules, createAutomationRule, deleteAutomationRule, setAutomationRuleActive, testAutomationRule } from "./automation-rules.functions";
 import { listClientTemplates, upsertClientTemplate, deleteClientTemplate } from "./client-templates.functions";
 import { listAgencyStories, listMyStoriesToday, setAgencyStoriesDay, setAgencyStoriesDone, getStoriesInspiracoes, setStoriesInspiracoes, gerarStoriesInspiracoes } from "./agency-stories.functions";
 import { listMyBugReports, listAllBugReports, updateBugReportStatus, sendBugReportMessage } from "./bug-reports.functions";
@@ -1640,6 +1640,16 @@ export function useApi() {
     createAutomationRule: useMutation({
       mutationFn: useServerFn(createAutomationRule),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["automation-rules"] }),
+    }),
+    setAutomationRuleActive: useMutation({
+      mutationFn: useServerFn(setAutomationRuleActive),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["automation-rules"] }),
+      onError: fail("Não consegui pausar/ativar a automação."),
+    }),
+    testAutomationRule: useMutation({
+      mutationFn: useServerFn(testAutomationRule),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications"] }); toast.success("Enviei uma notificação de teste pra você — abra o sininho."); },
+      onError: fail("Não consegui enviar o teste."),
     }),
     deleteAutomationRule: useMutation({
       mutationFn: useServerFn(deleteAutomationRule),

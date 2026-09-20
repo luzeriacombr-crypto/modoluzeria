@@ -137,6 +137,8 @@ export function NotificationsBell() {
                     navigate({ to: "/ajuda", search: { tab: "chats" } });
                   } else if (n.type === "support_chat_reply") {
                     setSupportChatOpen(true);
+                  } else if ((n.type === "automation_notify" || n.type === "automation_whatsapp_ready") && n.clientId && !n.itemId) {
+                    openFicha(n.clientId);
                   }
                 }}
                 className="w-full text-left px-4 py-3 border-b border-foreground/4 hover:bg-foreground/[0.04] transition-colors block"

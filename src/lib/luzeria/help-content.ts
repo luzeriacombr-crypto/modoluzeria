@@ -19,7 +19,8 @@ export const FAQ: HelpFaqGroup[] = [
     items: [
       { q: "Como envio uma foto de perfil pra um colega que ainda não tem?", a: "Em Configurações → Equipe, clique no card do colaborador — abre um modal onde o Admin Master pode enviar ou trocar a foto dele." },
       { q: "Esqueci minha senha, e agora?", a: "Peça pro Admin Master da sua agência: Configurações → Equipe → clique no seu card → \"Resetar senha\". Você recebe um link por e-mail." },
-      { q: "Como funcionam as Automações?", a: "Em Configurações → Automações, o Admin Master pode criar regras do tipo \"quando o status virar X, então alterar status para Y (ou atribuir para alguém)\". Elas rodam sozinhas, mesmo sem ninguém com a tela aberta." },
+      { q: "Como funcionam as Automações?", a: "Em Configurações → Automações, o Admin Master cria regras do tipo \"quando acontecer X, então fazer Y\". Elas rodam sozinhas, mesmo sem ninguém com a tela aberta. Gatilhos: item criado, status mudou, prazo (antes/vencido), item parado, cliente aprovou o feed ou pediu ajuste, arquivo anexado, falha na publicação do Instagram, roteiro aprovado ou com ajuste, seleção de fotos finalizada, contrato assinado, cliente sem entrega e cobrança a vencer/atrasada. Ações: mudar status, atribuir, notificar, deixar WhatsApp pronto, programar no Instagram, criar tarefa, comentar no item, mover pro próximo mês e enviar e-mail. Dá pra limitar a regra a um cliente ou tipo de conteúdo, pausar, testar a mensagem e ver quantas vezes ela já disparou. Se está começando, use um dos Modelos prontos na própria página." },
+      { q: "Não sei por onde começar nas Automações — tem algum exemplo pronto?", a: "Tem. Em Configurações → Automações, logo abaixo das suas regras, fica a lista de Modelos prontos (cobrar aprovação parada, avisar quando o cliente pedir ajuste, lembrete de prazo, falha no Instagram, mensalidade atrasada, cliente sem entrega, entre outros). É só clicar em Adicionar — depois você pode editar, limitar a um cliente ou pausar." },
       { q: "Adicionei um colaborador, mas ele não tem acesso de Admin — o que eu esqueci?", a: "Adicionar o colaborador e definir a função dele são duas etapas separadas. Depois de adicionar, clique no card da pessoa em Configurações → Equipe e escolha a Função certa: Membro, Adm Setor ou Adm Master." },
       { q: "Dá pra restringir o acesso à aba financeira só pros sócios?", a: "Sim, pela Função de cada pessoa. \"Membro\" só vê e mexe no que for atribuído a ele, \"Adm Setor\" pode ter permissões extras configuradas por cargo, e \"Adm Master\" tem acesso total, inclusive ao financeiro. Escolha a função certa pra cada colaborador em Configurações → Equipe." },
     ],
@@ -119,6 +120,18 @@ export const TUTORIALS: HelpTutorial[] = [
       "Revise cada sugestão: cada uma vem com o \"Texto de produção (Briefing)\" pronto pro editor gravar/produzir e a \"Legenda a publicar\" separada — edite o que quiser antes de continuar.",
       "Avalie o resultado com as estrelas (isso ajuda a Luzeria a melhorar a IA) e escolha: \"Salvar como Planejamento\" (vira um documento normal, visível pro cliente) ou \"Aprovar e enviar pros Roteiros\" (escolhe um mês e já cria os roteiros de verdade no quadro).",
       "Quanto mais preenchida a Ficha do Cliente (nicho, briefing, roteiros recentes, concorrentes) e a Base de Conhecimento da agência (Configurações → Base de conhecimento), melhor fica o resultado.",
+    ],
+  },
+  {
+    title: "Criar uma automação (com modelo pronto ou do zero)",
+    steps: [
+      "Vá em Configurações → Automações (só o Admin Master cria e edita).",
+      "Mais rápido: role até \"Modelos prontos\", escolha um (ex: \"Avisar falha na publicação do Instagram\") e clique em Adicionar — a regra já nasce com o texto pronto.",
+      "Do zero: clique em \"Nova automação\", escolha o gatilho (o que acontece), depois a ação (o que o sistema faz). Os gatilhos são agrupados em Conteúdo, Prazos e paradas, Cliente e Cobrança.",
+      "Use \"Só quando for\" pra limitar a regra a um cliente específico ou a um tipo de conteúdo (Posts, Reels ou Stories).",
+      "Nas mensagens, {cliente} e {titulo} são trocados pelo nome do cliente e o título do item — e {erro} no gatilho de falha do Instagram.",
+      "Na lista de automações, o frasco (🧪) manda a mensagem pra você como notificação, sem executar nada de verdade; o botão de pausa desliga a regra sem apagar; e cada linha mostra quantas vezes já disparou e quando foi a última.",
+      "Gatilhos de tempo (prazo, item parado, cliente sem entrega, cobrança) são conferidos uma vez por dia, de manhã. Os demais rodam na hora.",
     ],
   },
   {

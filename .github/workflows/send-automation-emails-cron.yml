@@ -1,0 +1,17 @@
+name: Send automation emails
+
+on:
+  schedule:
+    # A cada 10 min, fora da marca redonda (o GitHub atrasa/pula cron em :00).
+    - cron: "5,15,25,35,45,55 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call send-automation-emails endpoint
+        run: |
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.modocriador.com.br/api/cron/send-automation-emails
