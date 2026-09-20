@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, contentStatusesQO, myStoriesTodayQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { topMembersQO, myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, contentStatusesQO, myStoriesTodayQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, hasPermission, getStatusMeta, type Status } from "@/lib/luzeria/types";
 import { getStatusIcon } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send, Video as VideoIcon, MapPin, Users, SlidersHorizontal, Eye, EyeOff, Lock, RotateCcw } from "lucide-react";
+import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send, Video as VideoIcon, MapPin, Users, SlidersHorizontal, Eye, EyeOff, Lock, RotateCcw, Crown, Medal, Flame } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { MyWeekView } from "./MyWeekView";
 import { getDailyVerse } from "@/lib/luzeria/daily-verse";
@@ -152,6 +152,38 @@ function CustomizeLayoutModal({ layout, available, onChange, onClose }: {
   );
 }
 
+const RANK_INFO = [
+  { Icon: Crown, color: "#D7FF3F", msg: "Você está em primeiro lugar, parabéns!" },
+  { Icon: Medal, color: "#4A9EFF", msg: "Você está em segundo lugar, vamos em frente!" },
+  { Icon: Flame, color: "#A78BFA", msg: "Você está em terceiro lugar, ótimo ritmo!" },
+];
+
+/** Ícone da colocação (top 3 do ranking do mês) ao lado do nome. Passa o mouse
+ * ou toca pra ver a mensagem. */
+function RankBadge({ position }: { position: number }) {
+  const [open, setOpen] = useState(false);
+  const info = RANK_INFO[position];
+  if (!info) return null;
+  const { Icon } = info;
+  return (
+    <span className="relative inline-flex align-middle ml-2"
+      onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button type="button" aria-label={info.msg} aria-expanded={open}
+        onClick={() => setOpen((v) => !v)} onBlur={() => setOpen(false)}
+        className="inline-flex items-center justify-center rounded-full transition-transform hover:scale-110"
+        style={{ width: 34, height: 34, background: `${info.color}26`, color: info.color, boxShadow: `0 0 0 1px ${info.color}55 inset` }}>
+        <Icon size={18} strokeWidth={2.2} />
+      </button>
+      {open && (
+        <span role="tooltip" className="absolute left-0 top-full mt-2 z-30 w-max max-w-[240px] rounded-xl px-3 py-2 text-[12.5px] font-semibold leading-snug shadow-2xl"
+          style={{ background: "#fff", color: "#0D0D0D" }}>
+          {info.msg}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function MyTasks() {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
@@ -202,6 +234,13 @@ export function MyTasks() {
     });
   };
   const monthKey = useUI((s) => s.selectedMonthKey);
+  const { data: rankData } = useQuery({ ...topMembersQO("month", monthKey), enabled: !!monthKey && !!me?.id });
+  const myRankIdx = (() => {
+    if (!isMeView || !me?.id) return -1;
+    const list = rankData?.ranking ?? [];
+    const i = list.findIndex((r: any) => r.id === me.id);
+    return i >= 0 && i < 3 && (list[i] as any).count > 0 ? i : -1;
+  })();
   const { data: prod } = useQuery(productivityQO(monthKey, targetId));
 
   const now = new Date();
@@ -586,6 +625,7 @@ export function MyTasks() {
               const raw = ((isMeView ? me?.name : targetProfile?.name) ?? "você").trim().split(" ")[0];
               return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
             })()}! 🤩
+            {myRankIdx >= 0 && <RankBadge position={myRankIdx} />}
           </h1>
           {!disabledFeatures.has("daily_verse") && (
             <div className="max-w-sm mt-3">
@@ -1132,23 +1172,26 @@ function WorkStatsWidget({ monthKey, userId }: { monthKey: string; userId: strin
               tabIndex={0}
               onClick={() => setOpen((o) => (o === key ? null : key))}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpen((o) => (o === key ? null : key)); }}
-              className="relative overflow-hidden rounded-xl p-4 cursor-pointer transition-transform hover:-translate-y-0.5"
-              style={{ background: `linear-gradient(160deg, ${hexA(meta.color, 0.16)} 0%, var(--card) 70%)`, border: `1px solid ${hexA(meta.color, 0.22)}` }}
+              className="text-left rounded-2xl bg-card border px-4 py-3.5 cursor-pointer transition hover:-translate-y-0.5"
+              style={{ borderColor: open === key ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 7%, transparent)", boxShadow: open === key ? "0 0 0 1px rgb(var(--lz-brand-rgb)) inset" : undefined }}
             >
-              <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: meta.color }} />
-              <div className="relative flex items-center justify-between mb-3">
-                <div className="h-7 w-7 rounded-md inline-flex items-center justify-center" style={{ background: hexA(meta.color, 0.18), color: meta.color }}>
-                  {meta.icon(16)}
-                </div>
-                <span className="text-[9px] uppercase font-bold tracking-wider text-foreground/30">Toque</span>
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="h-6 w-6 rounded-lg inline-flex items-center justify-center shrink-0" style={{ background: hexA(meta.color, 0.16), color: meta.color }}>
+                  {meta.icon(14)}
+                </span>
+                <span className="text-[11.5px] font-semibold text-foreground/60 truncate">{meta.label}</span>
+                <ChevronDown size={13} className={`ml-auto shrink-0 text-foreground/35 transition-transform ${open === key ? "rotate-180" : ""}`} />
               </div>
-              <div className="relative text-[28px] font-extrabold leading-none mb-1.5 tabular-nums" style={{ color: meta.color }}>
+              <div className="text-[30px] font-extrabold leading-none tracking-tight tabular-nums text-foreground">
                 {section.done}{section.goal != null && <span className="text-foreground/35 font-bold text-lg">/{section.goal}</span>}
               </div>
-              <div className="relative text-[10.5px] uppercase tracking-wider font-bold" style={{ color: meta.color }}>{meta.label}</div>
-              <div className="relative text-[10.5px] text-foreground/35 mt-0.5">{section.goal != null ? "Meta do mês" : formatMonth(monthKey)}</div>
-              <div className="relative mt-2.5 pt-2 border-t text-[10.5px] text-foreground/35" style={{ borderColor: hexA(meta.color, 0.15) }}>
-                <span className="font-bold tabular-nums" style={{ color: meta.color }}>{perDay}</span> por dia em média
+              {section.goal != null && section.goal > 0 && (
+                <div className="h-1 rounded-full mt-2.5 overflow-hidden" style={{ background: "color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, (section.done / section.goal) * 100)}%`, background: meta.color }} />
+                </div>
+              )}
+              <div className="text-[11.5px] text-foreground/50 mt-2">
+                <span className="font-bold tabular-nums text-foreground/75">{perDay}</span> por dia · {section.goal != null ? "meta do mês" : formatMonth(monthKey)}
               </div>
             </div>
           );
