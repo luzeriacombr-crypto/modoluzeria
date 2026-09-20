@@ -4,9 +4,9 @@ import { STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, hasPermission, get
 import { getStatusIcon } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { useState, useMemo, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send, Video as VideoIcon, MapPin, Users } from "lucide-react";
+import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send, Video as VideoIcon, MapPin, Users, SlidersHorizontal, Eye, EyeOff, Lock, RotateCcw } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { MyWeekView } from "./MyWeekView";
 import { getDailyVerse } from "@/lib/luzeria/daily-verse";
@@ -41,6 +41,114 @@ function SectionHeader({ icon, iconBg, iconColor, label, count, open, onToggle }
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       </span>
     </button>
+  );
+}
+
+
+// ---- Personalização da página (ordem + o que fica visível), por pessoa/aparelho.
+const MY_TASKS_BLOCKS: { id: string; label: string; hint: string; locked?: boolean }[] = [
+  { id: "kpis", label: "Resumo", hint: "Atrasadas, hoje e próximos 7 dias (também filtram a lista)" },
+  { id: "agenda", label: "Agenda do Google", hint: "Seus compromissos dos próximos dias" },
+  { id: "daily", label: "Rotina do dia", hint: "Stories e tarefas de rotina que caem hoje", locked: true },
+  { id: "pubs", label: "Publicações de hoje", hint: "O que vai ao ar hoje no Instagram" },
+  { id: "list", label: "Lista de demandas", hint: "O coração da página", locked: true },
+  { id: "whatsapp", label: "Avisar clientes no WhatsApp", hint: "Atualizações semanais pendentes" },
+  { id: "payments", label: "Pagamentos próximos", hint: "Cobranças que vencem em breve" },
+  { id: "mentions", label: "Mencionado em", hint: "Comentários em que te marcaram" },
+  { id: "month", label: "Seu mês", hint: "Atividades e estatísticas de trabalho" },
+  { id: "productivity", label: "Produtividade", hint: "Gráfico de entregas do mês" },
+];
+const LOCKED_BLOCKS = new Set(MY_TASKS_BLOCKS.filter((b) => b.locked).map((b) => b.id));
+type MyTasksLayout = { order: string[]; hidden: string[] };
+const DEFAULT_LAYOUT: MyTasksLayout = { order: MY_TASKS_BLOCKS.map((b) => b.id), hidden: [] };
+
+function normalizeLayout(raw: any): MyTasksLayout {
+  const known = new Set(MY_TASKS_BLOCKS.map((b) => b.id));
+  const saved: string[] = Array.isArray(raw?.order) ? raw.order.filter((id: string) => known.has(id)) : [];
+  // Blocos novos (que a pessoa nunca viu) entram no fim, na ordem padrão.
+  const order = [...saved, ...DEFAULT_LAYOUT.order.filter((id) => !saved.includes(id))];
+  const hidden: string[] = Array.isArray(raw?.hidden) ? raw.hidden.filter((id: string) => known.has(id) && !LOCKED_BLOCKS.has(id)) : [];
+  return { order, hidden };
+}
+
+function useMyTasksLayout(userId?: string): [MyTasksLayout, (l: MyTasksLayout) => void] {
+  const key = `lz.myTasksLayout.${userId ?? "anon"}`;
+  const [layout, setLayoutState] = useState<MyTasksLayout>(() => {
+    if (typeof window === "undefined") return DEFAULT_LAYOUT;
+    try { const raw = window.localStorage.getItem(key); return raw ? normalizeLayout(JSON.parse(raw)) : DEFAULT_LAYOUT; } catch { return DEFAULT_LAYOUT; }
+  });
+  // O usuário só chega depois do carregamento: relê quando a chave passa a ter o id de verdade.
+  useEffect(() => {
+    try { const raw = window.localStorage.getItem(key); setLayoutState(raw ? normalizeLayout(JSON.parse(raw)) : DEFAULT_LAYOUT); } catch { /* noop */ }
+  }, [key]);
+  const setLayout = (l: MyTasksLayout) => {
+    setLayoutState(l);
+    try { window.localStorage.setItem(key, JSON.stringify(l)); } catch { /* noop */ }
+  };
+  return [layout, setLayout];
+}
+
+function CustomizeLayoutModal({ layout, available, onChange, onClose }: {
+  layout: MyTasksLayout; available: Set<string>; onChange: (l: MyTasksLayout) => void; onClose: () => void;
+}) {
+  const rows = layout.order.filter((id) => available.has(id));
+  const meta = (id: string) => MY_TASKS_BLOCKS.find((b) => b.id === id)!;
+  const move = (id: string, dir: -1 | 1) => {
+    const visible = rows;
+    const i = visible.indexOf(id), j = i + dir;
+    if (j < 0 || j >= visible.length) return;
+    const swap = visible[j];
+    const order = [...layout.order];
+    const a = order.indexOf(id), b = order.indexOf(swap);
+    order[a] = swap; order[b] = id;
+    onChange({ ...layout, order });
+  };
+  const toggle = (id: string) => {
+    if (LOCKED_BLOCKS.has(id)) return;
+    const hidden = layout.hidden.includes(id) ? layout.hidden.filter((x) => x !== id) : [...layout.hidden, id];
+    onChange({ ...layout, hidden });
+  };
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-md bg-card border border-foreground/10 rounded-2xl p-5 max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <h3 className="text-base font-semibold text-foreground">Personalizar página</h3>
+          <button onClick={onClose} aria-label="Fechar" className="text-foreground/40 hover:text-foreground shrink-0"><X size={16} /></button>
+        </div>
+        <p className="text-[12.5px] text-foreground/55 mb-4">Escolha o que aparece e em que ordem. Fica salvo neste aparelho.</p>
+        <div className="grid gap-2">
+          {rows.map((id, i) => {
+            const b = meta(id), hidden = layout.hidden.includes(id) && !b.locked;
+            return (
+              <div key={id} className="flex items-center gap-2 rounded-xl border border-foreground/8 px-3 py-2.5" style={{ opacity: hidden ? 0.5 : 1 }}>
+                <div className="flex flex-col shrink-0">
+                  <button onClick={() => move(id, -1)} disabled={i === 0} aria-label="Subir" className="text-foreground/50 hover:text-foreground disabled:opacity-25"><ChevronUp size={14} /></button>
+                  <button onClick={() => move(id, 1)} disabled={i === rows.length - 1} aria-label="Descer" className="text-foreground/50 hover:text-foreground disabled:opacity-25"><ChevronDown size={14} /></button>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-semibold text-foreground truncate">{b.label}</div>
+                  <div className="text-[11px] text-foreground/45 truncate">{b.locked ? "Sempre visível" : b.hint}</div>
+                </div>
+                {b.locked ? (
+                  <span className="shrink-0 text-foreground/35 p-1.5" title="Este bloco não pode ser ocultado"><Lock size={15} /></span>
+                ) : (
+                  <button onClick={() => toggle(id)} aria-label={hidden ? "Mostrar" : "Ocultar"} title={hidden ? "Mostrar" : "Ocultar"}
+                    className="shrink-0 p-1.5 rounded-md hover:bg-foreground/[0.06]" style={{ color: hidden ? undefined : "var(--lz-accent-ink)" }}>
+                    {hidden ? <EyeOff size={16} className="text-foreground/40" /> : <Eye size={16} />}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex items-center justify-between mt-4">
+          <button onClick={() => onChange(DEFAULT_LAYOUT)} className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-foreground/55 hover:text-foreground">
+            <RotateCcw size={12} /> Restaurar padrão
+          </button>
+          <button onClick={onClose} className="lz-btn-primary text-[13px] font-bold px-5 py-2 rounded-full">Pronto</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -178,67 +286,11 @@ export function MyTasks() {
   const [view, setView] = useState<"list" | "week">("list");
   const [showNovaDemanda, setShowNovaDemanda] = useState(false);
   const dailyVerse = getDailyVerse();
+  const [layout, setLayout] = useMyTasksLayout(me?.id);
+  const [showCustomize, setShowCustomize] = useState(false);
 
-  return (
-    <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-[1240px] mx-auto" data-tour="my-tasks">
-      {!isMeView && targetProfile && (
-        <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-4 px-3 py-2 rounded-lg text-[12.5px]"
-          style={{ backgroundColor: "rgba(74,158,255,0.12)", color: "#7EB3FF" }}>
-          <Avatar profile={targetProfile} size={18} />
-          <span className="font-semibold">Vendo como {targetProfile.name}</span>
-          <span className="text-foreground/40">— tudo abaixo é da perspectiva dele(a), não sua.</span>
-          <button
-            onClick={() => setViewAs("")}
-            className="ml-auto font-bold uppercase tracking-wide text-[11px] hover:underline shrink-0"
-          >
-            Voltar pra mim
-          </button>
-        </div>
-      )}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-foreground/40 mb-2">Minhas demandas</p>
-          <h1 className="text-[32px] sm:text-[44px] font-semibold text-foreground leading-[1.02] tracking-tight">
-            Olá,{" "}
-            {(() => {
-              const raw = ((isMeView ? me?.name : targetProfile?.name) ?? "você").trim().split(" ")[0];
-              return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
-            })()}! 🤩
-          </h1>
-          {!disabledFeatures.has("daily_verse") && (
-            <div className="max-w-sm mt-3">
-              <p className="italic text-foreground/60 text-[13px] leading-relaxed text-balance">"{dailyVerse.text}"</p>
-              <p className="mt-1 text-[10.5px] font-bold uppercase tracking-[0.09em]" style={{ color: "var(--lz-accent-ink)" }}>{dailyVerse.reference}</p>
-            </div>
-          )}
-        </div>
-        {isAdmin && (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-foreground/40 shrink-0">Ver como:</span>
-              <select value={viewAs} onChange={(e) => setViewAs(e.target.value)}
-                className="bg-card border border-foreground/10 text-sm text-foreground rounded-lg px-3 py-2 outline-none focus:border-[rgb(var(--lz-brand-rgb))] min-w-0 flex-1 sm:flex-none">
-                <option value="">{me?.name} (eu)</option>
-                {profiles.filter((p) => p.id !== me?.id).map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              {targetProfile && targetId !== me?.id && <Avatar profile={targetProfile} size={28} />}
-            </div>
-            <button
-              onClick={() => setShowNovaDemanda(true)}
-              className="lz-btn-primary text-[13px] font-bold px-5 py-2.5 rounded-full inline-flex items-center gap-1.5 shrink-0 self-start"
-            >
-              <Plus size={14} /> Nova demanda
-            </button>
-          </div>
-        )}
-      </div>
-
-      {showNovaDemanda && <NovaDemandaModal onClose={() => setShowNovaDemanda(false)} />}
-
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-7 lg:items-start">
-      <div className="min-w-0">
+  const blocks: Record<string, React.ReactNode> = {
+    kpis: <>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" data-tour="my-kpis">
         {([
           { id: "late", label: "Atrasadas", n: kpi.late, danger: true },
@@ -259,11 +311,9 @@ export function MyTasks() {
           );
         })}
       </div>
-
-      {targetId && <ActivityCountsWidget monthKey={monthKey} userId={targetId} />}
-
-      {targetId && <WorkStatsWidget monthKey={monthKey} userId={targetId} />}
-
+</>,
+    agenda: isMeView && googleCalendarEnabled ? <AgendaRail /> : null,
+    daily: <>
       {storiesHoje.length > 0 && (
         <div className="space-y-3 mb-8 lz-stagger">
           {storiesHoje.map((turno) => (
@@ -310,7 +360,97 @@ export function MyTasks() {
           })()}
         </div>
       )}
+</>,
+    pubs: isMeView && todayPublications.length > 0 ? (
+<>
+          <RailCard icon={<Instagram size={11} />} iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="var(--lz-accent-ink)"
+            label="Publicações de hoje" count={todayPublications.length}
+            open={isSectionOpen("today-publications")} onToggle={() => toggleSection("today-publications")}>
+            {todayPublications.map((p) => (
+              <RailRow key={p.id}
+                lead={new Date(p.scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                title={p.title}
+                sub={<><span style={{ color: p.clientColor }}>{p.clientName}</span> · {p.type === "post" && p.postFormat
+                  ? (POST_FORMAT_LABEL[p.postFormat as keyof typeof POST_FORMAT_LABEL] ?? p.postFormat)
+                  : (CONTENT_TYPE_LABEL[p.type as keyof typeof CONTENT_TYPE_LABEL] ?? p.type)}</>}
+                onClick={() => {
+                  navigate({ to: "/cliente/$clientId", params: { clientId: p.clientId } });
+                  selectMonth(p.monthKey);
+                  setTimeout(() => { openItem(p.id); flash(p.id); }, 30);
+                  setTimeout(() => flash(null), 2050);
+                }} />
+            ))}
+          </RailCard>
+        
+</>
+) : null,
+    whatsapp: isAdmin && isMeView && whatsappRemindersEnabled && weeklyReminders.length > 0 ? (
+<>
+          <RailCard icon={<MessageCircle size={11} />} iconBg="rgba(37,211,102,0.18)" iconColor="#25D366"
+            label="Avisar clientes no WhatsApp" count={weeklyReminders.length}
+            open={isSectionOpen("weekly-reminders")} onToggle={() => toggleSection("weekly-reminders")}>
+            {weeklyReminders.map((r) => (
+              <div key={r.clientId} className="flex items-center gap-2.5 px-1.5 py-2">
+                <button onClick={() => { openFicha(r.clientId); openStageComposer(r.clientId); }} className="flex-1 min-w-0 text-left hover:opacity-80 transition">
+                  <span className="block text-[12.5px] font-semibold truncate" style={{ color: r.clientColor }}>{r.clientName}</span>
+                  <span className="block text-[11px] text-foreground/45 truncate">{r.stageName ?? "Sem etapa definida"}</span>
+                </button>
+                <button
+                  onClick={() => logClientStageUpdate.mutate({ data: { clientId: r.clientId, stageId: r.stageId ?? undefined, message: r.stageDescription ?? "Atualização enviada.", trigger: "weekly_nudge" } })}
+                  className="shrink-0 text-[10.5px] font-extrabold px-2.5 py-1.5 rounded-full inline-flex items-center gap-1"
+                  style={{ backgroundColor: "#25D366", color: "#06210F" }}>
+                  <Check size={11} strokeWidth={3} /> Marcar feito
+                </button>
+              </div>
+            ))}
+          </RailCard>
+        
+</>
+) : null,
+    payments: canFinanceiro && isMeView && upcomingPayments.length > 0 ? (
+<>
+          <RailCard icon={<Wallet size={11} />} iconBg="rgba(91,168,138,0.18)" iconColor="#5BA88A"
+            label="Pagamentos próximos" count={upcomingPayments.length}
+            open={isSectionOpen("upcoming-payments")} onToggle={() => toggleSection("upcoming-payments")}>
+            {upcomingPayments.map((p) => (
+              <RailRow key={p.id}
+                title={p.name} titleColor={p.color}
+                sub={new Date(p.nextDueDate + "T00:00:00").toLocaleDateString("pt-BR")}
+                trail={<span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "rgba(245,166,35,0.14)", color: "#F5A623" }}>
+                  {p.daysUntil < 0 ? `Atrasado ${Math.abs(p.daysUntil)}d` : p.daysUntil === 0 ? "Vence hoje" : `em ${p.daysUntil}d`}</span>}
+                onClick={() => navigate({ to: "/configuracoes", search: { tab: "pagamentos" } })} />
+            ))}
+          </RailCard>
+        
+</>
+) : null,
+    mentions: isMeView && mentions.length > 0 ? (
+<>
+          <RailCard icon={<AtSign size={11} />} iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="var(--lz-accent-ink)"
+            label="Mencionado em" count={mentions.length}
+            open={isSectionOpen("mentions")} onToggle={() => toggleSection("mentions")}>
+            {mentions.map((m: any) => (
+              <RailRow key={m.mentionId}
+                title={<>{m.authorName ? <span className="text-foreground/50">{m.authorName}: </span> : null}{m.snippet || m.title}</>}
+                sub={<><span style={{ color: m.clientColor }}>{m.clientName}</span> · {CONTENT_TYPE_LABEL[m.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item"} {String(m.idx).padStart(2, "0")}</>}
+                onClick={() => {
+                  markMentionRead.mutate({ data: { mentionId: m.mentionId } });
+                  navigate({ to: "/cliente/$clientId", params: { clientId: m.clientId } });
+                  selectMonth(m.monthKey);
+                  setTimeout(() => { openItem(m.itemId); flash(m.itemId); }, 30);
+                  setTimeout(() => flash(null), 2050);
+                }} />
+            ))}
+          </RailCard>
+        
+</>
+) : null,
+    month: <>
+      {targetId && <ActivityCountsWidget monthKey={monthKey} userId={targetId} />}
 
+      {targetId && <WorkStatsWidget monthKey={monthKey} userId={targetId} />}
+</>,
+    list: <>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div className="inline-flex bg-card border border-foreground/6 rounded-xl p-1" data-tour="my-week">
           {[
@@ -404,92 +544,90 @@ export function MyTasks() {
           })}
         </div>
       )}
-
+</>,
+    productivity: <>
       {prod && (
         <Suspense fallback={<div className="mt-10 h-[290px] rounded-lg" style={{ background: "var(--card)", border: "1px solid rgba(var(--lz-brand-light-rgb),0.15)" }} />}>
           <ProductivityBlock prod={prod} monthKey={monthKey} />
         </Suspense>
       )}
+</>,
+  };
+  const isBlockShown = (id: string) => !!blocks[id] && (!layout.hidden.includes(id) || LOCKED_BLOCKS.has(id));
+  const availableBlocks = new Set<string>([
+    "kpis", "daily", "pubs", "mentions", "month", "list", "productivity",
+    ...(googleCalendarEnabled && isMeView ? ["agenda"] : []),
+    ...(isAdmin && whatsappRemindersEnabled ? ["whatsapp"] : []),
+    ...(canFinanceiro ? ["payments"] : []),
+  ]);
+
+  return (
+    <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-5xl mx-auto" data-tour="my-tasks">
+      {!isMeView && targetProfile && (
+        <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-4 px-3 py-2 rounded-lg text-[12.5px]"
+          style={{ backgroundColor: "rgba(74,158,255,0.12)", color: "#7EB3FF" }}>
+          <Avatar profile={targetProfile} size={18} />
+          <span className="font-semibold">Vendo como {targetProfile.name}</span>
+          <span className="text-foreground/40">— tudo abaixo é da perspectiva dele(a), não sua.</span>
+          <button
+            onClick={() => setViewAs("")}
+            className="ml-auto font-bold uppercase tracking-wide text-[11px] hover:underline shrink-0"
+          >
+            Voltar pra mim
+          </button>
+        </div>
+      )}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-foreground/40 mb-2">Minhas demandas</p>
+          <h1 className="text-[32px] sm:text-[44px] font-semibold text-foreground leading-[1.02] tracking-tight">
+            Olá,{" "}
+            {(() => {
+              const raw = ((isMeView ? me?.name : targetProfile?.name) ?? "você").trim().split(" ")[0];
+              return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+            })()}! 🤩
+          </h1>
+          {!disabledFeatures.has("daily_verse") && (
+            <div className="max-w-sm mt-3">
+              <p className="italic text-foreground/60 text-[13px] leading-relaxed text-balance">"{dailyVerse.text}"</p>
+              <p className="mt-1 text-[10.5px] font-bold uppercase tracking-[0.09em]" style={{ color: "var(--lz-accent-ink)" }}>{dailyVerse.reference}</p>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          {isAdmin && (<>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-foreground/40 shrink-0">Ver como:</span>
+              <select value={viewAs} onChange={(e) => setViewAs(e.target.value)}
+                className="bg-card border border-foreground/10 text-sm text-foreground rounded-lg px-3 py-2 outline-none focus:border-[rgb(var(--lz-brand-rgb))] min-w-0 flex-1 sm:flex-none">
+                <option value="">{me?.name} (eu)</option>
+                {profiles.filter((p) => p.id !== me?.id).map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {targetProfile && targetId !== me?.id && <Avatar profile={targetProfile} size={28} />}
+            </div>
+            <button
+              onClick={() => setShowNovaDemanda(true)}
+              className="lz-btn-primary text-[13px] font-bold px-5 py-2.5 rounded-full inline-flex items-center gap-1.5 shrink-0 self-start"
+            >
+              <Plus size={14} /> Nova demanda
+            </button>
+          </>)}
+          <button onClick={() => setShowCustomize(true)}
+            className="text-[13px] font-semibold px-4 py-2.5 rounded-full inline-flex items-center gap-1.5 shrink-0 self-start border border-foreground/12 text-foreground/70 hover:text-foreground hover:border-foreground/25 transition-colors">
+            <SlidersHorizontal size={14} /> Personalizar
+          </button>
+        </div>
       </div>
-      <aside className="space-y-4 mt-8 lg:mt-0 lg:sticky lg:top-4">
-        {isMeView && googleCalendarEnabled && <AgendaRail />}
 
-        {isMeView && todayPublications.length > 0 && (
-          <RailCard icon={<Instagram size={11} />} iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="var(--lz-accent-ink)"
-            label="Publicações de hoje" count={todayPublications.length}
-            open={isSectionOpen("today-publications")} onToggle={() => toggleSection("today-publications")}>
-            {todayPublications.map((p) => (
-              <RailRow key={p.id}
-                lead={new Date(p.scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                title={p.title}
-                sub={<><span style={{ color: p.clientColor }}>{p.clientName}</span> · {p.type === "post" && p.postFormat
-                  ? (POST_FORMAT_LABEL[p.postFormat as keyof typeof POST_FORMAT_LABEL] ?? p.postFormat)
-                  : (CONTENT_TYPE_LABEL[p.type as keyof typeof CONTENT_TYPE_LABEL] ?? p.type)}</>}
-                onClick={() => {
-                  navigate({ to: "/cliente/$clientId", params: { clientId: p.clientId } });
-                  selectMonth(p.monthKey);
-                  setTimeout(() => { openItem(p.id); flash(p.id); }, 30);
-                  setTimeout(() => flash(null), 2050);
-                }} />
-            ))}
-          </RailCard>
-        )}
+      {showNovaDemanda && <NovaDemandaModal onClose={() => setShowNovaDemanda(false)} />}
+      {showCustomize && (
+        <CustomizeLayoutModal layout={layout} available={availableBlocks} onChange={setLayout} onClose={() => setShowCustomize(false)} />
+      )}
 
-        {isAdmin && isMeView && whatsappRemindersEnabled && weeklyReminders.length > 0 && (
-          <RailCard icon={<MessageCircle size={11} />} iconBg="rgba(37,211,102,0.18)" iconColor="#25D366"
-            label="Avisar clientes no WhatsApp" count={weeklyReminders.length}
-            open={isSectionOpen("weekly-reminders")} onToggle={() => toggleSection("weekly-reminders")}>
-            {weeklyReminders.map((r) => (
-              <div key={r.clientId} className="flex items-center gap-2.5 px-1.5 py-2">
-                <button onClick={() => { openFicha(r.clientId); openStageComposer(r.clientId); }} className="flex-1 min-w-0 text-left hover:opacity-80 transition">
-                  <span className="block text-[12.5px] font-semibold truncate" style={{ color: r.clientColor }}>{r.clientName}</span>
-                  <span className="block text-[11px] text-foreground/45 truncate">{r.stageName ?? "Sem etapa definida"}</span>
-                </button>
-                <button
-                  onClick={() => logClientStageUpdate.mutate({ data: { clientId: r.clientId, stageId: r.stageId ?? undefined, message: r.stageDescription ?? "Atualização enviada.", trigger: "weekly_nudge" } })}
-                  className="shrink-0 text-[10.5px] font-extrabold px-2.5 py-1.5 rounded-full inline-flex items-center gap-1"
-                  style={{ backgroundColor: "#25D366", color: "#06210F" }}>
-                  <Check size={11} strokeWidth={3} /> Marcar feito
-                </button>
-              </div>
-            ))}
-          </RailCard>
-        )}
-
-        {canFinanceiro && isMeView && upcomingPayments.length > 0 && (
-          <RailCard icon={<Wallet size={11} />} iconBg="rgba(91,168,138,0.18)" iconColor="#5BA88A"
-            label="Pagamentos próximos" count={upcomingPayments.length}
-            open={isSectionOpen("upcoming-payments")} onToggle={() => toggleSection("upcoming-payments")}>
-            {upcomingPayments.map((p) => (
-              <RailRow key={p.id}
-                title={p.name} titleColor={p.color}
-                sub={new Date(p.nextDueDate + "T00:00:00").toLocaleDateString("pt-BR")}
-                trail={<span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "rgba(245,166,35,0.14)", color: "#F5A623" }}>
-                  {p.daysUntil < 0 ? `Atrasado ${Math.abs(p.daysUntil)}d` : p.daysUntil === 0 ? "Vence hoje" : `em ${p.daysUntil}d`}</span>}
-                onClick={() => navigate({ to: "/configuracoes", search: { tab: "pagamentos" } })} />
-            ))}
-          </RailCard>
-        )}
-
-        {isMeView && mentions.length > 0 && (
-          <RailCard icon={<AtSign size={11} />} iconBg="rgba(var(--lz-brand-light-rgb),0.18)" iconColor="var(--lz-accent-ink)"
-            label="Mencionado em" count={mentions.length}
-            open={isSectionOpen("mentions")} onToggle={() => toggleSection("mentions")}>
-            {mentions.map((m: any) => (
-              <RailRow key={m.mentionId}
-                title={<>{m.authorName ? <span className="text-foreground/50">{m.authorName}: </span> : null}{m.snippet || m.title}</>}
-                sub={<><span style={{ color: m.clientColor }}>{m.clientName}</span> · {CONTENT_TYPE_LABEL[m.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item"} {String(m.idx).padStart(2, "0")}</>}
-                onClick={() => {
-                  markMentionRead.mutate({ data: { mentionId: m.mentionId } });
-                  navigate({ to: "/cliente/$clientId", params: { clientId: m.clientId } });
-                  selectMonth(m.monthKey);
-                  setTimeout(() => { openItem(m.itemId); flash(m.itemId); }, 30);
-                  setTimeout(() => flash(null), 2050);
-                }} />
-            ))}
-          </RailCard>
-        )}
-      </aside>
+      <div className="space-y-6">
+        {layout.order.filter(isBlockShown).map((id) => <div key={id} className="min-w-0 flex flex-col gap-4 [&>*]:!mb-0">{blocks[id]}</div>)}
       </div>
     </div>
   );
@@ -763,7 +901,7 @@ function AgendaRail() {
       {list.length === 0 ? (
         <p className="text-center text-[12.5px] text-foreground/40 py-5">Dia livre. Nenhum compromisso.</p>
       ) : (
-        <div className="grid gap-2">
+        <div className="grid gap-2 md:grid-cols-2 md:gap-x-5">
           {list.map((ev, i) => {
             const endMs = ev.end ? new Date(ev.end).getTime() : null;
             const past = isToday && !ev.allDay && endMs !== null && endMs < nowMs;
