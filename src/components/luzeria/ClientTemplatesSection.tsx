@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Pencil, Trash2, Wand2 } from "lucide-react";
-import { clientTemplatesQO, clientCategoriesQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import {
+  clientTemplatesQO,
+  clientCategoriesQO,
+  profilesQO,
+  useApi,
+  useMe,
+} from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import type { ClientTemplate } from "@/lib/luzeria/client-templates.functions";
 
@@ -26,7 +32,9 @@ export function ClientTemplatesSection() {
 
   const categorias = [
     ...CATEGORIAS_FIXAS,
-    ...categoriasDaAgencia.map((c: any) => c.name).filter((n: string) => !CATEGORIAS_FIXAS.includes(n as any)),
+    ...categoriasDaAgencia
+      .map((c: any) => c.name)
+      .filter((n: string) => !CATEGORIAS_FIXAS.includes(n as any)),
   ];
 
   function descrever(categoria: string, t: ClientTemplate | undefined) {
@@ -35,8 +43,10 @@ export function ClientTemplatesSection() {
         ? "Padrão: nasce sem nenhum item"
         : "Padrão: 6 posts + 6 reels";
     }
-    const partes = [`${t.postsCount} post${t.postsCount === 1 ? "" : "s"}`, `${t.reelsCount} reel${t.reelsCount === 1 ? "" : "s"}`];
-    if (t.createDemandsPage) partes.push("página de demandas");
+    const partes = [
+      `${t.postsCount} post${t.postsCount === 1 ? "" : "s"}`,
+      `${t.reelsCount} reel${t.reelsCount === 1 ? "" : "s"}`,
+    ];
     if (t.welcomeMessage) partes.push("mensagem de boas-vindas");
     const responsavel = profiles.find((p: any) => p.id === t.defaultAssigneeId)?.name;
     if (responsavel) partes.push(`responsável: ${responsavel}`);
@@ -63,34 +73,53 @@ export function ClientTemplatesSection() {
                 profiles={profiles}
                 onCancel={() => setEditando(null)}
                 onSubmit={(payload) => {
-                  upsertClientTemplate.mutateAsync({ data: { category: categoria, ...payload } })
-                    .then(() => { setEditando(null); toast.success("Modelo salvo."); })
+                  upsertClientTemplate
+                    .mutateAsync({ data: { category: categoria, ...payload } })
+                    .then(() => {
+                      setEditando(null);
+                      toast.success("Modelo salvo.");
+                    })
                     .catch((e: any) => toast.error(e?.message ?? "Erro ao salvar o modelo"));
                 }}
               />
             );
           }
           return (
-            <div key={categoria} className="flex items-center gap-3 px-5 py-3.5 border-b border-foreground/5 last:border-b-0">
+            <div
+              key={categoria}
+              className="flex items-center gap-3 px-5 py-3.5 border-b border-foreground/5 last:border-b-0"
+            >
               <div className="flex-1 min-w-0">
                 <div className="text-sm text-foreground/85 font-semibold">{categoria}</div>
-                <div className={`text-[11px] mt-0.5 ${t ? "text-foreground/50" : "text-foreground/30"}`}>{descrever(categoria, t)}</div>
+                <div
+                  className={`text-[11px] mt-0.5 ${t ? "text-foreground/50" : "text-foreground/30"}`}
+                >
+                  {descrever(categoria, t)}
+                </div>
               </div>
               {podeEditar && (
                 <>
                   <button
                     onClick={() => setEditando(categoria)}
                     className="p-1.5 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5 shrink-0"
-                  ><Pencil size={13} /></button>
+                  >
+                    <Pencil size={13} />
+                  </button>
                   {t && (
                     <button
                       onClick={async () => {
-                        if (await requestConfirm(`Voltar "${categoria}" pro padrão do sistema?`, { danger: true })) {
+                        if (
+                          await requestConfirm(`Voltar "${categoria}" pro padrão do sistema?`, {
+                            danger: true,
+                          })
+                        ) {
                           deleteClientTemplate.mutate({ data: { id: t.id } });
                         }
                       }}
                       className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 shrink-0"
-                    ><Trash2 size={13} /></button>
+                    >
+                      <Trash2 size={13} />
+                    </button>
                   )}
                 </>
               )}
@@ -105,21 +134,29 @@ export function ClientTemplatesSection() {
 type ModeloPayload = {
   postsCount: number;
   reelsCount: number;
-  createDemandsPage: boolean;
   welcomeMessage: string | null;
   defaultAssigneeId: string | null;
 };
 
-function ModeloForm({ categoria, inicial, profiles, onCancel, onSubmit }: {
+function ModeloForm({
+  categoria,
+  inicial,
+  profiles,
+  onCancel,
+  onSubmit,
+}: {
   categoria: string;
   inicial: ClientTemplate | undefined;
   profiles: any[];
   onCancel: () => void;
   onSubmit: (payload: ModeloPayload) => void;
 }) {
-  const [posts, setPosts] = useState(String(inicial?.postsCount ?? (categoria === "Avulsos" ? 0 : 6)));
-  const [reels, setReels] = useState(String(inicial?.reelsCount ?? (categoria === "Avulsos" ? 0 : 6)));
-  const [pagina, setPagina] = useState(inicial?.createDemandsPage ?? categoria === "Avulsos");
+  const [posts, setPosts] = useState(
+    String(inicial?.postsCount ?? (categoria === "Avulsos" ? 0 : 6)),
+  );
+  const [reels, setReels] = useState(
+    String(inicial?.reelsCount ?? (categoria === "Avulsos" ? 0 : 6)),
+  );
   const [mensagem, setMensagem] = useState(inicial?.welcomeMessage ?? "");
   const [responsavel, setResponsavel] = useState(inicial?.defaultAssigneeId ?? "");
 
@@ -130,18 +167,32 @@ function ModeloForm({ categoria, inicial, profiles, onCancel, onSubmit }: {
       <div className="text-sm font-semibold text-foreground">{categoria}</div>
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">Posts por mês</span>
-          <input type="number" min={0} max={60} value={posts} onChange={(e) => setPosts(e.target.value)} className="lz-input mt-1.5" />
+          <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">
+            Posts por mês
+          </span>
+          <input
+            type="number"
+            min={0}
+            max={60}
+            value={posts}
+            onChange={(e) => setPosts(e.target.value)}
+            className="lz-input mt-1.5"
+          />
         </label>
         <label className="block">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">Reels por mês</span>
-          <input type="number" min={0} max={60} value={reels} onChange={(e) => setReels(e.target.value)} className="lz-input mt-1.5" />
+          <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">
+            Reels por mês
+          </span>
+          <input
+            type="number"
+            min={0}
+            max={60}
+            value={reels}
+            onChange={(e) => setReels(e.target.value)}
+            className="lz-input mt-1.5"
+          />
         </label>
       </div>
-      <label className="flex items-center gap-2 text-xs text-foreground/70">
-        <input type="checkbox" checked={pagina} onChange={(e) => setPagina(e.target.checked)} />
-        Criar a página de demandas do cliente
-      </label>
       <label className="block">
         <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">
           Mensagem de boas-vindas (opcional) — use {"{cliente}"} pro nome
@@ -154,28 +205,44 @@ function ModeloForm({ categoria, inicial, profiles, onCancel, onSubmit }: {
           className="lz-input mt-1.5 resize-y"
         />
         <span className="text-[10px] text-foreground/35 mt-1 block">
-          Chega como notificação pra você, pronta pra copiar e mandar — o sistema não envia nada sozinho.
+          Chega como notificação pra você, pronta pra copiar e mandar — o sistema não envia nada
+          sozinho.
         </span>
       </label>
       <label className="block">
-        <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">Responsável padrão dos itens</span>
-        <select value={responsavel} onChange={(e) => setResponsavel(e.target.value)} className="lz-input mt-1.5">
+        <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">
+          Responsável padrão dos itens
+        </span>
+        <select
+          value={responsavel}
+          onChange={(e) => setResponsavel(e.target.value)}
+          className="lz-input mt-1.5"
+        >
           <option value="">Ninguém</option>
-          {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {profiles.map((p: any) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
         </select>
       </label>
       <div className="flex gap-2 pt-1">
         <button
-          onClick={() => onSubmit({
-            postsCount: num(posts),
-            reelsCount: num(reels),
-            createDemandsPage: pagina,
-            welcomeMessage: mensagem.trim() || null,
-            defaultAssigneeId: responsavel || null,
-          })}
+          onClick={() =>
+            onSubmit({
+              postsCount: num(posts),
+              reelsCount: num(reels),
+              welcomeMessage: mensagem.trim() || null,
+              defaultAssigneeId: responsavel || null,
+            })
+          }
           className="lz-btn-primary text-xs px-4 py-2 rounded-md"
-        >Salvar modelo</button>
-        <button onClick={onCancel} className="lz-btn-ghost text-xs px-4 py-2 rounded-md">Cancelar</button>
+        >
+          Salvar modelo
+        </button>
+        <button onClick={onCancel} className="lz-btn-ghost text-xs px-4 py-2 rounded-md">
+          Cancelar
+        </button>
       </div>
     </div>
   );

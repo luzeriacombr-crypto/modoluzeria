@@ -9,8 +9,7 @@
 -- Nasce vazia pra toda org (nenhum seed), igual client_categories: sem
 -- linha aqui, o comportamento continua exatamente o de hoje.
 --
--- Pra reverter: DROP TABLE public.client_templates; e restaurar o CHECK
--- antigo de client_docs.type (só 'roteiro' e 'planejamento').
+-- Pra reverter: DROP TABLE public.client_templates;
 
 CREATE TABLE public.client_templates (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -18,7 +17,6 @@ CREATE TABLE public.client_templates (
   category text NOT NULL,
   posts_count integer NOT NULL DEFAULT 6 CHECK (posts_count BETWEEN 0 AND 60),
   reels_count integer NOT NULL DEFAULT 6 CHECK (reels_count BETWEEN 0 AND 60),
-  create_demands_page boolean NOT NULL DEFAULT false,
   welcome_message text,
   default_assignee_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
   created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -42,12 +40,3 @@ CREATE POLICY "admin manage client templates" ON public.client_templates FOR ALL
   WITH CHECK (public.is_admin(auth.uid()) AND org_id = public.current_org_id());
 
 CREATE INDEX idx_client_templates_org ON public.client_templates(org_id, category);
-
--- ===================== Página de demandas =====================
--- client_docs hoje só aceita 'roteiro' e 'planejamento'. A página única
--- onde o cliente avulso pede tudo é um terceiro tipo — reaproveita o
--- compartilhamento por token que client_docs_share_tokens já faz, em vez
--- de inventar outra superfície pública.
-ALTER TABLE public.client_docs DROP CONSTRAINT IF EXISTS client_docs_type_check;
-ALTER TABLE public.client_docs ADD CONSTRAINT client_docs_type_check
-  CHECK (type IN ('roteiro', 'planejamento', 'demandas'));

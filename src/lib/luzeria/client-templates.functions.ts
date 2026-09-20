@@ -12,7 +12,6 @@ export type ClientTemplate = {
   category: string;
   postsCount: number;
   reelsCount: number;
-  createDemandsPage: boolean;
   welcomeMessage: string | null;
   defaultAssigneeId: string | null;
 };
@@ -22,7 +21,7 @@ export const listClientTemplates = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<ClientTemplate[]> => {
     const { data, error } = await (context.supabase as any)
       .from("client_templates")
-      .select("id, category, posts_count, reels_count, create_demands_page, welcome_message, default_assignee_id")
+      .select("id, category, posts_count, reels_count, welcome_message, default_assignee_id")
       .order("category");
     if (error) throw new Error(error.message);
     return ((data ?? []) as any[]).map((t) => ({
@@ -30,7 +29,6 @@ export const listClientTemplates = createServerFn({ method: "GET" })
       category: t.category,
       postsCount: t.posts_count,
       reelsCount: t.reels_count,
-      createDemandsPage: t.create_demands_page,
       welcomeMessage: t.welcome_message,
       defaultAssigneeId: t.default_assignee_id,
     }));
@@ -40,7 +38,6 @@ const templateSchema = z.object({
   category: z.string().trim().min(1).max(40),
   postsCount: z.number().int().min(0).max(60),
   reelsCount: z.number().int().min(0).max(60),
-  createDemandsPage: z.boolean(),
   welcomeMessage: z.string().trim().max(1000).optional().nullable(),
   defaultAssigneeId: z.string().uuid().optional().nullable(),
 });
@@ -58,7 +55,6 @@ export const upsertClientTemplate = createServerFn({ method: "POST" })
         category: data.category,
         posts_count: data.postsCount,
         reels_count: data.reelsCount,
-        create_demands_page: data.createDemandsPage,
         welcome_message: data.welcomeMessage || null,
         default_assignee_id: data.defaultAssigneeId || null,
         created_by: context.userId,

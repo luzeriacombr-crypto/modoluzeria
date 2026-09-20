@@ -1410,7 +1410,6 @@ export async function seedMonth(
 export type ModeloDeCliente = {
   postsCount: number;
   reelsCount: number;
-  createDemandsPage: boolean;
   welcomeMessage: string | null;
   defaultAssigneeId: string | null;
 };
@@ -1423,7 +1422,7 @@ export async function buscarModeloDeCliente(
 ): Promise<ModeloDeCliente | null> {
   const { data, error } = await supabase
     .from("client_templates")
-    .select("posts_count, reels_count, create_demands_page, welcome_message, default_assignee_id")
+    .select("posts_count, reels_count, welcome_message, default_assignee_id")
     .eq("org_id", orgId)
     .eq("category", category)
     .maybeSingle();
@@ -1431,42 +1430,21 @@ export async function buscarModeloDeCliente(
   return {
     postsCount: data.posts_count,
     reelsCount: data.reels_count,
-    createDemandsPage: data.create_demands_page,
     welcomeMessage: data.welcome_message,
     defaultAssigneeId: data.default_assignee_id,
   };
 }
 
-const PAGINA_DEMANDAS_INICIAL = `# Demandas
-
-Use esta página pra pedir tudo o que precisar. Cada pedido novo entra aqui embaixo, com a data.
-
----
-
-*Nenhuma demanda por enquanto.*
-`;
-
 /**
- * Parte do modelo que roda depois do mês: página de demandas e mensagem de
- * boas-vindas. Nada aqui pode derrubar a criação do cliente — se falhar,
- * loga e segue, porque o cliente já existe nesse ponto.
+ * Parte do modelo que roda depois do mês: hoje, a mensagem de boas-vindas.
+ * Nada aqui pode derrubar a criação do cliente — se falhar, loga e segue,
+ * porque o cliente já existe nesse ponto.
  */
 export async function aplicarExtrasDoModelo(
   supabase: any,
   opts: { orgId: string; clientId: string; clientName: string; userId: string; modelo: ModeloDeCliente },
 ) {
-  const { orgId, clientId, clientName, userId, modelo } = opts;
-  if (modelo.createDemandsPage) {
-    const { error } = await supabase.from("client_docs").insert({
-      org_id: orgId,
-      client_id: clientId,
-      type: "demandas",
-      title: "Demandas",
-      content: PAGINA_DEMANDAS_INICIAL,
-      created_by: userId,
-    });
-    if (error) console.error("Falha ao criar página de demandas do modelo:", error.message);
-  }
+  const { clientId, clientName, userId, modelo } = opts;
   if (modelo.welcomeMessage) {
     const { error } = await supabase.from("notifications").insert({
       user_id: userId,
