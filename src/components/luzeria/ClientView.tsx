@@ -43,6 +43,10 @@ const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizado
 /** Abas que dá pra ocultar (por padrão da agência ou só pra um cliente) —
  * só "ficha" fica de fora (é o mínimo de navegação garantido). */
 const HIDEABLE_TABS = ["posts", "reels", "stories", "mais", "feed"] as const;
+// O banner de onboarding não é aba, mas usa o mesmo hidden_tabs pra poder
+// ser ocultado só num cliente ou por padrão na agência — e pra voltar pelo
+// mesmo lugar, o "Personalizar abas".
+const ONBOARDING_KEY = "onboarding";
 type MaisSubTab = "atividades" | "campanhas" | "docs" | "biblioteca";
 
 export function ClientView({ clientId, tab: tabParam, onTabChange }: {
@@ -260,9 +264,15 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         </div>
       </div>
 
-      {isAdmin && (
+      {isAdmin && !hiddenTabs.has(ONBOARDING_KEY) && (
         <div className="mt-4">
-          <OnboardingBanner clientId={client.id} onOpenFicha={() => setTab("ficha")} />
+          <OnboardingBanner
+            clientId={client.id}
+            onOpenFicha={() => setTab("ficha")}
+            onHide={() => updateClient.mutate({
+              data: { id: client.id, patch: { hidden_tabs: [...hiddenTabs, ONBOARDING_KEY] } },
+            })}
+          />
         </div>
       )}
 
@@ -448,6 +458,8 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                       isAvulso={isAvulso}
                       isAdmin={isAdmin}
                       navList={navList}
+                      batchedThumbUrl={gridThumbs?.[item.id]?.thumbUrl ?? null}
+                      batched
                       onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
                       onMove={!isAvulso ? () => setMovingItem(item) : undefined}
                       selectMode={selectMode}
@@ -650,6 +662,10 @@ function CustomizeTabsModal({ client, disabledFeatures, onClose, onSaveOrgDefaul
             {HIDEABLE_TAB_LABEL[t]}
           </label>
         ))}
+        <label className="flex items-center gap-2.5 text-sm text-foreground/80 pt-2 mt-1 border-t border-foreground/6">
+          <input type="checkbox" checked={!hidden.has(ONBOARDING_KEY)} onChange={() => toggle(ONBOARDING_KEY)} />
+          Bloco "Etapas de onboarding"
+        </label>
       </div>
       {hasOverride && (
         <button

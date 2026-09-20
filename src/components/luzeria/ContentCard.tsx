@@ -243,16 +243,18 @@ export function ContentCard({
 
 /** Linha compacta — mesma informação e edição inline do ContentCard (título,
  * status, prazo), só que numa lista em vez de grade de cards. Pensada pra
- * escanear/editar um board grande rapidamente, sem depender de miniatura. */
+ * escanear/editar um board grande rapidamente. */
 export function ContentListRow({
   item, profiles, idx, isAvulso, isAdmin, onDelete, navList, selectMode, selected, onToggleSelect,
-  onMove, draggable, isDragging, isOver, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
+  onMove, batchedThumbUrl, batched, draggable, isDragging, isOver, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
 }: {
   item: ContentItem;
   profiles: Profile[];
   idx: number;
   isAvulso?: boolean;
   isAdmin: boolean;
+  batchedThumbUrl?: string | null;
+  batched?: boolean;
   onDelete?: () => void;
   navList?: string[];
   selectMode?: boolean;
@@ -312,7 +314,7 @@ export function ContentListRow({
       onDragLeave={draggable ? onDragLeave : undefined}
       onDrop={draggable ? onDrop : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
-      className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-card hover:bg-card transition-colors cursor-pointer ${flashed ? "lz-flash" : ""} ${selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-foreground/6 hover:border-foreground/15"}`}
+      className={`group flex items-center gap-3 px-3 py-2 rounded-lg border bg-card hover:bg-card transition-colors cursor-pointer ${flashed ? "lz-flash" : ""} ${selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-foreground/6 hover:border-foreground/15"}`}
       style={{ cursor: draggable ? "grab" : "pointer", opacity: isDragging ? 0.4 : 1, outline: isOver ? "2px solid rgb(var(--lz-brand-rgb))" : "none", outlineOffset: isOver ? "-2px" : 0 }}
       onClick={() => (selectMode ? onToggleSelect?.() : openItem(item.id, navList))}
     >
@@ -328,6 +330,7 @@ export function ContentListRow({
         </span>
       )}
       <span className="text-[11px] font-bold tabular-nums text-foreground/30 w-5 shrink-0">{String(idx).padStart(2, "0")}</span>
+      <RowThumb itemId={item.id} coverUrl={item.coverUrl ?? null} batchedThumbUrl={batchedThumbUrl} batched={batched} />
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
         {editing ? (
@@ -478,18 +481,47 @@ function DueDateChip({ item, isOverdue, dueLabel, onSave }: {
   );
 }
 
+/**
+ * Miniatura do item (capa própria, lote da grade ou Drive), compartilhada
+ * pela grade e pela lista.
+ *
+ * Quando a grade resolve as miniaturas em lote (getGridThumbnails), não
+ * dispara nada — antes eram duas queries EM SÉRIE por card, e cada
+ * getDriveThumbnail fazia 2 chamadas ao Drive devolvendo base64 inline.
+ */
+function useItemThumbUrl(itemId: string, coverUrl: string | null, batchedThumbUrl?: string | null, batched?: boolean) {
+  const selfFetch = !coverUrl && !batched;
+  const filesQ = useQuery({ ...itemFilesQO(itemId), enabled: selfFetch });
+  const fileId = filesQ.data?.[0]?.driveFileId ?? null;
+  const thumbQ = useQuery(driveThumbnailQO(fileId, !!fileId && selfFetch));
+  return coverUrl ?? batchedThumbUrl ?? thumbQ.data?.dataUrl ?? null;
+}
+
+/** Miniatura da linha da lista — caixa fixa levemente vertical, que serve
+ *  tanto pro post (quadrado/4:5) quanto pro reel (9:16) sem desalinhar as
+ *  linhas entre si. */
+function RowThumb({ itemId, coverUrl, batchedThumbUrl, batched }: {
+  itemId: string; coverUrl: string | null; batchedThumbUrl?: string | null; batched?: boolean;
+}) {
+  const url = useItemThumbUrl(itemId, coverUrl, batchedThumbUrl, batched);
+  return (
+    <div
+      className="shrink-0 w-10 h-12 rounded-md overflow-hidden flex items-center justify-center"
+      style={{ background: "color-mix(in srgb, var(--foreground) 5%, transparent)" }}
+    >
+      {url ? (
+        <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+      ) : (
+        <ImageIcon size={14} style={{ color: "color-mix(in srgb, var(--foreground) 22%, transparent)" }} />
+      )}
+    </div>
+  );
+}
+
 function CardThumb({ itemId, coverUrl, batchedThumbUrl, batched }: {
   itemId: string; coverUrl: string | null; batchedThumbUrl?: string | null; batched?: boolean;
 }) {
-  // Quando a grade resolve as miniaturas em lote (getGridThumbnails), o card
-  // não dispara nada — antes eram duas queries EM SÉRIE por card, e cada
-  // getDriveThumbnail fazia 2 chamadas ao Drive devolvendo base64 inline.
-  const selfFetch = !coverUrl && !batched;
-  const filesQ = useQuery({ ...itemFilesQO(itemId), enabled: selfFetch });
-  const first = filesQ.data?.[0];
-  const fileId = first?.driveFileId ?? null;
-  const thumbQ = useQuery(driveThumbnailQO(fileId, !!fileId && selfFetch));
-  const url = coverUrl ?? batchedThumbUrl ?? thumbQ.data?.dataUrl ?? null;
+  const url = useItemThumbUrl(itemId, coverUrl, batchedThumbUrl, batched);
 
   return (
     <div

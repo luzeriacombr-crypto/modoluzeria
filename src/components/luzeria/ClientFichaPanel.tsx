@@ -1667,13 +1667,58 @@ function AddContactRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d:
  * cabeçalho do cliente (fora da Ficha do Cliente) — só admin de setor e
  * admin master enxergam isso, já que quem chama esse componente já filtra
  * por isAdmin antes de renderizar. */
-export function OnboardingBanner({ clientId, onOpenFicha }: { clientId: string; onOpenFicha: () => void }) {
+const CONFETTI_COLORS = ["rgb(var(--lz-brand-rgb))", "#6FA8DC", "#FF6B6B", "#B892FF", "#D7FF3F"];
+const CONFETTI_COUNT = 22;
+
+/** Chuva de confete dentro do próprio banner (mesma keyframe do tour e da
+ *  comemoração de nível) — some sozinha quando a animação acaba. */
+function OnboardingConfetti() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl" aria-hidden>
+      {Array.from({ length: CONFETTI_COUNT }, (_, i) => (
+        <span
+          key={i}
+          style={{
+            position: "absolute", top: -12, left: `${(i / CONFETTI_COUNT) * 100 + Math.random() * 4}%`,
+            width: 5, height: 8, borderRadius: 1,
+            backgroundColor: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+            animation: `lz-tour-confetti ${1.2 + Math.random() * 0.6}s ease-in ${Math.random() * 0.4}s forwards`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function OnboardingBanner({ clientId, onOpenFicha, onHide }: {
+  clientId: string; onOpenFicha: () => void; onHide?: () => void;
+}) {
   const api = useApi();
   const { data: onboarding } = useQuery(clientOnboardingQO(clientId));
   const list = onboarding?.checklist ?? [];
-  if (list.length === 0) return null;
   const done = list.filter((c) => c.done).length;
-  const allDone = done === list.length;
+  const allDone = list.length > 0 && done === list.length;
+
+  // Comemora uma vez por cliente: sem isso, toda visita à página com o
+  // checklist completo jogaria confete de novo.
+  const celebrationKey = `lz-onboarding-celebrado-${clientId}`;
+  const [celebrando, setCelebrando] = useState(false);
+  useEffect(() => {
+    if (!allDone) {
+      // Desmarcar uma etapa arma a comemoração de novo pra quando fechar.
+      try { localStorage.removeItem(celebrationKey); } catch { /* modo privado */ }
+      return;
+    }
+    let jaComemorou = true;
+    try { jaComemorou = localStorage.getItem(celebrationKey) === "1"; } catch { /* modo privado */ }
+    if (jaComemorou) return;
+    try { localStorage.setItem(celebrationKey, "1"); } catch { /* modo privado */ }
+    setCelebrando(true);
+    const t = setTimeout(() => setCelebrando(false), 2600);
+    return () => clearTimeout(t);
+  }, [allDone, celebrationKey]);
+
+  if (list.length === 0) return null;
 
   function toggle(id: string) {
     api.updateClientOnboarding.mutate({
@@ -1682,11 +1727,12 @@ export function OnboardingBanner({ clientId, onOpenFicha }: { clientId: string; 
   }
 
   return (
-    <div className="mb-6 rounded-xl border p-3.5"
+    <div className="relative mb-6 rounded-xl border p-3.5 overflow-hidden"
       style={{
         borderColor: allDone ? "rgba(var(--lz-brand-light-rgb),0.35)" : "color-mix(in srgb, var(--foreground) 10%, transparent)",
         backgroundColor: allDone ? "rgba(var(--lz-brand-light-rgb),0.06)" : "color-mix(in srgb, var(--foreground) 3%, transparent)",
       }}>
+      {celebrando && <OnboardingConfetti />}
       <div className="flex items-center justify-between gap-2 mb-2.5">
         <div className="flex items-center gap-2">
           <ListChecks size={13} className="text-foreground/40" />
@@ -1699,9 +1745,18 @@ export function OnboardingBanner({ clientId, onOpenFicha }: { clientId: string; 
             </span>
           )}
         </div>
-        <button onClick={onOpenFicha} className="shrink-0 text-[11px] font-semibold text-foreground/40 hover:text-foreground transition-colors">
-          Editar
-        </button>
+        <div className="shrink-0 flex items-center gap-2">
+          <button onClick={onOpenFicha} className="text-[11px] font-semibold text-foreground/40 hover:text-foreground transition-colors">
+            Editar
+          </button>
+          {onHide && (
+            <button
+              onClick={onHide}
+              title="Ocultar esse bloco — dá pra trazer de volta em Personalizar abas"
+              className="p-1 rounded text-foreground/30 hover:text-foreground/70 hover:bg-foreground/5 transition-colors"
+            ><EyeOff size={13} /></button>
+          )}
+        </div>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {list.map((c) => (
