@@ -23,6 +23,7 @@ import { ImageCropModal } from "./ImageCropModal";
 import { ClientBlockedItemsModal } from "./ClientBlockedItemsModal";
 import { getInstagramConnectionStatus, getInstagramConnectUrl, disconnectInstagram } from "@/lib/luzeria/instagram.functions";
 import { getFacebookConnectionStatus, getFacebookConnectUrl, disconnectFacebook } from "@/lib/luzeria/facebook.functions";
+import { TikTokConnectSection } from "./TikTokSections";
 
 function formatHours(h: number | null) {
   if (h == null) return "—";
@@ -169,6 +170,11 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         {canManageInstagram && (
           <FichaCard label="Facebook">
             <FacebookSection clientId={client.id} />
+          </FichaCard>
+        )}
+        {canManageInstagram && (
+          <FichaCard label="TikTok">
+            <TikTokConnectSection clientId={client.id} />
           </FichaCard>
         )}
         <FichaCard label="Pasta de entregas (Drive)">
