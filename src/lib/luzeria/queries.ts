@@ -55,6 +55,7 @@ import {
 } from "./automations.functions";
 import { listAutomationRules, createAutomationRule, deleteAutomationRule } from "./automation-rules.functions";
 import { listClientTemplates, upsertClientTemplate, deleteClientTemplate } from "./client-templates.functions";
+import { listAgencyStories, listMyStoriesToday, setAgencyStoriesDay, setAgencyStoriesDone } from "./agency-stories.functions";
 import { listMyBugReports, listAllBugReports, updateBugReportStatus, sendBugReportMessage } from "./bug-reports.functions";
 import { getMySupportThread, sendSupportMessage, listOpenSupportThreads, getSupportThreadMessages, replyToSupportThread, closeSupportThread } from "./support-chat.functions";
 import {
@@ -632,6 +633,12 @@ export const automationRulesQO = () =>
 
 export const clientTemplatesQO = () =>
   queryOptions({ queryKey: ["client-templates"], queryFn: () => listClientTemplates() });
+
+export const agencyStoriesQO = (month: string) =>
+  queryOptions({ queryKey: ["agency-stories", month], queryFn: () => listAgencyStories({ data: { month } }) });
+
+export const myStoriesTodayQO = (userId?: string) =>
+  queryOptions({ queryKey: ["agency-stories", "hoje", userId ?? "eu"], queryFn: () => listMyStoriesToday({ data: { userId } }) });
 
 export const myBugReportsQO = () =>
   queryOptions({ queryKey: ["bug-reports", "mine"], queryFn: () => listMyBugReports() });
@@ -1642,6 +1649,14 @@ export function useApi() {
     deleteClientTemplate: useMutation({
       mutationFn: useServerFn(deleteClientTemplate),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-templates"] }),
+    }),
+    setAgencyStoriesDay: useMutation({
+      mutationFn: useServerFn(setAgencyStoriesDay),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["agency-stories"] }),
+    }),
+    setAgencyStoriesDone: useMutation({
+      mutationFn: useServerFn(setAgencyStoriesDone),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["agency-stories"] }),
     }),
     /* ===== GOOGLE AGENDA ===== */
     getGoogleCalendarAuthUrl: useMutation({ mutationFn: useServerFn(getGoogleCalendarAuthUrl) }),

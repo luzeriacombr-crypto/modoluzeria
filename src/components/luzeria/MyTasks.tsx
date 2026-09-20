@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, contentStatusesQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, contentStatusesQO, myStoriesTodayQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, hasPermission, getStatusMeta, type Status } from "@/lib/luzeria/types";
 import { getStatusIcon } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -54,7 +54,7 @@ export function MyTasks() {
   }, [contentStatuses]);
   const labelOverrides = useMemo(() => new Map(contentStatuses.map((r) => [r.key, r.label])), [contentStatuses]);
   const isAdmin = me?.role === "master" || me?.role === "setor";
-  const { setCleaningDone, markMentionRead, logClientStageUpdate } = useApi();
+  const { setCleaningDone, markMentionRead, logClientStageUpdate, setAgencyStoriesDone } = useApi();
   const [viewAs, setViewAs] = useState<string>("");
   const targetId = isAdmin && viewAs ? viewAs : me?.id;
   const { data: allTasks = [], isLoading: tasksLoading, isError: tasksError } = useQuery({
@@ -108,6 +108,11 @@ export function MyTasks() {
   const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
   const { data: todayPublications = [] } = useQuery({
     ...todayPublicationsQO(todayStart, todayEnd, targetId),
+    enabled: !!targetId,
+  });
+  // Escala de Stories do perfil da própria agência (Equipe → Rotina).
+  const { data: storiesHoje = [] } = useQuery({
+    ...myStoriesTodayQO(targetId),
     enabled: !!targetId,
   });
 
@@ -379,6 +384,21 @@ export function MyTasks() {
           </button>
         ))}
       </div>
+
+      {storiesHoje.length > 0 && (
+        <div className="space-y-3 mb-8 lz-stagger">
+          {storiesHoje.map((turno) => (
+            <DailyTaskCard
+              key={turno.id}
+              icon={<Instagram size={18} />}
+              title={`É seu dia de fazer Stories no perfil da ${me?.orgName ?? "agência"}`}
+              status={turno.doneAt ? "done" : "pending"}
+              canAct={!isAdmin || !viewAs || viewAs === me?.id}
+              onDone={() => setAgencyStoriesDone.mutate({ data: { id: turno.id, done: true } })}
+            />
+          ))}
+        </div>
+      )}
 
       {((today?.cleaningTasks?.length ?? 0) > 0) && (
         <div className="space-y-3 mb-8 lz-stagger">

@@ -7,6 +7,7 @@ import { AssigneePicker, colorForLabel } from "./AssigneePicker";
 import { Avatar } from "./Avatar";
 import { toast } from "sonner";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { AgencyStoriesCalendar } from "@/components/luzeria/AgencyStoriesCalendar";
 
 export const CLEANING_DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -277,6 +278,8 @@ export function CleaningView() {
           )}
         </div>
       </div>
+
+      <AgencyStoriesCalendar />
 
       {picker && createPortal(
         <AssigneePicker
