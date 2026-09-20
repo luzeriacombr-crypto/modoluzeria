@@ -140,7 +140,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
 
   const [showBlockedModal, setShowBlockedModal] = useState(false);
 
-  const [fichaTab, setFichaTab] = useState<"geral" | "contatos" | "contrato" | "auto">("geral");
+  const [fichaTab, setFichaTab] = useState<"geral" | "contatos" | "contrato">("geral");
   // Atalhos de outras partes da ficha (ex.: "Adicionar contato") pedem pra abrir a aba certa.
   useEffect(() => {
     const h = (e: Event) => setFichaTab((e as CustomEvent).detail);
@@ -150,11 +150,10 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
   if (!client) return null;
   const metrics = ficha?.metrics;
 
-  const FICHA_TABS: { id: "geral" | "contatos" | "contrato" | "auto"; label: string }[] = [
+  const FICHA_TABS: { id: "geral" | "contatos" | "contrato"; label: string }[] = [
     { id: "geral", label: "Geral" },
     { id: "contatos", label: "Contatos e acessos" },
     { id: "contrato", label: "Contrato e marca" },
-    ...(isAdmin ? [{ id: "auto" as const, label: "Automação" }] : []),
   ];
   const activeTab = FICHA_TABS.some((t) => t.id === fichaTab) ? fichaTab : "geral";
 
@@ -248,6 +247,60 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         <FichaCard label="Configuração do cliente" wide>
           <ClientConfigBlock client={client} profiles={profiles} canEdit={isAdmin} isMaster={isMaster} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
         </FichaCard>
+        {isAdmin && (
+          <FichaCard label="Stories">
+            <label className="flex items-center gap-2 text-sm text-foreground/70">
+              <input
+                type="checkbox"
+                checked={client.notifyStoriesInTasks ?? false}
+                onChange={(e) => api.setNotifyStoriesInTasks.mutate({ data: { clientId: client.id, enabled: e.target.checked } })}
+              />
+              Notificar Stories em Minhas Demandas
+            </label>
+            <p className="text-[11px] text-foreground/40 mt-1.5">
+              Quando ativado, Stories atribuídos deste cliente aparecem na lista de tarefas do responsável — como Posts e Reels.
+            </p>
+          </FichaCard>
+        )}
+        {isAdmin && (
+          <FichaCard label="Novidade: IA de planejamento">
+            {aiPlanningQuota <= 0 ? (
+              <p className="text-[12px] text-foreground/40 leading-relaxed">
+                Disponível a partir do nível Prata do Programa de Níveis
+                {agencyLevel ? <> — sua agência está em <b className="text-foreground/60">{agencyLevel.label}</b></> : null}.{" "}
+                <Link to="/planejamento-com-ia" className="underline hover:text-foreground/60">Saiba mais →</Link>
+              </p>
+            ) : (
+              <>
+                <label className="flex items-center gap-2 text-sm text-foreground/70">
+                  <input
+                    type="checkbox"
+                    checked={client.aiPlanningEnabled ?? false}
+                    disabled={savingAiPlanning || (!client.aiPlanningEnabled && aiPlanningUsed >= aiPlanningQuota)}
+                    onChange={(e) => toggleAiPlanning(e.target.checked)}
+                  />
+                  Ativar prévia de planejamento com IA pra esse cliente
+                </label>
+                <p className="text-[11px] text-foreground/40 mt-1.5">
+                  {isLuzeriaOrg
+                    ? "Liberado pra todos os clientes (conta interna)."
+                    : <>{aiPlanningUsed} de {aiPlanningQuota} cliente(s) liberado(s) no seu nível ({agencyLevel?.label}).</>}{" "}
+                  <Link to="/planejamento-com-ia" className="underline hover:text-foreground/60">Saiba mais →</Link>
+                </p>
+              </>
+            )}
+          </FichaCard>
+        )}
+        {isAdmin && (
+          <FichaCard label="Onboarding do cliente">
+            <OnboardingBlock clientId={client.id} />
+          </FichaCard>
+        )}
+        {isAdmin && (
+          <FichaCard label="Recorrências" wide>
+            <RecurringBlock clientId={client.id} />
+          </FichaCard>
+        )}
         </div>
       )}
 
@@ -383,65 +436,6 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         <FichaCard label="Arquivos da marca" wide>
           <BrandAssetsBlock clientId={client.id} isAdmin={isAdmin} />
         </FichaCard>
-        </div>
-      )}
-
-      {activeTab === "auto" && isAdmin && (
-        <div className="grid gap-3 grid-cols-1 @[760px]:grid-cols-2">
-        {isAdmin && (
-          <FichaCard label="Stories">
-            <label className="flex items-center gap-2 text-sm text-foreground/70">
-              <input
-                type="checkbox"
-                checked={client.notifyStoriesInTasks ?? false}
-                onChange={(e) => api.setNotifyStoriesInTasks.mutate({ data: { clientId: client.id, enabled: e.target.checked } })}
-              />
-              Notificar Stories em Minhas Demandas
-            </label>
-            <p className="text-[11px] text-foreground/40 mt-1.5">
-              Quando ativado, Stories atribuídos deste cliente aparecem na lista de tarefas do responsável — como Posts e Reels.
-            </p>
-          </FichaCard>
-        )}
-        {isAdmin && (
-          <FichaCard label="Novidade: IA de planejamento">
-            {aiPlanningQuota <= 0 ? (
-              <p className="text-[12px] text-foreground/40 leading-relaxed">
-                Disponível a partir do nível Prata do Programa de Níveis
-                {agencyLevel ? <> — sua agência está em <b className="text-foreground/60">{agencyLevel.label}</b></> : null}.{" "}
-                <Link to="/planejamento-com-ia" className="underline hover:text-foreground/60">Saiba mais →</Link>
-              </p>
-            ) : (
-              <>
-                <label className="flex items-center gap-2 text-sm text-foreground/70">
-                  <input
-                    type="checkbox"
-                    checked={client.aiPlanningEnabled ?? false}
-                    disabled={savingAiPlanning || (!client.aiPlanningEnabled && aiPlanningUsed >= aiPlanningQuota)}
-                    onChange={(e) => toggleAiPlanning(e.target.checked)}
-                  />
-                  Ativar prévia de planejamento com IA pra esse cliente
-                </label>
-                <p className="text-[11px] text-foreground/40 mt-1.5">
-                  {isLuzeriaOrg
-                    ? "Liberado pra todos os clientes (conta interna)."
-                    : <>{aiPlanningUsed} de {aiPlanningQuota} cliente(s) liberado(s) no seu nível ({agencyLevel?.label}).</>}{" "}
-                  <Link to="/planejamento-com-ia" className="underline hover:text-foreground/60">Saiba mais →</Link>
-                </p>
-              </>
-            )}
-          </FichaCard>
-        )}
-        {isAdmin && (
-          <FichaCard label="Onboarding do cliente">
-            <OnboardingBlock clientId={client.id} />
-          </FichaCard>
-        )}
-        {isAdmin && (
-          <FichaCard label="Recorrências" wide>
-            <RecurringBlock clientId={client.id} />
-          </FichaCard>
-        )}
         </div>
       )}
     </div>
