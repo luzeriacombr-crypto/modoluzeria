@@ -91,9 +91,8 @@ export function SalesHero({ onCta }: { onCta: () => void }) {
           </div>
         </Reveal>
 
-        <Reveal className="relative pb-10 lg:pb-8">
+        <Reveal className="relative pt-4 pb-2">
           <BrowserFrame src={boardImg} alt="Board de posts de um cliente no Modo Criador" />
-          <PhoneFrame src={approvalImg} alt="Link de aprovação do cliente no celular" className="absolute -bottom-2 -left-3 sm:-left-8 w-[34%] max-w-[190px]" />
           <div className="lz-float-b absolute -top-4 -right-1 sm:-right-4 bg-white text-[#0A0E23] rounded-2xl px-3.5 py-2.5 flex items-center gap-2.5 text-xs shadow-2xl">
             <span className="w-8 h-8 rounded-[10px] flex items-center justify-center font-black text-sm" style={{ background: "#E7F9D6", color: "#2E7D32" }}>✓</span>
             <span><b className="block font-extrabold">Post aprovado</b><span className="text-[#0A0E23]/55 text-[11px]">Cliente aprovou em um toque</span></span>

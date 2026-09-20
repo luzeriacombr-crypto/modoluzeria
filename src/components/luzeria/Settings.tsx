@@ -109,8 +109,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         </div>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-foreground/10 mb-6 overflow-x-auto overflow-y-hidden" data-tour="settings-tabs">
-        {[
+      {(() => {
+        const tabItems = [
           { id: "team", label: "Equipe" },
           { id: "integrations", label: "Integrações" },
           { id: "automations", label: "Automações" },
@@ -120,23 +120,41 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "general", label: "Geral" },
           { id: "knowledge", label: "Base de conhecimento" },
           ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }, { id: "blog", label: "Blog" }] : []),
-        ].filter((t) => allowedTabs.includes(t.id as SettingsTab)).map((t) => {
-          const active = tab === (t.id as any) ||
-            (t.id === "team" && (tab === "report" || tab === "auditoria")) ||
-            (t.id === "cliente" && (tab === "margem" || tab === "journey" || tab === "pagamentos")) ||
-            (t.id === "cobranca" && (tab === "afiliados" || tab === "revenda" || tab === "indicacoes"));
-          return (
-            <button key={t.id} onClick={() => setTab(t.id as any)}
-              className="shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
-              style={{
-                color: active ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
-                borderColor: active ? "rgb(var(--lz-brand-rgb))" : "transparent",
-              }}>
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
+        ].filter((t) => allowedTabs.includes(t.id as SettingsTab));
+        const isActive = (id: string) =>
+          tab === (id as any) ||
+          (id === "team" && (tab === "report" || tab === "auditoria")) ||
+          (id === "cliente" && (tab === "margem" || tab === "journey" || tab === "pagamentos")) ||
+          (id === "cobranca" && (tab === "afiliados" || tab === "revenda" || tab === "indicacoes"));
+        const current = tabItems.find((t) => isActive(t.id))?.id ?? tabItems[0]?.id;
+        return (
+          <>
+            {/* Celular: caixa de seleção em vez de abas roláveis */}
+            <div className="md:hidden mb-6" data-tour="settings-tabs-mobile">
+              <select id="settings-tab-select" aria-label="Seção de configurações" value={current}
+                onChange={(e) => setTab(e.target.value as any)}
+                className="w-full rounded-md border border-foreground/15 bg-card text-foreground text-sm font-bold uppercase tracking-wider px-4 py-3">
+                {tabItems.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+            </div>
+            <div className="hidden md:flex items-center gap-1 border-b border-foreground/10 mb-6 overflow-x-auto overflow-y-hidden" data-tour="settings-tabs">
+              {tabItems.map((t) => {
+                const active = isActive(t.id);
+                return (
+                  <button key={t.id} onClick={() => setTab(t.id as any)}
+                    className="shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
+                    style={{
+                      color: active ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
+                      borderColor: active ? "rgb(var(--lz-brand-rgb))" : "transparent",
+                    }}>
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        );
+      })()}
 
       {tab === "team" && (
         <div className="flex items-center justify-end gap-2 mb-6" data-tour="team-tab">
