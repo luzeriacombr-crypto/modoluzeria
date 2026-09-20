@@ -43,6 +43,44 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  // Aviso fixo (em vez de toast) pros casos de e-mail não confirmado / link vencido:
+  // a pessoa precisa de um botão pra reenviar, não só de uma mensagem que some.
+  const [notice, setNotice] = useState<{ kind: "unconfirmed" | "expired"; text: string } | null>(null);
+  const [resendIn, setResendIn] = useState(0);
+
+  useEffect(() => {
+    // Link de confirmação vencido ou já usado volta pra cá com o erro na URL.
+    const hash = window.location.hash;
+    if (hash.includes("error_code=") || hash.includes("error=access_denied")) {
+      setNotice({
+        kind: "expired",
+        text: "O link de confirmação venceu ou já foi aberto (alguns e-mails abrem o link sozinhos ao chegar). Digite seu e-mail abaixo e peça um novo.",
+      });
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((n) => n - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
+
+  async function resendConfirmation() {
+    if (!email.trim()) { toast.error("Digite seu e-mail no campo acima primeiro."); return; }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup", email: email.trim(),
+        options: { emailRedirectTo: `${window.location.origin}/auth` },
+      });
+      if (error) throw error;
+      setResendIn(60);
+      toast.success("Enviamos um novo e-mail de confirmação. Confira também o spam.");
+    } catch (err: any) {
+      toast.error(/rate|seconds/i.test(err?.message ?? "") ? "Aguarde um minuto antes de pedir outro e-mail." : (err?.message ?? "Não consegui reenviar o e-mail."));
+    } finally { setLoading(false); }
+  }
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
@@ -65,7 +103,14 @@ function AuthPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
     } catch (err: any) {
-      toast.error(err.message ?? "Erro ao autenticar");
+      const msg: string = err?.message ?? "";
+      if (err?.code === "email_not_confirmed" || /not confirmed/i.test(msg)) {
+        setNotice({ kind: "unconfirmed", text: "Você ainda não confirmou seu e-mail. Abra o e-mail que enviamos no cadastro e clique no link — ou peça um novo abaixo." });
+      } else if (/invalid login credentials/i.test(msg)) {
+        toast.error("E-mail ou senha incorretos.");
+      } else {
+        toast.error(msg || "Erro ao autenticar");
+      }
     } finally { setLoading(false); }
   }
 
@@ -123,6 +168,15 @@ function AuthPage() {
 
         {mode === "login" ? (
           <form onSubmit={submit} className="space-y-3">
+            {notice && (
+              <div className="rounded-md p-3 text-xs leading-relaxed mb-1" style={{ background: "rgba(226,255,62,0.10)", border: "1px solid rgba(226,255,62,0.35)", color: "rgba(255,255,255,0.88)" }}>
+                <p>{notice.text}</p>
+                <button type="button" onClick={resendConfirmation} disabled={loading || resendIn > 0}
+                  className="mt-2 font-bold underline underline-offset-2 disabled:opacity-50 disabled:no-underline" style={{ color: "#E2FF3E" }}>
+                  {resendIn > 0 ? `Novo e-mail em ${resendIn}s` : "Reenviar e-mail de confirmação"}
+                </button>
+              </div>
+            )}
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Email"
               className="w-full bg-white/10 border border-white/15 rounded-md px-3 py-2.5 text-sm text-white outline-none focus:border-[#CDFF00] focus:ring-1 focus:ring-[#CDFF00] placeholder:text-white/40 transition-colors" />
             <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="Senha"

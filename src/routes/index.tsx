@@ -91,6 +91,16 @@ export const Route = createFileRoute("/")({
 function IndexRoute() {
   const nav = useNavigate();
 
+  // Link de confirmação de e-mail vencido/já usado cai na home com o erro na
+  // URL (#error_code=otp_expired). Manda pro login, que explica e oferece
+  // reenviar — antes a pessoa via só a página de vendas, sem nenhuma pista.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes("error_code=") || hash.includes("error=access_denied")) {
+      nav({ to: "/auth", hash: hash.slice(1), replace: true });
+    }
+  }, [nav]);
+
   useEffect(() => {
     // Runs client-side after the SSR'd sales page has already painted (kept
     // SSR for the landing page's SEO) — covers a fresh/full load, which

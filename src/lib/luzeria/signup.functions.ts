@@ -175,7 +175,7 @@ export const publicSignup = createServerFn({ method: "POST" })
       if (userErr || !created?.user) throw new Error(userErr?.message ?? "Não foi possível criar sua conta.");
 
       // admin.createUser() never sends the confirmation email itself — trigger it explicitly.
-      const { error: resendErr } = await supabaseAdmin.auth.resend({ type: "signup", email: data.email });
+      const { error: resendErr } = await supabaseAdmin.auth.resend({ type: "signup", email: data.email, options: { emailRedirectTo: "https://www.modocriador.com.br/auth" } });
       if (resendErr) console.error("Falha ao enviar e-mail de confirmação:", resendErr.message);
 
       try {
