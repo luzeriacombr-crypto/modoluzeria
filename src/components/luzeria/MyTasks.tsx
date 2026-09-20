@@ -4,9 +4,9 @@ import { STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, hasPermission, get
 import { getStatusIcon } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
-import { useState, useMemo, useEffect, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send, Video as VideoIcon, MapPin, Users, SlidersHorizontal, Eye, EyeOff, Lock, RotateCcw, Crown, Medal, Flame } from "lucide-react";
+import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send, Video as VideoIcon, MapPin, Users, SlidersHorizontal, Eye, EyeOff, Lock, RotateCcw, Crown, Medal, Flame, GripVertical } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { MyWeekView } from "./MyWeekView";
 import { getDailyVerse } from "@/lib/luzeria/daily-verse";
@@ -93,15 +93,43 @@ function CustomizeLayoutModal({ layout, available, onChange, onClose }: {
 }) {
   const rows = layout.order.filter((id) => available.has(id));
   const meta = (id: string) => MY_TASKS_BLOCKS.find((b) => b.id === id)!;
-  const move = (id: string, dir: -1 | 1) => {
-    const visible = rows;
-    const i = visible.indexOf(id), j = i + dir;
-    if (j < 0 || j >= visible.length) return;
-    const swap = visible[j];
+  const [dragId, setDragId] = useState<string | null>(null);
+  const rowEls = useRef<Record<string, HTMLDivElement | null>>({});
+  const box = useRef<HTMLDivElement>(null);
+
+  // Aplica a nova ordem dos itens visíveis mantendo os "escondidos do modal" nos seus lugares.
+  const applyVisibleOrder = (visible: string[]) => {
+    const slots = layout.order.map((id, i) => (available.has(id) ? i : -1)).filter((i) => i >= 0);
     const order = [...layout.order];
-    const a = order.indexOf(id), b = order.indexOf(swap);
-    order[a] = swap; order[b] = id;
+    slots.forEach((slot, k) => { order[slot] = visible[k]; });
     onChange({ ...layout, order });
+  };
+  const moveTo = (id: string, target: number) => {
+    const from = rows.indexOf(id);
+    if (from < 0 || target === from) return;
+    const next = [...rows];
+    next.splice(from, 1);
+    next.splice(target, 0, id);
+    applyVisibleOrder(next);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragId) return;
+    const y = e.clientY;
+    // Rola o modal quando o dedo/mouse chega perto da borda.
+    const c = box.current;
+    if (c) {
+      const r = c.getBoundingClientRect();
+      if (y < r.top + 48) c.scrollBy({ top: -14 });
+      else if (y > r.bottom - 48) c.scrollBy({ top: 14 });
+    }
+    let target = rows.length - 1;
+    for (let i = 0; i < rows.length; i++) {
+      const el = rowEls.current[rows[i]];
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (y < r.top + r.height / 2) { target = i; break; }
+    }
+    moveTo(dragId, target);
   };
   const toggle = (id: string) => {
     if (LOCKED_BLOCKS.has(id)) return;
@@ -110,22 +138,32 @@ function CustomizeLayoutModal({ layout, available, onChange, onClose }: {
   };
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-md bg-card border border-foreground/10 rounded-2xl p-5 max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div ref={box} className="w-full max-w-md bg-card border border-foreground/10 rounded-2xl p-5 max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 mb-1">
           <h3 className="text-base font-semibold text-foreground">Personalizar página</h3>
           <button onClick={onClose} aria-label="Fechar" className="text-foreground/40 hover:text-foreground shrink-0"><X size={16} /></button>
         </div>
-        <p className="text-[12.5px] text-foreground/55 mb-4">Escolha o que aparece e em que ordem. Fica salvo neste aparelho.</p>
-        <div className="grid gap-2">
+        <p className="text-[12.5px] text-foreground/55 mb-4">Arraste pela alça <GripVertical size={12} className="inline -mt-0.5" /> para mudar a ordem e use o olho para ocultar. Fica salvo neste aparelho.</p>
+        <div className="grid gap-2" onPointerMove={onPointerMove} onPointerUp={() => setDragId(null)} onPointerCancel={() => setDragId(null)}>
           {rows.map((id, i) => {
-            const b = meta(id), hidden = layout.hidden.includes(id) && !b.locked;
+            const b = meta(id), hidden = layout.hidden.includes(id) && !b.locked, dragging = dragId === id;
             return (
-              <div key={id} className="flex items-center gap-2 rounded-xl border border-foreground/8 px-3 py-2.5" style={{ opacity: hidden ? 0.5 : 1 }}>
-                <div className="flex flex-col shrink-0">
-                  <button onClick={() => move(id, -1)} disabled={i === 0} aria-label="Subir" className="text-foreground/50 hover:text-foreground disabled:opacity-25"><ChevronUp size={14} /></button>
-                  <button onClick={() => move(id, 1)} disabled={i === rows.length - 1} aria-label="Descer" className="text-foreground/50 hover:text-foreground disabled:opacity-25"><ChevronDown size={14} /></button>
-                </div>
-                <div className="min-w-0 flex-1">
+              <div key={id} ref={(el) => { rowEls.current[id] = el; }}
+                className="flex items-center gap-2 rounded-xl border px-2 py-2.5 transition-shadow"
+                style={{
+                  opacity: hidden ? 0.5 : 1,
+                  borderColor: dragging ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 8%, transparent)",
+                  boxShadow: dragging ? "0 8px 24px rgba(0,0,0,0.35)" : undefined,
+                  background: dragging ? "color-mix(in srgb, var(--foreground) 5%, var(--card))" : undefined,
+                }}>
+                <button type="button" aria-label={`Arrastar ${b.label}`}
+                  onPointerDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); setDragId(id); }}
+                  onKeyDown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); moveTo(id, i - 1); } if (e.key === "ArrowDown") { e.preventDefault(); moveTo(id, i + 1); } }}
+                  className="shrink-0 p-1.5 rounded-md text-foreground/45 hover:text-foreground cursor-grab active:cursor-grabbing"
+                  style={{ touchAction: "none" }}>
+                  <GripVertical size={18} />
+                </button>
+                <div className="min-w-0 flex-1 select-none">
                   <div className="text-[13px] font-semibold text-foreground truncate">{b.label}</div>
                   <div className="text-[11px] text-foreground/45 truncate">{b.locked ? "Sempre visível" : b.hint}</div>
                 </div>
