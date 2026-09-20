@@ -9,6 +9,7 @@ import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria
 import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { approveReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { BrazilAgenciesMap } from "@/components/luzeria/BrazilAgenciesMap";
 
 function formatCents(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
@@ -171,7 +172,6 @@ export function AgenciesBillingPanel() {
     const uf = ufFromWhatsapp(o.whatsapp);
     if (uf) stateCounts.set(uf, (stateCounts.get(uf) ?? 0) + 1);
   });
-  const topStates = [...stateCounts.entries()].sort((a, b) => b[1] - a[1]);
 
   const fetchInvoice = useMutation({
     mutationFn: useServerFn(getOrgNextInvoice),
@@ -336,17 +336,15 @@ export function AgenciesBillingPanel() {
           "Online agora" é aproximado (uso real nos últimos ~15min) — atualiza sozinho a cada 1min, passe o mouse pra ver por agência.
         </p>
 
-        {topStates.length > 0 && (
+        {stateCounts.size > 0 && (
           <div className="mt-4 pt-4 border-t border-foreground/6">
-            <div className="text-[11px] text-foreground/50 mb-2">Estados com mais agências ({topStates.length})</div>
-            <div className="flex flex-wrap gap-2">
-              {topStates.map(([uf, count]) => (
-                <span key={uf} className="inline-flex items-center gap-1.5 bg-foreground/[0.03] rounded-full px-2.5 py-1 text-xs">
-                  <span className="font-bold text-foreground">{uf}</span>
-                  <span className="text-foreground/40">{count}</span>
-                </span>
-              ))}
+            <div className="text-[11px] text-foreground/50 mb-3">
+              Agências por estado — {stateCounts.size} de 27 estados com agência
             </div>
+            <BrazilAgenciesMap counts={stateCounts} />
+            <p className="text-[10.5px] text-foreground/35 mt-2 leading-relaxed">
+              O estado é estimado pelo DDD do WhatsApp cadastrado, então é uma aproximação — agência com número de outro estado cai no estado do DDD.
+            </p>
           </div>
         )}
       </div>

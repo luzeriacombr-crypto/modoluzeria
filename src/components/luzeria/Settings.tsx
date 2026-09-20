@@ -157,15 +157,19 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
       {tab === "general" ? <GeneralSettings /> :
        tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" ? (
         <div className="space-y-10">
-          <PlanCardSection />
+          {/* Pro admin da plataforma o painel de agências é o que interessa
+              no dia a dia, então ele vem antes do plano/cobrança da própria
+              Luzeria. Pra quem não é admin nada muda: o painel nem renderiza
+              e "Seu plano" continua sendo a primeira seção. */}
+          {me.isPlatformAdmin && (
+            <AgenciesBillingPanel />
+          )}
+          <div className={me.isPlatformAdmin ? "pt-2 border-t border-foreground/10" : undefined}>
+            <PlanCardSection />
+          </div>
           <div className="pt-2 border-t border-foreground/10">
             <BillingSection />
           </div>
-          {me.isPlatformAdmin && (
-            <div className="pt-2 border-t border-foreground/10">
-              <AgenciesBillingPanel />
-            </div>
-          )}
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-foreground/10">
               <DemoRequestsPanel />
