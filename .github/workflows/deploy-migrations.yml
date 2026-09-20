@@ -1,17 +1,32 @@
 name: Deploy Supabase migrations
 
+# Aplica só as migrações ADICIONADAS no push (não o histórico inteiro):
+# o ledger do Supabase (supabase_migrations) nunca foi mantido — as
+# migrações antigas foram aplicadas na mão pelo SQL Editor — então
+# `supabase db push` tentava reaplicar todas e falhava em toda execução.
+# Cada arquivo novo roda via `supabase db query` (Management API, só
+# precisa do access token). Se a migração já foi aplicada na mão antes
+# do push (acontece), o erro "already exists" vira aviso, não falha.
+# Se falhar de outro jeito, o job fica vermelho e mostra o erro.
+
 on:
   push:
     branches: [main]
     paths:
       - "supabase/migrations/**"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      file:
+        description: "Arquivo de migração específico a aplicar (ex: supabase/migrations/2026..._nome.sql)"
+        required: false
 
 jobs:
   migrate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: supabase/setup-cli@v1
         with:
@@ -22,8 +37,43 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-      - name: Push pending migrations
-        run: supabase db push --yes
+      - name: Apply new migrations
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          INPUT_FILE: ${{ github.event.inputs.file }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          set -uo pipefail
+          if [ -n "${INPUT_FILE:-}" ]; then
+            FILES="$INPUT_FILE"
+          else
+            BEFORE="$BEFORE_SHA"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE="$(git rev-parse "$AFTER_SHA~1")"
+            fi
+            FILES="$(git diff --name-only --diff-filter=A "$BEFORE" "$AFTER_SHA" -- 'supabase/migrations/*.sql' | sort)"
+          fi
+
+          if [ -z "$FILES" ]; then
+            echo "Nenhuma migração nova neste push."
+            exit 0
+          fi
+
+          fail=0
+          for f in $FILES; do
+            echo "::group::$f"
+            out="$(supabase db query --linked --file "$f" 2>&1)"
+            rc=$?
+            if [ $rc -eq 0 ]; then
+              echo "aplicada."
+            elif echo "$out" | grep -qiE "already exists|duplicate"; then
+              echo "::notice::$f já estava aplicada (provavelmente na mão) — ignorada."
+            else
+              echo "$out"
+              echo "::error::$f falhou ao aplicar."
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $fail
