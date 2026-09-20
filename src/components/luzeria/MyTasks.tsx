@@ -1,5 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
-import { topMembersQO, myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, contentStatusesQO, myStoriesTodayQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { setMyTasksDefaultLayout } from "@/lib/luzeria/my-tasks-layout.functions";
+import { myTasksDefaultLayoutQO, topMembersQO, myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, contentStatusesQO, myStoriesTodayQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, hasPermission, getStatusMeta, type Status } from "@/lib/luzeria/types";
 import { getStatusIcon } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -47,15 +51,15 @@ function SectionHeader({ icon, iconBg, iconColor, label, count, open, onToggle }
 
 // ---- Personalização da página (ordem + o que fica visível), por pessoa/aparelho.
 const MY_TASKS_BLOCKS: { id: string; label: string; hint: string; locked?: boolean }[] = [
-  { id: "kpis", label: "Resumo", hint: "Atrasadas, hoje e próximos 7 dias (também filtram a lista)" },
-  { id: "agenda", label: "Agenda do Google", hint: "Seus compromissos dos próximos dias" },
   { id: "daily", label: "Rotina do dia", hint: "Stories e tarefas de rotina que caem hoje", locked: true },
+  { id: "kpis", label: "Resumo", hint: "Atrasadas, hoje e próximos 7 dias (também filtram a lista)" },
+  { id: "month", label: "Seu mês", hint: "Atividades e estatísticas de trabalho" },
+  { id: "agenda", label: "Agenda do Google", hint: "Seus compromissos dos próximos dias" },
   { id: "pubs", label: "Publicações de hoje", hint: "O que vai ao ar hoje no Instagram" },
   { id: "list", label: "Lista de demandas", hint: "O coração da página", locked: true },
   { id: "whatsapp", label: "Avisar clientes no WhatsApp", hint: "Atualizações semanais pendentes" },
   { id: "payments", label: "Pagamentos próximos", hint: "Cobranças que vencem em breve" },
   { id: "mentions", label: "Mencionado em", hint: "Comentários em que te marcaram" },
-  { id: "month", label: "Seu mês", hint: "Atividades e estatísticas de trabalho" },
   { id: "productivity", label: "Produtividade", hint: "Gráfico de entregas do mês" },
 ];
 const LOCKED_BLOCKS = new Set(MY_TASKS_BLOCKS.filter((b) => b.locked).map((b) => b.id));
@@ -71,25 +75,33 @@ function normalizeLayout(raw: any): MyTasksLayout {
   return { order, hidden };
 }
 
-function useMyTasksLayout(userId?: string): [MyTasksLayout, (l: MyTasksLayout) => void] {
+function useMyTasksLayout(userId: string | undefined, teamDefault: MyTasksLayout | null | undefined): {
+  layout: MyTasksLayout; setLayout: (l: MyTasksLayout) => void; reset: () => void;
+} {
   const key = `lz.myTasksLayout.${userId ?? "anon"}`;
-  const [layout, setLayoutState] = useState<MyTasksLayout>(() => {
-    if (typeof window === "undefined") return DEFAULT_LAYOUT;
-    try { const raw = window.localStorage.getItem(key); return raw ? normalizeLayout(JSON.parse(raw)) : DEFAULT_LAYOUT; } catch { return DEFAULT_LAYOUT; }
-  });
+  const read = (): MyTasksLayout | null => {
+    if (typeof window === "undefined") return null;
+    try { const raw = window.localStorage.getItem(key); return raw ? normalizeLayout(JSON.parse(raw)) : null; } catch { return null; }
+  };
+  const [saved, setSaved] = useState<MyTasksLayout | null>(read);
   // O usuário só chega depois do carregamento: relê quando a chave passa a ter o id de verdade.
-  useEffect(() => {
-    try { const raw = window.localStorage.getItem(key); setLayoutState(raw ? normalizeLayout(JSON.parse(raw)) : DEFAULT_LAYOUT); } catch { /* noop */ }
-  }, [key]);
+  useEffect(() => { setSaved(read()); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const layout = saved ?? (teamDefault ? normalizeLayout(teamDefault) : DEFAULT_LAYOUT);
   const setLayout = (l: MyTasksLayout) => {
-    setLayoutState(l);
+    setSaved(l);
     try { window.localStorage.setItem(key, JSON.stringify(l)); } catch { /* noop */ }
   };
-  return [layout, setLayout];
+  // "Restaurar padrão": apaga a personalização e volta pro padrão da casa.
+  const reset = () => {
+    setSaved(null);
+    try { window.localStorage.removeItem(key); } catch { /* noop */ }
+  };
+  return { layout, setLayout, reset };
 }
 
-function CustomizeLayoutModal({ layout, available, onChange, onClose }: {
-  layout: MyTasksLayout; available: Set<string>; onChange: (l: MyTasksLayout) => void; onClose: () => void;
+function CustomizeLayoutModal({ layout, available, onChange, onReset, onSetTeamDefault, onClose }: {
+  layout: MyTasksLayout; available: Set<string>; onChange: (l: MyTasksLayout) => void; onReset: () => void;
+  onSetTeamDefault?: () => void; onClose: () => void;
 }) {
   const rows = layout.order.filter((id) => available.has(id));
   const meta = (id: string) => MY_TASKS_BLOCKS.find((b) => b.id === id)!;
@@ -179,8 +191,13 @@ function CustomizeLayoutModal({ layout, available, onChange, onClose }: {
             );
           })}
         </div>
+        {onSetTeamDefault && (
+          <button onClick={onSetTeamDefault} className="mt-4 w-full text-[12px] font-bold px-4 py-2.5 rounded-xl border border-dashed border-foreground/25 text-foreground/75 hover:text-foreground hover:border-foreground/45 transition-colors">
+            Definir esta ordem como padrão para todo o Modo Criador
+          </button>
+        )}
         <div className="flex items-center justify-between mt-4">
-          <button onClick={() => onChange(DEFAULT_LAYOUT)} className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-foreground/55 hover:text-foreground">
+          <button onClick={onReset} className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-foreground/55 hover:text-foreground">
             <RotateCcw size={12} /> Restaurar padrão
           </button>
           <button onClick={onClose} className="lz-btn-primary text-[13px] font-bold px-5 py-2 rounded-full">Pronto</button>
@@ -363,7 +380,10 @@ export function MyTasks() {
   const [view, setView] = useState<"list" | "week">("list");
   const [showNovaDemanda, setShowNovaDemanda] = useState(false);
   const dailyVerse = getDailyVerse();
-  const [layout, setLayout] = useMyTasksLayout(me?.id);
+  const { data: teamDefault } = useQuery(myTasksDefaultLayoutQO());
+  const { layout, setLayout, reset: resetLayout } = useMyTasksLayout(me?.id, teamDefault);
+  const setTeamDefault = useServerFn(setMyTasksDefaultLayout);
+  const qc = useQueryClient();
   const [showCustomize, setShowCustomize] = useState(false);
 
   const blocks: Record<string, React.ReactNode> = {
@@ -701,7 +721,15 @@ export function MyTasks() {
 
       {showNovaDemanda && <NovaDemandaModal onClose={() => setShowNovaDemanda(false)} />}
       {showCustomize && (
-        <CustomizeLayoutModal layout={layout} available={availableBlocks} onChange={setLayout} onClose={() => setShowCustomize(false)} />
+        <CustomizeLayoutModal layout={layout} available={availableBlocks} onChange={setLayout} onReset={resetLayout} onClose={() => setShowCustomize(false)}
+          onSetTeamDefault={me?.isPlatformAdmin ? async () => {
+            if (!(await requestConfirm("Usar esta ordem e estes blocos como padrão para todas as agências? Quem já personalizou a própria página mantém a dela; todo o resto passa a ver esta ordem."))) return;
+            try {
+              await setTeamDefault({ data: { layout } });
+              await qc.invalidateQueries({ queryKey: ["my-tasks-default-layout"] });
+              toast.success("Pronto! Esta é a nova ordem padrão.");
+            } catch (e: any) { toast.error(e?.message ?? "Erro ao salvar o padrão."); }
+          } : undefined} />
       )}
 
       <div className="space-y-6">

@@ -88,6 +88,7 @@ import {
   getSiteTrackingSettings, updateSiteTrackingSettings, getAgencyWelcomeMessage, updateAgencyWelcomeMessage,
 } from "./sales-page.functions";
 import { getSalesLanding, getSalesLandingAdmin } from "./sales-landing.functions";
+import { getMyTasksDefaultLayout } from "./my-tasks-layout.functions";
 import { getMyReferralInfo, setMyReferralCode } from "./referrals.functions";
 import {
   listJourneyStages, upsertJourneyStage, deleteJourneyStage,
@@ -167,6 +168,7 @@ export const calendarItemsQO = (from: string, to: string) =>
     enabled: !!from && !!to,
   });
 export const platformUpdatesQO = () => queryOptions({ queryKey: ["platform-updates"], queryFn: () => listPlatformUpdates() });
+export const myTasksDefaultLayoutQO = () => queryOptions({ queryKey: ["my-tasks-default-layout"], queryFn: () => getMyTasksDefaultLayout(), staleTime: 10 * 60_000 });
 export const salesLandingQO = () => queryOptions({ queryKey: ["sales-landing"], queryFn: () => getSalesLanding(), staleTime: 5 * 60_000 });
 export const salesLandingAdminQO = () => queryOptions({ queryKey: ["sales-landing-admin"], queryFn: () => getSalesLandingAdmin(), staleTime: 0 });
 export const salesPageBlocksQO = () => queryOptions({ queryKey: ["sales-page-blocks"], queryFn: () => getSalesPageBlocks() });
