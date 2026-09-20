@@ -91,13 +91,13 @@ export function SalesHero({ onCta }: { onCta: () => void }) {
           </div>
         </Reveal>
 
-        <Reveal className="relative pt-4 pb-2">
+        <Reveal className="relative pt-4 pb-6 sm:pb-2">
           <BrowserFrame src={boardImg} alt="Board de posts de um cliente no Modo Criador" />
           <div className="lz-float-b absolute -top-4 -right-1 sm:-right-4 bg-white text-[#0A0E23] rounded-2xl px-3.5 py-2.5 flex items-center gap-2.5 text-xs shadow-2xl">
             <span className="w-8 h-8 rounded-[10px] flex items-center justify-center" style={{ background: "#D4F1DC", color: "#1B6B34" }}><Check size={17} strokeWidth={3} /></span>
-            <span><b className="block font-extrabold">Post aprovado</b><span className="text-[#0A0E23]/55 text-[11px]">Cliente aprovou em um toque</span></span>
+            <span><b className="block font-extrabold">Post aprovado</b><span className="text-[#0A0E23]/55 text-[11px]">Cliente aprovou em um clique</span></span>
           </div>
-          <div className="lz-float-a hidden sm:flex absolute -bottom-3 -left-4 lg:-left-8 bg-white text-[#0A0E23] rounded-2xl px-3.5 py-2.5 items-center gap-2.5 text-xs shadow-2xl">
+          <div className="lz-float-a flex absolute -bottom-4 left-1 sm:-bottom-3 sm:-left-4 lg:-left-8 bg-white text-[#0A0E23] rounded-2xl px-3.5 py-2.5 items-center gap-2.5 text-xs shadow-2xl">
             <span className="w-8 h-8 rounded-[10px] flex items-center justify-center" style={{ background: "#D6E8FF", color: "#0B4FB3" }}><Sparkles size={17} strokeWidth={2.4} /></span>
             <span><b className="block font-extrabold">Planejamento pronto</b><span className="text-[#0A0E23]/55 text-[11px]">A IA montou a prévia de outubro</span></span>
           </div>
@@ -122,12 +122,15 @@ export function SalesNumbers() {
     { value: "30 dias", label: "de teste grátis, sem cartão" },
   ];
   return (
-    <section style={{ background: BG_WHITE, color: BG_BLUE }} className="border-b border-black/10">
-      <div className="max-w-[1100px] mx-auto px-5 sm:px-10 grid grid-cols-1 sm:grid-cols-3">
+    <section style={{ background: LIME, color: BG_BLUE }}>
+      <div className="grid grid-cols-1 sm:grid-cols-3">
         {items.map((it, i) => (
-          <div key={it.label} className={`py-8 sm:px-6 text-center sm:text-left ${i > 0 ? "border-t sm:border-t-0 sm:border-l" : ""}`} style={{ borderColor: "rgba(10,14,35,0.12)" }}>
-            <div className={`${SERIF} text-[clamp(40px,5vw,58px)] leading-none`} style={{ fontStyle: "italic", letterSpacing: "-0.02em" }}>{it.value}</div>
-            <div className="mt-2 text-[13.5px] font-medium" style={{ color: "rgba(10,14,35,0.62)" }}>{it.label}</div>
+          <div key={it.label} className="py-8 px-5 sm:px-10 text-center sm:text-left"
+            style={{ background: i === 1 ? "#EAFF9A" : LIME }}>
+            <div className="max-w-[340px] mx-auto sm:mx-0 sm:ml-auto sm:mr-auto lg:max-w-[300px]">
+              <div className={`${SERIF} text-[clamp(40px,5vw,58px)] leading-none`} style={{ fontStyle: "italic", letterSpacing: "-0.02em" }}>{it.value}</div>
+              <div className="mt-2 text-[13.5px] font-semibold" style={{ color: "rgba(10,14,35,0.72)" }}>{it.label}</div>
+            </div>
           </div>
         ))}
       </div>
