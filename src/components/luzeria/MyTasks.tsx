@@ -1172,17 +1172,21 @@ function WorkStatsWidget({ monthKey, userId }: { monthKey: string; userId: strin
               tabIndex={0}
               onClick={() => setOpen((o) => (o === key ? null : key))}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpen((o) => (o === key ? null : key)); }}
-              className="text-left rounded-2xl bg-card border px-4 py-3.5 cursor-pointer transition hover:-translate-y-0.5"
-              style={{ borderColor: open === key ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 7%, transparent)", boxShadow: open === key ? "0 0 0 1px rgb(var(--lz-brand-rgb)) inset" : undefined }}
+              className="text-left rounded-2xl border px-4 py-3.5 cursor-pointer transition hover:-translate-y-0.5"
+              style={{
+                background: `color-mix(in srgb, ${meta.color} 11%, var(--card))`,
+                borderColor: open === key ? meta.color : hexA(meta.color, 0.3),
+                boxShadow: open === key ? `0 0 0 1px ${meta.color} inset` : undefined,
+              }}
             >
               <div className="flex items-center gap-2 mb-2.5">
                 <span className="h-6 w-6 rounded-lg inline-flex items-center justify-center shrink-0" style={{ background: hexA(meta.color, 0.16), color: meta.color }}>
                   {meta.icon(14)}
                 </span>
-                <span className="text-[11.5px] font-semibold text-foreground/60 truncate">{meta.label}</span>
+                <span className="text-[11.5px] font-bold truncate" style={{ color: meta.color }}>{meta.label}</span>
                 <ChevronDown size={13} className={`ml-auto shrink-0 text-foreground/35 transition-transform ${open === key ? "rotate-180" : ""}`} />
               </div>
-              <div className="text-[30px] font-extrabold leading-none tracking-tight tabular-nums text-foreground">
+              <div className="text-[30px] font-extrabold leading-none tracking-tight tabular-nums" style={{ color: meta.color }}>
                 {section.done}{section.goal != null && <span className="text-foreground/35 font-bold text-lg">/{section.goal}</span>}
               </div>
               {section.goal != null && section.goal > 0 && (
