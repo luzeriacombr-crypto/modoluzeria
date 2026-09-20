@@ -200,12 +200,10 @@ export function MyTasks() {
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-foreground/40 mb-2">Minhas demandas</p>
           <h1 className="text-[32px] sm:text-[44px] font-semibold text-foreground leading-[1.02] tracking-tight">
             Olá,{" "}
-            <span className="font-criador-serif italic font-normal normal-case" style={{ color: "var(--lz-accent-ink)" }}>
-              {(() => {
-                const raw = ((isMeView ? me?.name : targetProfile?.name) ?? "você").trim().split(" ")[0];
-                return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
-              })()}
-            </span>! 🤩
+            {(() => {
+              const raw = ((isMeView ? me?.name : targetProfile?.name) ?? "você").trim().split(" ")[0];
+              return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+            })()}! 🤩
           </h1>
           {!disabledFeatures.has("daily_verse") && (
             <div className="max-w-sm mt-3">
