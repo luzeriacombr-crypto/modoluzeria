@@ -231,8 +231,6 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
               <>
                 <p className="px-3 pt-4 pb-1 text-xs font-bold uppercase tracking-wider text-foreground/50">{navLabel("financeiro", DEFAULT_NAV_LABELS.financeiro)}</p>
                 <MenuLink icon={<Wallet size={17} />} label={navLabel("cobranca", DEFAULT_NAV_LABELS.cobranca)} onClick={() => goToConfigTab("cobranca")} />
-                <MenuLink icon={<Wallet size={17} />} label={navLabel("afiliados", DEFAULT_NAV_LABELS.afiliados)} onClick={() => goToConfigTab("afiliados")} />
-                <MenuLink icon={<Wallet size={17} />} label={navLabel("revenda", DEFAULT_NAV_LABELS.revenda)} onClick={() => goToConfigTab("revenda")} />
               </>
             )}
 

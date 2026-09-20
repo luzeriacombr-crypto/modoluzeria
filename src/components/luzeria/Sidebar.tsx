@@ -22,7 +22,7 @@ export const DEFAULT_NAV_LABELS: Record<string, string> = {
   "minhas-demandas": "Minhas demandas", dashboard: "Dashboard", clientes: "Clientes",
   calendario: "Calendário", biblioteca: "Biblioteca",
   instagram: "Instagram", financeiro: "Financeiro", equipe: "Equipe", ajuda: "Ajuda",
-  cobranca: "Plano e Cobrança", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda",
+  cobranca: "Seu plano", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda",
   rotina: "Rotina", membros: "Membros", relatorio: "Relatório", "auditoria-producao": "Auditoria de Produção", jornada: "Jornada do cliente",
   vendas: "Vendas", lixeira: "Lixeira", pagamentos: "Pagamentos", cliente: "Visão Geral", "cliente-overview": "Visão Geral",
   "selecao-de-fotos": "Seleção de Fotos",
@@ -206,10 +206,12 @@ export function Sidebar({
             ...(canFinanceiro ? [{ id: "pagamentos", label: navLabel("pagamentos", "Pagamentos"), node: <NavSubButton key="pagamentos" label={navLabel("pagamentos", "Pagamentos")} active={configTabActive("pagamentos")} onClick={() => goToConfigTab("pagamentos")} /> }] : []),
           ]);
 
+          // Afiliados e Revenda saíram do menu: as três entradas abriam a
+          // mesma tela (a aba de cobrança renderiza todas as seções), então
+          // eram três caminhos pro mesmo lugar. As seções continuam lá
+          // dentro, e as URLs ?tab=afiliados / ?tab=revenda seguem válidas.
           const financeiroItems = canFinanceiro ? orderSection("financeiro", [
-            { id: "cobranca", label: navLabel("cobranca", "Plano e Cobrança"), node: <NavSubButton key="cobranca" label={navLabel("cobranca", "Plano e Cobrança")} active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} /> },
-            { id: "afiliados", label: navLabel("afiliados", "Afiliados"), node: <NavSubButton key="afiliados" label={navLabel("afiliados", "Afiliados")} active={configTabActive("afiliados")} onClick={() => goToConfigTab("afiliados")} /> },
-            { id: "revenda", label: navLabel("revenda", "Revenda"), node: <NavSubButton key="revenda" label={navLabel("revenda", "Revenda")} active={configTabActive("revenda")} onClick={() => goToConfigTab("revenda")} /> },
+            { id: "cobranca", label: navLabel("cobranca", "Seu plano"), node: <NavSubButton key="cobranca" label={navLabel("cobranca", "Seu plano")} active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} /> },
           ]) : [];
 
           const equipeItems = orderSection("equipe", [
