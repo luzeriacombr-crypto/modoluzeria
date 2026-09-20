@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive } from "lucide-react";
+import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react";
 import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, orgPageViewsQO, useApi } from "@/lib/luzeria/queries";
 import { computeAgencyPoints, getAgencyLevel } from "@/lib/luzeria/agency-level";
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
@@ -15,6 +15,15 @@ function formatCents(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 }
 
+/** Quantas agências a tabela mostra antes de precisar expandir. */
+const AGENCIAS_VISIVEIS = 10;
+
+type ColunaOrdenavel = "name" | "nivel" | "plano" | "status" | "clientes" | "equipe" | "acesso";
+/** Colunas de texto começam em A→Z; as de número/data começam na maior. */
+const COLUNAS_TEXTO: ColunaOrdenavel[] = ["name"];
+/** Ordem que faz sentido pra "Status": quem paga primeiro, cancelado por último. */
+const STATUS_PESO: Record<string, number> = { active: 0, trialing: 1, past_due: 2, canceled: 3 };
+
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   trialing: { label: "Em teste", color: "#4A9EFF" },
   active: { label: "Ativa", color: "#4ADE80" },
@@ -22,10 +31,38 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   canceled: { label: "Cancelada", color: "#9AA4B2" },
 };
 
-function AgencyLevelBadge({ o }: { o: any }) {
-  const { data: plans = [] } = useQuery(plansQO());
+/**
+ * Cabeçalho que ordena: 1º clique ordena, 2º inverte, 3º volta pro padrão
+ * (mais recentes primeiro). A setinha só aparece na coluna ativa.
+ */
+function ThOrdenavel({ coluna, label, ordem, onClick, align = "left" }: {
+  coluna: ColunaOrdenavel;
+  label: string;
+  ordem: { coluna: ColunaOrdenavel; dir: "asc" | "desc" } | null;
+  onClick: (c: ColunaOrdenavel) => void;
+  align?: "left" | "right";
+}) {
+  const ativa = ordem?.coluna === coluna;
+  return (
+    <th className={`${align === "right" ? "text-right" : "text-left"} px-4 py-3 text-xs font-semibold`}>
+      <button
+        onClick={() => onClick(coluna)}
+        title="Ordenar por essa coluna"
+        className={`inline-flex items-center gap-1 transition-colors hover:text-foreground ${ativa ? "text-foreground" : "text-foreground/60"}`}
+      >
+        {label}
+        {ativa
+          ? (ordem!.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />)
+          : <ArrowUpDown size={11} className="opacity-0 group-hover:opacity-40" />}
+      </button>
+    </th>
+  );
+}
+
+/** Pontos da agência — usado pelo selo e pela ordenação da coluna "Nível". */
+function pontosDaAgencia(o: any, plans: any[]) {
   const plan = plans.find((p: any) => p.id === o.planId);
-  const points = computeAgencyPoints({
+  return computeAgencyPoints({
     activeClients: o.clientsUsed ?? 0,
     planMaxClients: plan?.maxClients ?? 10,
     finalizedCount: o.finalizedCount ?? 0,
@@ -35,6 +72,11 @@ function AgencyLevelBadge({ o }: { o: any }) {
     teamSize: Math.max(0, (o.teamCount ?? 1) - 1),
     planMaxCollaborators: plan?.maxCollaborators ?? 2,
   });
+}
+
+function AgencyLevelBadge({ o }: { o: any }) {
+  const { data: plans = [] } = useQuery(plansQO());
+  const points = pontosDaAgencia(o, plans);
   const level = getAgencyLevel(points);
   const color = TIER_COLOR[level.tier as AgencyTierName] ?? "#9AA4B2";
   const Icon = TIER_ICON[level.tier as AgencyTierName];
@@ -127,12 +169,53 @@ export function AgenciesBillingPanel() {
   const [resellerFilter, setResellerFilter] = useState<"all" | "resellers" | "resold">("all");
   const [creatingReseller, setCreatingReseller] = useState(false);
   const [infoPeriod, setInfoPeriod] = useState<"7d" | "30d" | "total">("7d");
+  const [ordem, setOrdem] = useState<{ coluna: ColunaOrdenavel; dir: "asc" | "desc" } | null>(null);
+  const [tabelaExpandida, setTabelaExpandida] = useState(false);
 
-  const visibleOrgs = orgs.filter((o: any) =>
+  const filteredOrgs = orgs.filter((o: any) =>
     resellerFilter === "all" ? true :
     resellerFilter === "resellers" ? o.isReseller :
     !!o.resellerOrgId
   );
+
+  // A ordem padrão da lista é a que vem do servidor: mais recentes
+  // primeiro. Clicar num cabeçalho ordena por aquela coluna, clicar de
+  // novo inverte, e o terceiro clique volta pro padrão.
+  const { data: plansParaOrdem = [] } = useQuery(plansQO());
+  const valorPraOrdenar = (o: any, coluna: ColunaOrdenavel): string | number => {
+    switch (coluna) {
+      case "name": return (o.name ?? "").toLowerCase();
+      case "nivel": return pontosDaAgencia(o, plansParaOrdem);
+      case "plano": return o.priceCents ?? 0;
+      case "status": return STATUS_PESO[o.subscriptionStatus] ?? 99;
+      case "clientes": return o.clientsUsed ?? 0;
+      case "equipe": return o.teamCount ?? 0;
+      case "acesso": return o.lastLoginAt ? new Date(o.lastLoginAt).getTime() : 0;
+    }
+  };
+
+  const visibleOrgs = ordem
+    ? [...filteredOrgs].sort((a: any, b: any) => {
+        const va = valorPraOrdenar(a, ordem.coluna);
+        const vb = valorPraOrdenar(b, ordem.coluna);
+        const cmp = typeof va === "string" && typeof vb === "string"
+          ? va.localeCompare(vb, "pt-BR")
+          : Number(va) - Number(vb);
+        return ordem.dir === "asc" ? cmp : -cmp;
+      })
+    : filteredOrgs;
+
+  const orgsNaTela = tabelaExpandida ? visibleOrgs : visibleOrgs.slice(0, AGENCIAS_VISIVEIS);
+  const orgsEscondidas = visibleOrgs.length - orgsNaTela.length;
+
+  function alternarOrdem(coluna: ColunaOrdenavel) {
+    const inicial = COLUNAS_TEXTO.includes(coluna) ? "asc" : "desc";
+    setOrdem((atual) => {
+      if (!atual || atual.coluna !== coluna) return { coluna, dir: inicial };
+      if (atual.dir === inicial) return { coluna, dir: inicial === "asc" ? "desc" : "asc" };
+      return null;
+    });
+  }
 
   // Funil de ativação — sempre calculado sobre todas as agências orgânicas
   // (fora revenda), independente do filtro acima, pra não mudar de
@@ -358,21 +441,21 @@ export function AgenciesBillingPanel() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-foreground/7">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Agência</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Nível</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Plano</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Status</th>
+                <ThOrdenavel coluna="name" label="Agência" ordem={ordem} onClick={alternarOrdem} />
+                <ThOrdenavel coluna="nivel" label="Nível" ordem={ordem} onClick={alternarOrdem} />
+                <ThOrdenavel coluna="plano" label="Plano" ordem={ordem} onClick={alternarOrdem} />
+                <ThOrdenavel coluna="status" label="Status" ordem={ordem} onClick={alternarOrdem} />
                 <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Teste / cobrança</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">Clientes</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">Equipe</th>
+                <ThOrdenavel coluna="clientes" label="Clientes" ordem={ordem} onClick={alternarOrdem} align="right" />
+                <ThOrdenavel coluna="equipe" label="Equipe" ordem={ordem} onClick={alternarOrdem} align="right" />
                 <th className="text-center px-4 py-3 text-xs font-semibold text-foreground/60">Drive</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-foreground/60">Instagram</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Último acesso</th>
+                <ThOrdenavel coluna="acesso" label="Último acesso" ordem={ordem} onClick={alternarOrdem} />
                 <th className="text-center px-4 py-3 text-xs font-semibold text-foreground/60"></th>
               </tr>
             </thead>
             <tbody>
-              {visibleOrgs.map((o: any) => {
+              {orgsNaTela.map((o: any) => {
                 const status = STATUS_LABEL[o.subscriptionStatus] ?? { label: o.subscriptionStatus, color: "#9AA4B2" };
                 const trialDays = o.subscriptionStatus === "trialing" && o.trialEndsAt ? daysUntil(o.trialEndsAt) : null;
                 const isFetchingThis = fetchInvoice.isPending && invoiceForId === o.id;
@@ -497,6 +580,16 @@ export function AgenciesBillingPanel() {
               })}
             </tbody>
           </table>
+          {(orgsEscondidas > 0 || tabelaExpandida) && (
+            <button
+              onClick={() => setTabelaExpandida((v) => !v)}
+              className="w-full px-4 py-3 border-t border-foreground/6 text-[11px] font-semibold text-foreground/50 hover:text-foreground hover:bg-foreground/[0.02] transition-colors inline-flex items-center justify-center gap-1.5"
+            >
+              {tabelaExpandida
+                ? <>Esconder <ChevronUp size={13} /></>
+                : <>Expandir — mais {orgsEscondidas} <ChevronDown size={13} /></>}
+            </button>
+          )}
         </div>
       )}
 

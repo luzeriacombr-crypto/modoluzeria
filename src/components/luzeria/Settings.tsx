@@ -164,17 +164,17 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           {me.isPlatformAdmin && (
             <AgenciesBillingPanel />
           )}
+          {me.isPlatformAdmin && (
+            <div className="pt-2 border-t border-foreground/10">
+              <DemoRequestsPanel />
+            </div>
+          )}
           <div className={me.isPlatformAdmin ? "pt-2 border-t border-foreground/10" : undefined}>
             <PlanCardSection />
           </div>
           <div className="pt-2 border-t border-foreground/10">
             <BillingSection />
           </div>
-          {me.isPlatformAdmin && (
-            <div className="pt-2 border-t border-foreground/10">
-              <DemoRequestsPanel />
-            </div>
-          )}
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-foreground/10">
               <PromotionCodesPanel />

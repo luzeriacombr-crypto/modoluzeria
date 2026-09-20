@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import {
-  Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ExternalLink,
+  Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ExternalLink, ChevronDown, ChevronUp,
   Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown, MessageCircle, Send, X, Mail, CalendarDays,
 } from "lucide-react";
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
@@ -1121,6 +1121,9 @@ function DirectMessagesPanel({ clientId }: { clientId: string }) {
   );
 }
 
+/** Quantas linhas do grid aparecem antes de precisar expandir. */
+const LINHAS_VISIVEIS = 3;
+
 function ActivitySection({ label, icon, items, thumbs, dateOf, datePrefix }: {
   label: string;
   icon: React.ReactNode;
@@ -1131,6 +1134,29 @@ function ActivitySection({ label, icon, items, thumbs, dateOf, datePrefix }: {
 }) {
   const navigate = useNavigate();
   const { selectMonth, openItem, flash } = useUI();
+  const [expandido, setExpandido] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [colunas, setColunas] = useState(5);
+
+  // O grid é auto-fill, então quantos cabem por linha depende da largura —
+  // medimos pra "3 linhas" valer igual no notebook e no celular.
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const medir = () => {
+      const gap = 12;
+      const minima = 150;
+      setColunas(Math.max(1, Math.floor((el.clientWidth + gap) / (minima + gap))));
+    };
+    medir();
+    const obs = new ResizeObserver(medir);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const limite = colunas * LINHAS_VISIVEIS;
+  const visiveis = expandido ? items : items.slice(0, limite);
+  const escondidos = items.length - visiveis.length;
 
   function goToItem(item: InstagramActivityItem) {
     navigate({ to: "/cliente/$clientId", params: { clientId: item.clientId } });
@@ -1146,8 +1172,8 @@ function ActivitySection({ label, icon, items, thumbs, dateOf, datePrefix }: {
         <span className="text-[11px] uppercase font-bold tracking-wider">{label}</span>
         <span className="text-[11px] text-foreground/30">· {items.length}</span>
       </div>
-      <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
-        {items.map((item) => (
+      <div ref={gridRef} className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
+        {visiveis.map((item) => (
           <button
             key={item.id}
             onClick={() => goToItem(item)}
@@ -1195,6 +1221,16 @@ function ActivitySection({ label, icon, items, thumbs, dateOf, datePrefix }: {
           </button>
         ))}
       </div>
+      {(escondidos > 0 || expandido) && (
+        <button
+          onClick={() => setExpandido((v) => !v)}
+          className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-foreground/50 hover:text-foreground transition-colors"
+        >
+          {expandido
+            ? <>Esconder <ChevronUp size={13} /></>
+            : <>Expandir — mais {escondidos} <ChevronDown size={13} /></>}
+        </button>
+      )}
     </div>
   );
 }
