@@ -15,14 +15,15 @@ import { SalesHero, SalesNumbers, SalesBeforeAfter, SalesFeatures, SalesAiSpotli
 
 const inputCls = "w-full bg-card border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
 
-function Field({ label, value, onChange, max, multiline, hint }: {
-  label: string; value: string; onChange: (v: string) => void; max?: number; multiline?: boolean; hint?: string;
+function Field({ label, value, onChange, max, single, hint }: {
+  label: string; value: string; onChange: (v: string) => void; max?: number; single?: boolean; multiline?: boolean; hint?: string;
 }) {
+  const multiline = !single;
   return (
     <label className="block">
       <span className="block text-[11.5px] font-semibold text-foreground/60 mb-1">{label}</span>
       {multiline
-        ? <textarea value={value} maxLength={max} rows={3} onChange={(e) => onChange(e.target.value)} className={`${inputCls} resize-y`} />
+        ? <textarea value={value} maxLength={max} rows={Math.min(6, Math.max(2, value.split("\n").length + 1))} onChange={(e) => onChange(e.target.value)} className={`${inputCls} resize-y`} />
         : <input value={value} maxLength={max} onChange={(e) => onChange(e.target.value)} className={inputCls} />}
       {hint && <span className="block text-[10.5px] text-foreground/40 mt-1">{hint}</span>}
     </label>
@@ -231,15 +232,15 @@ export function SalesLandingEditorTab() {
     <div className="grid gap-3">
       <Accordion id="hero" title="Topo da página" open={open === "hero"} onToggle={toggle}>
         <div className="grid grid-cols-2 gap-2.5">
-          <Field label="Selo (ex.: Novo)" value={d.hero.badge} max={30} onChange={(v) => edit((x) => { x.hero.badge = v; return x; })} />
-          <Field label="Texto do selo" value={d.hero.pill} max={120} onChange={(v) => edit((x) => { x.hero.pill = v; return x; })} />
+          <Field single label="Selo (ex.: Novo)" value={d.hero.badge} max={30} onChange={(v) => edit((x) => { x.hero.badge = v; return x; })} />
+          <Field single label="Texto do selo" value={d.hero.pill} max={120} onChange={(v) => edit((x) => { x.hero.pill = v; return x; })} />
         </div>
-        <Field label="Título" value={d.hero.title} max={200} multiline onChange={(v) => edit((x) => { x.hero.title = v; return x; })} />
+        <Field label="Título" value={d.hero.title} max={200} onChange={(v) => edit((x) => { x.hero.title = v; return x; })} />
         <Field label="Frase em destaque (itálico)" value={d.hero.titleAccent} max={200} onChange={(v) => edit((x) => { x.hero.titleAccent = v; return x; })} />
-        <Field label="Subtítulo" value={d.hero.subtitle} max={600} multiline onChange={(v) => edit((x) => { x.hero.subtitle = v; return x; })} />
+        <Field label="Subtítulo" value={d.hero.subtitle} max={600} onChange={(v) => edit((x) => { x.hero.subtitle = v; return x; })} />
         <div className="grid grid-cols-2 gap-2.5">
-          <Field label="Botão principal" value={d.hero.ctaLabel} max={60} onChange={(v) => edit((x) => { x.hero.ctaLabel = v; return x; })} />
-          <Field label="Botão secundário" value={d.hero.ctaSecondaryLabel} max={60} onChange={(v) => edit((x) => { x.hero.ctaSecondaryLabel = v; return x; })} />
+          <Field single label="Botão principal" value={d.hero.ctaLabel} max={60} onChange={(v) => edit((x) => { x.hero.ctaLabel = v; return x; })} />
+          <Field single label="Botão secundário" value={d.hero.ctaSecondaryLabel} max={60} onChange={(v) => edit((x) => { x.hero.ctaSecondaryLabel = v; return x; })} />
         </div>
         <div>
           <span className="block text-[11.5px] font-semibold text-foreground/60 mb-1">Garantias (abaixo dos botões)</span>
@@ -254,10 +255,10 @@ export function SalesLandingEditorTab() {
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
-          <Field label="Aviso flutuante 1 — título" value={d.hero.chipTitle} max={60} onChange={(v) => edit((x) => { x.hero.chipTitle = v; return x; })} />
-          <Field label="Aviso flutuante 1 — texto" value={d.hero.chipSub} max={80} onChange={(v) => edit((x) => { x.hero.chipSub = v; return x; })} />
-          <Field label="Aviso flutuante 2 — título" value={d.hero.chip2Title} max={60} onChange={(v) => edit((x) => { x.hero.chip2Title = v; return x; })} />
-          <Field label="Aviso flutuante 2 — texto" value={d.hero.chip2Sub} max={80} onChange={(v) => edit((x) => { x.hero.chip2Sub = v; return x; })} />
+          <Field single label="Aviso flutuante 1 — título" value={d.hero.chipTitle} max={60} onChange={(v) => edit((x) => { x.hero.chipTitle = v; return x; })} />
+          <Field single label="Aviso flutuante 1 — texto" value={d.hero.chipSub} max={80} onChange={(v) => edit((x) => { x.hero.chipSub = v; return x; })} />
+          <Field single label="Aviso flutuante 2 — título" value={d.hero.chip2Title} max={60} onChange={(v) => edit((x) => { x.hero.chip2Title = v; return x; })} />
+          <Field single label="Aviso flutuante 2 — texto" value={d.hero.chip2Sub} max={80} onChange={(v) => edit((x) => { x.hero.chip2Sub = v; return x; })} />
         </div>
         <ImageField label="Imagem principal (tela do sistema)" value={d.hero.image} onChange={(v) => edit((x) => { x.hero.image = v; return x; })} hint="Proporção 3:2 funciona melhor (ex.: 1500 × 1000)." />
       </Accordion>
@@ -267,14 +268,14 @@ export function SalesLandingEditorTab() {
         <Field label="Legenda do número de clientes" value={d.numbers.clientsLabel} max={120} onChange={(v) => edit((x) => { x.numbers.clientsLabel = v; return x; })} />
         <Field label="Legenda do número de entregas" value={d.numbers.deliveriesLabel} max={120} onChange={(v) => edit((x) => { x.numbers.deliveriesLabel = v; return x; })} />
         <div className="grid grid-cols-2 gap-2.5">
-          <Field label="Terceiro destaque" value={d.numbers.trialValue} max={40} onChange={(v) => edit((x) => { x.numbers.trialValue = v; return x; })} />
+          <Field single label="Terceiro destaque" value={d.numbers.trialValue} max={40} onChange={(v) => edit((x) => { x.numbers.trialValue = v; return x; })} />
           <Field label="Legenda do terceiro" value={d.numbers.trialLabel} max={120} onChange={(v) => edit((x) => { x.numbers.trialLabel = v; return x; })} />
         </div>
       </Accordion>
 
       <Accordion id="ba" title="Antes e depois" open={open === "ba"} onToggle={toggle}>
-        <Field label="Etiqueta pequena" value={d.beforeAfter.eyebrow} max={80} onChange={(v) => edit((x) => { x.beforeAfter.eyebrow = v; return x; })} />
-        <Field label="Título" value={d.beforeAfter.heading} max={200} multiline onChange={(v) => edit((x) => { x.beforeAfter.heading = v; return x; })} />
+        <Field single label="Etiqueta pequena" value={d.beforeAfter.eyebrow} max={80} onChange={(v) => edit((x) => { x.beforeAfter.eyebrow = v; return x; })} />
+        <Field label="Título" value={d.beforeAfter.heading} max={200} onChange={(v) => edit((x) => { x.beforeAfter.heading = v; return x; })} />
         {d.beforeAfter.rows.map((r, i) => (
           <RowShell key={i} first={i === 0} last={i === d.beforeAfter.rows.length - 1}
             onUp={() => edit((x) => { x.beforeAfter.rows = moveItem(x.beforeAfter.rows, i, -1); return x; })}
@@ -285,7 +286,7 @@ export function SalesLandingEditorTab() {
               <div><span className="block text-[11.5px] font-semibold text-foreground/60 mb-1">Ícone</span><IconSelect value={r.icon} onChange={(v) => edit((x) => { x.beforeAfter.rows[i].icon = v; return x; })} /></div>
               <Field label="Solução — título" value={r.title} max={120} onChange={(v) => edit((x) => { x.beforeAfter.rows[i].title = v; return x; })} />
             </div>
-            <Field label="Solução — descrição" value={r.desc} max={300} multiline onChange={(v) => edit((x) => { x.beforeAfter.rows[i].desc = v; return x; })} />
+            <Field label="Solução — descrição" value={r.desc} max={300} onChange={(v) => edit((x) => { x.beforeAfter.rows[i].desc = v; return x; })} />
           </RowShell>
         ))}
         {d.beforeAfter.rows.length < 10 && (
@@ -295,9 +296,9 @@ export function SalesLandingEditorTab() {
       </Accordion>
 
       <Accordion id="features" title="Funções por área (abas)" open={open === "features"} onToggle={toggle}>
-        <Field label="Etiqueta pequena" value={d.features.eyebrow} max={80} onChange={(v) => edit((x) => { x.features.eyebrow = v; return x; })} />
-        <Field label="Título" value={d.features.heading} max={200} multiline onChange={(v) => edit((x) => { x.features.heading = v; return x; })} />
-        <Field label="Subtítulo" value={d.features.subheading} max={300} multiline onChange={(v) => edit((x) => { x.features.subheading = v; return x; })} />
+        <Field single label="Etiqueta pequena" value={d.features.eyebrow} max={80} onChange={(v) => edit((x) => { x.features.eyebrow = v; return x; })} />
+        <Field label="Título" value={d.features.heading} max={200} onChange={(v) => edit((x) => { x.features.heading = v; return x; })} />
+        <Field label="Subtítulo" value={d.features.subheading} max={300} onChange={(v) => edit((x) => { x.features.subheading = v; return x; })} />
         <div className="flex gap-1.5 overflow-x-auto pb-1" role="tablist">
           {d.features.tabs.map((t, i) => (
             <button key={t.id} type="button" role="tab" aria-selected={i === tabIdx} onClick={() => setTabIdx(i)}
@@ -309,7 +310,7 @@ export function SalesLandingEditorTab() {
         </div>
         {tab && (
           <div className="grid gap-3 rounded-lg border border-foreground/10 p-3">
-            <Field label="Nome da aba" value={tab.label} max={60} onChange={(v) => edit((x) => { x.features.tabs[tabIdx].label = v; return x; })} />
+            <Field single label="Nome da aba" value={tab.label} max={60} onChange={(v) => edit((x) => { x.features.tabs[tabIdx].label = v; return x; })} />
             {tab.feats.map((f, i) => (
               <RowShell key={i} first={i === 0} last={i === tab.feats.length - 1}
                 onUp={() => edit((x) => { x.features.tabs[tabIdx].feats = moveItem(x.features.tabs[tabIdx].feats, i, -1); return x; })}
@@ -319,8 +320,8 @@ export function SalesLandingEditorTab() {
                   <div><span className="block text-[11.5px] font-semibold text-foreground/60 mb-1">Ícone</span><IconSelect value={f.icon} onChange={(v) => edit((x) => { x.features.tabs[tabIdx].feats[i].icon = v; return x; })} /></div>
                   <Field label="Título" value={f.title} max={120} onChange={(v) => edit((x) => { x.features.tabs[tabIdx].feats[i].title = v; return x; })} />
                 </div>
-                <Field label="Descrição" value={f.desc} max={400} multiline onChange={(v) => edit((x) => { x.features.tabs[tabIdx].feats[i].desc = v; return x; })} />
-                <Field label="Selo (opcional)" value={f.chip} max={60} onChange={(v) => edit((x) => { x.features.tabs[tabIdx].feats[i].chip = v; return x; })} hint="Ex.: Novo, App Review aprovado. Deixe vazio para não mostrar." />
+                <Field label="Descrição" value={f.desc} max={400} onChange={(v) => edit((x) => { x.features.tabs[tabIdx].feats[i].desc = v; return x; })} />
+                <Field single label="Selo (opcional)" value={f.chip} max={60} onChange={(v) => edit((x) => { x.features.tabs[tabIdx].feats[i].chip = v; return x; })} hint="Ex.: Novo, App Review aprovado. Deixe vazio para não mostrar." />
               </RowShell>
             ))}
             {tab.feats.length < 6 && (
@@ -340,23 +341,23 @@ export function SalesLandingEditorTab() {
       </Accordion>
 
       <Accordion id="ai" title="Planejamento com IA (destaque)" open={open === "ai"} onToggle={toggle}>
-        <Field label="Etiqueta pequena" value={d.ai.eyebrow} max={80} onChange={(v) => edit((x) => { x.ai.eyebrow = v; return x; })} />
-        <Field label="Título" value={d.ai.heading} max={200} multiline onChange={(v) => edit((x) => { x.ai.heading = v; return x; })} />
+        <Field single label="Etiqueta pequena" value={d.ai.eyebrow} max={80} onChange={(v) => edit((x) => { x.ai.eyebrow = v; return x; })} />
+        <Field label="Título" value={d.ai.heading} max={200} onChange={(v) => edit((x) => { x.ai.heading = v; return x; })} />
         {d.ai.steps.map((st, i) => (
           <RowShell key={i} first={i === 0} last={i === d.ai.steps.length - 1}
             onUp={() => edit((x) => { x.ai.steps = moveItem(x.ai.steps, i, -1); return x; })}
             onDown={() => edit((x) => { x.ai.steps = moveItem(x.ai.steps, i, 1); return x; })}
             onRemove={() => edit((x) => { x.ai.steps.splice(i, 1); return x; })}>
             <Field label={`Passo ${i + 1} — parte em negrito`} value={st.bold} max={160} onChange={(v) => edit((x) => { x.ai.steps[i].bold = v; return x; })} />
-            <Field label="Continuação" value={st.rest} max={300} multiline onChange={(v) => edit((x) => { x.ai.steps[i].rest = v; return x; })} />
+            <Field label="Continuação" value={st.rest} max={300} onChange={(v) => edit((x) => { x.ai.steps[i].rest = v; return x; })} />
           </RowShell>
         ))}
         {d.ai.steps.length < 8 && (
           <button type="button" onClick={() => edit((x) => { x.ai.steps.push({ bold: "Novo passo:", rest: "descrição" }); return x; })}
             className="text-xs font-bold text-foreground/60 hover:text-foreground inline-flex items-center gap-1 self-start"><Plus size={13} /> Adicionar passo</button>
         )}
-        <Field label="Botão" value={d.ai.ctaLabel} max={60} onChange={(v) => edit((x) => { x.ai.ctaLabel = v; return x; })} />
-        <Field label="Observação embaixo do botão" value={d.ai.note} max={300} multiline onChange={(v) => edit((x) => { x.ai.note = v; return x; })} />
+        <Field single label="Botão" value={d.ai.ctaLabel} max={60} onChange={(v) => edit((x) => { x.ai.ctaLabel = v; return x; })} />
+        <Field label="Observação embaixo do botão" value={d.ai.note} max={300} onChange={(v) => edit((x) => { x.ai.note = v; return x; })} />
       </Accordion>
 
       <Accordion id="order" title="Ordem e visibilidade das seções" open={open === "order"} onToggle={toggle}>
@@ -419,6 +420,7 @@ export function SalesLandingEditorTab() {
           </button>
         </div>
       </div>
+      <p className="text-[12px] text-foreground/50 mb-3">Dica: nos textos, aperte <b>Enter</b> para quebrar a linha exatamente onde você quiser — a prévia ao lado mostra o resultado.</p>
       <div className="xl:grid xl:grid-cols-[440px_minmax(0,1fr)] xl:gap-6 xl:items-start">
         <div className={view === "preview" ? "hidden xl:block" : ""}>{form}</div>
         <div className={`${view === "edit" ? "hidden xl:block" : ""} xl:sticky xl:top-16 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto`}>

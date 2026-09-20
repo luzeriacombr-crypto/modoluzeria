@@ -91,13 +91,13 @@ export function SalesHero({ onCta, content = DEFAULT_LANDING }: { onCta: () => v
             <b className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ background: LIME, color: BG_BLUE }}>{h.badge}</b>
             {h.pill}
           </div>
-          <h1 className="font-black uppercase leading-[1.02] tracking-[-0.03em] text-[clamp(36px,5.6vw,64px)]">
+          <h1 className="font-black uppercase leading-[1.02] tracking-[-0.03em] text-[clamp(36px,5.6vw,64px)] whitespace-pre-line">
             {h.title}
-            <span className={`block mt-1.5 ${SERIF}`} style={{ color: LIME, fontWeight: 400, fontStyle: "italic", textTransform: "none", letterSpacing: "-0.01em" }}>
+            <span className={`block mt-1.5 whitespace-pre-line ${SERIF}`} style={{ color: LIME, fontWeight: 400, fontStyle: "italic", textTransform: "none", letterSpacing: "-0.01em" }}>
               {h.titleAccent}
             </span>
           </h1>
-          <p className="text-white/65 text-lg max-w-[520px] mt-5 mb-7 leading-relaxed">
+          <p className="text-white/65 text-lg max-w-[520px] mt-5 mb-7 leading-relaxed whitespace-pre-line">
             {h.subtitle}
           </p>
           <div className="flex flex-wrap items-center gap-3">
@@ -151,10 +151,10 @@ export function SalesNumbers({ content = DEFAULT_LANDING }: { content?: LandingC
       <div className="grid grid-cols-1 sm:grid-cols-3">
         {items.map((it, i) => (
           <div key={it.label} className="py-8 px-5 sm:px-10 text-center sm:text-left"
-            style={{ background: i === 1 ? "#EAFF9A" : LIME }}>
+            style={{ background: i === 1 ? "linear-gradient(180deg,#F3FFC2,#E2FF7A)" : "linear-gradient(105deg,#DCFF4D 0%,#C9F52F 100%)" }}>
             <div className="max-w-[340px] mx-auto sm:mx-0 sm:ml-auto sm:mr-auto lg:max-w-[300px]">
               <div className={`${SERIF} text-[clamp(40px,5vw,58px)] leading-none`} style={{ fontStyle: "italic", letterSpacing: "-0.02em" }}>{it.value}</div>
-              <div className="mt-2 text-[13.5px] font-semibold" style={{ color: "rgba(10,14,35,0.72)" }}>{it.label}</div>
+              <div className="mt-2 text-[13.5px] font-semibold whitespace-pre-line" style={{ color: "rgba(10,14,35,0.72)" }}>{it.label}</div>
             </div>
           </div>
         ))}
@@ -168,25 +168,25 @@ export function SalesNumbers({ content = DEFAULT_LANDING }: { content?: LandingC
 export function SalesBeforeAfter({ content = DEFAULT_LANDING }: { content?: LandingContent }) {
   const ba = content.beforeAfter;
   return (
-    <section style={{ background: BG_WHITE, color: BG_BLUE }}>
+    <section style={{ background: `radial-gradient(ellipse 55% 60% at 100% 0%, rgba(74,158,255,0.10), transparent), radial-gradient(ellipse 45% 55% at 0% 100%, rgba(215,255,63,0.20), transparent), ${BG_WHITE}`, color: BG_BLUE }}>
       <div className="max-w-[1100px] mx-auto px-5 sm:px-10 py-20">
         <Reveal className="max-w-[680px] mb-11">
           <Eyebrow dark>{ba.eyebrow}</Eyebrow>
-          <h2 className={`${SERIF} text-[clamp(32px,4.6vw,52px)] leading-[1.05]`} style={{ fontStyle: "italic" }}>{ba.heading}</h2>
+          <h2 className={`${SERIF} text-[clamp(32px,4.6vw,52px)] leading-[1.05] whitespace-pre-line`} style={{ fontStyle: "italic" }}>{ba.heading}</h2>
         </Reveal>
         <div className="flex flex-col gap-3">
           {ba.rows.map((r, ri) => (
             <Reveal key={ri} className="grid md:grid-cols-[minmax(0,0.72fr)_auto_minmax(0,1.28fr)] items-center gap-2.5 md:gap-4">
               <div className="flex items-center gap-3 rounded-xl px-4 py-3.5" style={{ background: "rgba(10,14,35,0.05)" }}>
                 <span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(255,107,107,0.16)", color: "#E5484D" }}><X size={13} strokeWidth={3} /></span>
-                <span className="text-[14.5px] font-medium leading-snug" style={{ color: "rgba(10,14,35,0.55)" }}>{r.before}</span>
+                <span className="text-[14.5px] font-medium leading-snug whitespace-pre-line" style={{ color: "rgba(10,14,35,0.55)" }}>{r.before}</span>
               </div>
               <ArrowRight size={18} className="hidden md:block" style={{ color: "rgba(10,14,35,0.35)" }} />
-              <div className="flex items-center gap-4 rounded-2xl px-5 py-5" style={{ background: BG_BLUE, color: "#fff", boxShadow: "0 18px 40px -22px rgba(10,14,35,0.55)" }}>
+              <div className="flex items-center gap-4 rounded-2xl px-5 py-5" style={{ background: "linear-gradient(135deg,#0A0E23 0%,#16204F 100%)", color: "#fff", boxShadow: "0 18px 40px -22px rgba(10,14,35,0.55)" }}>
                 <span className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "rgba(215,255,63,0.14)", color: LIME }}>{landingIcon(r.icon, 20)}</span>
                 <div>
-                  <div className="font-extrabold text-[16.5px] leading-tight" style={{ color: LIME }}>{r.title}</div>
-                  <div className="text-[13.5px] mt-1 leading-snug text-white/65">{r.desc}</div>
+                  <div className="font-extrabold text-[16.5px] leading-tight whitespace-pre-line" style={{ color: LIME }}>{r.title}</div>
+                  <div className="text-[13.5px] mt-1 leading-snug text-white/65 whitespace-pre-line">{r.desc}</div>
                 </div>
               </div>
             </Reveal>
@@ -251,12 +251,12 @@ export function SalesFeatures({ content = DEFAULT_LANDING }: { content?: Landing
   const tab = TABS.find((t) => t.id === active) ?? TABS[0];
   if (!tab) return null;
   return (
-    <section id="funcoes" style={{ background: BG_GRAY }} className="border-y border-white/10">
+    <section id="funcoes" style={{ background: `radial-gradient(ellipse 50% 45% at 8% 0%, rgba(215,255,63,0.08), transparent), radial-gradient(ellipse 55% 55% at 100% 100%, rgba(74,158,255,0.12), transparent), ${BG_GRAY}` }} className="border-y border-white/10">
       <div className="max-w-[1100px] mx-auto px-5 sm:px-10 py-20">
         <Reveal className="max-w-[680px] mb-9">
           <Eyebrow>{ft.eyebrow}</Eyebrow>
-          <h2 className={`${SERIF} text-[clamp(32px,4.6vw,52px)] leading-[1.05]`} style={{ fontStyle: "italic" }}>{ft.heading}</h2>
-          <p className="text-white/60 text-[17px] mt-4">{ft.subheading}</p>
+          <h2 className={`${SERIF} text-[clamp(32px,4.6vw,52px)] leading-[1.05] whitespace-pre-line`} style={{ fontStyle: "italic" }}>{ft.heading}</h2>
+          <p className="text-white/60 text-[17px] mt-4 whitespace-pre-line">{ft.subheading}</p>
         </Reveal>
         <div role="tablist" aria-label="Áreas do Modo Criador" className="flex gap-2 overflow-x-auto pb-1.5 mb-8" style={{ scrollbarWidth: "none" }}>
           {TABS.map((t) => (
@@ -270,11 +270,11 @@ export function SalesFeatures({ content = DEFAULT_LANDING }: { content?: Landing
         <div className="grid lg:grid-cols-[0.82fr_1.18fr] gap-8 lg:gap-12 items-center" key={tab.id}>
           <div className="flex flex-col gap-3.5">
             {tab.feats.map((f, fi) => (
-              <div key={fi} className="rounded-2xl p-5 border flex gap-4" style={{ background: BG_BLUE, borderColor: "rgba(255,255,255,0.09)" }}>
+              <div key={fi} className="rounded-2xl p-5 border flex gap-4" style={{ background: "linear-gradient(160deg,#101638 0%,#0A0E23 70%)", borderColor: "rgba(255,255,255,0.09)" }}>
                 <span className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(215,255,63,0.12)", color: LIME }}>{landingIcon(f.icon, 19)}</span>
                 <div>
-                  <h3 className="font-extrabold text-[16px] leading-tight mb-1.5">{f.title}</h3>
-                  <p className="text-[13.5px] text-white/58 leading-relaxed">{f.desc}</p>
+                  <h3 className="font-extrabold text-[16px] leading-tight mb-1.5 whitespace-pre-line">{f.title}</h3>
+                  <p className="text-[13.5px] text-white/58 leading-relaxed whitespace-pre-line">{f.desc}</p>
                   {f.chip && <span className="inline-block mt-2.5 text-[10.5px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: "rgba(215,255,63,0.14)", color: LIME }}>{f.chip}</span>}
                 </div>
               </div>
@@ -292,23 +292,24 @@ export function SalesFeatures({ content = DEFAULT_LANDING }: { content?: Landing
 export function SalesAiSpotlight({ onCta, content = DEFAULT_LANDING }: { onCta: () => void; content?: LandingContent }) {
   const ai = content.ai;
   return (
-    <section id="ia" className="relative overflow-hidden" style={{ background: `radial-gradient(ellipse 60% 60% at 80% 30%, rgba(74,158,255,0.16), transparent), ${BG_BLUE}` }}>
-      <div className="max-w-[1100px] mx-auto px-5 sm:px-10 py-20 grid lg:grid-cols-2 gap-12 lg:gap-14 items-center">
+    <section id="ia" className="relative overflow-hidden" style={{ background: `radial-gradient(ellipse 60% 60% at 80% 30%, rgba(74,158,255,0.16), transparent), radial-gradient(ellipse 40% 50% at 0% 100%, rgba(215,255,63,0.07), transparent), ${BG_BLUE}` }}>
+      <div className="absolute inset-0 pointer-events-none"><ConstellationBackground count={30} alpha={0.55} /></div>
+      <div className="relative max-w-[1100px] mx-auto px-5 sm:px-10 py-20 grid lg:grid-cols-2 gap-12 lg:gap-14 items-center">
         <Reveal>
           <Eyebrow>{ai.eyebrow}</Eyebrow>
-          <h2 className={`${SERIF} text-[clamp(32px,4.6vw,52px)] leading-[1.05]`} style={{ fontStyle: "italic" }}>{ai.heading}</h2>
+          <h2 className={`${SERIF} text-[clamp(32px,4.6vw,52px)] leading-[1.05] whitespace-pre-line`} style={{ fontStyle: "italic" }}>{ai.heading}</h2>
           <div className="flex flex-col gap-3.5 my-7">
             {ai.steps.map((st, i) => (
               <div key={i} className="flex gap-3.5 items-start">
                 <span className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[13px] font-black mt-0.5" style={{ background: "rgba(215,255,63,0.14)", color: LIME }}>{i + 1}</span>
-                <p className="text-[15px] text-white/70"><b className="text-white">{st.bold}</b> {st.rest}</p>
+                <p className="text-[15px] text-white/70 whitespace-pre-line"><b className="text-white">{st.bold}</b> {st.rest}</p>
               </div>
             ))}
           </div>
           <button onClick={onCta} className="inline-flex items-center gap-2 font-black text-sm px-6 py-3.5 rounded-full transition hover:-translate-y-0.5" style={{ background: LIME, color: BG_BLUE }}>
             {ai.ctaLabel} <ArrowRight size={16} />
           </button>
-          <p className="text-[11.5px] text-white/35 mt-3">{ai.note}</p>
+          <p className="text-[11.5px] text-white/35 mt-3 whitespace-pre-line">{ai.note}</p>
         </Reveal>
         <Reveal><AiOutputCard /></Reveal>
       </div>
