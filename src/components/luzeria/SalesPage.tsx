@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { DemoRequestModal } from "./DemoRequestModal";
 import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, Reveal, useReveal, staggerStyle } from "./salesPageBlocks";
+import { salesLandingQO } from "@/lib/luzeria/queries";
+import { DEFAULT_LANDING, type LandingContent } from "@/lib/luzeria/sales-landing-content";
 import { SalesHero, SalesNumbers, SalesBeforeAfter, SalesFeatures, SalesAiSpotlight, SalesStickyCta } from "./SalesLanding";
 import { InteractiveDashboardDemo } from "./SalesInteractiveDashboard";
 import { PasswordInput } from "./PasswordInput";
@@ -36,6 +38,7 @@ export function SalesPage() {
   const refCode = searchParams.get("refCode") || undefined;
 
   const plans = useQuery({ queryKey: ["public-plans"], queryFn: () => getPublicPlans() });
+  const landing = (useQuery(salesLandingQO()).data ?? DEFAULT_LANDING) as LandingContent;
   const signup = useServerFn(publicSignup);
 
   const [planId, setPlanId] = useState<string | null>(null);
@@ -209,12 +212,17 @@ export function SalesPage() {
         </div>
       </header>
 
-      <SalesHero onCta={() => scrollToForm()} />
-      <SalesNumbers />
-      <SalesBeforeAfter />
-      <SalesFeatures />
-      <SalesAiSpotlight onCta={() => scrollToForm()} />
-      <InteractiveDashboardDemo />
+      <SalesHero onCta={() => scrollToForm()} content={landing} />
+      {landing.sections.order.filter((id) => !landing.sections.hidden.includes(id)).map((id) => {
+        switch (id) {
+          case "numbers": return <SalesNumbers key={id} content={landing} />;
+          case "beforeAfter": return <SalesBeforeAfter key={id} content={landing} />;
+          case "features": return <SalesFeatures key={id} content={landing} />;
+          case "ai": return <SalesAiSpotlight key={id} onCta={() => scrollToForm()} content={landing} />;
+          case "demo": return <InteractiveDashboardDemo key={id} />;
+          default: return null;
+        }
+      })}
 
       {/* Planos */}
       <section id="planos" style={{ background: BG_BLUE_2 }} className="border-t border-foreground/10">

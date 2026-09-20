@@ -30,7 +30,7 @@ const PageActivityReportPanel = lazy(() => import("./PageActivityReportPanel").t
 const AiPlanningFeedbackPanel = lazy(() => import("./AiPlanningFeedbackPanel").then((m) => ({ default: m.AiPlanningFeedbackPanel })));
 const ClientMarginPanel = lazy(() => import("./ClientMarginPanel").then((m) => ({ default: m.ClientMarginPanel })));
 const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => ({ default: m.DemoRequestsPanel })));
-const SalesPageEditorTab = lazy(() => import("./SalesPageEditorTab").then((m) => ({ default: m.SalesPageEditorTab })));
+const SalesPageEditorTab = lazy(() => import("./SalesLandingEditorTab").then((m) => ({ default: m.SalesLandingEditorTab })));
 const BlogAdminTab = lazy(() => import("./BlogAdminTab").then((m) => ({ default: m.BlogAdminTab })));
 const JourneyStagesTab = lazy(() => import("./JourneyStagesTab").then((m) => ({ default: m.JourneyStagesTab })));
 const ClientPaymentsPanel = lazy(() => import("./ClientPaymentsPanel").then((m) => ({ default: m.ClientPaymentsPanel })));
