@@ -166,8 +166,13 @@ export const confirmImportedClients = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
 
-    const { monthKey, seedMonth, LUZERIA_ORG_ID } = await import("./api.functions");
+    const { monthKey, seedMonth, LUZERIA_ORG_ID, buscarModeloDeCliente } = await import("./api.functions");
     const key = monthKey(new Date());
+    // Importação em lote respeita as quantidades do modelo, mas não os
+    // extras (página de demandas e mensagem de boas-vindas) — numa
+    // importação de 30 clientes isso viraria 30 notificações e 30 páginas
+    // que ninguém pediu.
+    const modelo = await buscarModeloDeCliente(context.supabase, context.orgId, "Social Media");
     let imported = 0;
     for (const c of data.clients) {
       const notes = [c.notes, c.whatsapp ? `Contato: ${c.whatsapp}` : null, "Importado por IA"]
@@ -184,7 +189,11 @@ export const confirmImportedClients = createServerFn({ method: "POST" })
       const { data: client, error } = await context.supabase
         .from("clients").insert(insert).select("id").single();
       if (error) throw new Error(error.message);
-      await seedMonth(context.supabase, client.id, key);
+      await seedMonth(context.supabase, client.id, key, modelo ? {
+        postsCount: modelo.postsCount,
+        reelsCount: modelo.reelsCount,
+        assigneeId: modelo.defaultAssigneeId,
+      } : undefined);
       imported++;
     }
 

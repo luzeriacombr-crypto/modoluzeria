@@ -54,6 +54,7 @@ import {
   getMyNotificationPreferences, setMyNotificationPreferences,
 } from "./automations.functions";
 import { listAutomationRules, createAutomationRule, deleteAutomationRule } from "./automation-rules.functions";
+import { listClientTemplates, upsertClientTemplate, deleteClientTemplate } from "./client-templates.functions";
 import { listMyBugReports, listAllBugReports, updateBugReportStatus, sendBugReportMessage } from "./bug-reports.functions";
 import { getMySupportThread, sendSupportMessage, listOpenSupportThreads, getSupportThreadMessages, replyToSupportThread, closeSupportThread } from "./support-chat.functions";
 import {
@@ -628,6 +629,9 @@ export const upcomingCalendarEventsQO = (userId?: string) =>
 
 export const automationRulesQO = () =>
   queryOptions({ queryKey: ["automation-rules"], queryFn: () => listAutomationRules() });
+
+export const clientTemplatesQO = () =>
+  queryOptions({ queryKey: ["client-templates"], queryFn: () => listClientTemplates() });
 
 export const myBugReportsQO = () =>
   queryOptions({ queryKey: ["bug-reports", "mine"], queryFn: () => listMyBugReports() });
@@ -1630,6 +1634,14 @@ export function useApi() {
     deleteAutomationRule: useMutation({
       mutationFn: useServerFn(deleteAutomationRule),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["automation-rules"] }),
+    }),
+    upsertClientTemplate: useMutation({
+      mutationFn: useServerFn(upsertClientTemplate),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-templates"] }),
+    }),
+    deleteClientTemplate: useMutation({
+      mutationFn: useServerFn(deleteClientTemplate),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-templates"] }),
     }),
     /* ===== GOOGLE AGENDA ===== */
     getGoogleCalendarAuthUrl: useMutation({ mutationFn: useServerFn(getGoogleCalendarAuthUrl) }),

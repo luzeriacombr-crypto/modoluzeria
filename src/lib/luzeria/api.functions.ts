@@ -1374,16 +1374,108 @@ function nextMonthKey(key: string) {
   return monthKey(new Date(y, m, 1));
 }
 
-export async function seedMonth(supabase: any, clientId: string, key: string) {
+/**
+ * Cria o mês do cliente já com os itens dentro. As quantidades vêm do
+ * modelo da categoria (client_templates) quando a agência configurou um —
+ * sem modelo, continua nos 6 posts + 6 reels que sempre foram fixos aqui.
+ */
+export async function seedMonth(
+  supabase: any,
+  clientId: string,
+  key: string,
+  opts?: { postsCount?: number; reelsCount?: number; assigneeId?: string | null },
+) {
+  const postsCount = opts?.postsCount ?? 6;
+  const reelsCount = opts?.reelsCount ?? 6;
   const { data: month, error: mErr } = await supabase
     .from("months").insert({ client_id: clientId, key }).select().single();
   if (mErr) throw new Error(mErr.message);
   const items = [];
-  for (let i = 1; i <= 6; i++) items.push({ month_id: month.id, type: "post", idx: i, title: `Post ${i}` });
-  for (let i = 1; i <= 6; i++) items.push({ month_id: month.id, type: "reel", idx: i, title: `Reels ${i}` });
-  const { error: iErr } = await supabase.from("content_items").insert(items);
+  for (let i = 1; i <= postsCount; i++) items.push({ month_id: month.id, type: "post", idx: i, title: `Post ${i}` });
+  for (let i = 1; i <= reelsCount; i++) items.push({ month_id: month.id, type: "reel", idx: i, title: `Reels ${i}` });
+  if (items.length === 0) return month;
+  const { data: created, error: iErr } = await supabase.from("content_items").insert(items).select("id");
   if (iErr) throw new Error(iErr.message);
+  if (opts?.assigneeId && created?.length) {
+    // Responsável padrão do modelo — falhar aqui não pode derrubar a
+    // criação do cliente, que é o que o usuário pediu de fato.
+    const { error: aErr } = await supabase.from("item_assignees").insert(
+      created.map((it: any) => ({ item_id: it.id, user_id: opts.assigneeId })),
+    );
+    if (aErr) console.error("Falha ao atribuir responsável padrão do modelo:", aErr.message);
+  }
   return month;
+}
+
+export type ModeloDeCliente = {
+  postsCount: number;
+  reelsCount: number;
+  createDemandsPage: boolean;
+  welcomeMessage: string | null;
+  defaultAssigneeId: string | null;
+};
+
+/** Modelo que a agência configurou pra essa categoria, ou null se não há. */
+export async function buscarModeloDeCliente(
+  supabase: any,
+  orgId: string,
+  category: string,
+): Promise<ModeloDeCliente | null> {
+  const { data, error } = await supabase
+    .from("client_templates")
+    .select("posts_count, reels_count, create_demands_page, welcome_message, default_assignee_id")
+    .eq("org_id", orgId)
+    .eq("category", category)
+    .maybeSingle();
+  if (error || !data) return null;
+  return {
+    postsCount: data.posts_count,
+    reelsCount: data.reels_count,
+    createDemandsPage: data.create_demands_page,
+    welcomeMessage: data.welcome_message,
+    defaultAssigneeId: data.default_assignee_id,
+  };
+}
+
+const PAGINA_DEMANDAS_INICIAL = `# Demandas
+
+Use esta página pra pedir tudo o que precisar. Cada pedido novo entra aqui embaixo, com a data.
+
+---
+
+*Nenhuma demanda por enquanto.*
+`;
+
+/**
+ * Parte do modelo que roda depois do mês: página de demandas e mensagem de
+ * boas-vindas. Nada aqui pode derrubar a criação do cliente — se falhar,
+ * loga e segue, porque o cliente já existe nesse ponto.
+ */
+export async function aplicarExtrasDoModelo(
+  supabase: any,
+  opts: { orgId: string; clientId: string; clientName: string; userId: string; modelo: ModeloDeCliente },
+) {
+  const { orgId, clientId, clientName, userId, modelo } = opts;
+  if (modelo.createDemandsPage) {
+    const { error } = await supabase.from("client_docs").insert({
+      org_id: orgId,
+      client_id: clientId,
+      type: "demandas",
+      title: "Demandas",
+      content: PAGINA_DEMANDAS_INICIAL,
+      created_by: userId,
+    });
+    if (error) console.error("Falha ao criar página de demandas do modelo:", error.message);
+  }
+  if (modelo.welcomeMessage) {
+    const { error } = await supabase.from("notifications").insert({
+      user_id: userId,
+      type: "client_template_welcome",
+      client_id: clientId,
+      message: modelo.welcomeMessage.replaceAll("{cliente}", clientName),
+    });
+    if (error) console.error("Falha ao criar notificação de boas-vindas do modelo:", error.message);
+  }
 }
 
 export const createClient = createServerFn({ method: "POST" })
@@ -1406,12 +1498,24 @@ export const createClient = createServerFn({ method: "POST" })
     const { data: client, error } = await context.supabase
       .from("clients").insert(insert).select().single();
     if (error) throw new Error(error.message);
-    if ((data.category ?? "Social Media") !== "Avulsos") {
-      const key = monthKey(new Date());
+    const categoria = data.category ?? "Social Media";
+    const key = monthKey(new Date());
+    const modelo = await buscarModeloDeCliente(context.supabase, context.orgId, categoria);
+    if (modelo) {
+      await seedMonth(context.supabase, client.id, key, {
+        postsCount: modelo.postsCount,
+        reelsCount: modelo.reelsCount,
+        assigneeId: modelo.defaultAssigneeId,
+      });
+      await aplicarExtrasDoModelo(context.supabase, {
+        orgId: context.orgId, clientId: client.id, clientName: client.name,
+        userId: context.userId, modelo,
+      });
+    } else if (categoria !== "Avulsos") {
       await seedMonth(context.supabase, client.id, key);
     } else {
-      // Avulsos: create empty month container so items can be added.
-      await context.supabase.from("months").insert({ client_id: client.id, key: monthKey(new Date()), org_id: context.orgId });
+      // Avulsos sem modelo: mês vazio só pra poder receber itens depois.
+      await context.supabase.from("months").insert({ client_id: client.id, key, org_id: context.orgId });
     }
     return { id: client.id };
   });

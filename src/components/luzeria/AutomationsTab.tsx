@@ -6,6 +6,7 @@ import { Pencil, Plus, Trash2, Zap } from "lucide-react";
 import { automationRulesQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { STATUS_META, getStatusMeta, type Status, type BuiltinStatus } from "@/lib/luzeria/types";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { ClientTemplatesSection } from "@/components/luzeria/ClientTemplatesSection";
 import { TRIGGER_TYPES, ACTION_TYPES, type AutomationRule, type TriggerType, type ActionType } from "@/lib/luzeria/automation-rules.functions";
 
 const STATUS_OPTIONS = Object.keys(STATUS_META) as BuiltinStatus[];
@@ -61,6 +62,7 @@ function describeAction(rule: AutomationRule, userNames: string): ReactNode {
 export function AutomationsTab() {
   return (
     <div className="space-y-8 max-w-3xl">
+      <ClientTemplatesSection />
       <AutomationRulesSection />
     </div>
   );

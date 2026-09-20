@@ -243,7 +243,7 @@ export const markLeadWon = createServerFn({ method: "POST" })
     if (leadErr || !lead) throw new Error("Lead não encontrado.");
     if (lead.won_client_id) throw new Error("Esse lead já virou cliente.");
 
-    const { assertClientLimit, monthKey, seedMonth } = await import("./api.functions");
+    const { assertClientLimit, monthKey, seedMonth, buscarModeloDeCliente, aplicarExtrasDoModelo } = await import("./api.functions");
     await assertClientLimit(context.supabase, context.orgId);
 
     const insert: any = { name: data.clientName, org_id: context.orgId };
@@ -253,10 +253,25 @@ export const markLeadWon = createServerFn({ method: "POST" })
     const { data: client, error: clientErr } = await context.supabase.from("clients").insert(insert).select().single();
     if (clientErr) throw new Error(clientErr.message);
 
-    if ((data.category ?? "Social Media") !== "Avulsos") {
-      await seedMonth(context.supabase, client.id, monthKey(new Date()));
+    // Lead que vira cliente entra igual a um cliente aberto na mão: se a
+    // agência configurou modelo pra categoria, é ele que manda.
+    const categoria = data.category ?? "Social Media";
+    const key = monthKey(new Date());
+    const modelo = await buscarModeloDeCliente(context.supabase, context.orgId, categoria);
+    if (modelo) {
+      await seedMonth(context.supabase, client.id, key, {
+        postsCount: modelo.postsCount,
+        reelsCount: modelo.reelsCount,
+        assigneeId: modelo.defaultAssigneeId,
+      });
+      await aplicarExtrasDoModelo(context.supabase, {
+        orgId: context.orgId, clientId: client.id, clientName: client.name,
+        userId: context.userId, modelo,
+      });
+    } else if (categoria !== "Avulsos") {
+      await seedMonth(context.supabase, client.id, key);
     } else {
-      await context.supabase.from("months").insert({ client_id: client.id, key: monthKey(new Date()), org_id: context.orgId });
+      await context.supabase.from("months").insert({ client_id: client.id, key, org_id: context.orgId });
     }
 
     const { error: updErr } = await context.supabase

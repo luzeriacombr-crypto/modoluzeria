@@ -131,6 +131,8 @@ export function NotificationsBell() {
                     navigate({ to: "/selecao-de-fotos/$clientId", params: { clientId: n.photoClientId } });
                   } else if (n.type === "contract_signed" && n.clientId) {
                     openFicha(n.clientId);
+                  } else if (n.type === "client_template_welcome" && n.clientId) {
+                    openFicha(n.clientId);
                   } else if (n.type === "support_chat_escalated") {
                     navigate({ to: "/ajuda", search: { tab: "chats" } });
                   } else if (n.type === "support_chat_reply") {
