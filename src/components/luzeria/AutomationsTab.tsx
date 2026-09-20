@@ -7,6 +7,7 @@ import { automationRulesQO, profilesQO, useApi, useMe } from "@/lib/luzeria/quer
 import { STATUS_META, getStatusMeta, type Status, type BuiltinStatus } from "@/lib/luzeria/types";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { ClientTemplatesSection } from "@/components/luzeria/ClientTemplatesSection";
+import { MonthRolloverSection } from "@/components/luzeria/MonthRolloverSection";
 import { TRIGGER_TYPES, ACTION_TYPES, type AutomationRule, type TriggerType, type ActionType } from "@/lib/luzeria/automation-rules.functions";
 
 const STATUS_OPTIONS = Object.keys(STATUS_META) as BuiltinStatus[];
@@ -63,6 +64,7 @@ export function AutomationsTab() {
   return (
     <div className="space-y-8 max-w-3xl">
       <ClientTemplatesSection />
+      <MonthRolloverSection />
       <AutomationRulesSection />
     </div>
   );

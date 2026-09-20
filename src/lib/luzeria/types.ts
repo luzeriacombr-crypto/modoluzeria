@@ -406,6 +406,9 @@ export interface Profile {
   /** Modelo de contrato da agência (texto com {variáveis}) — null cai no
    * modelo padrão embutido no front. */
   contractTemplate?: string | null;
+  /** Dia do mês da virada automática (1-28); null = desligada. */
+  monthRolloverDay?: number | null;
+  monthRolloverMode?: "criar" | "avisar";
   /** Personal (not org-wide) — which screen this member lands on right
    * after login. null = today's default (Minhas Demandas). */
   defaultLanding?: { view: string; clientId?: string } | null;

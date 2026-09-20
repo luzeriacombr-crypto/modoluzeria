@@ -151,7 +151,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at, month_rollover_day, month_rollover_mode").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -227,6 +227,8 @@ export const getMe = createServerFn({ method: "GET" })
       heroGradientFrom: ((org as any)?.hero_gradient_from ?? null) as string | null,
       heroGradientTo: ((org as any)?.hero_gradient_to ?? null) as string | null,
       contractTemplate: ((org as any)?.contract_template ?? null) as string | null,
+      monthRolloverDay: ((org as any)?.month_rollover_day ?? null) as number | null,
+      monthRolloverMode: ((org as any)?.month_rollover_mode ?? "criar") as "criar" | "avisar",
       cargoNames,
       cargoPermissions,
       defaultLanding: ((profile as any)?.default_landing ?? null) as { view: string; clientId?: string } | null,
@@ -270,6 +272,8 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     dashboardLayout?: Record<string, { x: number; y: number; w: number; h: number }>;
     heroGradientFrom?: string | null;
     heroGradientTo?: string | null;
+    monthRolloverDay?: number | null;
+    monthRolloverMode?: "criar" | "avisar";
   }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
@@ -300,6 +304,8 @@ export const updateMyOrg = createServerFn({ method: "POST" })
         w: z.number().int().min(1).max(24),
         h: z.number().int().min(1).max(20),
       })).optional(),
+      monthRolloverDay: z.number().int().min(1).max(28).nullable().optional(),
+      monthRolloverMode: z.enum(["criar", "avisar"]).optional(),
       heroGradientFrom: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       heroGradientTo: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
     }).parse(d))
@@ -330,6 +336,8 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.navLabels !== undefined) patch.nav_labels = data.navLabels;
     if (data.navOrder !== undefined) patch.nav_order = data.navOrder;
     if (data.dashboardLayout !== undefined) patch.dashboard_layout = data.dashboardLayout;
+    if (data.monthRolloverDay !== undefined) patch.month_rollover_day = data.monthRolloverDay;
+    if (data.monthRolloverMode !== undefined) patch.month_rollover_mode = data.monthRolloverMode;
     if (data.heroGradientFrom !== undefined) patch.hero_gradient_from = data.heroGradientFrom;
     if (data.heroGradientTo !== undefined) patch.hero_gradient_to = data.heroGradientTo;
     if (Object.keys(patch).length === 0) return { ok: true };
