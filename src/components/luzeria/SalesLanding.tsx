@@ -97,6 +97,10 @@ export function SalesHero({ onCta }: { onCta: () => void }) {
             <span className="w-8 h-8 rounded-[10px] flex items-center justify-center font-black text-sm" style={{ background: "#E7F9D6", color: "#2E7D32" }}>✓</span>
             <span><b className="block font-extrabold">Post aprovado</b><span className="text-[#0A0E23]/55 text-[11px]">Cliente aprovou em um toque</span></span>
           </div>
+          <div className="lz-float-a hidden sm:flex absolute -bottom-3 -left-4 lg:-left-8 bg-white text-[#0A0E23] rounded-2xl px-3.5 py-2.5 items-center gap-2.5 text-xs shadow-2xl">
+            <span className="w-8 h-8 rounded-[10px] flex items-center justify-center font-black text-sm" style={{ background: "#EDE7FF", color: "#6D3FE0" }}>✨</span>
+            <span><b className="block font-extrabold">Planejamento pronto</b><span className="text-[#0A0E23]/55 text-[11px]">A IA montou a prévia de outubro</span></span>
+          </div>
         </Reveal>
       </div>
     </section>
