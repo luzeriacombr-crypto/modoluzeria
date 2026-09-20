@@ -151,7 +151,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at, month_rollover_day, month_rollover_mode").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -183,6 +183,20 @@ export const getMe = createServerFn({ method: "GET" })
     const myCargos = ((cargoRows ?? []) as any[]).map((r) => r.cargos).filter(Boolean);
     const cargoNames = myCargos.map((c: any) => c.name as string);
     const cargoPermissions = [...new Set(myCargos.flatMap((c: any) => (c.permissions ?? []) as string[]))];
+
+    // Consulta à parte, e tolerante a falha de propósito: essas colunas
+    // chegam numa migration, e o deploy do código acontece antes dela ser
+    // aplicada. Junto do select principal, uma coluna que ainda não existe
+    // derruba o perfil inteiro e o app não abre — foi o que aconteceu.
+    const rollover: { day: number | null; mode: "criar" | "avisar" } = { day: null, mode: "criar" };
+    if (orgId) {
+      const { data: ro, error: roErr } = await (context.supabase as any)
+        .from("orgs").select("month_rollover_day, month_rollover_mode").eq("id", orgId).maybeSingle();
+      if (!roErr && ro) {
+        rollover.day = ro.month_rollover_day ?? null;
+        rollover.mode = (ro.month_rollover_mode ?? "criar") as "criar" | "avisar";
+      }
+    }
     return {
       id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
@@ -227,8 +241,8 @@ export const getMe = createServerFn({ method: "GET" })
       heroGradientFrom: ((org as any)?.hero_gradient_from ?? null) as string | null,
       heroGradientTo: ((org as any)?.hero_gradient_to ?? null) as string | null,
       contractTemplate: ((org as any)?.contract_template ?? null) as string | null,
-      monthRolloverDay: ((org as any)?.month_rollover_day ?? null) as number | null,
-      monthRolloverMode: ((org as any)?.month_rollover_mode ?? "criar") as "criar" | "avisar",
+      monthRolloverDay: rollover.day,
+      monthRolloverMode: rollover.mode,
       cargoNames,
       cargoPermissions,
       defaultLanding: ((profile as any)?.default_landing ?? null) as { view: string; clientId?: string } | null,

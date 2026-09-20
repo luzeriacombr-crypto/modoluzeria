@@ -23,7 +23,9 @@ export const listClientTemplates = createServerFn({ method: "GET" })
       .from("client_templates")
       .select("id, category, posts_count, reels_count, welcome_message, default_assignee_id")
       .order("category");
-    if (error) throw new Error(error.message);
+    // Idem: sem a migration aplicada, a tela mostra os padrões do sistema
+    // em vez de estourar.
+    if (error) return [];
     return ((data ?? []) as any[]).map((t) => ({
       id: t.id,
       category: t.category,

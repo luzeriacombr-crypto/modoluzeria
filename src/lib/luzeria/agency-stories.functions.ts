@@ -30,7 +30,9 @@ export const listAgencyStories = createServerFn({ method: "GET" })
       .gte("date", inicio)
       .lt("date", fim)
       .order("date");
-    if (error) throw new Error(error.message);
+    // Tabela nova: enquanto a migration não for aplicada, some em silêncio
+    // em vez de quebrar a tela de quem abriu a Rotina.
+    if (error) return [];
     return ((rows ?? []) as any[]).map((r) => ({
       id: r.id,
       date: r.date,
@@ -59,7 +61,7 @@ export const listMyStoriesToday = createServerFn({ method: "GET" })
       .select("id, date, user_id, done_at")
       .eq("user_id", alvo)
       .eq("date", hojeStr);
-    if (error) throw new Error(error.message);
+    if (error) return [];
     return ((rows ?? []) as any[]).map((r) => ({
       id: r.id,
       date: r.date,
