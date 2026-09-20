@@ -55,7 +55,7 @@ import {
 } from "./automations.functions";
 import { listAutomationRules, createAutomationRule, deleteAutomationRule } from "./automation-rules.functions";
 import { listClientTemplates, upsertClientTemplate, deleteClientTemplate } from "./client-templates.functions";
-import { listAgencyStories, listMyStoriesToday, setAgencyStoriesDay, setAgencyStoriesDone, getStoriesInspiracoes } from "./agency-stories.functions";
+import { listAgencyStories, listMyStoriesToday, setAgencyStoriesDay, setAgencyStoriesDone, getStoriesInspiracoes, setStoriesInspiracoes } from "./agency-stories.functions";
 import { listMyBugReports, listAllBugReports, updateBugReportStatus, sendBugReportMessage } from "./bug-reports.functions";
 import { getMySupportThread, sendSupportMessage, listOpenSupportThreads, getSupportThreadMessages, replyToSupportThread, closeSupportThread } from "./support-chat.functions";
 import {
@@ -1660,6 +1660,10 @@ export function useApi() {
     setAgencyStoriesDone: useMutation({
       mutationFn: useServerFn(setAgencyStoriesDone),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["agency-stories"] }),
+    }),
+    setStoriesInspiracoes: useMutation({
+      mutationFn: useServerFn(setStoriesInspiracoes),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["stories-inspiracoes"] }),
     }),
     /* ===== GOOGLE AGENDA ===== */
     getGoogleCalendarAuthUrl: useMutation({ mutationFn: useServerFn(getGoogleCalendarAuthUrl) }),

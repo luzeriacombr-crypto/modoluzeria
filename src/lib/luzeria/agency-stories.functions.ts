@@ -153,3 +153,44 @@ export const getStoriesInspiracoes = createServerFn({ method: "GET" })
     if (error || !data?.stories_inspirations) return null;
     return data.stories_inspirations as StoriesInspiracoes;
   });
+
+const inspiracoesSchema = z.object({
+  dias: z.array(z.object({
+    titulo: z.string().trim().min(1).max(60),
+    subtitulo: z.string().trim().max(80).optional(),
+    objetivo: z.string().trim().max(300).optional(),
+    ideias: z.array(z.string().trim().min(1).max(200)).max(30),
+    nota: z.string().trim().max(300).optional(),
+  })).max(7),
+  essencia: z.object({
+    titulo: z.string().trim().max(200).optional(),
+    itens: z.array(z.object({ dia: z.string().trim().min(1).max(40), texto: z.string().trim().min(1).max(200) })).max(7),
+  }).optional(),
+  padrao: z.object({
+    titulo: z.string().trim().max(60).optional(),
+    itens: z.array(z.string().trim().min(1).max(200)).max(20),
+    rodape: z.array(z.string().trim().min(1).max(200)).max(6).optional(),
+  }).optional(),
+  evitar: z.array(z.string().trim().min(1).max(200)).max(20).optional(),
+});
+
+/** Salva a rotina de stories da agência. Rotina vazia limpa o cadastro. */
+export const setStoriesInspiracoes = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { rotina: z.infer<typeof inspiracoesSchema> | null }) =>
+    z.object({ rotina: inspiracoesSchema.nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context);
+    const vazia = !data.rotina || data.rotina.dias.length === 0;
+    const { data: atualizada, error } = await (context.supabase as any)
+      .from("orgs")
+      .update({ stories_inspirations: vazia ? null : data.rotina })
+      .eq("id", context.orgId)
+      .select("id")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    // Update barrado por RLS não devolve erro, só zero linha — mesmo
+    // cuidado que updateMyOrg já toma.
+    if (!atualizada) throw new Error("Não foi possível salvar (permissão negada).");
+    return { ok: true };
+  });

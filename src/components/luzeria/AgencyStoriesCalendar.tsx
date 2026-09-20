@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Instagram, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Instagram, Check, Lightbulb } from "lucide-react";
 import { agencyStoriesQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { Avatar } from "@/components/luzeria/Avatar";
+import { StoriesInspiracoesEditor } from "@/components/luzeria/StoriesInspiracoesEditor";
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -33,6 +34,7 @@ export function AgencyStoriesCalendar() {
   const mes = chaveMes(refMes);
   const { data: escala = [] } = useQuery(agencyStoriesQO(mes));
   const [diaAberto, setDiaAberto] = useState<string | null>(null);
+  const [editorAberto, setEditorAberto] = useState(false);
 
   const porDia = useMemo(() => {
     const m = new Map<string, typeof escala>();
@@ -80,6 +82,13 @@ export function AgencyStoriesCalendar() {
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {isAdmin && (
+            <button
+              onClick={() => setEditorAberto(true)}
+              title="Editar as inspirações que a equipe vê no dia"
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 mr-1 text-[10.5px] font-semibold text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition-colors"
+            ><Lightbulb size={12} /> Inspirações</button>
+          )}
           <button
             onClick={() => setRefMes(new Date(ano, mesIdx - 1, 1))}
             className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5"
@@ -206,6 +215,8 @@ export function AgencyStoriesCalendar() {
           )}
         </div>
       )}
+
+      <StoriesInspiracoesEditor open={editorAberto} onClose={() => setEditorAberto(false)} />
     </div>
   );
 }
