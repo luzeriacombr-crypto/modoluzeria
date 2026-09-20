@@ -350,3 +350,24 @@ export const approveReseller = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+/** Platform-admin only (Luzeria): tira o status de revendedora. Só desliga
+ * a flag — a agência não consegue mais criar instâncias novas, mas as que
+ * já revendeu continuam funcionando e o preço de atacado fica salvo
+ * (é ele que fecha a cobrança do próprio revendedor sobre elas, e some
+ * o trabalho de reconfigurar se for aprovado de novo). */
+export const revokeReseller = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { orgId: string }) => z.object({ orgId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    if (data.orgId === LUZERIA_ORG_ID) throw new Error("A Luzeria não pode perder o próprio status.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("orgs").update({ is_reseller: false }).eq("id", data.orgId);
+    if (error) throw new Error(error.message);
+    const { count } = await supabaseAdmin.from("orgs").select("id", { count: "exact", head: true }).eq("reseller_org_id", data.orgId);
+    return { ok: true, resoldCount: count ?? 0 };
+  });

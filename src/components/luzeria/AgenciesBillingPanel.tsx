@@ -7,7 +7,7 @@ import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, orgPageViewsQO, useApi 
 import { computeAgencyPoints, getAgencyLevel } from "@/lib/luzeria/agency-level";
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
 import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
-import { approveReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
+import { approveReseller, revokeReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { BrazilAgenciesMap } from "@/components/luzeria/BrazilAgenciesMap";
 
@@ -44,7 +44,7 @@ function ThOrdenavel({ coluna, label, ordem, onClick, align = "left" }: {
 }) {
   const ativa = ordem?.coluna === coluna;
   return (
-    <th className={`${align === "right" ? "text-right" : "text-left"} px-4 py-3 text-xs font-semibold`}>
+    <th className={`${align === "right" ? "text-right" : "text-left"} px-3 py-3 text-xs font-semibold whitespace-nowrap`}>
       <button
         onClick={() => onClick(coluna)}
         title="Ordenar por essa coluna"
@@ -445,13 +445,12 @@ export function AgenciesBillingPanel() {
                 <ThOrdenavel coluna="nivel" label="Nível" ordem={ordem} onClick={alternarOrdem} />
                 <ThOrdenavel coluna="plano" label="Plano" ordem={ordem} onClick={alternarOrdem} />
                 <ThOrdenavel coluna="status" label="Status" ordem={ordem} onClick={alternarOrdem} />
-                <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">Teste / cobrança</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-foreground/60 whitespace-nowrap">Teste / cobrança</th>
                 <ThOrdenavel coluna="clientes" label="Clientes" ordem={ordem} onClick={alternarOrdem} align="right" />
                 <ThOrdenavel coluna="equipe" label="Equipe" ordem={ordem} onClick={alternarOrdem} align="right" />
-                <th className="text-center px-4 py-3 text-xs font-semibold text-foreground/60">Drive</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-foreground/60">Instagram</th>
+                <th className="text-center px-3 py-3 text-xs font-semibold text-foreground/60 whitespace-nowrap">Integrações</th>
                 <ThOrdenavel coluna="acesso" label="Último acesso" ordem={ordem} onClick={alternarOrdem} />
-                <th className="text-center px-4 py-3 text-xs font-semibold text-foreground/60"></th>
+                <th className="text-center px-3 py-3 text-xs font-semibold text-foreground/60"></th>
               </tr>
             </thead>
             <tbody>
@@ -463,11 +462,11 @@ export function AgenciesBillingPanel() {
                 const invoiceError = invoiceForId === o.id ? fetchInvoice.error : undefined;
                 return (
                   <tr key={o.id} className="border-b border-foreground/4 hover:bg-foreground/[0.02] transition">
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex items-center gap-2">
+                    <td className="px-3 py-3 text-sm">
+                      <div className="flex flex-col items-start gap-1 max-w-[220px]">
                         <button
                           onClick={() => setInfoTarget(o)}
-                          className="text-foreground font-medium hover:text-[var(--lz-accent-ink)] transition underline decoration-white/20 hover:decoration-current underline-offset-2"
+                          className="text-foreground font-medium text-left hover:text-[var(--lz-accent-ink)] transition underline decoration-white/20 hover:decoration-current underline-offset-2"
                         >
                           {o.name}
                         </button>
@@ -483,24 +482,24 @@ export function AgenciesBillingPanel() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-3 py-3 text-sm">
                       <AgencyLevelBadge o={o} />
                     </td>
-                    <td className="px-4 py-3 text-sm text-foreground/70">
-                      {o.planName}
+                    <td className="px-3 py-3 text-sm text-foreground/70 whitespace-nowrap">
+                      <div className="leading-tight">{o.planName}</div>
                       {o.priceCents != null && (
-                        <span className="text-foreground/40"> · R$ {(o.priceCents / 100).toFixed(2)}/mês</span>
+                        <div className="text-[11px] text-foreground/40 tabular-nums">R$ {(o.priceCents / 100).toFixed(2).replace(".", ",")}/mês</div>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold"
                         style={{ backgroundColor: `${status.color}22`, color: status.color }}>
                         {status.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-foreground/60">
+                    <td className="px-3 py-3 text-sm text-foreground/60 whitespace-nowrap">
                       {trialDays != null
-                        ? trialDays >= 0 ? `Teste acaba em ${trialDays}d` : `Teste expirou há ${-trialDays}d`
+                        ? trialDays >= 0 ? `Acaba em ${trialDays}d` : `Expirou há ${-trialDays}d`
                         : o.hasAsaasSubscription
                           ? (
                             <div className="flex items-center gap-2">
@@ -539,22 +538,21 @@ export function AgenciesBillingPanel() {
                           )
                           : <span className="text-foreground/30">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-foreground/70">{o.clientsUsed}</td>
-                    <td className="px-4 py-3 text-sm text-right text-foreground/70">{o.teamCount ?? 0}</td>
-                    <td className="px-4 py-3 text-center">
-                      <HardDrive size={14} className={`inline ${o.driveConnected ? "text-[var(--lz-accent-ink)]" : "text-foreground/20"}`} />
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {o.instagramConnected > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--lz-accent-ink)]">
-                          <Instagram size={13} /> {o.instagramConnected}
+                    <td className="px-3 py-3 text-sm text-right text-foreground/70 tabular-nums">{o.clientsUsed}</td>
+                    <td className="px-3 py-3 text-sm text-right text-foreground/70 tabular-nums">{o.teamCount ?? 0}</td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-3">
+                        <span title={o.driveConnected ? "Google Drive conectado" : "Drive não conectado"}>
+                          <HardDrive size={14} className={o.driveConnected ? "text-[var(--lz-accent-ink)]" : "text-foreground/20"} />
                         </span>
-                      ) : (
-                        <Instagram size={14} className="inline text-foreground/20" />
-                      )}
+                        <span title={o.instagramConnected > 0 ? `${o.instagramConnected} Instagram(s) conectado(s)` : "Nenhum Instagram conectado"}
+                          className={`inline-flex items-center gap-1 text-[11px] font-semibold tabular-nums min-w-[34px] ${o.instagramConnected > 0 ? "text-[var(--lz-accent-ink)]" : "text-foreground/20"}`}>
+                          <Instagram size={14} /> {o.instagramConnected > 0 ? o.instagramConnected : ""}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-foreground/50">{formatLastLogin(o.lastLoginAt)}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-3 text-xs text-foreground/50 whitespace-nowrap">{formatLastLogin(o.lastLoginAt)}</td>
+                    <td className="px-3 py-3">
                       <div className="flex items-center justify-center gap-1">
                         {o.subscriptionStatus !== "active" && (
                           <button
@@ -746,6 +744,25 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
     onError: (e: any) => toast.error(e?.message ?? "Erro ao aprovar revendedor."),
   });
 
+  const revokeResellerMutation = useMutation({
+    mutationFn: useServerFn(revokeReseller),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orgs-billing"] });
+      toast.success(`${org.name} não é mais revendedora.`);
+      onClose();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao remover revendedora."),
+  });
+
+  async function handleRevokeReseller() {
+    const resold = org.resoldCount ?? 0;
+    const extra = resold > 0
+      ? ` As ${resold} instância(s) que ela já revendeu continuam funcionando normalmente, mas ela não poderá criar novas.`
+      : " Ela não poderá mais criar instâncias novas.";
+    if (!(await requestConfirm(`Remover ${org.name} como revendedora?${extra} Dá pra aprovar de novo depois.`, { danger: true }))) return;
+    revokeResellerMutation.mutate({ data: { orgId: org.id } });
+  }
+
   async function handleApproveReseller() {
     if (!(await requestConfirm(`Aprovar ${org.name} como revendedora white label? Ela poderá criar instâncias novas com 60% de desconto de parceiro.`))) return;
     approveResellerMutation.mutate({ data: { orgId: org.id } });
@@ -829,9 +846,20 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
             {org.resellerOrgName ? (
               <p className="text-foreground/80">Instância revendida por <span className="text-foreground font-semibold">{org.resellerOrgName}</span>.</p>
             ) : org.isReseller ? (
-              <p className="inline-flex items-center gap-1.5 text-[var(--lz-accent-ink)] font-semibold">
-                <Check size={13} /> Aprovada como revendedora
-              </p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <p className="inline-flex items-center gap-1.5 text-[var(--lz-accent-ink)] font-semibold">
+                  <Check size={13} /> Aprovada como revendedora
+                </p>
+                {org.id !== LUZERIA_ORG_ID && (
+                  <button
+                    onClick={handleRevokeReseller}
+                    disabled={revokeResellerMutation.isPending}
+                    className="text-[11px] font-semibold text-foreground/40 hover:text-red-400 underline underline-offset-2 transition disabled:opacity-40"
+                  >
+                    {revokeResellerMutation.isPending ? "Removendo…" : "Remover"}
+                  </button>
+                )}
+              </div>
             ) : (
               <button
                 onClick={handleApproveReseller}
