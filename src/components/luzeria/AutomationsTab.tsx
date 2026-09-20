@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pause, Pencil, Play, Plus, Trash2, Zap, FlaskConical, Sparkles, ChevronDown } from "lucide-react";
+import { Pause, Pencil, Play, Plus, Trash2, Zap, FlaskConical, Sparkles } from "lucide-react";
 import { automationRulesQO, clientsQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { STATUS_META, getStatusMeta, type Status, type BuiltinStatus } from "@/lib/luzeria/types";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -193,7 +193,6 @@ function AutomationRulesSection() {
   const { createAutomationRule, deleteAutomationRule, setAutomationRuleActive, testAutomationRule } = useApi();
   // null = fechado, "add" = criando nova, ou a chave do grupo sendo editado.
   const [formTarget, setFormTarget] = useState<null | "add" | string>(null);
-  const [showTemplates, setShowTemplates] = useState(false);
 
   function memberName(userId: string | null) {
     return profiles.find((p) => p.id === userId)?.name ?? "—";
@@ -237,7 +236,6 @@ function AutomationRulesSection() {
     triggerType: g.rule.triggerType, triggerStatus: g.rule.triggerStatus ?? undefined, triggerDays: g.rule.triggerDays ?? undefined,
     actionType: g.rule.actionType, actionMessage: g.rule.actionMessage ?? undefined,
   })));
-  const templatesOpen = showTemplates || (rules.length === 0 && formTarget === null);
 
   return (
     <div>
@@ -343,15 +341,10 @@ function AutomationRulesSection() {
 
       {isMaster && (
         <div className="mt-4">
-          <button
-            onClick={() => setShowTemplates((v) => !v)}
-            className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-foreground/50 hover:text-foreground transition"
-          >
+          <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider flex items-center gap-1.5">
             <Sparkles size={12} /> Modelos prontos
-            <ChevronDown size={12} className={`transition-transform ${templatesOpen ? "rotate-180" : ""}`} />
-          </button>
-          {templatesOpen && (
-            <div className="grid sm:grid-cols-2 gap-2.5 mt-3">
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-2.5 mt-3">
               {TEMPLATES.map((t) => {
                 const added = existingTemplateKeys.has(templateKey(t.payload));
                 return (
@@ -367,8 +360,7 @@ function AutomationRulesSection() {
                   </div>
                 );
               })}
-            </div>
-          )}
+          </div>
         </div>
       )}
 
