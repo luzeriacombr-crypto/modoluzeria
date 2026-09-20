@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive } from "lucide-react";
-import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, useApi } from "@/lib/luzeria/queries";
+import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, orgPageViewsQO, useApi } from "@/lib/luzeria/queries";
 import { computeAgencyPoints, getAgencyLevel } from "@/lib/luzeria/agency-level";
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
 import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
@@ -660,9 +660,11 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
     approveResellerMutation.mutate({ data: { orgId: org.id } });
   }
 
+  const { data: pageViews = [], isLoading: loadingPageViews } = useQuery(orgPageViewsQO(org.id));
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-foreground/10 rounded-2xl p-6 max-w-sm w-full">
+      <div className="bg-card border border-foreground/10 rounded-2xl p-6 max-w-sm w-full max-h-[85vh] overflow-y-auto">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
             <Building2 size={18} className="text-[var(--lz-accent-ink)]" />
@@ -747,6 +749,26 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
               >
                 {approveResellerMutation.isPending ? "Aprovando..." : "Aprovar como revendedora"}
               </button>
+            )}
+          </div>
+
+          <div>
+            <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider mb-1.5">Páginas recentes</p>
+            {loadingPageViews ? (
+              <p className="text-foreground/30 text-[13px]">Carregando…</p>
+            ) : pageViews.length === 0 ? (
+              <p className="text-foreground/30 text-[13px]">Nenhuma navegação registrada ainda (só grava a partir de agora).</p>
+            ) : (
+              <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                {pageViews.map((v: any) => (
+                  <div key={v.id} className="flex items-center justify-between gap-2 text-[12px]">
+                    <span className="text-foreground/70 font-mono truncate">{v.path}</span>
+                    <span className="text-foreground/35 shrink-0 tabular-nums">
+                      {new Date(v.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

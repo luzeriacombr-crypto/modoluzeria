@@ -20,7 +20,7 @@ import {
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   addCleaningTask, renameCleaningTask, deleteCleaningTask,
   adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, cancelMySubscription, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations, getMyWorkStats,
-  listOrgsBilling, getOrgNextInvoice, getMyAgencyLevelInputs,
+  listOrgsBilling, getOrgNextInvoice, getMyAgencyLevelInputs, getOrgPageViews,
   updateMyAccount,
   getReport, getDeliveryTrend, getMemberReportDetail, getMemberVelocity, getFileUploadsReport,
   updateFeedOrder,
@@ -439,6 +439,10 @@ export const orgsBillingQO = () =>
   queryOptions({ queryKey: ["orgs-billing"], queryFn: () => listOrgsBilling(), refetchInterval: 60_000 });
 export const myAgencyLevelInputsQO = () =>
   queryOptions({ queryKey: ["my-agency-level-inputs"], queryFn: () => getMyAgencyLevelInputs(), staleTime: 5 * 60_000 });
+export const orgPageViewsQO = (orgId: string) =>
+  // staleTime curto de propósito: é pra conferir o que a pessoa está
+  // acessando "agora", faz sentido recarregar toda vez que o modal reabre.
+  queryOptions({ queryKey: ["org-page-views", orgId], queryFn: () => getOrgPageViews({ data: { orgId } }), staleTime: 15_000 });
 export const demoRequestsQO = () =>
   queryOptions({ queryKey: ["demo-requests"], queryFn: () => listDemoRequests() });
 export const aiPlanningFeedbackQO = () =>

@@ -690,6 +690,47 @@ export const acknowledgeAgencyLevel = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Registra "esse usuário abriu essa página agora" — chamado a cada troca
+ * de rota (ver PageViewTracker.tsx). Fire-and-forget de propósito no
+ * client: uma falha aqui nunca pode incomodar quem só está navegando. Só
+ * grava daqui pra frente — não existe histórico de navegação anterior a
+ * essa feature em nenhum lugar do banco. */
+export const logPageView = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { path: string }) => z.object({ path: z.string().min(1).max(500) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await (context.supabase as any).from("page_views").insert({
+      org_id: context.orgId, user_id: context.userId, path: data.path,
+    });
+    return { ok: true };
+  });
+
+export type PageViewRow = { id: string; path: string; createdAt: string; userName: string };
+
+/** Platform-admin only: últimas páginas acessadas pelos usuários de UMA
+ * agência — ferramenta interna pra acompanhar o que uma agência
+ * (principalmente uma trial nova) está de fato explorando no app. */
+export const getOrgPageViews = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { orgId: string }) => z.object({ orgId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<PageViewRow[]> => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await (supabaseAdmin as any)
+      .from("page_views")
+      .select("id, path, created_at, profiles(name)")
+      .eq("org_id", data.orgId)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r: any) => ({
+      id: r.id, path: r.path, createdAt: r.created_at, userName: r.profiles?.name ?? "—",
+    }));
+  });
+
 /** Insumos pro selo de nível (gamificação) da PRÓPRIA agência — qualquer
  * perfil ativo pode chamar (diferente de listOrgsBilling, que é só pro
  * admin da plataforma ver todas as agências). Usa context.supabase (RLS
