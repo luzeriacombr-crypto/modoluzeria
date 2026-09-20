@@ -331,8 +331,8 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
                     <div className="text-xs font-semibold text-foreground truncate">{l.label}</div>
                     {href ? (
                       <a href={href} target="_blank" rel="noopener noreferrer"
-                        className="text-[11px] text-foreground/50 hover:text-[var(--lz-accent-ink)] truncate inline-flex items-center gap-1">
-                        {l.url} <ExternalLink size={10} />
+                        className="text-[11px] text-foreground/50 hover:text-[var(--lz-accent-ink)] flex items-center gap-1 min-w-0 max-w-full">
+                        <span className="truncate min-w-0">{l.url}</span> <ExternalLink size={10} className="shrink-0" />
                       </a>
                     ) : (
                       <div className="text-[11px] text-foreground/40 truncate">{l.url}</div>
