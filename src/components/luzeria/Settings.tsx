@@ -96,7 +96,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           <h1 className="text-[32px] font-bold text-foreground tracking-tight">Configurações</h1>
           <p className="text-sm text-foreground/50 mt-2">
             {tab === "team" || tab === "report" || tab === "auditoria" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
-             tab === "integrations" ? "Conecte o Google Drive da agência e acompanhe o Instagram de cada cliente." :
+             tab === "integrations" ? "Conecte o Google Drive da agência, a sua Google Agenda e acompanhe o Instagram de cada cliente." :
              tab === "automations" ? "Lembretes automáticos e rotinas que o sistema executa sozinho." :
              tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
              tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? "Visão geral, jornada, margem e pagamentos de cada cliente." :

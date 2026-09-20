@@ -377,7 +377,7 @@ function PrefRow({ icon, title, description, value, disabled, onChange }: {
   );
 }
 
-function GoogleCalendarSection() {
+export function GoogleCalendarSection() {
   const { data: conn, isLoading } = useQuery(myCalendarConnectionQO());
   const { getGoogleCalendarAuthUrl, disconnectGoogleCalendar, createCalendarEvent } = useApi();
   const [showForm, setShowForm] = useState(false);

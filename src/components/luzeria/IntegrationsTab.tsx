@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Instagram, FolderTree } from "lucide-react";
+import { Instagram, FolderTree, CalendarClock } from "lucide-react";
 import { instagramConnectionSummaryQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { DriveSettingsTab } from "./DriveSettingsTab";
+import { GoogleCalendarSection } from "./ProfilePage";
 
 function InstagramSummaryCard() {
   const { data, isLoading } = useQuery(instagramConnectionSummaryQO());
@@ -61,7 +62,17 @@ export function IntegrationsTab({ disabledFeatures }: { disabledFeatures: string
           <DriveSettingsTab />
         </div>
       )}
-      <div className={disabledFeatures.includes("drive") ? "" : "pt-2 border-t border-foreground/10"}>
+      {!disabledFeatures.includes("google_calendar") && (
+        <div className={disabledFeatures.includes("drive") ? "" : "pt-2 border-t border-foreground/10"}>
+          <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
+            <CalendarClock size={12} /> Google Agenda
+          </h2>
+          <div className="bg-card rounded-lg p-6">
+            <GoogleCalendarSection />
+          </div>
+        </div>
+      )}
+      <div className={disabledFeatures.includes("drive") && disabledFeatures.includes("google_calendar") ? "" : "pt-2 border-t border-foreground/10"}>
         <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
           <Instagram size={12} /> Instagram
         </h2>
