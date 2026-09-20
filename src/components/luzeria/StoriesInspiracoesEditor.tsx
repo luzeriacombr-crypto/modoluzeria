@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { Modal } from "@/components/luzeria/Modals";
 import { storiesInspiracoesQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -21,9 +21,23 @@ const MODELO_VAZIO: StoriesInspiracoes = {
 
 export function StoriesInspiracoesEditor({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { data: salva } = useQuery({ ...storiesInspiracoesQO(), enabled: open });
-  const { setStoriesInspiracoes } = useApi();
+  const { setStoriesInspiracoes, gerarStoriesInspiracoes } = useApi();
   const [rascunho, setRascunho] = useState<StoriesInspiracoes | null>(null);
+  const [gerarAberto, setGerarAberto] = useState(false);
+  const [contexto, setContexto] = useState("");
   const rotina = rascunho ?? salva ?? MODELO_VAZIO;
+
+  function gerar() {
+    gerarStoriesInspiracoes.mutate({ data: { contexto: contexto.trim() || undefined } }, {
+      onSuccess: (nova: any) => {
+        // Cai no formulário como rascunho: nada é salvo antes da pessoa ler.
+        setRascunho(nova as StoriesInspiracoes);
+        setGerarAberto(false);
+        toast.success("Rascunho gerado — revise e salve.");
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Não consegui gerar agora"),
+    });
+  }
 
   function mudar(patch: Partial<StoriesInspiracoes>) {
     setRascunho({ ...rotina, ...patch });
@@ -57,14 +71,52 @@ export function StoriesInspiracoesEditor({ open, onClose }: { open: boolean; onC
     });
   }
 
-  if (!open) return null;
   const rotulo = "text-[10px] uppercase font-bold tracking-wider text-foreground/50";
+  if (!open) return null;
 
   return (
     <Modal open={open} onClose={onClose} title="Editar inspirações dos Stories" maxWidthClass="max-w-3xl">
-      <p className="text-[11px] text-foreground/40 mb-4 leading-relaxed">
+      <p className="text-[11px] text-foreground/40 mb-3 leading-relaxed">
         É isso que a pessoa escalada vê no botão "Ver inspirações" no dia dela. Nas listas, escreva um item por linha.
       </p>
+
+      <div className="rounded-lg border border-foreground/8 p-3 mb-4">
+        {!gerarAberto ? (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <span className="text-[11px] text-foreground/50">
+              Sem tempo de escrever? A IA monta um rascunho pra sua agência.
+            </span>
+            <button
+              onClick={() => setGerarAberto(true)}
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-bold transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "rgba(var(--lz-brand-rgb),0.15)", color: "var(--lz-accent-ink)" }}
+            ><Sparkles size={12} /> Gerar inspirações</button>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            <label className="block">
+              <span className={rotulo}>Contexto (opcional)</span>
+              <textarea
+                value={contexto}
+                onChange={(e) => setContexto(e.target.value)}
+                rows={3}
+                className="lz-input mt-1 resize-y"
+                placeholder="Ex: somos uma agência de social media pra clínicas, time de 4 pessoas, gravamos às terças e quintas, queremos aparecer mais leves e menos institucionais."
+              />
+              <span className="text-[10px] text-foreground/35 mt-1 block">
+                Sem contexto, ela monta uma rotina sólida a partir do nome da sua agência. O resultado vem como rascunho: você revisa e só salva se gostar.
+              </span>
+            </label>
+            <div className="flex gap-2">
+              <button onClick={gerar} disabled={gerarStoriesInspiracoes.isPending}
+                className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50 inline-flex items-center gap-1.5">
+                {gerarStoriesInspiracoes.isPending ? <><Loader2 size={13} className="animate-spin" /> Gerando…</> : <><Sparkles size={13} /> Gerar</>}
+              </button>
+              <button onClick={() => setGerarAberto(false)} className="lz-btn-ghost text-xs px-3 py-2 rounded-md">Cancelar</button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
         {rotina.dias.map((dia, i) => (

@@ -194,3 +194,114 @@ export const setStoriesInspiracoes = createServerFn({ method: "POST" })
     if (!atualizada) throw new Error("Não foi possível salvar (permissão negada).");
     return { ok: true };
   });
+
+/**
+ * Esqueleto de uma boa rotina de stories — método, não conteúdo.
+ *
+ * De propósito NÃO carrega nada da rotina da Luzeria: nomes de quadros,
+ * bordões e frases dela são ativos dela, e o app é white-label. O que vai
+ * pro modelo é o princípio genérico de social media (dia de bastidor, dia
+ * de autoridade, dia de humanização), que qualquer bom profissional
+ * conhece, mais o contexto da própria agência que está pedindo.
+ */
+const METODO_STORIES = `Uma rotina de stories que funciona costuma ter:
+- Dias fixos, poucos e sustentáveis (2 a 3 por semana é mais realista que todo dia).
+- Um tema por dia, com um objetivo claro por trás: um dia mostra bastidor e rotina (aproxima), um dia entrega algo útil (constrói autoridade), um dia humaniza o time (cria memória de marca).
+- Ideias concretas o suficiente pra alguém gravar sem pensar muito no dia.
+- Um padrão de publicação: quantos stories por sequência, usar interação (enquete, caixinha), mostrar pessoas e não só telas.
+- Uma lista curta do que evitar, tirada dos erros que a equipe realmente comete.`;
+
+const ROTINA_TOOL = {
+  name: "report_stories_routine",
+  description: "Devolve a rotina de stories montada pra agência.",
+  input_schema: {
+    type: "object",
+    properties: {
+      dias: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            titulo: { type: "string", description: "Dia da semana, ex: Segunda-feira" },
+            subtitulo: { type: "string", description: "Nome do tema do dia, curto e próprio da agência" },
+            objetivo: { type: "string", description: "O que esse dia comunica, em uma frase" },
+            ideias: { type: "array", items: { type: "string" }, description: "5 a 10 ideias concretas de gravação" },
+            nota: { type: "string", description: "Observação prática do dia" },
+          },
+          required: ["titulo", "subtitulo", "objetivo", "ideias"],
+        },
+      },
+      essencia: {
+        type: "object",
+        properties: {
+          titulo: { type: "string" },
+          itens: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: { dia: { type: "string" }, texto: { type: "string" } },
+              required: ["dia", "texto"],
+            },
+          },
+        },
+        required: ["titulo", "itens"],
+      },
+      padrao: {
+        type: "object",
+        properties: {
+          titulo: { type: "string" },
+          itens: { type: "array", items: { type: "string" } },
+          rodape: { type: "array", items: { type: "string" } },
+        },
+        required: ["itens"],
+      },
+      evitar: { type: "array", items: { type: "string" } },
+    },
+    required: ["dias", "padrao", "evitar"],
+  },
+};
+
+/** Gera uma proposta de rotina. Não salva: volta pro editor pra pessoa revisar. */
+export const gerarStoriesInspiracoes = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { contexto?: string }) =>
+    z.object({ contexto: z.string().trim().max(1500).optional() }).parse(d))
+  .handler(async ({ data, context }): Promise<StoriesInspiracoes> => {
+    await ensureAdmin(context);
+
+    const { data: org } = await context.supabase
+      .from("orgs").select("name, tagline").eq("id", context.orgId).maybeSingle();
+
+    const instrucao = [
+      `Você vai montar a rotina de stories do perfil de uma agência de marketing/conteúdo.`,
+      ``,
+      `AGÊNCIA: ${(org as any)?.name ?? "uma agência"}${(org as any)?.tagline ? ` — ${(org as any).tagline}` : ""}`,
+      data.contexto ? `\nO QUE A AGÊNCIA PEDIU:\n${data.contexto}` : `\nA agência não deu contexto: monte algo sólido e aplicável pra uma agência de conteúdo, sem inventar fatos sobre ela.`,
+      ``,
+      METODO_STORIES,
+      ``,
+      `REGRAS:`,
+      `- Escreva tudo em português do Brasil, no tom de quem fala com a própria equipe.`,
+      `- Os nomes dos temas precisam ser da cara DESSA agência. Não use nomes de quadros, bordões ou apelidos de outras agências.`,
+      `- Ideias concretas e graváveis ("Bastidor da gravação de hoje"), nunca conselho vago ("poste mais bastidores").`,
+      `- 3 dias, a não ser que o contexto peça outra coisa. De 5 a 10 ideias por dia.`,
+      `- A lista de "evitar" vem dos erros reais de quem grava story com pressa.`,
+      `- Termine SEMPRE chamando a tool report_stories_routine.`,
+    ].join("\n");
+
+    const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
+    const anthropic = getAnthropicClient();
+    const resposta = await anthropic.messages.create({
+      model: PLANNING_MODEL,
+      max_tokens: 4000,
+      tools: [ROTINA_TOOL as any],
+      tool_choice: { type: "tool", name: "report_stories_routine" } as any,
+      messages: [{ role: "user", content: instrucao }],
+    } as any);
+
+    const toolUse = [...resposta.content].reverse().find(
+      (b: any) => b.type === "tool_use" && b.name === "report_stories_routine",
+    ) as any;
+    if (!toolUse) throw new Error("Não consegui gerar as inspirações — tenta de novo.");
+    return toolUse.input as StoriesInspiracoes;
+  });
