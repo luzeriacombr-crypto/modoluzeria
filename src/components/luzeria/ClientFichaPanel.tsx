@@ -160,13 +160,13 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
 
   return (
     <div className="@container px-4 sm:px-6 py-5 space-y-4">
-      {/* Conexões — Instagram continua sendo o primeiro bloco da Ficha (mesmo lugar de sempre) */}
-      <div className={`grid gap-3 grid-cols-1 ${canManageInstagram ? "@[760px]:grid-cols-[1.5fr_1fr_1fr]" : ""}`}>
-        {canManageInstagram && (
-          <FichaCard label="Instagram">
-            <InstagramSection clientId={client.id} />
-          </FichaCard>
-        )}
+      {/* Instagram sozinho, linha inteira, primeiro bloco da Ficha (mesmo lugar de sempre) */}
+      {canManageInstagram && (
+        <FichaCard label="Instagram">
+          <InstagramSection clientId={client.id} />
+        </FichaCard>
+      )}
+      <div className={`grid gap-3 grid-cols-1 ${canManageInstagram ? "@[760px]:grid-cols-2" : ""}`}>
         {canManageInstagram && (
           <FichaCard label="Facebook">
             <FacebookSection clientId={client.id} />
