@@ -55,7 +55,7 @@ import {
 } from "./automations.functions";
 import { listAutomationRules, createAutomationRule, deleteAutomationRule } from "./automation-rules.functions";
 import { listClientTemplates, upsertClientTemplate, deleteClientTemplate } from "./client-templates.functions";
-import { listAgencyStories, listMyStoriesToday, setAgencyStoriesDay, setAgencyStoriesDone } from "./agency-stories.functions";
+import { listAgencyStories, listMyStoriesToday, setAgencyStoriesDay, setAgencyStoriesDone, getStoriesInspiracoes } from "./agency-stories.functions";
 import { listMyBugReports, listAllBugReports, updateBugReportStatus, sendBugReportMessage } from "./bug-reports.functions";
 import { getMySupportThread, sendSupportMessage, listOpenSupportThreads, getSupportThreadMessages, replyToSupportThread, closeSupportThread } from "./support-chat.functions";
 import {
@@ -639,6 +639,9 @@ export const agencyStoriesQO = (month: string) =>
 
 export const myStoriesTodayQO = (userId?: string) =>
   queryOptions({ queryKey: ["agency-stories", "hoje", userId ?? "eu"], queryFn: () => listMyStoriesToday({ data: { userId } }) });
+
+export const storiesInspiracoesQO = () =>
+  queryOptions({ queryKey: ["stories-inspiracoes"], queryFn: () => getStoriesInspiracoes(), staleTime: 10 * 60_000 });
 
 export const myBugReportsQO = () =>
   queryOptions({ queryKey: ["bug-reports", "mine"], queryFn: () => listMyBugReports() });

@@ -135,3 +135,21 @@ export const setAgencyStoriesDone = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export type StoriesInspiracoes = {
+  dias: { titulo: string; subtitulo?: string; objetivo?: string; ideias: string[]; nota?: string }[];
+  essencia?: { titulo?: string; itens: { dia: string; texto: string }[] };
+  padrao?: { titulo?: string; itens: string[]; rodape?: string[] };
+  evitar?: string[];
+};
+
+/** Rotina de stories da agência — alimenta o "Ver inspirações". */
+export const getStoriesInspiracoes = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }): Promise<StoriesInspiracoes | null> => {
+    const { data, error } = await (context.supabase as any)
+      .from("orgs").select("stories_inspirations").eq("id", context.orgId).maybeSingle();
+    // Coluna nova: sem a migration aplicada, é como não ter rotina cadastrada.
+    if (error || !data?.stories_inspirations) return null;
+    return data.stories_inspirations as StoriesInspiracoes;
+  });

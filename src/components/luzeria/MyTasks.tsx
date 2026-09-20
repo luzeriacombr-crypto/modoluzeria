@@ -10,6 +10,7 @@ import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, M
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { MyWeekView } from "./MyWeekView";
 import { getDailyVerse } from "@/lib/luzeria/daily-verse";
+import { StoriesInspiracoesButton, StoriesInspiracoesModal } from "@/components/luzeria/StoriesInspiracoesModal";
 
 const ProductivityBlock = lazy(() =>
   import("./ProductivityChart").then((m) => ({ default: m.ProductivityBlock })),
@@ -110,6 +111,7 @@ export function MyTasks() {
     ...todayPublicationsQO(todayStart, todayEnd, targetId),
     enabled: !!targetId,
   });
+  const [inspiracoesAbertas, setInspiracoesAbertas] = useState(false);
   // Escala de Stories do perfil da própria agência (Equipe → Rotina).
   const { data: storiesHoje = [] } = useQuery({
     ...myStoriesTodayQO(targetId),
@@ -388,17 +390,22 @@ export function MyTasks() {
       {storiesHoje.length > 0 && (
         <div className="space-y-3 mb-8 lz-stagger">
           {storiesHoje.map((turno) => (
-            <DailyTaskCard
-              key={turno.id}
-              icon={<Instagram size={18} />}
-              title={`É seu dia de fazer Stories no perfil da ${me?.orgName ?? "agência"}`}
-              status={turno.doneAt ? "done" : "pending"}
-              canAct={!isAdmin || !viewAs || viewAs === me?.id}
-              onDone={() => setAgencyStoriesDone.mutate({ data: { id: turno.id, done: true } })}
-            />
+            <div key={turno.id}>
+              <DailyTaskCard
+                icon={<Instagram size={18} />}
+                title={`É seu dia de fazer Stories no perfil da ${me?.orgName ?? "agência"}`}
+                status={turno.doneAt ? "done" : "pending"}
+                canAct={!isAdmin || !viewAs || viewAs === me?.id}
+                onDone={() => setAgencyStoriesDone.mutate({ data: { id: turno.id, done: true } })}
+              />
+              <div className="mt-2">
+                <StoriesInspiracoesButton onClick={() => setInspiracoesAbertas(true)} />
+              </div>
+            </div>
           ))}
         </div>
       )}
+      <StoriesInspiracoesModal open={inspiracoesAbertas} onClose={() => setInspiracoesAbertas(false)} />
 
       {((today?.cleaningTasks?.length ?? 0) > 0) && (
         <div className="space-y-3 mb-8 lz-stagger">
