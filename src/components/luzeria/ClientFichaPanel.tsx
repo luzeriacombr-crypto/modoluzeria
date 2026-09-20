@@ -140,33 +140,49 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
 
   const [showBlockedModal, setShowBlockedModal] = useState(false);
 
+  const [fichaTab, setFichaTab] = useState<"geral" | "contatos" | "contrato" | "auto">("geral");
+  // Atalhos de outras partes da ficha (ex.: "Adicionar contato") pedem pra abrir a aba certa.
+  useEffect(() => {
+    const h = (e: Event) => setFichaTab((e as CustomEvent).detail);
+    window.addEventListener("lz:ficha-tab", h);
+    return () => window.removeEventListener("lz:ficha-tab", h);
+  }, []);
   if (!client) return null;
   const metrics = ficha?.metrics;
 
+  const FICHA_TABS: { id: "geral" | "contatos" | "contrato" | "auto"; label: string }[] = [
+    { id: "geral", label: "Geral" },
+    { id: "contatos", label: "Contatos e acessos" },
+    { id: "contrato", label: "Contrato e marca" },
+    ...(isAdmin ? [{ id: "auto" as const, label: "Automação" }] : []),
+  ];
+  const activeTab = FICHA_TABS.some((t) => t.id === fichaTab) ? fichaTab : "geral";
+
   return (
-    <>
-        {/* Instagram (master, ou setor com a permissão "Publicar no Instagram") — no topo, é o que mais gente vem checar primeiro */}
+    <div className="@container px-4 sm:px-6 py-5 space-y-4">
+      {/* Conexões — Instagram continua sendo o primeiro bloco da Ficha (mesmo lugar de sempre) */}
+      <div className={`grid gap-3 grid-cols-1 ${canManageInstagram ? "@[760px]:grid-cols-[1.5fr_1fr_1fr]" : ""}`}>
         {canManageInstagram && (
-          <Section label="Instagram">
+          <FichaCard label="Instagram">
             <InstagramSection clientId={client.id} />
-          </Section>
+          </FichaCard>
         )}
-
-        {/* Facebook — mesma permissão do Instagram (v1 trata publicação em
-            rede social como um balde só de permissão) */}
         {canManageInstagram && (
-          <Section label="Facebook">
+          <FichaCard label="Facebook">
             <FacebookSection clientId={client.id} />
-          </Section>
+          </FichaCard>
         )}
-
-        {/* Deliveries folder (Drive) — no topo junto com o Instagram */}
-        <Section label="Pasta de entregas (Drive)">
+        <FichaCard label="Pasta de entregas (Drive)">
           <DeliveriesFolderBlock clientId={client.id} isAdmin={isAdmin} />
-        </Section>
+        </FichaCard>
+      </div>
 
-        {/* Metrics */}
-        <Section label="Métricas">
+      {/* Resumo: etapa do projeto + métricas */}
+      <div className="grid gap-3 grid-cols-1 @[760px]:grid-cols-[1.25fr_1fr]">
+        <FichaCard label="Etapa do projeto">
+          <ClientStageSection clientId={clientId} isAdmin={isAdmin} />
+        </FichaCard>
+        <FichaCard label="Métricas">
           <div className="grid grid-cols-2 gap-2">
             <MetricMini icon={<FileText size={13} />} label="Itens totais" value={metrics?.totalItems ?? 0} />
             <MetricMini icon={<CheckCircle2 size={13} />} label="Prontos" value={metrics?.finalized ?? 0} color="var(--lz-accent-ink)" />
@@ -184,17 +200,28 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
               Última entrega: {new Date(metrics.lastDeliveryAt).toLocaleDateString("pt-BR")}
             </p>
           )}
-        </Section>
-
+        </FichaCard>
+      </div>
         {showBlockedModal && <ClientBlockedItemsModal clientId={clientId} onClose={() => setShowBlockedModal(false)} />}
 
-        {/* Journey stage */}
-        <Section label="Etapa do projeto">
-          <ClientStageSection clientId={clientId} isAdmin={isAdmin} />
-        </Section>
+      {/* Sub-abas: caixa de seleção no espaço estreito, abas no largo */}
+      <select id="ficha-tab-select" aria-label="Seção da ficha" value={activeTab}
+        onChange={(e) => setFichaTab(e.target.value as any)}
+        className="@[640px]:hidden w-full rounded-xl border border-foreground/15 bg-card text-foreground text-[13px] font-bold uppercase tracking-wider px-4 py-3">
+        {FICHA_TABS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+      </select>
+      <div role="tablist" aria-label="Seções da ficha" className="hidden @[640px]:flex gap-1.5 rounded-xl border border-foreground/8 bg-card p-1 overflow-x-auto">
+        {FICHA_TABS.map((t) => (
+          <button key={t.id} role="tab" aria-selected={activeTab === t.id} onClick={() => setFichaTab(t.id)}
+            className={`flex-1 whitespace-nowrap text-xs font-bold px-4 py-2.5 rounded-lg transition-colors ${activeTab === t.id ? "bg-[rgb(var(--lz-brand-rgb))] text-black" : "text-foreground/60 hover:text-foreground"}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-        {/* Description */}
-        <Section label="Sobre">
+      {activeTab === "geral" && (
+        <div className="grid gap-3 grid-cols-1 @[760px]:grid-cols-2">
+        <FichaCard label="Sobre" wide>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -217,70 +244,16 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             placeholder={isAdmin ? "Tom de voz, nicho, observações, instruções do cliente…" : "Sem descrição."}
             className="w-full bg-card border border-foreground/8 rounded-md px-3 py-2.5 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 resize-none disabled:opacity-70"
           />
-        </Section>
-
-        {/* Configuração do cliente (campos do antigo Perfil) */}
-        <Section label="Configuração do cliente">
+        </FichaCard>
+        <FichaCard label="Configuração do cliente" wide>
           <ClientConfigBlock client={client} profiles={profiles} canEdit={isAdmin} isMaster={isMaster} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
-        </Section>
+        </FichaCard>
+        </div>
+      )}
 
-        {/* Contract (arquivo pronto, anexado manualmente) */}
-        <Section label="Contrato">
-          <ContractBlock clientId={client.id} isAdmin={isAdmin} />
-        </Section>
-
-        {/* Contract generation + e-signature */}
-        {isAdmin && !(me?.disabledFeatures ?? []).includes("contract") && (
-          <Section label="Gerar contrato pra assinatura">
-            <GenerateContractBlock client={client} />
-          </Section>
-        )}
-
-        {/* Brand assets */}
-        <Section label="Arquivos da marca">
-          <BrandAssetsBlock clientId={client.id} isAdmin={isAdmin} />
-        </Section>
-
-        {/* Links */}
-        <Section label="Links importantes">
-          <div className="space-y-2">
-            {(ficha?.links ?? []).length === 0 && (
-              <p className="text-xs text-foreground/40">Nenhum link cadastrado.</p>
-            )}
-            {(ficha?.links ?? []).map((l) => {
-              const href = normUrl(l.url);
-              return (
-                <div key={l.id} className="flex items-center gap-2 bg-card border border-foreground/6 rounded-md px-3 py-2">
-                  <LinkIcon size={14} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold text-foreground truncate">{l.label}</div>
-                    {href ? (
-                      <a href={href} target="_blank" rel="noopener noreferrer"
-                        className="text-[11px] text-foreground/50 hover:text-[var(--lz-accent-ink)] truncate inline-flex items-center gap-1">
-                        {l.url} <ExternalLink size={10} />
-                      </a>
-                    ) : (
-                      <div className="text-[11px] text-foreground/40 truncate">{l.url}</div>
-                    )}
-                  </div>
-                  {isAdmin && (
-                    <button
-                      onClick={async () => {
-                        if (await requestConfirm(`Excluir o link "${l.label}"?`, { danger: true }))
-                          api.deleteClientLink.mutate({ data: { id: l.id } });
-                      }}
-                      className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5"
-                    ><Trash2 size={13} /></button>
-                  )}
-                </div>
-              );
-            })}
-            {isAdmin && <AddLinkRow clientId={client.id} onSubmit={(d) => api.upsertClientLink.mutate({ data: d })} />}
-          </div>
-        </Section>
-
-        {/* Contacts */}
-        <Section label="Contatos" id="contatos-section">
+      {activeTab === "contatos" && (
+        <div className="grid gap-3 grid-cols-1 @[760px]:grid-cols-2">
+        <FichaCard label="Contatos" id="contatos-section">
           <div className="mb-3 pb-3 border-b border-foreground/6">
             <label className="flex items-center gap-1.5 text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">
               <Users size={11} /> Grupo com o cliente (WhatsApp)
@@ -343,11 +316,45 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             ))}
             {isAdmin && <AddContactRow clientId={client.id} onSubmit={(d) => api.upsertClientContact.mutate({ data: d })} />}
           </div>
-        </Section>
-
-        {/* Secrets - admin only */}
+        </FichaCard>
+        <FichaCard label="Links importantes">
+          <div className="space-y-2">
+            {(ficha?.links ?? []).length === 0 && (
+              <p className="text-xs text-foreground/40">Nenhum link cadastrado.</p>
+            )}
+            {(ficha?.links ?? []).map((l) => {
+              const href = normUrl(l.url);
+              return (
+                <div key={l.id} className="flex items-center gap-2 bg-card border border-foreground/6 rounded-md px-3 py-2">
+                  <LinkIcon size={14} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-semibold text-foreground truncate">{l.label}</div>
+                    {href ? (
+                      <a href={href} target="_blank" rel="noopener noreferrer"
+                        className="text-[11px] text-foreground/50 hover:text-[var(--lz-accent-ink)] truncate inline-flex items-center gap-1">
+                        {l.url} <ExternalLink size={10} />
+                      </a>
+                    ) : (
+                      <div className="text-[11px] text-foreground/40 truncate">{l.url}</div>
+                    )}
+                  </div>
+                  {isAdmin && (
+                    <button
+                      onClick={async () => {
+                        if (await requestConfirm(`Excluir o link "${l.label}"?`, { danger: true }))
+                          api.deleteClientLink.mutate({ data: { id: l.id } });
+                      }}
+                      className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5"
+                    ><Trash2 size={13} /></button>
+                  )}
+                </div>
+              );
+            })}
+            {isAdmin && <AddLinkRow clientId={client.id} onSubmit={(d) => api.upsertClientLink.mutate({ data: d })} />}
+          </div>
+        </FichaCard>
         {isAdmin && (
-          <Section label="Senhas e acessos" last={!isMaster}>
+          <FichaCard label="Senhas e acessos" wide>
             <div className="mb-2 text-[10px] text-foreground/40">Visível apenas para administradores.</div>
             <div className="space-y-2">
               {(ficha?.secrets ?? []).length === 0 && (
@@ -358,12 +365,31 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
               ))}
               <AddSecretRow clientId={client.id} onSubmit={(d) => api.upsertClientSecret.mutate({ data: d })} />
             </div>
-          </Section>
+          </FichaCard>
         )}
+        </div>
+      )}
 
-        {/* Stories (admin) */}
+      {activeTab === "contrato" && (
+        <div className="grid gap-3 grid-cols-1 @[760px]:grid-cols-2">
+        <FichaCard label="Contrato">
+          <ContractBlock clientId={client.id} isAdmin={isAdmin} />
+        </FichaCard>
+        {isAdmin && !(me?.disabledFeatures ?? []).includes("contract") && (
+          <FichaCard label="Gerar contrato pra assinatura">
+            <GenerateContractBlock client={client} />
+          </FichaCard>
+        )}
+        <FichaCard label="Arquivos da marca" wide>
+          <BrandAssetsBlock clientId={client.id} isAdmin={isAdmin} />
+        </FichaCard>
+        </div>
+      )}
+
+      {activeTab === "auto" && isAdmin && (
+        <div className="grid gap-3 grid-cols-1 @[760px]:grid-cols-2">
         {isAdmin && (
-          <Section label="Stories">
+          <FichaCard label="Stories">
             <label className="flex items-center gap-2 text-sm text-foreground/70">
               <input
                 type="checkbox"
@@ -375,12 +401,10 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             <p className="text-[11px] text-foreground/40 mt-1.5">
               Quando ativado, Stories atribuídos deste cliente aparecem na lista de tarefas do responsável — como Posts e Reels.
             </p>
-          </Section>
+          </FichaCard>
         )}
-
-        {/* IA de planejamento (novidade, gate por nível + cota) */}
         {isAdmin && (
-          <Section label="Novidade: IA de planejamento">
+          <FichaCard label="Novidade: IA de planejamento">
             {aiPlanningQuota <= 0 ? (
               <p className="text-[12px] text-foreground/40 leading-relaxed">
                 Disponível a partir do nível Prata do Programa de Níveis
@@ -406,23 +430,21 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
                 </p>
               </>
             )}
-          </Section>
+          </FichaCard>
         )}
-
-        {/* Onboarding (admin) */}
         {isAdmin && (
-          <Section label="Onboarding do cliente">
+          <FichaCard label="Onboarding do cliente">
             <OnboardingBlock clientId={client.id} />
-          </Section>
+          </FichaCard>
         )}
-
-        {/* Recurring (admin) */}
         {isAdmin && (
-          <Section label="Recorrências" last>
+          <FichaCard label="Recorrências" wide>
             <RecurringBlock clientId={client.id} />
-          </Section>
+          </FichaCard>
         )}
-    </>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -795,7 +817,7 @@ function StageUpdateComposer({ composer, whatsappPhone, whatsappGroupLink, onCha
           </button>
         ) : (
           <button
-            onClick={() => document.getElementById("contatos-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            onClick={() => { window.dispatchEvent(new CustomEvent("lz:ficha-tab", { detail: "contatos" })); setTimeout(() => document.getElementById("contatos-section")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60); }}
             className="text-[11px] font-semibold text-amber-400 hover:underline"
           >
             Falta preencher o grupo ou telefone — clique pra ir aos contatos
@@ -815,12 +837,12 @@ function ConfigField({ label, children }: { label: string; children: React.React
   );
 }
 
-function Section({ label, children, last, id }: { label: string; children: React.ReactNode; last?: boolean; id?: string }) {
+function FichaCard({ label, children, id, wide }: { label: string; children: React.ReactNode; id?: string; wide?: boolean }) {
   return (
-    <div id={id} className={`px-6 py-5 ${last ? "" : "border-b border-foreground/8"}`}>
+    <section id={id} className={`min-w-0 rounded-2xl border border-foreground/8 bg-card p-4 ${wide ? "@[760px]:col-span-2" : ""}`}>
       <div className="text-[10px] uppercase font-bold tracking-wider mb-3" style={{ color: "var(--lz-accent-ink)" }}>{label}</div>
       {children}
-    </div>
+    </section>
   );
 }
 
@@ -1577,7 +1599,7 @@ function MetricMini({ icon, label, value, color, onClick }: { icon: React.ReactN
   return (
     <Comp
       onClick={onClick}
-      className={`bg-card rounded-md px-3 py-2.5 text-left w-full ${onClick ? "hover:bg-[#242424] transition cursor-pointer" : ""}`}
+      className={`bg-foreground/[0.05] rounded-xl px-3 py-2.5 text-left w-full ${onClick ? "hover:bg-foreground/[0.09] transition cursor-pointer" : ""}`}
     >
       <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-foreground/50">
         {icon} {label}
