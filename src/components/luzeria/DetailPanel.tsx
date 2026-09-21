@@ -1477,7 +1477,7 @@ export function DetailPanel() {
         )}
 
         {/* Publicar no Facebook (v1: só Posts, mesma permissão do Instagram) */}
-        {item.type === "post" && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && (
+        {item.type === "post" && me?.orgId === LUZERIA_ORG_ID && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && (
           <ModalSection label="Publicar no Facebook">
             {clientFacebookConnected ? (
               <>
