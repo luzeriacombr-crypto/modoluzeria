@@ -589,7 +589,56 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       creationId = parentJson.id;
     } else {
       // Post com 1 imagem só, Reel ou Story — mídia única.
-      const { url, isVideoFile } = await uploadFileToTemp(relevantFiles[0]);
+      const first = relevantFiles[0];
+      const firstIsVideo = (first.mime_type ?? "").startsWith("video/");
+      if (firstIsVideo && (item.type === "reel" || item.type === "story")) {
+        // Vídeo: envio "resumable" direto do Drive pra Meta, em streaming.
+        // O caminho antigo baixava o vídeo INTEIRO na memória (3 cópias) e
+        // ainda subia pro storage temporário — reels grandes estouravam a
+        // memória da função (500 "ran out of available memory") ou o limite
+        // de tamanho do storage. Aqui nada é guardado: o arquivo passa do
+        // Drive pra Meta em pedaços.
+        const igType = item.type === "reel" ? "REELS" : "STORIES";
+        const startRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            media_type: igType,
+            upload_type: "resumable",
+            ...(item.type !== "story" ? { caption: item.caption ?? "" } : {}),
+            ...(collaborators.length > 0 ? { collaborators: JSON.stringify(collaborators) } : {}),
+            access_token: creds.access_token,
+          }),
+        });
+        const startJson: any = await startRes.json();
+        if (!startRes.ok || !startJson.id) {
+          throw new Error(startJson?.error?.message ?? "O Instagram recusou o vídeo.");
+        }
+        const driveRes: Response = await withDriveOrg(clientOrgId!, async () => {
+          const token = await getAccessToken();
+          return fetch(
+            `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(first.drive_file_id)}?alt=media&supportsAllDrives=true`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+        });
+        if (!driveRes.ok || !driveRes.body) throw new Error(`Falha ao baixar o vídeo do Drive (${driveRes.status}).`);
+        const size = Number(driveRes.headers.get("content-length"));
+        if (!size) throw new Error("Falha ao baixar o vídeo do Drive (tamanho desconhecido).");
+        const upRes = await fetch(`https://rupload.facebook.com/ig-api-upload/v21.0/${startJson.id}`, {
+          method: "POST",
+          headers: { Authorization: `OAuth ${creds.access_token}`, offset: "0", file_size: String(size) },
+          body: driveRes.body as any,
+          // @ts-expect-error — necessário pra enviar um ReadableStream como corpo (Node/undici)
+          duplex: "half",
+        });
+        const upJson: any = await upRes.json().catch(() => ({}));
+        if (!upRes.ok || upJson?.success === false) {
+          throw new Error(upJson?.debug_info?.message ?? upJson?.error?.message ?? `O Instagram não aceitou o envio do vídeo (${upRes.status}).`);
+        }
+        await waitForContainer(startJson.id, true, "o vídeo");
+        creationId = startJson.id;
+      } else {
+      const { url, isVideoFile } = await uploadFileToTemp(first);
       const igMediaType = item.type === "reel" ? "REELS" : item.type === "story" ? "STORIES" : null;
       // Stories não aceitam legenda pela API — o texto precisa já estar na
       // própria imagem/vídeo.
@@ -611,6 +660,7 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       }
       await waitForContainer(containerJson.id, isVideoFile, isVideoFile ? "o vídeo" : "a imagem");
       creationId = containerJson.id;
+      }
     }
 
     const publishRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media_publish`, {
@@ -867,6 +917,8 @@ export function explainPublishError(raw: string): string {
     return "A conexão com o Instagram desse cliente expirou ou foi revogada. Vá em Ficha do Cliente → Instagram, desconecte e conecte de novo." + tech;
   if (has(/image_url|video_url|media_url|parameter .* is required|missing.*(image|video|media)/i))
     return "Este item não tem imagem ou vídeo anexado (ou o arquivo não foi encontrado). Anexe a mídia do post e tente publicar de novo." + tech;
+  if (has(/exceeded the maximum allowed size|payload too large|\b413\b|ran out of available memory/i))
+    return "O arquivo é grande demais para ser preparado para o Instagram. Comprima o vídeo (ex.: até ~100 MB, MP4 H.264) e anexe de novo." + tech;
   if (has(/aspect ratio|media type|unsupported|codec|resolution|file size|too (large|small|big|long|short)|\b2207\d*\b|invalid.*(image|video|media)|formato|proporção/i))
     return "O Instagram recusou o arquivo (formato, tamanho ou proporção). Posts aceitam entre 4:5 e 1.91:1; Reels e Stories, 9:16 em MP4. Troque o arquivo e tente de novo." + tech;
   if (has(/rate limit|too many|request limit|publishing limit|limit reached|quota|\b9007\b|\b(4|17|32|613)\b\)/i))
