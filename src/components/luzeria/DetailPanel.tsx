@@ -1368,6 +1368,29 @@ export function DetailPanel() {
           <ModalSection label="Publicar">
             {clientInstagramConnected ? (
               <>
+                {item.type === "story" && (
+                  <div className="rounded-lg px-3.5 py-3 mb-3 border border-foreground/10 bg-foreground/[0.03]">
+                    <div className="text-sm font-bold text-foreground mb-1">Encaixe da imagem (9:16)</div>
+                    <p className="text-[11px] text-foreground/50 mb-2.5 leading-relaxed">
+                      Se a imagem não estiver em 9:16, o Modo Criador encaixa ela na tela do Story sem distorcer. Vídeos não são alterados.
+                    </p>
+                    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Encaixe da imagem no Story">
+                      {([["blur", "Fundo desfocado"], ["white", "Fundo branco"], ["black", "Fundo preto"], ["crop", "Recortar"]] as const).map(([val, label]) => {
+                        const on = (item.storyFit ?? "blur") === val;
+                        return (
+                          <button key={val} type="button" role="radio" aria-checked={on}
+                            onClick={() => updateItem.mutate({ data: { id: item.id, patch: { story_fit: val } } })}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors"
+                            style={on
+                              ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D", borderColor: "transparent" }
+                              : { borderColor: "color-mix(in srgb, var(--foreground) 15%, transparent)", color: "color-mix(in srgb, var(--foreground) 65%, transparent)" }}>
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 {item.type !== "story" && (
                   <div
                     className="rounded-lg px-3.5 py-3 mb-3"

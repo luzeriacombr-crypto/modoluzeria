@@ -430,9 +430,10 @@ export async function runInstagramTokenRefresh() {
 async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const { data: item } = await supabaseAdmin
+  // story_fit ainda não está nos tipos gerados do Supabase.
+  const { data: item } = await (supabaseAdmin as any)
     .from("content_items")
-    .select("id, type, status, caption, ig_collaborators, month_id, months(client_id, clients!months_client_id_fkey(id, org_id))")
+    .select("id, type, status, caption, ig_collaborators, story_fit, month_id, months(client_id, clients!months_client_id_fkey(id, org_id))")
     .eq("id", itemId)
     .maybeSingle();
   if (!item) throw new Error("Item não encontrado.");
@@ -517,13 +518,26 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       const { makeIgMediaUrl } = await import("./ig-media-proxy.server");
       return { url: makeIgMediaUrl(clientOrgId!, file.drive_file_id, mimeType), isVideoFile };
     }
-    const buffer = Buffer.from(await driveRes.arrayBuffer());
+    let buffer: Buffer = Buffer.from(await driveRes.arrayBuffer());
+    let uploadMime = mimeType;
+    let uploadPath = tempPath;
+    if (item.type === "story") {
+      // Story só fica bom em 9:16: encaixa a imagem numa tela 1080x1920
+      // (fundo desfocado por padrão) em vez de deixar o Instagram cortar ou
+      // esticar. Só imagens — vídeo de Story segue como está.
+      try {
+        const fitted = await fitImageForStory(buffer, ((item as any).story_fit ?? "blur") as StoryFit);
+        if (fitted) { buffer = fitted; uploadMime = "image/jpeg"; uploadPath = tempPath.replace(/\.[a-z0-9]+$/i, ".jpg"); }
+      } catch (e) {
+        console.error("[Instagram] falha ao ajustar imagem do Story (envia original):", e);
+      }
+    }
     const { error: upErr } = await supabaseAdmin.storage
       .from("instagram-publish-temp")
-      .upload(tempPath, buffer, { contentType: mimeType, upsert: true });
+      .upload(uploadPath, buffer, { contentType: uploadMime, upsert: true });
     if (upErr) throw new Error(`Falha ao preparar a imagem: ${upErr.message}`);
-    tempPaths.push(tempPath);
-    const { data: pub } = supabaseAdmin.storage.from("instagram-publish-temp").getPublicUrl(tempPath);
+    tempPaths.push(uploadPath);
+    const { data: pub } = supabaseAdmin.storage.from("instagram-publish-temp").getPublicUrl(uploadPath);
     return { url: pub.publicUrl, isVideoFile };
   }
 
@@ -855,6 +869,31 @@ function isRepeatDue(item: { scheduled_at: string | null; ig_repeat_mode: string
     return slots.some((s) => s.weekday === nowSp.weekday && nowSp.hm >= s.time);
   }
   return false;
+}
+
+export type StoryFit = "blur" | "white" | "black" | "crop";
+
+/** Encaixa uma imagem em 9:16 (1080x1920). Devolve null se já está em 9:16
+ * (não mexe). blur = fundo desfocado da própria foto; white/black = fundo
+ * liso; crop = recorte no centro. */
+export async function fitImageForStory(input: Buffer, fit: StoryFit): Promise<Buffer | null> {
+  const sharp = (await import("sharp")).default;
+  const W = 1080, H = 1920;
+  const base = sharp(input, { failOn: "none" }).rotate();
+  const meta = await base.metadata();
+  const w = meta.width ?? 0, h = meta.height ?? 0;
+  if (!w || !h) return null;
+  if (Math.abs(w / h - W / H) < 0.02) return null; // já é 9:16
+  const jpeg = { quality: 92, mozjpeg: true };
+  if (fit === "crop") {
+    return sharp(input, { failOn: "none" }).rotate().resize(W, H, { fit: "cover", position: "centre" }).jpeg(jpeg).toBuffer();
+  }
+  const foreground = await sharp(input, { failOn: "none" }).rotate().resize(W, H, { fit: "inside", withoutEnlargement: false }).toBuffer();
+  if (fit === "white" || fit === "black") {
+    return sharp(foreground).resize(W, H, { fit: "contain", background: fit === "white" ? "#ffffff" : "#000000" }).jpeg(jpeg).toBuffer();
+  }
+  const background = await sharp(input, { failOn: "none" }).rotate().resize(W, H, { fit: "cover" }).blur(45).modulate({ brightness: 0.8 }).toBuffer();
+  return sharp(background).composite([{ input: foreground, gravity: "centre" }]).jpeg(jpeg).toBuffer();
 }
 
 /** Traduz o erro técnico de uma publicação no Instagram (Meta, Drive, rede ou

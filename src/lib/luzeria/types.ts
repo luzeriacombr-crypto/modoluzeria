@@ -173,6 +173,8 @@ export interface ContentItem {
   igAutoPublish?: boolean;
   /** Quando o Modo Criador publicou este item no Instagram (null se nunca publicou por aqui). */
   igPublishedAt?: string | null;
+  /** Como encaixar a imagem de um Story fora do 9:16: blur (padrão), white, black ou crop. */
+  storyFit?: "blur" | "white" | "black" | "crop" | null;
   /** Comma-separated Instagram usernames (no @) invited as collaborators on this post/reel. They must accept the invite in the Instagram app for the collab tag to show. Only supported for posts and reels — not stories. */
   igCollaborators?: string | null;
   /** When true, the scheduled-publish cron auto-publishes this post to the client's Facebook Page once scheduledAt arrives. Posts only. */

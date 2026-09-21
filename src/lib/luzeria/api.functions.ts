@@ -1656,7 +1656,7 @@ export const getMonth = createServerFn({ method: "GET" })
     // migração for confirmada como aplicada.
     const { data: items } = (await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, ig_published_at, ig_collaborators, activity_location, activity_quantity, campaign_id, campaign_internal")
+      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, ig_published_at, story_fit, ig_collaborators, activity_location, activity_quantity, campaign_id, campaign_internal")
       .eq("month_id", month.id).order("type").order("idx")) as any as { data: any[] | null };
     const itemIds = (items ?? []).map((it: any) => it.id);
     const [{ data: assignees }, { data: comments }] = await Promise.all([
@@ -1704,6 +1704,7 @@ export const getMonth = createServerFn({ method: "GET" })
       scheduledAt: ((it as any).scheduled_at ?? null) as any,
       igAutoPublish: ((it as any).ig_auto_publish ?? false) as any,
       igPublishedAt: ((it as any).ig_published_at ?? null) as any,
+      storyFit: ((it as any).story_fit ?? null) as any,
       igCollaborators: ((it as any).ig_collaborators ?? null) as any,
       fbAutoPublish: false as any, // ver comentário acima do select — coluna ainda não existe em produção
       startedAt: ((it as any).started_at ?? null) as any,
@@ -1758,10 +1759,11 @@ export const updateItem = createServerFn({ method: "POST" })
       due_date?: string | null; scheduled_at?: string | null; blocked_reason?: string | null;
       activity_location?: string | null; activity_quantity?: number | null;
       ig_collaborators?: string | null;
+      story_fit?: "blur" | "white" | "black" | "crop" | null;
     };
   }) => d)
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("content_items").update(data.patch).eq("id", data.id);
+    const { error } = await context.supabase.from("content_items").update(data.patch as any).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
