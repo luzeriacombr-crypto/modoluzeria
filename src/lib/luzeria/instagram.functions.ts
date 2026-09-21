@@ -675,11 +675,18 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     // ig_last_error continuava null. Não mexe no comportamento pro
     // usuário (o erro ainda sobe pro caller normalmente), só passa a
     // ficar visível também na aba Instagram (tag "Falhou").
-    await (supabaseAdmin as any).from("content_items").update({
-      ig_last_error: e?.message ?? "Falha ao publicar no Instagram.",
-      ig_last_error_at: new Date().toISOString(),
-    }).eq("id", itemId).catch(() => {});
-    throw e;
+    const friendly = explainPublishError(e?.message ?? "");
+    // O builder do Supabase não tem .catch() (só vira Promise ao ser
+    // aguardado) — antes, esse .catch() estourava "is not a function" AQUI e
+    // escondia o erro real da publicação. Agora um erro ao gravar o erro
+    // nunca sobrepõe o motivo verdadeiro.
+    try {
+      await (supabaseAdmin as any).from("content_items").update({
+        ig_last_error: friendly,
+        ig_last_error_at: new Date().toISOString(),
+      }).eq("id", itemId);
+    } catch { /* noop */ }
+    throw new Error(friendly);
   } finally {
     if (tempPaths.length > 0) {
       await supabaseAdmin.storage.from("instagram-publish-temp").remove(tempPaths).catch(() => {});
@@ -839,6 +846,38 @@ function isRepeatDue(item: { scheduled_at: string | null; ig_repeat_mode: string
     return slots.some((s) => s.weekday === nowSp.weekday && nowSp.hm >= s.time);
   }
   return false;
+}
+
+/** Traduz o erro técnico de uma publicação no Instagram (Meta, Drive, rede ou
+ * bug nosso) numa explicação clara pra agência, com o que fazer — e guarda o
+ * texto técnico no fim, curto, pro suporte. Mensagens que já vêm em português
+ * do próprio Modo Criador passam direto. */
+export function explainPublishError(raw: string): string {
+  const msg = (raw || "").trim();
+  if (!msg) return "Não foi possível publicar no Instagram. Tente de novo em alguns minutos.";
+  const tech = ` (Detalhe técnico: ${msg.slice(0, 180)})`;
+  const has = (re: RegExp) => re.test(msg);
+  if (has(/is not a function|is not defined|cannot read propert|of undefined|of null|unexpected token/i))
+    return "Erro interno do Modo Criador ao publicar — não é problema do conteúdo nem da conta do cliente. Tente publicar de novo em alguns minutos; se repetir, fale com o suporte." + tech;
+  if (has(/session has expired|access token|oauthexception|invalid_token|token.*(expired|invalid|revoked)|\(#?190\)|code 190/i))
+    return "A conexão com o Instagram desse cliente expirou ou foi revogada. Vá em Ficha do Cliente → Instagram, desconecte e conecte de novo." + tech;
+  if (has(/invalid_grant|google drive|drive api|falha ao baixar/i)) {
+    if (/\(404\)/.test(msg)) return "O arquivo deste post não foi encontrado no Google Drive (foi apagado ou movido). Anexe o arquivo de novo e tente publicar." + tech;
+    return "Não consegui ler o arquivo no Google Drive. A conexão com o Drive pode ter expirado: reconecte em Configurações → Integrações e tente de novo." + tech;
+  }
+  if (has(/aspect ratio|media type|unsupported|codec|resolution|file size|too (large|small|big|long|short)|\b2207\d*\b|invalid.*(image|video|media)|formato|proporção/i))
+    return "O Instagram recusou o arquivo (formato, tamanho ou proporção). Posts aceitam entre 4:5 e 1.91:1; Reels e Stories, 9:16 em MP4. Troque o arquivo e tente de novo." + tech;
+  if (has(/rate limit|too many|request limit|publishing limit|limit reached|quota|\b9007\b|\b(4|17|32|613)\b\)/i))
+    return "O Instagram atingiu o limite de publicações dessa conta (há um máximo por 24 horas). Tente de novo mais tarde." + tech;
+  if (has(/collaborator|colaborador|invite/i))
+    return "O Instagram recusou um dos colaboradores (@ incorreto ou conta que não aceita convites). Confira os @ em Publicação → Colaboradores e tente de novo." + tech;
+  if (has(/permission|not authorized|does not have|unauthorized/i))
+    return "A conta do Instagram do cliente não tem permissão para publicar. Ela precisa ser Business ou Criador de Conteúdo e estar conectada pelo login do Instagram (Ficha do Cliente → Instagram)." + tech;
+  if (has(/timeout|timed out|fetch failed|econn|network|\b50[234]\b|temporar|try again later/i))
+    return "Falha temporária de comunicação com o Instagram. Se o post estiver programado, o Modo Criador tenta de novo sozinho (a cada ~10 minutos)." + tech;
+  // Já veio em português do próprio sistema (ex.: "O Instagram confirmou a publicação, mas...").
+  if (/[áâãàéêíóôõúç]/i.test(msg) && !/[{}]|error|exception/i.test(msg)) return msg;
+  return "Não foi possível publicar no Instagram. Tente de novo; se persistir, fale com o suporte." + tech;
 }
 
 /** Marca a falha no item e avisa os masters da agência — só na primeira
