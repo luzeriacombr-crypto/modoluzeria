@@ -38,7 +38,7 @@ function verify(token: string): Payload | null {
 
 export async function serveIgMedia(token: string, request: Request): Promise<Response> {
   const p = verify(token);
-  if (!p) return new Response("Not found", { status: 404 });
+  if (!p) { console.error("[ig-media] token inválido ou expirado"); return new Response("Not found", { status: 404 }); }
   const { withDriveOrg, getAccessToken } = await import("./drive.functions");
   const range = request.headers.get("range");
   let driveRes: Response;
@@ -53,7 +53,8 @@ export async function serveIgMedia(token: string, request: Request): Promise<Res
     console.error("[ig-media] falha ao ler do Drive:", e?.message);
     return new Response("Bad gateway", { status: 502 });
   }
-  if (!driveRes.ok && driveRes.status !== 206) return new Response("Not found", { status: 404 });
+  if (!driveRes.ok && driveRes.status !== 206) { console.error("[ig-media] Drive respondeu", driveRes.status); return new Response("Not found", { status: 404 }); }
+  console.log("[ig-media] servindo", request.method, range ?? "(inteiro)", driveRes.status);
   const headers = new Headers({
     "content-type": p.m || "video/mp4",
     "accept-ranges": "bytes",
