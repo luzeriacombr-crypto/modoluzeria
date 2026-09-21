@@ -1718,3 +1718,29 @@ export const getTodayPublications = createServerFn({ method: "GET" })
       monthKey: r.months.key,
     })) as TodayPublicationItem[];
   });
+
+
+/** Link do post já publicado no Instagram (pra "Ver no Instagram"). A Meta não
+ * deixa apagar mídia com o Login do Instagram, então a exclusão é feita pela
+ * própria pessoa no app — este link leva direto ao post. */
+export const getInstagramPostLink = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string }) => z.object({ itemId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: item } = await (supabaseAdmin as any).from("content_items")
+      .select("id, org_id, ig_media_id, months(client_id)").eq("id", data.itemId).maybeSingle();
+    if (!item || item.org_id !== context.orgId) throw new Error("Item não encontrado.");
+    if (!item.ig_media_id) throw new Error("Esse item ainda não foi publicado pelo Modo Criador.");
+    const { data: creds } = await (supabaseAdmin as any).from("client_instagram_credentials")
+      .select("access_token").eq("client_id", item.months?.client_id).maybeSingle();
+    if (!creds) throw new Error("O Instagram desse cliente não está mais conectado. Reconecte na Ficha do Cliente.");
+    const res = await fetch(`${IG_GRAPH_API}/${item.ig_media_id}?fields=permalink&access_token=${encodeURIComponent(creds.access_token)}`);
+    const json: any = await res.json().catch(() => ({}));
+    if (!res.ok || !json.permalink) {
+      throw new Error("Não achei esse post no Instagram. Ele pode já ter sido excluído por lá.");
+    }
+    return { permalink: json.permalink as string };
+  });

@@ -6,7 +6,7 @@ import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRi
 import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { getInstagramConnectionStatus, getStoryRepeatStatus, setStoryRepeatRule } from "@/lib/luzeria/instagram.functions";
+import { getInstagramConnectionStatus, getStoryRepeatStatus, setStoryRepeatRule, getInstagramPostLink } from "@/lib/luzeria/instagram.functions";
 import { getFacebookConnectionStatus } from "@/lib/luzeria/facebook.functions";
 import { TikTokPublishPanel } from "./TikTokSections";
 import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
@@ -1356,6 +1356,13 @@ export function DetailPanel() {
           </ModalSection>
         )}
 
+        {/* Já publicado pelo Modo Criador: atalho pro post no Instagram (a exclusão é feita lá) */}
+        {(item.type === "post" || item.type === "reel" || item.type === "story") && canPublishInstagram && item.igPublishedAt && (
+          <ModalSection label="No Instagram">
+            <PublishedOnInstagram itemId={item.id} publishedAt={item.igPublishedAt} />
+          </ModalSection>
+        )}
+
         {/* Publicar no Instagram (Posts/Carrosséis, Reels e Stories, admin com permissão, só quando pronto pra publicar) */}
         {(item.type === "post" || item.type === "reel" || item.type === "story") && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && (
           <ModalSection label="Publicar">
@@ -1826,6 +1833,34 @@ export function DetailPanel() {
           onClose={() => setCoverOpen(false)}
         />
       )}
+    </div>
+  );
+}
+
+function PublishedOnInstagram({ itemId, publishedAt }: { itemId: string; publishedAt: string }) {
+  const getLink = useServerFn(getInstagramPostLink);
+  const [loading, setLoading] = useState(false);
+  async function open() {
+    setLoading(true);
+    try {
+      const { permalink } = await getLink({ data: { itemId } });
+      window.open(permalink, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Não consegui abrir o post no Instagram.");
+    } finally { setLoading(false); }
+  }
+  return (
+    <div>
+      <p className="text-[12px] text-foreground/60 mb-2.5">
+        Publicado em {new Date(publishedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}.
+      </p>
+      <button type="button" onClick={open} disabled={loading}
+        className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold border border-foreground/15 hover:border-foreground/30 disabled:opacity-50 transition-colors">
+        {loading ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />} Ver no Instagram
+      </button>
+      <p className="text-[11px] text-foreground/45 mt-2.5 leading-relaxed">
+        Para <b className="text-foreground/70">excluir</b> do Instagram, abra o post por aqui e apague direto no app (três pontinhos → Excluir). A Meta ainda não deixa o Modo Criador apagar publicações por você.
+      </p>
     </div>
   );
 }
