@@ -15,7 +15,7 @@ const img = z.string().max(2000).nullable();
 
 const contentSchema = z.object({
   hero: z.object({
-    badge: str(30), pill: str(120), title: str(200), titleAccent: str(200), subtitle: str(600),
+    badge: str(30), pill: str(120), title: str(200), titleAccent: str(200), titleSize: z.number().min(28).max(90), subtitle: str(600),
     ctaLabel: str(60), ctaSecondaryLabel: str(60), trust: z.array(str(80)).max(6),
     chipTitle: str(60), chipSub: str(80), chip2Title: str(60), chip2Sub: str(80), image: img,
   }),

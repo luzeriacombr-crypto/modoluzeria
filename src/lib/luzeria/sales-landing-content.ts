@@ -20,6 +20,8 @@ export type LandingContent = {
   hero: {
     badge: string; pill: string;
     title: string; titleAccent: string; subtitle: string;
+    /** Tamanho máximo do título em px no computador (no celular reduz sozinho). */
+    titleSize: number;
     ctaLabel: string; ctaSecondaryLabel: string;
     trust: string[];
     chipTitle: string; chipSub: string;
@@ -50,6 +52,7 @@ export const DEFAULT_LANDING: LandingContent = {
     pill: "Planejamento mensal com IA",
     title: "Pare de perder cliente por falta de organização.",
     titleAccent: "Entregue mais, com menos correria.",
+    titleSize: 52,
     subtitle: "Calendário, aprovação do cliente, publicação no Instagram, equipe e IA num lugar só — sem planilha, sem arquivo perdido no WhatsApp.",
     ctaLabel: "Testar 30 dias grátis",
     ctaSecondaryLabel: "Ver o que tem dentro",

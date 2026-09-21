@@ -91,7 +91,7 @@ export function SalesHero({ onCta, content = DEFAULT_LANDING }: { onCta: () => v
             <b className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ background: LIME, color: BG_BLUE }}>{h.badge}</b>
             {h.pill}
           </div>
-          <h1 className="font-black uppercase leading-[1.02] tracking-[-0.03em] text-[clamp(36px,5.6vw,64px)] whitespace-pre-line">
+          <h1 className="font-black uppercase leading-[1.04] tracking-[-0.03em] whitespace-pre-line" style={{ fontSize: `clamp(${Math.max(26, Math.round(h.titleSize * 0.62))}px, ${(h.titleSize / 11.4).toFixed(2)}vw, ${h.titleSize}px)` }}>
             {h.title}
             <span className={`block mt-1.5 whitespace-pre-line ${SERIF}`} style={{ color: LIME, fontWeight: 400, fontStyle: "italic", textTransform: "none", letterSpacing: "-0.01em" }}>
               {h.titleAccent}

@@ -236,6 +236,16 @@ export function SalesLandingEditorTab() {
           <Field single label="Texto do selo" value={d.hero.pill} max={120} onChange={(v) => edit((x) => { x.hero.pill = v; return x; })} />
         </div>
         <Field label="Título" value={d.hero.title} max={200} onChange={(v) => edit((x) => { x.hero.title = v; return x; })} />
+        <div>
+          <span className="block text-[11.5px] font-semibold text-foreground/60 mb-1">Tamanho do título: {d.hero.titleSize}px</span>
+          <div className="flex items-center gap-3">
+            <input type="range" min={28} max={90} step={1} value={d.hero.titleSize} aria-label="Tamanho do título"
+              onChange={(e) => edit((x) => { x.hero.titleSize = Number(e.target.value); return x; })} className="flex-1 accent-[rgb(var(--lz-brand-rgb))]" />
+            <button type="button" onClick={() => edit((x) => { x.hero.titleSize = DEFAULT_LANDING.hero.titleSize; return x; })}
+              className="text-[11px] font-bold text-foreground/55 hover:text-foreground inline-flex items-center gap-1"><Undo2 size={12} /> Padrão</button>
+          </div>
+          <span className="block text-[10.5px] text-foreground/40 mt-1">No celular o título diminui sozinho. Este é o tamanho máximo no computador.</span>
+        </div>
         <Field label="Frase em destaque (itálico)" value={d.hero.titleAccent} max={200} onChange={(v) => edit((x) => { x.hero.titleAccent = v; return x; })} />
         <Field label="Subtítulo" value={d.hero.subtitle} max={600} onChange={(v) => edit((x) => { x.hero.subtitle = v; return x; })} />
         <div className="grid grid-cols-2 gap-2.5">
