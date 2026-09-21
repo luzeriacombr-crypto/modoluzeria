@@ -2,7 +2,7 @@
 // plataforma, antes/depois, funções por área, IA de planejamento). Layout
 // aprovado pelo Junior via mockup. Os prints são da conta demo (nomes e
 // rostos fictícios) — nunca colocar aqui print de cliente real.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -101,7 +101,7 @@ export function SalesHero({ onCta, content = DEFAULT_LANDING }: { onCta: () => v
             {h.subtitle}
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <button onClick={onCta} className="inline-flex items-center gap-2 font-black text-sm px-6 py-3.5 rounded-full transition hover:-translate-y-0.5" style={{ background: LIME, color: BG_BLUE }}>
+            <button id="hero-cta" onClick={onCta} className="inline-flex items-center gap-2 font-black text-sm px-6 py-3.5 rounded-full transition hover:-translate-y-0.5" style={{ background: LIME, color: BG_BLUE }}>
               {h.ctaLabel} <ArrowRight size={16} />
             </button>
             <a href="#funcoes" className="inline-flex items-center font-bold text-sm px-6 py-3.5 rounded-full border transition hover:bg-white/5" style={{ borderColor: "rgba(255,255,255,0.25)" }}>
@@ -319,11 +319,29 @@ export function SalesAiSpotlight({ onCta, content = DEFAULT_LANDING }: { onCta: 
 
 /* ============ barra fixa (celular) ============ */
 
+/** Faixa fixa no rodapé (só celular): aparece depois que o botão principal do
+ * topo sai da tela, pra os dois nunca aparecerem juntos. */
 export function SalesStickyCta({ onCta }: { onCta: () => void }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const target = document.getElementById("hero-cta");
+    if (!target || typeof IntersectionObserver === "undefined") { setShow(true); return; }
+    const io = new IntersectionObserver(([e]) => setShow(!e.isIntersecting && window.scrollY > 80), { threshold: 0 });
+    io.observe(target);
+    const onScroll = () => { if (window.scrollY <= 80) setShow(false); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { io.disconnect(); window.removeEventListener("scroll", onScroll); };
+  }, []);
   return (
-    <div className="sm:hidden fixed left-0 right-0 bottom-0 z-40 px-4 pt-2.5 backdrop-blur-md border-t"
-      style={{ background: "rgba(10,14,35,0.92)", borderColor: "rgba(255,255,255,0.1)", paddingBottom: "calc(10px + env(safe-area-inset-bottom, 0px))" }}>
-      <button onClick={onCta} className="w-[calc(100%-4.25rem)] font-black text-sm py-3.5 rounded-full" style={{ background: LIME, color: BG_BLUE }}>Testar 30 dias grátis →</button>
-    </div>
+    <button type="button" onClick={onCta} aria-hidden={!show} tabIndex={show ? 0 : -1}
+      className="sm:hidden fixed left-0 right-0 bottom-0 z-40 font-black text-[15px] text-center pt-4 pl-4 pr-[84px] transition-transform duration-300"
+      style={{
+        background: "linear-gradient(180deg,#DCFF4D 0%,#C9F52F 100%)", color: BG_BLUE,
+        paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+        transform: show ? "translateY(0)" : "translateY(110%)",
+        boxShadow: "0 -8px 30px rgba(10,14,35,0.35)",
+      }}>
+      Teste grátis por 30 dias →
+    </button>
   );
 }
