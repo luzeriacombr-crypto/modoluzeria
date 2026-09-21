@@ -172,7 +172,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             <FacebookSection clientId={client.id} />
           </FichaCard>
         )}
-        {canManageInstagram && (
+        {canManageInstagram && me?.orgId === LUZERIA_ORG_ID && (
           <FichaCard label="TikTok">
             <TikTokConnectSection clientId={client.id} />
           </FichaCard>
