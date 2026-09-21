@@ -568,6 +568,13 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   animation: lz-float 5.5s ease-in-out infinite;
   animation-delay: -4s;
 }
+@keyframes lz-halo {
+  0% { box-shadow: 0 0 0 0 rgba(215, 255, 63, 0.55); }
+  70%, 100% { box-shadow: 0 0 0 16px rgba(215, 255, 63, 0); }
+}
+@utility lz-halo {
+  animation: lz-halo 2.2s ease-out infinite;
+}
 @keyframes lz-grow-bar {
   from { transform: scaleY(0); }
   to { transform: scaleY(1); }
@@ -786,7 +793,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
     transition: none !important;
     transform: none !important;
   }
-  .lz-float-a, .lz-float-b, .lz-float-c {
+  .lz-float-a, .lz-float-b, .lz-float-c, .lz-halo {
     animation: none !important;
   }
 }

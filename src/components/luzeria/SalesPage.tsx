@@ -55,18 +55,29 @@ export function SalesPage() {
   const [error, setError] = useState<string | null>(null);
   const [invoiceUrl, setInvoiceUrl] = useState<string | null | undefined>(undefined);
   const [showDemoModal, setShowDemoModal] = useState(false);
+  const [planError, setPlanError] = useState(false);
+  // Rolagens feitas pela própria página (ex.: subir até o plano) não contam como "saindo do formulário".
+  const suppressDemoUntilRef = useRef(0);
 
   const plansReveal = useReveal<HTMLDivElement>();
   const selectablePlans = (plans.data ?? []).filter((p) => p.priceCents != null);
 
   function scrollToForm(id?: string) {
-    if (id) setPlanId(id);
+    if (id) { setPlanId(id); setPlanError(false); }
+    suppressDemoUntilRef.current = Date.now() + 3000;
     document.getElementById("assinar-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function askForPlan() {
+    setPlanError(true);
+    setError(null);
+    suppressDemoUntilRef.current = Date.now() + 3000;
+    document.getElementById("form-plans")?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!planId) { setError("Escolha um plano antes de continuar."); return; }
+    if (!planId) { askForPlan(); return; }
     if (!consent) { setError("Você precisa aceitar a Política de Privacidade para continuar."); return; }
     setLoading(true);
     setError(null);
@@ -93,7 +104,7 @@ export function SalesPage() {
       setError("Preenche o nome da agência, seu nome, o CNPJ/CPF e o WhatsApp antes de continuar com o Google.");
       return;
     }
-    if (!planId) { setError("Escolha um plano antes de continuar."); return; }
+    if (!planId) { askForPlan(); return; }
     if (!consent) { setError("Você precisa aceitar a Política de Privacidade para continuar."); return; }
     setError(null);
     setGoogleLoading(true);
@@ -139,6 +150,7 @@ export function SalesPage() {
     function trigger() {
       if (sessionStorage.getItem(DEMO_POPUP_SHOWN_KEY)) return;
       if (!formEngagedRef.current) return;
+      if (Date.now() < suppressDemoUntilRef.current) return;
       if (invoiceUrl !== undefined) return; // já cadastrou — não interrompe
       sessionStorage.setItem(DEMO_POPUP_SHOWN_KEY, "1");
       setShowDemoModal(true);
@@ -323,6 +335,35 @@ export function SalesPage() {
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
+            <div id="form-plans" className="scroll-mt-24">
+              <span className="block text-xs uppercase tracking-wide text-[#0A0E23]/60 mb-1.5">Escolha seu plano</span>
+              <div role="radiogroup" aria-label="Plano" className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(1, selectablePlans.length)}, minmax(0, 1fr))` }}>
+                {plans.isLoading && [0, 1, 2].map((i) => <div key={i} className="h-[76px] rounded-xl bg-black/[0.05] animate-pulse" />)}
+                {selectablePlans.map((p) => {
+                  const on = planId === p.id;
+                  const recommended = p.name.trim().toLowerCase() === "pro";
+                  return (
+                    <button key={p.id} type="button" role="radio" aria-checked={on}
+                      onClick={() => { setPlanId(p.id); setPlanError(false); }}
+                      className="relative rounded-xl px-2 py-3 text-center transition"
+                      style={{
+                        background: on ? LIME : "#fff",
+                        color: "#0A0E23",
+                        border: on ? "2px solid #0A0E23" : planError ? "2px solid #E5484D" : "2px solid rgba(10,14,35,0.14)",
+                      }}>
+                      {recommended && (
+                        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full whitespace-nowrap"
+                          style={{ background: "#0A0E23", color: LIME }}>Mais popular</span>
+                      )}
+                      <div className="font-black text-[13px] leading-tight">{p.name}</div>
+                      <div className="font-black text-[15px] leading-tight mt-1 tabular-nums">R$ {(p.priceCents! / 100).toFixed(2).replace(".", ",")}</div>
+                      <div className="text-[10.5px] opacity-60 leading-tight mt-0.5">por mês · {p.maxClients} clientes</div>
+                    </button>
+                  );
+                })}
+              </div>
+              {planError && <p role="alert" className="text-[13px] font-semibold mt-2" style={{ color: "#C0272D" }}>Escolha um dos planos acima para continuar.</p>}
+            </div>
             <Field label="Nome da agência">
               <input required value={agencyName} onChange={(e) => setAgencyName(e.target.value)} className="lz-input-onlight" maxLength={80} />
             </Field>

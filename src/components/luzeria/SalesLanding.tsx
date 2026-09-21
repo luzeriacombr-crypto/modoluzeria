@@ -101,7 +101,7 @@ export function SalesHero({ onCta, content = DEFAULT_LANDING }: { onCta: () => v
             {h.subtitle}
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <button id="hero-cta" onClick={onCta} className="inline-flex items-center gap-2 font-black text-sm px-6 py-3.5 rounded-full transition hover:-translate-y-0.5" style={{ background: LIME, color: BG_BLUE }}>
+            <button id="hero-cta" onClick={onCta} className="lz-halo inline-flex items-center gap-2 font-black text-sm px-6 py-3.5 rounded-full transition hover:-translate-y-0.5" style={{ background: LIME, color: BG_BLUE }}>
               {h.ctaLabel} <ArrowRight size={16} />
             </button>
             <a href="#funcoes" className="inline-flex items-center font-bold text-sm px-6 py-3.5 rounded-full border transition hover:bg-white/5" style={{ borderColor: "rgba(255,255,255,0.25)" }}>
