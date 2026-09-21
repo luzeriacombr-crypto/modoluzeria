@@ -830,6 +830,38 @@ export const getOrgNextInvoice = createServerFn({ method: "POST" })
  * that deletion would fail outright. Asaas cancellation runs first and
  * aborts the whole thing on failure, so a failed cancel never leaves an
  * orphaned subscription with no org left to reference it. */
+/** Apaga uma agência inteira: cancela a assinatura no Asaas (se houver), os
+ * dados operacionais, os usuários (auth) e a org. Compartilhada entre a
+ * remoção feita pelo admin da plataforma (deleteOrg) e a exclusão feita pela
+ * própria agência (deleteMyOrg). */
+async function performOrgDeletion(supabaseAdmin: any, orgId: string, org: { asaas_subscription_id?: string | null }) {
+    if (org.asaas_subscription_id) {
+      const { cancelAsaasSubscription } = await import("./asaas.server");
+      try {
+        await cancelAsaasSubscription(org.asaas_subscription_id);
+      } catch (err: any) {
+        throw new Error(`Não foi possível cancelar a assinatura no Asaas: ${err.message}. Nada foi apagado.`);
+      }
+    }
+
+    await supabaseAdmin.from("promotion_codes").delete().eq("org_id", orgId);
+    await supabaseAdmin.from("clients").delete().eq("org_id", orgId);
+    await supabaseAdmin.from("email_role_assignments").delete().eq("org_id", orgId);
+    await supabaseAdmin.from("stories_schedule").delete().eq("org_id", orgId);
+    await supabaseAdmin.from("cleaning_schedule").delete().eq("org_id", orgId);
+    await supabaseAdmin.from("cleaning_log").delete().eq("org_id", orgId);
+    await supabaseAdmin.from("cleaning_settings").delete().eq("org_id", orgId);
+
+    const { data: profiles } = await supabaseAdmin.from("profiles").select("id").eq("org_id", orgId);
+    for (const p of profiles ?? []) {
+      await supabaseAdmin.auth.admin.deleteUser((p as any).id);
+    }
+
+    const { error: delErr } = await supabaseAdmin.from("orgs").delete().eq("id", orgId);
+    if (delErr) throw new Error(delErr.message);
+
+}
+
 export const deleteOrg = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { orgId: string; confirmName: string }) =>
@@ -849,31 +881,33 @@ export const deleteOrg = createServerFn({ method: "POST" })
       throw new Error("O nome digitado não confere com o nome da agência.");
     }
 
-    if ((org as any).asaas_subscription_id) {
-      const { cancelAsaasSubscription } = await import("./asaas.server");
-      try {
-        await cancelAsaasSubscription((org as any).asaas_subscription_id);
-      } catch (err: any) {
-        throw new Error(`Não foi possível cancelar a assinatura no Asaas: ${err.message}. Nada foi apagado.`);
-      }
+    await performOrgDeletion(supabaseAdmin, data.orgId, org as any);
+
+    return { ok: true };
+  });
+
+/** A própria agência exclui a conta: só o master, digitando o nome da
+ * agência. Cancela a assinatura e apaga tudo (irreversível). Bloqueia a
+ * Luzeria e agências revendedoras com revendidas ativas (essas precisam do
+ * suporte pra não deixar as revendidas órfãs). */
+export const deleteMyOrg = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { confirmName: string }) => z.object({ confirmName: z.string() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Só o administrador master da agência pode excluir a conta.");
+    if (context.orgId === LUZERIA_ORG_ID) throw new Error("Não é possível remover a agência da Luzeria.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: org } = await supabaseAdmin
+      .from("orgs").select("id, name, asaas_subscription_id, is_reseller").eq("id", context.orgId).maybeSingle();
+    if (!org) throw new Error("Agência não encontrada.");
+    if ((org as any).name.trim().toLowerCase() !== data.confirmName.trim().toLowerCase()) {
+      throw new Error("O nome digitado não confere com o nome da agência.");
     }
-
-    await supabaseAdmin.from("promotion_codes").delete().eq("org_id", data.orgId);
-    await supabaseAdmin.from("clients").delete().eq("org_id", data.orgId);
-    await supabaseAdmin.from("email_role_assignments").delete().eq("org_id", data.orgId);
-    await supabaseAdmin.from("stories_schedule").delete().eq("org_id", data.orgId);
-    await supabaseAdmin.from("cleaning_schedule").delete().eq("org_id", data.orgId);
-    await supabaseAdmin.from("cleaning_log").delete().eq("org_id", data.orgId);
-    await supabaseAdmin.from("cleaning_settings").delete().eq("org_id", data.orgId);
-
-    const { data: profiles } = await supabaseAdmin.from("profiles").select("id").eq("org_id", data.orgId);
-    for (const p of profiles ?? []) {
-      await supabaseAdmin.auth.admin.deleteUser((p as any).id);
-    }
-
-    const { error: delErr } = await supabaseAdmin.from("orgs").delete().eq("id", data.orgId);
-    if (delErr) throw new Error(delErr.message);
-
+    const { count: resold } = await supabaseAdmin
+      .from("orgs").select("id", { count: "exact", head: true }).eq("reseller_org_id", context.orgId);
+    if ((resold ?? 0) > 0) throw new Error("Sua agência tem agências revendidas ativas. Fale com o suporte para encerrar a conta com segurança.");
+    await performOrgDeletion(supabaseAdmin, context.orgId, org as any);
     return { ok: true };
   });
 

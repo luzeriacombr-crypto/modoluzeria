@@ -103,6 +103,8 @@ export const sendSupportMessage = createServerFn({ method: "POST" })
       ``,
       buildHelpKnowledgeText(),
       ``,
+      `Excluir a conta: quem é administrador master da agência pode excluir sozinho em **Configurações → Plano e Cobrança**, na seção **Excluir conta** (no fim da página). Isso apaga tudo e cancela a assinatura, e não dá pra desfazer; a pessoa precisa digitar o nome da agência pra confirmar. Se estiver no teste grátis, não precisa excluir: o teste acaba sozinho e não há cobrança. Se quem perguntou não for master, precisa pedir a quem é master. Explique isso diretamente, sem chamar o Junior, a menos que a pessoa tenha algum problema ao excluir.`,
+      ``,
       `Quem está perguntando agora: ${profile?.name ?? "um usuário"}, da agência ${org?.name ?? "—"}.`,
       ``,
       `Se a pergunta não estiver coberta pelas informações acima, envolver algo específico da conta dessa pessoa que você não tem como ver (cobrança, cancelamento, um bug específico, um dado sensível), ou se ela pedir claramente pra falar com uma pessoa/o Junior, comece sua resposta com a tag ${ESCALATE_TAG} seguida de uma frase curta e natural avisando que você vai chamar o Junior pra continuar ali mesmo, sem prometer um prazo específico.`,
