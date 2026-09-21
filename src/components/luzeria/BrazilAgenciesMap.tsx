@@ -68,7 +68,11 @@ export function BrazilAgenciesMap({ counts }: { counts: Map<string, number> }) {
                 strokeLinejoin="round"
                 className="cursor-default transition-[fill,stroke] duration-150"
                 onMouseEnter={() => setHovered(uf)}
-                onClick={() => setHovered((cur) => (cur === uf ? null : uf))}
+                onClick={(e) => {
+                  const box = e.currentTarget.ownerSVGElement?.getBoundingClientRect();
+                  if (box) setTip({ x: e.clientX - box.left, y: e.clientY - box.top });
+                  setHovered((cur) => (cur === uf ? null : uf));
+                }}
               />
             );
           })}
@@ -76,7 +80,7 @@ export function BrazilAgenciesMap({ counts }: { counts: Map<string, number> }) {
 
         {hovered && tip && (
           <div
-            className="pointer-events-none absolute z-20 bg-card border border-foreground/10 rounded-lg shadow-xl px-2.5 py-1.5 whitespace-nowrap"
+            className="pointer-events-none absolute z-20 hidden sm:block bg-card border border-foreground/10 rounded-lg shadow-xl px-2.5 py-1.5 whitespace-nowrap"
             style={{ left: tip.x + 12, top: tip.y + 12 }}
           >
             <div className="text-xs font-bold text-foreground">{UF_NAMES[hovered]}</div>
@@ -87,6 +91,17 @@ export function BrazilAgenciesMap({ counts }: { counts: Map<string, number> }) {
             </div>
           </div>
         )}
+        {/* Celular: sem mouse não há balão — mostra o estado tocado numa faixa fixa. */}
+        <div className="sm:hidden mt-2 rounded-lg bg-foreground/[0.05] px-3 py-2 text-xs min-h-[38px] flex items-center">
+          {hovered ? (
+            <span>
+              <b className="text-foreground">{UF_NAMES[hovered]}</b>
+              <span className="text-foreground/60"> — {hoveredCount === 0 ? "nenhuma agência" : `${hoveredCount} agência${hoveredCount > 1 ? "s" : ""}`}</span>
+            </span>
+          ) : (
+            <span className="text-foreground/45">Toque em um estado para ver a quantidade de agências.</span>
+          )}
+        </div>
       </div>
 
       {/* columns-2 (e não grid) pra o ranking descer a primeira coluna
@@ -102,6 +117,7 @@ export function BrazilAgenciesMap({ counts }: { counts: Map<string, number> }) {
               onMouseLeave={() => setHovered(null)}
               onFocus={() => setHovered(uf)}
               onBlur={() => setHovered(null)}
+              onClick={() => setHovered((cur) => (cur === uf ? null : uf))}
               title={UF_NAMES[uf]}
               className={`relative flex w-full break-inside-avoid items-center justify-between gap-2 rounded px-2 py-1 text-xs overflow-hidden text-left transition-colors ${isHovered ? "bg-foreground/[0.07]" : ""}`}
             >

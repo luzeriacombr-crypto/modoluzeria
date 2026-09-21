@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -81,7 +81,12 @@ function AgencyLevelBadge({ o }: { o: any }) {
   const color = TIER_COLOR[level.tier as AgencyTierName] ?? "#9AA4B2";
   const Icon = TIER_ICON[level.tier as AgencyTierName];
   return (
-    <div className="group relative inline-block cursor-default">
+    <TipCard className="inline-block" tipClassName="max-w-[220px]" tip={<>
+      <div className="text-xs font-bold text-foreground mb-1">{points} pts — {level.label}</div>
+      {level.pointsToNext != null && (
+        <div className="text-[10.5px] text-foreground/50">Faltam {level.pointsToNext} pts pro próximo nível</div>
+      )}
+    </>}>
       <span
         className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10.5px] font-bold whitespace-nowrap"
         style={{ backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)`, color }}
@@ -89,12 +94,30 @@ function AgencyLevelBadge({ o }: { o: any }) {
         {Icon && <Icon size={12} />}
         {level.label}
       </span>
-      <div className="absolute left-0 top-full mt-1.5 z-20 w-max max-w-[220px] bg-card border border-foreground/10 rounded-lg shadow-xl px-3 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">
-        <div className="text-xs font-bold text-foreground mb-1">{points} pts — {level.label}</div>
-        {level.pointsToNext != null && (
-          <div className="text-[10.5px] text-foreground/50">Faltam {level.pointsToNext} pts pro próximo nível</div>
-        )}
-      </div>
+    </TipCard>
+  );
+}
+
+function TipCard({ className = "", tipClassName = "", tip, children }: { className?: string; tipClassName?: string; tip?: React.ReactNode; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [open]);
+  return (
+    <div ref={ref} className={`relative group ${tip ? "cursor-pointer" : "cursor-default"} ${className}`}
+      onClick={() => tip && setOpen((v) => !v)}
+      onKeyDown={(e) => { if (tip && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setOpen((v) => !v); } }}
+      role={tip ? "button" : undefined} tabIndex={tip ? 0 : undefined} aria-expanded={tip ? open : undefined}>
+      {children}
+      {tip && (
+        <div className={`absolute left-0 top-full mt-1.5 z-20 w-max bg-card border border-foreground/10 rounded-lg shadow-xl px-3 py-2 transition-opacity ${open ? "opacity-100 visible" : "opacity-0 invisible group-hover:opacity-100 group-hover:visible"} ${tipClassName}`}>
+          {tip}
+        </div>
+      )}
     </div>
   );
 }
@@ -359,20 +382,20 @@ export function AgenciesBillingPanel() {
         <div className="mt-4 pt-4 border-t border-foreground/6">
           <div className="text-[11px] text-foreground/50 mb-2">Receita mensal</div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="relative group bg-foreground/[0.03] rounded-lg px-3 py-2.5 cursor-default">
-              <div className="text-lg font-bold text-foreground">{fmtBRL(realRevenueCents)}</div>
-              <div className="text-[11px] text-foreground/50 mt-0.5">Real — {payingOrgs.length} pagante{payingOrgs.length === 1 ? "" : "s"}</div>
-              {payingOrgs.length > 0 && (
-                <div className="absolute left-0 top-full mt-1.5 z-20 w-max max-w-xs bg-card border border-foreground/10 rounded-lg shadow-xl px-3 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">
+            <TipCard className="bg-foreground/[0.03] rounded-lg px-3 py-2.5" tipClassName="max-w-xs"
+              tip={payingOrgs.length > 0 ? (
+                <>
                   {payingOrgs.map((o: any) => (
                     <div key={o.id} className="flex items-center gap-4 justify-between text-xs py-0.5">
                       <span className="text-foreground/80 font-medium">{o.name}</span>
                       <span className="text-foreground/50 font-semibold tabular-nums">{fmtBRL(o.priceCents ?? 0)}</span>
                     </div>
                   ))}
-                </div>
-              )}
-            </div>
+                </>
+              ) : undefined}>
+              <div className="text-lg font-bold text-foreground">{fmtBRL(realRevenueCents)}</div>
+              <div className="text-[11px] text-foreground/50 mt-0.5">Real — {payingOrgs.length} pagante{payingOrgs.length === 1 ? "" : "s"}</div>
+            </TipCard>
             <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
               <div className="text-lg font-bold text-foreground">{fmtBRL(realRevenueCents + trialRevenueCents)}</div>
               <div className="text-[11px] text-foreground/50 mt-0.5">Previsto — +{trialOrgs.length} em teste</div>
@@ -392,7 +415,17 @@ export function AgenciesBillingPanel() {
             <div className="text-lg font-bold text-foreground">{totalClients}</div>
             <div className="text-[11px] text-foreground/50 mt-0.5">Clientes no total</div>
           </div>
-          <div className="relative group bg-foreground/[0.03] rounded-lg px-3 py-2.5 cursor-default">
+          <TipCard className="bg-foreground/[0.03] rounded-lg px-3 py-2.5" tipClassName="max-w-xs"
+            tip={onlineOrgs.length > 0 ? (
+              <>
+                {onlineOrgs.map((o: any) => (
+                  <div key={o.id} className="flex items-center gap-4 justify-between text-xs py-0.5">
+                    <span className="text-foreground/80 font-medium">{o.name}</span>
+                    <span className="text-foreground/50 font-semibold tabular-nums">{o.onlineCount}</span>
+                  </div>
+                ))}
+              </>
+            ) : undefined}>
             <div className="flex items-center gap-1.5">
               {totalOnline > 0 && (
                 <span className="relative flex h-2 w-2">
@@ -403,20 +436,10 @@ export function AgenciesBillingPanel() {
               <div className="text-lg font-bold text-foreground">{totalOnline}</div>
             </div>
             <div className="text-[11px] text-foreground/50 mt-0.5">Online agora</div>
-            {onlineOrgs.length > 0 && (
-              <div className="absolute left-0 top-full mt-1.5 z-20 w-max max-w-xs bg-card border border-foreground/10 rounded-lg shadow-xl px-3 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">
-                {onlineOrgs.map((o: any) => (
-                  <div key={o.id} className="flex items-center gap-4 justify-between text-xs py-0.5">
-                    <span className="text-foreground/80 font-medium">{o.name}</span>
-                    <span className="text-foreground/50 font-semibold tabular-nums">{o.onlineCount}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          </TipCard>
         </div>
         <p className="text-[10.5px] text-foreground/35 mt-2 leading-relaxed">
-          "Online agora" é aproximado (uso real nos últimos ~15min) — atualiza sozinho a cada 1min, passe o mouse pra ver por agência.
+          "Online agora" é aproximado (uso real nos últimos ~15min) — atualiza sozinho a cada 1min. Toque (ou passe o mouse) nos cartões pra ver por agência.
         </p>
 
         {stateCounts.size > 0 && (
