@@ -859,12 +859,14 @@ export function explainPublishError(raw: string): string {
   const has = (re: RegExp) => re.test(msg);
   if (has(/is not a function|is not defined|cannot read propert|of undefined|of null|unexpected token/i))
     return "Erro interno do Modo Criador ao publicar — não é problema do conteúdo nem da conta do cliente. Tente publicar de novo em alguns minutos; se repetir, fale com o suporte." + tech;
-  if (has(/session has expired|access token|oauthexception|invalid_token|token.*(expired|invalid|revoked)|\(#?190\)|code 190/i))
-    return "A conexão com o Instagram desse cliente expirou ou foi revogada. Vá em Ficha do Cliente → Instagram, desconecte e conecte de novo." + tech;
-  if (has(/invalid_grant|google drive|drive api|falha ao baixar/i)) {
+  if (has(/invalid_grant|token do google|google|drive|falha ao baixar/i)) {
     if (/\(404\)/.test(msg)) return "O arquivo deste post não foi encontrado no Google Drive (foi apagado ou movido). Anexe o arquivo de novo e tente publicar." + tech;
     return "Não consegui ler o arquivo no Google Drive. A conexão com o Drive pode ter expirado: reconecte em Configurações → Integrações e tente de novo." + tech;
   }
+  if (has(/session has expired|access token|oauthexception|invalid_token|token.*(expired|invalid|revoked)|\(#?190\)|code 190/i))
+    return "A conexão com o Instagram desse cliente expirou ou foi revogada. Vá em Ficha do Cliente → Instagram, desconecte e conecte de novo." + tech;
+  if (has(/image_url|video_url|media_url|parameter .* is required|missing.*(image|video|media)/i))
+    return "Este item não tem imagem ou vídeo anexado (ou o arquivo não foi encontrado). Anexe a mídia do post e tente publicar de novo." + tech;
   if (has(/aspect ratio|media type|unsupported|codec|resolution|file size|too (large|small|big|long|short)|\b2207\d*\b|invalid.*(image|video|media)|formato|proporção/i))
     return "O Instagram recusou o arquivo (formato, tamanho ou proporção). Posts aceitam entre 4:5 e 1.91:1; Reels e Stories, 9:16 em MP4. Troque o arquivo e tente de novo." + tech;
   if (has(/rate limit|too many|request limit|publishing limit|limit reached|quota|\b9007\b|\b(4|17|32|613)\b\)/i))
