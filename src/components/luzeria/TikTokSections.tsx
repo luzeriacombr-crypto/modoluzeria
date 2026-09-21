@@ -138,6 +138,15 @@ export function TikTokPublishPanel({ itemId, clientId, scheduledAt }: { itemId: 
     setCommercial(s.brandOrganic || s.brandContent);
   }, [state.data, itemId]);
 
+  // Privacidade salva que a conta não aceita mais (ex.: "Todos" antes da
+  // aprovação do app): volta pra "Selecione…" em vez de reenviar um valor recusado.
+  useEffect(() => {
+    const opts = creator.data?.privacyOptions;
+    if (opts && form.privacyLevel && !opts.includes(form.privacyLevel)) {
+      setForm((f) => ({ ...f, privacyLevel: undefined as unknown as TikTokPostSettings["privacyLevel"] }));
+    }
+  }, [creator.data, form.privacyLevel]);
+
   const refresh = () => qc.invalidateQueries({ queryKey: ["tiktok-item-state", itemId] });
   const publishMut = useMutation({
     mutationFn: () => publish({ data: { itemId, settings: form } }),

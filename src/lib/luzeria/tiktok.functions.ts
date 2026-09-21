@@ -36,6 +36,14 @@ function assertTikTokEnabled(orgId: string) {
   if (orgId !== LUZERIA_ORG_ID) throw new Error("O TikTok ainda não está disponível pra sua conta.");
 }
 
+// Enquanto o app não passa na auditoria do TikTok, a API só aceita publicar
+// como "SELF_ONLY" (e em conta privada), mas o creator_info ainda lista as
+// outras opções. Depois da aprovação, defina TIKTOK_APP_APROVADO=true na Vercel.
+function filterPrivacyOptions(options: string[]): string[] {
+  if (process.env.TIKTOK_APP_APROVADO?.trim() === "true") return options;
+  return options.filter((o) => o === "SELF_ONLY");
+}
+
 function credentials() {
   // trim: colar o valor na Vercel costuma levar uma quebra de linha junto (%0A na URL).
   const key = process.env.TIKTOK_CLIENT_KEY?.trim();
@@ -72,6 +80,9 @@ async function ttJson(path: string, token: string, body?: unknown): Promise<any>
   const json: any = await res.json().catch(() => ({}));
   if (!res.ok || (json?.error?.code && json.error.code !== "ok")) {
     console.error("[TikTok]", path, res.status, JSON.stringify(json?.error ?? json));
+    if (json?.error?.code === "unaudited_client_can_only_post_to_private_accounts") {
+      throw new Error("O app ainda não foi aprovado pelo TikTok: por enquanto só dá pra publicar como \"Só eu\", e a conta do TikTok precisa estar privada.");
+    }
     throw new Error(json?.error?.message || `O TikTok recusou a requisição (${res.status}).`);
   }
   return json;
@@ -251,7 +262,7 @@ export const getTikTokCreatorInfo = createServerFn({ method: "POST" })
     return {
       nickname: d.creator_nickname ?? d.creator_username ?? "",
       avatarUrl: d.creator_avatar_url ?? null,
-      privacyOptions: Array.isArray(d.privacy_level_options) ? d.privacy_level_options : [],
+      privacyOptions: filterPrivacyOptions(Array.isArray(d.privacy_level_options) ? d.privacy_level_options : []),
       commentDisabled: !!d.comment_disabled,
       duetDisabled: !!d.duet_disabled,
       stitchDisabled: !!d.stitch_disabled,
@@ -383,7 +394,7 @@ async function runTikTokPublish(itemId: string, expectedOrgId?: string) {
 
   // Confere se a privacidade escolhida ainda é permitida pra essa conta.
   const creator = await ttJson("/post/publish/creator_info/query/", token, {});
-  const allowedPrivacy: string[] = creator?.data?.privacy_level_options ?? [];
+  const allowedPrivacy: string[] = filterPrivacyOptions(creator?.data?.privacy_level_options ?? []);
   if (allowedPrivacy.length > 0 && !allowedPrivacy.includes(s.privacyLevel)) {
     throw new Error("A privacidade escolhida não está disponível pra essa conta do TikTok agora. Escolha outra.");
   }
