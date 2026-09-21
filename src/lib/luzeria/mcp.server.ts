@@ -44,7 +44,11 @@ export async function getMcpEligibility(orgId: string): Promise<McpEligibility> 
   const { data: org } = await sb.from("orgs").select("plan_id").eq("id", orgId).maybeSingle();
   const planId: string | null = org?.plan_id ?? null;
   let v: McpEligibility;
-  if (orgId === LUZERIA_ORG_ID) {
+  // Lista de agências em teste (liberadas à mão, sem exigir plano/nível):
+  // site_tracking_settings, chave "mcp_beta_orgs" = ["<org_id>", ...].
+  const { data: beta } = await sb.from("site_tracking_settings").select("value").eq("key", "mcp_beta_orgs").maybeSingle();
+  const isBeta = Array.isArray(beta?.value) && (beta.value as string[]).includes(orgId);
+  if (orgId === LUZERIA_ORG_ID || isBeta) {
     v = { ok: true, reason: null, levelLabel: null, planId };
   } else {
     const inputs = await fetchAgencyLevelInputs(sb, orgId);
