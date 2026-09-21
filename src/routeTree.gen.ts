@@ -40,6 +40,7 @@ import { Route as ContratoTokenRouteImport } from './routes/contrato.$token'
 import { Route as ConectarInstagramTokenRouteImport } from './routes/conectar-instagram.$token'
 import { Route as BlogSlugRouteImport } from './routes/blog_.$slug'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
+import { Route as ApiMcpRouteImport } from './routes/api.mcp'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AuthenticatedSelecaoDeFotosRouteImport } from './routes/_authenticated/selecao-de-fotos'
 import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated/rotina'
@@ -229,6 +230,11 @@ const AssinarCompletarRoute = AssinarCompletarRouteImport.update({
   id: '/completar',
   path: '/completar',
   getParentRoute: () => AssinarRoute,
+} as any)
+const ApiMcpRoute = ApiMcpRouteImport.update({
+  id: '/api/mcp',
+  path: '/api/mcp',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedVendasRoute = AuthenticatedVendasRouteImport.update({
   id: '/vendas',
@@ -435,6 +441,7 @@ export interface FileRoutesByFullPath {
   '/rotina': typeof AuthenticatedRotinaRoute
   '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
+  '/api/mcp': typeof ApiMcpRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
@@ -498,6 +505,7 @@ export interface FileRoutesByTo {
   '/rotina': typeof AuthenticatedRotinaRoute
   '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
+  '/api/mcp': typeof ApiMcpRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
@@ -563,6 +571,7 @@ export interface FileRoutesById {
   '/_authenticated/rotina': typeof AuthenticatedRotinaRoute
   '/_authenticated/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
+  '/api/mcp': typeof ApiMcpRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog_/$slug': typeof BlogSlugRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
@@ -628,6 +637,7 @@ export interface FileRouteTypes {
     | '/rotina'
     | '/selecao-de-fotos'
     | '/vendas'
+    | '/api/mcp'
     | '/assinar/completar'
     | '/blog/$slug'
     | '/conectar-instagram/$token'
@@ -691,6 +701,7 @@ export interface FileRouteTypes {
     | '/rotina'
     | '/selecao-de-fotos'
     | '/vendas'
+    | '/api/mcp'
     | '/assinar/completar'
     | '/blog/$slug'
     | '/conectar-instagram/$token'
@@ -755,6 +766,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rotina'
     | '/_authenticated/selecao-de-fotos'
     | '/_authenticated/vendas'
+    | '/api/mcp'
     | '/assinar/completar'
     | '/blog_/$slug'
     | '/conectar-instagram/$token'
@@ -808,6 +820,7 @@ export interface RootRouteChildren {
   SelecaoDeFotosParaFotografosRoute: typeof SelecaoDeFotosParaFotografosRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermosRoute: typeof TermosRoute
+  ApiMcpRoute: typeof ApiMcpRoute
   BlogSlugRoute: typeof BlogSlugRoute
   ConectarInstagramTokenRoute: typeof ConectarInstagramTokenRoute
   ContratoTokenRoute: typeof ContratoTokenRoute
@@ -1048,6 +1061,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/assinar/completar'
       preLoaderRoute: typeof AssinarCompletarRouteImport
       parentRoute: typeof AssinarRoute
+    }
+    '/api/mcp': {
+      id: '/api/mcp'
+      path: '/api/mcp'
+      fullPath: '/api/mcp'
+      preLoaderRoute: typeof ApiMcpRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/vendas': {
       id: '/_authenticated/vendas'
@@ -1355,6 +1375,7 @@ const rootRouteChildren: RootRouteChildren = {
   SelecaoDeFotosParaFotografosRoute: SelecaoDeFotosParaFotografosRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermosRoute: TermosRoute,
+  ApiMcpRoute: ApiMcpRoute,
   BlogSlugRoute: BlogSlugRoute,
   ConectarInstagramTokenRoute: ConectarInstagramTokenRoute,
   ContratoTokenRoute: ContratoTokenRoute,

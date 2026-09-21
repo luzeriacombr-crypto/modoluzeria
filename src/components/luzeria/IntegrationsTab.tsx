@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Instagram, FolderTree, CalendarClock } from "lucide-react";
+import { Instagram, FolderTree, CalendarClock, Bot } from "lucide-react";
 import { instagramConnectionSummaryQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { DriveSettingsTab } from "./DriveSettingsTab";
 import { GoogleCalendarSection } from "./ProfilePage";
+import { McpSection } from "./McpSection";
 
 function InstagramSummaryCard() {
   const { data, isLoading } = useQuery(instagramConnectionSummaryQO());
@@ -77,6 +78,12 @@ export function IntegrationsTab({ disabledFeatures }: { disabledFeatures: string
           <Instagram size={12} /> Instagram
         </h2>
         <InstagramSummaryCard />
+      </div>
+      <div className="pt-2 border-t border-foreground/10">
+        <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
+          <Bot size={12} /> Conectar IA (MCP)
+        </h2>
+        <McpSection />
       </div>
     </div>
   );
