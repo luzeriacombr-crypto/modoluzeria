@@ -305,9 +305,9 @@ export const getTikTokItemState = createServerFn({ method: "GET" })
   });
 
 function assertSettingsValid(s: TikTokPostSettings) {
-  // Regra do TikTok: conteúdo de marca não pode ser privado (SELF_ONLY).
-  if ((s.brandOrganic || s.brandContent) && s.privacyLevel === "SELF_ONLY") {
-    throw new Error("Conteúdo com divulgação comercial não pode ser publicado como privado. Escolha outra privacidade.");
+  // Regra do TikTok: conteúdo de marca de terceiros (branded content) não pode ser privado (SELF_ONLY).
+  if (s.brandContent && s.privacyLevel === "SELF_ONLY") {
+    throw new Error("Conteúdo de marca de terceiros não pode ser publicado como privado. Escolha outra privacidade.");
   }
 }
 
@@ -324,6 +324,17 @@ async function saveSettings(db: any, itemId: string, s: TikTokPostSettings, extr
     ...extra,
   }, { onConflict: "item_id" });
   if (error) throw new Error(error.message);
+}
+
+/** Duração em segundos de um mp4/mov, lida do átomo "mvhd". Devolve null se
+ * não conseguir ler (aí a checagem de duração é pulada, e o TikTok valida). */
+function mp4DurationSec(buf: Buffer): number | null {
+  const at = buf.indexOf("mvhd");
+  if (at < 0 || at + 32 > buf.length) return null;
+  const version = buf[at + 4];
+  const timescale = buf.readUInt32BE(at + (version === 1 ? 24 : 16));
+  const duration = version === 1 ? Number(buf.readBigUInt64BE(at + 28)) : buf.readUInt32BE(at + 20);
+  return timescale > 0 ? duration / timescale : null;
 }
 
 const STATUS_POLL_ATTEMPTS = 12;
@@ -410,6 +421,13 @@ async function runTikTokPublish(itemId: string, expectedOrgId?: string) {
     return Buffer.from(await res.arrayBuffer());
   });
   if (buffer.length > MAX_VIDEO_BYTES) throw new Error("O vídeo passa de 250 MB, que é o limite pra enviar ao TikTok por aqui.");
+
+  // Regra do TikTok: o vídeo não pode passar da duração máxima que a conta aceita.
+  const maxSec: number | undefined = creator?.data?.max_video_post_duration_sec;
+  const durSec = mp4DurationSec(buffer);
+  if (maxSec && durSec && durSec > maxSec) {
+    throw new Error(`O vídeo tem ${Math.ceil(durSec)}s e essa conta do TikTok aceita até ${maxSec}s.`);
+  }
 
   const size = buffer.length;
   const chunkSize = size <= SINGLE_CHUNK_MAX ? size : CHUNK_SIZE;

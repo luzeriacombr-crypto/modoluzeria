@@ -96,7 +96,7 @@ const EMPTY: TikTokPostSettings = {
 };
 
 /** Conteúdo do bloco "Publicar no TikTok" do detalhe do item (dentro de um ModalSection). */
-export function TikTokPublishPanel({ itemId, clientId, scheduledAt }: { itemId: string; clientId: string; scheduledAt?: string | null }) {
+export function TikTokPublishPanel({ itemId, clientId, scheduledAt, caption }: { itemId: string; clientId: string; scheduledAt?: string | null; caption?: string | null }) {
   const qc = useQueryClient();
   const getConnStatus = useServerFn(getTikTokConnectionStatus);
   const getCreator = useServerFn(getTikTokCreatorInfo);
@@ -151,7 +151,10 @@ export function TikTokPublishPanel({ itemId, clientId, scheduledAt }: { itemId: 
   const publishMut = useMutation({
     mutationFn: () => publish({ data: { itemId, settings: form } }),
     onSuccess: (r: any) => {
-      toast.success(r?.processing ? "Vídeo enviado! O TikTok está processando." : "Publicado no TikTok!");
+      toast.success(
+        (r?.processing ? "Vídeo enviado! O TikTok está processando." : "Publicado no TikTok!") +
+        " Pode levar alguns minutos pra aparecer no perfil.",
+      );
       refresh();
       qc.invalidateQueries({ queryKey: ["month"] });
     },
@@ -185,7 +188,7 @@ export function TikTokPublishPanel({ itemId, clientId, scheduledAt }: { itemId: 
   const published = !!state.data?.publishedAt;
   const processing = !!state.data?.publishId && !published;
   const brandOn = form.brandOrganic || form.brandContent;
-  const privateBlocked = brandOn && form.privacyLevel === "SELF_ONLY";
+  const privateBlocked = form.brandContent && form.privacyLevel === "SELF_ONLY";
   const canSend = !!form.privacyLevel && (!commercial || brandOn) && !privateBlocked;
   const busy = publishMut.isPending || autoMut.isPending;
 
@@ -203,6 +206,14 @@ export function TikTokPublishPanel({ itemId, clientId, scheduledAt }: { itemId: 
       )}
 
       <div>
+        <label className="block text-[11px] uppercase tracking-wider text-foreground/50 mb-1">Título no TikTok</label>
+        <div className="rounded-md border border-foreground/10 px-3 py-2 text-sm text-foreground/80 whitespace-pre-wrap break-words max-h-24 overflow-y-auto">
+          {caption?.trim() || <span className="text-foreground/40">Sem legenda — o vídeo vai sem título.</span>}
+        </div>
+        <p className="text-[11px] text-foreground/40 mt-1">É a Legenda do item: edite no campo "Legenda" desta tela antes de publicar (hashtags incluídas).</p>
+      </div>
+
+      <div>
         <label className="block text-[11px] uppercase tracking-wider text-foreground/50 mb-1">Quem pode ver esse vídeo</label>
         <select
           value={form.privacyLevel ?? ""}
@@ -210,7 +221,12 @@ export function TikTokPublishPanel({ itemId, clientId, scheduledAt }: { itemId: 
           className="w-full rounded-md border border-foreground/10 bg-transparent px-3 py-2 text-sm"
         >
           <option value="">Selecione…</option>
-          {options.map((o) => <option key={o} value={o}>{PRIVACY_LABELS[o]}</option>)}
+          {options.map((o) => (
+            <option key={o} value={o} disabled={o === "SELF_ONLY" && form.brandContent}
+              title={o === "SELF_ONLY" && form.brandContent ? "A visibilidade de conteúdo de marca não pode ser privada (Branded content visibility cannot be set to private)" : undefined}>
+              {PRIVACY_LABELS[o]}
+            </option>
+          ))}
         </select>
         {onlyPrivate && (
           <p className="text-[11px] text-foreground/40 mt-1">
@@ -250,20 +266,40 @@ export function TikTokPublishPanel({ itemId, clientId, scheduledAt }: { itemId: 
               <input type="checkbox" checked={form.brandContent} onChange={(e) => patch({ brandContent: e.target.checked })} />
               Marca de terceiros (conteúdo de marca)
             </label>
-            {!brandOn && <p className="text-[11px] text-amber-400">Marque pelo menos uma opção pra continuar.</p>}
-            {privateBlocked && <p className="text-[11px] text-amber-400">Conteúdo com divulgação comercial não pode ser privado.</p>}
+            {!brandOn && (
+              <p className="text-[11px] text-amber-400"
+                title="You need to indicate if your content promotes yourself, a third party, or both">
+                Indique se o vídeo promove você, um terceiro ou os dois pra continuar (You need to indicate if your content promotes yourself, a third party, or both).
+              </p>
+            )}
+            {brandOn && (
+              <p className="text-[11px] text-foreground/60">
+                {form.brandContent
+                  ? <>Seu vídeo será marcado como "Parceria paga" (Your video will be labeled as "Paid partnership").</>
+                  : <>Seu vídeo será marcado como "Conteúdo promocional" (Your video will be labeled as "Promotional content").</>}
+              </p>
+            )}
+            {privateBlocked && <p className="text-[11px] text-amber-400">Conteúdo de marca de terceiros não pode ser privado (Branded content visibility cannot be set to private).</p>}
           </div>
         )}
       </div>
 
       <p className="text-[11px] text-foreground/40">
-        Ao publicar, você concorda com a{" "}
         {form.brandContent ? (
-          <a className="underline" href="https://www.tiktok.com/legal/page/global/bc-policy/pt-BR" target="_blank" rel="noreferrer">Política de Conteúdo de Marca</a>
+          <>
+            Ao publicar, você concorda com a{" "}
+            <a className="underline" href="https://www.tiktok.com/legal/page/global/bc-policy/pt-BR" target="_blank" rel="noreferrer">Política de Conteúdo de Marca</a>{" "}
+            e a{" "}
+            <a className="underline" href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/pt-BR" target="_blank" rel="noreferrer">Confirmação de Uso de Música</a>{" "}
+            do TikTok. (By posting, you agree to TikTok's Branded Content Policy and Music Usage Confirmation.)
+          </>
         ) : (
-          <a className="underline" href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/pt-BR" target="_blank" rel="noreferrer">Confirmação de Uso de Música</a>
-        )}{" "}
-        do TikTok.
+          <>
+            Ao publicar, você concorda com a{" "}
+            <a className="underline" href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/pt-BR" target="_blank" rel="noreferrer">Confirmação de Uso de Música</a>{" "}
+            do TikTok. (By posting, you agree to TikTok's Music Usage Confirmation.)
+          </>
+        )}
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -299,7 +335,11 @@ export function TikTokPublishPanel({ itemId, clientId, scheduledAt }: { itemId: 
         </p>
       )}
       {published && <p className="text-[11px]" style={{ color: "var(--lz-accent-ink)" }}>Publicado no TikTok.</p>}
-      {processing && <p className="text-[11px] text-foreground/50">Vídeo enviado; aguardando o TikTok terminar de processar.</p>}
+      {(processing || published) && (
+        <p className="text-[11px] text-foreground/50">
+          Pode levar alguns minutos pro vídeo ser processado e aparecer no perfil (It may take a few minutes for the content to process and be visible on the profile).
+        </p>
+      )}
       {state.data?.lastError && !published && <p className="text-[11px] text-red-400">Último erro: {state.data.lastError}</p>}
       <p className="text-[11px] text-foreground/40">
         Envia o primeiro vídeo anexado ao item e marca como Finalizado. "Programar" usa a data e horário de "Data de publicação".
