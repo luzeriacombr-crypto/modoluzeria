@@ -37,8 +37,9 @@ function assertTikTokEnabled(orgId: string) {
 }
 
 function credentials() {
-  const key = process.env.TIKTOK_CLIENT_KEY;
-  const secret = process.env.TIKTOK_CLIENT_SECRET;
+  // trim: colar o valor na Vercel costuma levar uma quebra de linha junto (%0A na URL).
+  const key = process.env.TIKTOK_CLIENT_KEY?.trim();
+  const secret = process.env.TIKTOK_CLIENT_SECRET?.trim();
   if (!key || !secret) throw new Error("Credenciais do TikTok ausentes no servidor.");
   return { key, secret };
 }
