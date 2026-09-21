@@ -498,22 +498,30 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
    * limpeza no finally, não importa quantos arquivos isso rodar. */
   async function uploadFileToTemp(file: { drive_file_id: string; mime_type: string | null }) {
     const isVideoFile = (file.mime_type ?? "").startsWith("video/");
-    const buffer = await withDriveOrg(clientOrgId!, async () => {
-      const token = await getAccessToken();
-      const res = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.drive_file_id)}?alt=media&supportsAllDrives=true`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (!res.ok) throw new Error(`Falha ao baixar ${isVideoFile ? "o vídeo" : "a imagem"} do Drive (${res.status}).`);
-      return Buffer.from(await res.arrayBuffer());
-    });
     const mimeType = file.mime_type ?? (isVideoFile ? "video/mp4" : "image/jpeg");
     const ext = isVideoFile ? "mp4" : mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
     const tempPath = `${itemId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const driveRes: Response = await withDriveOrg(clientOrgId!, async () => {
+      const token = await getAccessToken();
+      return fetch(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.drive_file_id)}?alt=media&supportsAllDrives=true`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+    });
+    if (!driveRes.ok) throw new Error(`Falha ao baixar ${isVideoFile ? "o vídeo" : "a imagem"} do Drive (${driveRes.status}).`);
+    if (isVideoFile) {
+      // Vídeo: a Meta busca direto pela nossa rota de proxy (ver
+      // ig-media-proxy.server.ts) — nada é baixado pra memória nem copiado
+      // pro storage, então não há limite de tamanho aqui.
+      await driveRes.body?.cancel().catch(() => {});
+      const { makeIgMediaUrl } = await import("./ig-media-proxy.server");
+      return { url: makeIgMediaUrl(clientOrgId!, file.drive_file_id, mimeType), isVideoFile };
+    }
+    const buffer = Buffer.from(await driveRes.arrayBuffer());
     const { error: upErr } = await supabaseAdmin.storage
       .from("instagram-publish-temp")
       .upload(tempPath, buffer, { contentType: mimeType, upsert: true });
-    if (upErr) throw new Error(`Falha ao preparar ${isVideoFile ? "o vídeo" : "a imagem"}: ${upErr.message}`);
+    if (upErr) throw new Error(`Falha ao preparar a imagem: ${upErr.message}`);
     tempPaths.push(tempPath);
     const { data: pub } = supabaseAdmin.storage.from("instagram-publish-temp").getPublicUrl(tempPath);
     return { url: pub.publicUrl, isVideoFile };
@@ -590,54 +598,6 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     } else {
       // Post com 1 imagem só, Reel ou Story — mídia única.
       const first = relevantFiles[0];
-      const firstIsVideo = (first.mime_type ?? "").startsWith("video/");
-      if (firstIsVideo && (item.type === "reel" || item.type === "story")) {
-        // Vídeo: envio "resumable" direto do Drive pra Meta, em streaming.
-        // O caminho antigo baixava o vídeo INTEIRO na memória (3 cópias) e
-        // ainda subia pro storage temporário — reels grandes estouravam a
-        // memória da função (500 "ran out of available memory") ou o limite
-        // de tamanho do storage. Aqui nada é guardado: o arquivo passa do
-        // Drive pra Meta em pedaços.
-        const igType = item.type === "reel" ? "REELS" : "STORIES";
-        const startRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            media_type: igType,
-            upload_type: "resumable",
-            ...(item.type !== "story" ? { caption: item.caption ?? "" } : {}),
-            ...(collaborators.length > 0 ? { collaborators: JSON.stringify(collaborators) } : {}),
-            access_token: creds.access_token,
-          }),
-        });
-        const startJson: any = await startRes.json();
-        if (!startRes.ok || !startJson.id) {
-          throw new Error(startJson?.error?.message ?? "O Instagram recusou o vídeo.");
-        }
-        const driveRes: Response = await withDriveOrg(clientOrgId!, async () => {
-          const token = await getAccessToken();
-          return fetch(
-            `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(first.drive_file_id)}?alt=media&supportsAllDrives=true`,
-            { headers: { Authorization: `Bearer ${token}` } },
-          );
-        });
-        if (!driveRes.ok || !driveRes.body) throw new Error(`Falha ao baixar o vídeo do Drive (${driveRes.status}).`);
-        const size = Number(driveRes.headers.get("content-length"));
-        if (!size) throw new Error("Falha ao baixar o vídeo do Drive (tamanho desconhecido).");
-        const upRes = await fetch(`https://rupload.facebook.com/ig-api-upload/v21.0/${startJson.id}`, {
-          method: "POST",
-          headers: { Authorization: `OAuth ${creds.access_token}`, offset: "0", file_size: String(size) },
-          body: driveRes.body as any,
-          // @ts-expect-error — necessário pra enviar um ReadableStream como corpo (Node/undici)
-          duplex: "half",
-        });
-        const upJson: any = await upRes.json().catch(() => ({}));
-        if (!upRes.ok || upJson?.success === false) {
-          throw new Error(upJson?.debug_info?.message ?? upJson?.error?.message ?? `O Instagram não aceitou o envio do vídeo (${upRes.status}).`);
-        }
-        await waitForContainer(startJson.id, true, "o vídeo");
-        creationId = startJson.id;
-      } else {
       const { url, isVideoFile } = await uploadFileToTemp(first);
       const igMediaType = item.type === "reel" ? "REELS" : item.type === "story" ? "STORIES" : null;
       // Stories não aceitam legenda pela API — o texto precisa já estar na
@@ -660,7 +620,6 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       }
       await waitForContainer(containerJson.id, isVideoFile, isVideoFile ? "o vídeo" : "a imagem");
       creationId = containerJson.id;
-      }
     }
 
     const publishRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media_publish`, {

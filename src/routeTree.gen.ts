@@ -55,6 +55,7 @@ import { Route as AuthenticatedBibliotecaRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/ajuda'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as ApiSelecaoOgTokenRouteImport } from './routes/api.selecao-og.$token'
+import { Route as ApiIgMediaTokenRouteImport } from './routes/api.ig-media.$token'
 import { Route as ApiCronSendPushNotificationsRouteImport } from './routes/api.cron.send-push-notifications'
 import { Route as ApiCronSendAutomationEmailsRouteImport } from './routes/api.cron.send-automation-emails'
 import { Route as ApiCronRetentionCleanupRouteImport } from './routes/api.cron.retention-cleanup'
@@ -311,6 +312,11 @@ const ApiSelecaoOgTokenRoute = ApiSelecaoOgTokenRouteImport.update({
   path: '/api/selecao-og/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiIgMediaTokenRoute = ApiIgMediaTokenRouteImport.update({
+  id: '/api/ig-media/$token',
+  path: '/api/ig-media/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCronSendPushNotificationsRoute =
   ApiCronSendPushNotificationsRouteImport.update({
     id: '/api/cron/send-push-notifications',
@@ -477,6 +483,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-automation-emails': typeof ApiCronSendAutomationEmailsRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
+  '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
   '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
 }
@@ -542,6 +549,7 @@ export interface FileRoutesByTo {
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-automation-emails': typeof ApiCronSendAutomationEmailsRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
+  '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
   '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
 }
@@ -609,6 +617,7 @@ export interface FileRoutesById {
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-automation-emails': typeof ApiCronSendAutomationEmailsRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
+  '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
   '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
 }
@@ -676,6 +685,7 @@ export interface FileRouteTypes {
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-automation-emails'
     | '/api/cron/send-push-notifications'
+    | '/api/ig-media/$token'
     | '/api/selecao-og/$token'
     | '/api/selecao-download/$token/$fileId'
   fileRoutesByTo: FileRoutesByTo
@@ -741,6 +751,7 @@ export interface FileRouteTypes {
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-automation-emails'
     | '/api/cron/send-push-notifications'
+    | '/api/ig-media/$token'
     | '/api/selecao-og/$token'
     | '/api/selecao-download/$token/$fileId'
   id:
@@ -807,6 +818,7 @@ export interface FileRouteTypes {
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-automation-emails'
     | '/api/cron/send-push-notifications'
+    | '/api/ig-media/$token'
     | '/api/selecao-og/$token'
     | '/api/selecao-download/$token/$fileId'
   fileRoutesById: FileRoutesById
@@ -853,6 +865,7 @@ export interface RootRouteChildren {
   ApiCronRetentionCleanupRoute: typeof ApiCronRetentionCleanupRoute
   ApiCronSendAutomationEmailsRoute: typeof ApiCronSendAutomationEmailsRoute
   ApiCronSendPushNotificationsRoute: typeof ApiCronSendPushNotificationsRoute
+  ApiIgMediaTokenRoute: typeof ApiIgMediaTokenRoute
   ApiSelecaoOgTokenRoute: typeof ApiSelecaoOgTokenRoute
   ApiSelecaoDownloadTokenFileIdRoute: typeof ApiSelecaoDownloadTokenFileIdRoute
 }
@@ -1181,6 +1194,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSelecaoOgTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ig-media/$token': {
+      id: '/api/ig-media/$token'
+      path: '/api/ig-media/$token'
+      fullPath: '/api/ig-media/$token'
+      preLoaderRoute: typeof ApiIgMediaTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/send-push-notifications': {
       id: '/api/cron/send-push-notifications'
       path: '/api/cron/send-push-notifications'
@@ -1416,6 +1436,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronRetentionCleanupRoute: ApiCronRetentionCleanupRoute,
   ApiCronSendAutomationEmailsRoute: ApiCronSendAutomationEmailsRoute,
   ApiCronSendPushNotificationsRoute: ApiCronSendPushNotificationsRoute,
+  ApiIgMediaTokenRoute: ApiIgMediaTokenRoute,
   ApiSelecaoOgTokenRoute: ApiSelecaoOgTokenRoute,
   ApiSelecaoDownloadTokenFileIdRoute: ApiSelecaoDownloadTokenFileIdRoute,
 }
