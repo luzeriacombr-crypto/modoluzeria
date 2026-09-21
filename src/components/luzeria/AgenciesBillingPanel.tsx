@@ -192,6 +192,8 @@ export function AgenciesBillingPanel() {
   const [resellerFilter, setResellerFilter] = useState<"all" | "resellers" | "resold">("all");
   const [creatingReseller, setCreatingReseller] = useState(false);
   const [infoPeriod, setInfoPeriod] = useState<"7d" | "30d" | "total">("7d");
+  // Detalhe aberto por toque/clique nos cartões de receita e online (inline, sem balão flutuante).
+  const [detail, setDetail] = useState<"receita" | "online" | null>(null);
   const [ordem, setOrdem] = useState<{ coluna: ColunaOrdenavel; dir: "asc" | "desc" } | null>(null);
   const [tabelaExpandida, setTabelaExpandida] = useState(false);
 
@@ -382,25 +384,28 @@ export function AgenciesBillingPanel() {
         <div className="mt-4 pt-4 border-t border-foreground/6">
           <div className="text-[11px] text-foreground/50 mb-2">Receita mensal</div>
           <div className="grid grid-cols-2 gap-3">
-            <TipCard className="bg-foreground/[0.03] rounded-lg px-3 py-2.5" tipClassName="max-w-xs"
-              tip={payingOrgs.length > 0 ? (
-                <>
-                  {payingOrgs.map((o: any) => (
-                    <div key={o.id} className="flex items-center gap-4 justify-between text-xs py-0.5">
-                      <span className="text-foreground/80 font-medium">{o.name}</span>
-                      <span className="text-foreground/50 font-semibold tabular-nums">{fmtBRL(o.priceCents ?? 0)}</span>
-                    </div>
-                  ))}
-                </>
-              ) : undefined}>
+            <button type="button" aria-expanded={detail === "receita"} disabled={payingOrgs.length === 0}
+              onClick={() => setDetail((d) => (d === "receita" ? null : "receita"))}
+              className="text-left bg-foreground/[0.03] hover:bg-foreground/[0.06] rounded-lg px-3 py-2.5 transition-colors disabled:cursor-default"
+              style={detail === "receita" ? { boxShadow: "0 0 0 1px rgb(var(--lz-brand-rgb)) inset" } : undefined}>
               <div className="text-lg font-bold text-foreground">{fmtBRL(realRevenueCents)}</div>
               <div className="text-[11px] text-foreground/50 mt-0.5">Real — {payingOrgs.length} pagante{payingOrgs.length === 1 ? "" : "s"}</div>
-            </TipCard>
+            </button>
             <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
               <div className="text-lg font-bold text-foreground">{fmtBRL(realRevenueCents + trialRevenueCents)}</div>
               <div className="text-[11px] text-foreground/50 mt-0.5">Previsto — +{trialOrgs.length} em teste</div>
             </div>
           </div>
+          {detail === "receita" && payingOrgs.length > 0 && (
+            <div className="mt-2 rounded-lg border border-foreground/8 bg-foreground/[0.03] px-3 py-2">
+              {payingOrgs.map((o: any) => (
+                <div key={o.id} className="flex items-center gap-4 justify-between text-xs py-1">
+                  <span className="text-foreground/80 font-medium truncate">{o.name}</span>
+                  <span className="text-foreground/50 font-semibold tabular-nums shrink-0">{fmtBRL(o.priceCents ?? 0)}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <p className="text-[10.5px] text-foreground/35 mt-2 leading-relaxed">
             "Previsto" assume 100% de conversão de quem está em teste — é o teto, não uma estimativa realista (ainda não temos histórico pra calcular uma taxa de conversão de verdade).
           </p>
@@ -415,17 +420,10 @@ export function AgenciesBillingPanel() {
             <div className="text-lg font-bold text-foreground">{totalClients}</div>
             <div className="text-[11px] text-foreground/50 mt-0.5">Clientes no total</div>
           </div>
-          <TipCard className="bg-foreground/[0.03] rounded-lg px-3 py-2.5" tipClassName="max-w-xs"
-            tip={onlineOrgs.length > 0 ? (
-              <>
-                {onlineOrgs.map((o: any) => (
-                  <div key={o.id} className="flex items-center gap-4 justify-between text-xs py-0.5">
-                    <span className="text-foreground/80 font-medium">{o.name}</span>
-                    <span className="text-foreground/50 font-semibold tabular-nums">{o.onlineCount}</span>
-                  </div>
-                ))}
-              </>
-            ) : undefined}>
+          <button type="button" aria-expanded={detail === "online"} disabled={onlineOrgs.length === 0}
+            onClick={() => setDetail((d) => (d === "online" ? null : "online"))}
+            className="text-left bg-foreground/[0.03] hover:bg-foreground/[0.06] rounded-lg px-3 py-2.5 transition-colors disabled:cursor-default"
+            style={detail === "online" ? { boxShadow: "0 0 0 1px rgb(var(--lz-brand-rgb)) inset" } : undefined}>
             <div className="flex items-center gap-1.5">
               {totalOnline > 0 && (
                 <span className="relative flex h-2 w-2">
@@ -436,8 +434,18 @@ export function AgenciesBillingPanel() {
               <div className="text-lg font-bold text-foreground">{totalOnline}</div>
             </div>
             <div className="text-[11px] text-foreground/50 mt-0.5">Online agora</div>
-          </TipCard>
+          </button>
         </div>
+        {detail === "online" && onlineOrgs.length > 0 && (
+          <div className="mt-2 rounded-lg border border-foreground/8 bg-foreground/[0.03] px-3 py-2">
+            {onlineOrgs.map((o: any) => (
+              <div key={o.id} className="flex items-center gap-4 justify-between text-xs py-1">
+                <span className="text-foreground/80 font-medium truncate">{o.name}</span>
+                <span className="text-foreground/50 font-semibold tabular-nums shrink-0">{o.onlineCount}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <p className="text-[10.5px] text-foreground/35 mt-2 leading-relaxed">
           "Online agora" é aproximado (uso real nos últimos ~15min) — atualiza sozinho a cada 1min. Toque (ou passe o mouse) nos cartões pra ver por agência.
         </p>
