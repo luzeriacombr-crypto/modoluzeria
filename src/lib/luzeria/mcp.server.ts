@@ -207,7 +207,7 @@ const TOOLS: Tool[] = [
   },
   {
     name: "resumo_da_semana",
-    description: "Panorama das demandas abertas: atrasadas, para hoje, próximos dias, por cliente e por etapa, com uma estimativa de horas baseada no tempo real que a agência levou nos últimos 90 dias.",
+    description: "Panorama das demandas abertas: atrasadas, para hoje, próximos dias, por cliente e por etapa. Traz também os tempos médios reais da agência por tipo (ciclo total e tempo só em produção) e uma estimativa para o que vence na janela.",
     inputSchema: { type: "object", properties: { dias: { type: "integer", minimum: 1, maximum: 60, description: "Janela a partir de hoje (padrão 7)" } } },
     async run(ctx, a) {
       const sb = await admin();
@@ -217,34 +217,62 @@ const TOOLS: Tool[] = [
         .select("id, type, status, due_date, months!inner(clients!months_client_id_fkey(name))")
         .eq("org_id", ctx.orgId).is("deleted_at", null).not("status", "in", `(${CLOSED_STATUSES.join(",")})`).limit(3000);
       if (openErr) throw new Error(openErr.message);
+
+      // Base histórica: itens concluídos nos últimos 90 dias.
       const since = new Date(Date.now() - 90 * 86400000).toISOString();
-      const { data: done } = await sb.from("content_items").select("type, started_at, finished_at")
-        .eq("org_id", ctx.orgId).is("deleted_at", null).not("started_at", "is", null).not("finished_at", "is", null).gte("finished_at", since).limit(3000);
-      const acc: Record<string, { s: number; n: number }> = {};
-      for (const d of done ?? []) {
+      const { data: done } = await sb.from("content_items").select("id, type, started_at, finished_at")
+        .eq("org_id", ctx.orgId).is("deleted_at", null).not("started_at", "is", null).not("finished_at", "is", null).gte("finished_at", since).limit(1500);
+      const doneRows = (done ?? []).filter((d: any) => {
         const h = (new Date(d.finished_at).getTime() - new Date(d.started_at).getTime()) / 3600000;
-        if (h > 0 && h < 24 * 30) { const x = (acc[d.type] ??= { s: 0, n: 0 }); x.s += h; x.n += 1; }
+        return h > 0 && h < 24 * 60;
+      });
+      // Tempo em produção = tempo total menos o que o item ficou esperando (cliente, publicação, travado).
+      const WAITING = new Set(["REVISAO_CLIENTE", "PRONTO_PARA_PUBLICAR", "TRAVADO", "PENDENTE", "FINALIZADO", "CONCLUIDO"]);
+      const prodMs: Record<string, number> = {};
+      const ids = doneRows.map((d: any) => d.id);
+      for (let i = 0; i < ids.length; i += 250) {
+        const { data: tr } = await sb.from("status_transitions").select("item_id, from_status, duration_ms").in("item_id", ids.slice(i, i + 250)).not("duration_ms", "is", null);
+        for (const t of tr ?? []) if (t.from_status && !WAITING.has(t.from_status)) prodMs[t.item_id] = (prodMs[t.item_id] ?? 0) + Number(t.duration_ms);
       }
-      const avg = (t: string) => (acc[t] && acc[t].n >= 3 ? acc[t].s / acc[t].n : null);
-      const porCliente: Record<string, number> = {}, porEtapa: Record<string, number> = {};
-      let atrasadas = 0, paraHoje = 0, janela = 0, semPrazo = 0, horas = 0, semBase = 0;
+      const acc: Record<string, { n: number; ciclo: number; prod: number; nProd: number }> = {};
+      for (const d of doneRows) {
+        const x = (acc[d.type] ??= { n: 0, ciclo: 0, prod: 0, nProd: 0 });
+        x.n += 1; x.ciclo += (new Date(d.finished_at).getTime() - new Date(d.started_at).getTime()) / 3600000;
+        if (prodMs[d.id]) { x.prod += prodMs[d.id] / 3600000; x.nProd += 1; }
+      }
+      const cicloAvg = (t: string) => (acc[t] && acc[t].n >= 3 ? acc[t].ciclo / acc[t].n : null);
+      const prodAvg = (t: string) => (acc[t] && acc[t].nProd >= 3 ? acc[t].prod / acc[t].nProd : null);
+      const r1 = (n: number) => Math.round(n * 10) / 10;
+
+      const porCliente: Record<string, number> = {}, porEtapa: Record<string, number> = {}, janelaPorTipo: Record<string, number> = {};
+      let atrasadas = 0, maisAntigaDias = 0, paraHoje = 0, janela = 0, semPrazo = 0;
+      const hojeMs = new Date(`${hoje}T12:00:00-03:00`).getTime();
       for (const r of open ?? []) {
         const cli = (r as any).months?.clients?.name ?? "?";
         porCliente[cli] = (porCliente[cli] ?? 0) + 1;
         porEtapa[statusLabel(r.status)] = (porEtapa[statusLabel(r.status)] ?? 0) + 1;
         if (!r.due_date) { semPrazo++; continue; }
-        const inWindow = r.due_date <= fim;
-        if (r.due_date < hoje) atrasadas++; else if (r.due_date === hoje) paraHoje++; else if (inWindow) janela++;
-        if (inWindow) { const h = avg(r.type); if (h == null) semBase++; else horas += h; }
+        if (r.due_date < hoje) { atrasadas++; maisAntigaDias = Math.max(maisAntigaDias, Math.round((hojeMs - new Date(`${r.due_date}T12:00:00-03:00`).getTime()) / 86400000)); continue; }
+        if (r.due_date === hoje) paraHoje++; else if (r.due_date <= fim) janela++;
+        // Só o que vence de hoje em diante entra na estimativa (atrasos antigos distorcem).
+        if (r.due_date <= fim) janelaPorTipo[r.type] = (janelaPorTipo[r.type] ?? 0) + 1;
       }
+      const estimativa = Object.entries(janelaPorTipo).map(([tipo, itens]) => {
+        const p = prodAvg(tipo), c = cicloAvg(tipo);
+        return { tipo, itens_com_prazo_na_janela: itens, media_horas_em_producao_por_item: p == null ? null : r1(p), media_dias_de_ciclo_total_por_item: c == null ? null : r1(c / 24),
+          horas_em_producao_somadas: p == null ? null : r1(p * itens) };
+      });
+      const somaProducao = estimativa.reduce((s, e) => s + (e.horas_em_producao_somadas ?? 0), 0);
       return {
-        hoje, janela_ate: fim, abertas: open?.length ?? 0, atrasadas, para_hoje: paraHoje, proximos_dias: janela, sem_prazo: semPrazo,
+        hoje, janela_ate: fim, abertas: open?.length ?? 0,
+        atrasadas: { total: atrasadas, mais_antiga_ha_dias: maisAntigaDias, obs: "atrasadas ficam fora da estimativa abaixo" },
+        para_hoje: paraHoje, proximos_dias: janela, sem_prazo: semPrazo,
         por_cliente: Object.entries(porCliente).sort((x, y) => y[1] - x[1]).slice(0, 15).map(([cliente, qtd]) => ({ cliente, qtd })),
         por_etapa: Object.entries(porEtapa).map(([etapa, qtd]) => ({ etapa, qtd })),
-        horas_estimadas_para_concluir: Math.round(horas * 10) / 10,
-        base_da_estimativa: "média de tempo (início até conclusão) por tipo de item nos últimos 90 dias; tipos com menos de 3 exemplos ficam de fora",
-        itens_sem_base_para_estimar: semBase,
-        media_horas_por_tipo: Object.fromEntries(Object.keys(acc).filter((t) => avg(t) != null).map((t) => [t, Math.round(avg(t)! * 10) / 10])),
+        estimativa_para_o_que_vence_na_janela: estimativa,
+        soma_de_horas_em_producao: r1(somaProducao),
+        como_ler_a_estimativa: "Horas em produção = tempo (relógio corrido) que o item ficou nas etapas de trabalho, sem contar espera de aprovação do cliente, publicação ou bloqueio. Ciclo total = do início à conclusão, incluindo esperas. Os itens andam em paralelo, então a soma NÃO é carga de trabalho da equipe nem prazo de entrega; use como ordem de grandeza. Base: itens concluídos nos últimos 90 dias, tipos com menos de 3 exemplos ficam sem média.",
+        base_historica: { itens_concluidos_90d: doneRows.length, por_tipo: Object.entries(acc).map(([tipo, x]) => ({ tipo, itens: x.n, ciclo_total_medio_dias: cicloAvg(tipo) == null ? null : r1(cicloAvg(tipo)! / 24), horas_em_producao_medias: prodAvg(tipo) == null ? null : r1(prodAvg(tipo)!) })) },
       };
     },
   },
