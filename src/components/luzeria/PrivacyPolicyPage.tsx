@@ -17,7 +17,7 @@ export function PrivacyPolicyPage() {
 
       <main className="max-w-[720px] mx-auto px-5 sm:px-10 py-14">
         <h1 className="text-3xl font-black mb-2">Política de Privacidade</h1>
-        <p className="text-foreground/50 text-sm mb-10">Última atualização: 30 de agosto de 2026</p>
+        <p className="text-foreground/50 text-sm mb-10">Última atualização: 20 de setembro de 2026</p>
 
         <div className="space-y-8 text-foreground/80 text-sm leading-relaxed">
           <section>
@@ -82,7 +82,26 @@ export function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">7. Extensão do Chrome</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">7. Integração com TikTok</h2>
+            <p>
+              Se sua agência conectar a conta do TikTok de um cliente ao Modo Criador, a autorização é feita
+              pelo login oficial do TikTok — nós nunca recebemos a senha. Coletamos e armazenamos o
+              identificador da conta (open_id), o nome de exibição, a foto do perfil e os tokens de acesso
+              fornecidos pelo TikTok. O nome e a foto servem apenas para mostrar qual conta está conectada;
+              os tokens são usados exclusivamente para enviar ao TikTok os vídeos que a agência escolher
+              publicar, com as opções de privacidade, comentários, Dueto, Stitch e conteúdo comercial
+              definidas por ela. Não lemos os vídeos, mensagens, seguidores ou outros dados da conta, e nada
+              é publicado sem uma ação da agência. Os tokens ficam guardados apenas no servidor, sem acesso
+              pelos usuários da plataforma, e não são compartilhados com terceiros. A agência pode
+              desconectar a conta a qualquer momento dentro da plataforma, o que revoga o acesso no TikTok
+              e exclui os dados de conexão armazenados; também é possível revogar o acesso pelas
+              configurações do próprio TikTok. O uso dos dados do TikTok segue os Termos de Serviço e a
+              Política de Privacidade do TikTok.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-foreground mb-2">8. Extensão do Chrome</h2>
             <p>
               A extensão "Modo Criador — Salvar referência" fala diretamente com o mesmo banco de dados
               da plataforma, sem servidor próprio. Ela usa seu e-mail e senha para autenticar sua conta —
@@ -96,7 +115,7 @@ export function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">8. Seus direitos</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">9. Seus direitos</h2>
             <p>
               Você pode solicitar, a qualquer momento, a confirmação, correção, exportação ou exclusão dos
               seus dados pessoais, conforme previsto na LGPD. Para isso, entre em contato pelo e-mail
@@ -105,7 +124,7 @@ export function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">9. Contato</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">10. Contato</h2>
             <p>
               Dúvidas sobre esta política ou solicitações relacionadas aos seus dados podem ser enviadas
               para{" "}

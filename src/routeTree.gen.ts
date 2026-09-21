@@ -14,6 +14,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SelecaoDeFotosParaFotografosRouteImport } from './routes/selecao-de-fotos-para-fotografos'
 import { Route as RevendaRouteImport } from './routes/revenda'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
+import { Route as PublicacaoAutomaticaTiktokRouteImport } from './routes/publicacao-automatica-tiktok'
 import { Route as PublicacaoAutomaticaInstagramRouteImport } from './routes/publicacao-automatica-instagram'
 import { Route as ProgramaDeNiveisRouteImport } from './routes/programa-de-niveis'
 import { Route as ProgramaDeIndicacaoRouteImport } from './routes/programa-de-indicacao'
@@ -99,6 +100,12 @@ const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
   path: '/redefinir-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PublicacaoAutomaticaTiktokRoute =
+  PublicacaoAutomaticaTiktokRouteImport.update({
+    id: '/publicacao-automatica-tiktok',
+    path: '/publicacao-automatica-tiktok',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PublicacaoAutomaticaInstagramRoute =
   PublicacaoAutomaticaInstagramRouteImport.update({
     id: '/publicacao-automatica-instagram',
@@ -424,6 +431,7 @@ export interface FileRoutesByFullPath {
   '/programa-de-indicacao': typeof ProgramaDeIndicacaoRoute
   '/programa-de-niveis': typeof ProgramaDeNiveisRoute
   '/publicacao-automatica-instagram': typeof PublicacaoAutomaticaInstagramRoute
+  '/publicacao-automatica-tiktok': typeof PublicacaoAutomaticaTiktokRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/revenda': typeof RevendaRoute
   '/selecao-de-fotos-para-fotografos': typeof SelecaoDeFotosParaFotografosRoute
@@ -488,6 +496,7 @@ export interface FileRoutesByTo {
   '/programa-de-indicacao': typeof ProgramaDeIndicacaoRoute
   '/programa-de-niveis': typeof ProgramaDeNiveisRoute
   '/publicacao-automatica-instagram': typeof PublicacaoAutomaticaInstagramRoute
+  '/publicacao-automatica-tiktok': typeof PublicacaoAutomaticaTiktokRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/revenda': typeof RevendaRoute
   '/selecao-de-fotos-para-fotografos': typeof SelecaoDeFotosParaFotografosRoute
@@ -554,6 +563,7 @@ export interface FileRoutesById {
   '/programa-de-indicacao': typeof ProgramaDeIndicacaoRoute
   '/programa-de-niveis': typeof ProgramaDeNiveisRoute
   '/publicacao-automatica-instagram': typeof PublicacaoAutomaticaInstagramRoute
+  '/publicacao-automatica-tiktok': typeof PublicacaoAutomaticaTiktokRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/revenda': typeof RevendaRoute
   '/selecao-de-fotos-para-fotografos': typeof SelecaoDeFotosParaFotografosRoute
@@ -620,6 +630,7 @@ export interface FileRouteTypes {
     | '/programa-de-indicacao'
     | '/programa-de-niveis'
     | '/publicacao-automatica-instagram'
+    | '/publicacao-automatica-tiktok'
     | '/redefinir-senha'
     | '/revenda'
     | '/selecao-de-fotos-para-fotografos'
@@ -684,6 +695,7 @@ export interface FileRouteTypes {
     | '/programa-de-indicacao'
     | '/programa-de-niveis'
     | '/publicacao-automatica-instagram'
+    | '/publicacao-automatica-tiktok'
     | '/redefinir-senha'
     | '/revenda'
     | '/selecao-de-fotos-para-fotografos'
@@ -749,6 +761,7 @@ export interface FileRouteTypes {
     | '/programa-de-indicacao'
     | '/programa-de-niveis'
     | '/publicacao-automatica-instagram'
+    | '/publicacao-automatica-tiktok'
     | '/redefinir-senha'
     | '/revenda'
     | '/selecao-de-fotos-para-fotografos'
@@ -815,6 +828,7 @@ export interface RootRouteChildren {
   ProgramaDeIndicacaoRoute: typeof ProgramaDeIndicacaoRoute
   ProgramaDeNiveisRoute: typeof ProgramaDeNiveisRoute
   PublicacaoAutomaticaInstagramRoute: typeof PublicacaoAutomaticaInstagramRoute
+  PublicacaoAutomaticaTiktokRoute: typeof PublicacaoAutomaticaTiktokRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   RevendaRoute: typeof RevendaRoute
   SelecaoDeFotosParaFotografosRoute: typeof SelecaoDeFotosParaFotografosRoute
@@ -878,6 +892,13 @@ declare module '@tanstack/react-router' {
       path: '/redefinir-senha'
       fullPath: '/redefinir-senha'
       preLoaderRoute: typeof RedefinirSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/publicacao-automatica-tiktok': {
+      id: '/publicacao-automatica-tiktok'
+      path: '/publicacao-automatica-tiktok'
+      fullPath: '/publicacao-automatica-tiktok'
+      preLoaderRoute: typeof PublicacaoAutomaticaTiktokRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/publicacao-automatica-instagram': {
@@ -1370,6 +1391,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProgramaDeIndicacaoRoute: ProgramaDeIndicacaoRoute,
   ProgramaDeNiveisRoute: ProgramaDeNiveisRoute,
   PublicacaoAutomaticaInstagramRoute: PublicacaoAutomaticaInstagramRoute,
+  PublicacaoAutomaticaTiktokRoute: PublicacaoAutomaticaTiktokRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   RevendaRoute: RevendaRoute,
   SelecaoDeFotosParaFotografosRoute: SelecaoDeFotosParaFotografosRoute,
