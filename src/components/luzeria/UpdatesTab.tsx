@@ -2,10 +2,10 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Plus, Trash2, ArrowRight, Megaphone } from "lucide-react";
+import { Plus, Trash2, ArrowRight, Megaphone, Bell } from "lucide-react";
 import { platformUpdatesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { PLATFORM_UPDATE_CATEGORIES } from "@/lib/luzeria/platform-updates.functions";
+import { PLATFORM_UPDATE_CATEGORIES, type PlatformUpdate } from "@/lib/luzeria/platform-updates.functions";
 
 export function UpdatesTab() {
   const me = useMe().data;
@@ -30,6 +30,8 @@ export function UpdatesTab() {
     }
   }
 
+  const unnotified = useMemo(() => updates.filter((u) => !u.notifiedAt), [updates]);
+
   return (
     <div className="max-w-2xl">
       {me?.isPlatformAdmin && (
@@ -40,6 +42,8 @@ export function UpdatesTab() {
           </button>
         </div>
       )}
+
+      {me?.isPlatformAdmin && unnotified.length > 0 && <NotifyBatchPanel unnotified={unnotified} />}
 
       {adding && <NewUpdateForm onClose={() => setAdding(false)} />}
 
@@ -180,6 +184,58 @@ function NewUpdateForm({ onClose }: { onClose: () => void }) {
           disabled={api.createPlatformUpdate.isPending}
           className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50"
         >Publicar</button>
+      </div>
+    </div>
+  );
+}
+
+/** Uma notificação por lote, nunca uma por atualização — o admin escolhe
+ * qual das ainda-não-avisadas é o destaque, o resto vira "e outras N
+ * novidades". Some sozinho da tela assim que não sobrar nenhuma pendente. */
+function NotifyBatchPanel({ unnotified }: { unnotified: PlatformUpdate[] }) {
+  const api = useApi();
+  const [headlineId, setHeadlineId] = useState(unnotified[0]?.id ?? "");
+  const headline = unnotified.find((u) => u.id === headlineId) ?? unnotified[0];
+  const otherCount = unnotified.length - 1;
+  const preview = headline
+    ? (otherCount > 0 ? `${headline.title} e outras ${otherCount} novidade${otherCount === 1 ? "" : "s"}... Clica aqui!` : `${headline.title} Clica aqui!`)
+    : "";
+
+  function send() {
+    if (!headline) return;
+    api.sendPlatformUpdateNotification.mutate({ data: { headlineId: headline.id } }, {
+      onSuccess: (r: any) => toast.success(`Notificação enviada pra ${r.notifiedUsers} pessoa${r.notifiedUsers === 1 ? "" : "s"}.`),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao notificar"),
+    });
+  }
+
+  return (
+    <div className="bg-card rounded-lg p-5 mb-5 space-y-3" style={{ border: "1px solid rgba(var(--lz-brand-light-rgb),0.25)" }}>
+      <div className="flex items-center gap-2 text-sm font-bold text-foreground">
+        <Bell size={14} style={{ color: "var(--lz-accent-ink)" }} />
+        {unnotified.length} novidade{unnotified.length === 1 ? "" : "s"} ainda não notificada{unnotified.length === 1 ? "" : "s"}
+      </div>
+      <p className="text-xs text-foreground/50">Escolha qual vira o destaque da notificação — as outras entram como "e outras N novidades".</p>
+      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+        {unnotified.map((u) => (
+          <label key={u.id} className="flex items-center gap-2 text-xs text-foreground/80 cursor-pointer px-2 py-1.5 rounded hover:bg-foreground/5">
+            <input type="radio" name="headline" checked={headlineId === u.id} onChange={() => setHeadlineId(u.id)} />
+            {u.title}
+          </label>
+        ))}
+      </div>
+      <div className="rounded-md px-3 py-2.5 text-xs text-foreground/70" style={{ background: "rgba(var(--lz-brand-light-rgb),0.08)" }}>
+        <span className="text-foreground/40 uppercase text-[10px] font-bold tracking-wider block mb-1">Prévia da notificação</span>
+        {preview}
+      </div>
+      <div className="flex justify-end">
+        <button
+          onClick={send}
+          disabled={!headline || api.sendPlatformUpdateNotification.isPending}
+          className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50"
+        >
+          {api.sendPlatformUpdateNotification.isPending ? "Enviando…" : "Notificar todo mundo"}
+        </button>
       </div>
     </div>
   );

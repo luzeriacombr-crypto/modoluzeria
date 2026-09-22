@@ -66,7 +66,7 @@ import {
 import {
   getOrCreateDocsShareToken, rotateDocsShareToken, getPublicClientDocs,
 } from "./client-docs-share.functions";
-import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate } from "./platform-updates.functions";
+import { listPlatformUpdates, createPlatformUpdate, deletePlatformUpdate, sendPlatformUpdateNotification } from "./platform-updates.functions";
 import {
   listPhotoClients, getPhotoClient, createPhotoClient, deletePhotoClient,
   createPhotoSelection, listPhotoSelections, getPhotoSelectionDetail, deletePhotoSelection, setPhotoSelectionStatus,
@@ -1489,6 +1489,10 @@ export function useApi() {
     }),
     deletePlatformUpdate: useMutation({
       mutationFn: useServerFn(deletePlatformUpdate),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["platform-updates"] }),
+    }),
+    sendPlatformUpdateNotification: useMutation({
+      mutationFn: useServerFn(sendPlatformUpdateNotification),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["platform-updates"] }),
     }),
     createSalesPageBlock: useMutation({
