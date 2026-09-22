@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { X, Send, CheckCircle2 } from "lucide-react";
+import { X, Send, CheckCircle2, ArrowLeft } from "lucide-react";
 import { ChatBubbleIcon } from "./ChatBubbleIcon";
 import { useMe, useApi, mySupportThreadQO, openSupportThreadsQO, supportThreadMessagesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -224,8 +224,8 @@ export function SupportChatAdminPanel() {
   if (threads.length === 0) return <div className="text-sm text-foreground/40 px-1">Nenhuma conversa esperando resposta agora.</div>;
 
   return (
-    <div className="flex gap-4 h-[560px]">
-      <div className="w-64 shrink-0 overflow-y-auto space-y-1.5 pr-1">
+    <div className="flex flex-col md:flex-row gap-4 h-[75vh] md:h-[560px]">
+      <div className={`w-full md:w-64 shrink-0 overflow-y-auto space-y-1.5 pr-1 ${selected ? "hidden md:block" : ""}`}>
         {threads.map((t) => {
           const active = t.id === selected;
           return (
@@ -251,17 +251,22 @@ export function SupportChatAdminPanel() {
       </div>
 
       {activeThread && (
-        <div className="flex-1 flex flex-col min-w-0 bg-card rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b border-foreground/10 flex items-center justify-between shrink-0">
-            <div>
-              <div className="text-sm font-bold text-foreground">{activeThread.userName}</div>
-              <div className="text-[11px] text-foreground/40">{activeThread.orgName}</div>
+        <div className={`flex-1 flex flex-col min-w-0 bg-card rounded-lg overflow-hidden ${selected ? "" : "hidden md:flex"}`}>
+          <div className="px-4 py-3 border-b border-foreground/10 flex items-center gap-2.5 justify-between shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <button onClick={() => setSelected(null)} aria-label="Voltar pra lista" className="md:hidden shrink-0 text-foreground/50 hover:text-foreground">
+                <ArrowLeft size={17} />
+              </button>
+              <div className="min-w-0">
+                <div className="text-sm font-bold text-foreground truncate">{activeThread.userName}</div>
+                <div className="text-[11px] text-foreground/40 truncate">{activeThread.orgName}</div>
+              </div>
             </div>
             <button
               onClick={() => closeSupportThread.mutate({ data: { threadId: activeThread.id } }, { onSuccess: () => setSelected(null) })}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground/50 hover:text-foreground"
+              className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold text-foreground/50 hover:text-foreground"
             >
-              <CheckCircle2 size={14} /> Marcar como resolvido
+              <CheckCircle2 size={14} /> <span className="hidden sm:inline">Marcar como resolvido</span>
             </button>
           </div>
           <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">

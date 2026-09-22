@@ -1,6 +1,6 @@
 import { LayoutDashboard, Users, BarChart2, Star, Menu, X, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2, Plus, Search, Images } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { useMe, clientsQO } from "@/lib/luzeria/queries";
@@ -50,6 +50,17 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
     setShowClients(false);
     setShowMenu(false);
   }
+
+  // Qualquer navegação de verdade fecha as folhas fixas (z-40) — sem isso,
+  // ir pra outra tela por um link que não passa por closeAllSheets (ex.: a
+  // engrenagem de Configurações no cabeçalho, que fica fora deste
+  // componente) deixava a folha de "Clientes"/"Menu" acima da tela nova,
+  // como se ela não tivesse mudado.
+  useEffect(() => {
+    setShowClients(false);
+    setShowMenu(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const activeClients = useMemo(() => {
     const term = clientSearch.trim().toLowerCase();

@@ -18,9 +18,10 @@ async function signBugReportPaths(supabase: any, paths: (string | null | undefin
 
 export const reportBug = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { message: string; pageUrl?: string; whatsapp?: string; screenshotBase64?: string; screenshotContentType?: string }) =>
+  .inputValidator((d: { message: string; kind?: "bug" | "suggestion"; pageUrl?: string; whatsapp?: string; screenshotBase64?: string; screenshotContentType?: string }) =>
     z.object({
       message: z.string().trim().min(1).max(4000),
+      kind: z.enum(["bug", "suggestion"]).default("bug"),
       pageUrl: z.string().max(500).optional(),
       whatsapp: z.string().trim().max(30).optional(),
       screenshotBase64: z.string().max(8_000_000).optional(),
@@ -46,6 +47,7 @@ export const reportBug = createServerFn({ method: "POST" })
       org_id: context.orgId,
       reported_by: context.userId,
       message: data.message,
+      kind: data.kind,
       screenshot_path: screenshotPath,
       page_url: data.pageUrl ?? null,
       whatsapp: data.whatsapp?.trim() || null,
@@ -61,7 +63,7 @@ export const reportBug = createServerFn({ method: "POST" })
       const { sendEmail } = await import("./resend.server");
       await sendEmail({
         to: PLATFORM_SUPPORT_EMAIL,
-        subject: `Reporte de erro — ${org?.name ?? "Agência"}`,
+        subject: `${data.kind === "suggestion" ? "Sugestão de melhoria" : "Reporte de erro"} — ${org?.name ?? "Agência"}`,
         html: `
           <p><strong>Agência:</strong> ${org?.name ?? "—"}</p>
           <p><strong>De:</strong> ${profile?.name ?? "—"}</p>
@@ -81,10 +83,12 @@ export const reportBug = createServerFn({ method: "POST" })
   });
 
 export type BugReportStatus = "novo" | "em_andamento" | "resolvido";
+export type BugReportKind = "bug" | "suggestion";
 
 export type MyBugReport = {
   id: string;
   message: string;
+  kind: BugReportKind;
   pageUrl: string | null;
   screenshotUrl: string | null;
   status: BugReportStatus;
@@ -96,7 +100,7 @@ export const listMyBugReports = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<MyBugReport[]> => {
     const { data, error } = await context.supabase
       .from("bug_reports")
-      .select("id, message, page_url, screenshot_path, status, created_at")
+      .select("id, message, kind, page_url, screenshot_path, status, created_at")
       .eq("reported_by", context.userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -104,6 +108,7 @@ export const listMyBugReports = createServerFn({ method: "GET" })
     return (data ?? []).map((r: any) => ({
       id: r.id,
       message: r.message,
+      kind: (r.kind ?? "bug") as BugReportKind,
       pageUrl: r.page_url,
       screenshotUrl: r.screenshot_path ? signed.get(r.screenshot_path) ?? null : null,
       status: (r.status ?? "novo") as BugReportStatus,
@@ -124,6 +129,7 @@ export const listAllBugReports = createServerFn({ method: "GET" })
     return rows.map((r: any) => ({
       id: r.id,
       message: r.message,
+      kind: (r.kind ?? "bug") as BugReportKind,
       pageUrl: r.page_url,
       screenshotUrl: r.screenshot_path ? signed.get(r.screenshot_path) ?? null : null,
       status: (r.status ?? "novo") as BugReportStatus,

@@ -107,12 +107,19 @@ export const sendSupportMessage = createServerFn({ method: "POST" })
       ``,
       `Quem está perguntando agora: ${profile?.name ?? "um usuário"}, da agência ${org?.name ?? "—"}.`,
       ``,
-      `Se a pergunta não estiver coberta pelas informações acima, envolver algo específico da conta dessa pessoa que você não tem como ver (cobrança, cancelamento, um bug específico, um dado sensível), ou se ela pedir claramente pra falar com uma pessoa/o Junior, comece sua resposta com a tag ${ESCALATE_TAG} seguida de uma frase curta e natural avisando que você vai chamar o Junior pra continuar ali mesmo, sem prometer um prazo específico.`,
+      `Antes de responder, releia com atenção TODA a base de conhecimento acima (perguntas frequentes, tutoriais e os parágrafos avulsos) procurando qualquer trecho relacionado à pergunta, mesmo que indireto ou espalhado em mais de um item — muita coisa só fica clara combinando 2-3 informações diferentes (ex.: "como o cliente aprova" + "onde fica o link" + "o que acontece depois que ele aprova"). Reformule a pergunta da pessoa de outras formas na sua cabeça antes de concluir que não está coberta — perguntas de suporte raramente usam os mesmos termos exatos da base.`,
+      `NÃO escale só porque a pergunta não é sobre uma tela específica ou porque exige juntar informação de mais de um lugar — isso é o trabalho normal do suporte, não motivo pra chamar o Junior. Only escale de verdade quando: (a) depende de dado da conta específica dessa pessoa que você não tem acesso (cobrança, um erro técnico que precisa investigar no banco, um valor cobrado errado), (b) é uma decisão de negócio/exceção (reembolso, prazo especial, desconto), (c) a pessoa pede explicitamente pra falar com uma pessoa/o Junior, ou (d) você releu tudo com cuidado e genuinamente não há informação suficiente pra responder com segurança. Uma dúvida de "como uso a função X" quase sempre está coberta — vale reler antes de desistir.`,
+      `Quando escalar, comece a resposta com a tag ${ESCALATE_TAG} seguida de uma frase curta e natural avisando que você vai chamar o Junior pra continuar ali mesmo, sem prometer um prazo específico.`,
     ].join("\n");
 
     const response = await anthropic.messages.create({
       model: SUPPORT_MODEL,
-      max_tokens: 1024,
+      max_tokens: 4096,
+      // Pensamento estendido: o modelo relê a base de conhecimento e
+      // considera a pergunta com mais calma antes de responder, em vez de
+      // ir direto pro "não sei" na primeira leitura — isso reduziu bastante
+      // as escaladas desnecessárias vistas nos chats reais das agências.
+      thinking: { type: "enabled", budget_tokens: 2048 },
       system: systemPrompt,
       messages: (history ?? []).map((m: any) => ({
         role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",

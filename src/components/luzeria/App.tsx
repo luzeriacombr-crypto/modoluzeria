@@ -23,6 +23,7 @@ import { identifyForMonitoring } from "@/lib/luzeria/error-monitoring";
 import { PullToRefresh } from "./PullToRefresh";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ClientFichaPanel } from "./ClientFichaPanel";
+import { AgencyLevelModal } from "./AgencyLevelModal";
 import { AppTour } from "./AppTour";
 import { LuzeriaLoader } from "./LuzeriaLoader";
 import { TrialEndingBanner } from "./TrialEndingBanner";
@@ -58,6 +59,7 @@ export function App() {
   const routeId = useRouterState({ select: (s) => s.matches.at(-1)?.routeId ?? "" });
   usePageActivityTracker(routeId, !!me.data);
   const [creating, setCreating] = useState<{ category?: string } | null>(null);
+  const [showLevelModal, setShowLevelModal] = useState(false);
   const [customFor, setCustomFor] = useState<Client | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const call = useScreenShareCall();
@@ -274,7 +276,7 @@ export function App() {
         </div>
       </div>
       <div className="flex-1 flex flex-col min-w-0">
-        <Header sidebarHidden={sidebarHidden} onToggleSidebar={toggleSidebar} sidebarCollapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebarCollapsed} />
+        <Header sidebarHidden={sidebarHidden} onToggleSidebar={toggleSidebar} sidebarCollapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebarCollapsed} onOpenLevel={() => setShowLevelModal(true)} />
         <TrialEndingBanner isMaster={me.data?.role === "master"} />
         <PastDueBanner isMaster={me.data?.role === "master"} />
         <ClientLimitGraceBanner isMaster={me.data?.role === "master"} />
@@ -305,6 +307,7 @@ export function App() {
       )}
       <GlobalSearchOverlay />
       <DetailPanel />
+      <AgencyLevelModal open={showLevelModal} onClose={() => setShowLevelModal(false)} />
       <ClientFichaPanel />
       <MobileNav onCreateClient={(category) => setCreating({ category })} />
       <AppTour />
@@ -318,8 +321,8 @@ export function App() {
   );
 }
 
-function Header({ sidebarHidden, onToggleSidebar, sidebarCollapsed, onToggleCollapsed }: {
-  sidebarHidden: boolean; onToggleSidebar: () => void; sidebarCollapsed: boolean; onToggleCollapsed: () => void;
+function Header({ sidebarHidden, onToggleSidebar, sidebarCollapsed, onToggleCollapsed, onOpenLevel }: {
+  sidebarHidden: boolean; onToggleSidebar: () => void; sidebarCollapsed: boolean; onToggleCollapsed: () => void; onOpenLevel: () => void;
 }) {
   const me = useMe().data;
   const { theme } = useTheme();
@@ -351,13 +354,14 @@ function Header({ sidebarHidden, onToggleSidebar, sidebarCollapsed, onToggleColl
         </button>
       )}
       {headerLogoUrl ? (
-        <div className={`h-10 max-w-[140px] ${sidebarCollapsed ? "" : "md:hidden"}`}>
+        <button onClick={onOpenLevel} title="Ver nível da agência" className={`h-10 max-w-[140px] ${sidebarCollapsed ? "" : "md:hidden"}`}>
           <img src={headerLogoUrl} alt={me.orgName ?? "Logo"} className="h-full max-w-full object-contain object-left" />
-        </div>
+        </button>
       ) : (
-        <span className={`text-foreground font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px] ${sidebarCollapsed ? "" : "md:hidden"}`}>
+        <button onClick={onOpenLevel} title="Ver nível da agência"
+          className={`text-foreground font-extrabold text-sm uppercase tracking-wide truncate max-w-[140px] text-left ${sidebarCollapsed ? "" : "md:hidden"}`}>
           {me?.orgName ?? "Modo Criador"}
-        </span>
+        </button>
       )}
       <div className="flex-1" />
       {me?.role === "master" && (

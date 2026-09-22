@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
-import { CircleHelp, Paperclip, X, BookOpen, Compass, Bug } from "lucide-react";
+import { CircleHelp, Paperclip, X, BookOpen, Compass, Bug, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "./Modals";
 import { startTour } from "./AppTour";
@@ -23,6 +23,7 @@ const ACCEPT = ["image/png", "image/jpeg", "image/webp"];
 
 export function HelpButton() {
   const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState<"bug" | "suggestion">("bug");
   const [message, setMessage] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -74,13 +75,14 @@ export function HelpButton() {
       await submitReport({
         data: {
           message: message.trim(),
+          kind,
           pageUrl: window.location.href,
           whatsapp: whatsapp.trim() || undefined,
           screenshotBase64,
           screenshotContentType: file?.type,
         },
       });
-      toast.success("Reportado! Obrigado, vamos verificar.");
+      toast.success(kind === "suggestion" ? "Sugestão enviada! Obrigado pela ideia." : "Reportado! Obrigado, vamos verificar.");
       close();
     } catch (e: any) {
       toast.error(e?.message ?? "Não foi possível enviar o reporte.");
@@ -116,24 +118,29 @@ export function HelpButton() {
             />
             <div className="h-px bg-foreground/8 my-1" />
             <HelpMenuItem
+              icon={<Lightbulb size={13} />}
+              label="Sugerir melhoria"
+              onClick={() => { setMenuOpen(false); setKind("suggestion"); setOpen(true); }}
+            />
+            <HelpMenuItem
               icon={<Bug size={13} />}
               label="Reportar um problema"
-              onClick={() => { setMenuOpen(false); setOpen(true); }}
+              onClick={() => { setMenuOpen(false); setKind("bug"); setOpen(true); }}
             />
           </div>
         )}
       </div>
 
-      <Modal open={open} onClose={close} title="Reportar um problema">
+      <Modal open={open} onClose={close} title={kind === "suggestion" ? "Sugerir melhoria" : "Reportar um problema"}>
         <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">
-          O que aconteceu?
+          {kind === "suggestion" ? "Qual é a sua ideia?" : "O que aconteceu?"}
         </label>
         <textarea
           autoFocus
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={4}
-          placeholder="Descreva o que você esperava e o que aconteceu…"
+          placeholder={kind === "suggestion" ? "Descreva a melhoria que você gostaria de ver no Modo Criador…" : "Descreva o que você esperava e o que aconteceu…"}
           className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
         />
 

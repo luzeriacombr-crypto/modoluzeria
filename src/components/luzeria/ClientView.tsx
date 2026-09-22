@@ -279,7 +279,19 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
       {/* Tabs — horizontally scrollable on its own (touch swipe), scrollbar
        * hidden, so the rest of the page never shifts sideways on mobile
        * when there are more tabs than fit the viewport width. */}
-      <div className="flex items-center gap-2 mt-8 border-b border-foreground/6">
+      {(() => {
+        const labelOf = (t: string) => t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t;
+        return (
+          <div className="mt-8">
+            <select id="client-tab-select" aria-label="Seção do cliente" value={tab}
+              onChange={(e) => setTab(e.target.value as any)}
+              className="md:hidden w-full rounded-xl border border-foreground/15 bg-card text-foreground text-[13px] font-bold uppercase tracking-wider px-4 py-3">
+              {tabs.map((t) => <option key={t} value={t}>{labelOf(t)}</option>)}
+            </select>
+          </div>
+        );
+      })()}
+      <div className="hidden md:flex items-center gap-2 mt-4 md:mt-8 border-b border-foreground/6">
         <div className="flex items-center gap-6 overflow-x-auto overflow-y-hidden lz-no-scrollbar flex-1 min-w-0">
           {tabs.map((t) => (
             <button key={t} onClick={() => setTab(t as any)}

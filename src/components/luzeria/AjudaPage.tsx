@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ExternalLink, Image as ImageIcon, MessageCircle, Video, Send } from "lucide-react";
+import { ChevronDown, ExternalLink, Image as ImageIcon, MessageCircle, Video, Send, Lightbulb, Bug } from "lucide-react";
 import { useMe, useApi, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/queries";
-import type { MyBugReport, AllBugReport, BugReportStatus } from "@/lib/luzeria/bug-reports.functions";
+import type { MyBugReport, AllBugReport, BugReportStatus, BugReportKind } from "@/lib/luzeria/bug-reports.functions";
 import { ForumTab } from "./ForumTab";
 import { SupportChatAdminPanel } from "./SupportChatWidget";
 import { FAQ, TUTORIALS as TUTORIALS_BASE } from "@/lib/luzeria/help-content";
@@ -145,6 +145,20 @@ function StatusBadge({ status }: { status: BugReportStatus }) {
   );
 }
 
+const KIND_STYLE: Record<BugReportKind, { label: string; bg: string; color: string; icon: React.ReactNode }> = {
+  bug: { label: "Problema", bg: "rgba(239,68,68,0.12)", color: "#F87171", icon: <Bug size={10} /> },
+  suggestion: { label: "Sugestão", bg: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)", icon: <Lightbulb size={10} /> },
+};
+
+function KindBadge({ kind }: { kind: BugReportKind }) {
+  const k = KIND_STYLE[kind];
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide" style={{ backgroundColor: k.bg, color: k.color }}>
+      {k.icon} {k.label}
+    </span>
+  );
+}
+
 function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugReport; showOrigin?: boolean }) {
   const asAll = report as AllBugReport;
   const { updateBugReportStatus, sendBugReportMessage } = useApi();
@@ -168,6 +182,7 @@ function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugRepo
           {showOrigin && asAll.orgName && <> · <span className="text-foreground/60 font-semibold">{asAll.orgName}</span> · {asAll.reporterName}</>}
         </div>
         <div className="flex items-center gap-2">
+          <KindBadge kind={report.kind} />
           {!showOrigin && <StatusBadge status={report.status} />}
           {report.screenshotUrl && (
             <a href={report.screenshotUrl} target="_blank" rel="noreferrer"
