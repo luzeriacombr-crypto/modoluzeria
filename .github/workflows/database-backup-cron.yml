@@ -1,0 +1,52 @@
+name: Database backup (offsite)
+
+# Cópia independente do banco, fora da conta Supabase — o Supabase já faz
+# backup físico diário sozinho (8 dias de retenção), mas esse backup mora
+# dentro da própria conta Supabase. Esse aqui sobe um dump completo
+# (roles + schema + dados) todo dia pro Backblaze B2, com uma chave de API
+# separada, pra ter uma cópia de verdade independente em caso de conta
+# comprometida ou apagada. Reaproveita o SUPABASE_ACCESS_TOKEN que o
+# deploy-migrations.yml já usa — nunca guarda a senha direta do Postgres em
+# lugar nenhum, o próprio `supabase db dump --linked` gera uma credencial
+# temporária na hora, a cada execução.
+on:
+  schedule:
+    # Uma vez por dia, 05:00 UTC (~02:00 no Brasil) — fora da janela do
+    # backup nativo do Supabase (~08:45 UTC), pra não competir com ele.
+    - cron: "0 5 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref grmayzeeemilvhjeninh
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Dump database (roles + schema + dados)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          supabase db dump --linked --role-only -f roles.sql
+          supabase db dump --linked -f schema.sql
+          supabase db dump --linked --data-only --use-copy -f data.sql
+          cat roles.sql schema.sql data.sql > "backup-$(date +%F).sql"
+          gzip "backup-$(date +%F).sql"
+
+      - name: Upload to Backblaze B2
+        env:
+          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+          B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
+        run: |
+          set -euo pipefail
+          pip install --quiet b2
+          b2 account authorize "$B2_KEY_ID" "$B2_APPLICATION_KEY"
+          b2 file upload "$B2_BUCKET_NAME" "backup-$(date +%F).sql.gz" "modoluzeria/backup-$(date +%F).sql.gz"
