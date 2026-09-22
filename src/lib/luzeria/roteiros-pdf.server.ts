@@ -33,6 +33,15 @@ const INK_SOFT: [number, number, number] = [0.227, 0.235, 0.247];
 const GRAY: [number, number, number] = [0.541, 0.553, 0.569];
 const LIME: [number, number, number] = [0.82, 0.847, 0.184];
 
+// A fonte padrão (Helvetica/WinAnsi) só desenha Latin-1 — qualquer coisa
+// acima disso (emoji, símbolos como ✨) quebra o pdf-lib inteiro na hora de
+// desenhar, e os roteiros gerados por IA usam emoji ocasional de propósito
+// (parte do tom de casa). Tira só isso, mantém acentuação normal (á é í ó ú
+// ã õ ç ñ etc. são todos ≤ 0xFF, então sobrevivem).
+function sanitizeForPdf(text: string): string {
+  return text.replace(/[\u{100}-\u{10FFFF}]/gu, "").replace(/[ \t]{2,}/g, " ").trim();
+}
+
 type Token = { text: string; bold: boolean };
 
 function tokenize(line: string): Token[] {
@@ -86,7 +95,7 @@ export async function renderRoteirosPdf(input: RoteirosPdfInput): Promise<Uint8A
     size?: number; forceBold?: boolean; italic?: boolean; color?: [number, number, number]; gapAfter?: number;
   } = {}) {
     const size = opts.size ?? SIZE;
-    const tokens = tokenize(raw).map((t) => ({ ...t, bold: t.bold || !!opts.forceBold }));
+    const tokens = tokenize(sanitizeForPdf(raw)).map((t) => ({ ...t, bold: t.bold || !!opts.forceBold }));
     if (tokens.length === 0) { y -= LEADING * 0.55; return; }
     const color = rgb(...(opts.color ?? INK_SOFT));
     const spaceW = fontRegular.widthOfTextAtSize(" ", size);
@@ -173,7 +182,7 @@ export async function renderRoteirosPdf(input: RoteirosPdfInput): Promise<Uint8A
 
   const pages = doc.getPages();
   pages.forEach((p, i) => {
-    const label = `${input.orgName} · Página ${i + 1} de ${pages.length}`;
+    const label = sanitizeForPdf(`${input.orgName} · Página ${i + 1} de ${pages.length}`);
     const w = fontRegular.widthOfTextAtSize(label, 8);
     p.drawText(label, { x: (PAGE_W - w) / 2, y: 28, size: 8, font: fontRegular, color: rgb(...GRAY) });
   });
