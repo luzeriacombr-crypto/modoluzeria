@@ -42,11 +42,14 @@ jobs:
 
       - name: Upload to Backblaze B2
         env:
-          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          # O CLI do b2 lê essas duas variáveis (nomes fixos dele) — usar
+          # outro nome (ex.: B2_KEY_ID) faz ele reclamar de "falta a outra"
+          # mesmo depois do `account authorize` já ter dado certo.
+          B2_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
           B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
           B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
         run: |
           set -euo pipefail
           pip install --quiet b2
-          b2 account authorize "$B2_KEY_ID" "$B2_APPLICATION_KEY"
+          b2 account authorize "$B2_APPLICATION_KEY_ID" "$B2_APPLICATION_KEY"
           b2 file upload "$B2_BUCKET_NAME" "backup-$(date +%F).sql.gz" "modoluzeria/backup-$(date +%F).sql.gz"
