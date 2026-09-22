@@ -119,7 +119,11 @@ export const sendSupportMessage = createServerFn({ method: "POST" })
       // considera a pergunta com mais calma antes de responder, em vez de
       // ir direto pro "não sei" na primeira leitura — isso reduziu bastante
       // as escaladas desnecessárias vistas nos chats reais das agências.
-      thinking: { type: "enabled", budget_tokens: 2048 },
+      // claude-sonnet-5 usa o formato novo de thinking ("adaptive" +
+      // output_config.effort) — o antigo ("enabled" + budget_tokens) dá 400
+      // nesse modelo (bug real visto em produção, chat parou de responder).
+      thinking: { type: "adaptive" },
+      output_config: { effort: "high" },
       system: systemPrompt,
       messages: (history ?? []).map((m: any) => ({
         role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
