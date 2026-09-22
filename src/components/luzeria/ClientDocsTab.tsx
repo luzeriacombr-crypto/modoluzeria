@@ -1,18 +1,19 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw, Lock } from "lucide-react";
+import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw, Lock, FileDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { clientDocsQO, roteiroStatusesQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { CLIENT_DOC_TYPE_LABEL, CLIENT_DOC_PROMPT, type ClientDocType } from "@/lib/luzeria/client-doc-templates";
-import { parseMarkdownLite, type MdBlock } from "@/lib/luzeria/markdown-lite";
+import { parseMarkdownLite, groupByH2, type MdBlock } from "@/lib/luzeria/markdown-lite";
 import { formatClientDocWithAI, type ClientDoc } from "@/lib/luzeria/client-docs.functions";
 import { RoteirosView, PlanejamentoView } from "./MarkdownLiteView";
 import { RoteiroControls } from "./RoteiroControls";
 import { AIPlanningPreview } from "./AIPlanningPreview";
 import { MonthPickerList } from "./MonthPickerList";
+import { Modal } from "./Modals";
 
 const DOC_TYPES: ClientDocType[] = ["roteiro", "planejamento"];
 
@@ -352,10 +353,18 @@ function DocRow({
 }) {
   const blocks = isOpen ? parseMarkdownLite(doc.content) : [];
   const isRoteiro = doc.type === "roteiro";
-  const { data: statuses = [] } = useQuery({ ...roteiroStatusesQO(doc.id), enabled: isOpen && isRoteiro });
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const { data: statuses = [] } = useQuery({ ...roteiroStatusesQO(doc.id), enabled: (isOpen || exportingPdf) && isRoteiro });
   const statusByTitle = new Map(statuses.map((s) => [s.roteiroTitle, s]));
   const { createRoteirosFromPlan, regenerateRoteiroDoc } = useApi();
   const [pickingMonth, setPickingMonth] = useState(false);
+  const [editingRoteiro, setEditingRoteiro] = useState<{ index: number; title: string; body: string } | null>(null);
+
+  const rawBlockText = (b: MdBlock): string => {
+    if (b.kind === "ul") return b.items.map((i) => `- ${i}`).join("\n");
+    if (b.kind === "slides") return b.items.map((s) => `SLIDE ${s.n}: ${s.text}`).join("\n");
+    return b.text;
+  };
 
   async function regenerate() {
     if (!(await requestConfirm(
@@ -396,6 +405,15 @@ function DocRow({
             <Sparkles size={13} />
           </span>
         )}
+        {isRoteiro && (
+          <span
+            onClick={(e) => { e.stopPropagation(); setExportingPdf(true); }}
+            title="Exportar em PDF"
+            className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0"
+          >
+            <FileDown size={13} />
+          </span>
+        )}
         <span onClick={(e) => { e.stopPropagation(); onEdit(); }}
           className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0">
           <Pencil size={13} />
@@ -411,18 +429,14 @@ function DocRow({
           {isRoteiro ? (
             <RoteirosView
               blocks={blocks}
+              onEditRoteiro={(g, i) => setEditingRoteiro({ index: i, title: g.title, body: g.blocks.map(rawBlockText).join("\n\n") })}
               renderFooter={(g) => {
-                const blockText = (b: MdBlock) => {
-                  if (b.kind === "ul") return b.items.map((i) => `- ${i}`).join("\n");
-                  if (b.kind === "slides") return b.items.map((s) => `SLIDE ${s.n}: ${s.text}`).join("\n");
-                  return b.text;
-                };
                 // A linha "Legenda: ..." já vira o campo de legenda de verdade
                 // separadamente (status.publishCaption, abaixo) — não duplicar
                 // ela dentro do Briefing.
                 const body = g.blocks
                   .filter((b) => !(b.kind === "p" && /^legenda:/i.test(b.text.trim())))
-                  .map(blockText).join("\n\n");
+                  .map(rawBlockText).join("\n\n");
                 return (
                   <RoteiroControls
                     docId={doc.id} clientId={clientId} title={g.title} status={statusByTitle.get(g.title)}
@@ -455,6 +469,164 @@ function DocRow({
           )}
         </div>
       )}
+      {editingRoteiro && (
+        <RoteiroEditModal
+          docId={doc.id}
+          index={editingRoteiro.index}
+          initialTitle={editingRoteiro.title}
+          initialBody={editingRoteiro.body}
+          onClose={() => setEditingRoteiro(null)}
+        />
+      )}
+      {exportingPdf && (
+        <ExportRoteirosPdfModal
+          docId={doc.id}
+          docTitle={doc.title || "roteiros"}
+          groups={groupByH2(parseMarkdownLite(doc.content))}
+          statusByTitle={statusByTitle}
+          onClose={() => setExportingPdf(false)}
+        />
+      )}
     </div>
+  );
+}
+
+function RoteiroEditModal({
+  docId, index, initialTitle, initialBody, onClose,
+}: {
+  docId: string; index: number; initialTitle: string; initialBody: string; onClose: () => void;
+}) {
+  const { updateRoteiroSection } = useApi();
+  const [title, setTitle] = useState(initialTitle);
+  const [body, setBody] = useState(initialBody);
+
+  function save() {
+    if (!title.trim() || !body.trim()) { toast.error("Preencha título e texto."); return; }
+    updateRoteiroSection.mutate(
+      { data: { docId, index, expectedOldTitle: initialTitle, newTitle: title.trim(), newBody: body.trim() } },
+      { onSuccess: () => { toast.success("Roteiro atualizado."); onClose(); } },
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Editar roteiro" maxWidthClass="max-w-lg">
+      <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Título</label>
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-3.5"
+      />
+      <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Texto</label>
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        rows={12}
+        className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2.5 text-[13px] text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-y font-mono"
+      />
+      <div className="flex items-center justify-end gap-2 mt-4">
+        <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
+        <button
+          onClick={save}
+          disabled={updateRoteiroSection.isPending}
+          className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50"
+        >
+          {updateRoteiroSection.isPending ? "Salvando…" : "Salvar alterações"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+type ExportMode = "todos" | "selecionados" | "aprovados" | "reels";
+
+function ExportRoteirosPdfModal({
+  docId, docTitle, groups, statusByTitle, onClose,
+}: {
+  docId: string;
+  docTitle: string;
+  groups: { title: string; blocks: MdBlock[] }[];
+  statusByTitle: Map<string, { status: string; contentType: "post" | "reel" }>;
+  onClose: () => void;
+}) {
+  const { exportRoteirosPdf } = useApi();
+  const [mode, setMode] = useState<ExportMode>("todos");
+  const [selected, setSelected] = useState<Set<string>>(new Set(groups.map((g) => g.title)));
+
+  const aprovadosCount = groups.filter((g) => statusByTitle.get(g.title)?.status === "aprovado").length;
+  const reelsCount = groups.filter((g) => (statusByTitle.get(g.title)?.contentType ?? "reel") === "reel").length;
+
+  function toggle(title: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(title)) next.delete(title); else next.add(title);
+      return next;
+    });
+  }
+
+  function download() {
+    exportRoteirosPdf.mutate(
+      { data: { docId, mode, selectedTitles: mode === "selecionados" ? [...selected] : undefined } },
+      {
+        onSuccess: (r: any) => {
+          const bytes = Uint8Array.from(atob(r.pdfBase64), (c) => c.charCodeAt(0));
+          const blob = new Blob([bytes], { type: "application/pdf" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${docTitle.replace(/[^\w-]+/g, "-")}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 5000);
+          toast.success("PDF gerado!");
+          onClose();
+        },
+      },
+    );
+  }
+
+  const OPTIONS: { id: ExportMode; label: string; hint: string }[] = [
+    { id: "todos", label: "Todos os roteiros", hint: `${groups.length} roteiro${groups.length === 1 ? "" : "s"}` },
+    { id: "reels", label: "Somente Reels", hint: `${reelsCount} roteiro${reelsCount === 1 ? "" : "s"}` },
+    { id: "aprovados", label: "Somente aprovados", hint: `${aprovadosCount} roteiro${aprovadosCount === 1 ? "" : "s"}` },
+    { id: "selecionados", label: "Selecionar quais", hint: `${selected.size} selecionado${selected.size === 1 ? "" : "s"}` },
+  ];
+
+  return (
+    <Modal open onClose={onClose} title="Exportar em PDF" maxWidthClass="max-w-md">
+      <div className="space-y-2 mb-4">
+        {OPTIONS.map((o) => (
+          <label
+            key={o.id}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 cursor-pointer"
+            style={{ background: mode === o.id ? "rgba(var(--lz-brand-rgb),0.1)" : "color-mix(in srgb, var(--foreground) 3%, transparent)", border: mode === o.id ? "1px solid rgba(var(--lz-brand-rgb),0.35)" : "1px solid transparent" }}
+          >
+            <input type="radio" name="export-mode" checked={mode === o.id} onChange={() => setMode(o.id)} />
+            <span className="flex-1 text-sm text-foreground">{o.label}</span>
+            <span className="text-[11px] text-foreground/40">{o.hint}</span>
+          </label>
+        ))}
+      </div>
+      {mode === "selecionados" && (
+        <div className="space-y-1.5 mb-4 max-h-52 overflow-y-auto rounded-lg p-2" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)" }}>
+          {groups.map((g) => (
+            <label key={g.title} className="flex items-center gap-2 text-xs text-foreground/80 cursor-pointer px-2 py-1.5 rounded hover:bg-foreground/5">
+              <input type="checkbox" checked={selected.has(g.title)} onChange={() => toggle(g.title)} />
+              {g.title}
+            </label>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
+        <button
+          onClick={download}
+          disabled={exportRoteirosPdf.isPending || (mode === "selecionados" && selected.size === 0)}
+          className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50 inline-flex items-center gap-1.5"
+        >
+          <FileDown size={13} /> {exportRoteirosPdf.isPending ? "Gerando…" : "Baixar PDF"}
+        </button>
+      </div>
+    </Modal>
   );
 }

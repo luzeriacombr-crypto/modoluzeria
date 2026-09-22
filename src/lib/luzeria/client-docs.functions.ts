@@ -285,6 +285,147 @@ export const createRoteirosFromPlan = createServerFn({ method: "POST" })
     return { docId: doc.id as string };
   });
 
+/** Edita SÓ UM roteiro dentro de um documento (o "## Roteiro N: título" de
+ * um índice específico), sem reabrir a caixa com o texto inteiro. Identifica
+ * a seção pela posição (mesma ordem que groupByH2 já usa pra renderizar os
+ * cards) e recorta/recoloca só aquele trecho — o resto do content não é
+ * tocado, então uma edição concorrente em outro roteiro não se perde. Se o
+ * título mudar, o status desse roteiro (aprovado/ajustar/gravado) migra
+ * junto em client_doc_roteiro_status, senão a edição "esqueceria" o
+ * andamento já registrado. */
+export const updateRoteiroSection = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { docId: string; index: number; expectedOldTitle: string; newTitle: string; newBody: string }) =>
+    z.object({
+      docId: z.string().uuid(),
+      index: z.number().int().min(0),
+      expectedOldTitle: z.string().trim().min(1).max(300),
+      newTitle: z.string().trim().min(1).max(300),
+      newBody: z.string().trim().min(1).max(8000),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+
+    const { data: doc, error: docErr } = await (context.supabase as any)
+      .from("client_docs").select("id, type, content").eq("id", data.docId).single();
+    if (docErr || !doc) throw new Error("Documento não encontrado.");
+    if (doc.type !== "roteiro") throw new Error("Só dá pra editar um roteiro individual em documentos de Roteiros.");
+
+    const headingRe = /^## (.+)$/gm;
+    const matches = [...(doc.content as string).matchAll(headingRe)];
+    const m = matches[data.index];
+    if (!m) throw new Error("Esse roteiro não existe mais nesse documento — recarregue a página.");
+    const oldTitle = m[1].trim();
+    if (oldTitle !== data.expectedOldTitle) {
+      throw new Error("Esse documento mudou desde que você abriu — recarregue a página antes de editar.");
+    }
+
+    const start = m.index!;
+    const end = data.index + 1 < matches.length ? matches[data.index + 1].index! : (doc.content as string).length;
+    const before = (doc.content as string).slice(0, start);
+    const after = (doc.content as string).slice(end);
+    const newSection = `## ${data.newTitle.trim()}\n${data.newBody.trim()}\n\n`;
+    const newContent = (before + newSection + after).replace(/\n{3,}/g, "\n\n").trim() + "\n";
+
+    const { error: updErr } = await (context.supabase as any)
+      .from("client_docs").update({ content: newContent }).eq("id", data.docId);
+    if (updErr) throw new Error(updErr.message);
+
+    if (oldTitle !== data.newTitle.trim()) {
+      await (context.supabase as any)
+        .from("client_doc_roteiro_status")
+        .update({ roteiro_title: data.newTitle.trim() })
+        .eq("doc_id", data.docId).eq("roteiro_title", oldTitle);
+    }
+
+    return { content: newContent };
+  });
+
+/** Exporta um doc de Roteiros em PDF — todos, uma seleção de títulos, só os
+ * aprovados (client_doc_roteiro_status.status='aprovado') ou só os Reels
+ * (content_type='reel'). Mockup aprovado: claude.ai/artifact/N1Vhikuq6VwWq2JM4WkGYY.
+ * Retorna base64 (o front baixa como Blob) em vez de subir pro Drive —
+ * exportação sob demanda, não um registro permanente como o contrato. */
+export const exportRoteirosPdf = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { docId: string; mode: "todos" | "selecionados" | "aprovados" | "reels"; selectedTitles?: string[] }) =>
+    z.object({
+      docId: z.string().uuid(),
+      mode: z.enum(["todos", "selecionados", "aprovados", "reels"]),
+      selectedTitles: z.array(z.string().trim().min(1).max(300)).max(60).optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+
+    const { data: doc, error: docErr } = await (context.supabase as any)
+      .from("client_docs").select("id, type, title, content, client_id, clients(name)").eq("id", data.docId).single();
+    if (docErr || !doc) throw new Error("Documento não encontrado.");
+    if (doc.type !== "roteiro") throw new Error("Só dá pra exportar documentos de Roteiros.");
+
+    const { parseMarkdownLite, groupByH2 } = await import("./markdown-lite");
+    const groups = groupByH2(parseMarkdownLite(doc.content as string));
+    if (groups.length === 0) throw new Error("Esse documento não tem nenhum roteiro pra exportar.");
+
+    const { data: statusRows } = await (context.supabase as any)
+      .from("client_doc_roteiro_status")
+      .select("roteiro_title, status, content_type")
+      .eq("doc_id", data.docId);
+    const statusByTitle = new Map(((statusRows ?? []) as any[]).map((r) => [r.roteiro_title, r]));
+
+    const blockText = (b: any): string => {
+      if (b.kind === "ul") return b.items.map((i: string) => `- ${i}`).join("\n");
+      if (b.kind === "slides") return b.items.map((s: any) => `SLIDE ${s.n}: ${s.text}`).join("\n");
+      return b.text;
+    };
+    let allItems = groups.map((g) => ({
+      title: g.title,
+      body: g.blocks.map(blockText).join("\n\n"),
+      contentType: (statusByTitle.get(g.title)?.content_type ?? "reel") as "post" | "reel",
+      status: (statusByTitle.get(g.title)?.status ?? "pending") as string,
+    }));
+
+    let filterLabel: string | null = null;
+    if (data.mode === "selecionados") {
+      const wanted = new Set(data.selectedTitles ?? []);
+      allItems = allItems.filter((i) => wanted.has(i.title));
+      if (allItems.length === 0) throw new Error("Selecione ao menos um roteiro pra exportar.");
+    } else if (data.mode === "aprovados") {
+      filterLabel = "Aprovados";
+      allItems = allItems.filter((i) => i.status === "aprovado");
+      if (allItems.length === 0) throw new Error("Nenhum roteiro aprovado ainda nesse documento.");
+    } else if (data.mode === "reels") {
+      filterLabel = "Somente Reels";
+      allItems = allItems.filter((i) => i.contentType === "reel");
+      if (allItems.length === 0) throw new Error("Nenhum roteiro de Reels nesse documento.");
+    }
+
+    const { data: org } = await context.supabase
+      .from("orgs").select("name, logo_path_light, logo_path").eq("id", context.orgId).maybeSingle();
+    let logoBytes: Uint8Array | null = null;
+    const logoPath = (org as any)?.logo_path_light ?? (org as any)?.logo_path ?? null;
+    if (logoPath) {
+      try {
+        // .download() precisa do client admin — mesmo padrão já usado pro
+        // logo do PDF de contrato assinado (contract-requests.functions.ts).
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: logoFile } = await supabaseAdmin.storage.from("avatars").download(logoPath);
+        if (logoFile) logoBytes = new Uint8Array(await logoFile.arrayBuffer());
+      } catch { /* segue sem logo se não conseguir baixar */ }
+    }
+
+    const { renderRoteirosPdf } = await import("./roteiros-pdf.server");
+    const pdfBytes = await renderRoteirosPdf({
+      docTitle: doc.title || (doc as any).clients?.name || "Roteiros",
+      orgName: org?.name ?? "",
+      totalCount: groups.length,
+      filterLabel,
+      logoBytes,
+      items: allItems.map(({ title, body, contentType }) => ({ title, body, contentType })),
+    });
+
+    return { pdfBase64: Buffer.from(pdfBytes).toString("base64") };
+  });
+
 /** Reescreve um documento de Roteiros já salvo — mesmo formato de casa e
  * base de conhecimento da agência usados na prévia de planejamento por IA,
  * pra melhorar tom/profundidade sem precisar recriar do zero. Mantém os

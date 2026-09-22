@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Layers, Target, Compass, Lightbulb, TrendingUp, ListChecks, Users, Calendar, Sparkles, Check } from "lucide-react";
+import { Layers, Target, Compass, Lightbulb, TrendingUp, ListChecks, Users, Calendar, Sparkles, Check, Pencil } from "lucide-react";
 import { type MdBlock, groupByH2, leadingTitle } from "@/lib/luzeria/markdown-lite";
 
 function MdInline({ text }: { text: string }) {
@@ -215,13 +215,17 @@ export function PlanejamentoView({ blocks }: { blocks: MdBlock[] }) {
  * (title + its blocks in, a node out) used by the admin editor to inject
  * workflow controls (aprovar/ajustar/gravado/enviar pro Reels) without this
  * shared component — also rendered on the public client page — knowing
- * anything about that behavior. */
+ * anything about that behavior. `onEditRoteiro` is the same idea for the
+ * per-card pencil: only the agency-side editor passes it, so the public
+ * client page (which never passes it) never shows an edit control. */
 export function RoteirosView({
   blocks,
   renderFooter,
+  onEditRoteiro,
 }: {
   blocks: MdBlock[];
   renderFooter?: (group: { title: string; blocks: MdBlock[] }, index: number) => ReactNode;
+  onEditRoteiro?: (group: { title: string; blocks: MdBlock[] }, index: number) => void;
 }) {
   const groups = groupByH2(blocks);
   if (groups.length === 0) return null;
@@ -242,7 +246,18 @@ export function RoteirosView({
                 style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
               >{String(i + 1).padStart(2, "0")}</span>
               <div className="flex-1 min-w-0 pt-0.5">
-                <h3 className="text-foreground font-bold text-[14.5px] mb-2">{g.title}</h3>
+                <div className="flex items-start gap-2 mb-2">
+                  <h3 className="text-foreground font-bold text-[14.5px] flex-1 min-w-0">{g.title}</h3>
+                  {onEditRoteiro && (
+                    <button
+                      onClick={() => onEditRoteiro(g, i)}
+                      title="Editar esse roteiro"
+                      className="shrink-0 p-1 -mt-0.5 -mr-1 rounded text-foreground/30 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  )}
+                </div>
                 {g.blocks.map((b, j) => <BlockRenderer key={j} block={b} />)}
                 {renderFooter?.(g, i)}
               </div>
