@@ -203,15 +203,17 @@ export function Sidebar({
             ...(isAdmin ? [{ id: "cliente-overview", label: navLabel("cliente-overview", "Visão Geral"), node: <NavSubButton key="cliente-overview" label={navLabel("cliente-overview", "Visão Geral")} active={configTabActive("cliente")} onClick={() => goToConfigTab("cliente")} /> }] : []),
             ...(canJourney ? [{ id: "jornada", label: navLabel("jornada", "Jornada do cliente"), node: <NavSubButton key="jornada" label={navLabel("jornada", "Jornada do cliente")} active={configTabActive("journey")} onClick={() => goToConfigTab("journey")} /> }] : []),
             ...(canFinanceiro ? [{ id: "margem", label: navLabel("margem", "Margem por cliente"), node: <NavSubButton key="margem" label={navLabel("margem", "Margem por cliente")} active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} /> }] : []),
-            ...(canFinanceiro ? [{ id: "pagamentos", label: navLabel("pagamentos", "Pagamentos"), node: <NavSubButton key="pagamentos" label={navLabel("pagamentos", "Pagamentos")} active={configTabActive("pagamentos")} onClick={() => goToConfigTab("pagamentos")} /> }] : []),
           ]);
 
           // Afiliados e Revenda saíram do menu: as três entradas abriam a
           // mesma tela (a aba de cobrança renderiza todas as seções), então
           // eram três caminhos pro mesmo lugar. As seções continuam lá
           // dentro, e as URLs ?tab=afiliados / ?tab=revenda seguem válidas.
+          // Pagamentos morava em "Visão Geral" — Junior achou que não fazia
+          // sentido lá, é claramente financeiro.
           const financeiroItems = canFinanceiro ? orderSection("financeiro", [
             { id: "cobranca", label: navLabel("cobranca", "Seu plano"), node: <NavSubButton key="cobranca" label={navLabel("cobranca", "Seu plano")} active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} /> },
+            { id: "pagamentos", label: navLabel("pagamentos", "Pagamentos"), node: <NavSubButton key="pagamentos" label={navLabel("pagamentos", "Pagamentos")} active={configTabActive("pagamentos")} onClick={() => goToConfigTab("pagamentos")} /> },
           ]) : [];
 
           const equipeItems = orderSection("equipe", [
@@ -299,18 +301,18 @@ export function Sidebar({
                 <NavButton icon={<Trash2 size={15} />} label={navLabel("lixeira", "Lixeira")} active={pathname === "/lixeira"} onClick={() => navigate({ to: "/lixeira" })} />
               </div>
             ) }] : []),
-            ...((isAdmin || canJourney || canFinanceiro) ? [{ id: "cliente", label: navLabel("cliente", "Visão Geral"), meta: { icon: <IdCard size={17} />, label: navLabel("cliente", "Visão Geral"), active: configTabActive("cliente") || configTabActive("journey") || configTabActive("margem") || configTabActive("pagamentos"), kind: "flyout" as const }, node: (
+            ...((isAdmin || canJourney || canFinanceiro) ? [{ id: "cliente", label: navLabel("cliente", "Visão Geral"), meta: { icon: <IdCard size={17} />, label: navLabel("cliente", "Visão Geral"), active: configTabActive("cliente") || configTabActive("journey") || configTabActive("margem"), kind: "flyout" as const }, node: (
               <div key="cliente" data-tour="nav-cliente">
                 <NavGroup icon={<IdCard size={15} />} label={navLabel("cliente", "Visão Geral")}
-                  active={configTabActive("cliente") || configTabActive("journey") || configTabActive("margem") || configTabActive("pagamentos")}>
+                  active={configTabActive("cliente") || configTabActive("journey") || configTabActive("margem")}>
                   {clienteItems.map((it) => it.node)}
                 </NavGroup>
               </div>
             ) }] : []),
-            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Financeiro"), meta: { icon: <Wallet size={17} />, label: navLabel("financeiro", "Financeiro"), active: configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda"), kind: "flyout" as const }, node: (
+            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Financeiro"), meta: { icon: <Wallet size={17} />, label: navLabel("financeiro", "Financeiro"), active: configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda") || configTabActive("pagamentos"), kind: "flyout" as const }, node: (
               <div key="financeiro" data-tour="nav-financeiro">
                 <NavGroup icon={<Wallet size={15} />} label={navLabel("financeiro", "Financeiro")}
-                  active={configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda")}>
+                  active={configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda") || configTabActive("pagamentos")}>
                   {financeiroItems.map((it) => it.node)}
                 </NavGroup>
               </div>
