@@ -66,8 +66,13 @@ jobs:
           mkdir -p storage-backup
           for b in $BUCKETS; do
             for attempt in 1 2 3; do
-              if supabase storage cp -r --linked --experimental "ss:///$b" "storage-backup/$b" 2>&1; then break; fi
-              echo "Falha baixando bucket $b (tentativa $attempt), tentando de novo..."
+              # -j8 baixa em paralelo (bem mais rápido que 1 arquivo por vez);
+              # timeout de 10min por tentativa — se um bucket travar de
+              # verdade (visto num teste: passou de 30min parado numa
+              # chamada só), corta e conta como falha em vez de prender o
+              # job a noite toda.
+              if timeout 600 supabase storage cp -r -j 8 --linked --experimental "ss:///$b" "storage-backup/$b" 2>&1; then break; fi
+              echo "Falha/timeout baixando bucket $b (tentativa $attempt), tentando de novo..."
               sleep 15
             done
           done
