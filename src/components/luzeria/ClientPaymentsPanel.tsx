@@ -5,6 +5,7 @@ import { clientPaymentsQO, clientPaymentHistoryQO, useApi, useMe } from "@/lib/l
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
+import { CashFlowSection } from "./CashFlowSection";
 
 const money = (v: number | null) =>
   v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -214,6 +215,7 @@ export function ClientPaymentsPanel() {
 
   return (
     <div className="space-y-4">
+      <CashFlowSection />
       <PixKeyForm pixKey={data.pixKey} isMaster={isMaster} />
       <MessageTemplateForm template={data.messageTemplate} isMaster={isMaster} />
 

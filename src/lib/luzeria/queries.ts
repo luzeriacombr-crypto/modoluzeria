@@ -102,6 +102,7 @@ import { listContentStatuses, upsertContentStatus, deleteContentStatus, setConte
 import { listClientCategories, createClientCategory, renameClientCategory, deleteClientCategory } from "./client-categories.functions";
 import { setProfileClientAccess } from "./client-access.functions";
 import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, setContractTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
+import { listCashFlowEntries, addCashFlowEntry, removeCashFlowEntry } from "./cash-flow.functions";
 import {
   listContractRequests, createContractRequest, cancelContractRequest,
   getPublicContractRequest,
@@ -335,6 +336,9 @@ export const clientPaymentHistoryQO = (clientId: string | null) =>
     queryFn: () => listClientPaymentHistory({ data: { clientId: clientId! } }),
     enabled: !!clientId,
   });
+
+export const cashFlowEntriesQO = (monthKey: string) =>
+  queryOptions({ queryKey: ["cash-flow-entries", monthKey], queryFn: () => listCashFlowEntries({ data: { monthKey } }) });
 
 export const campaignsQO = (clientId: string) =>
   queryOptions({ queryKey: ["campaigns", clientId], queryFn: () => listCampaigns({ data: { clientId } }) });
@@ -1304,6 +1308,16 @@ export function useApi() {
       mutationFn: useServerFn(unmarkClientPaymentReceived),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-payments"] }),
       onError: (e: any) => toast.error(e?.message ?? "Erro ao desfazer marcação."),
+    }),
+    addCashFlowEntry: useMutation({
+      mutationFn: useServerFn(addCashFlowEntry),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao lançar."),
+    }),
+    removeCashFlowEntry: useMutation({
+      mutationFn: useServerFn(removeCashFlowEntry),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }),
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover."),
     }),
     upsertCampaign: useMutation({
       mutationFn: useServerFn(upsertCampaign),
