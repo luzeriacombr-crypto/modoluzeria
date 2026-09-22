@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -210,6 +211,80 @@ function CarouselThumb({
   );
 }
 
+/** Mesma escolha que o FileActionsMenu já oferece por arquivo (só do Modo
+ * Criador vs. também do Google Drive), só que pra seleção múltipla — antes
+ * "Excluir selecionadas" só tinha a opção de sair do app, mesmo tendo essa
+ * opção arquivo por arquivo. */
+function BulkDeleteMenu({
+  count, onRemoveAppOnly, onRemoveEverywhere,
+}: {
+  count: number; onRemoveAppOnly: () => void; onRemoveEverywhere: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function place() {
+      const rect = btnRef.current?.getBoundingClientRect();
+      if (rect) setPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    const h = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!btnRef.current?.contains(t) && !menuRef.current?.contains(t)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+      document.removeEventListener("mousedown", h);
+    };
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        disabled={count === 0}
+        className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-red-400 hover:text-red-300 transition disabled:opacity-40"
+      >
+        <Trash2 size={11} />
+        Excluir selecionadas ({count})
+      </button>
+      {open && pos && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: "fixed", top: pos.top, left: pos.left, width: 260 }}
+          className="z-[200] rounded-md border border-foreground/10 bg-card shadow-lg py-1 text-[12px]"
+        >
+          <button
+            type="button"
+            onClick={() => { setOpen(false); onRemoveAppOnly(); }}
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-foreground/70 hover:bg-foreground/5 hover:text-foreground transition"
+          >
+            <Trash2 size={12} /> Remover do Modo Criador
+          </button>
+          <button
+            type="button"
+            onClick={() => { setOpen(false); onRemoveEverywhere(); }}
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-red-400/90 hover:bg-red-500/10 hover:text-red-400 transition"
+          >
+            <Trash2 size={12} /> Remover do Modo Criador e do Google Drive
+          </button>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
 function MediaPreview({
   itemId, coverUrl, postFormat, itemType, canEdit,
 }: {
@@ -217,7 +292,7 @@ function MediaPreview({
 }) {
   const { data: files = [], isLoading: filesLoading } = useQuery(itemFilesQO(itemId));
   const { upload, uploadProgress, busy, error, missingClientId } = useItemFileUpload(itemId, "media");
-  const { detachItemFile, deleteItemFileAndDrive, reorderItemFiles } = useApi();
+  const { detachItemFile, deleteItemFileAndDrive, deleteItemFilesAndDrive, reorderItemFiles } = useApi();
   const fetchDriveToken = useServerFn(getDriveVideoToken);
   const fileRef = useRef<HTMLInputElement>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -350,7 +425,7 @@ function MediaPreview({
     function toggleSelectAll() {
       setSelectedIds(allSelected ? new Set() : new Set(files.map((f) => f.id)));
     }
-    async function handleDeleteSelected() {
+    async function handleDeleteSelectedAppOnly() {
       const count = selectedIds.size;
       if (!count) return;
       if (!(await requestConfirm(
@@ -358,6 +433,17 @@ function MediaPreview({
         { danger: true },
       ))) return;
       selectedIds.forEach((id) => detachItemFile.mutate({ data: { id } }));
+      setSelectedIds(new Set());
+      setSelectMode(false);
+    }
+    async function handleDeleteSelectedEverywhere() {
+      const count = selectedIds.size;
+      if (!count) return;
+      if (!(await requestConfirm(
+        `Remover ${count} arquivo${count === 1 ? "" : "s"} do Modo Criador e mover pra lixeira do Google Drive?`,
+        { danger: true },
+      ))) return;
+      deleteItemFilesAndDrive.mutate({ data: { ids: [...selectedIds] } });
       setSelectedIds(new Set());
       setSelectMode(false);
     }
@@ -384,15 +470,11 @@ function MediaPreview({
                   Baixar selecionadas ({selectedIds.size})
                 </button>
                 {canEdit && (
-                  <button
-                    type="button"
-                    onClick={handleDeleteSelected}
-                    disabled={selectedIds.size === 0}
-                    className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-red-400 hover:text-red-300 transition disabled:opacity-40"
-                  >
-                    <Trash2 size={11} />
-                    Excluir selecionadas ({selectedIds.size})
-                  </button>
+                  <BulkDeleteMenu
+                    count={selectedIds.size}
+                    onRemoveAppOnly={handleDeleteSelectedAppOnly}
+                    onRemoveEverywhere={handleDeleteSelectedEverywhere}
+                  />
                 )}
                 <button
                   type="button"

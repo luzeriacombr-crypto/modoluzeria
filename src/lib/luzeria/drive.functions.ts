@@ -905,6 +905,49 @@ export const deleteItemFileAndDrive = createServerFn({ method: "POST" })
     return { ok: true };
   }));
 
+/** Mesma coisa que deleteItemFileAndDrive, só que pra vários arquivos de
+ * uma vez — usado no "Excluir selecionadas" do carrossel (antes só existia
+ * a opção "remover do Modo Criador" pra seleção múltipla; a opção de
+ * apagar do Drive também só existia arquivo por arquivo). Uma falha de
+ * Drive num arquivo não trava os outros — cada um segue seu próprio
+ * try/catch, igual a versão de um arquivo só. */
+export const deleteItemFilesAndDrive = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { ids: string[] }) =>
+    z.object({ ids: z.array(z.string().uuid()).min(1).max(100) }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    const { data: rows } = await context.supabase
+      .from("item_files")
+      .select("id, item_id, drive_file_id")
+      .in("id", data.ids);
+    if (!rows || rows.length === 0) return { ok: true };
+
+    const itemIds = new Set<string>();
+    for (const row of rows) {
+      await assertCanWrite(context.supabase, context.userId, row.item_id);
+      itemIds.add(row.item_id);
+      if (row.drive_file_id) {
+        try {
+          await driveFetch(`/drive/v3/files/${encodeURIComponent(row.drive_file_id)}?supportsAllDrives=true`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ trashed: true }),
+          });
+        } catch (e) {
+          console.error("[deleteItemFilesAndDrive] Drive trash failed:", row.drive_file_id, e);
+        }
+      }
+    }
+
+    const { error } = await context.supabase
+      .from("item_files")
+      .delete()
+      .in("id", data.ids);
+    if (error) throw new Error(error.message);
+    for (const itemId of itemIds) await syncLegacyDriveLink(context.supabase, itemId);
+    return { ok: true };
+  }));
+
 export type ItemFile = Awaited<ReturnType<typeof listItemFiles>>[number];
 export type DriveSearchResult = Awaited<ReturnType<typeof searchDriveFiles>>[number];
 

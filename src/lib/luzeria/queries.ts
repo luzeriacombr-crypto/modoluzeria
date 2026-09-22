@@ -45,7 +45,7 @@ import {
   getMyWeek, getItemTimeline, addCommentWithMentions, addAudioComment, updateComment,
 } from "./roadmap.functions";
 import {
-  listItemFiles, attachDriveFile, startDriveUploadSession, uploadDriveChunk, finalizeDriveUpload, detachItemFile, deleteItemFileAndDrive,
+  listItemFiles, attachDriveFile, startDriveUploadSession, uploadDriveChunk, finalizeDriveUpload, detachItemFile, deleteItemFileAndDrive, deleteItemFilesAndDrive,
   getDriveThumbnail, getDriveFileBytes, reorderItemFiles, getGridThumbnails,
   getClientDeliveriesFolder, setClientDeliveriesFolder, clearClientDeliveriesFolder,
   checkDriveConnectionHealth,
@@ -1655,6 +1655,14 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["item-files"] });
         qc.invalidateQueries({ queryKey: ["month"] });
       },
+    }),
+    deleteItemFilesAndDrive: useMutation({
+      mutationFn: useServerFn(deleteItemFilesAndDrive),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["item-files"] });
+        qc.invalidateQueries({ queryKey: ["month"] });
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover arquivos."),
     }),
     reorderItemFiles: useMutation({
       mutationFn: useServerFn(reorderItemFiles),
