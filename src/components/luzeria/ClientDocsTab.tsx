@@ -359,6 +359,7 @@ function DocRow({
   const { createRoteirosFromPlan, regenerateRoteiroDoc } = useApi();
   const [pickingMonth, setPickingMonth] = useState(false);
   const [editingRoteiro, setEditingRoteiro] = useState<{ index: number; title: string; body: string } | null>(null);
+  const [addingRoteiro, setAddingRoteiro] = useState(false);
 
   const rawBlockText = (b: MdBlock): string => {
     if (b.kind === "ul") return b.items.map((i) => `- ${i}`).join("\n");
@@ -445,6 +446,14 @@ function DocRow({
                 );
               }}
             />
+          ) : null}
+          {isRoteiro ? (
+            <button
+              onClick={() => setAddingRoteiro(true)}
+              className="mt-3 w-full flex items-center justify-center gap-1.5 border border-dashed border-foreground/15 rounded-lg py-2.5 text-xs font-semibold text-foreground/50 hover:text-[var(--lz-accent-ink)] hover:border-[rgba(var(--lz-brand-rgb),0.4)] transition"
+            >
+              + Adicionar roteiro
+            </button>
           ) : (
             <>
               <PlanejamentoView blocks={blocks} />
@@ -477,6 +486,9 @@ function DocRow({
           initialBody={editingRoteiro.body}
           onClose={() => setEditingRoteiro(null)}
         />
+      )}
+      {addingRoteiro && (
+        <AddRoteiroModal docId={doc.id} onClose={() => setAddingRoteiro(false)} />
       )}
       {exportingPdf && (
         <ExportRoteirosPdfModal
@@ -531,6 +543,51 @@ function RoteiroEditModal({
           className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50"
         >
           {updateRoteiroSection.isPending ? "Salvando…" : "Salvar alterações"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function AddRoteiroModal({ docId, onClose }: { docId: string; onClose: () => void }) {
+  const { addRoteiroSection } = useApi();
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+
+  function save() {
+    if (!title.trim() || !body.trim()) { toast.error("Preencha título e texto."); return; }
+    addRoteiroSection.mutate(
+      { data: { docId, title: title.trim(), body: body.trim() } },
+      { onSuccess: () => { toast.success("Roteiro adicionado."); onClose(); } },
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Adicionar roteiro" maxWidthClass="max-w-lg">
+      <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Título</label>
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Ex: Tour pela nova loja"
+        autoFocus
+        className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-3.5"
+      />
+      <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Texto</label>
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="Escreva o roteiro aqui…"
+        rows={10}
+        className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2.5 text-[13px] text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-y"
+      />
+      <div className="flex items-center justify-end gap-2 mt-4">
+        <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
+        <button
+          onClick={save}
+          disabled={addRoteiroSection.isPending}
+          className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50"
+        >
+          {addRoteiroSection.isPending ? "Adicionando…" : "Adicionar"}
         </button>
       </div>
     </Modal>

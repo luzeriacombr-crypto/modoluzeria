@@ -341,6 +341,38 @@ export const updateRoteiroSection = createServerFn({ method: "POST" })
     return { content: newContent };
   });
 
+/** Adiciona UM roteiro novo no fim de um documento já salvo, sem precisar
+ * reabrir a caixa de colar/editar o texto inteiro (o pedido explícito do
+ * Junior: "hoje pra adicionar um roteiro novo, ele sobe pra aquela
+ * caixinha de código, isso pode ser um pouco difícil"). Numera sozinho
+ * (conta quantos "## " já existem) e usa exatamente o formato que o resto
+ * do app já espera pra casar com client_doc_roteiro_status depois. */
+export const addRoteiroSection = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { docId: string; title: string; body: string }) =>
+    z.object({
+      docId: z.string().uuid(),
+      title: z.string().trim().min(1).max(300),
+      body: z.string().trim().min(1).max(8000),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+
+    const { data: doc, error: docErr } = await (context.supabase as any)
+      .from("client_docs").select("id, type, content").eq("id", data.docId).single();
+    if (docErr || !doc) throw new Error("Documento não encontrado.");
+    if (doc.type !== "roteiro") throw new Error("Só dá pra adicionar roteiros em documentos de Roteiros.");
+
+    const existingCount = [...(doc.content as string).matchAll(/^## .+$/gm)].length;
+    const heading = `Roteiro ${existingCount + 1}: ${data.title.trim()}`;
+    const newContent = `${(doc.content as string).trim()}\n\n## ${heading}\n${data.body.trim()}\n`;
+
+    const { error: updErr } = await (context.supabase as any)
+      .from("client_docs").update({ content: newContent }).eq("id", data.docId);
+    if (updErr) throw new Error(updErr.message);
+    return { content: newContent };
+  });
+
 /** Exporta um doc de Roteiros em PDF — todos, uma seleção de títulos, só os
  * aprovados (client_doc_roteiro_status.status='aprovado') ou só os Reels
  * (content_type='reel'). Mockup aprovado: claude.ai/artifact/N1Vhikuq6VwWq2JM4WkGYY.
@@ -358,11 +390,11 @@ export const exportRoteirosPdf = createServerFn({ method: "POST" })
     await assertAdmin(context);
 
     const { data: doc, error: docErr } = await (context.supabase as any)
-      .from("client_docs").select("id, type, title, content, client_id, clients(name)").eq("id", data.docId).single();
+      .from("client_docs").select("id, type, title, content, client_id, target_month_key, clients(name)").eq("id", data.docId).single();
     if (docErr || !doc) throw new Error("Documento não encontrado.");
     if (doc.type !== "roteiro") throw new Error("Só dá pra exportar documentos de Roteiros.");
 
-    const { parseMarkdownLite, groupByH2 } = await import("./markdown-lite");
+    const { parseMarkdownLite, groupByH2, displayRoteiroTitle } = await import("./markdown-lite");
     const groups = groupByH2(parseMarkdownLite(doc.content as string));
     if (groups.length === 0) throw new Error("Esse documento não tem nenhum roteiro pra exportar.");
 
@@ -379,6 +411,7 @@ export const exportRoteirosPdf = createServerFn({ method: "POST" })
     };
     let allItems = groups.map((g) => ({
       title: g.title,
+      displayTitle: displayRoteiroTitle(g.title),
       body: g.blocks.map(blockText).join("\n\n"),
       contentType: (statusByTitle.get(g.title)?.content_type ?? "reel") as "post" | "reel",
       status: (statusByTitle.get(g.title)?.status ?? "pending") as string,
@@ -415,12 +448,13 @@ export const exportRoteirosPdf = createServerFn({ method: "POST" })
 
     const { renderRoteirosPdf } = await import("./roteiros-pdf.server");
     const pdfBytes = await renderRoteirosPdf({
-      docTitle: doc.title || (doc as any).clients?.name || "Roteiros",
+      clientName: (doc as any).clients?.name ?? doc.title ?? "Cliente",
+      monthLabel: doc.target_month_key ? formatMonthLabel(doc.target_month_key) : null,
       orgName: org?.name ?? "",
       totalCount: groups.length,
       filterLabel,
       logoBytes,
-      items: allItems.map(({ title, body, contentType }) => ({ title, body, contentType })),
+      items: allItems.map(({ displayTitle, body, contentType }) => ({ title: displayTitle, body, contentType })),
     });
 
     return { pdfBase64: Buffer.from(pdfBytes).toString("base64") };

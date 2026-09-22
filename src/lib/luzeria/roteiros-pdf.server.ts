@@ -1,7 +1,9 @@
 /** Gera o PDF de exportação de Roteiros — mockup aprovado pelo Junior
- * (claude.ai/artifact/N1Vhikuq6VwWq2JM4WkGYY): logo da agência no topo,
- * nome/mês do documento, e cada roteiro com numerozinho + etiqueta de
- * formato (REEL/POST) + título + corpo. Só roda no servidor (pdf-lib). */
+ * (claude.ai/artifact/N1Vhikuq6VwWq2JM4WkGYY, revisado depois num feedback
+ * ao vivo no PDF real): logo da agência, nome do cliente e mês no topo, e
+ * cada roteiro só com numerozinho + título + corpo — sem repetir "Roteiro
+ * N" (já é o número do card) nem etiqueta de formato (Junior achou
+ * redundante). Só roda no servidor (pdf-lib). */
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 
 export type RoteiroPdfItem = {
@@ -11,7 +13,11 @@ export type RoteiroPdfItem = {
 };
 
 export type RoteirosPdfInput = {
-  docTitle: string;
+  clientName: string;
+  /** Mês do documento (ex.: "Outubro 2026") — null quando o doc não tem
+   * mês associado (ex.: roteiros colados manualmente, sem vir da prévia de
+   * planejamento). */
+  monthLabel: string | null;
   orgName: string;
   totalCount: number;
   filterLabel: string | null;
@@ -31,7 +37,6 @@ const LEADING = 15.5;
 const INK: [number, number, number] = [0.09, 0.094, 0.102];
 const INK_SOFT: [number, number, number] = [0.227, 0.235, 0.247];
 const GRAY: [number, number, number] = [0.541, 0.553, 0.569];
-const LIME: [number, number, number] = [0.82, 0.847, 0.184];
 
 // A fonte padrão (Helvetica/WinAnsi) só desenha Latin-1 — qualquer coisa
 // acima disso (emoji, símbolos como ✨) quebra o pdf-lib inteiro na hora de
@@ -133,15 +138,16 @@ export async function renderRoteirosPdf(input: RoteirosPdfInput): Promise<Uint8A
     if (opts.gapAfter) y -= opts.gapAfter;
   }
 
-  // Título do documento
+  // Cabeçalho: "ROTEIROS" → nome do cliente → mês + contagem.
   layoutLine(input.filterLabel ? `ROTEIROS · ${input.filterLabel.toUpperCase()}` : "ROTEIROS", {
     size: 9, forceBold: true, color: [0.42, 0.44, 0.102], gapAfter: 6,
   });
-  layoutLine(input.docTitle, { size: 19, forceBold: true, color: INK, gapAfter: 4 });
+  layoutLine(input.clientName, { size: 19, forceBold: true, color: INK, gapAfter: 4 });
   const countLabel = input.filterLabel
     ? `${input.items.length} de ${input.totalCount} roteiros (${input.filterLabel.toLowerCase()})`
     : `${input.items.length} roteiro${input.items.length === 1 ? "" : "s"}`;
-  layoutLine(`${countLabel} · ${input.orgName}`, { size: 9.5, color: GRAY, gapAfter: 4 });
+  const monthPart = input.monthLabel ? `${input.monthLabel} · ` : "";
+  layoutLine(`${monthPart}${countLabel} · ${input.orgName}`, { size: 9.5, color: GRAY, gapAfter: 4 });
 
   ensureSpace(4);
   page.drawLine({ start: { x: MARGIN, y }, end: { x: MARGIN + CONTENT_W, y }, thickness: 1.5, color: rgb(...INK) });
@@ -150,18 +156,9 @@ export async function renderRoteirosPdf(input: RoteirosPdfInput): Promise<Uint8A
   input.items.forEach((item, i) => {
     ensureSpace(60);
     const kicker = `ROTEIRO ${String(i + 1).padStart(2, "0")}`;
-    const tagLabel = item.contentType === "reel" ? "REEL" : "POST";
 
-    // Numerozinho + etiqueta de formato na mesma linha.
     const kickerSize = 9.5;
     page.drawText(kicker, { x: MARGIN, y, size: kickerSize, font: fontBold, color: rgb(...INK) });
-    const kickerW = fontBold.widthOfTextAtSize(kicker, kickerSize);
-    const tagSize = 8;
-    const tagPadX = 7, tagH = 13.5;
-    const tagW = fontBold.widthOfTextAtSize(tagLabel, tagSize) + tagPadX * 2;
-    const tagX = MARGIN + kickerW + 10;
-    page.drawRectangle({ x: tagX, y: y - 3, width: tagW, height: tagH, color: rgb(...LIME) });
-    page.drawText(tagLabel, { x: tagX + tagPadX, y: y - 0.5, size: tagSize, font: fontBold, color: rgb(...INK) });
     y -= LEADING + 4;
 
     layoutLine(item.title, { size: 13.5, forceBold: true, color: INK, gapAfter: 3 });

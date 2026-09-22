@@ -95,3 +95,16 @@ export function groupByH2(blocks: MdBlock[]): { title: string; blocks: MdBlock[]
 export function leadingTitle(blocks: MdBlock[]): string | null {
   return blocks[0]?.kind === "h1" ? blocks[0].text : null;
 }
+
+/** "Roteiro 3: Tour pela loja (Reel)" → "Tour pela loja". The raw heading
+ * keeps "Roteiro N:" and o sufixo de formato porque isso é o que casa com
+ * client_doc_roteiro_status.roteiro_title (não pode mudar sem migrar o
+ * status junto) — mas exibir isso pro usuário repete o número (já tem um
+ * "01" ao lado) e o formato (já tem uma cor/etiqueta ao lado, quando tem).
+ * Usado tanto na tela (RoteirosView) quanto no PDF exportado. */
+export function displayRoteiroTitle(rawTitle: string): string {
+  return rawTitle
+    .replace(/^roteiro\s+\d+\s*[:\-]\s*/i, "")
+    .replace(/\s*\((reel|post|carrossel|est[aá]tico)\)\s*$/i, "")
+    .trim();
+}

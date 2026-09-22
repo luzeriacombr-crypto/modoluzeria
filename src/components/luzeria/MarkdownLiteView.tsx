@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Layers, Target, Compass, Lightbulb, TrendingUp, ListChecks, Users, Calendar, Sparkles, Check, Pencil } from "lucide-react";
-import { type MdBlock, groupByH2, leadingTitle } from "@/lib/luzeria/markdown-lite";
+import { type MdBlock, groupByH2, leadingTitle, displayRoteiroTitle } from "@/lib/luzeria/markdown-lite";
 
 function MdInline({ text }: { text: string }) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
@@ -247,7 +247,7 @@ export function RoteirosView({
               >{String(i + 1).padStart(2, "0")}</span>
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-start gap-2 mb-2">
-                  <h3 className="text-foreground font-bold text-[14.5px] flex-1 min-w-0">{g.title}</h3>
+                  <h3 className="text-foreground font-bold text-[14.5px] flex-1 min-w-0">{displayRoteiroTitle(g.title)}</h3>
                   {onEditRoteiro && (
                     <button
                       onClick={() => onEditRoteiro(g, i)}
