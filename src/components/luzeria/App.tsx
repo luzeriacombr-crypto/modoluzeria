@@ -371,8 +371,13 @@ function Header({ sidebarHidden, onToggleSidebar, sidebarCollapsed, onToggleColl
         </button>
       )}
       <div className="flex-1" />
-      {me?.role === "master" && (
+      {me && (
         <button
+          // Antes só o master via essa engrenagem — quem era só "member"
+          // não tinha como abrir Configurações, nem pra ver a aba de
+          // Atualizações (que é informativa, sem nada sensível). Sem aba
+          // escolhida, a própria página cai na primeira que a pessoa pode
+          // ver — "Atualizações" pra quem não é master nem setor.
           onClick={() => navigate({ to: "/configuracoes" })}
           title="Configurações"
           className="flex items-center justify-center h-8 w-8 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors"

@@ -61,6 +61,10 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
   const isMaster = me.role === "master";
   const isAdmin = isMaster || me.role === "setor";
   const setorAllowedTabs: SettingsTab[] = [
+    // "O que mudou no produto" é informativo, sem nada sensível — todo
+    // mundo vê, até quem é só "member" e não tem nenhuma permissão de
+    // setor (antes essas pessoas nem conseguiam abrir Configurações).
+    "updates",
     ...(hasSetorPermission(me, "settings_journey") ? (["journey", "cliente"] as SettingsTab[]) : []),
     ...(hasSetorPermission(me, "team_reports") ? (["report", "auditoria"] as SettingsTab[]) : []),
     ...(hasPermission(me, "view_financeiro") ? (["cobranca", "margem", "pagamentos", "cliente"] as SettingsTab[]) : []),
@@ -72,9 +76,6 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
     ...(hasPermission(me, "view_client_overview") ? (["cliente"] as SettingsTab[]) : []),
     ...(isAdmin ? (["cliente"] as SettingsTab[]) : []),
   ];
-  if (!isMaster && setorAllowedTabs.length === 0) {
-    return <div className="p-10 text-foreground/60 text-sm">Acesso restrito ao Administrador Master.</div>;
-  }
   const allowedTabs: SettingsTab[] = isMaster ? VALID_TABS : setorAllowedTabs;
   const tab: SettingsTab = (allowedTabs as string[]).includes(tabParam ?? "") ? (tabParam as SettingsTab) : allowedTabs[0];
   const setTab = onTabChange;

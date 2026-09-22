@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart2, Star, Menu, X, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2, Plus, Search, Images } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Star, Menu, X, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2, Plus, Search, Images, Megaphone } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -253,6 +253,15 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
               </>
             )}
 
+            {/* Sem checagem de isAdmin/permissão de propósito — é a única
+             * aba de Configurações que todo mundo pode ver, até quem é só
+             * "member" (antes não tinha nenhum jeito de chegar em
+             * Atualizações pelo celular). */}
+            <MenuLink
+              icon={<Megaphone size={17} />}
+              label={navLabel("updates", "Atualizações")}
+              onClick={() => { goToConfigTab("updates"); closeAllSheets(); }}
+            />
             <MenuLink
               icon={<CircleHelp size={17} />}
               label={navLabel("ajuda", "Ajuda")}
