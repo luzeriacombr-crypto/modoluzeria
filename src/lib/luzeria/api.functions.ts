@@ -2793,11 +2793,25 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     z.object({ monthKey: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: clientsAll } = await context.supabase
-      .from("clients").select("id, name, color, archived, category, photo_url, posts_per_week, reels_per_week").order("name");
+      .from("clients").select("id, name, color, archived, category, photo_url, posts_per_week, reels_per_week, hidden_tabs").order("name");
     // "Ex-clientes" não entram nas métricas nem na listagem do dashboard.
     const clients = (clientsAll ?? []).filter(
       (c: any) => (c.category ?? "Social Media") !== "Ex-clientes"
     );
+    // Cliente que ocultou a aba "Posts" (ou "Reels") — ex.: só faz reels pra
+    // esse cliente — não deveria ver os itens desse tipo cobrando dele no
+    // dashboard como "atividade não concluída". Mesma regra de precedência
+    // que a página do cliente já usa: override do cliente > padrão da
+    // agência (ClientView.tsx). Só "posts"/"reels" importam aqui (mais/feed/
+    // stories não entram nesse total).
+    const { data: orgRow } = await context.supabase
+      .from("orgs").select("disabled_features").eq("id", context.orgId).maybeSingle();
+    const orgDisabled = new Set(((orgRow as any)?.disabled_features ?? []) as string[]);
+    const hiddenTypesByClient = new Map<string, Set<string>>();
+    (clients ?? []).forEach((c: any) => {
+      const set = c.hidden_tabs != null ? new Set(c.hidden_tabs as string[]) : orgDisabled;
+      hiddenTypesByClient.set(c.id, set);
+    });
     const photoMap = await signAvatarPaths(context.supabase, clients.map((c: any) => c.photo_url));
     const { data: months } = await context.supabase
       .from("months").select("id, client_id").eq("key", data.monthKey);
@@ -2821,15 +2835,17 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       // outras atividades internas não fazem parte do combinado
       // (posts_per_week + reels_per_week), então contá-las aqui inflava a
       // "% batida" sem relação com o que o cliente contratou.
-      const its = mid ? (items ?? []).filter((it: any) => it.month_id === mid && (it.type === "post" || it.type === "reel")) : [];
+      const hiddenTypes = hiddenTypesByClient.get(c.id) ?? orgDisabled;
+      const its = mid ? (items ?? []).filter((it: any) => it.month_id === mid && (it.type === "post" || it.type === "reel") && !hiddenTypes.has(`${it.type}s`)) : [];
       const posts = its.filter((i) => i.type === "post").length;
       const reels = its.filter((i) => i.type === "reel").length;
       const total = its.length;
       const done = its.filter((i) => i.status === "PRONTO_PARA_PUBLICAR" || i.status === "FINALIZADO" || i.status === "CONCLUIDO").length;
       // % contra o combinado no contrato (posts/reels por mês), não contra o
       // que foi criado no sistema — assim dá pra ultrapassar 100% quando a
-      // equipe entrega mais do que o combinado.
-      const contracted = (c.posts_per_week ?? 0) + (c.reels_per_week ?? 0);
+      // equipe entrega mais do que o combinado. Tipo oculto pro cliente não
+      // entra na meta, mesmo que o campo antigo ainda tenha um número ali.
+      const contracted = (hiddenTypes.has("posts") ? 0 : (c.posts_per_week ?? 0)) + (hiddenTypes.has("reels") ? 0 : (c.reels_per_week ?? 0));
       const percent = contracted > 0
         ? Math.round((done / contracted) * 100)
         : (total ? Math.round((done / total) * 100) : 0);
@@ -2862,6 +2878,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       if (it.type !== "post" && it.type !== "reel") return;
       const c = monthIdToClient.get(it.month_id);
       if (!c) return;
+      if ((hiddenTypesByClient.get(c.id) ?? orgDisabled).has(`${it.type}s`)) return;
       const entry = { id: it.id, title: it.title, type: it.type, clientName: c.name, clientColor: c.color };
       if (it.status === "PRONTO_PARA_PUBLICAR" || it.status === "FINALIZADO" || it.status === "CONCLUIDO") doneItems.push(entry);
       else pendingItems.push(entry);
