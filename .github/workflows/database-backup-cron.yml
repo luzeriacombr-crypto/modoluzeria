@@ -34,9 +34,22 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
-          supabase db dump --linked --role-only -f roles.sql
-          supabase db dump --linked -f schema.sql
-          supabase db dump --linked --data-only --use-copy -f data.sql
+          # A credencial temporária que o CLI gera pra cada dump às vezes
+          # esbarra num soluço passageiro do pooler do Supabase
+          # (EAUTHQUERY) — tenta de novo antes de desistir, em vez de
+          # deixar a noite inteira sem backup por causa de uma falha de
+          # alguns segundos.
+          dump_with_retry() {
+            for attempt in 1 2 3; do
+              if supabase db dump --linked "$@"; then return 0; fi
+              echo "Tentativa $attempt falhou, aguardando antes de tentar de novo..."
+              sleep 15
+            done
+            return 1
+          }
+          dump_with_retry --role-only -f roles.sql
+          dump_with_retry -f schema.sql
+          dump_with_retry --data-only --use-copy -f data.sql
           cat roles.sql schema.sql data.sql > "backup-$(date +%F).sql"
           gzip "backup-$(date +%F).sql"
 
