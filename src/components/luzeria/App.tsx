@@ -28,6 +28,8 @@ import { AppTour } from "./AppTour";
 import { LuzeriaLoader } from "./LuzeriaLoader";
 import { TrialEndingBanner } from "./TrialEndingBanner";
 import { PastDueBanner } from "./PastDueBanner";
+import { PaymentGraceModal } from "./PaymentGraceModal";
+import { PaymentPausedScreen } from "./PaymentPausedScreen";
 import { InstagramLiveBanner } from "./InstagramLiveBanner";
 import { DriveReconnectBanner } from "./DriveReconnectBanner";
 import { LevelUpCelebration } from "./LevelUpCelebration";
@@ -230,6 +232,10 @@ export function App() {
     );
   }
 
+  if (me.data && !me.data.active && me.data.deactivationReason === "payment") {
+    return <PaymentPausedScreen me={me.data} />;
+  }
+
   if (me.data && !me.data.active) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -279,6 +285,7 @@ export function App() {
         <Header sidebarHidden={sidebarHidden} onToggleSidebar={toggleSidebar} sidebarCollapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebarCollapsed} onOpenLevel={() => setShowLevelModal(true)} />
         <TrialEndingBanner isMaster={me.data?.role === "master"} />
         <PastDueBanner isMaster={me.data?.role === "master"} />
+        <PaymentGraceModal isMaster={me.data?.role === "master"} />
         <ClientLimitGraceBanner isMaster={me.data?.role === "master"} />
         <InstagramLiveBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
         <DriveReconnectBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />

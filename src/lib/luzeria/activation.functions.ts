@@ -1,4 +1,4 @@
-// Duas réguas rodando 1x/dia via cron (api.cron.activation-nudges):
+// Três réguas rodando 1x/dia via cron (api.cron.activation-nudges):
 //
 // 1. runClientActivationNudges — nos dias 2 e 4 desde o cadastro, se a
 //    agência ainda não tiver nenhum cliente, avisa (notificação in-app +
@@ -13,6 +13,14 @@
 //    usa. Se o teste terminar sem isso, desativa (profiles.active = false
 //    pra todo mundo da org — mesmo mecanismo que já barra cadastro
 //    pendente de aprovação, reversível, nunca apaga dado).
+//
+// 3. runPaymentGraceEnforcement — a régua de cobrança (mockup aprovado em
+//    claude.ai/artifact/6zLgdSd2nA9qstYDeBZKiD). Cobre o caso oposto: a
+//    agência COMPLETOU o onboarding (tem cliente + Drive, passou pela régua
+//    acima), mas o teste terminou sem nenhuma assinatura real, ou uma
+//    fatura venceu. Dá 7 dias de tolerância (orgs.payment_grace_started_at)
+//    — durante esse tempo o app mostra o popup/faixinha de cobrança
+//    (frontend, via getOrgPlanStatus) — e só desativa depois de esgotado.
 import type { ActivationChecklistItem } from "./activation-nudge-email.server";
 
 export async function runClientActivationNudges(): Promise<{ sent: number; errors: number }> {
@@ -181,4 +189,65 @@ export async function runInactivityDeactivation(): Promise<{ warned5d: number; w
     }
   }
   return { warned5d, warned2d, deactivated, errors };
+}
+
+export async function runPaymentGraceEnforcement(): Promise<{ started: number; deactivated: number; errors: number }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { LUZERIA_ORG_ID } = await import("./api.functions");
+  const now = new Date();
+  const db = supabaseAdmin as any;
+  let errors = 0;
+
+  // 1) Teste acabou sem nenhuma assinatura Asaas real e a tolerância ainda
+  // não começou a contar — inicia agora, ancorada em trial_ends_at (não em
+  // "agora") pra um cron atrasado não roubar dias que a pessoa já ganhou.
+  const { data: candidates } = await db
+    .from("orgs")
+    .select("id, is_reseller, reseller_org_id, asaas_subscription_id, trial_ends_at")
+    .eq("subscription_status", "trialing")
+    .is("payment_grace_started_at", null)
+    .not("trial_ends_at", "is", null)
+    .lte("trial_ends_at", now.toISOString())
+    .neq("id", LUZERIA_ORG_ID);
+
+  let started = 0;
+  for (const org of candidates ?? []) {
+    if (org.is_reseller || org.reseller_org_id || org.asaas_subscription_id) continue;
+    try {
+      await db.from("orgs").update({ payment_grace_started_at: org.trial_ends_at }).eq("id", org.id);
+      started++;
+    } catch (e) {
+      console.error(`Falha ao iniciar tolerância de pagamento da org ${org.id}:`, e);
+      errors++;
+    }
+  }
+
+  // 2) Tolerância de 7 dias esgotada (fim de teste sem assinar, ou fatura
+  // vencida — os dois casos usam a mesma coluna) e a conta ainda não foi
+  // pausada por isso — pausa agora. Some sozinha do lado direito assim que
+  // subscription_status volta a "active" (asaas-webhook.server.ts zera
+  // payment_grace_started_at e reativa os perfis), então não precisa
+  // reverter nada aqui.
+  const { data: graceOrgs } = await db
+    .from("orgs")
+    .select("id, payment_grace_started_at")
+    .not("payment_grace_started_at", "is", null)
+    .is("deactivation_reason", null)
+    .neq("id", LUZERIA_ORG_ID);
+
+  let deactivated = 0;
+  for (const org of graceOrgs ?? []) {
+    const daysSince = (now.getTime() - new Date(org.payment_grace_started_at).getTime()) / 86_400_000;
+    if (daysSince < 7) continue;
+    try {
+      await supabaseAdmin.from("profiles").update({ active: false }).eq("org_id", org.id);
+      await db.from("orgs").update({ deactivation_reason: "payment", deactivated_at: now.toISOString() }).eq("id", org.id);
+      deactivated++;
+    } catch (e) {
+      console.error(`Falha ao pausar org ${org.id} por pagamento pendente:`, e);
+      errors++;
+    }
+  }
+
+  return { started, deactivated, errors };
 }

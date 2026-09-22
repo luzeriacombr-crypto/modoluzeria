@@ -151,7 +151,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at, plan_id, subscription_status, trial_ends_at, deactivation_reason").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -241,6 +241,14 @@ export const getMe = createServerFn({ method: "GET" })
       heroGradientFrom: ((org as any)?.hero_gradient_from ?? null) as string | null,
       heroGradientTo: ((org as any)?.hero_gradient_to ?? null) as string | null,
       contractTemplate: ((org as any)?.contract_template ?? null) as string | null,
+      // Só o essencial pra montar a tela de "conta pausada" — quando o
+      // perfil está inativo (active=false), nenhuma outra função do
+      // servidor roda (requireActiveProfile bloqueia tudo), então é aqui
+      // ou em lugar nenhum que a pessoa descobre o motivo real.
+      planId: ((org as any)?.plan_id ?? "solo") as string,
+      subscriptionStatus: ((org as any)?.subscription_status ?? "trialing") as string,
+      trialEndsAt: ((org as any)?.trial_ends_at ?? null) as string | null,
+      deactivationReason: ((org as any)?.deactivation_reason ?? null) as "inactivity" | "payment" | null,
       monthRolloverDay: rollover.day,
       monthRolloverMode: rollover.mode,
       cargoNames,
@@ -442,7 +450,7 @@ export const getOrgPlanStatus = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     const { data: org } = await context.supabase
-      .from("orgs").select("plan_id, subscription_status, trial_ends_at, tax_id, asaas_subscription_id, max_collaborators_override, client_limit_grace_until").eq("id", context.orgId).maybeSingle();
+      .from("orgs").select("plan_id, subscription_status, trial_ends_at, tax_id, asaas_subscription_id, max_collaborators_override, client_limit_grace_until, payment_grace_started_at").eq("id", context.orgId).maybeSingle();
     const planId = (org as any)?.plan_id ?? "solo";
     const { data: plan } = await context.supabase.from("plans").select("*").eq("id", planId).maybeSingle();
     const { count: clientsUsed } = await context.supabase
@@ -474,7 +482,27 @@ export const getOrgPlanStatus = createServerFn({ method: "GET" })
       taxId: (org as any)?.tax_id ?? null,
       hasAsaasSubscription: !!(org as any)?.asaas_subscription_id,
       clientLimitGraceUntil,
+      paymentGraceStartedAt: (org as any)?.payment_grace_started_at ?? null,
     };
+  });
+
+/** Master-only, self-service version of getOrgNextInvoice (that one is
+ * platform-admin-only, for Luzeria looking at any agency) — used by the
+ * régua de cobrança's "Pagar agora" so an overdue master can jump straight
+ * to their existing invoice instead of creating a new subscription. */
+export const getMyPendingInvoice = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { data: org } = await context.supabase
+      .from("orgs").select("asaas_subscription_id").eq("id", context.orgId).maybeSingle();
+    if (!(org as any)?.asaas_subscription_id) return null;
+    const { getNextPendingPayment } = await import("./asaas.server");
+    const payment = await getNextPendingPayment((org as any).asaas_subscription_id);
+    return payment
+      ? { id: payment.id, valueCents: Math.round(payment.value * 100), invoiceUrl: payment.invoiceUrl ?? null }
+      : null;
   });
 
 /** Platform-admin only: every agency on Modo Criador with its plan and
@@ -949,6 +977,55 @@ export const subscribeToPlan = createServerFn({ method: "POST" })
       .eq("id", context.orgId);
     if (error) throw new Error(error.message);
 
+    return { invoiceUrl };
+  });
+
+/** Porta de entrada especial pra tela de "Conta pausada" — toda outra ação
+ * de cobrança exige requireActiveProfile, mas uma conta pausada por
+ * pagamento está (corretamente) com active=false, então precisa de uma
+ * porta própria pra voltar. Bem restrita de propósito: só funciona pra um
+ * master cuja org foi pausada especificamente pela régua de cobrança
+ * (deactivation_reason = 'payment') — não dá pra usar isso pra mais nada. */
+export const resumeFromPaymentPause = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: profile } = await context.supabase
+      .from("profiles").select("org_id").eq("id", context.userId).maybeSingle();
+    if (!profile?.org_id) throw new Error("Perfil não encontrado.");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Apenas o Adm Master pode reativar a conta.");
+
+    const { data: org } = await (context.supabase as any)
+      .from("orgs")
+      .select("name, tax_id, asaas_customer_id, asaas_subscription_id, plan_id, subscription_status, deactivation_reason")
+      .eq("id", profile.org_id).maybeSingle();
+    if (org?.deactivation_reason !== "payment") throw new Error("Forbidden");
+    if (!org.tax_id) throw new Error("Sua agência não tem CNPJ/CPF cadastrado — fala com a gente pelo chat de ajuda pra reativar.");
+
+    // Fatura atrasada: a assinatura já existe, só falta pagar a que está pendente.
+    if (org.subscription_status === "past_due" && org.asaas_subscription_id) {
+      const { getNextPendingPayment } = await import("./asaas.server");
+      const payment = await getNextPendingPayment(org.asaas_subscription_id);
+      return { invoiceUrl: payment?.invoiceUrl ?? null };
+    }
+
+    // Teste acabou sem nunca ter assinado — cria a assinatura agora, no
+    // plano que a agência já tinha escolhido lá atrás.
+    const { data: plan } = await context.supabase.from("plans").select("id, name, price_cents").eq("id", org.plan_id).maybeSingle();
+    if (!plan || plan.price_cents == null) throw new Error("Fale com a gente pelo chat de ajuda pra reativar sua conta.");
+
+    const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
+    let customerId = org.asaas_customer_id;
+    if (!customerId) {
+      const customer = await createAsaasCustomer({ name: org.name, cpfCnpj: org.tax_id });
+      customerId = customer.id;
+    }
+    const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
+      customerId, valueCents: plan.price_cents, description: `Modo Criador — Plano ${plan.name}`,
+    });
+    await context.supabase
+      .from("orgs").update({ plan_id: plan.id, asaas_customer_id: customerId, asaas_subscription_id: subscriptionId })
+      .eq("id", profile.org_id);
     return { invoiceUrl };
   });
 

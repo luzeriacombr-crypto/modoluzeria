@@ -50,12 +50,42 @@ export async function handleAsaasWebhook(request: Request): Promise<Response> {
     // Luzeria is the platform owner, not a paying customer — never let a
     // real (or lapsed) Asaas subscription flip its own status to past_due/
     // canceled/etc. Junior's explicit call: special case, not a bug.
-    const { error: updateError } = await supabaseAdmin
+    const dbStatus = supabaseAdmin as any;
+    const { data: orgBefore } = await dbStatus
+      .from("orgs").select("id, payment_grace_started_at, deactivation_reason")
+      .eq("asaas_subscription_id", subscriptionId).neq("id", LUZERIA_ORG_ID).maybeSingle();
+
+    const statusUpdate: Record<string, unknown> = { subscription_status: newStatus };
+    if (newStatus === "past_due") {
+      // Começa a contar os 7 dias de tolerância só na primeira vez que a
+      // fatura vence — um novo webhook OVERDUE pro mesmo atraso (Asaas
+      // reenvia) não pode resetar o prazo que a pessoa já recebeu.
+      if (orgBefore && !orgBefore.payment_grace_started_at) {
+        statusUpdate.payment_grace_started_at = new Date().toISOString();
+      }
+    } else if (newStatus === "active") {
+      // Pagamento em dia de novo — encerra a régua de cobrança e, se a
+      // conta tinha sido pausada por causa dela, reabre na hora (sem
+      // esperar a pessoa pedir pra alguém da Luzeria reativar na mão).
+      statusUpdate.payment_grace_started_at = null;
+      if (orgBefore?.deactivation_reason === "payment") {
+        statusUpdate.deactivation_reason = null;
+        statusUpdate.deactivated_at = null;
+      }
+    }
+
+    const { error: updateError } = await dbStatus
       .from("orgs")
-      .update({ subscription_status: newStatus })
+      .update(statusUpdate)
       .eq("asaas_subscription_id", subscriptionId)
       .neq("id", LUZERIA_ORG_ID);
     if (updateError) console.error("[asaas-webhook] failed to update org status", updateError);
+
+    if (orgBefore && newStatus === "active" && orgBefore.deactivation_reason === "payment") {
+      const { error: reactivateError } = await supabaseAdmin
+        .from("profiles").update({ active: true }).eq("org_id", orgBefore.id);
+      if (reactivateError) console.error("[asaas-webhook] failed to reactivate profiles", reactivateError);
+    }
 
     // Marca a primeira cobrança confirmada, uma única vez — é a partir daqui
     // que o programa de indicação conta os 60 dias como pagante ativo antes

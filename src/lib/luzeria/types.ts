@@ -416,6 +416,13 @@ export interface Profile {
   /** Personal (not org-wide) — which screen this member lands on right
    * after login. null = today's default (Minhas Demandas). */
   defaultLanding?: { view: string; clientId?: string } | null;
+  /** Régua de cobrança — presentes mesmo com o perfil inativo (getMe roda
+   * com requireSupabaseAuth, não requireActiveProfile), pra dar pra montar
+   * a tela de "conta pausada" explicando o motivo certo. */
+  planId?: string;
+  subscriptionStatus?: string;
+  trialEndsAt?: string | null;
+  deactivationReason?: "inactivity" | "payment" | null;
 }
 
 /** Escala semanal usada pro custo-hora por colaborador (Equipe > remuneração).

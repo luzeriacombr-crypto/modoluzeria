@@ -19,7 +19,7 @@ import {
   setItemEditor, setItemReelType, setItemPostFormat,
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   addCleaningTask, renameCleaningTask, deleteCleaningTask,
-  adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getPlans, subscribeToPlan, cancelMySubscription, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations, getMyWorkStats,
+  adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getMyPendingInvoice, resumeFromPaymentPause, getPlans, subscribeToPlan, cancelMySubscription, getSetupChecklist, adminSendPasswordReset, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations, getMyWorkStats,
   listOrgsBilling, getOrgNextInvoice, getMyAgencyLevelInputs, getOrgPageViews,
   updateMyAccount,
   getReport, getDeliveryTrend, getMemberReportDetail, getMemberVelocity, getFileUploadsReport,
@@ -441,6 +441,8 @@ export const appSettingsQO = () =>
 
 export const orgPlanStatusQO = () =>
   queryOptions({ queryKey: ["org-plan-status"], queryFn: () => getOrgPlanStatus() });
+export const myPendingInvoiceQO = () =>
+  queryOptions({ queryKey: ["my-pending-invoice"], queryFn: () => getMyPendingInvoice() });
 export const orgsBillingQO = () =>
   // refetchInterval curto de propósito: "usuários online agora" (onlineCount
   // por org) só faz sentido se o painel se atualizar sozinho enquanto está
@@ -1027,6 +1029,7 @@ export function useApi() {
       mutationFn: useServerFn(subscribeToPlan),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["org-plan-status"] }); qc.invalidateQueries({ queryKey: ["me"] }); },
     }),
+    resumeFromPaymentPause: useMutation({ mutationFn: useServerFn(resumeFromPaymentPause) }),
     cancelMySubscription: useMutation({
       mutationFn: useServerFn(cancelMySubscription),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["org-plan-status"] }),
