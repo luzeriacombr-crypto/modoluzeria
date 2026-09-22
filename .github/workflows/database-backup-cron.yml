@@ -1,14 +1,16 @@
 name: Database backup (offsite)
 
-# Cópia independente do banco, fora da conta Supabase — o Supabase já faz
-# backup físico diário sozinho (8 dias de retenção), mas esse backup mora
-# dentro da própria conta Supabase. Esse aqui sobe um dump completo
-# (roles + schema + dados) todo dia pro Backblaze B2, com uma chave de API
-# separada, pra ter uma cópia de verdade independente em caso de conta
-# comprometida ou apagada. Reaproveita o SUPABASE_ACCESS_TOKEN que o
-# deploy-migrations.yml já usa — nunca guarda a senha direta do Postgres em
-# lugar nenhum, o próprio `supabase db dump --linked` gera uma credencial
-# temporária na hora, a cada execução.
+# Cópia independente do banco (E dos arquivos de Storage), fora da conta
+# Supabase — o Supabase já faz backup físico diário sozinho do banco (8
+# dias de retenção), mas esse backup mora dentro da própria conta Supabase,
+# e nem cobre os buckets de Storage (só linhas de banco). Esse workflow
+# sobe TUDO todo dia pro Backblaze B2, com uma chave de API separada, pra
+# ter uma cópia de verdade independente em caso de conta comprometida ou
+# apagada. Reaproveita o SUPABASE_ACCESS_TOKEN que o deploy-migrations.yml
+# já usa — nunca guarda a senha direta do Postgres em lugar nenhum (o
+# próprio `supabase db dump --linked` gera uma credencial temporária na
+# hora) nem chaves S3 separadas pro Storage (`supabase storage cp` também
+# usa esse mesmo token).
 on:
   schedule:
     # Uma vez por dia, 05:00 UTC (~02:00 no Brasil) — fora da janela do
@@ -53,6 +55,24 @@ jobs:
           cat roles.sql schema.sql data.sql > "backup-$(date +%F).sql"
           gzip "backup-$(date +%F).sql"
 
+      - name: Download Storage buckets (logos, prints, ativos de marca etc.)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Lista fixa — os buckets que existem hoje no projeto. Um bucket
+          # novo criado depois precisa ser adicionado aqui manualmente.
+          BUCKETS="avatars bug-reports comment-audio marketing-assets org-knowledge reel-covers"
+          mkdir -p storage-backup
+          for b in $BUCKETS; do
+            for attempt in 1 2 3; do
+              if supabase storage cp -r --linked --experimental "ss:///$b" "storage-backup/$b" 2>&1; then break; fi
+              echo "Falha baixando bucket $b (tentativa $attempt), tentando de novo..."
+              sleep 15
+            done
+          done
+          tar -czf "storage-backup-$(date +%F).tar.gz" storage-backup
+
       - name: Upload to Backblaze B2
         env:
           # O CLI do b2 lê essas duas variáveis (nomes fixos dele) — usar
@@ -66,3 +86,4 @@ jobs:
           pip install --quiet b2
           b2 account authorize "$B2_APPLICATION_KEY_ID" "$B2_APPLICATION_KEY"
           b2 file upload "$B2_BUCKET_NAME" "backup-$(date +%F).sql.gz" "modoluzeria/backup-$(date +%F).sql.gz"
+          b2 file upload "$B2_BUCKET_NAME" "storage-backup-$(date +%F).tar.gz" "modoluzeria/storage-backup-$(date +%F).tar.gz"
