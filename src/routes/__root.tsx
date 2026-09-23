@@ -8,7 +8,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { setOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { siteTrackingSettingsQO } from "@/lib/luzeria/queries";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,39 +47,44 @@ function NotFoundComponent() {
   );
 }
 
-// Depois de um deploy novo, uma aba que já estava aberta ainda referencia os
-// arquivos JS da versão antiga (hash antigo) — ao tentar carregar uma aba/
-// rota preguiçosa (lazy) depois disso, o navegador tenta buscar um arquivo
-// que não existe mais e quebra com esse tipo de mensagem. "Tentar de novo"
-// (reset do router) não resolve, porque não busca JS novo nenhum, só
-// re-roda os loaders com o MESMO módulo quebrado já carregado — por isso
-// a pessoa via esse erro "com frequência" mesmo clicando em tentar de novo.
-// Um reload de verdade busca o HTML/JS atual e resolve sozinho.
-const CHUNK_LOAD_ERROR_PATTERN = /dynamically imported module|loading chunk|importing a module script failed|unable to preload css/i;
-const CHUNK_RELOAD_KEY = "lz:chunk-reload-at";
+// Boa parte dos erros que chegam aqui (chunk desatualizado depois de um
+// deploy, um loader que falhou por uma falha de rede passageira, uma corrida
+// de estado ao trocar de aba rápido) somem sozinhos com um reload de
+// verdade. "Tentar de novo" (reset do router) não busca nada novo — só
+// re-roda os loaders com o MESMO módulo/estado já carregado — por isso
+// esse erro "feio" aparecia pra pessoa mesmo em problemas passageiros.
+// Por isso: na primeira vez que um erro cai aqui, recarrega a página sozinho
+// e mostra uma mensagem neutra em vez do aviso de erro — sem deixar a pessoa
+// insegura. Só se o MESMO tipo de falha persistir logo depois do reload (ou
+// seja, não era passageiro) é que mostramos a tela de erro de verdade.
+const RELOAD_GUARD_KEY = "lz:error-reload-at";
+const RELOAD_GUARD_WINDOW_MS = 15_000;
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  const isChunkLoadError = CHUNK_LOAD_ERROR_PATTERN.test(error?.message ?? "");
+
+  // Calculado uma única vez, na primeira renderização deste erro: se já
+  // tentamos recarregar há pouco, não tenta de novo (evita loop) e mostra a
+  // tela de erro normal — senão, tenta o reload silencioso.
+  const [alreadyTriedReload] = useState(() => {
+    if (typeof window === "undefined") return true;
+    let lastReload = 0;
+    try { lastReload = Number(window.sessionStorage.getItem(RELOAD_GUARD_KEY) ?? 0); } catch { /* noop */ }
+    return Date.now() - lastReload < RELOAD_GUARD_WINDOW_MS;
+  });
 
   useEffect(() => {
-    reportAppError(error, { boundary: "tanstack_root_error_component" });
+    reportAppError(error, { boundary: "tanstack_root_error_component", autoReloaded: !alreadyTriedReload });
   }, [error]);
 
   useEffect(() => {
-    if (!isChunkLoadError || typeof window === "undefined") return;
-    // Só recarrega sozinho uma vez a cada 10s — evita loop infinito se por
-    // algum motivo o erro persistir depois do reload (aí vira o erro normal
-    // pra pessoa resolver manualmente, em vez de recarregar pra sempre).
-    let lastReload = 0;
-    try { lastReload = Number(window.sessionStorage.getItem(CHUNK_RELOAD_KEY) ?? 0); } catch { /* noop */ }
-    if (Date.now() - lastReload < 10_000) return;
-    try { window.sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now())); } catch { /* noop */ }
+    if (alreadyTriedReload || typeof window === "undefined") return;
+    try { window.sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now())); } catch { /* noop */ }
     window.location.reload();
-  }, [isChunkLoadError]);
+  }, [alreadyTriedReload]);
 
-  if (isChunkLoadError) {
+  if (!alreadyTriedReload) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <p className="text-sm text-muted-foreground">Atualizando o app…</p>
