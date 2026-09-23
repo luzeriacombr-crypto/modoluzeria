@@ -1435,7 +1435,7 @@ export const listClients = createServerFn({ method: "GET" })
     // colunas novas — cast até os tipos do Supabase serem regenerados
     // depois da migração rodar.
     const { data, error } = await (context.supabase as any).from("clients")
-      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, hidden_tabs, cnpj_cpf, address, legal_responsible_name, legal_responsible_cpf, ai_planning_enabled, competitors, content_briefing, recent_roteiros")
+      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, contract_start_date, contract_end_date, hidden_tabs, cnpj_cpf, address, legal_responsible_name, legal_responsible_cpf, ai_planning_enabled, competitors, content_briefing, recent_roteiros")
       .order("name");
     if (error) throw new Error(error.message);
     const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
@@ -1470,6 +1470,8 @@ export const listClients = createServerFn({ method: "GET" })
       notifyStoriesInTasks: c.notify_stories_in_tasks ?? false,
       contractValue: isMaster ? (c.contract_value ?? null) : undefined,
       paymentDueDay: isMaster ? (c.payment_due_day ?? null) : undefined,
+      contractStartDate: isMaster ? (c.contract_start_date ?? null) : undefined,
+      contractEndDate: isMaster ? (c.contract_end_date ?? null) : undefined,
       hiddenTabs: c.hidden_tabs ?? null,
     })) as Client[];
   });
@@ -1636,11 +1638,11 @@ export const updateClient = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string; patch: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     let patch = data.patch;
-    if (Object.prototype.hasOwnProperty.call(patch, "contract_value") || Object.prototype.hasOwnProperty.call(patch, "payment_due_day")) {
+    const masterOnlyKeys = ["contract_value", "payment_due_day", "contract_start_date", "contract_end_date"];
+    if (masterOnlyKeys.some((k) => Object.prototype.hasOwnProperty.call(patch, k))) {
       const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
       if (!isMaster) {
-        const { contract_value, payment_due_day, ...rest } = patch;
-        patch = rest;
+        patch = Object.fromEntries(Object.entries(patch).filter(([k]) => !masterOnlyKeys.includes(k)));
       }
     }
     const { error } = await context.supabase.from("clients").update(patch as any).eq("id", data.id);

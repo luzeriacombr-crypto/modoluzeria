@@ -274,6 +274,9 @@ export interface Client {
   /** Dia do mês (1-31) em que o pagamento desse cliente vence — master-only,
    * usado pra "Pagamentos próximos" em Minhas Demandas e na aba Financeiro. */
   paymentDueDay?: number | null;
+  /** Início e fim do contrato — master-only. Datas ISO ("YYYY-MM-DD"). */
+  contractStartDate?: string | null;
+  contractEndDate?: string | null;
   /** Exceção por cliente às abas customizáveis (reels/mais/feed)
    * — null = usa o padrão da agência (me.disabledFeatures); um array
    * substitui o padrão só pra esse cliente. */

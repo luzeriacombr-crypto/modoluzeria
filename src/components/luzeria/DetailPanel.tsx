@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Facebook, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus, Play, Film } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Facebook, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus, Play, Film, HardDrive } from "lucide-react";
 import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -282,6 +282,28 @@ function BulkDeleteMenu({
         document.body,
       )}
     </>
+  );
+}
+
+const PT_MONTHS_HINT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const TYPE_FOLDER_LABEL_HINT: Record<string, string> = { post: "Posts", reel: "Reels", story: "Stories" };
+
+/** Mostra pra onde o arquivo vai cair no Google Drive antes mesmo de subir
+ * — visto ao vivo numa call de onboarding real, a pessoa fez upload e
+ * depois não sabia achar o arquivo no Drive (achava que tinha sumido).
+ * Só texto, sem link nem ação — a pasta só existe de verdade depois do
+ * primeiro upload daquele mês/tipo. */
+function DriveDestinationHint({ clientName, monthKey, itemType }: { clientName: string; monthKey: string; itemType: string }) {
+  const m = /^(\d{4})-(\d{2})/.exec(monthKey);
+  if (!m) return null;
+  const monthLabel = `${PT_MONTHS_HINT[Math.max(1, Math.min(12, parseInt(m[2], 10))) - 1]} ${m[1]}`;
+  const typeLabel = TYPE_FOLDER_LABEL_HINT[itemType];
+  const path = [`Entregas - ${clientName}`, monthLabel, typeLabel].filter(Boolean).join(" › ");
+  return (
+    <div className="flex items-center gap-1.5 text-[10.5px] text-foreground/35 mb-1.5">
+      <HardDrive size={11} className="shrink-0" />
+      <span>Isso vai parar no Drive em: <span className="text-foreground/55">{path}</span></span>
+    </div>
   );
 }
 
@@ -965,6 +987,9 @@ export function DetailPanel() {
           <div className="md:overflow-y-auto md:border-r md:border-foreground/6">
             {/* Drive preview */}
             <ModalSection label="Mídia">
+              {client && effectiveMonthKey && (
+                <DriveDestinationHint clientName={client.name} monthKey={effectiveMonthKey} itemType={item.type} />
+              )}
               <MediaPreview
                 itemId={item.id}
                 coverUrl={item.coverUrl ?? null}

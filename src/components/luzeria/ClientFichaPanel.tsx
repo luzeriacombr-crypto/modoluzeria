@@ -468,6 +468,8 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
   const [legalResponsibleCpf, setLegalResponsibleCpf] = useState<string>(client.legalResponsibleCpf ?? "");
   const [contractValue, setContractValue] = useState<string | number>(client.contractValue ?? "");
   const [paymentDueDay, setPaymentDueDay] = useState<string | number>(client.paymentDueDay ?? "");
+  const [contractStartDate, setContractStartDate] = useState<string>(client.contractStartDate ?? "");
+  const [contractEndDate, setContractEndDate] = useState<string>(client.contractEndDate ?? "");
   const [photoPreview, setPhotoPreview] = useState<string | null>(client.photoUrl ?? null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
@@ -485,6 +487,8 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     setRecentRoteiros(client.customFields.recentRoteiros ?? "");
     setContractValue(client.contractValue ?? "");
     setPaymentDueDay(client.paymentDueDay ?? "");
+    setContractStartDate(client.contractStartDate ?? "");
+    setContractEndDate(client.contractEndDate ?? "");
     setPhotoPreview(client.photoUrl ?? null);
     setCnpjCpf(client.cnpjCpf ?? "");
     setAddress(client.address ?? "");
@@ -536,6 +540,8 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       ...(isMaster ? {
         contract_value: contractValue === "" ? null : Number(contractValue),
         payment_due_day: paymentDueDay === "" ? null : Number(paymentDueDay),
+        contract_start_date: contractStartDate || null,
+        contract_end_date: contractEndDate || null,
       } : {}),
     });
     toast.success("Configuração salva");
@@ -643,6 +649,26 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
             value={paymentDueDay} disabled={!canEdit}
             onChange={(e) => setPaymentDueDay(e.target.value)}
             placeholder="Ex: 10"
+            className={inp}
+          />
+        </ConfigField>
+      )}
+      {isMaster && (
+        <ConfigField label="Início do contrato">
+          <input
+            type="date"
+            value={contractStartDate} disabled={!canEdit}
+            onChange={(e) => setContractStartDate(e.target.value)}
+            className={inp}
+          />
+        </ConfigField>
+      )}
+      {isMaster && (
+        <ConfigField label="Fim do contrato">
+          <input
+            type="date"
+            value={contractEndDate} disabled={!canEdit}
+            onChange={(e) => setContractEndDate(e.target.value)}
             className={inp}
           />
         </ConfigField>

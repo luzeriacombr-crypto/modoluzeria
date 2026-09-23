@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -42,6 +42,29 @@ function StepDot({ step, label, state, onClick }: {
         {label}
       </span>
     </button>
+  );
+}
+
+/** Desenho simples da árvore de pastas que o Modo Criador cria sozinho —
+ * a explicação em texto ("a estrutura X/Y é criada automaticamente") não
+ * gruda tanto quanto ver o desenho; visto ao vivo numa call de onboarding
+ * real, a pessoa só entendeu onde os arquivos caíam depois de voltar pro
+ * Drive e ver na prática. */
+function FolderTreeExample() {
+  const row = (depth: number, icon: ReactNode, label: string, dim = false) => (
+    <div className="flex items-center gap-1.5" style={{ paddingLeft: depth * 18 }}>
+      {depth > 0 && <span className="text-foreground/20 text-xs -ml-1">└</span>}
+      {icon}
+      <span className={dim ? "text-foreground/40" : "text-foreground/80"}>{label}</span>
+    </div>
+  );
+  return (
+    <div className="rounded-lg p-3.5 mb-4 space-y-1.5 text-[12px]" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
+      {row(0, <Folder size={13} className="text-foreground/40 shrink-0" />, "Sua pasta raiz (a que você escolher abaixo)", true)}
+      {row(1, <Folder size={13} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />, "Entregas - Anastásia Farmácia")}
+      {row(2, <Folder size={13} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />, "Setembro")}
+      {row(3, <Video size={13} className="text-foreground/50 shrink-0" />, "Reels — seus vídeos caem aqui sozinhos")}
+    </div>
   );
 }
 
@@ -276,11 +299,13 @@ export function DriveSettingsTab() {
 
         {activeStep === 2 && (
           <div>
-            <p className="text-xs text-foreground/50 mb-4 leading-relaxed">
+            <p className="text-xs text-foreground/50 mb-3 leading-relaxed">
               Escolha a pasta do Drive que contém (ou vai conter) uma subpasta pra cada cliente. A
               estrutura <span className="text-foreground">Entregas - &lt;Cliente&gt; / &lt;Mês&gt;</span> é
-              criada automaticamente dentro dela.
+              criada automaticamente dentro dela — assim, sempre que alguém subir um vídeo ou foto
+              pelo Modo Criador, ele já cai organizado lá.
             </p>
+            <FolderTreeExample />
 
             {step2Done && (
               <div className="flex items-center gap-2 mb-3 text-xs" style={{ color: "var(--lz-accent-ink)" }}>
