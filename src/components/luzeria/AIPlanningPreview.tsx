@@ -140,7 +140,7 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
     const trimmedContext = extraContext.trim().slice(0, 60000);
     generate({ data: { clientId, extraContext: trimmedContext || undefined, contentTypes: [...contentTypes] } })
       .then((r) => { if (!cancelled) setResult(r); })
-      .catch((e: any) => { if (!cancelled) setError(friendlyError(e, "Não consegui gerar a prévia.")); })
+      .catch((e: any) => { if (!cancelled) setError(friendlyError(e, "Não consegui gerar a prévia. Tenta de novo em instantes.")); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [started, clientId]);

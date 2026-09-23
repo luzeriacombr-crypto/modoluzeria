@@ -355,7 +355,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
         ? `\n\nConcorrentes informados pela agência — pesquise na web (use a tool web_search) o que cada um tem postado recentemente, formatos e temas em alta, ANTES de sugerir o planejamento, e cite o que encontrou em competitorNotes:\n${competitorsText}`
         : "\n\nNenhum concorrente foi informado — não pesquise nada, deixe competitorNotes vazio.",
       "",
-      "Inclua pelo menos 1-2 sugestões respondendo direto uma pergunta frequente e real que o público do nicho desse cliente costuma ter (formato: a pessoa olha pra câmera e responde a pergunta, tipo os exemplos reais de roteiro na base de conhecimento acima, se houver) e pelo menos 1 sugestão em formato de lista rápida (Top 5/Top 10 em contagem regressiva, Esse ou Aquele, Troque isso por isso) quando fizer sentido pro nicho, são formatos rápidos de gravar e com bom histórico de alcance. Se não souber quais perguntas o público desse nicho mais faz, use a tool web_search pra pesquisar rapidamente antes de sugerir, em vez de inventar uma pergunta genérica.",
+      "Inclua pelo menos 1-2 sugestões respondendo direto uma pergunta frequente e real que o público do nicho desse cliente costuma ter (formato: a pessoa olha pra câmera e responde a pergunta, tipo os exemplos reais de roteiro na base de conhecimento acima, se houver) e pelo menos 1 sugestão em formato de lista rápida (Top 5/Top 10 em contagem regressiva, Esse ou Aquele, Troque isso por isso) quando fizer sentido pro nicho, são formatos rápidos de gravar e com bom histórico de alcance. Se já tiver essa informação no briefing/histórico/base de conhecimento, use direto. Só use web_search pra isso (no máximo 1 busca rápida) se REALMENTE não tiver nenhuma pista sobre o nicho; nunca gaste várias buscas só pra achar pergunta frequente, isso é secundário à pesquisa de concorrentes.",
       "",
       data.contentTypes && data.contentTypes.length > 0
         ? `TIPOS DE CONTEÚDO PERMITIDOS NESSA LEVA (a pessoa escolheu na tela, siga à risca, nunca sugira um tipo fora dessa lista): ${data.contentTypes.map((t) => ({ reel: "Reel", estatico: "Post estático", carrossel: "Post carrossel" }[t])).join(", ")}. Se só um tipo foi marcado, TODOS os itens da leva precisam ser desse tipo. Se mais de um foi marcado, distribua de forma equilibrada entre eles, nunca concentre quase tudo num só tipo só porque é mais fácil de escrever.`
@@ -369,20 +369,31 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
     const anthropic = getAnthropicClient();
 
-    const response = await anthropic.messages.create({
-      model: PLANNING_MODEL,
-      // Até 12 itens com captionDraft completo no formato de casa (carrossel
-      // pode ter 5-8 slides) mais o texto de busca de concorrentes já
-      // estourava os 8000 tokens antigos antes de fechar a tool_use final —
-      // margem generosa pra não cortar a resposta no meio.
-      max_tokens: 16000,
-      tools: [WEB_SEARCH_TOOL as any, REPORT_PLAN_TOOL],
-      tool_choice: { type: "auto" },
-      messages: [{
-        role: "user",
-        content: [{ type: "text", text: instruction }, ...assetBlocks, ...knowledgeBlocks],
-      }],
-    } as any);
+    let response;
+    try {
+      response = await anthropic.messages.create({
+        model: PLANNING_MODEL,
+        // Até 12 itens com captionDraft completo no formato de casa (carrossel
+        // pode ter 5-8 slides) mais o texto de busca de concorrentes já
+        // estourava os 8000 tokens antigos antes de fechar a tool_use final —
+        // margem generosa pra não cortar a resposta no meio.
+        max_tokens: 16000,
+        tools: [WEB_SEARCH_TOOL as any, REPORT_PLAN_TOOL],
+        tool_choice: { type: "auto" },
+        messages: [{
+          role: "user",
+          content: [{ type: "text", text: instruction }, ...assetBlocks, ...knowledgeBlocks],
+        }],
+      } as any);
+    } catch (apiError: any) {
+      // Antes, um erro aqui (rate limit, sobrecarga, timeout) chegava na
+      // tela só como "Não consegui gerar a prévia.", sem log nenhum pra
+      // investigar depois. Agora fica registrado com detalhe real.
+      console.error("generateMonthlyPlanPreview: falha na chamada da IA", {
+        message: apiError?.message, status: apiError?.status, type: apiError?.error?.type, clientId: data.clientId,
+      });
+      throw new Error("A IA não respondeu a tempo ou está sobrecarregada agora. Tenta gerar de novo em instantes.");
+    }
 
     const toolUse = [...response.content].reverse().find(
       (b: any) => b.type === "tool_use" && b.name === "report_monthly_plan",
