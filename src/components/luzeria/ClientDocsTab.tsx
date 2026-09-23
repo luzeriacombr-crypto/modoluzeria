@@ -15,6 +15,7 @@ import { RoteirosView, PlanejamentoView } from "./MarkdownLiteView";
 import { RoteiroControls } from "./RoteiroControls";
 import { MonthPickerList } from "./MonthPickerList";
 import { Modal } from "./Modals";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const DOC_TYPES: ClientDocType[] = ["roteiro", "planejamento"];
 
@@ -102,6 +103,7 @@ export function ClientDocsTab({
   }
 
   return (
+    <TooltipProvider delayDuration={0}>
     <div className="max-w-2xl">
       {aiPlanningEnabled && (
         <button
@@ -262,6 +264,7 @@ export function ClientDocsTab({
       )}
 
     </div>
+    </TooltipProvider>
   );
 }
 
@@ -399,31 +402,49 @@ function DocRow({
           {CLIENT_DOC_TYPE_LABEL[doc.type].label}
         </span>
         {isRoteiro && (
-          <span
-            onClick={(e) => { e.stopPropagation(); if (!regenerateRoteiroDoc.isPending) regenerate(); }}
-            title="Reescrever com IA — tom mais natural e aprofundado"
-            className={"p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0" + (regenerateRoteiroDoc.isPending ? " opacity-40" : "")}
-          >
-            <Sparkles size={13} />
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                onClick={(e) => { e.stopPropagation(); if (!regenerateRoteiroDoc.isPending) regenerate(); }}
+                className={"p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0" + (regenerateRoteiroDoc.isPending ? " opacity-40" : "")}
+              >
+                <Sparkles size={13} />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Reescrever com IA — tom mais natural e aprofundado</TooltipContent>
+          </Tooltip>
         )}
         {isRoteiro && (
-          <span
-            onClick={(e) => { e.stopPropagation(); setExportingPdf(true); }}
-            title="Exportar em PDF"
-            className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0"
-          >
-            <FileDown size={13} />
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                onClick={(e) => { e.stopPropagation(); setExportingPdf(true); }}
+                className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0"
+              >
+                <FileDown size={13} />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Exportar em PDF</TooltipContent>
+          </Tooltip>
         )}
-        <span onClick={(e) => { e.stopPropagation(); onEdit(); }}
-          className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0">
-          <Pencil size={13} />
-        </span>
-        <span onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 transition shrink-0">
-          <Trash2 size={13} />
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0">
+              <Pencil size={13} />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>Editar</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 transition shrink-0">
+              <Trash2 size={13} />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>Excluir</TooltipContent>
+        </Tooltip>
         {isOpen ? <ChevronDown size={14} className="text-foreground/40 shrink-0" /> : <ChevronRight size={14} className="text-foreground/40 shrink-0" />}
       </button>
       {isOpen && (
