@@ -338,6 +338,11 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       c.notes ? `Observações internas: ${c.notes}` : null,
     ].filter(Boolean).join("\n");
 
+    // Volume real que a agência entrega pra esse cliente — já cadastrado na
+    // Ficha, não é pra inventar um teto igual pra todo mundo. Cliente sem
+    // meta cadastrada cai num padrão razoável só pra não gerar zero.
+    const monthlyTarget = (c.posts_per_week ?? 0) + (c.reels_per_week ?? 0);
+
     const competitorsText: string | null = c.competitors?.trim() || null;
     const contentBriefingText: string | null = c.content_briefing?.trim() || null;
     const recentRoteirosText: string | null = c.recent_roteiros?.trim() || null;
@@ -366,7 +371,10 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       "",
       HOUSE_STYLE_GUIDE,
       "",
-      `Gere entre 4 e 8 sugestões de posts/reels pro próximo mês (nunca mais que 8, mesmo que a meta mensal do cliente seja mais alta — é uma prévia pra revisão, não o mês inteiro), com a mistura de tipos batendo aproximadamente com a meta mensal informada acima. Escreva tudo em português do Brasil, com tom real e específico do nicho do cliente — nunca genérico ou clichê. As legendas (publishCaption) precisam variar de tamanho entre si — misture curtas, médias e longas na mesma leva, não entregue tudo com uma frase só. Termine SEMPRE chamando a tool report_monthly_plan com o resultado final.`,
+      monthlyTarget > 0
+        ? `Gere ${monthlyTarget} sugestões de posts/reels pro próximo mês — esse é o volume real que a agência entrega pra esse cliente (Meta: ${c.posts_per_week ?? 0} posts/mês e ${c.reels_per_week ?? 0} reels/mês, já informado acima). Não entregue menos que isso, a pessoa está esperando esse volume. A mistura de tipos precisa bater com essa meta.`
+        : "O cliente não tem meta de posts/reels por mês cadastrada na Ficha — gere entre 4 e 8 sugestões.",
+      "Escreva tudo em português do Brasil, com tom real e específico do nicho do cliente — nunca genérico ou clichê. As legendas (publishCaption) precisam variar de tamanho entre si — misture curtas, médias e longas na mesma leva, não entregue tudo com uma frase só. Termine SEMPRE chamando a tool report_monthly_plan com o resultado final.",
     ].filter(Boolean).join("\n");
 
     const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
@@ -376,11 +384,9 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     try {
       response = await anthropic.messages.create({
         model: PLANNING_MODEL,
-        // Quem decide o tamanho da prévia é a instrução (quantos itens pedir),
-        // não esse número — 16000 já é margem generosa pro teto de itens
-        // pedido abaixo. Bug real corrigido reduzindo o pedido em vez de
-        // inflar isso.
-        max_tokens: 16000,
+        // A quantidade de itens pedida acima varia com a meta real do
+        // cliente (pode passar de 8) — 20000 dá a margem que isso precisa.
+        max_tokens: 20000,
         tools: [WEB_SEARCH_TOOL as any, REPORT_PLAN_TOOL],
         tool_choice: { type: "auto" },
         messages: [{
