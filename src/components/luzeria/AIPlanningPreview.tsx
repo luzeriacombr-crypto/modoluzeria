@@ -2,8 +2,15 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2, Star, BookMarked } from "lucide-react";
+import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2, Star, BookMarked, Check } from "lucide-react";
 import { generateMonthlyPlanPreview, submitAiPlanningFeedback, type MonthlyPlanItem, type MonthlyPlanResult } from "@/lib/luzeria/ai-planning.functions";
+
+type ContentTypeKey = "reel" | "estatico" | "carrossel";
+const CONTENT_TYPE_OPTIONS: { key: ContentTypeKey; label: string }[] = [
+  { key: "reel", label: "Reels" },
+  { key: "estatico", label: "Post estático" },
+  { key: "carrossel", label: "Post carrossel" },
+];
 import { useApi } from "@/lib/luzeria/queries";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { Modal } from "./Modals";
@@ -101,6 +108,7 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
   const api = useApi();
   const [started, setStarted] = useState(false);
   const [extraContext, setExtraContext] = useState("");
+  const [contentTypes, setContentTypes] = useState<Set<ContentTypeKey>>(new Set(["reel", "estatico", "carrossel"]));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<MonthlyPlanResult | null>(null);
@@ -130,7 +138,7 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
     setLoading(true);
     setError(null);
     const trimmedContext = extraContext.trim().slice(0, 60000);
-    generate({ data: { clientId, extraContext: trimmedContext || undefined } })
+    generate({ data: { clientId, extraContext: trimmedContext || undefined, contentTypes: [...contentTypes] } })
       .then((r) => { if (!cancelled) setResult(r); })
       .catch((e: any) => { if (!cancelled) setError(friendlyError(e, "Não consegui gerar a prévia.")); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -143,6 +151,19 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
 
   function removeItem(idx: number) {
     setResult((r) => r ? { ...r, items: r.items.filter((_, i) => i !== idx) } : r);
+  }
+
+  function toggleContentType(key: ContentTypeKey) {
+    setContentTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        if (next.size === 1) return next; // sempre pelo menos um marcado
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
   }
 
   function save() {
@@ -200,6 +221,30 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
           {extraContext.length > 50000 && (
             <p className="text-[11px] text-foreground/40 text-right -mt-1.5">{extraContext.length.toLocaleString("pt-BR")} / 60.000 caracteres</p>
           )}
+
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wide text-foreground/40 mb-1.5 block">Quais tipos de conteúdo você quer nessa leva?</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              {CONTENT_TYPE_OPTIONS.map((opt) => {
+                const active = contentTypes.has(opt.key);
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => toggleContentType(opt.key)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                    style={active
+                      ? { backgroundColor: "rgba(var(--lz-brand-rgb),0.15)", color: "var(--lz-accent-ink)", border: "1px solid rgba(var(--lz-brand-rgb),0.3)" }
+                      : { backgroundColor: "transparent", color: "color-mix(in srgb, var(--foreground) 45%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 12%, transparent)" }}
+                  >
+                    {active && <Check size={12} />}
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="flex items-center justify-end gap-2 pt-1">
             <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
             <button onClick={() => setStarted(true)} className="lz-btn-primary text-xs px-5 py-2.5 rounded-md">

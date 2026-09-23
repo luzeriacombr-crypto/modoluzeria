@@ -188,7 +188,7 @@ export type MonthlyPlanResult = z.infer<typeof PlanResultSchema> & {
 
 export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; extraContext?: string }) =>
+  .inputValidator((d: { clientId: string; extraContext?: string; contentTypes?: ("reel" | "estatico" | "carrossel")[] }) =>
     z.object({
       clientId: z.string().uuid(),
       // Colado na hora, só pra essa geração — reunião recente, transcrição,
@@ -197,6 +197,10 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       // Pode ser uma transcrição de reunião inteira — bem mais generoso que
       // os outros campos de texto do app.
       extraContext: z.string().trim().max(60000).optional(),
+      // Escolhido na tela antes de gerar (Reels/Post estático/Carrossel) —
+      // sem isso a IA às vezes concentrava tudo num tipo só e ignorava os
+      // outros. Vazio/ausente = os três liberados (comportamento antigo).
+      contentTypes: z.array(z.enum(["reel", "estatico", "carrossel"])).min(1).max(3).optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }): Promise<MonthlyPlanResult> => {
@@ -352,6 +356,10 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
         : "\n\nNenhum concorrente foi informado — não pesquise nada, deixe competitorNotes vazio.",
       "",
       "Inclua pelo menos 1-2 sugestões respondendo direto uma pergunta frequente e real que o público do nicho desse cliente costuma ter (formato: a pessoa olha pra câmera e responde a pergunta, tipo os exemplos reais de roteiro na base de conhecimento acima, se houver) e pelo menos 1 sugestão em formato de lista rápida (Top 5/Top 10 em contagem regressiva, Esse ou Aquele, Troque isso por isso) quando fizer sentido pro nicho, são formatos rápidos de gravar e com bom histórico de alcance. Se não souber quais perguntas o público desse nicho mais faz, use a tool web_search pra pesquisar rapidamente antes de sugerir, em vez de inventar uma pergunta genérica.",
+      "",
+      data.contentTypes && data.contentTypes.length > 0
+        ? `TIPOS DE CONTEÚDO PERMITIDOS NESSA LEVA (a pessoa escolheu na tela, siga à risca, nunca sugira um tipo fora dessa lista): ${data.contentTypes.map((t) => ({ reel: "Reel", estatico: "Post estático", carrossel: "Post carrossel" }[t])).join(", ")}. Se só um tipo foi marcado, TODOS os itens da leva precisam ser desse tipo. Se mais de um foi marcado, distribua de forma equilibrada entre eles, nunca concentre quase tudo num só tipo só porque é mais fácil de escrever.`
+        : "Nenhuma preferência de tipo foi marcada — misture Reels, posts estáticos e carrosséis de forma equilibrada, nunca concentre quase tudo num tipo só.",
       "",
       HOUSE_STYLE_GUIDE,
       "",
