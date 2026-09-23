@@ -5,14 +5,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw, Lock, FileDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { clientDocsQO, roteiroStatusesQO, useApi } from "@/lib/luzeria/queries";
+import { clientDocsQO, roteiroStatusesQO, clientsQO, useApi } from "@/lib/luzeria/queries";
+import { openAiPlanningModal } from "@/lib/luzeria/ai-planning-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { CLIENT_DOC_TYPE_LABEL, CLIENT_DOC_PROMPT, type ClientDocType } from "@/lib/luzeria/client-doc-templates";
 import { parseMarkdownLite, groupByH2, type MdBlock } from "@/lib/luzeria/markdown-lite";
 import { formatClientDocWithAI, type ClientDoc } from "@/lib/luzeria/client-docs.functions";
 import { RoteirosView, PlanejamentoView } from "./MarkdownLiteView";
 import { RoteiroControls } from "./RoteiroControls";
-import { AIPlanningPreview } from "./AIPlanningPreview";
 import { MonthPickerList } from "./MonthPickerList";
 import { Modal } from "./Modals";
 
@@ -33,9 +33,10 @@ export function ClientDocsTab({
   aiPlanningQuota?: number;
 }) {
   const { data: docs = [] } = useQuery(clientDocsQO(clientId));
+  const { data: clients = [] } = useQuery(clientsQO());
+  const clientName = clients.find((c) => c.id === clientId)?.name ?? "Cliente";
   const { upsertClientDoc, deleteClientDoc } = useApi();
   const formatWithAI = useServerFn(formatClientDocWithAI);
-  const [showAiPlanning, setShowAiPlanning] = useState(false);
   const [activeType, setActiveType] = useState<ClientDocType>("roteiro");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -104,7 +105,7 @@ export function ClientDocsTab({
     <div className="max-w-2xl">
       {aiPlanningEnabled && (
         <button
-          onClick={() => setShowAiPlanning(true)}
+          onClick={() => openAiPlanningModal(clientId, clientName)}
           className="w-full mb-5 flex items-center gap-2.5 rounded-xl p-4 text-left transition hover:opacity-90"
           style={{ background: "rgba(var(--lz-brand-rgb),0.1)", border: "1px solid rgba(var(--lz-brand-rgb),0.25)" }}
         >
@@ -260,7 +261,6 @@ export function ClientDocsTab({
         </div>
       )}
 
-      {showAiPlanning && <AIPlanningPreview clientId={clientId} onClose={() => setShowAiPlanning(false)} />}
     </div>
   );
 }

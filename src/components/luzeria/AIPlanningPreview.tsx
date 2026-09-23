@@ -4,6 +4,14 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2, Star, BookMarked, Check } from "lucide-react";
 import { generateMonthlyPlanPreview, submitAiPlanningFeedback, type MonthlyPlanItem, type MonthlyPlanResult } from "@/lib/luzeria/ai-planning.functions";
+import {
+  useAiPlanningStore, startAiPlanningJob, resolveAiPlanningJob, failAiPlanningJob,
+  minimizeAiPlanningModal, dismissAiPlanningJob, updateAiPlanningJobResult,
+} from "@/lib/luzeria/ai-planning-store";
+import { useApi } from "@/lib/luzeria/queries";
+import { formatMonth } from "@/lib/luzeria/utils";
+import { Modal } from "./Modals";
+import { MonthPickerList } from "./MonthPickerList";
 
 type ContentTypeKey = "reel" | "estatico" | "carrossel";
 const CONTENT_TYPE_OPTIONS: { key: ContentTypeKey; label: string }[] = [
@@ -11,10 +19,6 @@ const CONTENT_TYPE_OPTIONS: { key: ContentTypeKey; label: string }[] = [
   { key: "estatico", label: "Post estático" },
   { key: "carrossel", label: "Post carrossel" },
 ];
-import { useApi } from "@/lib/luzeria/queries";
-import { formatMonth } from "@/lib/luzeria/utils";
-import { Modal } from "./Modals";
-import { MonthPickerList } from "./MonthPickerList";
 
 const MONTH_LABEL = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
@@ -26,12 +30,13 @@ function friendlyError(e: any, fallback: string): string {
   return msg ?? fallback;
 }
 
-// Uma chamada só e sem streaming — pode demorar bastante (principalmente
-// quando a IA pesquisa concorrentes na web). Em vez de um spinner mudo,
-// mostra uma sequência de "etapas" fictícias mas plausíveis. As primeiras
-// rodam uma vez só; a partir daí fica ciclando um segundo grupo pra sempre,
-// pra nunca "congelar" numa frase só parada mesmo se a geração real
-// demorar mais que o normal.
+// Pode demorar bastante (principalmente quando a IA pesquisa concorrentes
+// na web e a leva é grande). Em vez de um spinner mudo, mostra uma
+// sequência de "etapas" fictícias mas plausíveis. As primeiras rodam uma
+// vez só; a partir daí fica ciclando um segundo grupo pra sempre, pra nunca
+// "congelar" numa frase só parada mesmo se a geração demorar mais que o
+// normal. min-h fixo no texto evita a caixa mudando de tamanho conforme a
+// frase quebra em 1 ou 2 linhas.
 const LOADING_STEPS: { icon: typeof FileText; text: string }[] = [
   { icon: FileText, text: "Lendo o histórico de posts e reels desse cliente…" },
   { icon: Layers, text: "Conferindo roteiros e planejamentos anteriores…" },
@@ -62,7 +67,7 @@ function AILoadingState() {
           <Current size={22} style={{ color: "var(--lz-accent-ink)" }} />
         </div>
       </div>
-      <p key={tick} className="text-sm text-foreground/60 text-center max-w-[280px] leading-relaxed" style={{ animation: "lzKnowledgeFadeIn 0.4s ease" }}>
+      <p key={tick} className="text-sm text-foreground/60 text-center max-w-[280px] leading-relaxed flex items-center justify-center min-h-[46px]" style={{ animation: "lzKnowledgeFadeIn 0.4s ease" }}>
         {current.text}
       </p>
       <div className="flex items-center gap-1.5">
@@ -110,22 +115,48 @@ function buildMarkdown(result: MonthlyPlanResult): string {
   return parts.join("\n\n");
 }
 
-export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onClose: () => void }) {
+/** Montada global no App.tsx (igual DetailPanel/ClientFichaPanel) — a
+ * própria geração roda em segundo plano no ai-planning-store, então
+ * fechar/minimizar essa tela nunca cancela nada. A bolha flutuante
+ * (AiPlanningJobsTray) mostra o progresso e reabre daqui. */
+export function AIPlanningPreview() {
+  const openClientId = useAiPlanningStore((s) => s.openClientId);
+  const job = useAiPlanningStore((s) => (s.openClientId ? s.jobs[s.openClientId] : null));
   const generate = useServerFn(generateMonthlyPlanPreview);
   const submitFeedback = useServerFn(submitAiPlanningFeedback);
   const navigate = useNavigate();
   const api = useApi();
-  const [started, setStarted] = useState(false);
   const [extraContext, setExtraContext] = useState("");
   const [contentTypes, setContentTypes] = useState<Set<ContentTypeKey>>(new Set(["reel", "estatico", "carrossel"]));
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<MonthlyPlanResult | null>(null);
   const [pickingMonth, setPickingMonth] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
   const [reasonDraft, setReasonDraft] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [sendingFeedback, setSendingFeedback] = useState(false);
+
+  // Reseta os campos locais (briefing, avaliação etc) toda vez que troca de
+  // cliente ou reabre um job novo — sem isso, dado de uma prévia vazava
+  // visualmente pra outra.
+  useEffect(() => {
+    setExtraContext("");
+    setContentTypes(new Set(["reel", "estatico", "carrossel"]));
+    setPickingMonth(false);
+    setRating(null);
+    setReasonDraft("");
+    setFeedbackSent(false);
+  }, [openClientId]);
+
+  if (!openClientId || !job) return null;
+  const clientId = openClientId;
+
+  function generateNow() {
+    if (!job) return;
+    const trimmedContext = extraContext.trim().slice(0, 60000);
+    startAiPlanningJob(clientId, job.clientName);
+    generate({ data: { clientId, extraContext: trimmedContext || undefined, contentTypes: [...contentTypes] } })
+      .then((r) => resolveAiPlanningJob(clientId, r))
+      .catch((e: any) => failAiPlanningJob(clientId, friendlyError(e, "Não consegui gerar a prévia. Tenta de novo em instantes.")));
+  }
 
   async function sendFeedback() {
     if (rating === null) return;
@@ -141,25 +172,12 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
     }
   }
 
-  useEffect(() => {
-    if (!started) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    const trimmedContext = extraContext.trim().slice(0, 60000);
-    generate({ data: { clientId, extraContext: trimmedContext || undefined, contentTypes: [...contentTypes] } })
-      .then((r) => { if (!cancelled) setResult(r); })
-      .catch((e: any) => { if (!cancelled) setError(friendlyError(e, "Não consegui gerar a prévia. Tenta de novo em instantes.")); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [started, clientId]);
-
   function updateItem(idx: number, patch: Partial<MonthlyPlanItem>) {
-    setResult((r) => r ? { ...r, items: r.items.map((it, i) => (i === idx ? { ...it, ...patch } : it)) } : r);
+    updateAiPlanningJobResult(clientId, (r) => ({ ...r, items: r.items.map((it, i) => (i === idx ? { ...it, ...patch } : it)) }));
   }
 
   function removeItem(idx: number) {
-    setResult((r) => r ? { ...r, items: r.items.filter((_, i) => i !== idx) } : r);
+    updateAiPlanningJobResult(clientId, (r) => ({ ...r, items: r.items.filter((_, i) => i !== idx) }));
   }
 
   function toggleContentType(key: ContentTypeKey) {
@@ -176,25 +194,27 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
   }
 
   function save() {
-    if (!result) return;
+    const currentResult = job!.result;
+    if (!currentResult) return;
     api.upsertClientDoc.mutate(
       {
         data: {
           clientId, type: "planejamento", title: `Planejamento (IA) — ${MONTH_LABEL}`,
-          content: buildMarkdown(result), planItems: result.items,
+          content: buildMarkdown(currentResult), planItems: currentResult.items,
         },
       },
-      { onSuccess: () => { toast.success("Prévia salva como Planejamento — pode aprovar depois quando quiser."); onClose(); } },
+      { onSuccess: () => { toast.success("Prévia salva como Planejamento — pode aprovar depois quando quiser."); dismissAiPlanningJob(clientId); } },
     );
   }
 
   function approveToRoteiros(targetMonthKey: string) {
-    if (!result) return;
+    const currentResult = job!.result;
+    if (!currentResult) return;
     api.createRoteirosFromPlan.mutate(
       {
         data: {
           clientId, targetMonthKey,
-          items: result.items.map((it) => ({
+          items: currentResult.items.map((it) => ({
             title: it.title, type: it.type, captionDraft: it.captionDraft,
             publishCaption: it.publishCaption, postFormat: it.postFormat,
             pillar: it.pillar, rationale: it.rationale,
@@ -204,17 +224,25 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
       {
         onSuccess: () => {
           toast.success(`Roteiros criados! Aprovar cada um já cria a publicação em ${formatMonth(targetMonthKey)}.`);
-          onClose();
+          dismissAiPlanningJob(clientId);
         },
       },
     );
   }
 
+  // Fechar durante a geração só minimiza (a bolha flutuante continua) —
+  // fechar antes de começar, ou depois de pronto/erro, descarta de vez.
+  function handleClose() {
+    if (job!.status === "loading") minimizeAiPlanningModal();
+    else dismissAiPlanningJob(clientId);
+  }
+
   const inp = "w-full bg-background border border-foreground/8 rounded-md px-2.5 py-1.5 text-[13px] text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
+  const result = job.result;
 
   return (
-    <Modal open onClose={onClose} title="Prévia de planejamento com IA (versão beta)" maxWidthClass="max-w-xl">
-      {!started && (
+    <Modal open onClose={handleClose} title={`Prévia de planejamento com IA — ${job.clientName}`} maxWidthClass="max-w-xl">
+      {job.status === "configuring" && (
         <div className="space-y-3">
           <p className="text-sm text-foreground/70">
             Pra esse próximo planejamento, teve alguma reunião com o cliente? Você tem algum briefing específico do mês ou transcrição? Cola aqui embaixo — isso conta mais do que o histórico antigo.
@@ -255,24 +283,33 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-1">
-            <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
-            <button onClick={() => setStarted(true)} className="lz-btn-primary text-xs px-5 py-2.5 rounded-md">
+            <button onClick={() => dismissAiPlanningJob(clientId)} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
+            <button onClick={generateNow} className="lz-btn-primary text-xs px-5 py-2.5 rounded-md">
               {extraContext.trim() ? "Gerar prévia com esse contexto" : "Gerar prévia sem contexto extra"}
             </button>
           </div>
         </div>
       )}
 
-      {started && loading && <AILoadingState />}
+      {job.status === "loading" && (
+        <>
+          <AILoadingState />
+          <div className="flex items-center justify-center -mt-4">
+            <button onClick={minimizeAiPlanningModal} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">
+              Minimizar e continuar usando o app
+            </button>
+          </div>
+        </>
+      )}
 
-      {!loading && error && (
+      {job.status === "error" && (
         <div className="py-8 text-center">
-          <p className="text-sm text-red-400 mb-4">{error}</p>
-          <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground">Fechar</button>
+          <p className="text-sm text-red-400 mb-4">{job.error}</p>
+          <button onClick={() => dismissAiPlanningJob(clientId)} className="text-xs text-foreground/50 hover:text-foreground">Fechar</button>
         </div>
       )}
 
-      {!loading && !error && result && pickingMonth && (
+      {job.status === "done" && result && pickingMonth && (
         <div>
           <p className="text-sm text-foreground/60 mb-3">Pra qual mês são essas publicações?</p>
           <div className="mb-3">
@@ -284,11 +321,11 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
         </div>
       )}
 
-      {!loading && !error && result && !pickingMonth && (
+      {job.status === "done" && result && !pickingMonth && (
         <div className="space-y-4">
           {result.knowledgeItemsCount === 0 && (
             <button
-              onClick={() => { onClose(); navigate({ to: "/configuracoes", search: { tab: "knowledge" } }); }}
+              onClick={() => { dismissAiPlanningJob(clientId); navigate({ to: "/configuracoes", search: { tab: "knowledge" } }); }}
               className="w-full flex items-center gap-2.5 rounded-lg p-3 text-left transition hover:opacity-90"
               style={{ background: "rgba(var(--lz-brand-rgb),0.08)", border: "1px solid rgba(var(--lz-brand-rgb),0.2)" }}
             >
@@ -394,7 +431,7 @@ export function AIPlanningPreview({ clientId, onClose }: { clientId: string; onC
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-1">
-            <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Descartar</button>
+            <button onClick={() => dismissAiPlanningJob(clientId)} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Descartar</button>
             <button
               onClick={save}
               disabled={api.upsertClientDoc.isPending || result.items.length === 0}

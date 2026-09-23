@@ -23,6 +23,8 @@ import { identifyForMonitoring } from "@/lib/luzeria/error-monitoring";
 import { PullToRefresh } from "./PullToRefresh";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { ClientFichaPanel } from "./ClientFichaPanel";
+import { AIPlanningPreview } from "./AIPlanningPreview";
+import { AiPlanningJobsTray } from "./AiPlanningJobsTray";
 import { AgencyLevelModal } from "./AgencyLevelModal";
 import { AppTour } from "./AppTour";
 import { LuzeriaLoader } from "./LuzeriaLoader";
@@ -318,6 +320,8 @@ export function App() {
       <DetailPanel />
       <AgencyLevelModal open={showLevelModal} onClose={() => setShowLevelModal(false)} />
       <ClientFichaPanel />
+      <AIPlanningPreview />
+      <AiPlanningJobsTray />
       <MobileNav onCreateClient={(category) => setCreating({ category })} />
       <AppTour />
       <GlobalConfirmDialog />
