@@ -347,7 +347,11 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     const contentBriefingText: string | null = c.content_briefing?.trim() || null;
     const recentRoteirosText: string | null = c.recent_roteiros?.trim() || null;
 
-    const instruction = [
+    // Base do prompt compartilhada por todas as chamadas (uma leva grande
+    // vira mais de uma chamada — ver CHUNK_SIZE abaixo). Só o pedaço final
+    // (quantos itens pedir, quais temas já foram usados, se pesquisa
+    // concorrente) muda de uma chamada pra outra.
+    const baseInstructionParts = [
       "Você é um estrategista de conteúdo de uma agência de social media, ajudando a montar uma PRÉVIA (rascunho pra revisão, não versão final) de planejamento de conteúdo do próximo mês pra um cliente.",
       "",
       briefText,
@@ -359,9 +363,6 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       recentRoteirosText ? `\n\nRoteiros recentes já escritos pra esse cliente (use pra aprender o padrão e o tom exatos já usados, não repita os mesmos temas):\n${safeTruncate(recentRoteirosText, 8000)}` : "",
       knowledgeText,
       data.extraContext ? `\n\nContexto informado agora, específico pra ESSE planejamento (reunião recente, transcrição, briefing pontual do mês — prioridade alta, é a informação mais atual que existe, siga isso de perto):\n${safeTruncate(data.extraContext, 50000)}` : "",
-      competitorsText
-        ? `\n\nConcorrentes informados pela agência — pesquise na web (use a tool web_search) o que cada um tem postado recentemente, formatos e temas em alta, ANTES de sugerir o planejamento, e cite o que encontrou em competitorNotes:\n${competitorsText}`
-        : "\n\nNenhum concorrente foi informado — não pesquise nada, deixe competitorNotes vazio.",
       "",
       "Inclua pelo menos 1-2 sugestões respondendo direto uma pergunta frequente e real que o público do nicho desse cliente costuma ter (formato: a pessoa olha pra câmera e responde a pergunta, tipo os exemplos reais de roteiro na base de conhecimento acima, se houver) e pelo menos 1 sugestão em formato de lista rápida (Top 5/Top 10 em contagem regressiva, Esse ou Aquele, Troque isso por isso) quando fizer sentido pro nicho, são formatos rápidos de gravar e com bom histórico de alcance. Se já tiver essa informação no briefing/histórico/base de conhecimento, use direto. Só use web_search pra isso (no máximo 1 busca rápida) se REALMENTE não tiver nenhuma pista sobre o nicho; nunca gaste várias buscas só pra achar pergunta frequente, isso é secundário à pesquisa de concorrentes.",
       "",
@@ -370,75 +371,115 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
         : "Nenhuma preferência de tipo foi marcada — misture Reels, posts estáticos e carrosséis de forma equilibrada, nunca concentre quase tudo num tipo só.",
       "",
       HOUSE_STYLE_GUIDE,
-      "",
-      monthlyTarget > 0
-        ? `Gere ${monthlyTarget} sugestões de posts/reels pro próximo mês — esse é o volume real que a agência entrega pra esse cliente (Meta: ${c.posts_per_week ?? 0} posts/mês e ${c.reels_per_week ?? 0} reels/mês, já informado acima). Não entregue menos que isso, a pessoa está esperando esse volume. A mistura de tipos precisa bater com essa meta.`
-        : "O cliente não tem meta de posts/reels por mês cadastrada na Ficha — gere entre 4 e 8 sugestões.",
-      "Escreva tudo em português do Brasil, com tom real e específico do nicho do cliente — nunca genérico ou clichê. As legendas (publishCaption) precisam variar de tamanho entre si — misture curtas, médias e longas na mesma leva, não entregue tudo com uma frase só. Termine SEMPRE chamando a tool report_monthly_plan com o resultado final.",
-    ].filter(Boolean).join("\n");
+    ];
 
     const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
     const anthropic = getAnthropicClient();
 
-    let response;
-    try {
-      response = await anthropic.messages.create({
-        model: PLANNING_MODEL,
-        // A quantidade de itens pedida acima varia com a meta real do
-        // cliente (pode passar de 8) — 20000 dá a margem que isso precisa.
-        max_tokens: 20000,
-        tools: [WEB_SEARCH_TOOL as any, REPORT_PLAN_TOOL],
-        tool_choice: { type: "auto" },
-        messages: [{
-          role: "user",
-          content: [{ type: "text", text: instruction }, ...assetBlocks, ...knowledgeBlocks],
-        }],
-      } as any);
-    } catch (apiError: any) {
-      // Antes, um erro aqui (rate limit, sobrecarga, timeout) chegava na
-      // tela só como "Não consegui gerar a prévia.", sem log nenhum pra
-      // investigar depois. Agora fica registrado com detalhe real.
-      console.error("generateMonthlyPlanPreview: falha na chamada da IA", {
-        message: apiError?.message, status: apiError?.status, type: apiError?.error?.type, clientId: data.clientId,
-      });
-      throw new Error("A IA não respondeu a tempo ou está sobrecarregada agora. Tenta gerar de novo em instantes.");
+    async function runBatch(wantCount: number, alreadyTitles: string[], allowWebSearch: boolean) {
+      const instruction = [
+        ...baseInstructionParts,
+        "",
+        allowWebSearch
+          ? (competitorsText
+            ? `Concorrentes informados pela agência — pesquise na web (use a tool web_search) o que cada um tem postado recentemente, formatos e temas em alta, ANTES de sugerir o planejamento, e cite o que encontrou em competitorNotes:\n${competitorsText}`
+            : "Nenhum concorrente foi informado — não pesquise nada, deixe competitorNotes vazio.")
+          : "",
+        alreadyTitles.length
+          ? `Essa prévia já teve ${alreadyTitles.length} sugestão(ões) gerada(s) numa chamada anterior (mesmo planejamento, em lotes) — NÃO repita esses temas nem títulos parecidos: ${alreadyTitles.join("; ")}.`
+          : "",
+        `Gere exatamente ${wantCount} sugestõe${wantCount === 1 ? "" : "s"} de posts/reels pro próximo mês. Escreva tudo em português do Brasil, com tom real e específico do nicho do cliente — nunca genérico ou clichê. As legendas (publishCaption) precisam variar de tamanho entre si — misture curtas, médias e longas na mesma leva, não entregue tudo com uma frase só. Termine SEMPRE chamando a tool report_monthly_plan com o resultado final.`,
+      ].filter(Boolean).join("\n");
+
+      const tools = allowWebSearch ? [WEB_SEARCH_TOOL as any, REPORT_PLAN_TOOL] : [REPORT_PLAN_TOOL];
+
+      let response;
+      try {
+        response = await anthropic.messages.create({
+          model: PLANNING_MODEL,
+          max_tokens: 20000,
+          tools,
+          tool_choice: { type: "auto" },
+          messages: [{
+            role: "user",
+            content: [{ type: "text", text: instruction }, ...assetBlocks, ...knowledgeBlocks],
+          }],
+        } as any);
+      } catch (apiError: any) {
+        // Antes, um erro aqui (rate limit, sobrecarga, timeout) chegava na
+        // tela só como "Não consegui gerar a prévia.", sem log nenhum pra
+        // investigar depois. Agora fica registrado com detalhe real.
+        console.error("generateMonthlyPlanPreview: falha na chamada da IA", {
+          message: apiError?.message, status: apiError?.status, type: apiError?.error?.type, clientId: data.clientId,
+        });
+        throw new Error("A IA não respondeu a tempo ou está sobrecarregada agora. Tenta gerar de novo em instantes.");
+      }
+
+      const toolUse = [...response.content].reverse().find(
+        (b: any) => b.type === "tool_use" && b.name === "report_monthly_plan",
+      ) as any;
+      if (!toolUse) {
+        console.error("generateMonthlyPlanPreview: sem tool_use", { stopReason: (response as any).stop_reason, clientId: data.clientId });
+        throw new Error(
+          (response as any).stop_reason === "max_tokens"
+            ? "A prévia ficou grande demais e foi cortada — tenta gerar de novo."
+            : "Não consegui gerar a prévia — tenta de novo.",
+        );
+      }
+
+      // Antes, PlanResultSchema.parse(toolUse.input) ficava fora de
+      // qualquer try/catch: se UM item viesse mal formado, o erro do zod
+      // (um JSON de issues) subia cru até o cliente, que reconhece esse
+      // formato e mostra só "Não consegui gerar a prévia" — sem log nenhum
+      // pra investigar. Agora valida item por item: descarta só o item
+      // ruim (com log de verdade) em vez de jogar fora a leva inteira.
+      const rawItems = Array.isArray(toolUse.input?.items) ? toolUse.input.items : [];
+      const items: any[] = [];
+      for (const raw of rawItems) {
+        const r = PlanItemSchema.safeParse(raw);
+        if (r.success) items.push(r.data);
+        else console.error("generateMonthlyPlanPreview: item da leva veio mal formado, descartado", { issues: r.error.issues, raw, clientId: data.clientId });
+      }
+      return {
+        summary: typeof toolUse.input?.summary === "string" ? toolUse.input.summary : "",
+        items,
+        competitorNotes: typeof toolUse.input?.competitorNotes === "string" ? toolUse.input.competitorNotes : undefined,
+      };
     }
 
-    const toolUse = [...response.content].reverse().find(
-      (b: any) => b.type === "tool_use" && b.name === "report_monthly_plan",
-    ) as any;
-    if (!toolUse) {
-      console.error("generateMonthlyPlanPreview: sem tool_use", { stopReason: (response as any).stop_reason, clientId: data.clientId });
-      throw new Error(
-        (response as any).stop_reason === "max_tokens"
-          ? "A prévia ficou grande demais e foi cortada — tenta gerar de novo."
-          : "Não consegui gerar a prévia — tenta de novo.",
-      );
+    // Uma leva grande (cliente com meta alta, roteiros ricos) passa fácil
+    // de qualquer teto seguro de tokens numa chamada só — em vez de inflar
+    // o limite (o que já provou não bastar: 12 itens ricos passa de 20000),
+    // divide em lotes de no máximo CHUNK_SIZE itens, chamando a IA mais de
+    // uma vez em sequência. A pessoa nem percebe: o job já roda em segundo
+    // plano (ai-planning-store) e o resultado final chega como uma leva só.
+    const CHUNK_SIZE = 6;
+    const totalWanted = monthlyTarget > 0 ? monthlyTarget : 6;
+    const numChunks = Math.max(1, Math.ceil(totalWanted / CHUNK_SIZE));
+    const chunkSizes: number[] = [];
+    {
+      let remaining = totalWanted;
+      for (let i = 0; i < numChunks; i++) {
+        const size = Math.ceil(remaining / (numChunks - i));
+        chunkSizes.push(size);
+        remaining -= size;
+      }
     }
 
-    // Antes, PlanResultSchema.parse(toolUse.input) ficava fora de qualquer
-    // try/catch: se UM item da leva viesse mal formado, o erro do zod
-    // (um JSON de issues) subia cru até o cliente, que reconhece esse
-    // formato e mostra só "Não consegui gerar a prévia" — sem log nenhum
-    // pra investigar. Agora valida item por item: descarta só o item
-    // ruim (com log de verdade) em vez de jogar fora a leva inteira.
-    const rawItems = Array.isArray(toolUse.input?.items) ? toolUse.input.items : [];
-    const items: any[] = [];
-    for (const raw of rawItems) {
-      const r = PlanItemSchema.safeParse(raw);
-      if (r.success) items.push(r.data);
-      else console.error("generateMonthlyPlanPreview: item da leva veio mal formado, descartado", { issues: r.error.issues, raw, clientId: data.clientId });
+    let summary = "";
+    let allItems: any[] = [];
+    let competitorNotes: string | undefined;
+    for (let i = 0; i < numChunks; i++) {
+      const batch = await runBatch(chunkSizes[i], allItems.map((it) => it.title), i === 0);
+      if (i === 0) { summary = batch.summary; competitorNotes = batch.competitorNotes; }
+      allItems.push(...batch.items);
     }
-    if (items.length === 0) {
-      console.error("generateMonthlyPlanPreview: nenhum item válido na resposta", { input: toolUse.input, clientId: data.clientId });
+
+    if (allItems.length === 0) {
+      console.error("generateMonthlyPlanPreview: nenhum item válido na resposta", { clientId: data.clientId });
       throw new Error("A IA devolveu a prévia num formato inesperado — tenta gerar de novo.");
     }
-    return {
-      summary: typeof toolUse.input?.summary === "string" ? toolUse.input.summary : "",
-      items,
-      competitorNotes: typeof toolUse.input?.competitorNotes === "string" ? toolUse.input.competitorNotes : undefined,
-      knowledgeItemsCount: knowledge.length,
-    };
+    return { summary, items: allItems, competitorNotes, knowledgeItemsCount: knowledge.length };
   });
 
 /** Liga/desliga a IA de planejamento pra UM cliente específico — a própria
