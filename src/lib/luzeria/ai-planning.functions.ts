@@ -320,7 +320,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       }
     }
     const knowledgeText = knowledgeTextParts.length
-      ? `\n\nBase de conhecimento da agência (como ela costuma criar conteúdo, guias de voz/estilo etc — use isso pra escrever no tom certo):\n${knowledgeTextParts.join("\n\n")}`
+      ? `\n\nBase de conhecimento da agência: pode ter guia de voz/tom, MAS TAMBÉM formatos de conteúdo nomeados e reutilizáveis com exemplos reais de roteiro (ex: "Esse ou Aquele", "Top 5"/lista numerada em contagem regressiva, "Troque isso por isso", POV, resposta direta a pergunta frequente tipo "[pergunta entre aspas]" respondida olhando pra câmera, tela dividida, mito ou verdade). Isso não é só referência de tom, é material pra REAPROVEITAR DE VERDADE: sempre que a base tiver formato nomeado como esses, use pelo menos 2-3 deles na leva de sugestões, adaptados pro nicho e pros produtos/serviços reais do cliente atual (nunca copie o exemplo literal de outro cliente/nicho). São formatos rápidos de gravar e com histórico real de bom engajamento.\n${knowledgeTextParts.join("\n\n")}`
       : "";
 
     const briefText = [
@@ -350,6 +350,8 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       competitorsText
         ? `\n\nConcorrentes informados pela agência — pesquise na web (use a tool web_search) o que cada um tem postado recentemente, formatos e temas em alta, ANTES de sugerir o planejamento, e cite o que encontrou em competitorNotes:\n${competitorsText}`
         : "\n\nNenhum concorrente foi informado — não pesquise nada, deixe competitorNotes vazio.",
+      "",
+      "Inclua pelo menos 1-2 sugestões respondendo direto uma pergunta frequente e real que o público do nicho desse cliente costuma ter (formato: a pessoa olha pra câmera e responde a pergunta, tipo os exemplos reais de roteiro na base de conhecimento acima, se houver) e pelo menos 1 sugestão em formato de lista rápida (Top 5/Top 10 em contagem regressiva, Esse ou Aquele, Troque isso por isso) quando fizer sentido pro nicho, são formatos rápidos de gravar e com bom histórico de alcance. Se não souber quais perguntas o público desse nicho mais faz, use a tool web_search pra pesquisar rapidamente antes de sugerir, em vez de inventar uma pergunta genérica.",
       "",
       HOUSE_STYLE_GUIDE,
       "",
