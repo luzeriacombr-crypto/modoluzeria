@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -316,7 +317,8 @@ function MediaPreview({
   const { data: files = [], isLoading: filesLoading } = useQuery(itemFilesQO(itemId));
   const { upload, uploadProgress, busy, error, missingClientId, setMissingClientId } = useItemFileUpload(itemId, "media");
   const { detachItemFile, deleteItemFileAndDrive, deleteItemFilesAndDrive, reorderItemFiles } = useApi();
-  const { openFicha } = useUI();
+  const { openItem } = useUI();
+  const navigate = useNavigate();
   const fetchDriveToken = useServerFn(getDriveVideoToken);
   const fileRef = useRef<HTMLInputElement>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -409,14 +411,18 @@ function MediaPreview({
   useEffect(() => { if (error) toast.error(error); }, [error]);
 
   function goConfigureDeliveriesFolder() {
-    if (missingClientId) openFicha(missingClientId);
     setMissingClientId(null);
+    // Fecha esse painel e manda pra Integrações — lá o passo "Vincular
+    // clientes" já sugere e CRIA a pasta certa sozinho (casando o nome do
+    // cliente), em vez da pessoa ter que colar um link manualmente na
+    // Ficha. Junior pediu especificamente esse caminho.
+    openItem(null);
+    navigate({ to: "/configuracoes", search: { tab: "integrations" } });
   }
 
   // Popup em vez do toast de canto — a pessoa não conseguia entender o que
   // fazer só com o aviso passando rápido; agora tem um botão que já leva
-  // pro lugar certo (a mesma ação de "Abrir perfil" que Arquivos/Briefing
-  // já usam, só que como popup em vez de caixinha inline).
+  // pro lugar certo.
   const missingFolderModal = missingClientId && createPortal(
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4" style={{ background: "rgba(6,6,7,0.75)" }}>
       <div className="w-full max-w-[420px] rounded-2xl p-6" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.1)" }}>
@@ -425,14 +431,14 @@ function MediaPreview({
         </div>
         <h3 className="text-white text-[17px] font-bold mb-2">Pasta de entregas não configurada</h3>
         <p className="text-white/60 text-[13px] leading-relaxed mb-5">
-          Esse cliente ainda não tem uma pasta de entregas vinculada no Google Drive, por isso não dá pra subir arquivo ainda. Configure isso no perfil do cliente, é rapidinho.
+          Esse cliente ainda não tem uma pasta de entregas vinculada no Google Drive, por isso não dá pra subir arquivo ainda. Em Configurações → Integrações o Modo Criador já sugere e cria a pasta certa sozinho.
         </p>
         <button
           onClick={goConfigureDeliveriesFolder}
           className="block w-full text-center font-bold text-sm py-3 rounded-lg mb-2 transition-opacity hover:opacity-90"
           style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
         >
-          Ir para o perfil do cliente
+          Ir para Integrações
         </button>
         <button
           onClick={() => setMissingClientId(null)}
