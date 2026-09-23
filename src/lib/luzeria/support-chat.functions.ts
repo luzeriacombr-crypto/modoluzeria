@@ -253,3 +253,61 @@ export const closeSupportThread = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export type SupportChatTopic = { topic: string; count: number; examples: string[] };
+
+/** Platform-admin only: pega as últimas perguntas reais já feitas no chat
+ * de suporte (inclusive de conversas já fechadas — o painel de "Chats" só
+ * mostra as abertas) e pede pra IA agrupar em temas recorrentes, pra Junior
+ * ver de uma vez só sobre o que as agências mais perguntam, sem precisar
+ * ler conversa por conversa. Rodado sob demanda (custa uma chamada de IA),
+ * nunca automático. */
+export const getSupportChatTopics = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }): Promise<{ totalQuestions: number; topics: SupportChatTopic[] }> => {
+    await assertPlatformAdmin(context.supabase, context.orgId, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await (supabaseAdmin as any)
+      .from("support_messages")
+      .select("content, created_at")
+      .eq("role", "user")
+      .order("created_at", { ascending: false })
+      .limit(300);
+    if (error) throw new Error(error.message);
+
+    const questions = (rows ?? []).map((r: any) => r.content as string);
+    if (questions.length === 0) {
+      return { totalQuestions: 0, topics: [] };
+    }
+
+    const { getAnthropicClient, SUPPORT_MODEL } = await import("./ai-client.server");
+    const anthropic = getAnthropicClient();
+
+    const response = await anthropic.messages.create({
+      model: SUPPORT_MODEL,
+      max_tokens: 4096,
+      thinking: { type: "adaptive" },
+      output_config: { effort: "medium" },
+      system: [
+        "Você recebe uma lista de perguntas reais que usuários de um SaaS brasileiro (Modo Criador, plataforma pra agências de social media) fizeram num chat de suporte.",
+        "Agrupe essas perguntas em temas recorrentes — junte perguntas parecidas mesmo que escritas de formas diferentes.",
+        "Responda só com JSON puro, sem markdown, sem texto antes ou depois, no formato exato:",
+        `{"topics": [{"topic": "nome curto do tema em português", "count": N, "examples": ["pergunta original 1", "pergunta original 2"]}]}`,
+        "Ordene do tema mais frequente pro menos frequente. No máximo 15 temas. Cada tema com no máximo 3 exemplos, copiados literalmente da lista (nunca invente ou parafraseie os exemplos).",
+      ].join("\n"),
+      messages: [{ role: "user", content: questions.map((q: string, i: number) => `${i + 1}. ${q}`).join("\n") }],
+    });
+
+    const textBlock = response.content.find((b) => b.type === "text");
+    const raw = textBlock && "text" in textBlock ? textBlock.text.trim() : "";
+    let topics: SupportChatTopic[] = [];
+    try {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+      topics = Array.isArray(parsed.topics) ? parsed.topics : [];
+    } catch {
+      throw new Error("Não consegui organizar os temas agora. Tenta de novo em instantes.");
+    }
+
+    return { totalQuestions: questions.length, topics };
+  });

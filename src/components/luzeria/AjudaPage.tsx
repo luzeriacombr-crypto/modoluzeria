@@ -7,9 +7,10 @@ import { useMe, useApi, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/qu
 import type { MyBugReport, AllBugReport, BugReportStatus, BugReportKind } from "@/lib/luzeria/bug-reports.functions";
 import { ForumTab } from "./ForumTab";
 import { SupportChatAdminPanel } from "./SupportChatWidget";
+import { SupportChatTopicsPanel } from "./SupportChatTopicsPanel";
 import { FAQ, TUTORIALS as TUTORIALS_BASE } from "@/lib/luzeria/help-content";
 
-type Tab = "faq" | "tutoriais" | "minhas" | "todas" | "chats" | "forum";
+type Tab = "faq" | "tutoriais" | "minhas" | "todas" | "chats" | "temas" | "forum";
 
 // Mídia (imagens/vídeo) é só visual — fica aqui, fora da base de conhecimento
 // compartilhada com o Chat do Modo Criador (help-content.ts).
@@ -23,7 +24,7 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
   const me = useMe().data;
   const disabled = new Set(me?.disabledFeatures ?? []);
   const forumEnabled = me?.role === "master" && !disabled.has("forum");
-  const validTabs = ["faq", "tutoriais", "minhas", "todas", "chats", ...(forumEnabled ? ["forum"] : [])];
+  const validTabs = ["faq", "tutoriais", "minhas", "todas", "chats", "temas", ...(forumEnabled ? ["forum"] : [])];
   const [tab, setTab] = useState<Tab>(validTabs.includes(initialTab ?? "") ? (initialTab as Tab) : "faq");
 
   const tabs: { id: Tab; label: string }[] = [
@@ -32,11 +33,12 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
     { id: "minhas", label: "Minhas solicitações" },
     ...(me?.isPlatformAdmin ? [{ id: "todas" as Tab, label: "Todas as solicitações" }] : []),
     ...(me?.isPlatformAdmin ? [{ id: "chats" as Tab, label: "Chats" }] : []),
+    ...(me?.isPlatformAdmin ? [{ id: "temas" as Tab, label: "Assuntos" }] : []),
     ...(forumEnabled ? [{ id: "forum" as Tab, label: "Fórum" }] : []),
   ];
 
   return (
-    <div className={`p-10 mx-auto ${tab === "forum" || tab === "chats" ? "max-w-6xl" : "max-w-4xl"}`}>
+    <div className={`p-10 mx-auto ${tab === "forum" || tab === "chats" || tab === "temas" ? "max-w-6xl" : "max-w-4xl"}`}>
       <h1 className="text-[32px] font-bold text-foreground tracking-tight">Central de ajuda</h1>
       <p className="text-sm text-foreground/50 mt-2">Dúvidas frequentes, tutoriais, o histórico do que você já reportou e o fórum entre agências.</p>
 
@@ -104,6 +106,7 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
       {tab === "minhas" && <MinhasSolicitacoes />}
       {tab === "todas" && me?.isPlatformAdmin && <TodasSolicitacoes />}
       {tab === "chats" && me?.isPlatformAdmin && <SupportChatAdminPanel />}
+      {tab === "temas" && me?.isPlatformAdmin && <SupportChatTopicsPanel />}
       {tab === "forum" && forumEnabled && <ForumTab />}
     </div>
   );
