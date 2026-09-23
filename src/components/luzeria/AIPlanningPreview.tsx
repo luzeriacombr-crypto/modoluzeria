@@ -26,28 +26,34 @@ function friendlyError(e: any, fallback: string): string {
   return msg ?? fallback;
 }
 
-// Uma chamada só e sem streaming — pode demorar (principalmente quando a IA
-// pesquisa concorrentes na web). Em vez de um spinner mudo, mostra uma
-// sequência de "etapas" fictícias mas plausíveis, pra pessoa entender que
-// tem trabalho de verdade acontecendo em vez de achar que travou.
+// Uma chamada só e sem streaming — pode demorar bastante (principalmente
+// quando a IA pesquisa concorrentes na web). Em vez de um spinner mudo,
+// mostra uma sequência de "etapas" fictícias mas plausíveis. As primeiras
+// rodam uma vez só; a partir daí fica ciclando um segundo grupo pra sempre,
+// pra nunca "congelar" numa frase só parada mesmo se a geração real
+// demorar mais que o normal.
 const LOADING_STEPS: { icon: typeof FileText; text: string }[] = [
   { icon: FileText, text: "Lendo o histórico de posts e reels desse cliente…" },
   { icon: Layers, text: "Conferindo roteiros e planejamentos anteriores…" },
   { icon: ImageIcon, text: "Analisando os arquivos de marca no Drive…" },
   { icon: Search, text: "Pesquisando o que os concorrentes andam postando…" },
   { icon: Brain, text: "Entendendo os padrões que funcionam com esse cliente…" },
+];
+const LOADING_STEPS_LOOP: { icon: typeof FileText; text: string }[] = [
   { icon: Wand2, text: "Construindo um planejamento incrível pra você…" },
+  { icon: Sparkles, text: "Ajustando o tom pra soar como sua agência escreveria…" },
+  { icon: Wand2, text: "Ainda trabalhando nisso, quase lá…" },
 ];
 
 function AILoadingState() {
-  const [step, setStep] = useState(0);
+  const [tick, setTick] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => {
-      setStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1));
-    }, 2200);
+    const id = setInterval(() => setTick((t) => t + 1), 2200);
     return () => clearInterval(id);
   }, []);
-  const Current = LOADING_STEPS[step].icon;
+  const inFirstPass = tick < LOADING_STEPS.length;
+  const current = inFirstPass ? LOADING_STEPS[tick] : LOADING_STEPS_LOOP[(tick - LOADING_STEPS.length) % LOADING_STEPS_LOOP.length];
+  const Current = current.icon;
   return (
     <div className="flex flex-col items-center justify-center gap-5 py-16">
       <div className="relative w-14 h-14 flex items-center justify-center">
@@ -56,17 +62,20 @@ function AILoadingState() {
           <Current size={22} style={{ color: "var(--lz-accent-ink)" }} />
         </div>
       </div>
-      <p key={step} className="text-sm text-foreground/60 text-center max-w-[280px] leading-relaxed" style={{ animation: "lzKnowledgeFadeIn 0.4s ease" }}>
-        {LOADING_STEPS[step].text}
+      <p key={tick} className="text-sm text-foreground/60 text-center max-w-[280px] leading-relaxed" style={{ animation: "lzKnowledgeFadeIn 0.4s ease" }}>
+        {current.text}
       </p>
       <div className="flex items-center gap-1.5">
         {LOADING_STEPS.map((_, i) => (
           <span
             key={i}
             className="w-1.5 h-1.5 rounded-full transition-colors duration-500"
-            style={{ backgroundColor: i <= step ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 15%, transparent)" }}
+            style={{ backgroundColor: i <= Math.min(tick, LOADING_STEPS.length - 1) ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 15%, transparent)" }}
           />
         ))}
+        {!inFirstPass && (
+          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />
+        )}
       </div>
       <style>{`@keyframes lzKnowledgeFadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }`}</style>
     </div>

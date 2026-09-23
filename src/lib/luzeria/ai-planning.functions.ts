@@ -112,7 +112,10 @@ Se identificou algum, comenta aqui que eu te oriento."`;
 const WEB_SEARCH_TOOL = {
   type: "web_search_20260209",
   name: "web_search",
-  max_uses: 5,
+  // Já foi 5 — cada busca extra é mais um round-trip dentro da mesma
+  // chamada, e isso empurra o tempo total (uma pessoa reportou a geração
+  // travando/demorando demais). 3 já cobre bem 2-3 concorrentes.
+  max_uses: 3,
 };
 
 const REPORT_PLAN_TOOL = {
