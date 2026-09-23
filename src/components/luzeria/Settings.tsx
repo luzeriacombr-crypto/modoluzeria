@@ -27,6 +27,7 @@ const AffiliateProgramPanel = lazy(() => import("./AffiliateProgramPanel").then(
 const ResellerPanel = lazy(() => import("./ResellerPanel").then((m) => ({ default: m.ResellerPanel })));
 const AgenciesBillingPanel = lazy(() => import("./AgenciesBillingPanel").then((m) => ({ default: m.AgenciesBillingPanel })));
 const PageActivityReportPanel = lazy(() => import("./PageActivityReportPanel").then((m) => ({ default: m.PageActivityReportPanel })));
+const NewUserJourneyReportPanel = lazy(() => import("./NewUserJourneyReportPanel").then((m) => ({ default: m.NewUserJourneyReportPanel })));
 const AiPlanningFeedbackPanel = lazy(() => import("./AiPlanningFeedbackPanel").then((m) => ({ default: m.AiPlanningFeedbackPanel })));
 const ClientMarginPanel = lazy(() => import("./ClientMarginPanel").then((m) => ({ default: m.ClientMarginPanel })));
 const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => ({ default: m.DemoRequestsPanel })));
@@ -203,6 +204,11 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-foreground/10">
               <PromotionCodesPanel />
+            </div>
+          )}
+          {me.isPlatformAdmin && (
+            <div className="pt-2 border-t border-foreground/10">
+              <NewUserJourneyReportPanel />
             </div>
           )}
           {me.isPlatformAdmin && (

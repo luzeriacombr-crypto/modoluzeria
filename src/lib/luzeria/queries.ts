@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { reportHandledError } from "./error-monitoring";
 import { getClientContract } from "./client-contracts.functions";
 import { getProductionAudit } from "./production-audit.functions";
-import { getPageActivityReport } from "./page-activity.functions";
+import { getPageActivityReport, getNewUserJourneyReport } from "./page-activity.functions";
 import { listClientBrandAssets } from "./client-brand-assets.functions";
 import {
   startClientAssetUploadSession, finalizeClientAssetUpload, deleteClientBrandAsset,
@@ -464,6 +464,8 @@ export const aiPlanningFeedbackQO = () =>
   queryOptions({ queryKey: ["ai-planning-feedback"], queryFn: () => listAiPlanningFeedback() });
 export const pageActivityReportQO = (days: number) =>
   queryOptions({ queryKey: ["page-activity-report", days], queryFn: () => getPageActivityReport({ data: { days } }) });
+export const newUserJourneyReportQO = (windowDays: number) =>
+  queryOptions({ queryKey: ["new-user-journey-report", windowDays], queryFn: () => getNewUserJourneyReport({ data: { windowDays } }) });
 
 export const orgCostSettingsQO = () =>
   queryOptions({ queryKey: ["org-cost-settings"], queryFn: () => getOrgCostSettings() });
