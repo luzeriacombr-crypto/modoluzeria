@@ -98,7 +98,7 @@ export const sendSupportMessage = createServerFn({ method: "POST" })
       `Responda sempre em português do Brasil, com um tom natural, cordial e direto — como alguém de suporte experiente, nunca robótico ou genérico. Nunca use travessão.`,
       `Nunca se apresente como inteligência artificial, IA, "assistente virtual" ou robô por conta própria. Se perguntarem diretamente se você é um robô/uma IA, não negue nem minta — responda de forma simples e natural, algo como "sou o chat de suporte do Modo Criador", e ofereça chamar o Junior (quem toca o produto) se a pessoa preferir.`,
       `Use só as informações reais abaixo pra responder. Não invente funcionalidade que não está descrita aqui.`,
-      `Se perguntarem sobre segurança, privacidade ou proteção de dados, responda com muita confiança e respaldo — não seja vago nem genérico. Use os fatos reais da base de conhecimento abaixo (aprovação oficial do Google, autorização como desenvolvedor Meta com API oficial do Instagram/Facebook, política de privacidade alinhada à LGPD) pra mostrar que é um site sério e seguro de verdade.`,
+      `Se perguntarem sobre segurança, privacidade, proteção de dados, ou o que acontece se o site sair do ar/tiver instabilidade, responda com muita confiança e respaldo — não seja vago nem genérico, e nunca deixe a pessoa com a sensação de que os dados dela podem sumir. Use os fatos reais da base de conhecimento abaixo (aprovação oficial do Google, autorização como desenvolvedor Meta com API oficial do Instagram/Facebook, política de privacidade alinhada à LGPD, backup diário automático) pra mostrar que é um site sério e seguro de verdade. Nunca cite o nome de nenhum fornecedor/provedor de infraestrutura (hospedagem, banco de dados, backup) — só confirme que a proteção existe.`,
       `Formatação: destaque em **negrito** (dois asteriscos) só a informação mais importante da resposta — o nome de um botão/tela, um aviso, o passo decisivo — sem exagerar, no máximo 1-2 trechos por resposta. Quando a resposta apontar pra um lugar do app que está na lista de LINKS REAIS DO APP abaixo, sempre ofereça o link nesse formato: [texto do botão](caminho) — por exemplo [Configurações → Integrações](/configuracoes?tab=integrations). Nunca invente um caminho fora dessa lista; se o lugar certo não estiver nela, só explique em texto, sem link.`,
       ``,
       buildHelpKnowledgeText(),
@@ -112,34 +112,49 @@ export const sendSupportMessage = createServerFn({ method: "POST" })
       `Quando escalar, comece a resposta com a tag ${ESCALATE_TAG} seguida de uma frase curta e natural avisando que você vai chamar o Junior pra continuar ali mesmo, sem prometer um prazo específico.`,
     ].join("\n");
 
-    const response = await anthropic.messages.create({
-      model: SUPPORT_MODEL,
-      max_tokens: 4096,
-      // Pensamento estendido: o modelo relê a base de conhecimento e
-      // considera a pergunta com mais calma antes de responder, em vez de
-      // ir direto pro "não sei" na primeira leitura — isso reduziu bastante
-      // as escaladas desnecessárias vistas nos chats reais das agências.
-      // claude-sonnet-5 usa o formato novo de thinking ("adaptive" +
-      // output_config.effort) — o antigo ("enabled" + budget_tokens) dá 400
-      // nesse modelo (bug real visto em produção, chat parou de responder).
-      thinking: { type: "adaptive" },
-      output_config: { effort: "high" },
-      system: systemPrompt,
-      messages: (history ?? []).map((m: any) => ({
-        role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
-        content: m.content as string,
-      })),
-    });
+    // Antes, um erro aqui (rate limit, timeout, resposta malformada da IA)
+    // deixava a mensagem da pessoa salva sem NENHUMA resposta e sem
+    // escalar — ela ficava esperando pra sempre e ninguém era avisado
+    // (achado revisando conversas reais: 3 perguntas, incluindo uma sobre
+    // disponibilidade do site, sumiram assim). Agora qualquer falha vira
+    // uma resposta amigável + escalação, igual ao caminho normal de "não
+    // sei responder".
+    let replyText: string;
+    let escalate: boolean;
+    try {
+      const response = await anthropic.messages.create({
+        model: SUPPORT_MODEL,
+        max_tokens: 4096,
+        // Pensamento estendido: o modelo relê a base de conhecimento e
+        // considera a pergunta com mais calma antes de responder, em vez de
+        // ir direto pro "não sei" na primeira leitura — isso reduziu bastante
+        // as escaladas desnecessárias vistas nos chats reais das agências.
+        // claude-sonnet-5 usa o formato novo de thinking ("adaptive" +
+        // output_config.effort) — o antigo ("enabled" + budget_tokens) dá 400
+        // nesse modelo (bug real visto em produção, chat parou de responder).
+        thinking: { type: "adaptive" },
+        output_config: { effort: "high" },
+        system: systemPrompt,
+        messages: (history ?? []).map((m: any) => ({
+          role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
+          content: m.content as string,
+        })),
+      });
 
-    const textBlock = response.content.find((b) => b.type === "text");
-    let replyText = textBlock && "text" in textBlock ? textBlock.text.trim() : "";
-    if (!replyText) {
-      replyText = "Desculpa, não consegui responder agora. Já chamei o Junior pra te ajudar por aqui.";
-    }
+      const textBlock = response.content.find((b) => b.type === "text");
+      replyText = textBlock && "text" in textBlock ? textBlock.text.trim() : "";
+      if (!replyText) {
+        replyText = "Desculpa, não consegui responder agora. Já chamei o Junior pra te ajudar por aqui.";
+      }
 
-    const escalate = replyText.startsWith(ESCALATE_TAG);
-    if (escalate) {
-      replyText = replyText.slice(ESCALATE_TAG.length).trim();
+      escalate = replyText.startsWith(ESCALATE_TAG);
+      if (escalate) {
+        replyText = replyText.slice(ESCALATE_TAG.length).trim();
+      }
+    } catch (aiError) {
+      console.error("[sendSupportMessage] falha ao chamar a IA:", aiError);
+      replyText = "Desculpa, tive um problema técnico agora e não consegui responder. Já chamei o Junior pra continuar por aqui.";
+      escalate = true;
     }
 
     // A RLS de support_messages só deixa a própria pessoa inserir role='user'
