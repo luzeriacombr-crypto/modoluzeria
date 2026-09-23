@@ -314,8 +314,9 @@ function MediaPreview({
   itemId: string; coverUrl: string | null; postFormat: PostFormat | null | undefined; itemType: string; canEdit: boolean;
 }) {
   const { data: files = [], isLoading: filesLoading } = useQuery(itemFilesQO(itemId));
-  const { upload, uploadProgress, busy, error, missingClientId } = useItemFileUpload(itemId, "media");
+  const { upload, uploadProgress, busy, error, missingClientId, setMissingClientId } = useItemFileUpload(itemId, "media");
   const { detachItemFile, deleteItemFileAndDrive, deleteItemFilesAndDrive, reorderItemFiles } = useApi();
+  const { openFicha } = useUI();
   const fetchDriveToken = useServerFn(getDriveVideoToken);
   const fileRef = useRef<HTMLInputElement>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -406,9 +407,43 @@ function MediaPreview({
   const href = first ? normalizeExternalUrl(first.webViewUrl) : null;
 
   useEffect(() => { if (error) toast.error(error); }, [error]);
-  useEffect(() => {
-    if (missingClientId) toast.error("Configure a pasta de entregas no Perfil do Cliente antes de fazer upload.");
-  }, [missingClientId]);
+
+  function goConfigureDeliveriesFolder() {
+    if (missingClientId) openFicha(missingClientId);
+    setMissingClientId(null);
+  }
+
+  // Popup em vez do toast de canto — a pessoa não conseguia entender o que
+  // fazer só com o aviso passando rápido; agora tem um botão que já leva
+  // pro lugar certo (a mesma ação de "Abrir perfil" que Arquivos/Briefing
+  // já usam, só que como popup em vez de caixinha inline).
+  const missingFolderModal = missingClientId && createPortal(
+    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4" style={{ background: "rgba(6,6,7,0.75)" }}>
+      <div className="w-full max-w-[420px] rounded-2xl p-6" style={{ background: "#1C1C1C", border: "1px solid rgba(255,255,255,0.1)" }}>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3.5" style={{ background: "rgba(250,204,21,0.15)", color: "#FACC15" }}>
+          <HardDrive size={20} />
+        </div>
+        <h3 className="text-white text-[17px] font-bold mb-2">Pasta de entregas não configurada</h3>
+        <p className="text-white/60 text-[13px] leading-relaxed mb-5">
+          Esse cliente ainda não tem uma pasta de entregas vinculada no Google Drive, por isso não dá pra subir arquivo ainda. Configure isso no perfil do cliente, é rapidinho.
+        </p>
+        <button
+          onClick={goConfigureDeliveriesFolder}
+          className="block w-full text-center font-bold text-sm py-3 rounded-lg mb-2 transition-opacity hover:opacity-90"
+          style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >
+          Ir para o perfil do cliente
+        </button>
+        <button
+          onClick={() => setMissingClientId(null)}
+          className="block w-full text-center text-[12.5px] font-semibold py-1.5 text-white/50 hover:text-white transition-colors"
+        >
+          Fechar
+        </button>
+      </div>
+    </div>,
+    document.body,
+  );
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files ?? []);
@@ -579,6 +614,7 @@ function MediaPreview({
             </button>
           )}
           {inputEl}
+        {missingFolderModal}
         </div>
         {lightboxIndex !== null && (
           <CarouselLightbox files={orderedFiles} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
@@ -608,6 +644,7 @@ function MediaPreview({
           )}
         </button>
         {inputEl}
+        {missingFolderModal}
       </div>
     );
   }
@@ -721,6 +758,7 @@ function MediaPreview({
         )}
       </div>
       {inputEl}
+        {missingFolderModal}
       {opensLightbox && lightboxIndex !== null && (
         <CarouselLightbox files={files} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
       )}
