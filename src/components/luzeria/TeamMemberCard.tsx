@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { KeyRound, ListChecks, Trash2 } from "lucide-react";
+import { KeyRound, ListChecks, Trash2, Mail } from "lucide-react";
 import {
   WEEK_DAYS, WEEK_DAY_LABEL, defaultWorkSchedule, computeMonthlyHourlyCost,
   type Profile, type Role, type WorkSchedule,
@@ -64,7 +64,7 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
 
 function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
   const me = useMe().data;
-  const { setUserRole, setUserActive, setExcludeFromRanking, setHideGoalsWidget, deleteUser, adminSendPasswordReset, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay, setProfileCargos, setProfileClientAccess } = useApi();
+  const { setUserRole, setUserActive, setExcludeFromRanking, setHideGoalsWidget, deleteUser, adminSendPasswordReset, adminResendWelcomeEmail, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay, setProfileCargos, setProfileClientAccess } = useApi();
   const { data: cargos = [] } = useQuery(cargosQO());
   const [selectedCargoIds, setSelectedCargoIds] = useState<string[]>(profile.cargoIds ?? []);
   useEffect(() => { setSelectedCargoIds(profile.cargoIds ?? []); }, [profile.cargoIds]);
@@ -154,6 +154,14 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
     adminSendPasswordReset.mutate({ data: { userId: profile.id } }, {
       onSuccess: (res: any) => toast.success(`Email enviado para ${res?.email ?? profile.email}.`),
       onError: (e: any) => toastFriendlyError(e, "Erro ao enviar email"),
+    });
+  }
+
+  async function handleResendWelcomeEmail() {
+    if (!(await requestConfirm(`Reenviar o e-mail de boas-vindas pra ${profile.name} (${profile.email})?`))) return;
+    adminResendWelcomeEmail.mutate({ data: { userId: profile.id } }, {
+      onSuccess: (res: any) => toast.success(`E-mail de boas-vindas reenviado pra ${res?.email ?? profile.email}.`),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao reenviar e-mail"),
     });
   }
 
@@ -350,6 +358,11 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
             disabled={adminSendPasswordReset.isPending}
             className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-foreground/70 hover:text-foreground hover:bg-foreground/5 transition-colors text-left disabled:opacity-40"
           ><KeyRound size={15} /> Resetar senha (por e-mail)</button>
+          <button
+            onClick={handleResendWelcomeEmail}
+            disabled={adminResendWelcomeEmail.isPending}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-foreground/70 hover:text-foreground hover:bg-foreground/5 transition-colors text-left disabled:opacity-40"
+          ><Mail size={15} /> Reenviar e-mail de boas-vindas</button>
         </div>
         <div className="flex flex-col gap-1.5">
           <button

@@ -1397,6 +1397,31 @@ export const adminSendPasswordReset = createServerFn({ method: "POST" })
     return { ok: true, email: result.email };
   });
 
+/** Reenvia o e-mail de boas-vindas (mesmo template do cadastro) pra um
+ * membro específico — útil quando o e-mail original teve algum problema
+ * (endereço digitado errado, foi pra spam etc) e a pessoa nunca recebeu.
+ * Não precisa da edge function de auth: só reenvia o mesmo e-mail
+ * estático, sem gerar nenhum link de acesso. */
+export const adminResendWelcomeEmail = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId: string }) => z.object({ userId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: target } = await context.supabase
+      .from("profiles").select("id, org_id, email, name").eq("id", data.userId).maybeSingle();
+    if (!target) throw new Error("Usuário não encontrado.");
+    if (target.org_id !== context.orgId && context.orgId !== LUZERIA_ORG_ID) {
+      throw new Error("Forbidden");
+    }
+    const { sendEmail } = await import("./resend.server");
+    const { buildWelcomeEmailHtml } = await import("./welcome-email.server");
+    await sendEmail({
+      to: target.email,
+      subject: "Bem-vindo(a) ao Modo Criador 🎉",
+      html: buildWelcomeEmailHtml({ name: target.name }),
+    });
+    return { ok: true, email: target.email };
+  });
+
 export const adminSetUserPassword = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string; password: string }) =>
