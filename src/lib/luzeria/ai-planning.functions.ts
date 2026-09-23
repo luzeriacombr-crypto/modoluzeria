@@ -415,8 +415,30 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
           : "Não consegui gerar a prévia — tenta de novo.",
       );
     }
-    const parsed = PlanResultSchema.parse(toolUse.input);
-    return { ...parsed, knowledgeItemsCount: knowledge.length };
+
+    // Antes, PlanResultSchema.parse(toolUse.input) ficava fora de qualquer
+    // try/catch: se UM item da leva viesse mal formado, o erro do zod
+    // (um JSON de issues) subia cru até o cliente, que reconhece esse
+    // formato e mostra só "Não consegui gerar a prévia" — sem log nenhum
+    // pra investigar. Agora valida item por item: descarta só o item
+    // ruim (com log de verdade) em vez de jogar fora a leva inteira.
+    const rawItems = Array.isArray(toolUse.input?.items) ? toolUse.input.items : [];
+    const items: any[] = [];
+    for (const raw of rawItems) {
+      const r = PlanItemSchema.safeParse(raw);
+      if (r.success) items.push(r.data);
+      else console.error("generateMonthlyPlanPreview: item da leva veio mal formado, descartado", { issues: r.error.issues, raw, clientId: data.clientId });
+    }
+    if (items.length === 0) {
+      console.error("generateMonthlyPlanPreview: nenhum item válido na resposta", { input: toolUse.input, clientId: data.clientId });
+      throw new Error("A IA devolveu a prévia num formato inesperado — tenta gerar de novo.");
+    }
+    return {
+      summary: typeof toolUse.input?.summary === "string" ? toolUse.input.summary : "",
+      items,
+      competitorNotes: typeof toolUse.input?.competitorNotes === "string" ? toolUse.input.competitorNotes : undefined,
+      knowledgeItemsCount: knowledge.length,
+    };
   });
 
 /** Liga/desliga a IA de planejamento pra UM cliente específico — a própria
