@@ -29,6 +29,7 @@ import { LuzeriaLoader } from "./LuzeriaLoader";
 import { TrialEndingBanner } from "./TrialEndingBanner";
 import { PastDueBanner } from "./PastDueBanner";
 import { PaymentGraceModal } from "./PaymentGraceModal";
+import { WhatsAppCommunityModal } from "./WhatsAppCommunityModal";
 import { PaymentPausedScreen } from "./PaymentPausedScreen";
 import { InstagramLiveBanner } from "./InstagramLiveBanner";
 import { DriveReconnectBanner } from "./DriveReconnectBanner";
@@ -286,6 +287,7 @@ export function App() {
         <TrialEndingBanner isMaster={me.data?.role === "master"} />
         <PastDueBanner isMaster={me.data?.role === "master"} />
         <PaymentGraceModal isMaster={me.data?.role === "master"} />
+        <WhatsAppCommunityModal isMaster={me.data?.role === "master"} whatsappCommunitySeenAt={me.data?.whatsappCommunitySeenAt} />
         <ClientLimitGraceBanner isMaster={me.data?.role === "master"} />
         <InstagramLiveBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
         <DriveReconnectBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />

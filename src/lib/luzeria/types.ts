@@ -314,6 +314,8 @@ export interface Profile {
   avatarPath?: string | null;
   onboardedAt?: string | null;
   tourCompletedAt?: string | null;
+  /** Quando o master viu/fechou o popup da Comunidade WhatsApp — null = nunca viu. */
+  whatsappCommunitySeenAt?: string | null;
   /** True only for masters of the Luzeria org itself (the platform owner). */
   isPlatformAdmin?: boolean;
   /** True when this org was approved by Luzeria to resell white-label

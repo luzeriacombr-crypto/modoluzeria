@@ -140,9 +140,9 @@ export const getMyDefaultLanding = createServerFn({ method: "GET" })
 export const getMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: profile } = await context.supabase
+    const { data: profile } = await (context.supabase as any)
       .from("profiles")
-      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, org_id, exclude_from_ranking, hide_goals_widget, default_landing")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, whatsapp_community_seen_at, org_id, exclude_from_ranking, hide_goals_widget, default_landing")
       .eq("id", context.userId).maybeSingle();
     const { data: roleRow } = await context.supabase
       .from("user_roles").select("role").eq("user_id", context.userId).maybeSingle();
@@ -207,6 +207,7 @@ export const getMe = createServerFn({ method: "GET" })
       avatarUrl: profile.avatar_url ? signed.get(profile.avatar_url) ?? null : null,
       onboardedAt: profile.onboarded_at ?? null,
       tourCompletedAt: (profile as any).tour_completed_at ?? null,
+      whatsappCommunitySeenAt: (profile as any).whatsapp_community_seen_at ?? null,
       isPlatformAdmin: role === "master" && orgId === LUZERIA_ORG_ID,
       isReseller: (org as any)?.is_reseller ?? false,
       orgId,
@@ -1118,7 +1119,7 @@ async function assertCollaboratorLimit(supabase: any, orgId: string) {
 
 export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { name?: string; color?: string; icon?: string | null; avatarPath?: string | null; onboarded?: boolean; tourCompleted?: boolean }) =>
+  .inputValidator((d: { name?: string; color?: string; icon?: string | null; avatarPath?: string | null; onboarded?: boolean; tourCompleted?: boolean; whatsappCommunitySeen?: boolean }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
       color: z.string().trim().max(32).optional(),
@@ -1126,13 +1127,14 @@ export const updateMyProfile = createServerFn({ method: "POST" })
       avatarPath: z.string().trim().max(400).nullable().optional(),
       onboarded: z.boolean().optional(),
       tourCompleted: z.boolean().optional(),
+      whatsappCommunitySeen: z.boolean().optional(),
     }).strict().parse(d))
   .handler(async ({ data, context }) => {
     await assertNotDemoReadOnly(context.supabase, context.orgId, context.userId);
     const update: {
       name?: string; color?: string; icon?: string | null;
       avatar_url?: string | null; onboarded_at?: string;
-      tour_completed_at?: string | null;
+      tour_completed_at?: string | null; whatsapp_community_seen_at?: string;
     } = {};
     if (data.name !== undefined) update.name = data.name;
     if (data.color !== undefined) update.color = data.color;
@@ -1141,8 +1143,9 @@ export const updateMyProfile = createServerFn({ method: "POST" })
     if (data.onboarded) update.onboarded_at = new Date().toISOString();
     if (data.tourCompleted === true) update.tour_completed_at = new Date().toISOString();
     if (data.tourCompleted === false) update.tour_completed_at = null;
+    if (data.whatsappCommunitySeen) update.whatsapp_community_seen_at = new Date().toISOString();
     if (Object.keys(update).length === 0) return { ok: true };
-    const { error } = await context.supabase
+    const { error } = await (context.supabase as any)
       .from("profiles").update(update).eq("id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
