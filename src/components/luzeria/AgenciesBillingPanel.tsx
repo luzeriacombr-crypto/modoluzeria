@@ -10,6 +10,7 @@ import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, LUZERIA
 import { approveReseller, revokeReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { BrazilAgenciesMap } from "@/components/luzeria/BrazilAgenciesMap";
+import { PlatformCostsPanel } from "@/components/luzeria/PlatformCostsPanel";
 
 function formatCents(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
@@ -410,6 +411,8 @@ export function AgenciesBillingPanel() {
             "Previsto" assume 100% de conversão de quem está em teste — é o teto, não uma estimativa realista (ainda não temos histórico pra calcular uma taxa de conversão de verdade).
           </p>
         </div>
+
+        <PlatformCostsPanel />
 
         <div className="mt-4 pt-4 border-t border-foreground/6 grid grid-cols-3 gap-3">
           <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
