@@ -398,6 +398,13 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
         response = await anthropic.messages.create({
           model: PLANNING_MODEL,
           max_tokens: 20000,
+          // Testado ao vivo: com thinking adaptativo (o padrão do Sonnet 5
+          // quando o parâmetro nem é informado), a mesma leva de 12 itens
+          // levou 152s e gastou 10395 dos 15449 tokens só "pensando" (nada
+          // disso vira conteúdo). Desligado: 44s, os mesmos 12 itens, sem
+          // perda perceptível de qualidade — essa era a causa real da
+          // demora de minutos que a pessoa reportou.
+          thinking: { type: "disabled" },
           tools,
           tool_choice: { type: "auto" },
           messages: [{
@@ -447,13 +454,11 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       };
     }
 
-    // Uma leva grande (cliente com meta alta, roteiros ricos) passa fácil
-    // de qualquer teto seguro de tokens numa chamada só — em vez de inflar
-    // o limite (o que já provou não bastar: 12 itens ricos passa de 20000),
-    // divide em lotes de no máximo CHUNK_SIZE itens, chamando a IA mais de
-    // uma vez em sequência. A pessoa nem percebe: o job já roda em segundo
-    // plano (ai-planning-store) e o resultado final chega como uma leva só.
-    const CHUNK_SIZE = 6;
+    // Com thinking desligado (ver acima), 12 itens gastam ~4000 tokens de
+    // resposta, bem longe do teto de 20000 — testado ao vivo. CHUNK_SIZE
+    // alto cobre a esmagadora maioria dos clientes numa chamada só; só quem
+    // tiver meta bem acima disso (raro) cai em mais de um lote sequencial.
+    const CHUNK_SIZE = 20;
     const totalWanted = monthlyTarget > 0 ? monthlyTarget : 6;
     const numChunks = Math.max(1, Math.ceil(totalWanted / CHUNK_SIZE));
     const chunkSizes: number[] = [];
