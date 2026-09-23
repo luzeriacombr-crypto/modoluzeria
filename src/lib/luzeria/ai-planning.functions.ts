@@ -366,7 +366,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       "",
       HOUSE_STYLE_GUIDE,
       "",
-      `Gere entre 4 e 12 sugestões de posts/reels pro próximo mês, com a mistura de tipos batendo aproximadamente com a meta mensal informada acima. Escreva tudo em português do Brasil, com tom real e específico do nicho do cliente — nunca genérico ou clichê. As legendas (publishCaption) precisam variar de tamanho entre si — misture curtas, médias e longas na mesma leva, não entregue tudo com uma frase só. Termine SEMPRE chamando a tool report_monthly_plan com o resultado final.`,
+      `Gere entre 4 e 8 sugestões de posts/reels pro próximo mês (nunca mais que 8, mesmo que a meta mensal do cliente seja mais alta — é uma prévia pra revisão, não o mês inteiro), com a mistura de tipos batendo aproximadamente com a meta mensal informada acima. Escreva tudo em português do Brasil, com tom real e específico do nicho do cliente — nunca genérico ou clichê. As legendas (publishCaption) precisam variar de tamanho entre si — misture curtas, médias e longas na mesma leva, não entregue tudo com uma frase só. Termine SEMPRE chamando a tool report_monthly_plan com o resultado final.`,
     ].filter(Boolean).join("\n");
 
     const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
@@ -376,10 +376,10 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     try {
       response = await anthropic.messages.create({
         model: PLANNING_MODEL,
-        // Até 12 itens com captionDraft completo no formato de casa (carrossel
-        // pode ter 5-8 slides) mais o texto de busca de concorrentes já
-        // estourava os 8000 tokens antigos antes de fechar a tool_use final —
-        // margem generosa pra não cortar a resposta no meio.
+        // Quem decide o tamanho da prévia é a instrução (quantos itens pedir),
+        // não esse número — 16000 já é margem generosa pro teto de itens
+        // pedido abaixo. Bug real corrigido reduzindo o pedido em vez de
+        // inflar isso.
         max_tokens: 16000,
         tools: [WEB_SEARCH_TOOL as any, REPORT_PLAN_TOOL],
         tool_choice: { type: "auto" },
