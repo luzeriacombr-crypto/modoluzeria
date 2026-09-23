@@ -47,12 +47,45 @@ function NotFoundComponent() {
   );
 }
 
+// Depois de um deploy novo, uma aba que já estava aberta ainda referencia os
+// arquivos JS da versão antiga (hash antigo) — ao tentar carregar uma aba/
+// rota preguiçosa (lazy) depois disso, o navegador tenta buscar um arquivo
+// que não existe mais e quebra com esse tipo de mensagem. "Tentar de novo"
+// (reset do router) não resolve, porque não busca JS novo nenhum, só
+// re-roda os loaders com o MESMO módulo quebrado já carregado — por isso
+// a pessoa via esse erro "com frequência" mesmo clicando em tentar de novo.
+// Um reload de verdade busca o HTML/JS atual e resolve sozinho.
+const CHUNK_LOAD_ERROR_PATTERN = /dynamically imported module|loading chunk|importing a module script failed|unable to preload css/i;
+const CHUNK_RELOAD_KEY = "lz:chunk-reload-at";
+
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+  const isChunkLoadError = CHUNK_LOAD_ERROR_PATTERN.test(error?.message ?? "");
+
   useEffect(() => {
     reportAppError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
+
+  useEffect(() => {
+    if (!isChunkLoadError || typeof window === "undefined") return;
+    // Só recarrega sozinho uma vez a cada 10s — evita loop infinito se por
+    // algum motivo o erro persistir depois do reload (aí vira o erro normal
+    // pra pessoa resolver manualmente, em vez de recarregar pra sempre).
+    let lastReload = 0;
+    try { lastReload = Number(window.sessionStorage.getItem(CHUNK_RELOAD_KEY) ?? 0); } catch { /* noop */ }
+    if (Date.now() - lastReload < 10_000) return;
+    try { window.sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now())); } catch { /* noop */ }
+    window.location.reload();
+  }, [isChunkLoadError]);
+
+  if (isChunkLoadError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <p className="text-sm text-muted-foreground">Atualizando o app…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
