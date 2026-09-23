@@ -11,6 +11,11 @@ import {
 
 const emptyForm = { name: "", amount: "", currency: "USD" as "USD" | "BRL", notes: "" };
 
+// Não tem cotação em tempo real aqui dentro — é só uma estimativa fixa pra
+// dar uma noção de custo total em R$. Se o dólar mudar muito, ajusta essa
+// constante (ou pede pra eu ajustar).
+const USD_TO_BRL_ESTIMATE = 5.4;
+
 /** "Quanto eu pago pra tudo isso rodar" — lançado à mão (Vercel, Supabase,
  * Backblaze, Resend, Claude Code etc.), pra comparar contra a receita das
  * agências logo acima. Mora dentro de AgenciesBillingPanel de propósito —
@@ -62,12 +67,12 @@ export function PlatformCostsPanel() {
     else createMutation.mutate({ data: payload });
   }
 
-  const totalsByCurrency = costs.reduce<Record<string, number>>((acc, c) => {
-    acc[c.currency] = (acc[c.currency] ?? 0) + c.amountCents;
-    return acc;
-  }, {});
+  const fmtBRL = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const fmt = (cents: number, currency: string) =>
     (cents / 100).toLocaleString(currency === "BRL" ? "pt-BR" : "en-US", { style: "currency", currency });
+  const toBRLCents = (c: PlatformOperatingCost) =>
+    c.currency === "BRL" ? c.amountCents : Math.round(c.amountCents * USD_TO_BRL_ESTIMATE);
+  const totalBRLCents = costs.reduce((sum, c) => sum + toBRLCents(c), 0);
 
   const saving = createMutation.isPending || updateMutation.isPending;
 
@@ -84,26 +89,22 @@ export function PlatformCostsPanel() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {Object.keys(totalsByCurrency).length === 0 ? (
-          <div className="col-span-2 bg-foreground/[0.03] rounded-lg px-3 py-2.5 text-xs text-foreground/40">
-            Nenhum custo lançado ainda.
-          </div>
-        ) : (
-          Object.entries(totalsByCurrency).map(([currency, cents]) => (
-            <button
-              key={currency}
-              type="button"
-              onClick={() => setExpanded((e) => !e)}
-              className="text-left bg-foreground/[0.03] hover:bg-foreground/[0.06] rounded-lg px-3 py-2.5 transition-colors"
-              style={expanded ? { boxShadow: "0 0 0 1px rgb(var(--lz-brand-rgb)) inset" } : undefined}
-            >
-              <div className="text-lg font-bold text-foreground">{fmt(cents, currency)}</div>
-              <div className="text-[11px] text-foreground/50 mt-0.5">Total em {currency}/mês</div>
-            </button>
-          ))
-        )}
-      </div>
+      {costs.length === 0 ? (
+        <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5 text-xs text-foreground/40">
+          Nenhum custo lançado ainda.
+        </div>
+      ) : (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((e) => !e)}
+          className="w-full text-left bg-foreground/[0.03] hover:bg-foreground/[0.06] rounded-lg px-3 py-2.5 transition-colors"
+          style={expanded ? { boxShadow: "0 0 0 1px rgb(var(--lz-brand-rgb)) inset" } : undefined}
+        >
+          <div className="text-lg font-bold text-foreground">{fmtBRL(totalBRLCents)}</div>
+          <div className="text-[11px] text-foreground/50 mt-0.5">Custos operacionais/mês — {costs.length} item{costs.length === 1 ? "" : "s"}</div>
+        </button>
+      )}
 
       {expanded && costs.length > 0 && (
         <div className="mt-2 rounded-lg border border-foreground/8 bg-foreground/[0.03] px-3 py-2 space-y-1">
@@ -114,7 +115,10 @@ export function PlatformCostsPanel() {
                 {c.notes && <span className="text-foreground/35 ml-2">{c.notes}</span>}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-foreground/50 font-semibold tabular-nums">{fmt(c.amountCents, c.currency)}</span>
+                <span className="text-foreground/50 font-semibold tabular-nums">
+                  {fmt(c.amountCents, c.currency)}
+                  {c.currency === "USD" && <span className="text-foreground/30 font-normal"> (~{fmtBRL(toBRLCents(c))})</span>}
+                </span>
                 <button onClick={() => startEdit(c)} className="opacity-0 group-hover:opacity-100 text-foreground/40 hover:text-foreground transition p-0.5" title="Editar">
                   <Pencil size={12} />
                 </button>
@@ -181,7 +185,7 @@ export function PlatformCostsPanel() {
       )}
 
       <p className="text-[10.5px] text-foreground/30 mt-2 leading-relaxed">
-        Lançado à mão — atualiza quando conferir a fatura de cada serviço. Câmbio não é convertido automaticamente, compare US$ e R$ separadamente contra a receita.
+        Lançado à mão — atualiza quando conferir a fatura de cada serviço. Total em R$ usa dólar estimado em {USD_TO_BRL_ESTIMATE.toFixed(2).replace(".", ",")} pra converter — não é cotação em tempo real.
       </p>
     </div>
   );
