@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Sparkles, PauseCircle } from "lucide-react";
 import { useApi } from "@/lib/luzeria/queries";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
@@ -25,7 +26,7 @@ export function PaymentPausedScreen({ me }: { me: Profile }) {
           toast.error("Não encontrei sua fatura — fala com a gente pelo WhatsApp.");
         }
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao abrir o pagamento."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao abrir o pagamento."),
     });
   }
 

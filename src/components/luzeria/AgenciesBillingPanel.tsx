@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react";
 import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, orgPageViewsQO, useApi } from "@/lib/luzeria/queries";
 import { computeAgencyPoints, getAgencyLevel } from "@/lib/luzeria/agency-level";
@@ -293,7 +294,7 @@ export function AgenciesBillingPanel() {
       toast.success("Mais 30 dias de teste liberados.");
       setResettingId(null);
     },
-    onError: (e: any) => { toast.error(e?.message ?? "Erro ao resetar teste."); setResettingId(null); },
+    onError: (e: any) => { toastFriendlyError(e, "Erro ao resetar teste."); setResettingId(null); },
   });
 
   async function handleResetTrial(o: { id: string; name: string }) {
@@ -748,7 +749,7 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
       setEditing(false);
       toast.success("WhatsApp atualizado.");
     },
-    onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar."),
+    onError: (e: any) => toastFriendlyError(e, "Erro ao salvar."),
   });
 
   function openTemplateEditor() {
@@ -758,7 +759,7 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
   function saveTemplate() {
     api.updateAgencyWelcomeMessage.mutate({ data: { message: templateDraft } }, {
       onSuccess: () => { toast.success("Mensagem padrão atualizada."); setEditingTemplate(false); },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar."),
     });
   }
 
@@ -775,7 +776,7 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
       queryClient.invalidateQueries({ queryKey: ["orgs-billing"] });
       toast.success(`${org.name} aprovada como revendedora — 60% de desconto de parceiro já configurado.`);
     },
-    onError: (e: any) => toast.error(e?.message ?? "Erro ao aprovar revendedor."),
+    onError: (e: any) => toastFriendlyError(e, "Erro ao aprovar revendedor."),
   });
 
   const revokeResellerMutation = useMutation({
@@ -785,7 +786,7 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
       toast.success(`${org.name} não é mais revendedora.`);
       onClose();
     },
-    onError: (e: any) => toast.error(e?.message ?? "Erro ao remover revendedora."),
+    onError: (e: any) => toastFriendlyError(e, "Erro ao remover revendedora."),
   });
 
   async function handleRevokeReseller() {

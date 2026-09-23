@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import { Loader2, X, ZoomIn } from "lucide-react";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 
 const MAX_OUTPUT_SIZE = 500;
 
@@ -69,7 +70,7 @@ export function ImageCropModal({
       const result = await cropAndResize(imageSrc, area, file.type);
       onConfirm(result);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao processar imagem.");
+      toastFriendlyError(e, "Erro ao processar imagem.");
     }
     setProcessing(false);
   }

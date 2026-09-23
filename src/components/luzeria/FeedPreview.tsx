@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Check, CheckCircle2, Copy as CopyIcon, Download, Film, Image as ImageIcon, Layers, Loader2, MessageSquare, RefreshCw, Share2 } from "lucide-react";
 import { itemFilesQO, gridThumbnailsQO, feedApprovalSummaryQO, activeFeedMonthQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { listItemFiles, getDriveVideoToken } from "@/lib/luzeria/drive.functions";
@@ -350,7 +351,7 @@ function DownloadAllButton({ items, zipName }: { items: FeedItem[]; zipName: str
       await downloadDriveFilesAsZip(fetchDriveToken, allFiles, zipName);
       toast.success(`${allFiles.length} arquivo${allFiles.length === 1 ? "" : "s"} baixado${allFiles.length === 1 ? "" : "s"} num .zip.`);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao baixar arquivos.");
+      toastFriendlyError(e, "Erro ao baixar arquivos.");
     } finally {
       setDownloading(false);
     }

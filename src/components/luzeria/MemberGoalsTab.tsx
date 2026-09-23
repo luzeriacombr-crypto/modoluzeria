@@ -4,6 +4,7 @@ import { goalsQO, goalProgressForOrgQO, profilesQO, useApi } from "@/lib/luzeria
 import { listGoals } from "@/lib/luzeria/roadmap.functions";
 import { Avatar } from "./Avatar";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Target, Copy, Save, Sparkles } from "lucide-react";
 
 const MONTH_NAMES = [
@@ -89,7 +90,7 @@ export function MemberGoalsTab() {
       { data: rowPayload(uid, row) },
       {
         onSuccess: () => toast.success("Meta salva."),
-        onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+        onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
       },
     );
   };
@@ -126,7 +127,7 @@ export function MemberGoalsTab() {
       setDraft(next);
       toast.success(`${count} metas copiadas de ${labelFor(prev)}. Clique em salvar para aplicar.`);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao copiar");
+      toastFriendlyError(e, "Erro ao copiar");
     }
   };
 

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Plus, Trash2, ArrowRight, Megaphone, Bell } from "lucide-react";
 import { platformUpdatesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -142,7 +143,7 @@ function NewUpdateForm({ onClose }: { onClose: () => void }) {
       },
     }, {
       onSuccess: () => { toast.success("Atualização publicada."); onClose(); },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao publicar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao publicar"),
     });
   }
 
@@ -205,7 +206,7 @@ function NotifyBatchPanel({ unnotified }: { unnotified: PlatformUpdate[] }) {
     if (!headline) return;
     api.sendPlatformUpdateNotification.mutate({ data: { headlineId: headline.id } }, {
       onSuccess: (r: any) => toast.success(`Notificação enviada pra ${r.notifiedUsers} pessoa${r.notifiedUsers === 1 ? "" : "s"}.`),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao notificar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao notificar"),
     });
   }
 

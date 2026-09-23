@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { ChevronLeft, ChevronRight, Heart, MessageCircle, Pause, Play, Send, Share2, X, Bookmark, Calendar, Pencil, Download, Loader2 } from "lucide-react";
 import { driveThumbnailQO, publicDriveThumbQO } from "@/lib/luzeria/queries";
 import { listItemFiles, getDriveVideoToken } from "@/lib/luzeria/drive.functions";
@@ -226,7 +227,7 @@ export function InstagramPostModal({
       }
       toast.success(`${allFiles.length} arquivo${allFiles.length === 1 ? "" : "s"} baixado${allFiles.length === 1 ? "" : "s"}.`);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao baixar arquivo.");
+      toastFriendlyError(e, "Erro ao baixar arquivo.");
     } finally {
       setDownloading(false);
     }

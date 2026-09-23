@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Check, Copy, KeyRound, Loader2, Lock, Trash2 } from "lucide-react";
 import { mcpStatusQO } from "@/lib/luzeria/queries";
 import { createMcpKey, revokeMcpKey } from "@/lib/luzeria/mcp-keys.functions";
@@ -59,13 +60,13 @@ export function McpSection() {
       const r = await create({ data: { name: name.trim() } });
       setNewKey(r.key); setName("");
       qc.invalidateQueries({ queryKey: ["mcp-status"] });
-    } catch (err: any) { toast.error(err?.message ?? "Não consegui criar a chave."); }
+    } catch (err: any) { toastFriendlyError(err, "Não consegui criar a chave."); }
     finally { setBusy(false); }
   }
   async function onRevoke(id: string, label: string) {
     if (!(await requestConfirm(`Revogar a chave "${label}"? Quem usa essa chave perde o acesso na hora.`, { danger: true, confirmLabel: "Revogar" }))) return;
     try { await revoke({ data: { id } }); toast.success("Chave revogada."); qc.invalidateQueries({ queryKey: ["mcp-status"] }); }
-    catch (err: any) { toast.error(err?.message ?? "Erro ao revogar."); }
+    catch (err: any) { toastFriendlyError(err, "Erro ao revogar."); }
   }
 
   const keyForSnippet = newKey ?? "SUA_CHAVE";

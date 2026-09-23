@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Upload, Loader2, Image as ImageIcon, Download } from "lucide-react";
 import { itemFilesQO, driveThumbnailQO, useApi } from "@/lib/luzeria/queries";
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
@@ -29,7 +30,7 @@ function BriefingThumb({ file, onOpen, onRemoveAppOnly, onRemoveEverywhere, canE
     try {
       await downloadDriveFile(fetchDriveToken, file.driveFileId, file.name);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao baixar arquivo.");
+      toastFriendlyError(e, "Erro ao baixar arquivo.");
     } finally {
       setDownloading(false);
     }
@@ -80,7 +81,7 @@ export function BriefingUploads({ itemId, clientId, canEdit }: { itemId: string;
     try {
       await downloadDriveFilesAsZip(fetchDriveToken, files, "imagens-referencia.zip");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao baixar imagens.");
+      toastFriendlyError(e, "Erro ao baixar imagens.");
     } finally {
       setDownloadingAll(false);
     }

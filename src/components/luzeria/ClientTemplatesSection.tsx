@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Pencil, Trash2, Wand2 } from "lucide-react";
 import {
   clientTemplatesQO,
@@ -79,7 +80,7 @@ export function ClientTemplatesSection() {
                       setEditando(null);
                       toast.success("Modelo salvo.");
                     })
-                    .catch((e: any) => toast.error(e?.message ?? "Erro ao salvar o modelo"));
+                    .catch((e: any) => toastFriendlyError(e, "Erro ao salvar o modelo"));
                 }}
               />
             );

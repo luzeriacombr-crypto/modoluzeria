@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { setMyTasksDefaultLayout } from "@/lib/luzeria/my-tasks-layout.functions";
 import { myTasksDefaultLayoutQO, topMembersQO, myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, contentStatusesQO, myStoriesTodayQO, useMe, useApi } from "@/lib/luzeria/queries";
@@ -729,7 +730,7 @@ export function MyTasks() {
               await setTeamDefault({ data: { layout } });
               await qc.invalidateQueries({ queryKey: ["my-tasks-default-layout"] });
               toast.success("Pronto! Esta é a nova ordem padrão.");
-            } catch (e: any) { toast.error(e?.message ?? "Erro ao salvar o padrão."); }
+            } catch (e: any) { toastFriendlyError(e, "Erro ao salvar o padrão."); }
           } : undefined} />
       )}
 

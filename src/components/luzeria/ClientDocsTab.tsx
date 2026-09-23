@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw, Lock, FileDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -61,7 +62,7 @@ export function ClientDocsTab({
       setRawMaterial("");
       toast.success("Formatado! Revise e clique em Salvar.");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao formatar com IA.");
+      toastFriendlyError(e, "Erro ao formatar com IA.");
     } finally {
       setFormatting(false);
     }

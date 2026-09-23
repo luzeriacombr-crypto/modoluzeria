@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { FileText, Image as ImageIcon, Link2, PenLine, X, Upload, Loader2, CheckCircle2 } from "lucide-react";
 import { extractClientsFromFiles, confirmImportedClients, type ExtractedClient } from "@/lib/luzeria/import-ai.functions";
 import { ImportClientsStep } from "./ImportClientsStep";
@@ -74,7 +75,7 @@ export function SmartImportStep({ onDone, onSkip }: { onDone: () => void; onSkip
       setRows(res.clients.map((c) => ({ ...c, selected: true })));
       setPhase("review");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao ler os arquivos.");
+      toastFriendlyError(e, "Erro ao ler os arquivos.");
       setPhase("upload");
     }
   }
@@ -104,7 +105,7 @@ export function SmartImportStep({ onDone, onSkip }: { onDone: () => void; onSkip
       qc.invalidateQueries({ queryKey: ["clients"] });
       qc.invalidateQueries({ queryKey: ["setup-checklist"] });
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao importar.");
+      toastFriendlyError(e, "Erro ao importar.");
     }
   }
 

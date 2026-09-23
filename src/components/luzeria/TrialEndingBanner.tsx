@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { AlertTriangle, X } from "lucide-react";
 import { orgPlanStatusQO, useApi } from "@/lib/luzeria/queries";
 
@@ -35,7 +36,7 @@ export function TrialEndingBanner({ isMaster }: { isMaster: boolean }) {
         toast.success("Quase lá! Abrindo a página de pagamento…");
         if (r?.invoiceUrl) window.open(r.invoiceUrl, "_blank");
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao configurar o pagamento."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao configurar o pagamento."),
     });
   }
 

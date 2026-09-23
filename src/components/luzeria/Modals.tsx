@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { profilesQO, useApi } from "@/lib/luzeria/queries";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 
 export function Modal({ open, onClose, title, children, maxWidthClass = "max-w-md" }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; maxWidthClass?: string }) {
   if (!open) return null;
@@ -57,7 +58,7 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
             data: { name: name.trim(), category, color, icon: null },
           })
             .then(() => { toast.success(`Cliente "${name.trim()}" criado.`); onClose(); })
-            .catch((e: any) => toast.error(e?.message ?? "Não consegui criar o cliente. Tenta de novo?"))}
+            .catch((e: any) => toastFriendlyError(e, "Não consegui criar o cliente. Tenta de novo?"))}
           className="px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50 transition-opacity hover:opacity-90"
           style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
           Criar

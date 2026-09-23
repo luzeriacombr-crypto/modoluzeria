@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Copy, Loader2, Pencil, Check } from "lucide-react";
 import { myReferralInfoQO, useApi } from "@/lib/luzeria/queries";
 
@@ -53,7 +54,7 @@ export function ReferralsTab() {
       { data: { code } },
       {
         onSuccess: () => { toast.success("Código atualizado."); setEditingCode(false); },
-        onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar o código."),
+        onError: (e: any) => toastFriendlyError(e, "Erro ao salvar o código."),
       },
     );
   }

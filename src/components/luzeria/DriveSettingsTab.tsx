@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import {
   Loader2, RefreshCw, HardDrive, ExternalLink, Video,
   Folder, ChevronRight, Check, X, ArrowLeft, Sparkles,
@@ -159,7 +160,7 @@ export function DriveSettingsTab() {
       const r: any = await getConnectUrl({ data: { redirectOrigin: window.location.origin } });
       window.location.href = r.url;
     } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao iniciar conexão com o Drive");
+      toastFriendlyError(e, "Falha ao iniciar conexão com o Drive");
       setConnecting(false);
     }
   }
@@ -179,7 +180,7 @@ export function DriveSettingsTab() {
       qc.invalidateQueries({ queryKey: ["setup-checklist"] });
       setManualStep(3);
     } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao salvar pasta raiz");
+      toastFriendlyError(e, "Falha ao salvar pasta raiz");
     } finally {
       setSavingRoot(false);
     }
@@ -214,7 +215,7 @@ export function DriveSettingsTab() {
       qc.invalidateQueries({ queryKey: ["drive-client-matches"] });
       qc.invalidateQueries({ queryKey: ["setup-checklist"] });
     } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao vincular clientes");
+      toastFriendlyError(e, "Falha ao vincular clientes");
     } finally {
       setApplying(false);
     }
@@ -231,7 +232,7 @@ export function DriveSettingsTab() {
       setReport({ moved: r.moved, skipped: r.skipped, errors: r.errors ?? [] });
       toast.success(`Movidos ${r.moved} arquivo(s).`);
     } catch (e: any) {
-      toast.error(e?.message ?? "Falha na reorganização");
+      toastFriendlyError(e, "Falha na reorganização");
     } finally {
       setRunning(false);
     }

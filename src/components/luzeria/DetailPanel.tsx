@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Facebook, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus, Play, Film, HardDrive } from "lucide-react";
 import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -147,7 +148,7 @@ function CarouselThumb({
     try {
       await downloadDriveFile(fetchDriveToken, file.driveFileId, file.name);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao baixar arquivo.");
+      toastFriendlyError(e, "Erro ao baixar arquivo.");
     } finally {
       setDownloading(false);
     }
@@ -392,7 +393,7 @@ function MediaPreview({
         await downloadDriveFilesAsZip(fetchDriveToken, files, "arquivos.zip");
       }
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao baixar imagens.");
+      toastFriendlyError(e, "Erro ao baixar imagens.");
     } finally {
       setDownloadingAll(false);
     }
@@ -431,7 +432,7 @@ function MediaPreview({
           await downloadDriveFilesAsZip(fetchDriveToken, chosen, "arquivos.zip");
         }
       } catch (e: any) {
-        toast.error(e?.message ?? "Erro ao baixar imagens.");
+        toastFriendlyError(e, "Erro ao baixar imagens.");
       } finally {
         setDownloadingAll(false);
       }
@@ -651,7 +652,7 @@ function MediaPreview({
     try {
       await downloadDriveFile(fetchDriveToken, first.driveFileId, first.name);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao baixar arquivo.");
+      toastFriendlyError(e, "Erro ao baixar arquivo.");
     } finally {
       setDownloadingFirst(false);
     }
@@ -896,7 +897,7 @@ export function DetailPanel() {
     const nextIso = scheduledPartsToIso(nextDate, normalizedTime);
     updateItem.mutate({ data: { id: stableItem.id, patch: { scheduled_at: nextIso } } }, {
       onError: (e: any) => {
-        toast.error(e?.message ?? "Erro ao salvar data de publicação.");
+        toastFriendlyError(e, "Erro ao salvar data de publicação.");
         setScheduledDate(current.date);
         setScheduledTime(current.time);
       },
@@ -1536,7 +1537,7 @@ export function DetailPanel() {
                       if (!(await requestConfirm('Publicar esse post no Instagram do cliente agora? Isso é uma ação real e pública.'))) return;
                       publishToInstagram.mutate({ data: { itemId: item.id } }, {
                         onSuccess: () => toast.success("Publicado no Instagram!"),
-                        onError: (e: any) => toast.error(e?.message ?? "Falha ao publicar no Instagram"),
+                        onError: (e: any) => toastFriendlyError(e, "Falha ao publicar no Instagram"),
                       });
                     }}
                     disabled={publishToInstagram.isPending}
@@ -1551,7 +1552,7 @@ export function DetailPanel() {
                       onClick={() => {
                         setInstagramAutoPublish.mutate({ data: { itemId: item.id, enabled: false } }, {
                           onSuccess: () => toast.success("Publicação programada cancelada."),
-                          onError: (e: any) => toast.error(e?.message ?? "Falha ao cancelar programação"),
+                          onError: (e: any) => toastFriendlyError(e, "Falha ao cancelar programação"),
                         });
                       }}
                       disabled={setInstagramAutoPublish.isPending}
@@ -1570,7 +1571,7 @@ export function DetailPanel() {
                         }
                         setInstagramAutoPublish.mutate({ data: { itemId: item.id, enabled: true } }, {
                           onSuccess: () => toast.success("Publicação programada!"),
-                          onError: (e: any) => toast.error(e?.message ?? "Defina data e horário de publicação futuros antes de programar."),
+                          onError: (e: any) => toastFriendlyError(e, "Defina data e horário de publicação futuros antes de programar."),
                         });
                       }}
                       disabled={setInstagramAutoPublish.isPending || !item.scheduledAt}
@@ -1629,7 +1630,7 @@ export function DetailPanel() {
                       if (!(await requestConfirm('Publicar esse post na Página do Facebook do cliente agora? Isso é uma ação real e pública.'))) return;
                       publishToFacebook.mutate({ data: { itemId: item.id } }, {
                         onSuccess: () => toast.success("Publicado no Facebook!"),
-                        onError: (e: any) => toast.error(e?.message ?? "Falha ao publicar no Facebook"),
+                        onError: (e: any) => toastFriendlyError(e, "Falha ao publicar no Facebook"),
                       });
                     }}
                     disabled={publishToFacebook.isPending}
@@ -1644,7 +1645,7 @@ export function DetailPanel() {
                       onClick={() => {
                         setFacebookAutoPublish.mutate({ data: { itemId: item.id, enabled: false } }, {
                           onSuccess: () => toast.success("Publicação programada cancelada."),
-                          onError: (e: any) => toast.error(e?.message ?? "Falha ao cancelar programação"),
+                          onError: (e: any) => toastFriendlyError(e, "Falha ao cancelar programação"),
                         });
                       }}
                       disabled={setFacebookAutoPublish.isPending}
@@ -1663,7 +1664,7 @@ export function DetailPanel() {
                         }
                         setFacebookAutoPublish.mutate({ data: { itemId: item.id, enabled: true } }, {
                           onSuccess: () => toast.success("Publicação programada!"),
-                          onError: (e: any) => toast.error(e?.message ?? "Defina data e horário de publicação futuros antes de programar."),
+                          onError: (e: any) => toastFriendlyError(e, "Defina data e horário de publicação futuros antes de programar."),
                         });
                       }}
                       disabled={setFacebookAutoPublish.isPending || !item.scheduledAt}
@@ -1724,7 +1725,7 @@ export function DetailPanel() {
                 const prev = item.dueDate ?? null;
                 if (v !== prev)
                   updateItem.mutate({ data: { id: item.id, patch: { due_date: v } } }, {
-                    onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar data."); setDueDate(prev ?? ""); },
+                    onError: (e: any) => { toastFriendlyError(e, "Erro ao salvar data."); setDueDate(prev ?? ""); },
                   });
               }}
               className="flex-1 bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]"
@@ -1736,7 +1737,7 @@ export function DetailPanel() {
                   const prev = item.dueDate ?? null;
                   setDueDate("");
                   updateItem.mutate({ data: { id: item.id, patch: { due_date: null } } }, {
-                    onError: (e: any) => { toast.error(e?.message ?? "Erro ao salvar data."); setDueDate(prev ?? ""); },
+                    onError: (e: any) => { toastFriendlyError(e, "Erro ao salvar data."); setDueDate(prev ?? ""); },
                   });
                 }}
                 className="text-[11px] text-foreground/40 hover:text-foreground px-2 py-1 rounded hover:bg-foreground/5"
@@ -1783,7 +1784,7 @@ export function DetailPanel() {
                     setScheduledTime("");
                     updateItem.mutate({ data: { id: item.id, patch: { scheduled_at: null } } }, {
                       onError: (e: any) => {
-                        toast.error(e?.message ?? "Erro ao salvar data de publicação.");
+                        toastFriendlyError(e, "Erro ao salvar data de publicação.");
                         setScheduledDate(prev.date);
                         setScheduledTime(prev.time);
                       },
@@ -1976,7 +1977,7 @@ function PublishedOnInstagram({ itemId, publishedAt }: { itemId: string; publish
       const { permalink } = await getLink({ data: { itemId } });
       window.open(permalink, "_blank", "noopener,noreferrer");
     } catch (e: any) {
-      toast.error(e?.message ?? "Não consegui abrir o post no Instagram.");
+      toastFriendlyError(e, "Não consegui abrir o post no Instagram.");
     } finally { setLoading(false); }
   }
   return (
@@ -2043,7 +2044,7 @@ function StoryRepeatControl({ itemId, scheduledAt }: { itemId: string; scheduled
   const mutation = useMutation({
     mutationFn: (vars: { mode: RepeatMode; slots?: RepeatSlot[] }) => setRule({ data: { itemId, ...vars } }),
     onSuccess: () => { toast.success("Repetição atualizada."); qc.invalidateQueries({ queryKey: ["story-repeat-status", itemId] }); },
-    onError: (e: any) => toast.error(e?.message ?? "Falha ao atualizar repetição."),
+    onError: (e: any) => toastFriendlyError(e, "Falha ao atualizar repetição."),
   });
 
   function selectMode(mode: RepeatMode) {

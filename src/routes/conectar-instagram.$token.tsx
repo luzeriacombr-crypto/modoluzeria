@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Toaster } from "@/components/ui/sonner";
 import { Instagram, User, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { publicInstagramConnectInfoQO } from "@/lib/luzeria/queries";
@@ -93,7 +94,7 @@ function PublicInstagramConnectPage() {
       const r: any = await getUrl({ data: { token } });
       window.location.href = r.url;
     } catch (e: any) {
-      toast.error(e?.message ?? "Não foi possível iniciar a conexão.");
+      toastFriendlyError(e, "Não foi possível iniciar a conexão.");
       setConnecting(false);
     }
   }

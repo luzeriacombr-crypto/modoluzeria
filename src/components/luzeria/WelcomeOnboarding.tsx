@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Video } from "lucide-react";
 import { useApi } from "@/lib/luzeria/queries";
 import type { Profile } from "@/lib/luzeria/types";
@@ -39,13 +40,13 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
     if (!saveCustomization) { next(); return; }
     updateMyProfile.mutate({ data: { color, avatarPath } }, {
       onSuccess: () => { toast.success("Perfil personalizado."); next(); },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar perfil"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar perfil"),
     });
   }
 
   function completeOnboarding() {
     updateMyProfile.mutate({ data: { onboarded: true } }, {
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao concluir"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao concluir"),
     });
   }
 

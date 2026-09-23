@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { X, Send, CheckCircle2, ArrowLeft } from "lucide-react";
 import { ChatBubbleIcon } from "./ChatBubbleIcon";
 import { useMe, useApi, mySupportThreadQO, openSupportThreadsQO, supportThreadMessagesQO } from "@/lib/luzeria/queries";
@@ -87,7 +88,7 @@ export function SupportChatWidget() {
     sendSupportMessage.mutate(
       { data: { threadId: data?.threadId ?? undefined, text } },
       {
-        onError: (e: any) => { toast.error(e?.message ?? "Não consegui enviar sua mensagem."); setPending(null); },
+        onError: (e: any) => { toastFriendlyError(e, "Não consegui enviar sua mensagem."); setPending(null); },
         onSuccess: () => setPending(null),
       },
     );
@@ -216,7 +217,7 @@ export function SupportChatAdminPanel() {
     if (!text || !selected) return;
     replyToSupportThread.mutate(
       { data: { threadId: selected, text } },
-      { onSuccess: () => setReply(""), onError: (e: any) => toast.error(e?.message ?? "Erro ao responder") },
+      { onSuccess: () => setReply(""), onError: (e: any) => toastFriendlyError(e, "Erro ao responder") },
     );
   }
 

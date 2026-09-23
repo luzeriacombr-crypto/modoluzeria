@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import {
@@ -33,17 +34,17 @@ export function PlatformCostsPanel() {
   const createMutation = useMutation({
     mutationFn: useServerFn(createOperatingCost),
     onSuccess: () => { invalidate(); resetForm(); toast.success("Custo adicionado."); },
-    onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar."),
+    onError: (e: any) => toastFriendlyError(e, "Erro ao salvar."),
   });
   const updateMutation = useMutation({
     mutationFn: useServerFn(updateOperatingCost),
     onSuccess: () => { invalidate(); resetForm(); toast.success("Custo atualizado."); },
-    onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar."),
+    onError: (e: any) => toastFriendlyError(e, "Erro ao salvar."),
   });
   const deleteMutation = useMutation({
     mutationFn: useServerFn(deleteOperatingCost),
     onSuccess: () => { invalidate(); toast.success("Removido."); },
-    onError: (e: any) => toast.error(e?.message ?? "Erro ao remover."),
+    onError: (e: any) => toastFriendlyError(e, "Erro ao remover."),
   });
 
   function resetForm() {

@@ -2,6 +2,7 @@ import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-ro
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Toaster } from "@/components/ui/sonner";
 import { ArrowLeft } from "lucide-react";
 
@@ -47,7 +48,7 @@ function MfaChallengePage() {
       if (vErr) throw vErr;
       nav({ to: "/minhas-tarefas" });
     } catch (err: any) {
-      toast.error(err?.message ?? "Código inválido");
+      toastFriendlyError(err, "Código inválido");
       setCode("");
     } finally { setLoading(false); }
   }

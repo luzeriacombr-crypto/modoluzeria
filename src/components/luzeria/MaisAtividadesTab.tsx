@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock, FolderInput, CheckSquare, X } from "lucide-react";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -181,7 +182,7 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                     toast.success(`${label} registrada com sucesso`);
                     setOpenForm(null);
                   } catch (e: any) {
-                    toast.error(e?.message ?? "Erro ao registrar. Tente novamente.");
+                    toastFriendlyError(e, "Erro ao registrar. Tente novamente.");
                   }
                 }}
                 onCancel={() => setOpenForm(null)}

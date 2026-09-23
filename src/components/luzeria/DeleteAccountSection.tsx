@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { AlertTriangle, Loader2, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/lib/luzeria/queries";
@@ -27,7 +28,7 @@ export function DeleteAccountSection() {
       await supabase.auth.signOut().catch(() => {});
       window.location.href = "/";
     } catch (e: any) {
-      toast.error(e?.message ?? "Não foi possível excluir a conta.");
+      toastFriendlyError(e, "Não foi possível excluir a conta.");
       setBusy(false);
     }
   }

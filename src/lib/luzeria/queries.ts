@@ -2,6 +2,7 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/r
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { reportHandledError } from "./error-monitoring";
+import { toastFriendlyError } from "./friendly-error";
 import { getClientContract } from "./client-contracts.functions";
 import { getProductionAudit } from "./production-audit.functions";
 import { getPageActivityReport, getNewUserJourneyReport } from "./page-activity.functions";
@@ -780,7 +781,7 @@ export function useApi() {
   // havia como saber se tinha salvo. Só usar em mutation SEM onError no
   // ponto de chamada, senão o aviso aparece duas vezes.
   const fail = (msg: string) => (e: any) => {
-    toast.error(e?.message ?? msg);
+    toastFriendlyError(e, msg);
     reportHandledError(e, { origem: "mutation", aviso: msg });
   };
   // Ação rápida que muda UM campo de um item (editor, formato, checklist,
@@ -843,7 +844,7 @@ export function useApi() {
     setWhatsappGroupLink: useMutation({
       mutationFn: useServerFn(setWhatsappGroupLink),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar link do grupo."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar link do grupo."),
     }),
     deleteClient: useMutation({ mutationFn: useServerFn(deleteClient), onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }), onError: fail("Não consegui excluir o cliente.") }),
     duplicateMonth: useMutation({
@@ -862,7 +863,7 @@ export function useApi() {
         if (!itemId) return;
         return optimisticPatchMonthItem(itemId, (item) => ({ ...item, editorId }));
       },
-      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao definir o editor."); },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toastFriendlyError(e, "Erro ao definir o editor."); },
       onSuccess: invalidateItemOnly,
     }),
     setItemReelType: useMutation({
@@ -872,7 +873,7 @@ export function useApi() {
         if (!itemId) return;
         return optimisticPatchMonthItem(itemId, (item) => ({ ...item, reelType }));
       },
-      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao definir o formato."); },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toastFriendlyError(e, "Erro ao definir o formato."); },
       onSuccess: invalidateItemOnly,
     }),
     setItemPostFormat: useMutation({
@@ -882,7 +883,7 @@ export function useApi() {
         if (!itemId) return;
         return optimisticPatchMonthItem(itemId, (item) => ({ ...item, postFormat }));
       },
-      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao definir o formato."); },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toastFriendlyError(e, "Erro ao definir o formato."); },
       onSuccess: invalidateItemOnly,
     }),
     setItemStatus: useMutation({
@@ -910,7 +911,7 @@ export function useApi() {
       },
       onError: (e: any, _v: unknown, ctx: any) => {
         ctx?.snapshots?.forEach(({ key, data }: any) => qc.setQueryData(key, data));
-        toast.error(e?.message ?? "Erro ao mudar status.");
+        toastFriendlyError(e, "Erro ao mudar status.");
       },
       onSuccess: invalidateAll,
     }),
@@ -923,7 +924,7 @@ export function useApi() {
           (item.assigneeIds ?? []).includes(userId) ? item : { ...item, assigneeIds: [...(item.assigneeIds ?? []), userId] }
         );
       },
-      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao atribuir responsável."); },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toastFriendlyError(e, "Erro ao atribuir responsável."); },
       onSuccess: invalidateItemAndTasks,
     }),
     removeAssignee: useMutation({
@@ -935,7 +936,7 @@ export function useApi() {
           ({ ...item, assigneeIds: (item.assigneeIds ?? []).filter((id: string) => id !== userId) })
         );
       },
-      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao remover responsável."); },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toastFriendlyError(e, "Erro ao remover responsável."); },
       onSuccess: invalidateItemAndTasks,
     }),
     addContentItem: useMutation({ mutationFn: useServerFn(addContentItem), onSuccess: invalidateAll, onError: fail("Não consegui criar o item.") }),
@@ -944,12 +945,12 @@ export function useApi() {
     restoreItem: useMutation({
       mutationFn: useServerFn(restoreItem),
       onSuccess: () => { invalidateAll(); qc.invalidateQueries({ queryKey: ["trash"] }); },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao restaurar."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao restaurar."),
     }),
     purgeItem: useMutation({
       mutationFn: useServerFn(purgeItem),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["trash"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao excluir para sempre."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao excluir para sempre."),
     }),
     updateFeedOrder: useMutation({
       mutationFn: useServerFn(updateFeedOrder),
@@ -962,7 +963,7 @@ export function useApi() {
     moveItemToMonth: useMutation({
       mutationFn: useServerFn(moveItemToMonth),
       onSuccess: () => { invalidateAll(); qc.invalidateQueries({ queryKey: ["monthKeys"] }); },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao mover item."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao mover item."),
     }),
     setFeedOrderMode: useMutation({
       mutationFn: useServerFn(setFeedOrderMode),
@@ -1039,7 +1040,7 @@ export function useApi() {
     cancelMySubscription: useMutation({
       mutationFn: useServerFn(cancelMySubscription),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["org-plan-status"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao cancelar assinatura."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao cancelar assinatura."),
     }),
     adminSendPasswordReset: useMutation({ mutationFn: useServerFn(adminSendPasswordReset) }),
     adminSetUserPassword: useMutation({ mutationFn: useServerFn(adminSetUserPassword) }),
@@ -1107,7 +1108,7 @@ export function useApi() {
       },
       onError: (e: any, _v: unknown, ctx: any) => {
         if (ctx?.previous) qc.setQueryData(["cleaning"], ctx.previous);
-        toast.error(e?.message ?? "Erro ao marcar tarefa.");
+        toastFriendlyError(e, "Erro ao marcar tarefa.");
       },
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["cleaning"] }); qc.invalidateQueries({ queryKey: ["my-today"] }); },
     }),
@@ -1138,12 +1139,12 @@ export function useApi() {
     upsertClientLink: useMutation({
       mutationFn: useServerFn(upsertClientLink),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar link."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar link."),
     }),
     deleteClientLink: useMutation({
       mutationFn: useServerFn(deleteClientLink),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover link."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover link."),
     }),
     startClientContractUploadSession: useMutation({
       mutationFn: useServerFn(startClientContractUploadSession),
@@ -1151,12 +1152,12 @@ export function useApi() {
     finalizeClientContractUpload: useMutation({
       mutationFn: useServerFn(finalizeClientContractUpload),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-contract"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar contrato."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar contrato."),
     }),
     deleteClientContract: useMutation({
       mutationFn: useServerFn(deleteClientContract),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-contract"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover contrato."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover contrato."),
     }),
     startClientAssetUploadSession: useMutation({
       mutationFn: useServerFn(startClientAssetUploadSession),
@@ -1164,32 +1165,32 @@ export function useApi() {
     finalizeClientAssetUpload: useMutation({
       mutationFn: useServerFn(finalizeClientAssetUpload),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-brand-assets"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao adicionar arquivo."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao adicionar arquivo."),
     }),
     deleteClientBrandAsset: useMutation({
       mutationFn: useServerFn(deleteClientBrandAsset),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-brand-assets"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover arquivo."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover arquivo."),
     }),
     upsertClientContact: useMutation({
       mutationFn: useServerFn(upsertClientContact),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar contato."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar contato."),
     }),
     deleteClientContact: useMutation({
       mutationFn: useServerFn(deleteClientContact),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover contato."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover contato."),
     }),
     upsertClientSecret: useMutation({
       mutationFn: useServerFn(upsertClientSecret),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar."),
     }),
     deleteClientSecret: useMutation({
       mutationFn: useServerFn(deleteClientSecret),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover."),
     }),
     upsertJourneyStage: useMutation({
       mutationFn: useServerFn(upsertJourneyStage),
@@ -1197,32 +1198,32 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["journey-stages"] });
         qc.invalidateQueries({ queryKey: ["client-operations-overview"] });
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar etapa."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar etapa."),
     }),
     deleteJourneyStage: useMutation({
       mutationFn: useServerFn(deleteJourneyStage),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["journey-stages"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover etapa."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover etapa."),
     }),
     upsertContentStatus: useMutation({
       mutationFn: useServerFn(upsertContentStatus),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["content-statuses"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar status."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar status."),
     }),
     deleteContentStatus: useMutation({
       mutationFn: useServerFn(deleteContentStatus),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["content-statuses"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover status."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover status."),
     }),
     setContentStatusHidden: useMutation({
       mutationFn: useServerFn(setContentStatusHidden),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["content-statuses"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao ocultar status."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao ocultar status."),
     }),
     createClientCategory: useMutation({
       mutationFn: useServerFn(createClientCategory),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-categories"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao criar categoria."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao criar categoria."),
     }),
     renameClientCategory: useMutation({
       mutationFn: useServerFn(renameClientCategory),
@@ -1230,22 +1231,22 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["client-categories"] });
         qc.invalidateQueries({ queryKey: ["clients"] });
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao renomear categoria."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao renomear categoria."),
     }),
     deleteClientCategory: useMutation({
       mutationFn: useServerFn(deleteClientCategory),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-categories"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover categoria."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover categoria."),
     }),
     upsertCargo: useMutation({
       mutationFn: useServerFn(upsertCargo),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["cargos"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar cargo."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar cargo."),
     }),
     deleteCargo: useMutation({
       mutationFn: useServerFn(deleteCargo),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["cargos"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover cargo."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover cargo."),
     }),
     setProfileCargos: useMutation({
       mutationFn: useServerFn(setProfileCargos),
@@ -1253,7 +1254,7 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["profiles"] });
         qc.invalidateQueries({ queryKey: ["me"] });
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar cargos."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar cargos."),
     }),
     setProfileClientAccess: useMutation({
       mutationFn: useServerFn(setProfileClientAccess),
@@ -1261,7 +1262,7 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["profiles"] });
         qc.invalidateQueries({ queryKey: ["clients"] });
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar acesso a clientes."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar acesso a clientes."),
     }),
     setOrgPixKey: useMutation({
       mutationFn: useServerFn(setOrgPixKey),
@@ -1269,67 +1270,67 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["me"] });
         qc.invalidateQueries({ queryKey: ["client-payments"] });
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar chave Pix."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar chave Pix."),
     }),
     setContractTemplate: useMutation({
       mutationFn: useServerFn(setContractTemplate),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar modelo de contrato."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar modelo de contrato."),
     }),
     createContractRequest: useMutation({
       mutationFn: useServerFn(createContractRequest),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["contract-requests"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao gerar contrato."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao gerar contrato."),
     }),
     cancelContractRequest: useMutation({
       mutationFn: useServerFn(cancelContractRequest),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["contract-requests"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao cancelar."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao cancelar."),
     }),
     createInstagramConnectRequest: useMutation({
       mutationFn: useServerFn(createInstagramConnectRequest),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["instagram-connect-requests"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao gerar link."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao gerar link."),
     }),
     cancelInstagramConnectRequest: useMutation({
       mutationFn: useServerFn(cancelInstagramConnectRequest),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["instagram-connect-requests"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao cancelar."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao cancelar."),
     }),
     setPaymentMessageTemplate: useMutation({
       mutationFn: useServerFn(setPaymentMessageTemplate),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-payments"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar mensagem."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar mensagem."),
     }),
     markClientPaymentReceived: useMutation({
       mutationFn: useServerFn(markClientPaymentReceived),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-payments"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar pagamento."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao marcar pagamento."),
     }),
     unmarkClientPaymentReceived: useMutation({
       mutationFn: useServerFn(unmarkClientPaymentReceived),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-payments"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao desfazer marcação."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao desfazer marcação."),
     }),
     addCashFlowEntry: useMutation({
       mutationFn: useServerFn(addCashFlowEntry),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao lançar."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao lançar."),
     }),
     removeCashFlowEntry: useMutation({
       mutationFn: useServerFn(removeCashFlowEntry),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover."),
     }),
     upsertCampaign: useMutation({
       mutationFn: useServerFn(upsertCampaign),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["campaigns"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar campanha."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar campanha."),
     }),
     deleteCampaign: useMutation({
       mutationFn: useServerFn(deleteCampaign),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["campaigns"] }); invalidateAll(); },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover campanha."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover campanha."),
     }),
     setItemCampaign: useMutation({
       mutationFn: useServerFn(setItemCampaign),
@@ -1338,17 +1339,17 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["campaign-items"] });
         invalidateAll();
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar campanha do item."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao atualizar campanha do item."),
     }),
     upsertLead: useMutation({
       mutationFn: useServerFn(upsertLead),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar oportunidade."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar oportunidade."),
     }),
     moveLeadStatus: useMutation({
       mutationFn: useServerFn(moveLeadStatus),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao mover oportunidade."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao mover oportunidade."),
     }),
     logLeadContact: useMutation({
       mutationFn: useServerFn(logLeadContact),
@@ -1356,17 +1357,17 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["leads"] });
         qc.invalidateQueries({ queryKey: ["lead-contacts", vars.data.leadId] });
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao registrar contato."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao registrar contato."),
     }),
     scheduleLeadFollowup: useMutation({
       mutationFn: useServerFn(scheduleLeadFollowup),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao agendar follow-up."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao agendar follow-up."),
     }),
     markLeadLost: useMutation({
       mutationFn: useServerFn(markLeadLost),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar como perdido."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao marcar como perdido."),
     }),
     markLeadWon: useMutation({
       mutationFn: useServerFn(markLeadWon),
@@ -1375,86 +1376,86 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["clients"] });
         qc.invalidateQueries({ queryKey: ["client-operations-overview"] });
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar como ganho."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao marcar como ganho."),
     }),
     linkLeadToClient: useMutation({
       mutationFn: useServerFn(linkLeadToClient),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao vincular ao cliente."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao vincular ao cliente."),
     }),
     markLeadWonNoClient: useMutation({
       mutationFn: useServerFn(markLeadWonNoClient),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar como ganho."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao marcar como ganho."),
     }),
     deleteLead: useMutation({
       mutationFn: useServerFn(deleteLead),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover oportunidade."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover oportunidade."),
     }),
     upsertClientDoc: useMutation({
       mutationFn: useServerFn(upsertClientDoc),
       onSuccess: (_r, vars: any) => qc.invalidateQueries({ queryKey: ["client-docs", vars.data.clientId] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar documento."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar documento."),
     }),
     deleteClientDoc: useMutation({
       mutationFn: useServerFn(deleteClientDoc),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover documento."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover documento."),
     }),
     regenerateRoteiroDoc: useMutation({
       mutationFn: useServerFn(regenerateRoteiroDoc),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao regenerar documento."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao regenerar documento."),
     }),
     updateRoteiroSection: useMutation({
       mutationFn: useServerFn(updateRoteiroSection),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar o roteiro."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar o roteiro."),
     }),
     addRoteiroSection: useMutation({
       mutationFn: useServerFn(addRoteiroSection),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao adicionar o roteiro."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao adicionar o roteiro."),
     }),
     exportRoteirosPdf: useMutation({
       mutationFn: useServerFn(exportRoteirosPdf),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao gerar o PDF."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao gerar o PDF."),
     }),
     createRoteirosFromPlan: useMutation({
       mutationFn: useServerFn(createRoteirosFromPlan),
       onSuccess: (_r, vars: any) => qc.invalidateQueries({ queryKey: ["client-docs", vars.data.clientId] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao gerar os roteiros."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao gerar os roteiros."),
     }),
     saveOrgKnowledgeText: useMutation({
       mutationFn: useServerFn(saveOrgKnowledgeText),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["org-knowledge"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar."),
     }),
     saveOrgKnowledgeFile: useMutation({
       mutationFn: useServerFn(saveOrgKnowledgeFile),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["org-knowledge"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar arquivo."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar arquivo."),
     }),
     deleteOrgKnowledge: useMutation({
       mutationFn: useServerFn(deleteOrgKnowledge),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["org-knowledge"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover."),
     }),
     upsertReferenceLibraryItem: useMutation({
       mutationFn: useServerFn(upsertReferenceLibraryItem),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["reference-library"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar referência."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar referência."),
     }),
     deleteReferenceLibraryItem: useMutation({
       mutationFn: useServerFn(deleteReferenceLibraryItem),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["reference-library"] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover referência."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover referência."),
     }),
     upsertRoteiroStatus: useMutation({
       mutationFn: useServerFn(upsertRoteiroStatus),
       onSuccess: (_r, vars: any) => qc.invalidateQueries({ queryKey: ["roteiro-statuses", vars.data.docId] }),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar status do roteiro."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar status do roteiro."),
     }),
     setClientStage: useMutation({
       mutationFn: useServerFn(setClientStage),
@@ -1463,7 +1464,7 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["clients"] });
         qc.invalidateQueries({ queryKey: ["client-operations-overview"] });
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao mudar etapa."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao mudar etapa."),
     }),
     logClientStageUpdate: useMutation({
       mutationFn: useServerFn(logClientStageUpdate),
@@ -1471,7 +1472,7 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["client-stage-history"] });
         qc.invalidateQueries({ queryKey: ["weekly-client-reminders"] });
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao registrar envio."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao registrar envio."),
     }),
     /* ===== ROADMAP MUTATIONS ===== */
     updateChecklist: useMutation({
@@ -1481,7 +1482,7 @@ export function useApi() {
         if (!itemId) return;
         return optimisticPatchMonthItem(itemId, (item) => ({ ...item, checklist }));
       },
-      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao salvar checklist."); },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toastFriendlyError(e, "Erro ao salvar checklist."); },
       onSuccess: invalidateItemOnly,
     }),
     rateItem: useMutation({
@@ -1491,7 +1492,7 @@ export function useApi() {
         if (!itemId) return;
         return optimisticPatchMonthItem(itemId, (item) => ({ ...item, qualityRating: rating }));
       },
-      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao avaliar."); },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toastFriendlyError(e, "Erro ao avaliar."); },
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["month"] }); qc.invalidateQueries({ queryKey: ["report"] }); },
     }),
     setGoals: useMutation({
@@ -1608,7 +1609,7 @@ export function useApi() {
         };
         return optimisticPatchMonthItem(itemId, (item) => ({ ...item, comments: [...(item.comments ?? []), tempComment] }));
       },
-      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toast.error(e?.message ?? "Erro ao comentar."); },
+      onError: (e: any, _v: unknown, ctx: any) => { rollbackMonthSnapshots(ctx); toastFriendlyError(e, "Erro ao comentar."); },
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["month"] });
         qc.invalidateQueries({ queryKey: ["notifications"] });
@@ -1624,7 +1625,7 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["month"] });
         qc.invalidateQueries({ queryKey: ["notifications"] });
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao enviar áudio."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao enviar áudio."),
     }),
     /* ===== DRIVE FILES ===== */
     attachDriveFile: useMutation({
@@ -1664,7 +1665,7 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["item-files"] });
         qc.invalidateQueries({ queryKey: ["month"] });
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover arquivos."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover arquivos."),
     }),
     reorderItemFiles: useMutation({
       mutationFn: useServerFn(reorderItemFiles),

@@ -19,6 +19,7 @@ import { useClientContractUpload } from "@/lib/luzeria/use-client-contract-uploa
 import { CONTENT_TYPE_LABEL, hasSetorPermission } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { ImageCropModal } from "./ImageCropModal";
 import { ClientBlockedItemsModal } from "./ClientBlockedItemsModal";
 import { getInstagramConnectionStatus, getInstagramConnectUrl, disconnectInstagram } from "@/lib/luzeria/instagram.functions";
@@ -127,7 +128,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
       qc.invalidateQueries({ queryKey: ["clients"] });
       toast.success(enabled ? "IA de planejamento ativada pra esse cliente." : "IA de planejamento desativada pra esse cliente.");
     } catch (e: any) {
-      toast.error(e?.message ?? "Não consegui atualizar a IA de planejamento.");
+      toastFriendlyError(e, "Não consegui atualizar a IA de planejamento.");
     } finally {
       setSavingAiPlanning(false);
     }
@@ -891,7 +892,7 @@ function InstagramSection({ clientId }: { clientId: string }) {
       const r: any = await getConnectUrl({ data: { clientId } });
       window.location.href = r.url;
     } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao iniciar conexão com o Instagram");
+      toastFriendlyError(e, "Falha ao iniciar conexão com o Instagram");
       setConnecting(false);
     }
   }
@@ -904,7 +905,7 @@ function InstagramSection({ clientId }: { clientId: string }) {
       toast.success("Instagram desconectado.");
       status.refetch();
     } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao desconectar");
+      toastFriendlyError(e, "Falha ao desconectar");
     } finally {
       setDisconnecting(false);
     }
@@ -980,7 +981,7 @@ function FacebookSection({ clientId }: { clientId: string }) {
       const r: any = await getConnectUrl({ data: { clientId } });
       window.location.href = r.url;
     } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao iniciar conexão com o Facebook");
+      toastFriendlyError(e, "Falha ao iniciar conexão com o Facebook");
       setConnecting(false);
     }
   }
@@ -993,7 +994,7 @@ function FacebookSection({ clientId }: { clientId: string }) {
       toast.success("Facebook desconectado.");
       status.refetch();
     } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao desconectar");
+      toastFriendlyError(e, "Falha ao desconectar");
     } finally {
       setDisconnecting(false);
     }
@@ -1109,7 +1110,7 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
           toast.success(`Pasta de entregas salva${r?.name ? `: ${r.name}` : ""}.`);
           setDirty(false);
         },
-        onError: (e: any) => toast.error(e?.message ?? "Falha ao salvar pasta."),
+        onError: (e: any) => toastFriendlyError(e, "Falha ao salvar pasta."),
       },
     );
   }
@@ -1120,7 +1121,7 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
       { data: { clientId } },
       {
         onSuccess: () => { toast.success("Pasta removida."); setValue(""); setDirty(false); },
-        onError: (e: any) => toast.error(e?.message ?? "Falha ao remover."),
+        onError: (e: any) => toastFriendlyError(e, "Falha ao remover."),
       },
     );
   }
@@ -1847,7 +1848,7 @@ function OnboardingBlock({ clientId }: { clientId: string }) {
     if (labels.length === 0) return;
     api.setOnboardingDefaults.mutate({ data: { labels } }, {
       onSuccess: () => toast.success("Checklist salvo como padrão em todos os clientes."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar como padrão"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar como padrão"),
     });
   }
 

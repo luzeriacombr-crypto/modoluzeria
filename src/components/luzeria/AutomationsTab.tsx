@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Pause, Pencil, Play, Plus, Trash2, Zap, FlaskConical, Sparkles } from "lucide-react";
 import { automationRulesQO, clientsQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { STATUS_META, getStatusMeta, type Status, type BuiltinStatus } from "@/lib/luzeria/types";
@@ -266,7 +267,7 @@ function AutomationRulesSection() {
                 Promise.all(g.ids.map((id) => deleteAutomationRule.mutateAsync({ data: { id } })))
                   .then(() => submitCreate(payload))
                   .then(() => setFormTarget(null))
-                  .catch((e: any) => toast.error(e?.message ?? "Erro ao salvar automação"));
+                  .catch((e: any) => toastFriendlyError(e, "Erro ao salvar automação"));
               }}
             />
           ) : (
@@ -327,7 +328,7 @@ function AutomationRulesSection() {
               clients={clients}
               onCancel={() => setFormTarget(null)}
               onSubmit={(payload) => {
-                submitCreate(payload).then(() => setFormTarget(null)).catch((e: any) => toast.error(e?.message ?? "Erro ao criar automação"));
+                submitCreate(payload).then(() => setFormTarget(null)).catch((e: any) => toastFriendlyError(e, "Erro ao criar automação"));
               }}
             />
           ) : formTarget === null ? (
@@ -353,7 +354,7 @@ function AutomationRulesSection() {
                     <p className="text-[11.5px] text-foreground/45 leading-relaxed flex-1">{t.desc}</p>
                     <button
                       disabled={added}
-                      onClick={() => submitCreate(t.payload).then(() => toast.success("Automação adicionada.")).catch((e: any) => toast.error(e?.message ?? "Erro ao criar automação"))}
+                      onClick={() => submitCreate(t.payload).then(() => toast.success("Automação adicionada.")).catch((e: any) => toastFriendlyError(e, "Erro ao criar automação"))}
                       className="self-start text-[11px] font-bold px-3 py-1.5 rounded-md disabled:opacity-40 transition"
                       style={added ? { backgroundColor: "color-mix(in srgb, var(--foreground) 8%, transparent)" } : { backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
                     >{added ? "Já adicionada" : "Adicionar"}</button>

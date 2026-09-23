@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield, UserPlus, RefreshCw, MessageCircle, AtSign, Star, Bug, LogOut, CalendarClock, Sun, Moon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useMe, useApi, notificationPrefsQO, myCalendarConnectionQO, clientsQO } from "@/lib/luzeria/queries";
@@ -60,7 +61,7 @@ export function ProfilePage() {
       { data: { color, avatarPath } },
       {
         onSuccess: () => { toast.success("Perfil atualizado."); setDirty(false); },
-        onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+        onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
       },
     );
   }
@@ -110,7 +111,7 @@ export function ProfilePage() {
                     { data: payload },
                     {
                       onSuccess: () => toast.success("Dados da conta atualizados."),
-                      onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar"),
+                      onError: (e: any) => toastFriendlyError(e, "Erro ao atualizar"),
                     },
                   )
                 }
@@ -180,7 +181,7 @@ export function ProfilePage() {
           onChange={(v) => setMyNotificationPreferences.mutate(
             { data: { dailyDigest: v } },
             { onSuccess: () => toast.success("Preferência salva."),
-              onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+              onError: (e: any) => toastFriendlyError(e, "Erro ao salvar") })}
         />
         <div className="h-px bg-foreground/[0.06] my-4" />
         <PrefRow
@@ -192,7 +193,7 @@ export function ProfilePage() {
           onChange={(v) => setMyNotificationPreferences.mutate(
             { data: { deadlineAlerts: v } },
             { onSuccess: () => toast.success("Preferência salva."),
-              onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+              onError: (e: any) => toastFriendlyError(e, "Erro ao salvar") })}
         />
         <div className="h-px bg-foreground/[0.06] my-4" />
         <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/30 mb-4">
@@ -207,7 +208,7 @@ export function ProfilePage() {
           onChange={(v) => setMyNotificationPreferences.mutate(
             { data: { pushAssigned: v } },
             { onSuccess: () => toast.success("Preferência salva."),
-              onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+              onError: (e: any) => toastFriendlyError(e, "Erro ao salvar") })}
         />
         <div className="h-px bg-foreground/[0.06] my-4" />
         <PrefRow
@@ -219,7 +220,7 @@ export function ProfilePage() {
           onChange={(v) => setMyNotificationPreferences.mutate(
             { data: { pushStatus: v } },
             { onSuccess: () => toast.success("Preferência salva."),
-              onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+              onError: (e: any) => toastFriendlyError(e, "Erro ao salvar") })}
         />
         <div className="h-px bg-foreground/[0.06] my-4" />
         <PrefRow
@@ -231,7 +232,7 @@ export function ProfilePage() {
           onChange={(v) => setMyNotificationPreferences.mutate(
             { data: { pushComment: v } },
             { onSuccess: () => toast.success("Preferência salva."),
-              onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+              onError: (e: any) => toastFriendlyError(e, "Erro ao salvar") })}
         />
         <div className="h-px bg-foreground/[0.06] my-4" />
         <PrefRow
@@ -243,7 +244,7 @@ export function ProfilePage() {
           onChange={(v) => setMyNotificationPreferences.mutate(
             { data: { pushMention: v } },
             { onSuccess: () => toast.success("Preferência salva."),
-              onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+              onError: (e: any) => toastFriendlyError(e, "Erro ao salvar") })}
         />
         <div className="h-px bg-foreground/[0.06] my-4" />
         <PrefRow
@@ -255,7 +256,7 @@ export function ProfilePage() {
           onChange={(v) => setMyNotificationPreferences.mutate(
             { data: { pushClientFeedback: v } },
             { onSuccess: () => toast.success("Preferência salva."),
-              onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+              onError: (e: any) => toastFriendlyError(e, "Erro ao salvar") })}
         />
         {me?.role === "master" && (
           <>
@@ -269,7 +270,7 @@ export function ProfilePage() {
               onChange={(v) => setMyNotificationPreferences.mutate(
                 { data: { pushBugReport: v } },
                 { onSuccess: () => toast.success("Preferência salva."),
-                  onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") })}
+                  onError: (e: any) => toastFriendlyError(e, "Erro ao salvar") })}
             />
           </>
         )}
@@ -285,7 +286,7 @@ export function ProfilePage() {
               const view = e.target.value;
               updateMyDefaultLanding.mutate(
                 { data: { defaultLanding: view === "minhas-tarefas" ? null : { view, clientId: view === "cliente" ? (defaultLandingClientId || clients[0]?.id) : undefined } } },
-                { onSuccess: () => toast.success("Preferência salva."), onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") },
+                { onSuccess: () => toast.success("Preferência salva."), onError: (e: any) => toastFriendlyError(e, "Erro ao salvar") },
               );
             }}
             className="bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
@@ -300,7 +301,7 @@ export function ProfilePage() {
               value={defaultLandingClientId}
               onChange={(e) => updateMyDefaultLanding.mutate(
                 { data: { defaultLanding: { view: "cliente", clientId: e.target.value } } },
-                { onSuccess: () => toast.success("Preferência salva."), onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar") },
+                { onSuccess: () => toast.success("Preferência salva."), onError: (e: any) => toastFriendlyError(e, "Erro ao salvar") },
               )}
               className="bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
             >
@@ -397,14 +398,14 @@ export function GoogleCalendarSection() {
       const { url } = await getGoogleCalendarAuthUrl.mutateAsync({ data: { redirectOrigin: window.location.origin } });
       window.location.href = withOAuthState(url);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao iniciar conexão com o Google.");
+      toastFriendlyError(e, "Erro ao iniciar conexão com o Google.");
     }
   }
 
   function disconnect() {
     disconnectGoogleCalendar.mutate({} as any, {
       onSuccess: () => toast.success("Google Agenda desconectada."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao desconectar."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao desconectar."),
     });
   }
 
@@ -418,7 +419,7 @@ export function GoogleCalendarSection() {
           toast.success("Compromisso criado na sua Google Agenda.");
           setTitle(""); setDate(""); setTime(""); setShowForm(false);
         },
-        onError: (err: any) => toast.error(err?.message ?? "Erro ao criar compromisso."),
+        onError: (err: any) => toastFriendlyError(err, "Erro ao criar compromisso."),
       },
     );
   }
@@ -620,7 +621,7 @@ function TwoFactorSection() {
       setSecret(enrolled.totp.secret);
       setEnrolling(true);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao iniciar ativação");
+      toastFriendlyError(e, "Erro ao iniciar ativação");
     } finally { setBusy(false); }
   }
 
@@ -637,7 +638,7 @@ function TwoFactorSection() {
       setEnrolling(false); setCode(""); setQrCode(null); setSecret(null);
       setStatus("on");
     } catch (e: any) {
-      toast.error(e?.message ?? "Código inválido, tenta de novo.");
+      toastFriendlyError(e, "Código inválido, tenta de novo.");
     } finally { setBusy(false); }
   }
 
@@ -656,7 +657,7 @@ function TwoFactorSection() {
       toast.success("Autenticação de dois fatores desativada.");
       setStatus("off"); setFactorId(null);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao desativar");
+      toastFriendlyError(e, "Erro ao desativar");
     } finally { setBusy(false); }
   }
 

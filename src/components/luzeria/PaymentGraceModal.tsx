@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Sparkles, Clock3 } from "lucide-react";
 import { orgPlanStatusQO, myPendingInvoiceQO, useApi } from "@/lib/luzeria/queries";
 
@@ -56,7 +57,7 @@ export function PaymentGraceModal({ isMaster }: { isMaster: boolean }) {
           if (r?.invoiceUrl) window.open(r.invoiceUrl, "_blank");
           dismiss();
         },
-        onError: (e: any) => toast.error(e?.message ?? "Erro ao configurar o pagamento."),
+        onError: (e: any) => toastFriendlyError(e, "Erro ao configurar o pagamento."),
       });
     } else if (invoice?.invoiceUrl) {
       window.open(invoice.invoiceUrl, "_blank");

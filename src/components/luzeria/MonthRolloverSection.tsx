@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { CalendarSync } from "lucide-react";
 import { useApi, useMe } from "@/lib/luzeria/queries";
 
@@ -28,7 +29,7 @@ export function MonthRolloverSection() {
       },
     }, {
       onSuccess: () => toast.success("Virada de mês salva."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
     });
   }
 

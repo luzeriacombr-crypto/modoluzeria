@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Images, ImageIcon, Plus, ShieldCheck, Trash2, Type, Upload, ChevronDown, ChevronRight } from "lucide-react";
 import { photoClientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -122,7 +123,7 @@ function WatermarkSettings() {
 
   function setMode(next: WatermarkMode) {
     updateMyOrg.mutate({ data: { photoWatermarkMode: next } }, {
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
     });
   }
 
@@ -142,7 +143,7 @@ function WatermarkSettings() {
       await updateMyOrg.mutateAsync({ data: { photoWatermarkPath: path, photoWatermarkMode: "image" } });
       toast.success("Marca d'água atualizada.");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao enviar a marca d'água.");
+      toastFriendlyError(e, "Erro ao enviar a marca d'água.");
     } finally {
       setUploading(false);
     }
@@ -151,7 +152,7 @@ function WatermarkSettings() {
   function saveText() {
     updateMyOrg.mutate({ data: { photoWatermarkText: text.trim(), photoWatermarkOpacity: opacity, photoWatermarkDensity: density } }, {
       onSuccess: () => { setDirty(false); toast.success("Marca d'água atualizada."); },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
     });
   }
 
@@ -335,7 +336,7 @@ function NewPhotoClientModal({ onClose }: { onClose: () => void }) {
     if (!name.trim()) { toast.error("Dá um nome pra esse cliente."); return; }
     createPhotoClient.mutate({ data: { name: name.trim() } }, {
       onSuccess: () => { toast.success(`Cliente "${name.trim()}" criado.`); onClose(); },
-      onError: (e: any) => toast.error(e?.message ?? "Não consegui criar o cliente. Tenta de novo?"),
+      onError: (e: any) => toastFriendlyError(e, "Não consegui criar o cliente. Tenta de novo?"),
     });
   }
 

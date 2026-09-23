@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Toaster } from "@/components/ui/sonner";
 import { publicFeedQO } from "@/lib/luzeria/queries";
 import { addPublicFeedback, approvePublicFeed, approvePublicItem, getPublicItemFiles, getPublicDriveVideoToken } from "@/lib/luzeria/feed-share.functions";
@@ -335,7 +336,7 @@ function PublicDownloadAllButton({ token, items, zipName }: { token: string; ite
       await downloadDriveFilesAsZip(fetchDriveToken, allFiles, zipName);
       toast.success(`${allFiles.length} arquivo${allFiles.length === 1 ? "" : "s"} baixado${allFiles.length === 1 ? "" : "s"} num .zip.`);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao baixar arquivos.");
+      toastFriendlyError(e, "Erro ao baixar arquivos.");
     } finally {
       setDownloading(false);
     }
@@ -431,7 +432,7 @@ function PublicStoryViewer({ token, client, stories, index, onClose, onNavigate 
       }
       toast.success("Baixado.");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao baixar arquivo.");
+      toastFriendlyError(e, "Erro ao baixar arquivo.");
     } finally {
       setDownloading(false);
     }

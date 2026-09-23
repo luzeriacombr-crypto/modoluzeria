@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Plus, Copy, Trash2, ExternalLink, Image as ImageIcon, Lock, Unlock, ChevronDown, ChevronRight, Star } from "lucide-react";
 import { photoSelectionsQO, photoSelectionDetailQO, selectionDriveImagesQO, driveThumbnailQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -69,11 +70,11 @@ export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string 
               onToggleStatus={() => setPhotoSelectionStatus.mutate({
                 data: { id: s.id, status: s.status === "aberta" ? "encerrada" : "aberta" },
               }, {
-                onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar."),
+                onError: (e: any) => toastFriendlyError(e, "Erro ao atualizar."),
               })}
               togglingStatus={setPhotoSelectionStatus.isPending}
               onChangeOrder={(photoOrder) => setPhotoSelectionOrder.mutate({ data: { id: s.id, photoOrder } }, {
-                onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar."),
+                onError: (e: any) => toastFriendlyError(e, "Erro ao atualizar."),
               })}
               onPickCover={() => setPickingCoverFor(s.id)}
             />
@@ -88,7 +89,7 @@ export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string 
           onCreate={(vals) => {
             createPhotoSelection.mutate({ data: { photoClientId, ...vals } }, {
               onSuccess: () => { setShowNew(false); toast.success("Seleção criada — copie o link pro cliente."); },
-              onError: (e: any) => toast.error(e?.message ?? "Erro ao criar seleção."),
+              onError: (e: any) => toastFriendlyError(e, "Erro ao criar seleção."),
             });
           }}
         />
@@ -101,7 +102,7 @@ export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string 
           onPick={(driveFileId) => {
             setPhotoSelectionCover.mutate({ data: { id: pickingCoverFor, driveFileId } }, {
               onSuccess: () => { toast.success("Capa atualizada."); setPickingCoverFor(null); },
-              onError: (e: any) => toast.error(e?.message ?? "Erro ao definir capa."),
+              onError: (e: any) => toastFriendlyError(e, "Erro ao definir capa."),
             });
           }}
         />

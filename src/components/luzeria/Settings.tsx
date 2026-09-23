@@ -7,6 +7,7 @@ import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
 import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Gift, Archive, PlayCircle } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
 import { ContentStatusesSection } from "./ContentStatusesSection";
@@ -88,7 +89,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
     if (!(await requestConfirm(`Remover ${name}? Esta ação é permanente.`, { danger: true }))) return;
     deleteUser.mutate({ data: { userId: id } }, {
       onSuccess: () => toast.success("Colaborador removido."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover"),
     });
   };
 
@@ -330,7 +331,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           onSubmit={(payload) => {
             adminCreateUser.mutate({ data: payload }, {
               onSuccess: () => { toast.success(`${payload.name} adicionado.`); setAdding(false); },
-              onError: (e: any) => toast.error(e?.message ?? "Erro ao adicionar membro"),
+              onError: (e: any) => toastFriendlyError(e, "Erro ao adicionar membro"),
             });
           }}
         />
@@ -343,7 +344,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           onSubmit={(payload) => {
             createAgency.mutate({ data: payload }, {
               onSuccess: () => { toast.success(`Agência "${payload.orgName}" criada.`); setCreatingAgency(false); },
-              onError: (e: any) => toast.error(e?.message ?? "Erro ao criar agência"),
+              onError: (e: any) => toastFriendlyError(e, "Erro ao criar agência"),
             });
           }}
         />
@@ -542,13 +543,13 @@ function GeneralSettings() {
   const toggle = (next: boolean) =>
     updateAppSettings.mutate({ data: { requireRatingOnFinalize: next } }, {
       onSuccess: () => toast.success("Configuração salva."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
     });
 
   const toggleFinalizadosSeparateTab = (next: boolean) =>
     updateMyOrg.mutate({ data: { finalizadosSeparateTab: next } }, {
       onSuccess: () => toast.success("Configuração salva."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
     });
 
   return (
@@ -673,7 +674,7 @@ function FeatureTogglesSection({ disabledFeatures }: { disabledFeatures: string[
       ? [...disabledSet, key]
       : [...disabledSet].filter((k) => k !== key);
     updateMyOrg.mutate({ data: { disabledFeatures: next } }, {
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
     });
   }
 
@@ -733,13 +734,13 @@ function TeamPermissionsPanel({ me }: { me: Profile }) {
     const next = on ? [...granted, key] : [...granted].filter((k) => k !== key);
     updateSetorPermissions.mutate({ data: { permissions: next } }, {
       onSuccess: () => toast.success("Permissões atualizadas."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
     });
   }
 
   function toggleMembersEditorFormat(on: boolean) {
     updateMyOrg.mutate({ data: { membersCanSetEditorFormat: on } }, {
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
     });
   }
 
@@ -1066,7 +1067,7 @@ function BillingSection() {
     const digits = taxId.replace(/\D/g, "");
     updateMyOrg.mutate({ data: { taxId: digits || null } }, {
       onSuccess: () => toast.success("CNPJ/CPF salvo."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
     });
   }
 
@@ -1076,7 +1077,7 @@ function BillingSection() {
         toast.success("Assinatura criada! Abrindo a fatura para pagamento…");
         if (r?.invoiceUrl) window.open(r.invoiceUrl, "_blank");
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao assinar o plano."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao assinar o plano."),
     });
   }
 
@@ -1307,7 +1308,7 @@ function OrgBrandingSection({
       },
     }, {
       onSuccess: () => toast.success("Marca da agência atualizada."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
     });
   }
 
@@ -1328,7 +1329,7 @@ function OrgBrandingSection({
       await updateMyOrg.mutateAsync({ data: { logoPath: path } });
       toast.success("Logo atualizada.");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao enviar a logo.");
+      toastFriendlyError(e, "Erro ao enviar a logo.");
     } finally {
       setUploading(false);
     }
@@ -1337,7 +1338,7 @@ function OrgBrandingSection({
   function removeLogo() {
     updateMyOrg.mutate({ data: { logoPath: null } }, {
       onSuccess: () => toast.success("Logo removida."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover"),
     });
   }
 
@@ -1358,7 +1359,7 @@ function OrgBrandingSection({
       await updateMyOrg.mutateAsync({ data: { logoPathLight: path } });
       toast.success("Logo do modo claro atualizada.");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao enviar a logo.");
+      toastFriendlyError(e, "Erro ao enviar a logo.");
     } finally {
       setUploadingLight(false);
     }
@@ -1367,7 +1368,7 @@ function OrgBrandingSection({
   function removeLogoLight() {
     updateMyOrg.mutate({ data: { logoPathLight: null } }, {
       onSuccess: () => toast.success("Logo do modo claro removida — volta a usar a mesma dos dois temas."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover"),
     });
   }
 
@@ -1388,7 +1389,7 @@ function OrgBrandingSection({
       await updateMyOrg.mutateAsync({ data: { feedPreviewImagePath: path } });
       toast.success("Imagem de preview atualizada.");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao enviar a imagem.");
+      toastFriendlyError(e, "Erro ao enviar a imagem.");
     } finally {
       setUploadingPreview(false);
     }
@@ -1397,7 +1398,7 @@ function OrgBrandingSection({
   function resetFeedPreviewImage() {
     updateMyOrg.mutate({ data: { feedPreviewImagePath: null } }, {
       onSuccess: () => toast.success("Voltou pra imagem padrão do Modo Criador."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover"),
     });
   }
 
@@ -1418,7 +1419,7 @@ function OrgBrandingSection({
       await updateMyOrg.mutateAsync({ data: { faviconPath: path } });
       toast.success("Ícone atualizado.");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao enviar o ícone.");
+      toastFriendlyError(e, "Erro ao enviar o ícone.");
     } finally {
       setUploadingFavicon(false);
     }
@@ -1427,7 +1428,7 @@ function OrgBrandingSection({
   function resetFavicon() {
     updateMyOrg.mutate({ data: { faviconPath: null } }, {
       onSuccess: () => toast.success("Voltou pro ícone padrão do Modo Criador."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover"),
     });
   }
 

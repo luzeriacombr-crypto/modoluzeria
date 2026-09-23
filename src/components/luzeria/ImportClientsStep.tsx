@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import {
   getTrelloAuthUrl, fetchTrelloBoards, fetchTrelloLists,
   fetchClickUpTeams, fetchClickUpSpaces, fetchClickUpLists,
@@ -62,7 +63,7 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
         setTopItems(databases);
       }
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao conectar.");
+      toastFriendlyError(e, "Erro ao conectar.");
     } finally {
       setLoading(false);
     }
@@ -75,7 +76,7 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
       const spaces = await clickupSpaces({ data: { token: token.trim(), teamId: id } });
       setTopItems(spaces);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao buscar spaces.");
+      toastFriendlyError(e, "Erro ao buscar spaces.");
     } finally {
       setLoading(false);
     }
@@ -93,7 +94,7 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
       setNestedItems(lists);
       setSelected(Object.fromEntries(lists.map((l) => [l.id, true])));
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao buscar listas.");
+      toastFriendlyError(e, "Erro ao buscar listas.");
     } finally {
       setLoading(false);
     }
@@ -113,7 +114,7 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
       const r = await doImport({ data: { names, source: provider } });
       setResult(r);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao importar clientes.");
+      toastFriendlyError(e, "Erro ao importar clientes.");
     } finally {
       setLoading(false);
     }

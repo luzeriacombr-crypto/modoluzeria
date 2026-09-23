@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Clock, Music2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import {
   getTikTokConnectionStatus, getTikTokConnectUrl, disconnectTikTok,
@@ -36,7 +37,7 @@ export function TikTokConnectSection({ clientId }: { clientId: string }) {
       const r: any = await getConnectUrl({ data: { clientId } });
       window.location.href = r.url;
     } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao iniciar conexão com o TikTok");
+      toastFriendlyError(e, "Falha ao iniciar conexão com o TikTok");
       setConnecting(false);
     }
   }
@@ -49,7 +50,7 @@ export function TikTokConnectSection({ clientId }: { clientId: string }) {
       toast.success("TikTok desconectado.");
       status.refetch();
     } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao desconectar");
+      toastFriendlyError(e, "Falha ao desconectar");
     } finally {
       setDisconnecting(false);
     }
@@ -158,12 +159,12 @@ export function TikTokPublishPanel({ itemId, clientId, scheduledAt, caption }: {
       refresh();
       qc.invalidateQueries({ queryKey: ["month"] });
     },
-    onError: (e: any) => { toast.error(e?.message ?? "Falha ao publicar no TikTok"); refresh(); },
+    onError: (e: any) => { toastFriendlyError(e, "Falha ao publicar no TikTok"); refresh(); },
   });
   const autoMut = useMutation({
     mutationFn: (enabled: boolean) => setAuto({ data: { itemId, enabled, settings: enabled ? form : undefined } }),
     onSuccess: (_r, enabled) => { toast.success(enabled ? "Publicação programada!" : "Publicação programada cancelada."); refresh(); },
-    onError: (e: any) => toast.error(e?.message ?? "Falha ao programar"),
+    onError: (e: any) => toastFriendlyError(e, "Falha ao programar"),
   });
 
   // Tabela/credenciais indisponíveis (ex.: migration ainda não aplicada):

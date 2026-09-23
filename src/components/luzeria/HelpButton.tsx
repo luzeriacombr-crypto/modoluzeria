@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { CircleHelp, Paperclip, X, BookOpen, Compass, Bug, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Modal } from "./Modals";
 import { startTour } from "./AppTour";
 import { reportBug } from "@/lib/luzeria/bug-reports.functions";
@@ -85,7 +86,7 @@ export function HelpButton() {
       toast.success(kind === "suggestion" ? "Sugestão enviada! Obrigado pela ideia." : "Reportado! Obrigado, vamos verificar.");
       close();
     } catch (e: any) {
-      toast.error(e?.message ?? "Não foi possível enviar o reporte.");
+      toastFriendlyError(e, "Não foi possível enviar o reporte.");
     } finally {
       setSending(false);
     }

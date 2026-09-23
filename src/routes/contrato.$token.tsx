@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Toaster } from "@/components/ui/sonner";
 import { Check, Eraser } from "lucide-react";
 import { publicContractRequestQO } from "@/lib/luzeria/queries";
@@ -97,7 +98,7 @@ function PublicContractPage() {
       setJustSigned(true);
       toast.success("Contrato assinado!");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao assinar. Tente de novo.");
+      toastFriendlyError(e, "Erro ao assinar. Tente de novo.");
     } finally {
       setSubmitting(false);
     }

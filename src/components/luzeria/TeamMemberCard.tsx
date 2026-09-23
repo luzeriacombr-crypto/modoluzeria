@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { KeyRound, ListChecks, Trash2 } from "lucide-react";
 import {
   WEEK_DAYS, WEEK_DAY_LABEL, defaultWorkSchedule, computeMonthlyHourlyCost,
@@ -125,7 +126,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
       data: { userId: profile.id, monthlySalary: salary.trim() ? Number(salary) : null, workSchedule: schedule },
     }, {
       onSuccess: () => toast.success("Remuneração salva."),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar remuneração"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar remuneração"),
     });
   }
 
@@ -135,7 +136,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
       const path = await uploadAvatar(file, profile.id);
       setAvatarPreview(URL.createObjectURL(file));
       adminUpdateMemberAvatar.mutate({ data: { userId: profile.id, avatarPath: path } }, {
-        onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar foto"),
+        onError: (e: any) => toastFriendlyError(e, "Erro ao salvar foto"),
       });
     } catch (e) { showAvatarError(e); }
     finally { setUploading(false); }
@@ -144,7 +145,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
   function onRemovePhoto() {
     setAvatarPreview(null);
     adminUpdateMemberAvatar.mutate({ data: { userId: profile.id, avatarPath: null } }, {
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover foto"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover foto"),
     });
   }
 
@@ -152,7 +153,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
     if (!(await requestConfirm(`Enviar link de redefinição de senha para ${profile.name} (${profile.email})?`))) return;
     adminSendPasswordReset.mutate({ data: { userId: profile.id } }, {
       onSuccess: (res: any) => toast.success(`Email enviado para ${res?.email ?? profile.email}.`),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao enviar email"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao enviar email"),
     });
   }
 
@@ -164,7 +165,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
         setNewPassword("");
         setShowPasswordField(false);
       },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao definir senha"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao definir senha"),
     });
   }
 
@@ -172,7 +173,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
     if (!(await requestConfirm(`Remover ${profile.name}? Esta ação é permanente.`, { danger: true }))) return;
     deleteUser.mutate({ data: { userId: profile.id } }, {
       onSuccess: () => { toast.success("Colaborador removido."); onClose(); },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao remover"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover"),
     });
   }
 

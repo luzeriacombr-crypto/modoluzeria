@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { FileText, StickyNote, Trash2, Upload, Loader2 } from "lucide-react";
 import { orgKnowledgeQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -42,7 +43,7 @@ export function OrgKnowledgeSettings() {
       });
       toast.success("Arquivo salvo.");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao enviar arquivo.");
+      toastFriendlyError(e, "Erro ao enviar arquivo.");
     } finally {
       setUploading(false);
     }

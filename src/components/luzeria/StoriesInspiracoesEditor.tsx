@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Plus, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { Modal } from "@/components/luzeria/Modals";
 import { storiesInspiracoesQO, useApi } from "@/lib/luzeria/queries";
@@ -35,7 +36,7 @@ export function StoriesInspiracoesEditor({ open, onClose }: { open: boolean; onC
         setGerarAberto(false);
         toast.success("Rascunho gerado — revise e salve.");
       },
-      onError: (e: any) => toast.error(e?.message ?? "Não consegui gerar agora"),
+      onError: (e: any) => toastFriendlyError(e, "Não consegui gerar agora"),
     });
   }
 
@@ -67,7 +68,7 @@ export function StoriesInspiracoesEditor({ open, onClose }: { open: boolean; onC
     };
     setStoriesInspiracoes.mutate({ data: { rotina: limpa.dias.length ? limpa : null } }, {
       onSuccess: () => { toast.success("Inspirações salvas."); setRascunho(null); onClose(); },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
     });
   }
 

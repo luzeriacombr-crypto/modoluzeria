@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { ChevronDown, ExternalLink, Image as ImageIcon, MessageCircle, Video, Send, Lightbulb, Bug } from "lucide-react";
 import { useMe, useApi, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/queries";
 import type { MyBugReport, AllBugReport, BugReportStatus, BugReportKind } from "@/lib/luzeria/bug-reports.functions";
@@ -170,7 +171,7 @@ function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugRepo
     if (!message) return;
     sendBugReportMessage.mutate({ data: { id: report.id, message } }, {
       onSuccess: () => { toast.success("Mensagem enviada."); setReplyText(""); },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao enviar mensagem"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao enviar mensagem"),
     });
   }
 
@@ -216,7 +217,7 @@ function BugReportRow({ report, showOrigin }: { report: MyBugReport | AllBugRepo
                 disabled={active}
                 onClick={() => updateBugReportStatus.mutate(
                   { data: { id: report.id, status: s } },
-                  { onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar status") },
+                  { onError: (e: any) => toastFriendlyError(e, "Erro ao atualizar status") },
                 )}
                 className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-all duration-200 disabled:cursor-default hover:brightness-110"
                 style={{

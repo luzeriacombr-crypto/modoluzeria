@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import {
   MessageCircle, Search, Plus, X, Cog, Users, Sparkles, Wallet, LayoutGrid,
   Pin, Trash2, ExternalLink, ChevronDown, Send,
@@ -178,7 +179,7 @@ function PostDetail({ postId, category, categories, isPlatformAdmin, onClose }: 
     if (!body) return;
     api.createForumReply.mutate({ data: { postId, body } }, {
       onSuccess: () => setReplyText(""),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao responder"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao responder"),
     });
   }
 
@@ -304,7 +305,7 @@ function NewPostModal({ categories, onClose, onCreated }: {
     }
     api.createForumPost.mutate({ data: { categoryId, title: title.trim(), body: body.trim(), linkUrl: linkUrl.trim() || null } }, {
       onSuccess: (r) => { toast.success("Post publicado!"); onCreated(r.id); },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao publicar"),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao publicar"),
     });
   }
 

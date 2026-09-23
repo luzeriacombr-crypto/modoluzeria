@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import {
   Plus, Pencil, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, X, Wand2,
   Copy, ImagePlus, Loader2, ArrowLeft,
@@ -60,7 +61,7 @@ function BlogPostList({ onEdit }: { onEdit: (id: string | "new") => void }) {
       await api.deleteBlogPost.mutateAsync({ data: { id } });
       toast.success("Artigo apagado.");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao apagar.");
+      toastFriendlyError(e, "Erro ao apagar.");
     }
   }
 
@@ -186,7 +187,7 @@ function BlogPostEditor({ id, onClose }: { id: string | null; onClose: () => voi
       const url = await upload(file);
       if (url) setCoverImageUrl(url);
     } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao enviar imagem.");
+      toastFriendlyError(err, "Erro ao enviar imagem.");
     }
   }
 
@@ -250,7 +251,7 @@ function BlogPostEditor({ id, onClose }: { id: string | null; onClose: () => voi
       toast.success("Artigo salvo!");
       onClose();
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao salvar.");
+      toastFriendlyError(e, "Erro ao salvar.");
     }
   }
 

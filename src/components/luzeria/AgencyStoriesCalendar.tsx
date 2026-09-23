@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { ChevronLeft, ChevronRight, Instagram, Check, Lightbulb } from "lucide-react";
 import { agencyStoriesQO, profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { Avatar } from "@/components/luzeria/Avatar";
@@ -62,7 +63,7 @@ export function AgencyStoriesCalendar() {
     setAgencyStoriesDay.mutate(
       { data: { date: dia, userIds: novos } },
       {
-        onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar a escala"),
+        onError: (e: any) => toastFriendlyError(e, "Erro ao salvar a escala"),
       },
     );
   }

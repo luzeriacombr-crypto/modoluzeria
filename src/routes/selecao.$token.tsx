@@ -3,6 +3,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Toaster } from "@/components/ui/sonner";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Download, Heart, Lock, X } from "lucide-react";
 import { publicPhotoSelectionQO, publicPhotoThumbsBatchQO } from "@/lib/luzeria/queries";
@@ -186,7 +187,7 @@ function PublicPhotoSelectionPage() {
       setSubmittedAs(name);
       toast.success("Seleção enviada!");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao enviar seleção.");
+      toastFriendlyError(e, "Erro ao enviar seleção.");
     } finally {
       setSubmitting(false);
     }

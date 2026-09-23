@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { ChevronDown, ChevronUp, Eye, EyeOff, ExternalLink, ImagePlus, Loader2, Plus, Radar, Rocket, Trash2, Undo2, X } from "lucide-react";
 import { salesLandingAdminQO, siteTrackingSettingsQO, useApi } from "@/lib/luzeria/queries";
 import { saveSalesLandingDraft, publishSalesLanding, discardSalesLandingDraft } from "@/lib/luzeria/sales-landing.functions";
@@ -174,7 +175,7 @@ export function SalesLandingEditorTab() {
     setStatus("saving");
     const t = setTimeout(async () => {
       try { await save({ data: { content: draft } }); setStatus("saved"); dirty.current = false; }
-      catch (e: any) { setStatus("error"); toast.error(e?.message ?? "Não consegui salvar o rascunho."); }
+      catch (e: any) { setStatus("error"); toastFriendlyError(e, "Não consegui salvar o rascunho."); }
     }, 1000);
     return () => clearTimeout(t);
   }, [draft, save]);
@@ -192,7 +193,7 @@ export function SalesLandingEditorTab() {
       await qc.invalidateQueries({ queryKey: ["sales-landing-admin"] });
       setStatus("idle");
       toast.success("Página publicada! Já está no ar.");
-    } catch (e: any) { toast.error(e?.message ?? "Erro ao publicar."); }
+    } catch (e: any) { toastFriendlyError(e, "Erro ao publicar."); }
   }
   async function doDiscard() {
     const ok = await requestConfirm("Descartar as alterações não publicadas e voltar para a versão que está no ar?", { confirmLabel: "Descartar", danger: true });
@@ -204,7 +205,7 @@ export function SalesLandingEditorTab() {
       await qc.invalidateQueries({ queryKey: ["sales-landing-admin"] });
       setStatus("idle");
       toast.success("Voltou para a versão publicada.");
-    } catch (e: any) { toast.error(e?.message ?? "Erro ao descartar."); }
+    } catch (e: any) { toastFriendlyError(e, "Erro ao descartar."); }
   }
   async function doResetDefault() {
     const ok = await requestConfirm("Restaurar todos os textos e imagens ao padrão original? Você ainda precisa publicar para valer no site.", { confirmLabel: "Restaurar", danger: true });
@@ -219,7 +220,7 @@ export function SalesLandingEditorTab() {
   function savePixel() {
     api.updateSiteTrackingSettings.mutate({ data: { metaPixelId: pixelValue.trim() || null } }, {
       onSuccess: () => { toast.success("Pixel salvo."); setPixelDraft(null); },
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar o pixel."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar o pixel."),
     });
   }
 
