@@ -1,29 +1,14 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Video, Check } from "lucide-react";
+import { Video } from "lucide-react";
 import { useApi } from "@/lib/luzeria/queries";
 import type { Profile } from "@/lib/luzeria/types";
-import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, type OptionalFeatureKey } from "@/lib/luzeria/types";
 import { AvatarEditor, ColorPicker, showAvatarError, uploadAvatar } from "./AvatarEditor";
 import { SmartImportStep } from "./SmartImportStep";
 
-// As 4 abas por-cliente (posts/reels/mais/feed) ficam de fora dessa lista —
-// são um ajuste fino por cliente (Personalizar abas), não uma decisão do
-// dia 1 sobre o app inteiro. O resto é o que de fato vale perguntar aqui:
-// "isso combina com a sua agência?".
-const ONBOARDING_FEATURE_KEYS = OPTIONAL_FEATURE_KEYS.filter(
-  (k) => !["posts", "reels", "mais", "feed"].includes(k),
-);
-
 export function WelcomeOnboarding({ me }: { me: Profile }) {
-  const { updateMyProfile, updateMyOrg } = useApi();
-  const [step, setStep] = useState<"profile" | "features" | "import">("profile");
-  // Tudo começa marcado (= ativado) — a pessoa só desmarca o que não usa.
-  // Feedback real de usuário: "achei que tinha muita função, queria algo
-  // mais clean" — em vez de esperar reclamação, pergunta já no início.
-  const [enabledFeatures, setEnabledFeatures] = useState<Set<OptionalFeatureKey>>(
-    () => new Set(ONBOARDING_FEATURE_KEYS),
-  );
+  const { updateMyProfile } = useApi();
+  const [step, setStep] = useState<"profile" | "import">("profile");
   const [color, setColor] = useState<string>(me.color);
   const [avatarPath, setAvatarPath] = useState<string | null>(me.avatarPath ?? null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(me.avatarUrl ?? null);
@@ -50,28 +35,11 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
   const canImportClients = me.role === "master" || me.role === "setor";
 
   function goToImportStep(saveCustomization: boolean) {
-    const next = canImportClients ? () => setStep("features") : completeOnboarding;
+    const next = canImportClients ? () => setStep("import") : completeOnboarding;
     if (!saveCustomization) { next(); return; }
     updateMyProfile.mutate({ data: { color, avatarPath } }, {
       onSuccess: () => { toast.success("Perfil personalizado."); next(); },
       onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar perfil"),
-    });
-  }
-
-  function toggleFeature(key: OptionalFeatureKey) {
-    setEnabledFeatures((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  }
-
-  function goToImportOrFinish(saveFeatures: boolean) {
-    if (!saveFeatures) { setStep("import"); return; }
-    const disabled = ONBOARDING_FEATURE_KEYS.filter((k) => !enabledFeatures.has(k));
-    updateMyOrg.mutate({ data: { disabledFeatures: disabled } }, {
-      onSuccess: () => setStep("import"),
-      onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar preferências"),
     });
   }
 
@@ -127,64 +95,6 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
             <button
               onClick={() => goToImportStep(false)}
               disabled={updateMyProfile.isPending}
-              className="mt-3 w-full text-xs text-foreground/50 hover:text-foreground transition disabled:opacity-40"
-            >
-              Pular por agora
-            </button>
-          </>
-        ) : step === "features" ? (
-          <>
-            <div className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: "var(--lz-accent-ink)" }}>
-              Personalizar
-            </div>
-            <h1 className="text-foreground text-[24px] font-bold leading-tight">
-              O que sua agência usa?
-            </h1>
-            <p className="text-foreground/60 text-sm mt-1.5 mb-5">
-              Tudo começa ligado. Desmarque o que não faz sentido pra sua agência — dá pra
-              mudar isso depois em Configurações.
-            </p>
-
-            <div className="max-h-[45vh] overflow-y-auto -mx-1 px-1 space-y-1.5">
-              {ONBOARDING_FEATURE_KEYS.map((key) => {
-                const meta = OPTIONAL_FEATURE_LABEL[key];
-                const on = enabledFeatures.has(key);
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => toggleFeature(key)}
-                    className="w-full flex items-start gap-3 rounded-lg p-3 text-left transition-colors hover:bg-foreground/[0.04]"
-                    style={{ border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}
-                  >
-                    <span
-                      className="mt-0.5 w-[18px] h-[18px] rounded shrink-0 flex items-center justify-center transition-colors"
-                      style={on
-                        ? { backgroundColor: "rgb(var(--lz-brand-rgb))" }
-                        : { border: "1.5px solid color-mix(in srgb, var(--foreground) 25%, transparent)" }}
-                    >
-                      {on && <Check size={12} strokeWidth={3} color="#0D0D0D" />}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm text-foreground font-medium">{meta.label}</span>
-                      <span className="block text-xs text-foreground/50 mt-0.5">{meta.description}</span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              onClick={() => goToImportOrFinish(true)}
-              disabled={updateMyOrg.isPending}
-              className="mt-6 w-full rounded-md py-3 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-            >
-              {updateMyOrg.isPending ? "Salvando…" : "Salvar e continuar"}
-            </button>
-            <button
-              onClick={() => goToImportOrFinish(false)}
-              disabled={updateMyOrg.isPending}
               className="mt-3 w-full text-xs text-foreground/50 hover:text-foreground transition disabled:opacity-40"
             >
               Pular por agora
