@@ -135,7 +135,7 @@ export function CashFlowSection() {
           <div className="text-[10px] font-bold uppercase tracking-wider text-foreground/30 mb-1.5">Clientes (recorrente)</div>
           <div className="space-y-1.5 mb-3">
             {clients.length === 0 ? (
-              <div className="text-[11px] text-foreground/35 py-2">Nenhum cliente cadastrado ainda.</div>
+              <div className="text-[11px] text-foreground/35 py-2">Nenhum cliente recorrente (Social Media/Pack Digital) cadastrado ainda.</div>
             ) : clients.map((c) => {
               const missing = c.missingValue || c.missingDueDay;
               return (

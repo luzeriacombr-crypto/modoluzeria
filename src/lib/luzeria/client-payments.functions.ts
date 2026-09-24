@@ -55,11 +55,16 @@ export const listClientPayments = createServerFn({ method: "GET" })
 
     const { data: org } = await context.supabase.from("orgs").select("pix_key, payment_message_template").eq("id", context.orgId).maybeSingle();
 
+    // Só cliente recorrente (mensalidade todo mês) entra aqui — Avulsos (e
+    // qualquer categoria customizada, que a agência criou pra outra coisa
+    // que não seja o pacote mensal) não são cobrança recorrente, então
+    // nunca deveriam aparecer pedindo "falta preencher".
     const { data: clients } = await context.supabase
       .from("clients")
-      .select("id, name, color, icon, contract_value, payment_due_day")
+      .select("id, name, color, icon, contract_value, payment_due_day, category")
       .eq("org_id", context.orgId)
       .eq("archived", false)
+      .in("category", ["Social Media", "Pack Digital"])
       .order("name");
     const clientIds = (clients ?? []).map((c: any) => c.id);
     if (clientIds.length === 0) return { pixKey: org?.pix_key ?? null, messageTemplate: org?.payment_message_template ?? null, clients: [] as ClientPaymentRow[] };
