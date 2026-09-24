@@ -17,7 +17,11 @@ export function parseMarkdownLite(md: string): MdBlock[] {
   let i = 0;
   const isHeading = (l: string) => /^#{1,3}\s/.test(l);
   const isBullet = (l: string) => /^[-*]\s/.test(l);
-  const isSlide = (l: string) => /^slide\s*\d+\s*:/i.test(l);
+  // Aceita tanto "SLIDE 6:" quanto "SLIDE FINAL:" (a IA às vezes rotula o
+  // último slide assim em vez de numerar) — sem isso, "SLIDE FINAL:" não
+  // batia no \d+ e grudava como continuação do slide anterior em vez de
+  // virar sua própria caixinha.
+  const isSlide = (l: string) => /^slide\s*[^\s:]+\s*:/i.test(l);
 
   while (i < lines.length) {
     const trimmed = lines[i].trim();
@@ -45,9 +49,13 @@ export function parseMarkdownLite(md: string): MdBlock[] {
       const items: { n: number; text: string }[] = [];
       while (i < lines.length && lines[i].trim() && !isHeading(lines[i].trim()) && !isBullet(lines[i].trim())) {
         const t = lines[i].trim();
-        const m = t.match(/^slide\s*(\d+)\s*:\s*(.*)$/i);
+        const m = t.match(/^slide\s*([^\s:]+)\s*:\s*(.*)$/i);
         if (m) {
-          items.push({ n: Number(m[1]), text: m[2].trim() });
+          // "FINAL"/"ÚLTIMO"/etc. não tem número pra usar — cai na próxima
+          // posição da sequência (é exatamente o número que teria se a IA
+          // tivesse contado certo).
+          const n = /^\d+$/.test(m[1]) ? Number(m[1]) : items.length + 1;
+          items.push({ n, text: m[2].trim() });
         } else if (items.length > 0) {
           items[items.length - 1].text = [items[items.length - 1].text, t].filter(Boolean).join(" ");
         } else {
