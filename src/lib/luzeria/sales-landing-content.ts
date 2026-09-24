@@ -32,6 +32,7 @@ export type LandingContent = {
   beforeAfter: { eyebrow: string; heading: string; rows: LandingRow[] };
   features: { eyebrow: string; heading: string; subheading: string; tabs: LandingTab[] };
   ai: { eyebrow: string; heading: string; steps: LandingStep[]; ctaLabel: string; note: string };
+  aiConnector: { eyebrow: string; heading: string; steps: LandingStep[]; ctaLabel: string; note: string };
   /** Ordem e visibilidade das seções (o hero fica sempre no topo). */
   sections: { order: string[]; hidden: string[] };
 };
@@ -41,6 +42,7 @@ export const LANDING_SECTIONS: { id: string; label: string }[] = [
   { id: "beforeAfter", label: "Antes e depois" },
   { id: "features", label: "Funções por área" },
   { id: "ai", label: "Planejamento com IA" },
+  { id: "aiConnector", label: "Conector de IA (destaque)" },
   { id: "demo", label: "Demonstração interativa (dashboard)" },
 ];
 
@@ -76,6 +78,7 @@ export const DEFAULT_LANDING: LandingContent = {
       { icon: "clock", before: "Ninguém sabe quem faz o quê nem o prazo", title: "Responsável e prazo em cada entrega", desc: "Com aviso no celular pra equipe não deixar nada escapar." },
       { icon: "send", before: "Postar é lembrar, abrir o Instagram e subir na mão", title: "Publica sozinho depois da aprovação", desc: "Pela API oficial da Meta — sem abrir o Instagram nem outro app de agendamento." },
       { icon: "sparkles", before: "Planejar o mês de cada cliente leva dias", title: "A IA monta a prévia do mês", desc: "Usando o histórico, a marca e os concorrentes de cada cliente." },
+      { icon: "palette", before: "O app parece de outro sistema, não da sua agência", title: "Sua marca em tudo que o cliente vê", desc: "Logo e cores da sua agência — o cliente nunca vê \"Modo Criador\" na tela, só a sua marca." },
     ],
   },
   features: {
@@ -87,26 +90,36 @@ export const DEFAULT_LANDING: LandingContent = {
         { icon: "layout", title: "Board por cliente e por mês", desc: "Posts, reels e stories num quadro visual, com status, responsável, prazo e checklist em cada card.", chip: "" },
         { icon: "calendar", title: "Calendário geral", desc: "Tudo que vai ao ar em qualquer dia, de qualquer cliente, com a miniatura do post ao passar o mouse.", chip: "" },
         { icon: "zap", title: "Automações", desc: "Regras do tipo \"quando acontecer X, faça Y\": cobrar aprovação parada, avisar prazo, criar tarefa. Com modelos prontos.", chip: "16 gatilhos · 9 ações" },
+        { icon: "calendarclock", title: "Google Agenda", desc: "Cada pessoa da equipe conecta a própria Google Agenda e cria compromissos direto do Modo Criador, sem trocar de aba.", chip: "Novo" },
       ]),
       tab("aprovacao", "Aprovação", [
         { icon: "link", title: "Link de aprovação sem login", desc: "O cliente vê o post do jeito que vai ficar no Instagram e aprova ou pede ajuste pelo celular, sem criar conta.", chip: "" },
         { icon: "file", title: "Roteiros e planejamento aprovados", desc: "Manda o roteiro ou o planejamento do mês pro cliente, ele responde por item e você vê tudo organizado.", chip: "" },
         { icon: "image", title: "Seleção e entrega de fotos", desc: "Galeria a partir do Drive, com marca d'água na escolha e download em alta ou tamanho pra redes na entrega.", chip: "" },
+        { icon: "route", title: "Jornada do Cliente", desc: "Cada etapa do trabalho já sai com a mensagem pronta pro WhatsApp — o cliente sempre sabe onde está, sem você parar tudo pra escrever.", chip: "Novo" },
       ]),
       tab("publicacao", "Publicação", [
         { icon: "send", title: "Instagram e Facebook", desc: "Publica posts, carrosséis, reels e stories direto do Modo Criador, com autorização oficial da Meta.", chip: "App Review aprovado" },
         { icon: "clock", title: "Programa e esquece", desc: "Agendou, aprovou, saiu. Se algo falhar, você é avisado na hora com o motivo.", chip: "" },
-        { icon: "userplus", title: "Cliente conecta o próprio Instagram", desc: "Manda um link e ele conecta sozinho — sem passar login e senha pra você.", chip: "" },
+        { icon: "userplus", title: "Cliente conecta o próprio Instagram", desc: "Manda um link e ele mesmo autoriza — você nunca vê nem guarda a senha dele. Mais seguro pra você e pra ele.", chip: "Zero senha" },
+      ]),
+      tab("financeiro", "Financeiro & Vendas", [
+        { icon: "wallet", title: "Financeiro", desc: "Contas a pagar e a receber de cada cliente, vencimento e status num lugar só — sem depender de planilha.", chip: "Novo" },
+        { icon: "trending-up", title: "Margem por Cliente", desc: "Descubra quanto cada cliente realmente rende, descontando o tempo que sua equipe gasta com ele — não só o que ele paga.", chip: "" },
+        { icon: "signature", title: "Contrato com assinatura eletrônica", desc: "Manda o contrato por link, o cliente digita nome e CPF e assina com o dedo na tela — sem imprimir nada.", chip: "" },
+        { icon: "handshake", title: "Vendas (CRM)", desc: "Um funil simples pra não perder nenhum lead — e quando fecha, o sistema já cria o cliente novo sozinho.", chip: "Novo" },
       ]),
       tab("gestao", "Gestão", [
         { icon: "chart", title: "Dashboard e relatórios", desc: "Entregas, gargalos e ranking de produtividade da equipe, com retrabalho e prazos cumpridos.", chip: "" },
-        { icon: "wallet", title: "Cobrança, margem e contrato", desc: "Vencimento de cada cliente, custo por hora e margem, e contrato com assinatura por link.", chip: "" },
         { icon: "trophy", title: "Programa de Níveis", desc: "Da Bronze à Lendária: sua agência sobe de nível usando o sistema e desbloqueia novidades.", chip: "" },
+        { icon: "listchecks", title: "Rotina", desc: "Escala tarefas de limpeza recorrentes e quem posta o Stories do perfil da agência — com ranking no relatório pra premiar quem mais fez.", chip: "Novo" },
+        { icon: "message", title: "Fórum entre Agências", desc: "Troque ideia direto com outras agências que usam o Modo Criador, dentro do próprio app.", chip: "Novo" },
       ]),
       tab("ia", "Inteligência artificial", [
         { icon: "sparkles", title: "Planejamento do próximo mês", desc: "A IA lê o histórico, a marca e os concorrentes do cliente e monta as sugestões com texto e legenda prontos.", chip: "Novo" },
         { icon: "upload", title: "Importação de clientes", desc: "Manda uma planilha, PDF ou até um print e ela organiza todos os seus clientes pra você revisar.", chip: "" },
         { icon: "message", title: "Chat de suporte", desc: "Tira dúvida na hora com o assistente do Modo Criador — e passa pro nosso time quando precisar.", chip: "" },
+        { icon: "bot", title: "Conecte o Claude ou o ChatGPT", desc: "Sua IA de todo dia consulta os dados reais da agência — clientes, demandas, calendário — direto de dentro do Claude ou do ChatGPT.", chip: "Novo" },
       ]),
     ],
   },
@@ -121,6 +134,18 @@ export const DEFAULT_LANDING: LandingContent = {
     ],
     ctaLabel: "Quero testar",
     note: "O planejamento com IA é liberado conforme o nível da agência no Programa de Níveis.",
+  },
+  aiConnector: {
+    eyebrow: "Novo · Assistente de IA",
+    heading: "A sua IA de todo dia já sabe tudo sobre a sua agência.",
+    steps: [
+      { bold: "Gere sua chave em Configurações → Integrações.", rest: "Leva menos de um minuto, sem nada técnico." },
+      { bold: "Conecte como um conector no Claude ou no ChatGPT.", rest: "Cola a chave uma vez e pronto." },
+      { bold: "Pergunte qualquer coisa sobre a operação.", rest: "\"O que falta essa semana?\", \"quantos clientes ativos?\" — resposta na hora, com dados reais." },
+      { bold: "Sem abrir o Modo Criador.", rest: "Você já usa essa IA no dia a dia — agora ela também enxerga sua agência." },
+    ],
+    ctaLabel: "Quero testar",
+    note: "Liberado a partir do plano Pro ou do nível Prata II do Programa de Níveis.",
   },
   sections: { order: LANDING_SECTIONS.map((s) => s.id), hidden: [] },
 };

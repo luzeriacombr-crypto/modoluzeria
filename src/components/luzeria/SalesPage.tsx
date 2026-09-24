@@ -12,7 +12,7 @@ import { DemoRequestModal } from "./DemoRequestModal";
 import { LIME, BG_BLUE, BG_BLUE_2, BG_WHITE, BG_GRAY, EASE, POP, Reveal, useReveal, staggerStyle } from "./salesPageBlocks";
 import { salesLandingQO } from "@/lib/luzeria/queries";
 import { DEFAULT_LANDING, type LandingContent } from "@/lib/luzeria/sales-landing-content";
-import { SalesHero, SalesNumbers, SalesBeforeAfter, SalesFeatures, SalesAiSpotlight, SalesStickyCta } from "./SalesLanding";
+import { SalesHero, SalesNumbers, SalesBeforeAfter, SalesFeatures, SalesAiSpotlight, SalesAiConnectorSpotlight, SalesStickyCta } from "./SalesLanding";
 import { InteractiveDashboardDemo } from "./SalesInteractiveDashboard";
 import { PasswordInput } from "./PasswordInput";
 
@@ -234,6 +234,7 @@ export function SalesPage() {
           case "beforeAfter": return <SalesBeforeAfter key={id} content={landing} />;
           case "features": return <SalesFeatures key={id} content={landing} />;
           case "ai": return <SalesAiSpotlight key={id} onCta={() => scrollToForm()} content={landing} />;
+          case "aiConnector": return <SalesAiConnectorSpotlight key={id} onCta={() => scrollToForm()} content={landing} />;
           case "demo": return <InteractiveDashboardDemo key={id} />;
           default: return null;
         }
@@ -456,6 +457,7 @@ export function SalesPage() {
           <Link to="/backup-automatico-drive" className="underline hover:text-foreground/50 transition">Backup no Drive</Link>
           <Link to="/publicacao-automatica-instagram" className="underline hover:text-foreground/50 transition">Publicação no Instagram</Link>
           <Link to="/biblioteca-de-referencias" className="underline hover:text-foreground/50 transition">Biblioteca de Referências</Link>
+          <Link to="/assinatura-eletronica-de-contratos" className="underline hover:text-foreground/50 transition">Contrato com Assinatura Eletrônica</Link>
         </div>
         Modo <span className="font-criador-serif">Criador</span> — desenvolvido pela Luzeria Estúdio.
         {" · "}

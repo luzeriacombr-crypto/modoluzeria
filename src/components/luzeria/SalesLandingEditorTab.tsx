@@ -10,7 +10,7 @@ import { saveSalesLandingDraft, publishSalesLanding, discardSalesLandingDraft } 
 import { LANDING_SECTIONS, DEFAULT_LANDING, type LandingContent } from "@/lib/luzeria/sales-landing-content";
 import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { SalesHero, SalesNumbers, SalesBeforeAfter, SalesFeatures, SalesAiSpotlight, LANDING_ICONS } from "./SalesLanding";
+import { SalesHero, SalesNumbers, SalesBeforeAfter, SalesFeatures, SalesAiSpotlight, SalesAiConnectorSpotlight, LANDING_ICONS } from "./SalesLanding";
 
 /* ---------- campos ---------- */
 
@@ -133,6 +133,7 @@ function LivePreview({ content }: { content: LandingContent }) {
             case "beforeAfter": return <SalesBeforeAfter key={id} content={content} />;
             case "features": return <SalesFeatures key={id} content={content} />;
             case "ai": return <SalesAiSpotlight key={id} onCta={noop} content={content} />;
+            case "aiConnector": return <SalesAiConnectorSpotlight key={id} onCta={noop} content={content} />;
             case "demo": return <div key={id} className="py-16 text-center text-white/40 text-sm border-y border-white/10">Demonstração interativa do dashboard (não editável)</div>;
             default: return null;
           }
@@ -369,6 +370,26 @@ export function SalesLandingEditorTab() {
         )}
         <Field single label="Botão" value={d.ai.ctaLabel} max={60} onChange={(v) => edit((x) => { x.ai.ctaLabel = v; return x; })} />
         <Field label="Observação embaixo do botão" value={d.ai.note} max={300} onChange={(v) => edit((x) => { x.ai.note = v; return x; })} />
+      </Accordion>
+
+      <Accordion id="aiConnector" title="Conector de IA — Claude/ChatGPT (destaque)" open={open === "aiConnector"} onToggle={toggle}>
+        <Field single label="Etiqueta pequena" value={d.aiConnector.eyebrow} max={80} onChange={(v) => edit((x) => { x.aiConnector.eyebrow = v; return x; })} />
+        <Field label="Título" value={d.aiConnector.heading} max={200} onChange={(v) => edit((x) => { x.aiConnector.heading = v; return x; })} />
+        {d.aiConnector.steps.map((st, i) => (
+          <RowShell key={i} first={i === 0} last={i === d.aiConnector.steps.length - 1}
+            onUp={() => edit((x) => { x.aiConnector.steps = moveItem(x.aiConnector.steps, i, -1); return x; })}
+            onDown={() => edit((x) => { x.aiConnector.steps = moveItem(x.aiConnector.steps, i, 1); return x; })}
+            onRemove={() => edit((x) => { x.aiConnector.steps.splice(i, 1); return x; })}>
+            <Field label={`Passo ${i + 1} — parte em negrito`} value={st.bold} max={160} onChange={(v) => edit((x) => { x.aiConnector.steps[i].bold = v; return x; })} />
+            <Field label="Continuação" value={st.rest} max={300} onChange={(v) => edit((x) => { x.aiConnector.steps[i].rest = v; return x; })} />
+          </RowShell>
+        ))}
+        {d.aiConnector.steps.length < 8 && (
+          <button type="button" onClick={() => edit((x) => { x.aiConnector.steps.push({ bold: "Novo passo:", rest: "descrição" }); return x; })}
+            className="text-xs font-bold text-foreground/60 hover:text-foreground inline-flex items-center gap-1 self-start"><Plus size={13} /> Adicionar passo</button>
+        )}
+        <Field single label="Botão" value={d.aiConnector.ctaLabel} max={60} onChange={(v) => edit((x) => { x.aiConnector.ctaLabel = v; return x; })} />
+        <Field label="Observação embaixo do botão" value={d.aiConnector.note} max={300} onChange={(v) => edit((x) => { x.aiConnector.note = v; return x; })} />
       </Accordion>
 
       <Accordion id="order" title="Ordem e visibilidade das seções" open={open === "order"} onToggle={toggle}>

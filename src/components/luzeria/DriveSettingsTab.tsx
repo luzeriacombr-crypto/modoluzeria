@@ -61,8 +61,9 @@ function FolderTreeExample() {
   );
   return (
     <div className="rounded-lg p-3.5 mb-4 space-y-1.5 text-[12px]" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-foreground/40 mb-2">Exemplo de como vai ficar no seu Drive</p>
       {row(0, <Folder size={13} className="text-foreground/40 shrink-0" />, "Sua pasta raiz (a que você escolher abaixo)", true)}
-      {row(1, <Folder size={13} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />, "Entregas - Anastásia Farmácia")}
+      {row(1, <Folder size={13} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />, "Entregas - Seu cliente aqui")}
       {row(2, <Folder size={13} style={{ color: "var(--lz-accent-ink)" }} className="shrink-0" />, "Setembro")}
       {row(3, <Video size={13} className="text-foreground/50 shrink-0" />, "Reels — seus vídeos caem aqui sozinhos")}
     </div>

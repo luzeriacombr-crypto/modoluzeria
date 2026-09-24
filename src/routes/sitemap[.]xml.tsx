@@ -13,6 +13,7 @@ const STATIC_PAGES: { path: string; changefreq: string; priority: string }[] = [
   { path: "/backup-automatico-drive", changefreq: "monthly", priority: "0.7" },
   { path: "/publicacao-automatica-instagram", changefreq: "monthly", priority: "0.7" },
   { path: "/biblioteca-de-referencias", changefreq: "monthly", priority: "0.7" },
+  { path: "/assinatura-eletronica-de-contratos", changefreq: "monthly", priority: "0.7" },
   { path: "/blog", changefreq: "weekly", priority: "0.6" },
   { path: "/privacidade", changefreq: "yearly", priority: "0.2" },
   { path: "/termos", changefreq: "yearly", priority: "0.2" },

@@ -26,6 +26,7 @@ import { Route as BlogRouteImport } from './routes/blog'
 import { Route as BibliotecaDeReferenciasRouteImport } from './routes/biblioteca-de-referencias'
 import { Route as BackupAutomaticoDriveRouteImport } from './routes/backup-automatico-drive'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AssinaturaEletronicaDeContratosRouteImport } from './routes/assinatura-eletronica-de-contratos'
 import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as AprovacaoDeConteudoPorLinkRouteImport } from './routes/aprovacao-de-conteudo-por-link'
 import { Route as AfiliarRouteImport } from './routes/afiliar'
@@ -164,6 +165,12 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssinaturaEletronicaDeContratosRoute =
+  AssinaturaEletronicaDeContratosRouteImport.update({
+    id: '/assinatura-eletronica-de-contratos',
+    path: '/assinatura-eletronica-de-contratos',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AssinarRoute = AssinarRouteImport.update({
   id: '/assinar',
   path: '/assinar',
@@ -433,6 +440,7 @@ export interface FileRoutesByFullPath {
   '/afiliar': typeof AfiliarRoute
   '/aprovacao-de-conteudo-por-link': typeof AprovacaoDeConteudoPorLinkRoute
   '/assinar': typeof AssinarRouteWithChildren
+  '/assinatura-eletronica-de-contratos': typeof AssinaturaEletronicaDeContratosRoute
   '/auth': typeof AuthRoute
   '/backup-automatico-drive': typeof BackupAutomaticoDriveRoute
   '/biblioteca-de-referencias': typeof BibliotecaDeReferenciasRoute
@@ -500,6 +508,7 @@ export interface FileRoutesByTo {
   '/afiliar': typeof AfiliarRoute
   '/aprovacao-de-conteudo-por-link': typeof AprovacaoDeConteudoPorLinkRoute
   '/assinar': typeof AssinarRouteWithChildren
+  '/assinatura-eletronica-de-contratos': typeof AssinaturaEletronicaDeContratosRoute
   '/auth': typeof AuthRoute
   '/backup-automatico-drive': typeof BackupAutomaticoDriveRoute
   '/biblioteca-de-referencias': typeof BibliotecaDeReferenciasRoute
@@ -569,6 +578,7 @@ export interface FileRoutesById {
   '/afiliar': typeof AfiliarRoute
   '/aprovacao-de-conteudo-por-link': typeof AprovacaoDeConteudoPorLinkRoute
   '/assinar': typeof AssinarRouteWithChildren
+  '/assinatura-eletronica-de-contratos': typeof AssinaturaEletronicaDeContratosRoute
   '/auth': typeof AuthRoute
   '/backup-automatico-drive': typeof BackupAutomaticoDriveRoute
   '/biblioteca-de-referencias': typeof BibliotecaDeReferenciasRoute
@@ -638,6 +648,7 @@ export interface FileRouteTypes {
     | '/afiliar'
     | '/aprovacao-de-conteudo-por-link'
     | '/assinar'
+    | '/assinatura-eletronica-de-contratos'
     | '/auth'
     | '/backup-automatico-drive'
     | '/biblioteca-de-referencias'
@@ -705,6 +716,7 @@ export interface FileRouteTypes {
     | '/afiliar'
     | '/aprovacao-de-conteudo-por-link'
     | '/assinar'
+    | '/assinatura-eletronica-de-contratos'
     | '/auth'
     | '/backup-automatico-drive'
     | '/biblioteca-de-referencias'
@@ -773,6 +785,7 @@ export interface FileRouteTypes {
     | '/afiliar'
     | '/aprovacao-de-conteudo-por-link'
     | '/assinar'
+    | '/assinatura-eletronica-de-contratos'
     | '/auth'
     | '/backup-automatico-drive'
     | '/biblioteca-de-referencias'
@@ -842,6 +855,7 @@ export interface RootRouteChildren {
   AfiliarRoute: typeof AfiliarRoute
   AprovacaoDeConteudoPorLinkRoute: typeof AprovacaoDeConteudoPorLinkRoute
   AssinarRoute: typeof AssinarRouteWithChildren
+  AssinaturaEletronicaDeContratosRoute: typeof AssinaturaEletronicaDeContratosRoute
   AuthRoute: typeof AuthRoute
   BackupAutomaticoDriveRoute: typeof BackupAutomaticoDriveRoute
   BibliotecaDeReferenciasRoute: typeof BibliotecaDeReferenciasRoute
@@ -1002,6 +1016,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assinatura-eletronica-de-contratos': {
+      id: '/assinatura-eletronica-de-contratos'
+      path: '/assinatura-eletronica-de-contratos'
+      fullPath: '/assinatura-eletronica-de-contratos'
+      preLoaderRoute: typeof AssinaturaEletronicaDeContratosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assinar': {
@@ -1422,6 +1443,7 @@ const rootRouteChildren: RootRouteChildren = {
   AfiliarRoute: AfiliarRoute,
   AprovacaoDeConteudoPorLinkRoute: AprovacaoDeConteudoPorLinkRoute,
   AssinarRoute: AssinarRouteWithChildren,
+  AssinaturaEletronicaDeContratosRoute: AssinaturaEletronicaDeContratosRoute,
   AuthRoute: AuthRoute,
   BackupAutomaticoDriveRoute: BackupAutomaticoDriveRoute,
   BibliotecaDeReferenciasRoute: BibliotecaDeReferenciasRoute,

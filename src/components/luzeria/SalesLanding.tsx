@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   X, ArrowRight, Link2, HardDrive, Clock, Send, Sparkles, LayoutGrid, CalendarDays, Zap, FileText, Image as ImageIcon,
   UserPlus, BarChart3, Wallet, Trophy, Upload, MessageCircle, Check,
+  TrendingUp, PenLine, Handshake, CalendarClock, Route, ListChecks, Bot, Palette,
 } from "lucide-react";
 import { getPublicSalesStats } from "@/lib/luzeria/sales-stats.functions";
 import { ConstellationBackground } from "./ConstellationBackground";
@@ -40,6 +41,14 @@ export const LANDING_ICONS: Record<string, { label: string; render: (size: numbe
   upload: { label: "Upload", render: (n) => <Upload size={n} /> },
   message: { label: "Mensagem", render: (n) => <MessageCircle size={n} /> },
   check: { label: "Check", render: (n) => <Check size={n} /> },
+  "trending-up": { label: "Crescimento", render: (n) => <TrendingUp size={n} /> },
+  signature: { label: "Assinatura", render: (n) => <PenLine size={n} /> },
+  handshake: { label: "Aperto de mão", render: (n) => <Handshake size={n} /> },
+  calendarclock: { label: "Agenda", render: (n) => <CalendarClock size={n} /> },
+  route: { label: "Jornada", render: (n) => <Route size={n} /> },
+  listchecks: { label: "Checklist", render: (n) => <ListChecks size={n} /> },
+  bot: { label: "Robô", render: (n) => <Bot size={n} /> },
+  palette: { label: "Paleta", render: (n) => <Palette size={n} /> },
 };
 const landingIcon = (key: string, size: number) => (LANDING_ICONS[key] ?? LANDING_ICONS.sparkles).render(size);
 
@@ -228,6 +237,25 @@ function AiOutputCard() {
   );
 }
 
+function McpOutputCard() {
+  return (
+    <div className="rounded-2xl p-5 border flex flex-col gap-3" style={{ background: "#0E1220", borderColor: "rgba(255,255,255,0.1)", boxShadow: "0 30px 80px rgba(0,0,0,0.45)" }}>
+      <div className="flex items-center gap-2 pb-3 mb-1 border-b border-white/10">
+        <span className="w-2 h-2 rounded-full bg-white/20" /><span className="w-2 h-2 rounded-full bg-white/20" /><span className="w-2 h-2 rounded-full bg-white/20" />
+        <span className="ml-2 text-[11px] font-bold text-white/40">Modo Criador — conector MCP</span>
+      </div>
+      <div className="self-end max-w-[82%] rounded-2xl rounded-br-sm px-3.5 py-2.5 text-[13px]" style={{ background: "rgba(215,255,63,0.14)" }}>
+        o que falta entregar essa semana?
+      </div>
+      <div className="self-start max-w-[92%] rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-[13px] leading-relaxed bg-white text-[#0A0E23]">
+        Faltam <b>5 posts</b> e <b>2 reels</b>. Um deles vence amanhã e ainda está em roteiro.
+      </div>
+      <div className="flex items-center justify-between text-[11.5px] text-white/45 pt-2 border-t border-white/10"><span>listar_demandas</span><span style={{ color: LIME }}>conectado</span></div>
+      <div className="flex items-center justify-between text-[11.5px] text-white/45"><span>resumo_da_semana</span><span style={{ color: LIME }}>conectado</span></div>
+    </div>
+  );
+}
+
 function tabVisual(t: LandingTab): ReactNode {
   switch (t.id) {
     case "producao": return <BrowserFrame src={t.image || calendarImg} alt="Calendário geral com posts de vários clientes" />;
@@ -312,6 +340,36 @@ export function SalesAiSpotlight({ onCta, content = DEFAULT_LANDING }: { onCta: 
           <p className="text-[11.5px] text-white/35 mt-3 whitespace-pre-line">{ai.note}</p>
         </Reveal>
         <Reveal><AiOutputCard /></Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* ============ Conector de IA em destaque ============ */
+
+export function SalesAiConnectorSpotlight({ onCta, content = DEFAULT_LANDING }: { onCta: () => void; content?: LandingContent }) {
+  const ai = content.aiConnector;
+  return (
+    <section id="conector-ia" className="relative overflow-hidden" style={{ background: `radial-gradient(ellipse 60% 60% at 80% 30%, rgba(74,158,255,0.16), transparent), radial-gradient(ellipse 40% 50% at 0% 100%, rgba(215,255,63,0.07), transparent), ${BG_BLUE}` }}>
+      <div className="absolute inset-0 pointer-events-none"><ConstellationBackground count={30} alpha={0.55} /></div>
+      <div className="relative max-w-[1100px] mx-auto px-5 sm:px-10 py-20 grid lg:grid-cols-2 gap-12 lg:gap-14 items-center">
+        <Reveal>
+          <Eyebrow>{ai.eyebrow}</Eyebrow>
+          <h2 className={`${SERIF} text-[clamp(32px,4.6vw,52px)] leading-[1.05] whitespace-pre-line`} style={{ fontStyle: "italic" }}>{ai.heading}</h2>
+          <div className="flex flex-col gap-3.5 my-7">
+            {ai.steps.map((st, i) => (
+              <div key={i} className="flex gap-3.5 items-start">
+                <span className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[13px] font-black mt-0.5" style={{ background: "rgba(215,255,63,0.14)", color: LIME }}>{i + 1}</span>
+                <p className="text-[15px] text-white/70 whitespace-pre-line"><b className="text-white">{st.bold}</b> {st.rest}</p>
+              </div>
+            ))}
+          </div>
+          <button onClick={onCta} className="inline-flex items-center gap-2 font-black text-sm px-6 py-3.5 rounded-full transition hover:-translate-y-0.5" style={{ background: LIME, color: BG_BLUE }}>
+            {ai.ctaLabel} <ArrowRight size={16} />
+          </button>
+          <p className="text-[11.5px] text-white/35 mt-3 whitespace-pre-line">{ai.note}</p>
+        </Reveal>
+        <Reveal><McpOutputCard /></Reveal>
       </div>
     </section>
   );

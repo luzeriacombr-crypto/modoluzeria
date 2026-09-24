@@ -3,7 +3,7 @@ import {
   Rocket, CalendarDays, Users, Link2, FolderOpen, Check, X, Zap, Lock, Star,
   MessageCircle, LayoutDashboard, BarChart3, Bell, ShieldCheck, Smartphone, Tablet, Monitor,
   ChevronLeft, ChevronRight, Play, Heart, Send, Bookmark, Plus, Pencil, ImagePlus, Loader2, GripVertical,
-  Sparkles, Waves, Squircle,
+  Sparkles, Waves, Squircle, PenLine,
 } from "lucide-react";
 import { useMarketingAssetUpload } from "@/lib/luzeria/use-marketing-asset-upload";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -610,6 +610,25 @@ function SecurityVisual() {
   );
 }
 
+function SignatureVisual() {
+  return (
+    <AppCard className="max-w-[400px]">
+      <div className="p-6">
+        <p className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-3.5">Contrato de prestação de serviço</p>
+        <div className="h-2 w-[88%] rounded bg-foreground/10 mb-2" />
+        <div className="h-2 w-[70%] rounded bg-foreground/10 mb-2" />
+        <div className="h-2 w-[78%] rounded bg-foreground/10 mb-5" />
+        <div className="rounded-xl border-2 border-dashed border-foreground/15 p-4 flex flex-col items-center gap-2">
+          <svg width="130" height="36" viewBox="0 0 130 36" fill="none" stroke="rgb(var(--lz-brand-rgb))" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 27c8-4 13-15 21-15s7 13 15 13 11-19 21-19 9 17 17 17 9-11 15-6 9 9 15 2" />
+          </svg>
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-foreground/40"><PenLine size={11} /> assinado com o dedo na tela</span>
+        </div>
+      </div>
+    </AppCard>
+  );
+}
+
 export const BUILTIN_ILLUSTRATIONS: Record<string, React.ComponentType> = {
   feedPreview: FeedPreviewVisual,
   dashboard: DashboardVisual,
@@ -618,11 +637,13 @@ export const BUILTIN_ILLUSTRATIONS: Record<string, React.ComponentType> = {
   notifications: NotificationVisual,
   responsive: ResponsiveVisual,
   security: SecurityVisual,
+  signature: SignatureVisual,
 };
 export const BUILTIN_KEYS = Object.keys(BUILTIN_ILLUSTRATIONS);
 export const BUILTIN_LABELS: Record<string, string> = {
   feedPreview: "Preview de feed", dashboard: "Dashboard", report: "Relatórios",
   calendar: "Calendário", notifications: "Notificações", responsive: "Responsividade", security: "Segurança",
+  signature: "Assinatura de contrato",
 };
 // Ordem importa: termos mais específicos primeiro, porque alguns textos de
 // seção citam "celular" tanto em notificações quanto em responsividade —

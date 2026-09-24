@@ -92,6 +92,24 @@ export type PublicContractRequest = {
   orgLogoUrl: string | null;
 };
 
+/** Pinta de preto tudo que não é transparente na logo, mantendo o
+ * contorno (canal alfa). Só faz sentido em logo com fundo transparente —
+ * numa logo sem transparência (JPEG, PNG com fundo) viraria um retângulo
+ * preto, então nesse caso devolve a imagem como veio. */
+async function paintLogoBlack(bytes: Uint8Array): Promise<Uint8Array> {
+  const sharp = (await import("sharp")).default;
+  const meta = await sharp(bytes).metadata();
+  if (!meta.hasAlpha) return bytes;
+  const { data, info } = await sharp(bytes).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 0;
+    data[i + 1] = 0;
+    data[i + 2] = 0;
+  }
+  const png = await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer();
+  return new Uint8Array(png);
+}
+
 /** GET pública, sem sessão — mesmo padrão de getPublicPhotoSelection:
  * cliente anon + RPC SECURITY DEFINER, que valida o token por dentro. */
 export const getPublicContractRequest = createServerFn({ method: "GET" })
@@ -166,14 +184,21 @@ export const signContractRequest = createServerFn({ method: "POST" })
 
         // Logo pra fundo branco (papel timbrado do PDF) — prefere a
         // variante clara (logo_path_light); cai pra logo_path normal se a
-        // agência não tiver cadastrado uma versão clara.
+        // agência não tiver cadastrado uma versão clara. A logo normal é a
+        // do tema escuro (quase sempre branca, some no papel), então nesse
+        // caso ela é pintada de preto antes de entrar no PDF.
         let logoBytes: Uint8Array | null = null;
+        const hasLightLogo = !!req.orgs?.logo_path_light;
         const logoPath = req.orgs?.logo_path_light ?? req.orgs?.logo_path ?? null;
         if (logoPath) {
           try {
             const { data: logoFile } = await db.storage.from("avatars").download(logoPath);
             if (logoFile) logoBytes = new Uint8Array(await logoFile.arrayBuffer());
           } catch { /* segue sem logo se não conseguir baixar */ }
+        }
+        if (logoBytes && !hasLightLogo) {
+          try { logoBytes = await paintLogoBlack(logoBytes); }
+          catch { /* segue com a logo original se não der pra converter */ }
         }
 
         const pdfBytes = await renderContractPdf({

@@ -37,6 +37,11 @@ const contentSchema = z.object({
     steps: z.array(z.object({ bold: str(160), rest: str(300) })).max(8),
     ctaLabel: str(60), note: str(300),
   }),
+  aiConnector: z.object({
+    eyebrow: str(80), heading: str(200),
+    steps: z.array(z.object({ bold: str(160), rest: str(300) })).max(8),
+    ctaLabel: str(60), note: str(300),
+  }),
   sections: z.object({ order: z.array(str(30)).max(12), hidden: z.array(str(30)).max(12) }),
 });
 
