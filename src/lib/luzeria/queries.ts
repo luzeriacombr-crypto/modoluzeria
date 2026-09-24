@@ -29,6 +29,8 @@ import {
   setFeedOrderDirection,
   reorderContentItems,
   moveItemToMonth,
+  moveContentItemsToMonth,
+  setContentItemsStatus,
   setItemCover,
   uploadItemCover,
   getClientFicha,
@@ -966,6 +968,16 @@ export function useApi() {
       mutationFn: useServerFn(moveItemToMonth),
       onSuccess: () => { invalidateAll(); qc.invalidateQueries({ queryKey: ["monthKeys"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao mover item."),
+    }),
+    moveContentItemsToMonth: useMutation({
+      mutationFn: useServerFn(moveContentItemsToMonth),
+      onSuccess: () => { invalidateAll(); qc.invalidateQueries({ queryKey: ["monthKeys"] }); },
+      onError: (e: any) => toastFriendlyError(e, "Erro ao mover os itens."),
+    }),
+    setContentItemsStatus: useMutation({
+      mutationFn: useServerFn(setContentItemsStatus),
+      onSuccess: invalidateAll,
+      onError: (e: any) => toastFriendlyError(e, "Erro ao mudar o status dos itens."),
     }),
     setFeedOrderMode: useMutation({
       mutationFn: useServerFn(setFeedOrderMode),

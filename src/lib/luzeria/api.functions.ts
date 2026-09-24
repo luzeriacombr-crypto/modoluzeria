@@ -2466,6 +2466,86 @@ export const moveItemToMonth = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Versão em lote de moveItemToMonth, pra seleção múltipla em Posts/Reels/
+ * Stories — resolve/cria o mês de destino uma vez só (não por item) e cada
+ * item entra em sequência no fim da fila do próprio tipo, igual já
+ * acontece movendo um de cada vez. */
+export const moveContentItemsToMonth = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemIds: string[]; targetKey: string }) =>
+    z.object({
+      itemIds: z.array(z.string().uuid()).min(1).max(200),
+      targetKey: z.string().regex(/^\d{4}-\d{2}$/),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { data: items, error: itemsErr } = await context.supabase
+      .from("content_items")
+      .select("id, type, months!inner(client_id, key)")
+      .in("id", data.itemIds);
+    if (itemsErr) throw new Error(itemsErr.message);
+    if (!items || items.length === 0) throw new Error("Nenhum item encontrado.");
+
+    const clientId = (items[0] as any).months.client_id as string;
+    const toMove = items.filter((it: any) => it.months.key !== data.targetKey);
+    if (toMove.length === 0) return { ok: true, count: 0 };
+
+    let { data: targetMonth } = await context.supabase
+      .from("months").select("id").eq("client_id", clientId).eq("key", data.targetKey).maybeSingle();
+    if (!targetMonth) {
+      const { data: m, error } = await context.supabase
+        .from("months").insert({ client_id: clientId, key: data.targetKey, org_id: context.orgId }).select("id").single();
+      if (error) throw new Error(error.message);
+      targetMonth = m;
+    }
+
+    const nextIdxByType = new Map<string, number>();
+    for (const it of toMove as any[]) {
+      const cached = nextIdxByType.get(it.type);
+      let nextIdx: number;
+      if (cached != null) {
+        nextIdx = cached;
+      } else {
+        const { data: maxRow } = await context.supabase
+          .from("content_items").select("idx").eq("month_id", targetMonth!.id).eq("type", it.type)
+          .order("idx", { ascending: false }).limit(1).maybeSingle();
+        nextIdx = ((maxRow as any)?.idx ?? 0) + 1;
+      }
+      const { error: updErr } = await context.supabase
+        .from("content_items")
+        .update({ month_id: targetMonth!.id, idx: nextIdx, feed_order: null })
+        .eq("id", it.id);
+      if (updErr) throw new Error(updErr.message);
+      nextIdxByType.set(it.type, nextIdx + 1);
+    }
+    return { ok: true, count: toMove.length };
+  });
+
+/** Versão em lote de setItemStatus, pra seleção múltipla — reaproveita a
+ * mesma RPC (set_item_status) item por item, então automações e o log de
+ * status_transitions disparam certinho pra cada um, igual mudando na mão. */
+export const setContentItemsStatus = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemIds: string[]; status: Status }) =>
+    z.object({ itemIds: z.array(z.string().uuid()).min(1).max(200), status: z.string().min(1) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertNotDemoReadOnly(context.supabase, context.orgId, context.userId);
+    for (const id of data.itemIds) {
+      const { data: current } = await context.supabase
+        .from("content_items").select("status, item_assignees(user_id)").eq("id", id).maybeSingle();
+      const { error } = await context.supabase.rpc("set_item_status", { p_item_id: id, p_status: data.status });
+      if (error) throw new Error(error.message);
+      const assigneeIds = (current?.item_assignees ?? []).map((a: any) => a.user_id);
+      context.supabase.from("status_transitions").insert({
+        item_id: id, from_status: current?.status ?? null, to_status: data.status,
+        changed_by: context.userId, assignee_ids: assigneeIds,
+      }).then(() => {});
+    }
+    return { ok: true, count: data.itemIds.length };
+  });
+
 /** "Excluir" não apaga de verdade — só marca deleted_at/deleted_by
  * (soft delete). O item some de toda tela normal (a política de RLS já
  * filtra deleted_at is null pra todo mundo), mas continua existindo

@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List, CheckSquare, Trash2, X, Settings2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List, CheckSquare, Trash2, X, Settings2, FolderInput, Tags } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { reportAppError } from "@/lib/error-reporting";
-import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi, myAgencyLevelInputsQO } from "@/lib/luzeria/queries";
+import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi, myAgencyLevelInputsQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { computeAgencyPoints, getAgencyLevel, computeAiPlanningQuota } from "@/lib/luzeria/agency-level";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { CONTENT_TYPE_LABEL, type ContentItem } from "@/lib/luzeria/types";
+import { CONTENT_TYPE_LABEL, statusOptionsFor, getStatusMeta, statusLabel, hasSetorPermission, type ContentItem, type ContentType, type Status } from "@/lib/luzeria/types";
+import { getStatusIcon } from "./icons";
 import { Avatar } from "./Avatar";
 import { ContentCard, ContentListRow } from "./ContentCard";
 import { FeedPreview } from "./FeedPreview";
@@ -114,13 +115,15 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
     : (visibleTabs[0] ?? "posts");
   const [maisSubTab, setMaisSubTab] = useState<MaisSubTab>("atividades");
   const [customizingTabs, setCustomizingTabs] = useState(false);
-  const { duplicateMonth, addContentItem, deleteItem, deleteContentItems, updateMyOrg, updateClient, reorderContentItems, moveItemToMonth } = useApi();
+  const { duplicateMonth, addContentItem, deleteItem, deleteContentItems, updateMyOrg, updateClient, reorderContentItems, moveItemToMonth, moveContentItemsToMonth, setContentItemsStatus } = useApi();
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
   const [movingItem, setMovingItem] = useState<ContentItem | null>(null);
+  const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
+  const [bulkStatusType, setBulkStatusType] = useState<ContentType | null>(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setLocalOrder(null); }, [tab, effectiveMonthKey, orderMode]);
   const canDragReorder = isAdmin && !selectMode && orderMode === "personalizada" && (tab === "posts" || tab === "reels");
@@ -156,6 +159,8 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   function exitSelectMode() {
     setSelectMode(false);
     setSelectedIds(new Set());
+    setBulkMoveOpen(false);
+    setBulkStatusType(null);
   }
   async function bulkDelete() {
     if (selectedIds.size === 0) return;
@@ -345,6 +350,20 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                     >
                       <CheckSquare size={13} />
                       {items.length > 0 && items.every((it) => selectedIds.has(it.id)) ? "Limpar seleção" : "Selecionar tudo"}
+                    </button>
+                    <button
+                      onClick={() => setBulkMoveOpen(true)}
+                      disabled={selectedIds.size === 0}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 disabled:opacity-30 transition"
+                    >
+                      <FolderInput size={13} /> Mover
+                    </button>
+                    <button
+                      onClick={() => setBulkStatusType(items.find((it) => selectedIds.has(it.id))?.type ?? null)}
+                      disabled={selectedIds.size === 0}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 disabled:opacity-30 transition"
+                    >
+                      <Tags size={13} /> Alterar status
                     </button>
                     <button
                       onClick={bulkDelete}
@@ -579,6 +598,36 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           }}
         />
       )}
+      {bulkMoveOpen && (
+        <BulkMoveModal
+          count={selectedIds.size}
+          clientId={clientId}
+          currentKey={effectiveMonthKey}
+          onClose={() => setBulkMoveOpen(false)}
+          onMove={(targetKey) => {
+            moveContentItemsToMonth.mutate(
+              { data: { itemIds: [...selectedIds], targetKey } },
+              { onSuccess: exitSelectMode },
+            );
+            setBulkMoveOpen(false);
+          }}
+        />
+      )}
+      {bulkStatusType && (
+        <BulkStatusModal
+          type={bulkStatusType}
+          count={selectedIds.size}
+          isAvulso={client.category === "Avulsos"}
+          onClose={() => setBulkStatusType(null)}
+          onApply={(status) => {
+            setContentItemsStatus.mutate(
+              { data: { itemIds: [...selectedIds], status } },
+              { onSuccess: exitSelectMode },
+            );
+            setBulkStatusType(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -623,6 +672,93 @@ export function MoveItemModal({ item, clientId, currentKey, onClose, onMove }: {
         >
           Mover
         </button>
+      </div>
+    </Modal>
+  );
+}
+
+/** Mesma UI do MoveItemModal (um item), pra seleção múltipla — sem um item
+ * específico pra nomear no título, só a contagem. */
+export function BulkMoveModal({ count, clientId, currentKey, onClose, onMove }: {
+  count: number; clientId: string; currentKey: string; onClose: () => void; onMove: (targetKey: string) => void;
+}) {
+  const { data: monthKeys = [] } = useQuery(monthKeysQO(clientId));
+  const [customKey, setCustomKey] = useState("");
+  const upcoming: string[] = [];
+  let k = currentKey;
+  for (let i = 0; i < 6; i++) { k = nextMonthKey(k); upcoming.push(k); }
+  const options = [...new Set([...monthKeys.filter((mk) => mk !== currentKey), ...upcoming])].sort();
+
+  return (
+    <Modal open onClose={onClose} title={`Mover ${count} ${count === 1 ? "item" : "itens"}`}>
+      <p className="text-xs text-foreground/50 mb-3">
+        Escolha pra qual mês mover {count === 1 ? "o item selecionado" : "os itens selecionados"}. Estão em {formatMonth(currentKey)}.
+      </p>
+      <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+        {options.map((key) => (
+          <button
+            key={key}
+            onClick={() => onMove(key)}
+            className="text-left px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-foreground/[0.06] transition-colors"
+          >
+            {formatMonth(key)}
+            {!monthKeys.includes(key) && <span className="ml-2 text-[10px] uppercase font-bold text-foreground/30">Novo mês</span>}
+          </button>
+        ))}
+      </div>
+      <div className="mt-3 pt-3 border-t border-foreground/6 flex items-center gap-2">
+        <input
+          type="month"
+          value={customKey}
+          onChange={(e) => setCustomKey(e.target.value)}
+          className="flex-1 bg-transparent border border-foreground/10 rounded-md px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition-colors"
+        />
+        <button
+          onClick={() => customKey && onMove(customKey)}
+          disabled={!customKey}
+          className="rounded-md px-3 py-1.5 text-xs font-bold uppercase disabled:opacity-30 transition"
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >
+          Mover
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/** Lista de status válidos pro tipo dos itens selecionados (Posts/Reels/
+ * Stories/Mais são sempre um tipo só por vez, então não tem mistura) —
+ * mesma fonte (statusOptionsFor) e mesma checagem de permissão do seletor
+ * de status de um item só, em DetailPanel.tsx. */
+export function BulkStatusModal({ type, count, isAvulso, onClose, onApply }: {
+  type: ContentType; count: number; isAvulso: boolean; onClose: () => void; onApply: (status: Status) => void;
+}) {
+  const me = useMe().data;
+  const { data: contentStatuses = [] } = useQuery(contentStatusesQO());
+  const customStatuses = useMemo(() => contentStatuses.filter((r) => r.isCustom), [contentStatuses]);
+  const labelOverrides = useMemo(() => new Map(contentStatuses.map((r) => [r.key, r.label])), [contentStatuses]);
+  const hiddenStatusKeys = useMemo(() => new Set(contentStatuses.filter((r) => r.hidden).map((r) => r.key)), [contentStatuses]);
+  const canApproveFinalize = hasSetorPermission(me, "approve_finalize");
+
+  return (
+    <Modal open onClose={onClose} title={`Alterar status de ${count} ${count === 1 ? "item" : "itens"}`}>
+      <div className="flex flex-col gap-1 max-h-72 overflow-y-auto">
+        {statusOptionsFor(type, customStatuses, hiddenStatusKeys)
+          .filter((s) => (s === "PRONTO_PARA_PUBLICAR" || s === "FINALIZADO" ? canApproveFinalize : true))
+          .map((s) => {
+            const m = getStatusMeta(s, labelOverrides);
+            const Icon = getStatusIcon(s);
+            return (
+              <button
+                key={s}
+                onClick={() => onApply(s)}
+                className="flex items-center gap-2.5 text-left px-3 py-2.5 rounded-md text-sm font-bold uppercase tracking-wide transition hover:opacity-90"
+                style={{ backgroundColor: m.bg, color: m.color }}
+              >
+                <Icon size={15} /> {statusLabel(s, isAvulso, labelOverrides)}
+              </button>
+            );
+          })}
       </div>
     </Modal>
   );

@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock, FolderInput, CheckSquare, X } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock, FolderInput, CheckSquare, X, Tags } from "lucide-react";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { ACTIVITY_QUANTITY_LABEL, type ContentItem, type Profile } from "@/lib/luzeria/types";
-import { MoveItemModal } from "./ClientView";
+import { ACTIVITY_QUANTITY_LABEL, type ContentItem, type ContentType, type Profile } from "@/lib/luzeria/types";
+import { MoveItemModal, BulkMoveModal, BulkStatusModal } from "./ClientView";
 
 type ActivityType = "gravacao" | "roteiro" | "sistema" | "outros";
 
@@ -37,7 +37,7 @@ interface Props {
 }
 
 export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sistemas, outros, profiles, isAdmin, isAvulso }: Props) {
-  const { addContentItem, addAssignee, deleteItem, deleteContentItems, setItemStatus, moveItemToMonth } = useApi();
+  const { addContentItem, addAssignee, deleteItem, deleteContentItems, setItemStatus, moveItemToMonth, moveContentItemsToMonth, setContentItemsStatus } = useApi();
   const { openItem } = useUI();
   const [openForm, setOpenForm] = useState<GroupKey | null>(null);
   const [movingItem, setMovingItem] = useState<ContentItem | null>(null);
@@ -46,6 +46,8 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
   });
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
+  const [bulkStatusType, setBulkStatusType] = useState<ContentType | null>(null);
 
   const groups: { key: GroupKey; label: string; cfg: typeof ACTIVITY_CONFIG[ActivityType]; items: ContentItem[]; registerType: ActivityType }[] = [
     { key: "gravacao", label: ACTIVITY_CONFIG.gravacao.label, cfg: ACTIVITY_CONFIG.gravacao, items: gravacoes, registerType: "gravacao" },
@@ -64,6 +66,8 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
   function exitSelectMode() {
     setSelectMode(false);
     setSelectedIds(new Set());
+    setBulkMoveOpen(false);
+    setBulkStatusType(null);
   }
   async function bulkDelete() {
     if (selectedIds.size === 0) return;
@@ -91,6 +95,20 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                 className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition"
               >
                 <CheckSquare size={13} /> {allSelected ? "Limpar seleção" : "Selecionar tudo"}
+              </button>
+              <button
+                onClick={() => setBulkMoveOpen(true)}
+                disabled={selectedIds.size === 0}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 disabled:opacity-30 transition"
+              >
+                <FolderInput size={13} /> Mover
+              </button>
+              <button
+                onClick={() => setBulkStatusType(allItems.find((it) => selectedIds.has(it.id))?.type ?? null)}
+                disabled={selectedIds.size === 0}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 disabled:opacity-30 transition"
+              >
+                <Tags size={13} /> Alterar status
               </button>
               <button
                 onClick={bulkDelete}
@@ -265,6 +283,36 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
           onMove={(targetKey) => {
             moveItemToMonth.mutate({ data: { itemId: movingItem.id, targetKey } });
             setMovingItem(null);
+          }}
+        />
+      )}
+      {bulkMoveOpen && (
+        <BulkMoveModal
+          count={selectedIds.size}
+          clientId={clientId}
+          currentKey={monthKey}
+          onClose={() => setBulkMoveOpen(false)}
+          onMove={(targetKey) => {
+            moveContentItemsToMonth.mutate(
+              { data: { itemIds: [...selectedIds], targetKey } },
+              { onSuccess: exitSelectMode },
+            );
+            setBulkMoveOpen(false);
+          }}
+        />
+      )}
+      {bulkStatusType && (
+        <BulkStatusModal
+          type={bulkStatusType}
+          count={selectedIds.size}
+          isAvulso={isAvulso}
+          onClose={() => setBulkStatusType(null)}
+          onApply={(status) => {
+            setContentItemsStatus.mutate(
+              { data: { itemIds: [...selectedIds], status } },
+              { onSuccess: exitSelectMode },
+            );
+            setBulkStatusType(null);
           }}
         />
       )}
