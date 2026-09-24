@@ -569,7 +569,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
               <ClientDocsTab
                 clientId={client.id}
                 aiPlanningEnabled={aiPlanningEnabled}
-                aiPlanningLocked={!aiPlanningEnabled}
+                aiPlanningLimited={aiPlanningLimited}
                 aiPlanningUsed={aiPlanningUsed}
                 aiPlanningQuota={aiPlanningQuota}
                 aiPlanningHasSubscription={orgPlanStatus?.hasAsaasSubscription ?? false}

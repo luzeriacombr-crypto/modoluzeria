@@ -2,12 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw, Lock, FileDown } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw, FileDown } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { clientDocsQO, roteiroStatusesQO, clientsQO, useApi } from "@/lib/luzeria/queries";
 import { openAiPlanningModal } from "@/lib/luzeria/ai-planning-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { setClientAiPlanningEnabled } from "@/lib/luzeria/ai-planning.functions";
 import { CLIENT_DOC_TYPE_LABEL, CLIENT_DOC_PROMPT, type ClientDocType } from "@/lib/luzeria/client-doc-templates";
 import { parseMarkdownLite, groupByH2, type MdBlock } from "@/lib/luzeria/markdown-lite";
 import { formatClientDocWithAI, type ClientDoc } from "@/lib/luzeria/client-docs.functions";
@@ -20,13 +20,14 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 const DOC_TYPES: ClientDocType[] = ["roteiro", "planejamento"];
 
 export function ClientDocsTab({
-  clientId, aiPlanningEnabled, aiPlanningLocked,
+  clientId, aiPlanningEnabled, aiPlanningLimited,
   aiPlanningUsed, aiPlanningQuota, aiPlanningHasSubscription,
 }: {
   clientId: string;
+  /** true = esse cliente já foi usado antes (client.ai_planning_enabled) — gerar de novo não gasta cota. */
   aiPlanningEnabled?: boolean;
-  /** Esse cliente específico ainda não foi ativado (Ficha do Cliente) — mostra a novidade travada, em vez de esconder. */
-  aiPlanningLocked?: boolean;
+  /** true = a agência tem teto de clientes com IA (sem assinatura, ou plano Solo). */
+  aiPlanningLimited?: boolean;
   aiPlanningUsed?: number;
   aiPlanningQuota?: number;
   aiPlanningHasSubscription?: boolean;
@@ -36,6 +37,9 @@ export function ClientDocsTab({
   const clientName = clients.find((c) => c.id === clientId)?.name ?? "Cliente";
   const { upsertClientDoc, deleteClientDoc } = useApi();
   const formatWithAI = useServerFn(formatClientDocWithAI);
+  const enableAiPlanning = useServerFn(setClientAiPlanningEnabled);
+  const qc = useQueryClient();
+  const [checkingAiPlanning, setCheckingAiPlanning] = useState(false);
   const [activeType, setActiveType] = useState<ClientDocType>("roteiro");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -100,41 +104,53 @@ export function ClientDocsTab({
     deleteClientDoc.mutate({ data: { id } });
   }
 
+  async function handleOpenAiPlanning() {
+    if (aiPlanningEnabled) {
+      openAiPlanningModal(clientId, clientName);
+      return;
+    }
+    // Primeira vez com esse cliente: se a agência tem teto (sem assinatura
+    // ou plano Solo), confirma antes de gastar a cota — já bloqueado de
+    // vez se ela não tiver mais vaga.
+    if (aiPlanningLimited) {
+      if ((aiPlanningUsed ?? 0) >= (aiPlanningQuota ?? 0)) {
+        toast.error(aiPlanningHasSubscription
+          ? `Você já usou os ${aiPlanningQuota} clientes liberados no plano Solo. Faça upgrade pro plano Pro em Configurações → Cobrança pra usar em mais clientes.`
+          : `Você já usou os ${aiPlanningQuota} clientes liberados no teste grátis. Cadastre uma forma de pagamento em Configurações → Cobrança pra usar em mais clientes.`);
+        return;
+      }
+      const ok = await requestConfirm(
+        `No seu plano atual, você só pode usar a IA de planejamento em até ${aiPlanningQuota} clientes. Usar aqui em "${clientName}" vai contar um deles. Deseja continuar?`,
+      );
+      if (!ok) return;
+    }
+    setCheckingAiPlanning(true);
+    try {
+      await enableAiPlanning({ data: { clientId, enabled: true } });
+      qc.invalidateQueries({ queryKey: ["clients"] });
+      openAiPlanningModal(clientId, clientName);
+    } catch (e: any) {
+      toastFriendlyError(e, "Não consegui ativar a IA de planejamento pra esse cliente.");
+    } finally {
+      setCheckingAiPlanning(false);
+    }
+  }
+
   return (
     <TooltipProvider delayDuration={0}>
     <div className="max-w-2xl">
-      {aiPlanningEnabled && (
-        <button
-          onClick={() => openAiPlanningModal(clientId, clientName)}
-          className="w-full mb-5 flex items-center gap-2.5 rounded-xl p-4 text-left transition hover:opacity-90"
-          style={{ background: "rgba(var(--lz-brand-rgb),0.1)", border: "1px solid rgba(var(--lz-brand-rgb),0.25)" }}
-        >
-          <Sparkles size={16} className="shrink-0" style={{ color: "var(--lz-accent-ink)" }} />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-foreground">Gerar prévia de planejamento com IA <span className="text-foreground/40 font-normal">(novidade)</span></div>
-            <div className="text-[11px] text-foreground/45">Lê o histórico, arquivos de marca e concorrentes pra montar uma prévia do próximo mês.</div>
-          </div>
-        </button>
-      )}
-      {!aiPlanningEnabled && aiPlanningLocked && (
-        <Link
-          to="/planejamento-com-ia"
-          className="w-full mb-5 flex items-center gap-2.5 rounded-xl p-4 text-left transition hover:opacity-90"
-          style={{ background: "color-mix(in srgb, var(--foreground) 4%, transparent)", border: "1px dashed color-mix(in srgb, var(--foreground) 15%, transparent)" }}
-        >
-          <Lock size={15} className="shrink-0 text-foreground/40" />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-foreground/70">Prévia de planejamento com IA <span className="text-foreground/35 font-normal">(novidade)</span></div>
-            <div className="text-[11px] text-foreground/40">
-              {(aiPlanningUsed ?? 0) >= (aiPlanningQuota ?? 0)
-                ? (aiPlanningHasSubscription
-                  ? <>Você já usou os {aiPlanningQuota} clientes liberados no seu plano. Faça upgrade pro plano Pro pra ativar em mais.</>
-                  : <>Você já usou os {aiPlanningQuota} clientes liberados no teste grátis. Cadastre uma forma de pagamento pra ativar em mais.</>)
-                : <>Sua agência já pode usar essa novidade ({aiPlanningUsed ?? 0} de {aiPlanningQuota === Infinity ? "∞" : aiPlanningQuota} clientes liberados) — falta ativar pra esse cliente na Ficha do Cliente.</>}
-            </div>
-          </div>
-        </Link>
-      )}
+      <button
+        onClick={handleOpenAiPlanning}
+        disabled={checkingAiPlanning}
+        className="w-full mb-5 flex items-center gap-2.5 rounded-xl p-4 text-left transition hover:opacity-90 disabled:opacity-60"
+        style={{ background: "rgba(var(--lz-brand-rgb),0.1)", border: "1px solid rgba(var(--lz-brand-rgb),0.25)" }}
+      >
+        <Sparkles size={16} className="shrink-0" style={{ color: "var(--lz-accent-ink)" }} />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-foreground">Gerar prévia de planejamento com IA <span className="text-foreground/40 font-normal">(novidade)</span></div>
+          <div className="text-[11px] text-foreground/45">Lê o histórico, arquivos de marca e concorrentes pra montar uma prévia do próximo mês.</div>
+        </div>
+      </button>
       {/* Tutorial */}
       <div className="rounded-xl p-4 mb-5" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
         <div className="text-[11px] font-bold uppercase tracking-wide text-foreground/35 mb-3">Como funciona</div>
