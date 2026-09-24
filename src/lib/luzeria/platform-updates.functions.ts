@@ -11,6 +11,8 @@ export const PLATFORM_UPDATE_CATEGORIES = [
   "Segurança e Conta",
   "Arquivos e Mídia",
   "Financeiro",
+  "Vendas",
+  "Automações",
   "Correções e Melhorias",
 ] as const;
 
