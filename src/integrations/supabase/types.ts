@@ -1722,41 +1722,6 @@ export type Database = {
           },
         ]
       }
-      client_secrets: {
-        Row: {
-          client_id: string
-          created_at: string
-          id: string
-          label: string
-          position: number
-          value: string
-        }
-        Insert: {
-          client_id: string
-          created_at?: string
-          id?: string
-          label: string
-          position?: number
-          value: string
-        }
-        Update: {
-          client_id?: string
-          created_at?: string
-          id?: string
-          label?: string
-          position?: number
-          value?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_secrets_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       client_stage_history: {
         Row: {
           client_id: string

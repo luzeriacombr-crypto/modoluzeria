@@ -2055,23 +2055,16 @@ export const getClientFicha = createServerFn({ method: "GET" })
   .inputValidator((d: { clientId: string }) =>
     z.object({ clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-
     const { data: client } = await context.supabase
       .from("clients").select("description, current_stage_id, whatsapp_group_link").eq("id", data.clientId).maybeSingle();
 
-    const [linksRes, contactsRes, secretsRes] = await Promise.all([
+    const [linksRes, contactsRes] = await Promise.all([
       context.supabase.from("client_links")
         .select("id, client_id, label, url, position")
         .eq("client_id", data.clientId).order("position"),
       context.supabase.from("client_contacts")
         .select("id, client_id, name, role, email, phone, notes, position")
         .eq("client_id", data.clientId).order("position"),
-      isAdmin
-        ? context.supabase.from("client_secrets")
-            .select("id, client_id, label, value, notes")
-            .eq("client_id", data.clientId).order("label")
-        : Promise.resolve({ data: [] }),
     ]);
 
     // ---- metrics ----
@@ -2121,9 +2114,6 @@ export const getClientFicha = createServerFn({ method: "GET" })
       contacts: (contactsRes.data ?? []).map((c: any) => ({
         id: c.id, clientId: c.client_id, name: c.name, role: c.role,
         email: c.email, phone: c.phone, notes: c.notes, sortOrder: c.position,
-      })),
-      secrets: (secretsRes.data ?? []).map((s: any) => ({
-        id: s.id, clientId: s.client_id, label: s.label, value: s.value, notes: s.notes,
       })),
       metrics: { totalItems, finalized, blocked, avgLeadTimeHours, lastDeliveryAt },
     };
@@ -2209,44 +2199,6 @@ export const deleteClientContact = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
     const { error } = await context.supabase.from("client_contacts").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
-export const upsertClientSecret = createServerFn({ method: "POST" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { id?: string; clientId: string; label: string; value: string; notes?: string | null }) =>
-    z.object({
-      id: z.string().uuid().optional(),
-      clientId: z.string().uuid(),
-      label: z.string().trim().min(1).max(120),
-      value: z.string().min(1).max(2000),
-      notes: z.string().trim().max(2000).nullable().optional(),
-    }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-    const db: any = context.supabase;
-    if (data.id) {
-      const { error } = await db.from("client_secrets")
-        .update({ label: data.label, value: data.value, notes: data.notes ?? null })
-        .eq("id", data.id);
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await db.from("client_secrets")
-        .insert({ client_id: data.clientId, label: data.label, value: data.value, notes: data.notes ?? null });
-      if (error) throw new Error(error.message);
-    }
-    return { ok: true };
-  });
-
-export const deleteClientSecret = createServerFn({ method: "POST" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-    const { error } = await context.supabase.from("client_secrets").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

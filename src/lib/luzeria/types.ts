@@ -796,20 +796,10 @@ export interface ClientContact {
   sortOrder: number;
 }
 
-export interface ClientSecret {
-  id: string;
-  clientId: string;
-  label: string;
-  value: string;
-  notes: string | null;
-}
-
 export interface ClientFicha {
   description: string;
   links: ClientLink[];
   contacts: ClientContact[];
-  /** Only filled for admins (master/setor). */
-  secrets: ClientSecret[];
   /** Aggregated metrics computed across all months. */
   metrics: {
     totalItems: number;

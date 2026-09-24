@@ -34,7 +34,6 @@ import {
   getClientFicha,
   upsertClientLink, deleteClientLink,
   upsertClientContact, deleteClientContact,
-  upsertClientSecret, deleteClientSecret,
   listMyMentions, markMentionRead,
 } from "./api.functions";
 import {
@@ -1185,16 +1184,6 @@ export function useApi() {
       mutationFn: useServerFn(deleteClientContact),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
       onError: (e: any) => toastFriendlyError(e, "Erro ao remover contato."),
-    }),
-    upsertClientSecret: useMutation({
-      mutationFn: useServerFn(upsertClientSecret),
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
-      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar."),
-    }),
-    deleteClientSecret: useMutation({
-      mutationFn: useServerFn(deleteClientSecret),
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-ficha"] }),
-      onError: (e: any) => toastFriendlyError(e, "Erro ao remover."),
     }),
     upsertJourneyStage: useMutation({
       mutationFn: useServerFn(upsertJourneyStage),

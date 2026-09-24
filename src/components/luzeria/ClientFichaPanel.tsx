@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
-  Eye, EyeOff, KeyRound, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
+  EyeOff, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
   Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save, Camera, Instagram, Facebook,
   MessageCircle, Milestone, Users, Upload, Download, Film, Image as ImageIcon,
 } from "lucide-react";
@@ -414,20 +414,6 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             {isAdmin && <AddLinkRow clientId={client.id} onSubmit={(d) => api.upsertClientLink.mutate({ data: d })} />}
           </div>
         </FichaCard>
-        {isAdmin && (
-          <FichaCard label="Senhas e acessos" wide>
-            <div className="mb-2 text-[10px] text-foreground/40">Visível apenas para administradores.</div>
-            <div className="space-y-2">
-              {(ficha?.secrets ?? []).length === 0 && (
-                <p className="text-xs text-foreground/40">Nenhum acesso cadastrado.</p>
-              )}
-              {(ficha?.secrets ?? []).map((s) => (
-                <SecretRow key={s.id} secret={s} onDelete={() => api.deleteClientSecret.mutate({ data: { id: s.id } })} />
-              ))}
-              <AddSecretRow clientId={client.id} onSubmit={(d) => api.upsertClientSecret.mutate({ data: d })} />
-            </div>
-          </FichaCard>
-        )}
         </div>
       )}
 
@@ -2097,71 +2083,3 @@ function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
   );
 }
 
-function SecretRow({ secret, onDelete }: { secret: any; onDelete: () => void }) {
-  const [show, setShow] = useState(false);
-  const [copied, setCopied] = useState(false);
-  return (
-    <div className="bg-card border border-foreground/6 rounded-md px-3 py-2.5">
-      <div className="flex items-center gap-2">
-        <KeyRound size={14} style={{ color: "var(--lz-accent-ink)" }} />
-        <div className="text-sm font-semibold text-foreground flex-1 truncate">{secret.label}</div>
-        <button onClick={() => setShow((s) => !s)} className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5" title={show ? "Ocultar" : "Revelar"}>
-          {show ? <EyeOff size={13} /> : <Eye size={13} />}
-        </button>
-        <button
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(secret.value);
-              setCopied(true);
-              toast.success("Copiado");
-              window.setTimeout(() => setCopied(false), 1500);
-            } catch { toast.error("Não foi possível copiar"); }
-          }}
-          className="p-1 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5"
-          title="Copiar valor"
-        >{copied ? <Check size={13} /> : <Copy size={13} />}</button>
-        <button onClick={async () => { if (await requestConfirm(`Excluir "${secret.label}"?`, { danger: true })) onDelete(); }} className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5">
-          <Trash2 size={13} />
-        </button>
-      </div>
-      <div className="mt-1 text-[12px] font-mono break-all" style={{ color: show ? "#FFF" : "color-mix(in srgb, var(--foreground) 30%, transparent)" }}>
-        {show ? secret.value : "••••••••••••"}
-      </div>
-      {secret.notes && <div className="mt-1 text-[11px] text-foreground/40 whitespace-pre-wrap">{secret.notes}</div>}
-    </div>
-  );
-}
-
-function AddSecretRow({ clientId, onSubmit }: { clientId: string; onSubmit: (d: any) => void }) {
-  const [open, setOpen] = useState(false);
-  const [label, setLabel] = useState("");
-  const [value, setValue] = useState("");
-  const [notes, setNotes] = useState("");
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)}
-        className="w-full mt-1 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-foreground/15 py-2 text-[11px] text-foreground/50 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))]">
-        <Plus size={12} /> Novo acesso
-      </button>
-    );
-  }
-  return (
-    <div className="bg-card border border-foreground/8 rounded-md p-3 space-y-2">
-      <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Rótulo (ex.: Instagram)" className="w-full bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
-      <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Senha / token / login" className="w-full bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground font-mono outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
-      <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observações (opcional)" className="w-full bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
-      <div className="flex items-center justify-end gap-2">
-        <button onClick={() => setOpen(false)} className="text-[11px] text-foreground/50 hover:text-foreground px-2 py-1">Cancelar</button>
-        <button
-          disabled={!label.trim() || !value}
-          onClick={() => {
-            onSubmit({ clientId, label: label.trim(), value, notes: notes.trim() || null });
-            setLabel(""); setValue(""); setNotes(""); setOpen(false);
-          }}
-          className="px-3 py-1.5 rounded-md text-[11px] font-bold disabled:opacity-30"
-          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-        >Salvar</button>
-      </div>
-    </div>
-  );
-}
