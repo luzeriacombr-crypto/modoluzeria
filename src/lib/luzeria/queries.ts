@@ -20,7 +20,7 @@ import {
   setItemEditor, setItemReelType, setItemPostFormat,
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
   addCleaningTask, renameCleaningTask, deleteCleaningTask,
-  adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getMyPendingInvoice, resumeFromPaymentPause, getPlans, subscribeToPlan, cancelMySubscription, getSetupChecklist, adminSendPasswordReset, adminResendWelcomeEmail, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations, getMyWorkStats,
+  adminCreateUser, createAgency, updateMyOrg, updateMyDefaultLanding, updateSetorPermissions, getOrgPlanStatus, getMyPendingInvoice, resendPendingInvoiceEmail, getMyInvoiceHistory, resumeFromPaymentPause, getPlans, subscribeToPlan, cancelMySubscription, getSetupChecklist, adminSendPasswordReset, adminResendWelcomeEmail, adminSetUserPassword, getAdminDashboard, getTopMembers, getTopMembersByGoal, getMemberFinalizations, getMyWorkStats,
   listOrgsBilling, getOrgNextInvoice, getMyAgencyLevelInputs, getOrgPageViews,
   updateMyAccount,
   getReport, getDeliveryTrend, getMemberReportDetail, getMemberVelocity, getFileUploadsReport,
@@ -452,6 +452,8 @@ export const orgPlanStatusQO = () =>
   queryOptions({ queryKey: ["org-plan-status"], queryFn: () => getOrgPlanStatus() });
 export const myPendingInvoiceQO = () =>
   queryOptions({ queryKey: ["my-pending-invoice"], queryFn: () => getMyPendingInvoice() });
+export const myInvoiceHistoryQO = () =>
+  queryOptions({ queryKey: ["my-invoice-history"], queryFn: () => getMyInvoiceHistory() });
 export const orgsBillingQO = () =>
   // refetchInterval curto de propósito: "usuários online agora" (onlineCount
   // por org) só faz sentido se o painel se atualizar sozinho enquanto está
@@ -1051,6 +1053,7 @@ export function useApi() {
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["org-plan-status"] }); qc.invalidateQueries({ queryKey: ["me"] }); },
     }),
     resumeFromPaymentPause: useMutation({ mutationFn: useServerFn(resumeFromPaymentPause) }),
+    resendPendingInvoiceEmail: useMutation({ mutationFn: useServerFn(resendPendingInvoiceEmail) }),
     cancelMySubscription: useMutation({
       mutationFn: useServerFn(cancelMySubscription),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["org-plan-status"] }),

@@ -79,6 +79,21 @@ export async function getNextPendingPayment(asaasSubscriptionId: string) {
   return payments.data?.[0] ?? null;
 }
 
+/** Histórico de faturas de uma assinatura (pagas, pendentes, atrasadas...),
+ * mais recente primeiro — alimenta o "Histórico de faturas" self-service em
+ * Configurações → Cobrança. */
+export async function listAsaasPayments(asaasSubscriptionId: string, limit = 12) {
+  const payments = (await asaasFetch(
+    `/payments?subscription=${asaasSubscriptionId}&limit=${limit}&order=desc`,
+  )) as {
+    data?: {
+      id: string; value: number; status: string; dueDate?: string; paymentDate?: string;
+      invoiceUrl?: string; bankSlipUrl?: string; transactionReceiptUrl?: string;
+    }[];
+  };
+  return payments.data ?? [];
+}
+
 export async function updateAsaasPaymentValue(paymentId: string, valueCents: number) {
   return asaasFetch(`/payments/${paymentId}`, {
     method: "PUT",

@@ -521,6 +521,64 @@ export const getMyPendingInvoice = createServerFn({ method: "GET" })
       : null;
   });
 
+/** Manda de novo, por e-mail, o link da fatura em aberto — resolve o caso
+ * de quem perdeu o e-mail original da Asaas no meio do spam e não sabia
+ * que dava pra pegar a segunda via de outro jeito. Manda pro e-mail de
+ * login do próprio master (get_my_email), não pro que estiver cadastrado
+ * na Asaas — é o e-mail que a pessoa realmente confere. */
+export const resendPendingInvoiceEmail = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { data: org } = await context.supabase
+      .from("orgs").select("name, asaas_subscription_id").eq("id", context.orgId).maybeSingle();
+    if (!(org as any)?.asaas_subscription_id) throw new Error("Sua agência ainda não tem assinatura registrada.");
+    const { getNextPendingPayment } = await import("./asaas.server");
+    const payment = await getNextPendingPayment((org as any).asaas_subscription_id);
+    if (!payment) throw new Error("Não há nenhuma fatura em aberto pra reenviar.");
+    const { data: myEmail } = await context.supabase.rpc("get_my_email");
+    if (!myEmail) throw new Error("Não consegui identificar seu e-mail de login.");
+
+    const valueLabel = `R$ ${(payment.value).toFixed(2).replace(".", ",")}`;
+    const dueLabel = payment.dueDate ? new Date(payment.dueDate + "T12:00:00").toLocaleDateString("pt-BR") : null;
+    const { sendEmail } = await import("./resend.server");
+    await sendEmail({
+      to: myEmail as string,
+      subject: `Sua fatura do Modo Criador${dueLabel ? ` — vence em ${dueLabel}` : ""}`,
+      html: `
+        <p>Oi! Aqui está de novo o link da sua fatura em aberto do Modo Criador (${(org as any).name}).</p>
+        <p><strong>Valor:</strong> ${valueLabel}${dueLabel ? `<br><strong>Vencimento:</strong> ${dueLabel}` : ""}</p>
+        <p><a href="${payment.invoiceUrl}">Ver fatura e pagar (PIX, boleto ou cartão)</a></p>
+        ${payment.bankSlipUrl ? `<p><a href="${payment.bankSlipUrl}">Baixar o boleto em PDF</a></p>` : ""}
+      `,
+    });
+    return { ok: true };
+  });
+
+/** Histórico de faturas (pagas, pendentes, atrasadas) da assinatura da
+ * própria agência — self-service, pra não precisar pedir pro suporte. */
+export const getMyInvoiceHistory = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { data: org } = await context.supabase
+      .from("orgs").select("asaas_subscription_id").eq("id", context.orgId).maybeSingle();
+    if (!(org as any)?.asaas_subscription_id) return [];
+    const { listAsaasPayments } = await import("./asaas.server");
+    const payments = await listAsaasPayments((org as any).asaas_subscription_id);
+    return payments.map((p) => ({
+      id: p.id,
+      valueCents: Math.round(p.value * 100),
+      status: p.status,
+      dueDate: p.dueDate ?? null,
+      paymentDate: p.paymentDate ?? null,
+      invoiceUrl: p.invoiceUrl ?? null,
+      receiptUrl: p.transactionReceiptUrl ?? null,
+    }));
+  });
+
 /** Platform-admin only: every agency on Modo Criador with its plan and
  * billing status, for the "Financeiro" tab in Settings. */
 export const listOrgsBilling = createServerFn({ method: "GET" })

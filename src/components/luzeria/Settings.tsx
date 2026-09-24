@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, lazy, Suspense } from "react";
-import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO, cargosQO, myPendingInvoiceQO } from "@/lib/luzeria/queries";
+import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO, cargosQO, myPendingInvoiceQO, myInvoiceHistoryQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
@@ -8,7 +8,7 @@ import type { Role } from "@/lib/luzeria/types";
 import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Gift, Archive, PlayCircle } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Gift, Archive, PlayCircle, ChevronDown } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
 import { ContentStatusesSection } from "./ContentStatusesSection";
 import { ClientCategoriesSection } from "./ClientCategoriesSection";
@@ -1005,6 +1005,16 @@ const SUBSCRIPTION_STATUS_LABEL: Record<string, { label: string; color: string }
   canceled: { label: "Cancelada", color: "#FF6B6B" },
 };
 
+const INVOICE_STATUS_LABEL: Record<string, { label: string; color: string }> = {
+  PENDING: { label: "Pendente", color: "#FFD97E" },
+  RECEIVED: { label: "Pago", color: "#4ADE80" },
+  CONFIRMED: { label: "Pago", color: "#4ADE80" },
+  RECEIVED_IN_CASH: { label: "Pago", color: "#4ADE80" },
+  OVERDUE: { label: "Atrasado", color: "#FF6B6B" },
+  REFUNDED: { label: "Reembolsado", color: "#7EB3FF" },
+  REFUND_REQUESTED: { label: "Reembolso solicitado", color: "#7EB3FF" },
+};
+
 /** "Seu plano" — plano atual + uso (clientes/colaboradores). */
 function PlanCardSection() {
   const { data: status, isLoading } = useQuery(orgPlanStatusQO());
@@ -1056,7 +1066,9 @@ function BillingSection() {
   const { data: plans } = useQuery(plansQO());
   const me = useMe().data;
   const { data: pendingInvoice } = useQuery({ ...myPendingInvoiceQO(), enabled: me?.role === "master" });
-  const { updateMyOrg, subscribeToPlan, cancelMySubscription } = useApi();
+  const { data: invoiceHistory } = useQuery({ ...myInvoiceHistoryQO(), enabled: me?.role === "master" && !!status?.hasAsaasSubscription });
+  const [showHistory, setShowHistory] = useState(false);
+  const { updateMyOrg, subscribeToPlan, cancelMySubscription, resendPendingInvoiceEmail } = useApi();
   const [taxId, setTaxId] = useState("");
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -1080,6 +1092,13 @@ function BillingSection() {
         if (r?.invoiceUrl) window.open(r.invoiceUrl, "_blank");
       },
       onError: (e: any) => toastFriendlyError(e, "Erro ao assinar o plano."),
+    });
+  }
+
+  function resendInvoice() {
+    resendPendingInvoiceEmail.mutate({} as any, {
+      onSuccess: () => toast.success("Fatura reenviada pro seu e-mail de login."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao reenviar a fatura."),
     });
   }
 
@@ -1113,6 +1132,10 @@ function BillingSection() {
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">
+                <button onClick={resendInvoice} disabled={resendPendingInvoiceEmail.isPending}
+                  className="lz-btn-ghost text-xs px-3 py-2 rounded-md whitespace-nowrap disabled:opacity-50">
+                  {resendPendingInvoiceEmail.isPending ? "Enviando…" : "Reenviar por e-mail"}
+                </button>
                 {pendingInvoice.bankSlipUrl && (
                   <a href={pendingInvoice.bankSlipUrl} target="_blank" rel="noreferrer"
                     className="lz-btn-ghost text-xs px-3 py-2 rounded-md whitespace-nowrap">
@@ -1165,6 +1188,40 @@ function BillingSection() {
             </div>
           ))}
         </div>
+
+        {me?.role === "master" && status.hasAsaasSubscription && (invoiceHistory?.length ?? 0) > 0 && (
+          <div className="pt-3 border-t border-foreground/6">
+            <button onClick={() => setShowHistory((v) => !v)} className="text-xs font-semibold text-foreground/60 hover:text-foreground flex items-center gap-1">
+              Histórico de faturas <ChevronDown size={13} className="transition-transform" style={{ transform: showHistory ? "rotate(180deg)" : "rotate(0deg)" }} />
+            </button>
+            {showHistory && (
+              <div className="mt-2.5 space-y-1.5">
+                {invoiceHistory!.map((inv) => {
+                  const info = INVOICE_STATUS_LABEL[inv.status] ?? { label: inv.status, color: "var(--foreground)" };
+                  const link = inv.receiptUrl ?? inv.invoiceUrl;
+                  return (
+                    <div key={inv.id} className="flex items-center justify-between gap-3 bg-black/20 rounded-md px-3 py-2">
+                      <div className="text-xs text-foreground/70">
+                        {inv.paymentDate
+                          ? new Date(inv.paymentDate + "T12:00:00").toLocaleDateString("pt-BR")
+                          : inv.dueDate ? `Venc. ${new Date(inv.dueDate + "T12:00:00").toLocaleDateString("pt-BR")}` : "—"}
+                        {" · "}R$ {(inv.valueCents / 100).toFixed(2).replace(".", ",")}
+                      </div>
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        <span className="text-[10px] font-bold uppercase" style={{ color: info.color }}>{info.label}</span>
+                        {link && (
+                          <a href={link} target="_blank" rel="noreferrer" className="text-[11px] text-foreground/50 hover:text-foreground underline">
+                            Ver
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {me?.role === "master" && status.hasAsaasSubscription && status.subscriptionStatus !== "canceled" && (
           <div className="pt-3 border-t border-foreground/6">
