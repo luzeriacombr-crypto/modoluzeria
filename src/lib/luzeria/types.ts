@@ -881,6 +881,7 @@ export interface StatusDurationStat {
 /** App-wide settings (master-controlled). */
 export interface AppSettings {
   requireRatingOnFinalize: boolean;
+  demoWhatsappMessage: string | null;
 }
 
 /** Item agrupado por dia da semana para o kanban "Minha Semana". */

@@ -764,21 +764,42 @@ export const getAppSettings = createServerFn({ method: "GET" })
     (rows ?? []).forEach((r: any) => map.set(r.key, r.value));
     return {
       requireRatingOnFinalize: map.get("require_rating_on_finalize")?.enabled !== false,
+      demoWhatsappMessage: map.get("demo_whatsapp_message")?.text ?? null,
     };
   });
 
 export const updateAppSettings = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { requireRatingOnFinalize?: boolean }) =>
-    z.object({ requireRatingOnFinalize: z.boolean().optional() }).parse(d))
+  .inputValidator((d: { requireRatingOnFinalize?: boolean; demoWhatsappMessage?: string | null }) =>
+    z.object({
+      requireRatingOnFinalize: z.boolean().optional(),
+      demoWhatsappMessage: z.string().trim().max(2000).nullable().optional(),
+    }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
     if (!isMaster) throw new Error("Forbidden");
+    // app_settings não tem org_id (é uma tabela global, RLS só exige
+    // is_master) — sem esse check, o master de qualquer agência poderia
+    // sobrescrever o texto de abordagem que o Junior usa com os próprios
+    // leads, então esse campo específico fica restrito à Luzeria mesmo.
+    if (data.demoWhatsappMessage !== undefined) {
+      const { LUZERIA_ORG_ID } = await import("./api.functions");
+      if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    }
     const db: any = context.supabase;
     if (data.requireRatingOnFinalize !== undefined) {
       const { error } = await db.from("app_settings").upsert({
         key: "require_rating_on_finalize",
         value: { enabled: data.requireRatingOnFinalize },
+        updated_at: new Date().toISOString(),
+        updated_by: context.userId,
+      }, { onConflict: "key" });
+      if (error) throw new Error(error.message);
+    }
+    if (data.demoWhatsappMessage !== undefined) {
+      const { error } = await db.from("app_settings").upsert({
+        key: "demo_whatsapp_message",
+        value: { text: data.demoWhatsappMessage || null },
         updated_at: new Date().toISOString(),
         updated_by: context.userId,
       }, { onConflict: "key" });
