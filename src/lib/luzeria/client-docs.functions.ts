@@ -473,7 +473,7 @@ export const exportRoteirosPdf = createServerFn({ method: "POST" })
 export const regenerateRoteiroDoc = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { docId: string; tone: string }) =>
-    z.object({ docId: z.string().uuid(), tone: z.string().trim().min(1).max(200) }).parse(d))
+    z.object({ docId: z.string().uuid(), tone: z.string().trim().min(1).max(2000) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
 

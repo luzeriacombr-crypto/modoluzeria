@@ -384,7 +384,7 @@ function RewriteToneMenu({ disabled, onPick }: { disabled: boolean; onPick: (ton
         <TooltipContent>Reescrever com IA</TooltipContent>
       </Tooltip>
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-48 rounded-md bg-card border border-foreground/10 shadow-xl py-1 z-50">
+        <div className={"absolute right-0 top-full mt-1.5 rounded-md bg-card border border-foreground/10 shadow-xl py-1 z-50 transition-[width] " + (customOpen ? "w-80" : "w-48")}>
           {!customOpen ? (
             <>
               {REWRITE_TONE_PRESETS.map((p) => (
@@ -405,13 +405,15 @@ function RewriteToneMenu({ disabled, onPick }: { disabled: boolean; onPick: (ton
             </>
           ) : (
             <div className="p-2 space-y-1.5">
-              <input
+              <textarea
                 autoFocus
                 value={custom}
                 onChange={(e) => setCustom(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && custom.trim()) pick(custom.trim()); }}
-                placeholder="Ex: mais engraçado"
-                className="w-full bg-background border border-foreground/10 rounded px-2 py-1 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && custom.trim()) { e.preventDefault(); pick(custom.trim()); } }}
+                placeholder="Ex: mais engraçado, ou descreva com detalhes o que ajustar…"
+                rows={4}
+                maxLength={2000}
+                className="w-full bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-none"
               />
               <button
                 disabled={!custom.trim()}
