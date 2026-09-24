@@ -10,8 +10,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, driveThumbnailQO, journeyStagesQO, contractRequestsQO, instagramConnectRequestsQO, myAgencyLevelInputsQO } from "@/lib/luzeria/queries";
-import { computeAgencyPoints, getAgencyLevel, computeAiPlanningQuota } from "@/lib/luzeria/agency-level";
+import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, driveThumbnailQO, journeyStagesQO, contractRequestsQO, instagramConnectRequestsQO, orgPlanStatusQO } from "@/lib/luzeria/queries";
 import { setClientAiPlanningEnabled } from "@/lib/luzeria/ai-planning.functions";
 import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { useClientAssetUpload } from "@/lib/luzeria/use-client-asset-upload";
@@ -112,13 +111,15 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
   const qc = useQueryClient();
   const setAiPlanningEnabled = useServerFn(setClientAiPlanningEnabled);
   const [savingAiPlanning, setSavingAiPlanning] = useState(false);
-  const { data: agencyLevelInputs } = useQuery({ ...myAgencyLevelInputsQO(), enabled: isAdmin });
-  const agencyLevel = agencyLevelInputs ? getAgencyLevel(computeAgencyPoints(agencyLevelInputs)) : null;
-  // Luzeria é isenta do gate por nível/cota (mesma isenção do servidor,
-  // ai-planning.functions.ts) — já usa a feature em produção com todos os
-  // clientes desde a fase de teste, antes da cota por nível existir.
+  const { data: orgPlanStatus } = useQuery({ ...orgPlanStatusQO(), enabled: isAdmin });
+  // Luzeria é isenta do gate por plano/pagamento (mesma isenção do
+  // servidor, ai-planning.functions.ts) — já usa a feature em produção com
+  // todos os clientes desde a fase de teste.
   const isLuzeriaOrg = me?.orgId === LUZERIA_ORG_ID;
-  const aiPlanningQuota = isLuzeriaOrg ? Infinity : (agencyLevel && agencyLevelInputs ? computeAiPlanningQuota(agencyLevel, agencyLevelInputs.planMaxClients) : 0);
+  // Sem assinatura registrada no Asaas (teste grátis) ou no plano Solo:
+  // teto de 2 clientes com IA. Pro/Agência/Enterprise: sem teto específico.
+  const aiPlanningLimited = !isLuzeriaOrg && (!orgPlanStatus?.hasAsaasSubscription || orgPlanStatus?.planId === "solo");
+  const aiPlanningQuota = aiPlanningLimited ? 2 : Infinity;
   const aiPlanningUsed = clients.filter((c: any) => c.aiPlanningEnabled).length;
 
   async function toggleAiPlanning(enabled: boolean) {
@@ -272,31 +273,31 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         )}
         {isAdmin && (
           <FichaCard label="Novidade: IA de planejamento">
-            {aiPlanningQuota <= 0 ? (
-              <p className="text-[12px] text-foreground/40 leading-relaxed">
-                Disponível a partir do nível Prata do Programa de Níveis
-                {agencyLevel ? <> — sua agência está em <b className="text-foreground/60">{agencyLevel.label}</b></> : null}.{" "}
-                <Link to="/planejamento-com-ia" className="underline hover:text-foreground/60">Saiba mais →</Link>
-              </p>
-            ) : (
-              <>
-                <label className="flex items-center gap-2 text-sm text-foreground/70">
-                  <input
-                    type="checkbox"
-                    checked={client.aiPlanningEnabled ?? false}
-                    disabled={savingAiPlanning || (!client.aiPlanningEnabled && aiPlanningUsed >= aiPlanningQuota)}
-                    onChange={(e) => toggleAiPlanning(e.target.checked)}
-                  />
-                  Ativar prévia de planejamento com IA pra esse cliente
-                </label>
-                <p className="text-[11px] text-foreground/40 mt-1.5">
-                  {isLuzeriaOrg
-                    ? "Liberado pra todos os clientes (conta interna)."
-                    : <>{aiPlanningUsed} de {aiPlanningQuota} cliente(s) liberado(s) no seu nível ({agencyLevel?.label}).</>}{" "}
-                  <Link to="/planejamento-com-ia" className="underline hover:text-foreground/60">Saiba mais →</Link>
-                </p>
-              </>
-            )}
+            <label className="flex items-center gap-2 text-sm text-foreground/70">
+              <input
+                type="checkbox"
+                checked={client.aiPlanningEnabled ?? false}
+                disabled={savingAiPlanning || (!client.aiPlanningEnabled && aiPlanningUsed >= aiPlanningQuota)}
+                onChange={(e) => toggleAiPlanning(e.target.checked)}
+              />
+              Ativar prévia de planejamento com IA pra esse cliente
+            </label>
+            <p className="text-[11px] text-foreground/40 mt-1.5">
+              {isLuzeriaOrg ? (
+                "Liberado pra todos os clientes (conta interna)."
+              ) : (
+                <>
+                  {aiPlanningUsed} de {aiPlanningQuota === Infinity ? "∞" : aiPlanningQuota} cliente(s) liberado(s)
+                  {orgPlanStatus?.hasAsaasSubscription ? <> no plano {orgPlanStatus.planName}</> : " no teste grátis"}.{" "}
+                  {aiPlanningLimited && aiPlanningUsed >= aiPlanningQuota && (
+                    orgPlanStatus?.hasAsaasSubscription
+                      ? "Faça upgrade pro plano Pro pra liberar em mais clientes."
+                      : "Cadastre uma forma de pagamento pra liberar em mais clientes."
+                  )}
+                </>
+              )}{" "}
+              <Link to="/planejamento-com-ia" className="underline hover:text-foreground/60">Saiba mais →</Link>
+            </p>
           </FichaCard>
         )}
         {isAdmin && (

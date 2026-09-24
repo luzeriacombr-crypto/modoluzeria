@@ -113,9 +113,9 @@ export const TUTORIALS: HelpTutorial[] = [
     ],
   },
   {
-    title: "Gerar uma prévia de planejamento com IA (novidade, a partir do nível Prata)",
+    title: "Gerar uma prévia de planejamento com IA (novidade)",
     steps: [
-      "Essa função é exclusiva de agências que já chegaram no nível Prata do Programa de Níveis — veja em /programa-de-niveis como está o seu nível e o que falta pra subir.",
+      "No teste grátis ou no plano Solo, dá pra ativar em até 2 clientes; no plano Pro ou superior não tem limite — veja em Configurações → Cobrança.",
       "Abra a Ficha de um cliente e vá na aba \"Roteiros & Planejamento\".",
       "Clique no card \"Gerar prévia de planejamento com IA\", no topo da aba.",
       "Se teve reunião com o cliente recentemente, cola as anotações ou a transcrição inteira no campo de contexto extra — isso conta mais do que qualquer histórico antigo, mas é opcional.",

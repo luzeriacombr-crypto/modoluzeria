@@ -20,18 +20,16 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 const DOC_TYPES: ClientDocType[] = ["roteiro", "planejamento"];
 
 export function ClientDocsTab({
-  clientId, aiPlanningEnabled, aiPlanningLocked, aiPlanningCurrentLevelLabel,
-  aiPlanningOrgUnlocked, aiPlanningUsed, aiPlanningQuota,
+  clientId, aiPlanningEnabled, aiPlanningLocked,
+  aiPlanningUsed, aiPlanningQuota, aiPlanningHasSubscription,
 }: {
   clientId: string;
   aiPlanningEnabled?: boolean;
-  /** Agência não desbloqueou (nível) OU não ativou esse cliente (cota) — mostra a novidade travada, em vez de esconder. */
+  /** Esse cliente específico ainda não foi ativado (Ficha do Cliente) — mostra a novidade travada, em vez de esconder. */
   aiPlanningLocked?: boolean;
-  aiPlanningCurrentLevelLabel?: string;
-  /** true = agência já chegou em Prata (só falta ativar ESSE cliente, não o nível). */
-  aiPlanningOrgUnlocked?: boolean;
   aiPlanningUsed?: number;
   aiPlanningQuota?: number;
+  aiPlanningHasSubscription?: boolean;
 }) {
   const { data: docs = [] } = useQuery(clientDocsQO(clientId));
   const { data: clients = [] } = useQuery(clientsQO());
@@ -126,11 +124,13 @@ export function ClientDocsTab({
         >
           <Lock size={15} className="shrink-0 text-foreground/40" />
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-foreground/70">Prévia de planejamento com IA <span className="text-foreground/35 font-normal">(novidade — a partir do nível Prata)</span></div>
+            <div className="text-sm font-semibold text-foreground/70">Prévia de planejamento com IA <span className="text-foreground/35 font-normal">(novidade)</span></div>
             <div className="text-[11px] text-foreground/40">
-              {aiPlanningOrgUnlocked
-                ? <>Sua agência já desbloqueou essa novidade ({aiPlanningUsed ?? 0} de {aiPlanningQuota ?? 0} clientes liberados) — falta ativar pra esse cliente na Ficha do Cliente.</>
-                : <>Sua agência está em {aiPlanningCurrentLevelLabel ?? "carregamento…"}. Toque aqui pra ver como funciona e como desbloquear.</>}
+              {(aiPlanningUsed ?? 0) >= (aiPlanningQuota ?? 0)
+                ? (aiPlanningHasSubscription
+                  ? <>Você já usou os {aiPlanningQuota} clientes liberados no seu plano. Faça upgrade pro plano Pro pra ativar em mais.</>
+                  : <>Você já usou os {aiPlanningQuota} clientes liberados no teste grátis. Cadastre uma forma de pagamento pra ativar em mais.</>)
+                : <>Sua agência já pode usar essa novidade ({aiPlanningUsed ?? 0} de {aiPlanningQuota === Infinity ? "∞" : aiPlanningQuota} clientes liberados) — falta ativar pra esse cliente na Ficha do Cliente.</>}
             </div>
           </div>
         </Link>

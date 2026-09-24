@@ -3,8 +3,8 @@ import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List, CheckSqu
 import { useEffect, useMemo, useState } from "react";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { reportAppError } from "@/lib/error-reporting";
-import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi, myAgencyLevelInputsQO, contentStatusesQO } from "@/lib/luzeria/queries";
-import { computeAgencyPoints, getAgencyLevel, computeAiPlanningQuota } from "@/lib/luzeria/agency-level";
+import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi, orgPlanStatusQO, contentStatusesQO } from "@/lib/luzeria/queries";
+import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { CONTENT_TYPE_LABEL, statusOptionsFor, getStatusMeta, statusLabel, hasSetorPermission, type ContentItem, type ContentType, type Status } from "@/lib/luzeria/types";
 import { getStatusIcon } from "./icons";
@@ -200,17 +200,17 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   const showDocsSubTab = isAdmin;
   const showBibliotecaSubTab = !disabledFeatures.has("reference_library");
 
-  // Prévia de planejamento com IA — duas camadas: a agência precisa ter
-  // chegado no nível Prata (libera uma cota de clientes, % do teto do
-  // plano), e dentro dessa cota, ESSE cliente precisa estar marcado
-  // (client.aiPlanningEnabled, escolhido na Ficha do Cliente).
-  const { data: agencyLevelInputs } = useQuery({ ...myAgencyLevelInputsQO(), enabled: !!me });
-  const agencyLevel = agencyLevelInputs ? getAgencyLevel(computeAgencyPoints(agencyLevelInputs)) : null;
-  const aiPlanningOrgUnlocked = (agencyLevel?.index ?? -1) >= 3;
-  const aiPlanningQuota = agencyLevel && agencyLevelInputs ? computeAiPlanningQuota(agencyLevel, agencyLevelInputs.planMaxClients) : 0;
+  // Prévia de planejamento com IA — gate por plano/pagamento (não mais por
+  // nível): sem assinatura registrada no Asaas ou no plano Solo, teto de 2
+  // clientes; Pro+ sem teto específico. Dentro dessa cota, ESSE cliente
+  // precisa estar marcado (client.aiPlanningEnabled, escolhido na Ficha).
+  const { data: orgPlanStatus } = useQuery({ ...orgPlanStatusQO(), enabled: !!me });
+  const isLuzeriaOrgForAi = me?.orgId === LUZERIA_ORG_ID;
+  const aiPlanningLimited = !isLuzeriaOrgForAi && (!orgPlanStatus?.hasAsaasSubscription || orgPlanStatus?.planId === "solo");
+  const aiPlanningQuota = aiPlanningLimited ? 2 : Infinity;
   const aiPlanningUsed = clients.filter((c: any) => c.aiPlanningEnabled).length;
   const aiPlanningClientEnabled = !!(client as any)?.aiPlanningEnabled;
-  const aiPlanningEnabled = aiPlanningOrgUnlocked && aiPlanningClientEnabled;
+  const aiPlanningEnabled = aiPlanningClientEnabled;
   const tabs = visibleTabs;
 
   const sortedKeys = [...new Set([...monthKeys, selectedMonthKey])].sort();
@@ -569,11 +569,10 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
               <ClientDocsTab
                 clientId={client.id}
                 aiPlanningEnabled={aiPlanningEnabled}
-                aiPlanningLocked={!aiPlanningEnabled && !disabledFeatures.has("agency_levels")}
-                aiPlanningCurrentLevelLabel={agencyLevel?.label}
-                aiPlanningOrgUnlocked={aiPlanningOrgUnlocked}
+                aiPlanningLocked={!aiPlanningEnabled}
                 aiPlanningUsed={aiPlanningUsed}
                 aiPlanningQuota={aiPlanningQuota}
+                aiPlanningHasSubscription={orgPlanStatus?.hasAsaasSubscription ?? false}
               />
             )}
             {maisSubTab === "biblioteca" && showBibliotecaSubTab && <ClientReferenceLibraryTab clientId={client.id} />}

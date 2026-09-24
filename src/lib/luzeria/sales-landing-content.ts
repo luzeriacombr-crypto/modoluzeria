@@ -133,7 +133,7 @@ export const DEFAULT_LANDING: LandingContent = {
       { bold: "Você revisa e decide.", rest: "Nada é salvo sozinho — aprova direto pros roteiros do mês." },
     ],
     ctaLabel: "Quero testar",
-    note: "O planejamento com IA é liberado conforme o nível da agência no Programa de Níveis.",
+    note: "No teste grátis ou no plano Solo, dá pra usar em até 2 clientes. No plano Pro ou superior, não tem limite.",
   },
   aiConnector: {
     eyebrow: "Novo · Assistente de IA",

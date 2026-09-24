@@ -1,22 +1,49 @@
 // Prévia de planejamento do próximo mês gerada por IA. Validada primeiro
 // só com os clientes da própria Luzeria (clients.ai_planning_enabled) —
-// agora liberada pra qualquer agência que já tenha chegado no nível Prata
-// (Programa de Níveis), como uma novidade a desbloquear evoluindo no app.
-// Lê histórico real de conteúdo, o roteiro/planejamento mais recente já
-// escrito, os arquivos de marca do Drive e a lista de concorrentes
-// informada, e pede pra IA pesquisar os concorrentes na web (tool nativo
-// da Anthropic) antes de sugerir a prévia. Nunca escreve nada sozinha —
-// o resultado só vira um client_docs de verdade se a pessoa clicar em
-// "Salvar como Planejamento" depois de revisar.
+// hoje liberada por PLANO/PAGAMENTO, não mais por nível do Programa de
+// Níveis (decisão do Junior 2026-09-24: quem ainda não assinou de verdade,
+// ou está no plano Solo, só pode ligar em até AI_PLANNING_FREE_QUOTA
+// clientes; Pro/Agência/Enterprise não têm teto específico de IA, só o
+// próprio max_clients do plano). Lê histórico real de conteúdo, o
+// roteiro/planejamento mais recente já escrito, os arquivos de marca do
+// Drive e a lista de concorrentes informada, e pede pra IA pesquisar os
+// concorrentes na web (tool nativo da Anthropic) antes de sugerir a
+// prévia. Nunca escreve nada sozinha — o resultado só vira um client_docs
+// de verdade se a pessoa clicar em "Salvar como Planejamento" depois de
+// revisar.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
-import { computeAgencyPoints, getAgencyLevel, computeAiPlanningQuota } from "./agency-level";
 
-// Índice de "Prata I" em AGENCY_TIER_NAMES/THRESHOLDS (agency-level.ts):
-// Bronze ocupa os índices 0-2, Prata começa no 3. Combinado com o Junior:
-// essa função é a primeira "novidade" travada por nível do app.
-const MIN_LEVEL_INDEX_FOR_AI_PLANNING = 3;
+/** Quantos clientes podem ter a IA de planejamento ativada quando a
+ * agência ainda não tem assinatura registrada no Asaas (teste grátis) OU
+ * está no plano Solo mesmo já pagando — o mesmo teto pros dois casos, de
+ * propósito: pagar o Solo não dá bônus de IA sobre o teste, só o Pro tira
+ * o teto. */
+export const AI_PLANNING_FREE_QUOTA = 2;
+
+/** Estado de acesso à IA de planejamento pra uma org — usado tanto pra
+ * decidir se pode ligar em mais um cliente quanto pra validar de novo na
+ * hora de gerar (cobre o caso de downgrade: cliente ficou ligado além da
+ * cota nova). `quota: null` = sem teto específico de IA (Pro+). */
+async function getAiPlanningLimitState(supabase: any, orgId: string): Promise<{
+  limited: boolean; quota: number | null; enabledCount: number; hasSubscription: boolean; planId: string;
+}> {
+  const { data: org } = await supabase.from("orgs").select("plan_id, asaas_subscription_id").eq("id", orgId).maybeSingle();
+  const hasSubscription = !!org?.asaas_subscription_id;
+  const planId = (org?.plan_id as string) ?? "solo";
+  const limited = !hasSubscription || planId === "solo";
+  if (!limited) return { limited: false, quota: null, enabledCount: 0, hasSubscription, planId };
+  const { count } = await supabase.from("clients")
+    .select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("ai_planning_enabled", true);
+  return { limited: true, quota: AI_PLANNING_FREE_QUOTA, enabledCount: count ?? 0, hasSubscription, planId };
+}
+
+function aiPlanningLimitMessage(hasSubscription: boolean): string {
+  return hasSubscription
+    ? `No plano Solo, a IA de planejamento fica disponível pra até ${AI_PLANNING_FREE_QUOTA} clientes. Pra liberar em mais clientes, faça upgrade pro plano Pro em Configurações → Cobrança.`
+    : `Você atingiu o limite de ${AI_PLANNING_FREE_QUOTA} clientes com IA de planejamento do teste grátis. Pra continuar usando, cadastre uma forma de pagamento em Configurações → Cobrança — seu teste de 30 dias continua ativo, a cobrança só começa depois dele.`;
+}
 
 // Formato de casa da Luzeria, exatamente como o Junior manda — a IA deve
 // escrever `captionDraft` já pronto nesse formato, não um resumo genérico.
@@ -221,21 +248,21 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     if (!client) throw new Error("Cliente não encontrado.");
     const c: any = client;
 
-    // Gate em duas camadas — substitui a liberação manual por cliente que
-    // valia só durante o teste na Luzeria: (1) a AGÊNCIA precisa ter
-    // chegado no nível Prata, (2) dentro da cota que o nível+plano dão,
-    // esse CLIENTE específico precisa estar marcado (setClientAiPlanningEnabled,
-    // escolhido pela própria agência na Ficha do Cliente). Fail-closed: se
-    // não der pra calcular o nível por qualquer motivo, fica bloqueado.
-    const { fetchAgencyLevelInputs, LUZERIA_ORG_ID } = await import("./api.functions");
+    // Gate em duas camadas: (1) esse CLIENTE específico precisa estar
+    // marcado (setClientAiPlanningEnabled, escolhido pela própria agência
+    // na Ficha do Cliente — já passou pela cota na hora de ligar); (2)
+    // revalida a cota de novo aqui, cobrindo o caso de downgrade (a
+    // agência tinha Pro, ligou em vários clientes, caiu pro Solo ou perdeu
+    // a assinatura — os clientes continuam com o flag ligado até alguém
+    // desativar, mas a geração para até a contagem voltar a caber).
+    const { LUZERIA_ORG_ID } = await import("./api.functions");
     if (context.orgId !== LUZERIA_ORG_ID) {
-      const levelInputs = await fetchAgencyLevelInputs(context.supabase, context.orgId);
-      const level = getAgencyLevel(computeAgencyPoints(levelInputs));
-      if (level.index < MIN_LEVEL_INDEX_FOR_AI_PLANNING) {
-        throw new Error(`Essa novidade é liberada a partir do nível Prata — sua agência está em ${level.label}. Continue usando o Modo Criador pra subir de nível.`);
-      }
       if (!c.ai_planning_enabled) {
-        throw new Error("Esse cliente ainda não foi ativado pra IA de planejamento — ative na Ficha do Cliente (dentro da cota do seu nível).");
+        throw new Error("Esse cliente ainda não foi ativado pra IA de planejamento — ative na Ficha do Cliente.");
+      }
+      const st = await getAiPlanningLimitState(context.supabase, context.orgId);
+      if (st.limited && st.enabledCount > st.quota!) {
+        throw new Error(`Sua agência tem mais clientes com IA de planejamento ativada do que o plano atual permite. Desative em algum cliente ou faça upgrade em Configurações → Cobrança pra continuar gerando.`);
       }
     }
 
@@ -488,12 +515,13 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
   });
 
 /** Liga/desliga a IA de planejamento pra UM cliente específico — a própria
- * agência escolhe quais clientes usam sua cota (computeAiPlanningQuota,
- * agency-level.ts), em vez de um número fixo/automático. Só valida a cota
- * ao LIGAR (desligar sempre é permitido); se o nível cair depois e a
- * agência ficar acima da cota, os clientes já ativados continuam
- * funcionando até alguém desativar manualmente — evita um "desliga sozinho
- * no meio da noite" surpreendente. */
+ * agência escolhe quais clientes usam sua cota (getAiPlanningLimitState
+ * acima), em vez de um número fixo/automático. Só valida a cota ao LIGAR
+ * (desligar sempre é permitido); se o plano cair depois e a agência ficar
+ * acima da cota, os clientes já ativados continuam funcionando até alguém
+ * desativar manualmente — evita um "desliga sozinho no meio da noite"
+ * surpreendente (generateMonthlyPlanPreview é quem revalida na hora de
+ * gerar de verdade). */
 export const setClientAiPlanningEnabled = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string; enabled: boolean }) =>
@@ -502,21 +530,11 @@ export const setClientAiPlanningEnabled = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
 
-    const { fetchAgencyLevelInputs, LUZERIA_ORG_ID } = await import("./api.functions");
+    const { LUZERIA_ORG_ID } = await import("./api.functions");
     if (data.enabled && context.orgId !== LUZERIA_ORG_ID) {
-      const levelInputs = await fetchAgencyLevelInputs(context.supabase, context.orgId);
-      const level = getAgencyLevel(computeAgencyPoints(levelInputs));
-      const quota = computeAiPlanningQuota(level, levelInputs.planMaxClients);
-      if (quota <= 0) {
-        throw new Error(`Essa novidade é liberada a partir do nível Prata — sua agência está em ${level.label}.`);
-      }
-      const { count } = await (context.supabase as any)
-        .from("clients")
-        .select("id", { count: "exact", head: true })
-        .eq("org_id", context.orgId)
-        .eq("ai_planning_enabled", true);
-      if ((count ?? 0) >= quota) {
-        throw new Error(`Sua agência já usou toda a cota de ${quota} cliente(s) liberado(s) no nível ${level.label}. Desative em outro cliente primeiro, ou suba de nível.`);
+      const st = await getAiPlanningLimitState(context.supabase, context.orgId);
+      if (st.limited && st.enabledCount >= st.quota!) {
+        throw new Error(aiPlanningLimitMessage(st.hasSubscription));
       }
     }
 

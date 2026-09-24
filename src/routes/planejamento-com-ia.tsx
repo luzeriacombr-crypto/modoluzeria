@@ -1,8 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Sparkles, FileText, MessageSquareText, PenLine, CheckCircle2, Star, Lock } from "lucide-react";
+import { Sparkles, FileText, MessageSquareText, PenLine, CheckCircle2, Wallet, Lock } from "lucide-react";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 import { LIME, BG_BLUE, BG_GRAY, Reveal } from "@/components/luzeria/salesPageBlocks";
-import { TIER_COLOR, TIER_ICON } from "@/components/luzeria/AgencyLevelIcons";
 import { ConstellationBackground } from "@/components/luzeria/ConstellationBackground";
 
 export const Route = createFileRoute("/planejamento-com-ia")({
@@ -10,7 +9,7 @@ export const Route = createFileRoute("/planejamento-com-ia")({
   head: () => ({
     meta: [
       { title: "Prévia de Planejamento com IA — Modo Criador" },
-      { name: "description", content: "A novidade que lê o histórico do seu cliente e monta uma prévia completa do próximo mês — liberada a partir do nível Prata." },
+      { name: "description", content: "A novidade que lê o histórico do seu cliente e monta uma prévia completa do próximo mês — teste grátis em até 2 clientes, sem limite no plano Pro." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -69,8 +68,6 @@ const ACCESS_STEPS = [
 ];
 
 function PlanejamentoComIaPage() {
-  const prataColor = TIER_COLOR["Prata"];
-  const PrataIcon = TIER_ICON["Prata"];
   return (
     <div className="min-h-screen text-white" style={{ background: BG_BLUE, fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       <header className="flex items-center justify-between px-5 sm:px-10 py-5 border-b border-white/10">
@@ -198,23 +195,24 @@ Se ficou com dúvida, comenta aqui que a gente explica 🧴`}
 
       <section className="px-5 sm:px-10 max-w-[720px] mx-auto pb-16">
         <div className="rounded-3xl border p-7 sm:p-9 text-center" style={{ background: `linear-gradient(180deg, ${BG_GRAY}, ${BG_BLUE})`, borderColor: "rgba(255,255,255,0.14)" }}>
-          <div className="w-[64px] h-[64px] rounded-[18px] flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: `color-mix(in srgb, ${prataColor} 20%, transparent)`, color: prataColor }}>
-            <PrataIcon size={32} />
+          <div className="w-[64px] h-[64px] rounded-[18px] flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: "rgba(215,255,63,0.15)", color: LIME }}>
+            <Wallet size={30} />
           </div>
-          <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: prataColor }}>
-            <Lock size={11} /> Exclusiva a partir do nível Prata
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: LIME }}>
+            <Lock size={11} /> Liberada por plano
           </div>
-          <h2 className="font-criador-serif normal-case text-2xl sm:text-3xl mb-3">Essa novidade se desbloqueia com o uso</h2>
+          <h2 className="font-criador-serif normal-case text-2xl sm:text-3xl mb-3">Teste em 2 clientes, sem limite no Pro</h2>
           <p className="text-white/50 text-[13.5px] max-w-md mx-auto leading-relaxed mb-6">
-            A Prévia de Planejamento com IA é a primeira função exclusiva do Programa de Níveis. Toda agência que chega em{" "}
-            <b className="text-white">Prata I</b> desbloqueia pra todos os clientes, automaticamente — sem pedir liberação pra ninguém.
+            No teste grátis ou no plano Solo, dá pra ativar a IA de planejamento em até <b className="text-white">2 clientes</b>, pra experimentar
+            de verdade. No plano <b className="text-white">Pro</b> ou superior, não tem limite — ativa em quantos clientes quiser.
           </p>
           <Link
-            to="/programa-de-niveis"
+            to="/configuracoes"
+            search={{ tab: "cobranca" } as any}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-black transition hover:opacity-90"
             style={{ background: LIME, color: BG_BLUE }}
           >
-            <Star size={14} /> Ver meu nível e como subir
+            <Wallet size={14} /> Ver plano e cobrança
           </Link>
         </div>
       </section>
