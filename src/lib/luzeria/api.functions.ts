@@ -515,7 +515,7 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
 
     const { data: orgs, error } = await context.supabase
       .from("orgs")
-      .select("id, name, slug, plan_id, subscription_status, trial_ends_at, asaas_subscription_id, created_at, tax_id, whatsapp, is_reseller, reseller_org_id")
+      .select("id, name, slug, plan_id, subscription_status, trial_ends_at, asaas_subscription_id, created_at, tax_id, whatsapp, is_reseller, reseller_org_id, max_collaborators_override")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const resellerNameById = new Map((orgs ?? []).map((o: any) => [o.id, o.name as string]));
@@ -645,8 +645,10 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         createdAt: o.created_at as string,
         taxId: o.tax_id as string | null,
         whatsapp: o.whatsapp as string | null,
+        ownerId: owner?.id ?? null,
         ownerName: owner?.name ?? null,
         ownerEmail: owner?.email ?? null,
+        maxCollaboratorsOverride: (o.max_collaborators_override as number | null) ?? null,
         isReseller: !!o.is_reseller,
         resellerOrgId: o.reseller_org_id as string | null,
         resellerOrgName: o.reseller_org_id ? (resellerNameById.get(o.reseller_org_id) ?? null) : null,
@@ -830,6 +832,84 @@ export const updateOrgWhatsapp = createServerFn({ method: "POST" })
     const { error } = await context.supabase
       .from("orgs").update({ whatsapp: data.whatsapp || null }).eq("id", data.orgId);
     if (error) throw new Error(error.message);
+  });
+
+/** Platform-admin only: muda o plano de uma agência (ex.: acordo especial
+ * fora dos planos padrão) e, opcionalmente, dá a ela um limite de
+ * colaboradores diferente do plano (max_collaborators_override — o mesmo
+ * campo que já existia pra MACRO NEGOCIOS, agora com uma tela pra editar em
+ * vez de precisar de uma migration a cada vez). Se a agência já tiver
+ * assinatura de verdade no Asaas, o valor de lá é atualizado junto — senão,
+ * fica só no nosso banco (ela ainda nem paga de verdade). Usa supabaseAdmin
+ * porque RLS só deixa o admin da plataforma mexer na própria org dele, não
+ * na de terceiros. */
+export const adminUpdateOrgPlan = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { orgId: string; planId: string; maxCollaboratorsOverride?: number | null }) =>
+    z.object({
+      orgId: z.string().uuid(),
+      planId: z.string().min(1),
+      maxCollaboratorsOverride: z.number().int().min(1).max(999).nullable().optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: plan } = await supabaseAdmin.from("plans").select("id, price_cents").eq("id", data.planId).maybeSingle();
+    if (!plan) throw new Error("Plano não encontrado.");
+
+    const { data: org } = await supabaseAdmin.from("orgs").select("asaas_subscription_id").eq("id", data.orgId).maybeSingle();
+    if (!org) throw new Error("Agência não encontrada.");
+
+    const { error } = await supabaseAdmin.from("orgs")
+      .update({ plan_id: data.planId, max_collaborators_override: data.maxCollaboratorsOverride ?? null })
+      .eq("id", data.orgId);
+    if (error) throw new Error(error.message);
+
+    let asaasSynced = false;
+    if ((org as any).asaas_subscription_id && plan.price_cents != null) {
+      const { updateAsaasSubscriptionValue } = await import("./asaas.server");
+      await updateAsaasSubscriptionValue((org as any).asaas_subscription_id, plan.price_cents);
+      asaasSynced = true;
+    }
+    return { ok: true, asaasSynced };
+  });
+
+/** Platform-admin only: corrige o e-mail de login do responsável de uma
+ * agência (ex.: erro de digitação no cadastro). Precisa trocar em três
+ * lugares em conjunto — auth.users (login de verdade), profiles (usado no
+ * resto do app) e email_role_assignments (usado se a pessoa precisar
+ * receber um convite de novo) — senão a pessoa fica sem conseguir entrar
+ * com nenhum dos dois e-mails. */
+export const adminUpdateOrgOwnerEmail = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { profileId: string; orgId: string; newEmail: string }) =>
+    z.object({
+      profileId: z.string().uuid(),
+      orgId: z.string().uuid(),
+      newEmail: z.string().trim().toLowerCase().email(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: profile } = await supabaseAdmin.from("profiles").select("id, email, org_id").eq("id", data.profileId).maybeSingle();
+    if (!profile || (profile as any).org_id !== data.orgId) throw new Error("Perfil não encontrado nessa agência.");
+
+    const { data: conflict } = await supabaseAdmin.from("profiles").select("id").eq("email", data.newEmail).maybeSingle();
+    if (conflict && (conflict as any).id !== data.profileId) throw new Error("Já existe uma conta com esse e-mail.");
+
+    const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(data.profileId, { email: data.newEmail, email_confirm: true });
+    if (authErr) throw new Error(authErr.message);
+
+    const { error: profErr } = await supabaseAdmin.from("profiles").update({ email: data.newEmail }).eq("id", data.profileId);
+    if (profErr) throw new Error(profErr.message);
+
+    const oldEmail = (profile as any).email;
+    if (oldEmail) {
+      await supabaseAdmin.from("email_role_assignments").update({ email: data.newEmail }).eq("org_id", data.orgId).eq("email", oldEmail);
+    }
+    return { ok: true };
   });
 
 /** Platform-admin only: fetches an org's next pending Asaas invoice on

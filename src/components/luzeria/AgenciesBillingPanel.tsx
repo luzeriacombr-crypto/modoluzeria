@@ -7,7 +7,7 @@ import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, Mes
 import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, orgPageViewsQO, useApi } from "@/lib/luzeria/queries";
 import { computeAgencyPoints, getAgencyLevel } from "@/lib/luzeria/agency-level";
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
-import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
+import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, adminUpdateOrgPlan, adminUpdateOrgOwnerEmail, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { approveReseller, revokeReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { BrazilAgenciesMap } from "@/components/luzeria/BrazilAgenciesMap";
@@ -738,9 +738,15 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
   const [editing, setEditing] = useState(false);
   const [whatsapp, setWhatsapp] = useState(org.whatsapp ?? "");
   const [editingTemplate, setEditingTemplate] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailDraft, setEmailDraft] = useState(org.ownerEmail ?? "");
+  const [editingPlan, setEditingPlan] = useState(false);
+  const [planDraft, setPlanDraft] = useState(org.planId);
+  const [collabDraft, setCollabDraft] = useState(org.maxCollaboratorsOverride != null ? String(org.maxCollaboratorsOverride) : "");
 
   const { data: customTemplate } = useQuery(agencyWelcomeMessageQO());
   const [templateDraft, setTemplateDraft] = useState(customTemplate ?? DEFAULT_WELCOME_TEMPLATE);
+  const { data: plans = [] } = useQuery(plansQO());
 
   const saveWhatsapp = useMutation({
     mutationFn: useServerFn(updateOrgWhatsapp),
@@ -750,6 +756,31 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
       toast.success("WhatsApp atualizado.");
     },
     onError: (e: any) => toastFriendlyError(e, "Erro ao salvar."),
+  });
+
+  // Fecha o modal ao salvar (em vez de só voltar pro modo leitura) porque
+  // `org` é um retrato do momento em que o modal abriu, não ligado à
+  // consulta ao vivo — igual já acontece com "Remover como revendedora"
+  // aqui do lado. Fechando, a tabela por trás (essa sim ligada à consulta)
+  // já mostra o valor novo assim que reabrir.
+  const saveEmail = useMutation({
+    mutationFn: useServerFn(adminUpdateOrgOwnerEmail),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orgs-billing"] });
+      toast.success("E-mail atualizado.");
+      onClose();
+    },
+    onError: (e: any) => toastFriendlyError(e, "Erro ao salvar e-mail."),
+  });
+
+  const savePlan = useMutation({
+    mutationFn: useServerFn(adminUpdateOrgPlan),
+    onSuccess: (r: any) => {
+      queryClient.invalidateQueries({ queryKey: ["orgs-billing"] });
+      toast.success(r?.asaasSynced ? "Plano atualizado — Asaas sincronizado também." : "Plano atualizado.");
+      onClose();
+    },
+    onError: (e: any) => toastFriendlyError(e, "Erro ao salvar plano."),
   });
 
   function openTemplateEditor() {
@@ -825,18 +856,101 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
               <p className="text-foreground">{org.ownerName}</p>
             </div>
           )}
-          {org.ownerEmail && (
-            <div className="flex items-center gap-2 text-foreground/80">
-              <Mail size={13} className="text-foreground/40 shrink-0" />
-              <a href={`mailto:${org.ownerEmail}`} className="hover:text-foreground transition truncate">{org.ownerEmail}</a>
+          <div>
+            <div className="flex items-center justify-between mb-0.5">
+              <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider">E-mail</p>
+              {!editingEmail && org.ownerId && (
+                <button onClick={() => { setEmailDraft(org.ownerEmail ?? ""); setEditingEmail(true); }} className="text-foreground/40 hover:text-foreground transition">
+                  <Pencil size={12} />
+                </button>
+              )}
             </div>
-          )}
+            {editingEmail ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="email"
+                  value={emailDraft}
+                  onChange={(e) => setEmailDraft(e.target.value)}
+                  autoFocus
+                  placeholder="novo@email.com"
+                  className="flex-1 px-3 py-2 bg-foreground/[0.08] border border-foreground/15 rounded-lg text-foreground text-sm placeholder:text-foreground/30 focus:outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition"
+                />
+                <button
+                  onClick={() => saveEmail.mutate({ data: { profileId: org.ownerId, orgId: org.id, newEmail: emailDraft.trim() } })}
+                  disabled={saveEmail.isPending || !emailDraft.trim()}
+                  className="p-2 rounded-lg text-black disabled:opacity-50"
+                  style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+                >
+                  {saveEmail.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                </button>
+                <button onClick={() => setEditingEmail(false)} className="text-foreground/40 hover:text-foreground p-2"><X size={14} /></button>
+              </div>
+            ) : org.ownerEmail ? (
+              <div className="flex items-center gap-2 text-foreground/80">
+                <Mail size={13} className="text-foreground/40 shrink-0" />
+                <a href={`mailto:${org.ownerEmail}`} className="hover:text-foreground transition truncate">{org.ownerEmail}</a>
+              </div>
+            ) : (
+              <p className="text-foreground/30 text-[13px]">Sem e-mail.</p>
+            )}
+          </div>
           {org.taxId && (
             <div>
               <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider mb-0.5">CNPJ/CPF</p>
               <p className="text-foreground/80">{org.taxId}</p>
             </div>
           )}
+
+          <div>
+            <div className="flex items-center justify-between mb-0.5">
+              <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider">Plano</p>
+              {!editingPlan && (
+                <button
+                  onClick={() => { setPlanDraft(org.planId); setCollabDraft(org.maxCollaboratorsOverride != null ? String(org.maxCollaboratorsOverride) : ""); setEditingPlan(true); }}
+                  className="text-foreground/40 hover:text-foreground transition"
+                ><Pencil size={12} /></button>
+              )}
+            </div>
+            {editingPlan ? (
+              <div className="space-y-2">
+                <select
+                  value={planDraft} onChange={(e) => setPlanDraft(e.target.value)}
+                  className="w-full px-3 py-2 bg-foreground/[0.08] border border-foreground/15 rounded-lg text-foreground text-sm focus:outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition"
+                >
+                  {plans.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.priceCents != null ? formatCents(p.priceCents) : "sob consulta"}</option>)}
+                </select>
+                <input
+                  type="number" min={1} value={collabDraft} onChange={(e) => setCollabDraft(e.target.value)}
+                  placeholder={`Colaboradores (padrão do plano: ${plans.find((p) => p.id === planDraft)?.maxCollaborators ?? "ilimitado"})`}
+                  className="w-full px-3 py-2 bg-foreground/[0.08] border border-foreground/15 rounded-lg text-foreground text-sm placeholder:text-foreground/30 focus:outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition"
+                />
+                <p className="text-[10.5px] text-foreground/35">Deixe em branco pra usar o limite padrão do plano escolhido.</p>
+                {org.hasAsaasSubscription ? (
+                  <p className="text-[10.5px]" style={{ color: "var(--lz-accent-ink)" }}>Essa agência já tem assinatura no Asaas — o valor de lá também será atualizado.</p>
+                ) : (
+                  <p className="text-[10.5px] text-foreground/35">Sem assinatura no Asaas ainda — só muda aqui no sistema.</p>
+                )}
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button onClick={() => setEditingPlan(false)} className="text-xs text-foreground/50 hover:text-foreground px-2 py-1.5">Cancelar</button>
+                  <button
+                    onClick={() => savePlan.mutate({ data: { orgId: org.id, planId: planDraft, maxCollaboratorsOverride: collabDraft.trim() ? Number(collabDraft) : null } })}
+                    disabled={savePlan.isPending}
+                    className="text-xs font-bold px-3 py-1.5 rounded-md disabled:opacity-50"
+                    style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+                  >
+                    {savePlan.isPending ? "Salvando…" : "Salvar"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-foreground/80">
+                {org.planName} — {org.priceCents != null ? formatCents(org.priceCents) : "sob consulta"}
+                {org.maxCollaboratorsOverride != null && (
+                  <span className="block text-[11px] mt-0.5" style={{ color: "var(--lz-accent-ink)" }}>Limite especial: até {org.maxCollaboratorsOverride} colaboradores</span>
+                )}
+              </p>
+            )}
+          </div>
 
           <div>
             <div className="flex items-center justify-between mb-0.5">
