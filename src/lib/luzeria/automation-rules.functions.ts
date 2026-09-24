@@ -9,7 +9,7 @@ async function ensureMaster(context: any) {
 
 export const TRIGGER_TYPES = [
   "on_create", "status_change", "deadline_days_before", "deadline_overdue",
-  "stale_days", "feed_approved", "feed_feedback", "file_attached",
+  "stale_days", "feed_approved", "item_approved", "feed_feedback", "file_attached",
   "ig_publish_failed", "roteiro_approved", "roteiro_adjust",
   "photo_selection_done", "contract_signed",
   "client_no_post_days", "payment_days_before", "payment_overdue",

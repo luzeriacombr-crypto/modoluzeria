@@ -20,6 +20,7 @@ const TRIGGER_LABEL: Record<TriggerType, string> = {
   deadline_overdue: "Quando o prazo vencer",
   stale_days: "Quando ficar parado N dias",
   feed_approved: "Quando o cliente aprovar o feed",
+  item_approved: "Quando o cliente aprovar um post específico",
   feed_feedback: "Quando o cliente pedir ajuste no feed",
   file_attached: "Quando anexarem um arquivo",
   ig_publish_failed: "Quando a publicação no Instagram falhar",
@@ -33,7 +34,7 @@ const TRIGGER_LABEL: Record<TriggerType, string> = {
 };
 
 const TRIGGER_GROUPS: { label: string; items: TriggerType[] }[] = [
-  { label: "No conteúdo", items: ["on_create", "status_change", "feed_approved", "feed_feedback", "file_attached", "ig_publish_failed"] },
+  { label: "No conteúdo", items: ["on_create", "status_change", "feed_approved", "item_approved", "feed_feedback", "file_attached", "ig_publish_failed"] },
   { label: "Prazos e paradas", items: ["deadline_days_before", "deadline_overdue", "stale_days"] },
   { label: "No cliente", items: ["roteiro_approved", "roteiro_adjust", "photo_selection_done", "contract_signed", "client_no_post_days"] },
   { label: "Cobrança", items: ["payment_days_before", "payment_overdue"] },
@@ -69,6 +70,7 @@ function describeTrigger(rule: AutomationRule): ReactNode {
     case "deadline_overdue": return <>Quando o prazo <strong>vencer</strong></>;
     case "stale_days": return <>Quando ficar <strong>{rule.triggerDays} dia(s)</strong> parado {rule.triggerStatus ? <>em <strong style={{ color: getStatusMeta(rule.triggerStatus as Status).color }}>{getStatusMeta(rule.triggerStatus as Status).label}</strong></> : "no mesmo status"}</>;
     case "feed_approved": return <>Quando o cliente <strong>aprovar o feed</strong></>;
+    case "item_approved": return <>Quando o cliente <strong>aprovar um post</strong> específico</>;
     case "feed_feedback": return <>Quando o cliente <strong>pedir ajuste</strong> num post</>;
     case "file_attached": return <>Quando <strong>anexarem um arquivo</strong></>;
     case "ig_publish_failed": return <>Quando a publicação no <strong>Instagram falhar</strong></>;
