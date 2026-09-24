@@ -181,6 +181,151 @@ export type Database = {
           },
         ]
       }
+      agency_referrals: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          referral_code_used: string
+          referred_org_id: string
+          referrer_org_id: string
+          status: string
+          validated_at: string | null
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code_used: string
+          referred_org_id: string
+          referrer_org_id: string
+          status?: string
+          validated_at?: string | null
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code_used?: string
+          referred_org_id?: string
+          referrer_org_id?: string
+          status?: string
+          validated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_referrals_referred_org_id_fkey"
+            columns: ["referred_org_id"]
+            isOneToOne: true
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_referrals_referrer_org_id_fkey"
+            columns: ["referrer_org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agency_stories_schedule: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string
+          done_at: string | null
+          id: string
+          org_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date: string
+          done_at?: string | null
+          id?: string
+          org_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          done_at?: string | null
+          id?: string
+          org_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_stories_schedule_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_stories_schedule_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_planning_feedback: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          org_id: string
+          rating: number
+          reason: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id: string
+          rating: number
+          reason?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id?: string
+          rating?: number
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_planning_feedback_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_planning_feedback_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_planning_feedback_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           key: string
@@ -223,44 +368,190 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_email_queue: {
+        Row: {
+          attempts: number
+          body: string
+          created_at: string
+          error: string | null
+          from_name: string | null
+          id: string
+          org_id: string
+          rule_id: string | null
+          sent_at: string | null
+          subject: string
+          to_email: string
+        }
+        Insert: {
+          attempts?: number
+          body: string
+          created_at?: string
+          error?: string | null
+          from_name?: string | null
+          id?: string
+          org_id: string
+          rule_id?: string | null
+          sent_at?: string | null
+          subject: string
+          to_email: string
+        }
+        Update: {
+          attempts?: number
+          body?: string
+          created_at?: string
+          error?: string | null
+          from_name?: string | null
+          id?: string
+          org_id?: string
+          rule_id?: string | null
+          sent_at?: string | null
+          subject?: string
+          to_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_email_queue_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_rule_fires: {
+        Row: {
+          fired_on: string
+          id: string
+          item_id: string
+          rule_id: string
+        }
+        Insert: {
+          fired_on?: string
+          id?: string
+          item_id: string
+          rule_id: string
+        }
+        Update: {
+          fired_on?: string
+          id?: string
+          item_id?: string
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rule_fires_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_rule_fires_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_rule_log: {
+        Row: {
+          client_id: string | null
+          fired_at: string
+          id: string
+          item_id: string | null
+          org_id: string
+          rule_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          fired_at?: string
+          id?: string
+          item_id?: string | null
+          org_id: string
+          rule_id: string
+        }
+        Update: {
+          client_id?: string | null
+          fired_at?: string
+          id?: string
+          item_id?: string | null
+          org_id?: string
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rule_log_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_rules: {
         Row: {
+          action_audience: string | null
+          action_message: string | null
           action_status: string | null
+          action_subject: string | null
           action_type: string
           action_user_id: string | null
           active: boolean
           created_at: string
           created_by: string | null
+          filter_client_id: string | null
+          filter_content_type: string | null
           id: string
-          on_create: boolean
           org_id: string
+          trigger_days: number | null
           trigger_status: string | null
+          trigger_type: string
         }
         Insert: {
+          action_audience?: string | null
+          action_message?: string | null
           action_status?: string | null
+          action_subject?: string | null
           action_type: string
           action_user_id?: string | null
           active?: boolean
           created_at?: string
           created_by?: string | null
+          filter_client_id?: string | null
+          filter_content_type?: string | null
           id?: string
-          on_create?: boolean
           org_id: string
+          trigger_days?: number | null
           trigger_status?: string | null
+          trigger_type: string
         }
         Update: {
+          action_audience?: string | null
+          action_message?: string | null
           action_status?: string | null
+          action_subject?: string | null
           action_type?: string
           action_user_id?: string | null
           active?: boolean
           created_at?: string
           created_by?: string | null
+          filter_client_id?: string | null
+          filter_content_type?: string | null
           id?: string
-          on_create?: boolean
           org_id?: string
+          trigger_days?: number | null
           trigger_status?: string | null
+          trigger_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "automation_rules_filter_client_id_fkey"
+            columns: ["filter_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "automation_rules_org_id_fkey"
             columns: ["org_id"]
@@ -328,6 +619,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          kind: string
           message: string
           org_id: string
           page_url: string | null
@@ -339,6 +631,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          kind?: string
           message: string
           org_id: string
           page_url?: string | null
@@ -350,6 +643,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          kind?: string
           message?: string
           org_id?: string
           page_url?: string | null
@@ -445,6 +739,57 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "cargos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_flow_entries: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          created_by: string | null
+          direction: string
+          id: string
+          kind: string
+          label: string
+          month_key: string | null
+          org_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          created_by?: string | null
+          direction: string
+          id?: string
+          kind: string
+          label: string
+          month_key?: string | null
+          org_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          id?: string
+          kind?: string
+          label?: string
+          month_key?: string | null
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_flow_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_flow_entries_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "orgs"
@@ -645,6 +990,105 @@ export type Database = {
           },
         ]
       }
+      client_brand_assets: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          drive_file_id: string
+          icon_url: string | null
+          id: string
+          mime_type: string | null
+          name: string
+          org_id: string
+          size_bytes: number | null
+          thumbnail_url: string | null
+          web_view_url: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          drive_file_id: string
+          icon_url?: string | null
+          id?: string
+          mime_type?: string | null
+          name: string
+          org_id: string
+          size_bytes?: number | null
+          thumbnail_url?: string | null
+          web_view_url?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          drive_file_id?: string
+          icon_url?: string | null
+          id?: string
+          mime_type?: string | null
+          name?: string
+          org_id?: string
+          size_bytes?: number | null
+          thumbnail_url?: string | null
+          web_view_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_brand_assets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_brand_assets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_brand_assets_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          org_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          org_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_categories_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_contacts: {
         Row: {
           client_id: string
@@ -689,6 +1133,140 @@ export type Database = {
           },
         ]
       }
+      client_contract_requests: {
+        Row: {
+          client_id: string
+          contract_text: string
+          created_at: string
+          created_by: string | null
+          id: string
+          org_id: string
+          signature_data_url: string | null
+          signed_at: string | null
+          signer_cpf: string | null
+          signer_name: string | null
+          status: string
+          token: string
+        }
+        Insert: {
+          client_id: string
+          contract_text: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id: string
+          signature_data_url?: string | null
+          signed_at?: string | null
+          signer_cpf?: string | null
+          signer_name?: string | null
+          status?: string
+          token: string
+        }
+        Update: {
+          client_id?: string
+          contract_text?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id?: string
+          signature_data_url?: string | null
+          signed_at?: string | null
+          signer_cpf?: string | null
+          signer_name?: string | null
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contract_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contract_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contract_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_contracts: {
+        Row: {
+          client_id: string
+          created_at: string
+          drive_file_id: string
+          file_name: string
+          icon_url: string | null
+          id: string
+          mime_type: string | null
+          org_id: string
+          size_bytes: number | null
+          thumbnail_url: string | null
+          uploaded_by: string | null
+          web_view_url: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          drive_file_id: string
+          file_name: string
+          icon_url?: string | null
+          id?: string
+          mime_type?: string | null
+          org_id: string
+          size_bytes?: number | null
+          thumbnail_url?: string | null
+          uploaded_by?: string | null
+          web_view_url?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          drive_file_id?: string
+          file_name?: string
+          icon_url?: string | null
+          id?: string
+          mime_type?: string | null
+          org_id?: string
+          size_bytes?: number | null
+          thumbnail_url?: string | null
+          uploaded_by?: string | null
+          web_view_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_doc_roteiro_status: {
         Row: {
           adjust_note: string | null
@@ -696,10 +1274,13 @@ export type Database = {
           client_responded_at: string | null
           client_status: string
           content_item_id: string | null
+          content_type: string
           doc_id: string
           gravado: boolean
           id: string
           org_id: string
+          post_format: string | null
+          publish_caption: string | null
           roteiro_title: string
           status: string
           updated_at: string
@@ -711,10 +1292,13 @@ export type Database = {
           client_responded_at?: string | null
           client_status?: string
           content_item_id?: string | null
+          content_type?: string
           doc_id: string
           gravado?: boolean
           id?: string
           org_id: string
+          post_format?: string | null
+          publish_caption?: string | null
           roteiro_title: string
           status?: string
           updated_at?: string
@@ -726,10 +1310,13 @@ export type Database = {
           client_responded_at?: string | null
           client_status?: string
           content_item_id?: string | null
+          content_type?: string
           doc_id?: string
           gravado?: boolean
           id?: string
           org_id?: string
+          post_format?: string | null
+          publish_caption?: string | null
           roteiro_title?: string
           status?: string
           updated_at?: string
@@ -767,6 +1354,8 @@ export type Database = {
           created_by: string | null
           id: string
           org_id: string
+          plan_items: Json | null
+          target_month_key: string | null
           title: string | null
           type: string
           updated_at: string
@@ -778,6 +1367,8 @@ export type Database = {
           created_by?: string | null
           id?: string
           org_id: string
+          plan_items?: Json | null
+          target_month_key?: string | null
           title?: string | null
           type: string
           updated_at?: string
@@ -789,6 +1380,8 @@ export type Database = {
           created_by?: string | null
           id?: string
           org_id?: string
+          plan_items?: Json | null
+          target_month_key?: string | null
           title?: string | null
           type?: string
           updated_at?: string
@@ -806,6 +1399,41 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_docs_share_tokens: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          revoked_at?: string | null
+          token: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_docs_share_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -851,6 +1479,7 @@ export type Database = {
           created_at: string
           id: string
           item_id: string
+          kind: string
           share_token: string | null
           text: string
         }
@@ -859,6 +1488,7 @@ export type Database = {
           created_at?: string
           id?: string
           item_id: string
+          kind?: string
           share_token?: string | null
           text: string
         }
@@ -867,6 +1497,7 @@ export type Database = {
           created_at?: string
           id?: string
           item_id?: string
+          kind?: string
           share_token?: string | null
           text?: string
         }
@@ -888,6 +1519,7 @@ export type Database = {
           connected_by: string | null
           ig_username: string | null
           instagram_business_account_id: string
+          token_expires_at: string | null
         }
         Insert: {
           access_token: string
@@ -896,6 +1528,7 @@ export type Database = {
           connected_by?: string | null
           ig_username?: string | null
           instagram_business_account_id: string
+          token_expires_at?: string | null
         }
         Update: {
           access_token?: string
@@ -904,6 +1537,7 @@ export type Database = {
           connected_by?: string | null
           ig_username?: string | null
           instagram_business_account_id?: string
+          token_expires_at?: string | null
         }
         Relationships: [
           {
@@ -1231,12 +1865,130 @@ export type Database = {
           },
         ]
       }
+      client_templates: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          default_assignee_id: string | null
+          id: string
+          org_id: string
+          posts_count: number
+          reels_count: number
+          updated_at: string
+          welcome_message: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by?: string | null
+          default_assignee_id?: string | null
+          id?: string
+          org_id: string
+          posts_count?: number
+          reels_count?: number
+          updated_at?: string
+          welcome_message?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          default_assignee_id?: string | null
+          id?: string
+          org_id?: string
+          posts_count?: number
+          reels_count?: number
+          updated_at?: string
+          welcome_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_templates_default_assignee_id_fkey"
+            columns: ["default_assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_templates_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_tiktok_credentials: {
+        Row: {
+          access_token: string
+          access_token_expires_at: string
+          avatar_url: string | null
+          client_id: string
+          connected_at: string
+          connected_by: string | null
+          display_name: string | null
+          open_id: string
+          refresh_token: string
+          refresh_token_expires_at: string
+          scopes: string | null
+        }
+        Insert: {
+          access_token: string
+          access_token_expires_at: string
+          avatar_url?: string | null
+          client_id: string
+          connected_at?: string
+          connected_by?: string | null
+          display_name?: string | null
+          open_id: string
+          refresh_token: string
+          refresh_token_expires_at: string
+          scopes?: string | null
+        }
+        Update: {
+          access_token?: string
+          access_token_expires_at?: string
+          avatar_url?: string | null
+          client_id?: string
+          connected_at?: string
+          connected_by?: string | null
+          display_name?: string | null
+          open_id?: string
+          refresh_token?: string
+          refresh_token_expires_at?: string
+          scopes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_tiktok_credentials_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tiktok_credentials_connected_by_fkey"
+            columns: ["connected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           active_month_id: string | null
+          address: string | null
+          ai_planning_enabled: boolean
           archived: boolean
           category: string
+          cnpj_cpf: string | null
           color: string
+          competitors: string | null
+          content_briefing: string | null
+          contract_end_date: string | null
+          contract_start_date: string | null
           contract_value: number | null
           created_at: string
           current_stage_id: string | null
@@ -1246,6 +1998,8 @@ export type Database = {
           hidden_tabs: string[] | null
           icon: string | null
           id: string
+          legal_responsible_cpf: string | null
+          legal_responsible_name: string | null
           name: string
           niche: string | null
           notes: string | null
@@ -1254,15 +2008,23 @@ export type Database = {
           payment_due_day: number | null
           photo_url: string | null
           posts_per_week: number | null
+          recent_roteiros: string | null
           reels_per_week: number | null
           review_day: string | null
           whatsapp_group_link: string | null
         }
         Insert: {
           active_month_id?: string | null
+          address?: string | null
+          ai_planning_enabled?: boolean
           archived?: boolean
           category?: string
+          cnpj_cpf?: string | null
           color?: string
+          competitors?: string | null
+          content_briefing?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
           contract_value?: number | null
           created_at?: string
           current_stage_id?: string | null
@@ -1272,6 +2034,8 @@ export type Database = {
           hidden_tabs?: string[] | null
           icon?: string | null
           id?: string
+          legal_responsible_cpf?: string | null
+          legal_responsible_name?: string | null
           name: string
           niche?: string | null
           notes?: string | null
@@ -1280,15 +2044,23 @@ export type Database = {
           payment_due_day?: number | null
           photo_url?: string | null
           posts_per_week?: number | null
+          recent_roteiros?: string | null
           reels_per_week?: number | null
           review_day?: string | null
           whatsapp_group_link?: string | null
         }
         Update: {
           active_month_id?: string | null
+          address?: string | null
+          ai_planning_enabled?: boolean
           archived?: boolean
           category?: string
+          cnpj_cpf?: string | null
           color?: string
+          competitors?: string | null
+          content_briefing?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
           contract_value?: number | null
           created_at?: string
           current_stage_id?: string | null
@@ -1298,6 +2070,8 @@ export type Database = {
           hidden_tabs?: string[] | null
           icon?: string | null
           id?: string
+          legal_responsible_cpf?: string | null
+          legal_responsible_name?: string | null
           name?: string
           niche?: string | null
           notes?: string | null
@@ -1306,6 +2080,7 @@ export type Database = {
           payment_due_day?: number | null
           photo_url?: string | null
           posts_per_week?: number | null
+          recent_roteiros?: string | null
           reels_per_week?: number | null
           review_day?: string | null
           whatsapp_group_link?: string | null
@@ -1421,6 +2196,62 @@ export type Database = {
           },
         ]
       }
+      content_item_tiktok: {
+        Row: {
+          allow_comment: boolean
+          allow_duet: boolean
+          allow_stitch: boolean
+          auto_publish: boolean
+          brand_content: boolean
+          brand_organic: boolean
+          item_id: string
+          last_error: string | null
+          last_error_at: string | null
+          privacy_level: string | null
+          publish_id: string | null
+          published_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          allow_comment?: boolean
+          allow_duet?: boolean
+          allow_stitch?: boolean
+          auto_publish?: boolean
+          brand_content?: boolean
+          brand_organic?: boolean
+          item_id: string
+          last_error?: string | null
+          last_error_at?: string | null
+          privacy_level?: string | null
+          publish_id?: string | null
+          published_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allow_comment?: boolean
+          allow_duet?: boolean
+          allow_stitch?: boolean
+          auto_publish?: boolean
+          brand_content?: boolean
+          brand_organic?: boolean
+          item_id?: string
+          last_error?: string | null
+          last_error_at?: string | null
+          privacy_level?: string | null
+          publish_id?: string | null
+          published_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_item_tiktok_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_items: {
         Row: {
           activity_location: string | null
@@ -1444,6 +2275,8 @@ export type Database = {
           idx: number
           ig_auto_publish: boolean
           ig_collaborators: string | null
+          ig_last_error: string | null
+          ig_last_error_at: string | null
           ig_media_id: string | null
           ig_published_at: string | null
           ig_repeat_last_fired_date: string | null
@@ -1459,7 +2292,8 @@ export type Database = {
           rework_count: number
           scheduled_at: string | null
           started_at: string | null
-          status: Database["public"]["Enums"]["content_status"]
+          status: string
+          story_fit: string | null
           title: string
           type: Database["public"]["Enums"]["content_type"]
           updated_at: string
@@ -1486,6 +2320,8 @@ export type Database = {
           idx: number
           ig_auto_publish?: boolean
           ig_collaborators?: string | null
+          ig_last_error?: string | null
+          ig_last_error_at?: string | null
           ig_media_id?: string | null
           ig_published_at?: string | null
           ig_repeat_last_fired_date?: string | null
@@ -1501,7 +2337,8 @@ export type Database = {
           rework_count?: number
           scheduled_at?: string | null
           started_at?: string | null
-          status?: Database["public"]["Enums"]["content_status"]
+          status?: string
+          story_fit?: string | null
           title?: string
           type: Database["public"]["Enums"]["content_type"]
           updated_at?: string
@@ -1528,6 +2365,8 @@ export type Database = {
           idx?: number
           ig_auto_publish?: boolean
           ig_collaborators?: string | null
+          ig_last_error?: string | null
+          ig_last_error_at?: string | null
           ig_media_id?: string | null
           ig_published_at?: string | null
           ig_repeat_last_fired_date?: string | null
@@ -1543,7 +2382,8 @@ export type Database = {
           rework_count?: number
           scheduled_at?: string | null
           started_at?: string | null
-          status?: Database["public"]["Enums"]["content_status"]
+          status?: string
+          story_fit?: string | null
           title?: string
           type?: Database["public"]["Enums"]["content_type"]
           updated_at?: string
@@ -1579,6 +2419,44 @@ export type Database = {
           },
           {
             foreignKeyName: "content_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_statuses: {
+        Row: {
+          created_at: string
+          hidden: boolean
+          id: string
+          key: string
+          label: string
+          org_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          hidden?: boolean
+          id?: string
+          key: string
+          label: string
+          org_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          hidden?: boolean
+          id?: string
+          key?: string
+          label?: string
+          org_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_statuses_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "orgs"
@@ -1887,6 +2765,67 @@ export type Database = {
           },
         ]
       }
+      instagram_connect_requests: {
+        Row: {
+          client_id: string
+          connected_at: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          ig_username: string | null
+          org_id: string
+          status: string
+          token: string
+        }
+        Insert: {
+          client_id: string
+          connected_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          ig_username?: string | null
+          org_id: string
+          status?: string
+          token: string
+        }
+        Update: {
+          client_id?: string
+          connected_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          ig_username?: string | null
+          org_id?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_connect_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instagram_connect_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instagram_connect_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_assignees: {
         Row: {
           created_at: string
@@ -2051,7 +2990,7 @@ export type Database = {
           product: string | null
           responsible_ids: string[]
           source: string | null
-          status: string
+          stage_id: string
           updated_at: string
           value_estimate_cents: number | null
           won_client_id: string | null
@@ -2071,7 +3010,7 @@ export type Database = {
           product?: string | null
           responsible_ids?: string[]
           source?: string | null
-          status?: string
+          stage_id: string
           updated_at?: string
           value_estimate_cents?: number | null
           won_client_id?: string | null
@@ -2091,7 +3030,7 @@ export type Database = {
           product?: string | null
           responsible_ids?: string[]
           source?: string | null
-          status?: string
+          stage_id?: string
           updated_at?: string
           value_estimate_cents?: number | null
           won_client_id?: string | null
@@ -2105,10 +3044,113 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "leads_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "sales_stages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "leads_won_client_id_fkey"
             columns: ["won_client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          org_id: string
+          revoked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          org_id: string
+          revoked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          org_id?: string
+          revoked_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_api_keys_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcp_api_keys_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_audit_log: {
+        Row: {
+          created_at: string
+          id: string
+          key_id: string | null
+          ok: boolean
+          org_id: string
+          summary: string | null
+          tool: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_id?: string | null
+          ok?: boolean
+          org_id: string
+          summary?: string | null
+          tool: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_id?: string | null
+          ok?: boolean
+          org_id?: string
+          summary?: string | null
+          tool?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_audit_log_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "mcp_api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcp_audit_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
             referencedColumns: ["id"]
           },
         ]
@@ -2121,6 +3163,7 @@ export type Database = {
           month_key: string
           outros_goal: number
           posts_goal: number
+          publicacoes_goal: number
           reels_goal: number
           stories_goal: number
           updated_at: string
@@ -2133,6 +3176,7 @@ export type Database = {
           month_key: string
           outros_goal?: number
           posts_goal?: number
+          publicacoes_goal?: number
           reels_goal?: number
           stories_goal?: number
           updated_at?: string
@@ -2145,6 +3189,7 @@ export type Database = {
           month_key?: string
           outros_goal?: number
           posts_goal?: number
+          publicacoes_goal?: number
           reels_goal?: number
           stories_goal?: number
           updated_at?: string
@@ -2338,6 +3383,7 @@ export type Database = {
           read: boolean
           type: string
           user_id: string
+          whatsapp_phone: string | null
         }
         Insert: {
           client_id?: string | null
@@ -2350,6 +3396,7 @@ export type Database = {
           read?: boolean
           type: string
           user_id: string
+          whatsapp_phone?: string | null
         }
         Update: {
           client_id?: string | null
@@ -2362,6 +3409,7 @@ export type Database = {
           read?: boolean
           type?: string
           user_id?: string
+          whatsapp_phone?: string | null
         }
         Relationships: [
           {
@@ -2426,6 +3474,60 @@ export type Database = {
           },
         ]
       }
+      org_content_knowledge: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_name: string | null
+          id: string
+          kind: string
+          mime_type: string | null
+          org_id: string
+          storage_path: string | null
+          text_content: string | null
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          id?: string
+          kind: string
+          mime_type?: string | null
+          org_id: string
+          storage_path?: string | null
+          text_content?: string | null
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          id?: string
+          kind?: string
+          mime_type?: string | null
+          org_id?: string
+          storage_path?: string | null
+          text_content?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_content_knowledge_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_content_knowledge_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_google_credentials: {
         Row: {
           connected_at: string
@@ -2467,33 +3569,51 @@ export type Database = {
       }
       orgs: {
         Row: {
+          activation_nudge_sent_at: string | null
           asaas_customer_id: string | null
           asaas_subscription_id: string | null
           avg_hours_by_type: Json
           border_radius: number
+          canceled_at: string | null
+          cancellation_reason: string | null
           client_limit_grace_until: string | null
+          client_nudge_day2_sent_at: string | null
+          client_nudge_day4_sent_at: string | null
           color_accent_light: string | null
           color_primary: string | null
           color_primary_light: string | null
           color_sidebar: string | null
+          contract_template: string | null
           created_at: string
           dashboard_layout: Json
+          deactivated_at: string | null
+          deactivated_for_inactivity: boolean
+          deactivation_reason: string | null
+          demo_read_only: boolean
           disabled_features: string[]
           favicon_path: string | null
           feed_preview_image_path: string | null
+          finalizados_separate_tab: boolean
+          first_payment_confirmed_at: string | null
           fixed_monthly_cost: number | null
           hero_gradient_from: string | null
           hero_gradient_to: string | null
           hourly_cost: number | null
           id: string
+          inactivity_warning_2d_sent_at: string | null
+          inactivity_warning_5d_sent_at: string | null
           is_reseller: boolean
+          last_seen_level_index: number | null
           logo_path: string | null
           logo_path_light: string | null
           max_collaborators_override: number | null
           members_can_set_editor_format: boolean
+          month_rollover_day: number | null
+          month_rollover_mode: string
           name: string
           nav_labels: Json
           nav_order: Json
+          payment_grace_started_at: string | null
           payment_message_template: string | null
           photo_watermark_density: string
           photo_watermark_mode: string
@@ -2503,9 +3623,13 @@ export type Database = {
           pix_key: string | null
           plan_id: string
           promotion_code_id: string | null
+          referral_code: string | null
+          referral_credit_balance: number
+          referred_by_org_id: string | null
           reseller_org_id: string | null
           setor_permissions: string[]
           slug: string
+          stories_inspirations: Json | null
           subscription_status: string
           tagline: string | null
           tax_id: string | null
@@ -2513,33 +3637,51 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          activation_nudge_sent_at?: string | null
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
           avg_hours_by_type?: Json
           border_radius?: number
+          canceled_at?: string | null
+          cancellation_reason?: string | null
           client_limit_grace_until?: string | null
+          client_nudge_day2_sent_at?: string | null
+          client_nudge_day4_sent_at?: string | null
           color_accent_light?: string | null
           color_primary?: string | null
           color_primary_light?: string | null
           color_sidebar?: string | null
+          contract_template?: string | null
           created_at?: string
           dashboard_layout?: Json
+          deactivated_at?: string | null
+          deactivated_for_inactivity?: boolean
+          deactivation_reason?: string | null
+          demo_read_only?: boolean
           disabled_features?: string[]
           favicon_path?: string | null
           feed_preview_image_path?: string | null
+          finalizados_separate_tab?: boolean
+          first_payment_confirmed_at?: string | null
           fixed_monthly_cost?: number | null
           hero_gradient_from?: string | null
           hero_gradient_to?: string | null
           hourly_cost?: number | null
           id?: string
+          inactivity_warning_2d_sent_at?: string | null
+          inactivity_warning_5d_sent_at?: string | null
           is_reseller?: boolean
+          last_seen_level_index?: number | null
           logo_path?: string | null
           logo_path_light?: string | null
           max_collaborators_override?: number | null
           members_can_set_editor_format?: boolean
+          month_rollover_day?: number | null
+          month_rollover_mode?: string
           name: string
           nav_labels?: Json
           nav_order?: Json
+          payment_grace_started_at?: string | null
           payment_message_template?: string | null
           photo_watermark_density?: string
           photo_watermark_mode?: string
@@ -2549,9 +3691,13 @@ export type Database = {
           pix_key?: string | null
           plan_id?: string
           promotion_code_id?: string | null
+          referral_code?: string | null
+          referral_credit_balance?: number
+          referred_by_org_id?: string | null
           reseller_org_id?: string | null
           setor_permissions?: string[]
           slug: string
+          stories_inspirations?: Json | null
           subscription_status?: string
           tagline?: string | null
           tax_id?: string | null
@@ -2559,33 +3705,51 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          activation_nudge_sent_at?: string | null
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
           avg_hours_by_type?: Json
           border_radius?: number
+          canceled_at?: string | null
+          cancellation_reason?: string | null
           client_limit_grace_until?: string | null
+          client_nudge_day2_sent_at?: string | null
+          client_nudge_day4_sent_at?: string | null
           color_accent_light?: string | null
           color_primary?: string | null
           color_primary_light?: string | null
           color_sidebar?: string | null
+          contract_template?: string | null
           created_at?: string
           dashboard_layout?: Json
+          deactivated_at?: string | null
+          deactivated_for_inactivity?: boolean
+          deactivation_reason?: string | null
+          demo_read_only?: boolean
           disabled_features?: string[]
           favicon_path?: string | null
           feed_preview_image_path?: string | null
+          finalizados_separate_tab?: boolean
+          first_payment_confirmed_at?: string | null
           fixed_monthly_cost?: number | null
           hero_gradient_from?: string | null
           hero_gradient_to?: string | null
           hourly_cost?: number | null
           id?: string
+          inactivity_warning_2d_sent_at?: string | null
+          inactivity_warning_5d_sent_at?: string | null
           is_reseller?: boolean
+          last_seen_level_index?: number | null
           logo_path?: string | null
           logo_path_light?: string | null
           max_collaborators_override?: number | null
           members_can_set_editor_format?: boolean
+          month_rollover_day?: number | null
+          month_rollover_mode?: string
           name?: string
           nav_labels?: Json
           nav_order?: Json
+          payment_grace_started_at?: string | null
           payment_message_template?: string | null
           photo_watermark_density?: string
           photo_watermark_mode?: string
@@ -2595,9 +3759,13 @@ export type Database = {
           pix_key?: string | null
           plan_id?: string
           promotion_code_id?: string | null
+          referral_code?: string | null
+          referral_credit_balance?: number
+          referred_by_org_id?: string | null
           reseller_org_id?: string | null
           setor_permissions?: string[]
           slug?: string
+          stories_inspirations?: Json | null
           subscription_status?: string
           tagline?: string | null
           tax_id?: string | null
@@ -2617,6 +3785,13 @@ export type Database = {
             columns: ["promotion_code_id"]
             isOneToOne: false
             referencedRelation: "promotion_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orgs_referred_by_org_id_fkey"
+            columns: ["referred_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
             referencedColumns: ["id"]
           },
           {
@@ -2663,6 +3838,45 @@ export type Database = {
           },
           {
             foreignKeyName: "page_activity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_views: {
+        Row: {
+          created_at: string
+          id: string
+          org_id: string
+          path: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          org_id: string
+          path: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          org_id?: string
+          path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_views_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "page_views_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2778,6 +3992,7 @@ export type Database = {
           org_id: string
           photo_client_id: string
           photo_order: string
+          selection_mode: string
           status: string
           title: string
           token: string
@@ -2793,6 +4008,7 @@ export type Database = {
           org_id: string
           photo_client_id: string
           photo_order?: string
+          selection_mode?: string
           status?: string
           title: string
           token: string
@@ -2808,6 +4024,7 @@ export type Database = {
           org_id?: string
           photo_client_id?: string
           photo_order?: string
+          selection_mode?: string
           status?: string
           title?: string
           token?: string
@@ -2862,6 +4079,36 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_operating_costs: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       platform_updates: {
         Row: {
           category: string
@@ -2871,6 +4118,7 @@ export type Database = {
           id: string
           link_label: string | null
           link_path: string | null
+          notified_at: string | null
           published_at: string
           title: string
         }
@@ -2882,6 +4130,7 @@ export type Database = {
           id?: string
           link_label?: string | null
           link_path?: string | null
+          notified_at?: string | null
           published_at?: string
           title: string
         }
@@ -2893,6 +4142,7 @@ export type Database = {
           id?: string
           link_label?: string | null
           link_path?: string | null
+          notified_at?: string | null
           published_at?: string
           title?: string
         }
@@ -2946,6 +4196,7 @@ export type Database = {
           onboarded_at: string | null
           org_id: string | null
           tour_completed_at: string | null
+          whatsapp_community_seen_at: string | null
         }
         Insert: {
           active?: boolean
@@ -2964,6 +4215,7 @@ export type Database = {
           onboarded_at?: string | null
           org_id?: string | null
           tour_completed_at?: string | null
+          whatsapp_community_seen_at?: string | null
         }
         Update: {
           active?: boolean
@@ -2982,6 +4234,7 @@ export type Database = {
           onboarded_at?: string | null
           org_id?: string | null
           tour_completed_at?: string | null
+          whatsapp_community_seen_at?: string | null
         }
         Relationships: [
           {
@@ -3238,6 +4491,51 @@ export type Database = {
           },
         ]
       }
+      referral_credit_ledger: {
+        Row: {
+          balance_after: number
+          created_at: string
+          delta: number
+          id: string
+          org_id: string
+          reason: string
+          referral_id: string | null
+        }
+        Insert: {
+          balance_after: number
+          created_at?: string
+          delta: number
+          id?: string
+          org_id: string
+          reason: string
+          referral_id?: string | null
+        }
+        Update: {
+          balance_after?: number
+          created_at?: string
+          delta?: number
+          id?: string
+          org_id?: string
+          reason?: string
+          referral_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_credit_ledger_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_credit_ledger_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "agency_referrals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reseller_wholesale_prices: {
         Row: {
           created_at: string
@@ -3313,6 +4611,41 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_stages: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string | null
+          name: string
+          org_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string | null
+          name: string
+          org_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string | null
+          name?: string
+          org_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_stages_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       signup_attempts: {
         Row: {
           created_at: string
@@ -3328,6 +4661,27 @@ export type Database = {
           created_at?: string
           id?: string
           ip?: string
+        }
+        Relationships: []
+      }
+      site_tracking_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
         }
         Relationships: []
       }
@@ -3442,6 +4796,80 @@ export type Database = {
           },
         ]
       }
+      support_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          thread_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          thread_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "support_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_threads: {
+        Row: {
+          created_at: string
+          id: string
+          org_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          org_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          org_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_threads_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_threads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_calendar_tokens: {
         Row: {
           access_token: string | null
@@ -3518,12 +4946,76 @@ export type Database = {
           id: string
         }[]
       }
+      apply_automation_action: {
+        Args: {
+          _item_id: string
+          _rule: Database["public"]["Tables"]["automation_rules"]["Row"]
+        }
+        Returns: undefined
+      }
+      apply_automation_action_v2: {
+        Args: {
+          _client_id: string
+          _extra?: string
+          _item_id: string
+          _rule: Database["public"]["Tables"]["automation_rules"]["Row"]
+          _subject?: string
+          _type?: string
+        }
+        Returns: undefined
+      }
       approve_public_feed: { Args: { _token: string }; Returns: string }
       auto_mark_missed: { Args: never; Returns: number }
+      automation_client_phone: { Args: { _client_id: string }; Returns: string }
+      automation_filter_ok: {
+        Args: {
+          _client_id: string
+          _rule: Database["public"]["Tables"]["automation_rules"]["Row"]
+          _type: string
+        }
+        Returns: boolean
+      }
+      automation_log: {
+        Args: {
+          _client_id: string
+          _item_id: string
+          _rule: Database["public"]["Tables"]["automation_rules"]["Row"]
+        }
+        Returns: undefined
+      }
+      automation_next_month_slot: {
+        Args: { _month_id: string; _type: string }
+        Returns: Record<string, unknown>
+      }
+      automation_recipients: {
+        Args: {
+          _item_id: string
+          _rule: Database["public"]["Tables"]["automation_rules"]["Row"]
+        }
+        Returns: string[]
+      }
+      automation_render: {
+        Args: { _client: string; _extra: string; _msg: string; _title: string }
+        Returns: string
+      }
+      complete_instagram_connect_request: {
+        Args: {
+          _access_token: string
+          _ig_business_account_id: string
+          _ig_username: string
+          _token: string
+          _token_expires_at: string
+        }
+        Returns: boolean
+      }
       current_org_id: { Args: never; Returns: string }
       generate_recurring_for_month: {
         Args: { _month_key?: string }
         Returns: number
+      }
+      get_client_id_for_docs_token: {
+        Args: { _token: string }
+        Returns: string
       }
       get_client_id_for_token: { Args: { _token: string }; Returns: string }
       get_forum_post: {
@@ -3545,11 +5037,17 @@ export type Database = {
       }
       get_my_email: { Args: never; Returns: string }
       get_org_id_for_token: { Args: { _token: string }; Returns: string }
+      get_public_contract_request: { Args: { _token: string }; Returns: Json }
       get_public_feed: { Args: { _token: string }; Returns: Json }
+      get_public_instagram_connect_info: {
+        Args: { _token: string }
+        Returns: Json
+      }
       get_public_photo_selection_info: {
         Args: { _token: string }
         Returns: Json
       }
+      get_public_referrer_name: { Args: { _code: string }; Returns: string }
       has_cargo_permission: {
         Args: { _perm: string; _user_id: string }
         Returns: boolean
@@ -3612,13 +5110,27 @@ export type Database = {
           schedule: string
         }[]
       }
+      mark_agency_stories_done: {
+        Args: { _done: boolean; _id: string }
+        Returns: undefined
+      }
       member_can_edit_item: { Args: { _item_id: string }; Returns: boolean }
       notify_stale_client_updates: { Args: never; Returns: number }
+      platform_get_support_messages: {
+        Args: { _thread_id: string }
+        Returns: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+        }[]
+      }
       platform_list_bug_reports: {
         Args: never
         Returns: {
           created_at: string
           id: string
+          kind: string
           message: string
           org_name: string
           page_url: string
@@ -3628,6 +5140,20 @@ export type Database = {
           whatsapp: string
         }[]
       }
+      platform_list_support_threads: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          last_message: string
+          last_message_role: string
+          org_name: string
+          status: string
+          updated_at: string
+          user_name: string
+        }[]
+      }
+      run_month_rollover: { Args: never; Returns: undefined }
       run_retention_cleanup: {
         Args: never
         Returns: {
@@ -3635,6 +5161,7 @@ export type Database = {
           notificacoes_apagadas: number
         }[]
       }
+      run_time_based_automations: { Args: never; Returns: undefined }
       send_daily_digest: { Args: never; Returns: number }
       send_deadline_reminders: { Args: never; Returns: number }
       set_item_editor: {
@@ -3666,6 +5193,15 @@ export type Database = {
           _token: string
         }
         Returns: Json
+      }
+      sign_client_contract_request: {
+        Args: {
+          _signature_data_url: string
+          _signer_cpf: string
+          _signer_name: string
+          _token: string
+        }
+        Returns: boolean
       }
       submit_photo_selection_response: {
         Args: { _choices: Json; _respondent_name: string; _token: string }

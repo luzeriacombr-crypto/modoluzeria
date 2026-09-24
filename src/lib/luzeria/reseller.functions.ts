@@ -146,6 +146,8 @@ export const createResoldOrg = createServerFn({ method: "POST" })
 
     const { seedJourneyStagesForOrg } = await import("./journey-stages.functions");
     await seedJourneyStagesForOrg(supabaseAdmin, newOrg.id);
+    const { seedSalesStagesForOrg } = await import("./sales-pipeline.functions");
+    await seedSalesStagesForOrg(supabaseAdmin, newOrg.id);
     const { seedCargosForOrg } = await import("./cargos.functions");
     await seedCargosForOrg(supabaseAdmin, newOrg.id);
 
@@ -277,6 +279,8 @@ export const createResellerOrg = createServerFn({ method: "POST" })
 
     const { seedJourneyStagesForOrg } = await import("./journey-stages.functions");
     await seedJourneyStagesForOrg(supabaseAdmin, newOrg.id);
+    const { seedSalesStagesForOrg } = await import("./sales-pipeline.functions");
+    await seedSalesStagesForOrg(supabaseAdmin, newOrg.id);
     const { seedCargosForOrg } = await import("./cargos.functions");
     await seedCargosForOrg(supabaseAdmin, newOrg.id);
 

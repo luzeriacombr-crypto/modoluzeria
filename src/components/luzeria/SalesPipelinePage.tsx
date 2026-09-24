@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Trash2, Handshake, MessageCircle, Snowflake, PhoneCall, Check, UserPlus, Users, Phone, CalendarClock, CheckCircle2, XCircle, X, Info } from "lucide-react";
-import { leadsQO, leadContactsQO, profilesQO, clientsQO, clientCategoriesQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { Plus, Trash2, Pencil, Settings2, Circle, Handshake, MessageCircle, Snowflake, PhoneCall, Check, UserPlus, Users, CalendarClock, CheckCircle2, XCircle, X, Info } from "lucide-react";
+import { leadsQO, leadContactsQO, salesStagesQO, profilesQO, clientsQO, clientCategoriesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { Modal } from "./Modals";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { hasPermission } from "@/lib/luzeria/types";
-import type { Lead, LeadStatus } from "@/lib/luzeria/sales-pipeline.functions";
+import type { Lead, SalesStage, StageKind } from "@/lib/luzeria/sales-pipeline.functions";
 
 const formatBRL = (v: number | null) =>
   v == null ? null : (v / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -48,18 +48,22 @@ const LEAD_PRODUCTS = [
   "Pack de vídeo", "Imersão VIP", "Educação", "Resgatando Clássicos",
 ];
 
-const COLUMNS: { key: LeadStatus; label: string; accent: string; icon: typeof UserPlus; help: string }[] = [
-  { key: "novo", label: "Novos", accent: "#888780", icon: UserPlus,
-    help: "Leads que acabaram de entrar, sem contato ainda. Arraste o card pra 'Responder agora' assim que começar a atender." },
-  { key: "responder", label: "Responder agora", accent: "#E76F51", icon: Phone,
-    help: "Já teve contato e está esperando um retorno seu — clique em 'Marquei contato' toda vez que falar com a pessoa." },
-  { key: "followup", label: "Follow-up", accent: "#4A9EFF", icon: CalendarClock,
-    help: "Tem um retorno agendado pra uma data e horário específicos. Arrastar um card pra cá (ou clicar em 'Agendar' dentro dele) pede a data." },
-  { key: "fechado", label: "Fechado", accent: "#5BA88A", icon: CheckCircle2,
-    help: "Virou cliente de verdade. Arrastar um card pra cá (ou clicar em 'Ganho') cria o cliente automaticamente na lista de Clientes." },
-  { key: "perdido", label: "Perdido", accent: "#E24B4A", icon: XCircle,
-    help: "Não vai fechar — sai do quadro ativo, mas fica guardado (dá pra conferir marcando 'ver arquivados', se precisar)." },
-];
+// Etapas "comuns" (kind nulo) não têm mais um nome fixo pra escolher ícone —
+// giram por essa paleta na ordem em que aparecem. As 3 com comportamento
+// especial (followup/won/lost) sempre têm o mesmo ícone e cor, não importa
+// como a agência as renomeie.
+const PLAIN_PALETTE = ["#888780", "#E76F51", "#9B7EDE", "#4A9EFF", "#5BA88A", "#E2B23A"];
+const KIND_LABEL: Record<StageKind, string> = {
+  followup: "Follow-up (pede data ao entrar)",
+  won: "Ganho (cria cliente ao entrar)",
+  lost: "Perdido (pede motivo, arquiva)",
+};
+const STAGE_HELP: Record<StageKind | "plain", string> = {
+  plain: "Etapa comum do funil.",
+  followup: "Tem um retorno agendado pra uma data e horário específicos. Arrastar um card pra cá (ou clicar em 'Agendar' dentro dele) pede a data.",
+  won: "Virou cliente de verdade. Arrastar um card pra cá (ou clicar em 'Ganho') cria o cliente automaticamente na lista de Clientes.",
+  lost: "Não vai fechar — sai do quadro ativo, mas fica guardado (dá pra conferir marcando 'ver arquivados', se precisar).",
+};
 
 /** Pequeno "i" clicável — abre uma explicação curta embaixo, fecha ao
  * clicar fora. Usado nos botões/áreas que não são autoexplicativas pra
@@ -111,51 +115,72 @@ function PillButton({ label, active, onClick }: { label: string; active: boolean
   );
 }
 
+type StageMeta = { icon: typeof UserPlus; accent: string; help: string };
+
 export function SalesPipelinePage() {
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
-  const [followupLead, setFollowupLead] = useState<Lead | null>(null);
-  const [wonLead, setWonLead] = useState<Lead | null>(null);
-  const [lostLead, setLostLead] = useState<Lead | null>(null);
+  const [followupTarget, setFollowupTarget] = useState<{ lead: Lead; stageId: string } | null>(null);
+  const [wonTarget, setWonTarget] = useState<{ lead: Lead; stageId: string } | null>(null);
+  const [lostTarget, setLostTarget] = useState<{ lead: Lead; stageId: string } | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
-  const [overCol, setOverCol] = useState<LeadStatus | null>(null);
-  const [expanded, setExpanded] = useState<LeadStatus | null>(null);
+  const [overCol, setOverCol] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [stagesModalOpen, setStagesModalOpen] = useState(false);
 
   // Igual à Lixeira: o item some do menu, mas a rota abria por link direto.
   const me = useMe().data;
   const canSales = !new Set(me?.disabledFeatures ?? []).has("sales_pipeline")
     && hasPermission(me, "sales_pipeline");
   const { data: leads = [] } = useQuery({ ...leadsQO(true), enabled: canSales });
+  const { data: stages = [] } = useQuery({ ...salesStagesQO(), enabled: canSales });
   const api = useApi();
 
-  const byStatus = useMemo(() => {
-    const map: Record<LeadStatus, Lead[]> = { novo: [], responder: [], followup: [], fechado: [], perdido: [] };
-    for (const l of leads) map[l.status]?.push(l);
-    return map;
-  }, [leads]);
+  const sortedStages = useMemo(() => [...stages].sort((a, b) => a.sortOrder - b.sortOrder), [stages]);
+  const stagesById = useMemo(() => new Map(sortedStages.map((s) => [s.id, s])), [sortedStages]);
 
-  function onDropOnColumn(status: LeadStatus, lead: Lead) {
+  const stageMeta = useMemo(() => {
+    const map = new Map<string, StageMeta>();
+    let plainIdx = 0;
+    for (const s of sortedStages) {
+      const kind = (s.kind ?? "plain") as StageKind | "plain";
+      const accent = s.kind === "followup" ? "#4A9EFF" : s.kind === "won" ? "#5BA88A" : s.kind === "lost" ? "#E24B4A" : PLAIN_PALETTE[plainIdx % PLAIN_PALETTE.length];
+      const icon = s.kind === "followup" ? CalendarClock : s.kind === "won" ? CheckCircle2 : s.kind === "lost" ? XCircle : Circle;
+      map.set(s.id, { icon, accent, help: STAGE_HELP[kind] });
+      if (!s.kind) plainIdx += 1;
+    }
+    return map;
+  }, [sortedStages]);
+
+  const byStage = useMemo(() => {
+    const map = new Map<string, Lead[]>();
+    for (const s of sortedStages) map.set(s.id, []);
+    for (const l of leads) map.get(l.stageId)?.push(l);
+    return map;
+  }, [leads, sortedStages]);
+
+  function onDropOnColumn(stage: SalesStage, lead: Lead) {
     setDragId(null); setOverCol(null);
-    if (lead.status === status) return;
-    if (status === "novo" || status === "responder") {
-      api.moveLeadStatus.mutate({ data: { id: lead.id, status } });
-    } else if (status === "followup") {
-      setFollowupLead(lead);
-    } else if (status === "fechado") {
-      setWonLead(lead);
-    } else if (status === "perdido") {
-      setLostLead(lead);
+    if (lead.stageId === stage.id) return;
+    if (!stage.kind) {
+      api.moveLeadStage.mutate({ data: { id: lead.id, stageId: stage.id } });
+    } else if (stage.kind === "followup") {
+      setFollowupTarget({ lead, stageId: stage.id });
+    } else if (stage.kind === "won") {
+      setWonTarget({ lead, stageId: stage.id });
+    } else if (stage.kind === "lost") {
+      setLostTarget({ lead, stageId: stage.id });
     }
   }
 
-  function dropProps(status: LeadStatus) {
+  function dropProps(stage: SalesStage) {
     return {
-      onDragOver: (e: React.DragEvent) => { e.preventDefault(); if (dragId) setOverCol(status); },
-      onDragLeave: () => { if (overCol === status) setOverCol(null); },
+      onDragOver: (e: React.DragEvent) => { e.preventDefault(); if (dragId) setOverCol(stage.id); },
+      onDragLeave: () => { if (overCol === stage.id) setOverCol(null); },
       onDrop: (e: React.DragEvent) => {
         e.preventDefault();
         const lead = leads.find((l) => l.id === dragId);
-        if (lead) onDropOnColumn(status, lead);
+        if (lead) onDropOnColumn(stage, lead);
         else { setDragId(null); setOverCol(null); }
       },
     };
@@ -165,6 +190,8 @@ export function SalesPipelinePage() {
     return <div className="px-4 sm:px-6 md:px-10 py-10 text-foreground/60 text-sm">Você não tem acesso à área de Vendas.</div>;
   }
 
+  const expandedStage = expanded ? stagesById.get(expanded) ?? null : null;
+
   return (
     <div className="p-4 md:p-6 min-h-[70vh] flex flex-col">
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
@@ -173,53 +200,51 @@ export function SalesPipelinePage() {
           <h1 className="text-lg font-bold text-foreground">Vendas</h1>
           <InfoTip text="Cada bloco é uma etapa do funil. Arraste os cards entre eles pra mudar o estágio de um lead, ou clique num card pra ver/editar os detalhes." />
         </div>
-        <button
-          onClick={() => setNewLeadOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold"
-          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-        >
-          <Plus size={13} /> Nova oportunidade
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setStagesModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-foreground/60 hover:text-foreground border border-foreground/15 hover:border-foreground/30 transition-colors"
+          >
+            <Settings2 size={13} /> Editar etapas
+          </button>
+          <button
+            onClick={() => setNewLeadOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+          >
+            <Plus size={13} /> Nova oportunidade
+          </button>
+        </div>
       </div>
 
       {!expanded ? (
-        <div className="flex-1 flex flex-col gap-3 min-h-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 flex-1 min-h-0">
-            {COLUMNS.slice(0, 3).map((col) => (
-              <FolderBlock key={col.key} col={col} leads={byStatus[col.key]} {...dropProps(col.key)}
-                isOver={overCol === col.key} dragId={dragId}
-                onDragStartLead={setDragId} onDragEndLead={() => setDragId(null)}
-                onExpand={() => setExpanded(col.key)} onOpenLead={setEditLead} />
-            ))}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 min-h-0">
-            {COLUMNS.slice(3, 5).map((col) => (
-              <FolderBlock key={col.key} col={col} leads={byStatus[col.key]} {...dropProps(col.key)}
-                isOver={overCol === col.key} dragId={dragId}
-                onDragStartLead={setDragId} onDragEndLead={() => setDragId(null)}
-                onExpand={() => setExpanded(col.key)} onOpenLead={setEditLead} />
-            ))}
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 flex-1 min-h-0">
+          {sortedStages.map((stage) => (
+            <FolderBlock key={stage.id} stage={stage} meta={stageMeta.get(stage.id)!} leads={byStage.get(stage.id) ?? []} {...dropProps(stage)}
+              isOver={overCol === stage.id} dragId={dragId}
+              onDragStartLead={setDragId} onDragEndLead={() => setDragId(null)}
+              onExpand={() => setExpanded(stage.id)} onOpenLead={setEditLead} />
+          ))}
         </div>
       ) : (
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-3">
-            {COLUMNS.map((col) => (
-              <CompactChip key={col.key} col={col} count={byStatus[col.key].length}
-                active={col.key === expanded} isOver={overCol === col.key}
-                onClick={() => setExpanded(col.key)} {...dropProps(col.key)} />
+            {sortedStages.map((stage) => (
+              <CompactChip key={stage.id} stage={stage} meta={stageMeta.get(stage.id)!} count={(byStage.get(stage.id) ?? []).length}
+                active={stage.id === expanded} isOver={overCol === stage.id}
+                onClick={() => setExpanded(stage.id)} {...dropProps(stage)} />
             ))}
             <button onClick={() => setExpanded(null)} className="ml-1 p-2 rounded-lg text-foreground/40 hover:text-foreground hover:bg-foreground/5 shrink-0" title="Voltar aos blocos">
               <X size={16} />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto rounded-lg border border-foreground/6 bg-card p-3 space-y-1.5">
-            {expanded === "followup"
-              ? <FollowupColumnBody leads={byStatus.followup} dragId={dragId} onDragStart={setDragId} onDragEnd={() => setDragId(null)} onOpen={setEditLead} />
-              : byStatus[expanded].length === 0
+            {expandedStage?.kind === "followup"
+              ? <FollowupColumnBody leads={byStage.get(expanded!) ?? []} dragId={dragId} onDragStart={setDragId} onDragEnd={() => setDragId(null)} onOpen={setEditLead} />
+              : (byStage.get(expanded!) ?? []).length === 0
               ? <p className="text-[11px] text-foreground/25 text-center py-10">Nenhuma oportunidade aqui ainda.</p>
-              : byStatus[expanded].map((l) => (
-                  <LeadCard key={l.id} lead={l} draggable={expanded !== "fechado" && expanded !== "perdido"}
+              : (byStage.get(expanded!) ?? []).map((l) => (
+                  <LeadCard key={l.id} lead={l} stageKind={expandedStage?.kind ?? null} draggable={!expandedStage?.kind}
                     dragging={dragId === l.id}
                     onDragStart={() => setDragId(l.id)} onDragEnd={() => setDragId(null)}
                     onOpen={() => setEditLead(l)} />
@@ -228,37 +253,38 @@ export function SalesPipelinePage() {
         </div>
       )}
 
-      <LeadFormModal open={newLeadOpen} onClose={() => setNewLeadOpen(false)} />
-      <LeadFormModal open={!!editLead} onClose={() => setEditLead(null)} lead={editLead ?? undefined} />
-      <FollowupModal lead={followupLead} onClose={() => setFollowupLead(null)} />
-      {wonLead && <WonLeadModal open={!!wonLead} lead={wonLead} onClose={() => setWonLead(null)} />}
-      {lostLead && <LostLeadModal open={!!lostLead} lead={lostLead} onClose={() => setLostLead(null)} />}
+      <LeadFormModal open={newLeadOpen} onClose={() => setNewLeadOpen(false)} stages={sortedStages} />
+      <LeadFormModal open={!!editLead} onClose={() => setEditLead(null)} lead={editLead ?? undefined} stages={sortedStages} />
+      <FollowupModal target={followupTarget} onClose={() => setFollowupTarget(null)} />
+      {wonTarget && <WonLeadModal open={!!wonTarget} lead={wonTarget.lead} stageId={wonTarget.stageId} onClose={() => setWonTarget(null)} />}
+      {lostTarget && <LostLeadModal open={!!lostTarget} lead={lostTarget.lead} stageId={lostTarget.stageId} onClose={() => setLostTarget(null)} />}
+      <SalesStagesModal open={stagesModalOpen} onClose={() => setStagesModalOpen(false)} stages={sortedStages} />
     </div>
   );
 }
 
-function leadPreviewSubtitle(col: LeadStatus, lead: Lead): string {
-  const base = col === "followup" ? (lead.nextFollowupAt ? formatDate(lead.nextFollowupAt) : "sem data")
-    : col === "novo" ? `há ${timeSince(lead.createdAt)}`
+function leadPreviewSubtitle(kind: StageKind | null, lead: Lead): string {
+  const base = kind === "followup"
+    ? (lead.nextFollowupAt ? formatDate(lead.nextFollowupAt) : "sem data")
     : `há ${timeSince(lead.lastContactAt ?? lead.updatedAt)}`;
   return lead.product ? `${base} · ${lead.product}` : base;
 }
 
-function FolderBlock({ col, leads, isOver, dragId, onDragStartLead, onDragEndLead, onExpand, onOpenLead, onDragOver, onDragLeave, onDrop }: {
-  col: { key: LeadStatus; label: string; accent: string; icon: typeof UserPlus; help: string };
+function FolderBlock({ stage, meta, leads, isOver, dragId, onDragStartLead, onDragEndLead, onExpand, onOpenLead, onDragOver, onDragLeave, onDrop }: {
+  stage: SalesStage; meta: StageMeta;
   leads: Lead[]; isOver: boolean; dragId: string | null;
   onDragStartLead: (id: string) => void; onDragEndLead: () => void;
   onExpand: () => void; onOpenLead: (l: Lead) => void;
   onDragOver: (e: React.DragEvent) => void; onDragLeave: () => void; onDrop: (e: React.DragEvent) => void;
 }) {
-  const Icon = col.icon;
-  const draggableRows = col.key !== "fechado" && col.key !== "perdido";
+  const Icon = meta.icon;
+  const draggableRows = !stage.kind;
   const recent = useMemo(() => {
-    const sorted = col.key === "followup"
+    const sorted = stage.kind === "followup"
       ? [...leads].sort((a, b) => (a.nextFollowupAt ?? "").localeCompare(b.nextFollowupAt ?? ""))
       : [...leads].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     return sorted.slice(0, 6);
-  }, [leads, col.key]);
+  }, [leads, stage.kind]);
   const extra = leads.length - recent.length;
 
   return (
@@ -269,17 +295,17 @@ function FolderBlock({ col, leads, isOver, dragId, onDragStartLead, onDragEndLea
       style={{
         backgroundColor: isOver ? "rgba(var(--lz-brand-rgb),0.08)" : "var(--card)",
         borderColor: isOver ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
-        borderTopColor: isOver ? "rgb(var(--lz-brand-rgb))" : col.accent,
+        borderTopColor: isOver ? "rgb(var(--lz-brand-rgb))" : meta.accent,
         borderTopWidth: "2px",
       }}
     >
       <div className="flex items-center justify-between shrink-0">
-        <Icon size={18} style={{ color: col.accent }} />
+        <Icon size={18} style={{ color: meta.accent }} />
         <span className="text-2xl font-bold text-foreground">{leads.length}</span>
       </div>
       <div className="flex items-center gap-1 mt-1 mb-2 shrink-0">
-        <span className="text-xs text-foreground/50">{col.label}</span>
-        <InfoTip text={col.help} />
+        <span className="text-xs text-foreground/50">{stage.name}</span>
+        <InfoTip text={meta.help} />
       </div>
       <div className="flex-1 overflow-y-auto min-h-0 -mx-1.5 space-y-0.5">
         {recent.length === 0 && <p className="text-[11px] text-foreground/20 px-1.5 py-2">Nada por aqui.</p>}
@@ -294,7 +320,7 @@ function FolderBlock({ col, leads, isOver, dragId, onDragStartLead, onDragEndLea
             style={{ opacity: dragId === l.id ? 0.4 : 1, cursor: draggableRows ? "grab" : "pointer" }}
           >
             <div className="text-xs text-foreground font-medium truncate">{l.name}</div>
-            <div className="text-[10px] text-foreground/35 truncate">{leadPreviewSubtitle(col.key, l)}</div>
+            <div className="text-[10px] text-foreground/35 truncate">{leadPreviewSubtitle(stage.kind, l)}</div>
           </div>
         ))}
         {extra > 0 && (
@@ -305,12 +331,12 @@ function FolderBlock({ col, leads, isOver, dragId, onDragStartLead, onDragEndLea
   );
 }
 
-function CompactChip({ col, count, active, isOver, onClick, onDragOver, onDragLeave, onDrop }: {
-  col: { key: LeadStatus; label: string; accent: string; icon: typeof UserPlus };
+function CompactChip({ stage, meta, count, active, isOver, onClick, onDragOver, onDragLeave, onDrop }: {
+  stage: SalesStage; meta: StageMeta;
   count: number; active: boolean; isOver: boolean; onClick: () => void;
   onDragOver: (e: React.DragEvent) => void; onDragLeave: () => void; onDrop: (e: React.DragEvent) => void;
 }) {
-  const Icon = col.icon;
+  const Icon = meta.icon;
   return (
     <button
       onClick={onClick}
@@ -318,11 +344,11 @@ function CompactChip({ col, count, active, isOver, onClick, onDragOver, onDragLe
       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border shrink-0 transition-colors"
       style={{
         backgroundColor: active ? "rgba(var(--lz-brand-rgb),0.1)" : isOver ? "color-mix(in srgb, var(--foreground) 6%, transparent)" : "var(--card)",
-        borderColor: active ? "rgb(var(--lz-brand-rgb))" : isOver ? col.accent : "color-mix(in srgb, var(--foreground) 6%, transparent)",
+        borderColor: active ? "rgb(var(--lz-brand-rgb))" : isOver ? meta.accent : "color-mix(in srgb, var(--foreground) 6%, transparent)",
       }}
     >
-      <Icon size={14} style={{ color: col.accent }} />
-      <span className="text-xs font-semibold text-foreground/80 whitespace-nowrap">{col.label}</span>
+      <Icon size={14} style={{ color: meta.accent }} />
+      <span className="text-xs font-semibold text-foreground/80 whitespace-nowrap">{stage.name}</span>
       <span className="text-[10px] text-foreground/30">{count}</span>
     </button>
   );
@@ -341,7 +367,7 @@ function FollowupColumnBody({ leads, dragId, onDragStart, onDragEnd, onOpen }: {
   return (
     <>
       {hoje.map((l) => (
-        <LeadCard key={l.id} lead={l} draggable dragging={dragId === l.id}
+        <LeadCard key={l.id} lead={l} stageKind="followup" draggable dragging={dragId === l.id}
           onDragStart={() => onDragStart(l.id)} onDragEnd={onDragEnd} onOpen={() => onOpen(l)} />
       ))}
       {proximos.length > 0 && (
@@ -352,20 +378,20 @@ function FollowupColumnBody({ leads, dragId, onDragStart, onDragEnd, onOpen }: {
         </div>
       )}
       {proximos.map((l) => (
-        <LeadCard key={l.id} lead={l} draggable dragging={dragId === l.id}
+        <LeadCard key={l.id} lead={l} stageKind="followup" draggable dragging={dragId === l.id}
           onDragStart={() => onDragStart(l.id)} onDragEnd={onDragEnd} onOpen={() => onOpen(l)} />
       ))}
     </>
   );
 }
 
-function LeadCard({ lead, draggable, dragging, onDragStart, onDragEnd, onOpen }: {
-  lead: Lead; draggable: boolean; dragging: boolean;
+function LeadCard({ lead, stageKind, draggable, dragging, onDragStart, onDragEnd, onOpen }: {
+  lead: Lead; stageKind: StageKind | null; draggable: boolean; dragging: boolean;
   onDragStart: () => void; onDragEnd: () => void; onOpen: () => void;
 }) {
   const value = formatBRL(lead.valueEstimateCents);
   const wa = waLink(lead.contactPhone, lead.followUpNote ?? undefined);
-  const cold = lead.status !== "fechado" && lead.status !== "perdido" && isCold(lead);
+  const cold = stageKind !== "won" && stageKind !== "lost" && isCold(lead);
 
   return (
     <div
@@ -392,14 +418,14 @@ function LeadCard({ lead, draggable, dragging, onDragStart, onDragEnd, onOpen }:
         {lead.product && <span className="text-foreground/50">{lead.product}</span>}
         {value && <span>{value}</span>}
       </div>
-      {lead.status === "followup" && (
+      {stageKind === "followup" && (
         <div className="mt-1 text-[10.5px] text-[#4A9EFF]">
           {lead.nextFollowupAt ? formatDate(lead.nextFollowupAt) : "sem data"}
           {lead.followUpNote ? ` · ${lead.followUpNote}` : ""}
         </div>
       )}
       <div className="mt-1 flex items-center gap-1.5 text-[10px] text-foreground/25">
-        {lead.status !== "followup" && <span>há {timeSince(lead.lastContactAt ?? lead.updatedAt)}</span>}
+        {stageKind !== "followup" && <span>há {timeSince(lead.lastContactAt ?? lead.updatedAt)}</span>}
         {lead.contactCount > 0 && (
           <span className="inline-flex items-center gap-0.5"><PhoneCall size={9} /> {lead.contactCount}</span>
         )}
@@ -408,31 +434,33 @@ function LeadCard({ lead, draggable, dragging, onDragStart, onDragEnd, onOpen }:
   );
 }
 
-function FollowupModal({ lead, onClose }: { lead: Lead | null; onClose: () => void }) {
+function FollowupModal({ target, onClose }: { target: { lead: Lead; stageId: string } | null; onClose: () => void }) {
   const api = useApi();
   const [date, setDate] = useState("");
   const [time, setTime] = useState("09:00");
   const [note, setNote] = useState("");
 
   useEffect(() => {
-    if (!lead) return;
+    if (!target) return;
+    const lead = target.lead;
     const d = lead.nextFollowupAt ? new Date(lead.nextFollowupAt) : new Date(Date.now() + 24 * 3600 * 1000);
     setDate(d.toISOString().slice(0, 10));
     setTime(lead.nextFollowupAt ? d.toTimeString().slice(0, 5) : "09:00");
     setNote(lead.followUpNote ?? "");
-  }, [lead?.id]);
+  }, [target?.lead.id]);
 
-  if (!lead) return null;
+  if (!target) return null;
+  const { lead, stageId } = target;
 
   function save() {
     if (!date) return;
     api.scheduleLeadFollowup.mutateAsync({
-      data: { id: lead!.id, followUpAt: new Date(`${date}T${time || "09:00"}:00`).toISOString(), note: note.trim() || null },
+      data: { id: lead.id, stageId, followUpAt: new Date(`${date}T${time || "09:00"}:00`).toISOString(), note: note.trim() || null },
     }).then(onClose);
   }
 
   return (
-    <Modal open={!!lead} onClose={onClose} title={`Agendar follow-up · ${lead.name}`}>
+    <Modal open={!!target} onClose={onClose} title={`Agendar follow-up · ${lead.name}`}>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <F label="Data">
@@ -514,7 +542,7 @@ function StatTile({ label, value, accent, info }: { label: string; value: string
   );
 }
 
-function FollowupScheduler({ lead }: { lead: Lead }) {
+function FollowupScheduler({ lead, stageId }: { lead: Lead; stageId: string | undefined }) {
   const api = useApi();
   const [date, setDate] = useState("");
   const [time, setTime] = useState("09:00");
@@ -528,9 +556,9 @@ function FollowupScheduler({ lead }: { lead: Lead }) {
   }, [lead.id]);
 
   function save() {
-    if (!date) return;
+    if (!date || !stageId) return;
     api.scheduleLeadFollowup.mutate({
-      data: { id: lead.id, followUpAt: new Date(`${date}T${time || "09:00"}:00`).toISOString(), note: note.trim() || null },
+      data: { id: lead.id, stageId, followUpAt: new Date(`${date}T${time || "09:00"}:00`).toISOString(), note: note.trim() || null },
     });
   }
 
@@ -538,14 +566,17 @@ function FollowupScheduler({ lead }: { lead: Lead }) {
     <div className="rounded-md border border-foreground/6 bg-card p-3 space-y-2">
       <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40 flex items-center gap-1.5">
         <CalendarClock size={12} /> Próximo follow-up
-        <InfoTip text="Ao agendar, esse lead muda pra coluna 'Follow-up' e some das outras — volta a aparecer no seu radar na data e horário marcados." />
+        <InfoTip text="Ao agendar, esse lead muda pra etapa de Follow-up e some das outras — volta a aparecer no seu radar na data e horário marcados." />
       </div>
+      {!stageId && (
+        <p className="text-[10.5px] text-foreground/35">Nenhuma etapa de Follow-up configurada — adicione uma em "Editar etapas".</p>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inp + " text-xs"} />
         <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inp + " text-xs"} />
       </div>
       <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nota (ex: confirmar proposta)" className={inp + " text-xs"} />
-      <button onClick={save} disabled={!date || api.scheduleLeadFollowup.isPending}
+      <button onClick={save} disabled={!date || !stageId || api.scheduleLeadFollowup.isPending}
         className="w-full text-[11px] font-bold uppercase px-2.5 py-1.5 rounded disabled:opacity-50"
         style={{ backgroundColor: "rgba(74,158,255,0.15)", color: "#4A9EFF" }}>
         {lead.nextFollowupAt ? "Reagendar" : "Agendar"}
@@ -554,7 +585,7 @@ function FollowupScheduler({ lead }: { lead: Lead }) {
   );
 }
 
-function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => void; lead?: Lead }) {
+function LeadFormModal({ open, onClose, lead, stages }: { open: boolean; onClose: () => void; lead?: Lead; stages: SalesStage[] }) {
   const { data: profiles = [] } = useQuery(profilesQO());
   const api = useApi();
   const me = useMe().data;
@@ -610,7 +641,12 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
     }).then(onClose);
   }
 
-  const isTerminal = lead && (lead.status === "fechado" || lead.status === "perdido");
+  const plainStages = useMemo(() => stages.filter((s) => !s.kind), [stages]);
+  const followupStage = stages.find((s) => s.kind === "followup");
+  const wonStage = stages.find((s) => s.kind === "won");
+  const lostStage = stages.find((s) => s.kind === "lost");
+  const currentStage = lead ? stages.find((s) => s.id === lead.stageId) : undefined;
+  const isTerminal = !!currentStage && (currentStage.kind === "won" || currentStage.kind === "lost");
   const wa = waLink(contactPhone, lead?.followUpNote ?? undefined);
 
   return (
@@ -673,19 +709,16 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
               {!isTerminal && (
                 <F label="Etapa">
                   <div className="flex flex-wrap gap-1.5">
-                    {(["novo", "responder"] as const).map((s) => {
-                      const col = COLUMNS.find((c) => c.key === s)!;
-                      return (
-                        <PillButton
-                          key={s}
-                          label={col.label}
-                          active={lead.status === s}
-                          onClick={() => { if (lead.status !== s) api.moveLeadStatus.mutate({ data: { id: lead.id, status: s } }); }}
-                        />
-                      );
-                    })}
-                    {lead.status === "followup" && (
-                      <PillButton label="Follow-up" active onClick={() => { /* já está — reagende abaixo */ }} />
+                    {plainStages.map((s) => (
+                      <PillButton
+                        key={s.id}
+                        label={s.name}
+                        active={lead.stageId === s.id}
+                        onClick={() => { if (lead.stageId !== s.id) api.moveLeadStage.mutate({ data: { id: lead.id, stageId: s.id } }); }}
+                      />
+                    ))}
+                    {currentStage?.kind === "followup" && (
+                      <PillButton label={currentStage.name} active onClick={() => { /* já está — reagende abaixo */ }} />
                     )}
                   </div>
                   <p className="text-[10.5px] text-foreground/35 mt-1.5">
@@ -693,7 +726,7 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
                   </p>
                 </F>
               )}
-              <FollowupScheduler lead={lead} />
+              <FollowupScheduler lead={lead} stageId={followupStage?.id} />
               <ContactHistory lead={lead} />
             </div>
           )}
@@ -701,16 +734,18 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
         <div className="flex items-center justify-between mt-5">
           {lead && !isTerminal ? (
             <div className="flex items-center gap-1.5">
-              <button onClick={() => setWonOpen(true)}
-                className="text-[11px] font-bold uppercase px-2.5 py-1.5 rounded" style={{ backgroundColor: "rgba(91,168,138,0.15)", color: "#5BA88A" }}>
+              <button onClick={() => setWonOpen(true)} disabled={!wonStage}
+                title={!wonStage ? "Configure uma etapa de 'Ganho' em Editar etapas" : undefined}
+                className="text-[11px] font-bold uppercase px-2.5 py-1.5 rounded disabled:opacity-40 disabled:cursor-not-allowed" style={{ backgroundColor: "rgba(91,168,138,0.15)", color: "#5BA88A" }}>
                 Ganho
               </button>
               <button
-                onClick={() => setLostOpen(true)}
-                className="text-[11px] font-bold uppercase px-2.5 py-1.5 rounded" style={{ backgroundColor: "rgba(231,111,81,0.15)", color: "#E76F51" }}>
+                onClick={() => setLostOpen(true)} disabled={!lostStage}
+                title={!lostStage ? "Configure uma etapa de 'Perdido' em Editar etapas" : undefined}
+                className="text-[11px] font-bold uppercase px-2.5 py-1.5 rounded disabled:opacity-40 disabled:cursor-not-allowed" style={{ backgroundColor: "rgba(231,111,81,0.15)", color: "#E76F51" }}>
                 Perdido
               </button>
-              <InfoTip align="right" text="Ganho cria um cliente de verdade (pede nome, categoria e cor) e move essa oportunidade pra 'Fechado'. Perdido arquiva e pede o motivo — sai do quadro ativo, sem criar nada." />
+              <InfoTip align="right" text="Ganho cria um cliente de verdade (pede nome, categoria e cor) e move essa oportunidade pra etapa de Ganho. Perdido arquiva e pede o motivo — sai do quadro ativo, sem criar nada." />
             </div>
           ) : lead && isAdmin ? (
             <button
@@ -733,8 +768,8 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
           </div>
         </div>
       </Modal>
-      {lead && <WonLeadModal open={wonOpen} lead={lead} onClose={() => { setWonOpen(false); onClose(); }} />}
-      {lead && <LostLeadModal open={lostOpen} lead={lead} onClose={() => { setLostOpen(false); onClose(); }} />}
+      {lead && wonStage && <WonLeadModal open={wonOpen} lead={lead} stageId={wonStage.id} onClose={() => { setWonOpen(false); onClose(); }} />}
+      {lead && lostStage && <LostLeadModal open={lostOpen} lead={lead} stageId={lostStage.id} onClose={() => { setLostOpen(false); onClose(); }} />}
     </>
   );
 }
@@ -742,7 +777,7 @@ function LeadFormModal({ open, onClose, lead }: { open: boolean; onClose: () => 
 const CLIENT_CATEGORIES = ["Social Media", "Pack Digital", "Avulsos"];
 type WonStep = "choice" | "new" | "existing";
 
-function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onClose: () => void }) {
+function WonLeadModal({ open, lead, stageId, onClose }: { open: boolean; lead: Lead; stageId: string; onClose: () => void }) {
   const api = useApi();
   const { data: clients = [] } = useQuery({ ...clientsQO(), enabled: open });
   const { data: customCategories = [] } = useQuery({ ...clientCategoriesQO(), enabled: open });
@@ -774,17 +809,17 @@ function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onCl
 
   function saveNew() {
     api.markLeadWon.mutateAsync({
-      data: { id: lead.id, clientName: clientName.trim(), category, color, icon: icon.trim() || null },
+      data: { id: lead.id, stageId, clientName: clientName.trim(), category, color, icon: icon.trim() || null },
     }).then(onClose);
   }
 
   function saveExisting() {
     if (!existingClientId) return;
-    api.linkLeadToClient.mutateAsync({ data: { id: lead.id, clientId: existingClientId } }).then(onClose);
+    api.linkLeadToClient.mutateAsync({ data: { id: lead.id, stageId, clientId: existingClientId } }).then(onClose);
   }
 
   function saveNoClient() {
-    api.markLeadWonNoClient.mutateAsync({ data: { id: lead.id } }).then(onClose);
+    api.markLeadWonNoClient.mutateAsync({ data: { id: lead.id, stageId } }).then(onClose);
   }
 
   if (step === "choice") {
@@ -900,7 +935,7 @@ function WonLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onCl
   );
 }
 
-function LostLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onClose: () => void }) {
+function LostLeadModal({ open, lead, stageId, onClose }: { open: boolean; lead: Lead; stageId: string; onClose: () => void }) {
   const api = useApi();
   const [reason, setReason] = useState("");
 
@@ -910,7 +945,7 @@ function LostLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onC
   }, [open, lead.id]);
 
   function save() {
-    api.markLeadLost.mutateAsync({ data: { id: lead.id, reason: reason.trim() || null } }).then(onClose);
+    api.markLeadLost.mutateAsync({ data: { id: lead.id, stageId, reason: reason.trim() || null } }).then(onClose);
   }
 
   return (
@@ -937,6 +972,128 @@ function LostLeadModal({ open, lead, onClose }: { open: boolean; lead: Lead; onC
         </button>
       </div>
     </Modal>
+  );
+}
+
+/** Modal de "Editar etapas" da Vendas — mesmo padrão visual/UX de
+ * JourneyStagesTab (Configurações > Jornada), mas dentro de um Modal
+ * porque Vendas não é uma aba de Configurações. */
+function SalesStagesModal({ open, onClose, stages }: { open: boolean; onClose: () => void; stages: SalesStage[] }) {
+  const api = useApi();
+  const [adding, setAdding] = useState(false);
+
+  return (
+    <Modal open={open} onClose={onClose} title="Etapas do funil de vendas" maxWidthClass="max-w-lg">
+      <p className="text-xs text-foreground/50 mb-3">
+        Adicione, renomeie ou remova etapas. As marcadas como Follow-up, Ganho ou Perdido continuam com o comportamento especial (pedem data, criam cliente ou pedem motivo) — só o nome muda.
+      </p>
+      <div className="space-y-2">
+        {stages.length === 0 && !adding && <p className="text-xs text-foreground/40">Nenhuma etapa cadastrada.</p>}
+        {stages.map((s) => <StageRow key={s.id} stage={s} />)}
+      </div>
+      {adding ? (
+        <StageEditForm
+          onCancel={() => setAdding(false)}
+          onSave={(d) => { api.upsertSalesStage.mutate({ data: d }); setAdding(false); }}
+        />
+      ) : (
+        <button onClick={() => setAdding(true)}
+          className="w-full mt-2 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-foreground/15 py-2 text-[11px] text-foreground/50 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))]">
+          <Plus size={12} /> Adicionar etapa
+        </button>
+      )}
+      <div className="flex items-center justify-end mt-5">
+        <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Fechar</button>
+      </div>
+    </Modal>
+  );
+}
+
+function StageRow({ stage }: { stage: SalesStage }) {
+  const api = useApi();
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <StageEditForm
+        initial={{ name: stage.name, kind: stage.kind }}
+        onCancel={() => setEditing(false)}
+        onSave={(d) => { api.upsertSalesStage.mutate({ data: { id: stage.id, ...d } }); setEditing(false); }}
+      />
+    );
+  }
+
+  return (
+    <div className="bg-card border border-foreground/6 rounded-md px-3 py-2.5 flex items-center gap-2">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="text-sm font-semibold text-foreground">{stage.name}</div>
+          {stage.kind && (
+            <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
+              style={{ backgroundColor: "rgba(var(--lz-brand-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+              {KIND_LABEL[stage.kind]}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <button onClick={() => setEditing(true)} className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5" title="Editar">
+          <Pencil size={13} />
+        </button>
+        <button
+          onClick={async () => { if (await requestConfirm(`Excluir a etapa "${stage.name}"?`, { danger: true })) api.deleteSalesStage.mutate({ data: { id: stage.id } }); }}
+          className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5" title="Excluir"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function StageEditForm({ initial, onCancel, onSave }: {
+  initial?: { name: string; kind: StageKind | null };
+  onCancel: () => void;
+  onSave: (d: { name: string; kind: StageKind | null }) => void;
+}) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [kind, setKind] = useState<StageKind | null>(initial?.kind ?? null);
+
+  return (
+    <div className="bg-card border border-foreground/8 rounded-md p-3 space-y-2 mt-2">
+      <input
+        value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome da etapa" autoFocus
+        className="w-full bg-background border border-foreground/10 rounded px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+      />
+      <label className="block">
+        <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1">
+          Comportamento especial
+        </span>
+        <select
+          value={kind ?? ""}
+          onChange={(e) => setKind((e.target.value || null) as StageKind | null)}
+          className="w-full bg-background border border-foreground/10 rounded px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+        >
+          <option value="">— Nenhum (etapa comum)</option>
+          <option value="followup">{KIND_LABEL.followup}</option>
+          <option value="won">{KIND_LABEL.won}</option>
+          <option value="lost">{KIND_LABEL.lost}</option>
+        </select>
+      </label>
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={onCancel} className="inline-flex items-center gap-1 text-[11px] text-foreground/50 hover:text-foreground px-2 py-1">
+          <X size={12} /> Cancelar
+        </button>
+        <button
+          disabled={!name.trim()}
+          onClick={() => onSave({ name: name.trim(), kind })}
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-[11px] font-bold disabled:opacity-30"
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >
+          <Check size={12} /> Salvar
+        </button>
+      </div>
+    </div>
   );
 }
 

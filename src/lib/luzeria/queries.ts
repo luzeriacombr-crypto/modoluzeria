@@ -113,7 +113,7 @@ import {
   getPublishedBlogPosts, getPublishedBlogPost,
 } from "./blog-admin.functions";
 import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
-import { listLeads, upsertLead, moveLeadStatus, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts } from "./sales-pipeline.functions";
+import { listLeads, upsertLead, moveLeadStage, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts, listSalesStages, upsertSalesStage, deleteSalesStage } from "./sales-pipeline.functions";
 import { listTrash, restoreItem, purgeItem } from "./trash.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus, createRoteirosFromPlan, regenerateRoteiroDoc, updateRoteiroSection, addRoteiroSection, exportRoteirosPdf } from "./client-docs.functions";
 import { listOrgKnowledge, saveOrgKnowledgeText, saveOrgKnowledgeFile, deleteOrgKnowledge } from "./org-knowledge.functions";
@@ -315,6 +315,9 @@ export const leadsQO = (includeArchived?: boolean) =>
     queryKey: ["leads", includeArchived ?? false],
     queryFn: () => listLeads({ data: { includeArchived } }),
   });
+
+export const salesStagesQO = () =>
+  queryOptions({ queryKey: ["sales-stages"], queryFn: () => listSalesStages() });
 
 export const trashQO = () => queryOptions({ queryKey: ["trash"], queryFn: () => listTrash() });
 
@@ -1347,10 +1350,20 @@ export function useApi() {
       onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
       onError: (e: any) => toastFriendlyError(e, "Erro ao salvar oportunidade."),
     }),
-    moveLeadStatus: useMutation({
-      mutationFn: useServerFn(moveLeadStatus),
+    moveLeadStage: useMutation({
+      mutationFn: useServerFn(moveLeadStage),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
       onError: (e: any) => toastFriendlyError(e, "Erro ao mover oportunidade."),
+    }),
+    upsertSalesStage: useMutation({
+      mutationFn: useServerFn(upsertSalesStage),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["sales-stages"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar etapa."),
+    }),
+    deleteSalesStage: useMutation({
+      mutationFn: useServerFn(deleteSalesStage),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["sales-stages"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover etapa."),
     }),
     logLeadContact: useMutation({
       mutationFn: useServerFn(logLeadContact),
