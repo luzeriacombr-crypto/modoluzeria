@@ -290,7 +290,7 @@ export function App() {
         <TrialEndingBanner isMaster={me.data?.role === "master"} />
         <PastDueBanner isMaster={me.data?.role === "master"} />
         <PaymentGraceModal isMaster={me.data?.role === "master"} />
-        <WhatsAppCommunityModal isMaster={me.data?.role === "master"} whatsappCommunitySeenAt={me.data?.whatsappCommunitySeenAt} />
+        <WhatsAppCommunityModal isMaster={me.data?.role === "master"} whatsappCommunitySeenAt={me.data?.whatsappCommunitySeenAt} tourCompletedAt={me.data?.tourCompletedAt} />
         <FeatureShowcaseBanner isMaster={me.data?.role === "master"} />
         <ClientLimitGraceBanner isMaster={me.data?.role === "master"} />
         <InstagramLiveBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />

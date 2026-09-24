@@ -250,16 +250,17 @@ export function AppTour() {
 
   if (!open || !step) return null;
 
-  const close = async (markDone: boolean) => {
+  // Qualquer saída do tour (terminar, fechar no X, pular, clicar fora)
+  // conta como "terminou o tour" — é o marco que o convite da comunidade do
+  // WhatsApp usa pra só aparecer 3 dias depois (WhatsAppCommunityModal).
+  const close = async () => {
     setOpen(false);
     setRect(null);
-    if (markDone) {
-      try { await updateMyProfile.mutateAsync({ data: { tourCompleted: true } }); } catch {}
-    }
+    try { await updateMyProfile.mutateAsync({ data: { tourCompleted: true } }); } catch {}
   };
 
   const next = () => {
-    if (stepIdx >= visibleSteps.length - 1) close(true);
+    if (stepIdx >= visibleSteps.length - 1) close();
     else setStepIdx((i) => i + 1);
   };
   const prev = () => setStepIdx((i) => Math.max(0, i - 1));
@@ -306,7 +307,7 @@ export function AppTour() {
 
   const backdrop = !rect && (
     <div
-      onClick={() => close(false)}
+      onClick={() => close()}
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 999 }}
     />
   );
@@ -337,7 +338,7 @@ export function AppTour() {
           />
         ))}
 
-        <button onClick={() => close(true)} className="absolute top-4 right-4 text-foreground/40 hover:text-foreground z-10" aria-label="Fechar">
+        <button onClick={() => close()} className="absolute top-4 right-4 text-foreground/40 hover:text-foreground z-10" aria-label="Fechar">
           <X size={16} />
         </button>
 
@@ -405,7 +406,7 @@ export function AppTour() {
                   <ArrowLeft size={12} /> Voltar
                 </button>
               ) : (
-                <button onClick={() => close(false)} className="text-[11px] text-foreground/40 hover:text-foreground/70 px-1">
+                <button onClick={() => close()} className="text-[11px] text-foreground/40 hover:text-foreground/70 px-1">
                   Pular tour
                 </button>
               )}

@@ -5,13 +5,23 @@ const WHATSAPP_GROUP_URL = "https://chat.whatsapp.com/HmCaoZG14Gr2bFMowa18Ls?s=c
 
 const WHATSAPP_ICON_PATH = "M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.35 5.07L2 22l5.07-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm5.2 14.2c-.22.62-1.28 1.18-1.77 1.24-.45.06-1.02.09-1.65-.1-.38-.12-.87-.28-1.5-.55-2.64-1.14-4.36-3.8-4.5-3.98-.13-.18-1.08-1.43-1.08-2.73s.68-1.93.93-2.2c.24-.26.53-.33.7-.33h.5c.16 0 .38-.03.58.44.22.53.75 1.83.82 1.96.07.13.11.29.02.47-.09.18-.13.29-.26.45-.13.16-.28.35-.4.47-.13.13-.27.28-.11.55.16.27.7 1.15 1.5 1.86 1.03.92 1.9 1.2 2.17 1.34.27.13.43.11.59-.07.16-.18.68-.79.86-1.06.18-.27.36-.22.6-.13.25.09 1.57.74 1.84.87.27.13.45.2.51.31.07.13.07.71-.15 1.33z";
 
+const TOUR_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000;
+
 /** Mockup aprovado: claude.ai/artifact/8ZGqFmeQwvQJjQpdDXCfu5.
  * Só master vê, e só uma vez — marca whatsapp_community_seen_at ao fechar
- * (X, "Agora não") ou ao entrar no grupo, nunca mais aparece depois disso. */
-export function WhatsAppCommunityModal({ isMaster, whatsappCommunitySeenAt }: { isMaster: boolean; whatsappCommunitySeenAt?: string | null }) {
+ * (X, "Agora não") ou ao entrar no grupo, nunca mais aparece depois disso.
+ * Some junto com o tour guiado (App.tsx) bagunçava a primeira experiência —
+ * agora só libera 3 dias depois que a pessoa termina o tour, seja
+ * concluindo, fechando no X ou pulando (todo caminho marca tourCompletedAt,
+ * ver AppTour.tsx). */
+export function WhatsAppCommunityModal({ isMaster, whatsappCommunitySeenAt, tourCompletedAt }: {
+  isMaster: boolean; whatsappCommunitySeenAt?: string | null; tourCompletedAt?: string | null;
+}) {
   const { updateMyProfile } = useApi();
 
   if (!isMaster || whatsappCommunitySeenAt) return null;
+  if (!tourCompletedAt) return null;
+  if (Date.now() - new Date(tourCompletedAt).getTime() < TOUR_COOLDOWN_MS) return null;
 
   function markSeen() {
     updateMyProfile.mutate({ data: { whatsappCommunitySeen: true } }, {
