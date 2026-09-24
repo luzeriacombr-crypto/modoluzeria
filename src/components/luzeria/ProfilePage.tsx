@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield, UserPlus, RefreshCw, MessageCircle, AtSign, Star, Bug, LogOut, CalendarClock, Sun, Moon } from "lucide-react";
+import { Mail, Bell, Calendar, User, Lock, ShieldCheck, Shield, UserPlus, RefreshCw, MessageCircle, AtSign, Star, Bug, LogOut, CalendarClock, Sun, Moon, Sparkles } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMe, useApi, notificationPrefsQO, myCalendarConnectionQO, clientsQO } from "@/lib/luzeria/queries";
 import { useTheme } from "@/lib/luzeria/theme-store";
@@ -323,6 +324,17 @@ export function ProfilePage() {
         >
           Refazer tour
         </button>
+      </div>
+
+      <div className="mt-6 pt-6 border-t border-foreground/6">
+        <Link
+          to="/funcionalidades"
+          className="w-full flex items-center justify-center gap-2 rounded-lg py-3.5 font-bold text-sm transition-opacity hover:opacity-90"
+          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >
+          <Sparkles size={16} />
+          Conheça todas as funcionalidades do Modo Criador (e como usar)
+        </Link>
       </div>
 
       <div className="mt-6 pt-6 border-t border-foreground/6 flex items-center justify-between gap-4">
