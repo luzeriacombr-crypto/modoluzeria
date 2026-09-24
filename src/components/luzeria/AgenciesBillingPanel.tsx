@@ -837,8 +837,8 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
   const { data: pageViews = [], isLoading: loadingPageViews } = useQuery(orgPageViewsQO(org.id));
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-foreground/10 rounded-2xl p-6 max-w-sm w-full max-h-[85vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-card border border-foreground/10 rounded-2xl p-6 max-w-sm w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
             <Building2 size={18} className="text-[var(--lz-accent-ink)]" />
