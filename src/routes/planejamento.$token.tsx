@@ -21,7 +21,7 @@ export const Route = createFileRoute("/planejamento/$token")({
     const description = `Confira os roteiros e o planejamento de ${clientName}.`;
 
     const defaultOgImage = `${import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com.br"}/og-preview.jpg`;
-    const ogImage = loaderData?.client?.photoUrl ?? defaultOgImage;
+    const ogImage = loaderData?.orgPlanejamentoCoverImageUrl ?? defaultOgImage;
 
     const meta: Record<string, string>[] = [
       { title },

@@ -566,6 +566,7 @@ function GeneralSettings() {
           orgColorSidebar={me.orgColorSidebar ?? "#1A3A2E"}
           orgColorAccentLight={me.orgColorAccentLight ?? null}
           orgFeedPreviewImageUrl={me.orgFeedPreviewImageUrl ?? null}
+          orgPlanejamentoCoverImageUrl={me.orgPlanejamentoCoverImageUrl ?? null}
           orgFaviconUrl={me.orgFaviconUrl ?? null}
           borderRadius={me.borderRadius ?? 12}
           heroGradientFrom={me.heroGradientFrom ?? null}
@@ -1254,11 +1255,11 @@ function ReferralsSection({ initiallyOpen }: { initiallyOpen: boolean }) {
 
 function OrgBrandingSection({
   orgId, orgName, orgTagline, orgLogoUrl, orgLogoUrlLight, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar,
-  orgColorAccentLight, orgFeedPreviewImageUrl, orgFaviconUrl, borderRadius, heroGradientFrom, heroGradientTo,
+  orgColorAccentLight, orgFeedPreviewImageUrl, orgPlanejamentoCoverImageUrl, orgFaviconUrl, borderRadius, heroGradientFrom, heroGradientTo,
 }: {
   orgId: string; orgName: string; orgTagline: string | null; orgLogoUrl: string | null; orgLogoUrlLight: string | null;
   orgColorPrimary: string; orgColorPrimaryLight: string; orgColorSidebar: string; orgColorAccentLight: string | null;
-  orgFeedPreviewImageUrl: string | null; orgFaviconUrl: string | null; borderRadius: number;
+  orgFeedPreviewImageUrl: string | null; orgPlanejamentoCoverImageUrl: string | null; orgFaviconUrl: string | null; borderRadius: number;
   heroGradientFrom: string | null; heroGradientTo: string | null;
 }) {
   const { updateMyOrg } = useApi();
@@ -1280,6 +1281,7 @@ function OrgBrandingSection({
   const [uploading, setUploading] = useState(false);
   const [uploadingLight, setUploadingLight] = useState(false);
   const [uploadingPreview, setUploadingPreview] = useState(false);
+  const [uploadingPlanejamentoCover, setUploadingPlanejamentoCover] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
 
@@ -1397,6 +1399,36 @@ function OrgBrandingSection({
 
   function resetFeedPreviewImage() {
     updateMyOrg.mutate({ data: { feedPreviewImagePath: null } }, {
+      onSuccess: () => toast.success("Voltou pra imagem padrão do Modo Criador."),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover"),
+    });
+  }
+
+  async function pickPlanejamentoCoverImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Escolha um arquivo de imagem."); return; }
+    if (file.size > MAX_LOGO_BYTES) { toast.error("Imagem muito grande (máximo 3 MB)."); return; }
+    setUploadingPlanejamentoCover(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `org-planejamento-cover/${orgId}/cover-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        contentType: file.type, upsert: true,
+      });
+      if (upErr) throw upErr;
+      await updateMyOrg.mutateAsync({ data: { planejamentoCoverImagePath: path } });
+      toast.success("Imagem de capa atualizada.");
+    } catch (e: any) {
+      toastFriendlyError(e, "Erro ao enviar a imagem.");
+    } finally {
+      setUploadingPlanejamentoCover(false);
+    }
+  }
+
+  function resetPlanejamentoCoverImage() {
+    updateMyOrg.mutate({ data: { planejamentoCoverImagePath: null } }, {
       onSuccess: () => toast.success("Voltou pra imagem padrão do Modo Criador."),
       onError: (e: any) => toastFriendlyError(e, "Erro ao remover"),
     });
@@ -1588,6 +1620,40 @@ function OrgBrandingSection({
           </label>
           {orgFeedPreviewImageUrl && (
             <button onClick={resetFeedPreviewImage} disabled={updateMyOrg.isPending}
+              className="text-[11px] text-foreground/50 hover:text-red-400 transition disabled:opacity-50">
+              Voltar pra imagem padrão
+            </button>
+          )}
+        </div>
+        <p className="text-[11px] text-foreground/35">
+          Tamanho recomendado: 1200 x 630px (formato horizontal) · até 3 MB.
+        </p>
+      </div>
+
+      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
+        <Star size={12} /> Capa do link de planejamento
+      </h2>
+      <div className="bg-card rounded-lg p-5 mb-8 space-y-4">
+        <p className="text-[11px] text-foreground/50 leading-relaxed">
+          Imagem que aparece quando você manda o link de roteiros/planejamento pro cliente (WhatsApp, etc).
+          Por padrão é a imagem do Modo Criador — troque pra aparecer uma imagem da sua agência.
+        </p>
+
+        <div className="rounded-md overflow-hidden bg-black/30 border border-foreground/10 max-w-sm">
+          <img
+            src={orgPlanejamentoCoverImageUrl ?? "/og-preview.jpg"}
+            alt="Capa do link de planejamento"
+            className="w-full aspect-[936/438] object-cover"
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <label className="lz-btn-ghost text-xs px-4 py-2 rounded-md cursor-pointer disabled:opacity-50">
+            {uploadingPlanejamentoCover ? "Enviando…" : "Enviar imagem"}
+            <input type="file" accept="image/*" className="hidden" onChange={pickPlanejamentoCoverImage} disabled={uploadingPlanejamentoCover} />
+          </label>
+          {orgPlanejamentoCoverImageUrl && (
+            <button onClick={resetPlanejamentoCoverImage} disabled={updateMyOrg.isPending}
               className="text-[11px] text-foreground/50 hover:text-red-400 transition disabled:opacity-50">
               Voltar pra imagem padrão
             </button>

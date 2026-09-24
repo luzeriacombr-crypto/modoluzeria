@@ -3587,6 +3587,7 @@ export type Database = {
           photo_watermark_text: string | null
           pix_key: string | null
           plan_id: string
+          planejamento_cover_image_path: string | null
           promotion_code_id: string | null
           referral_code: string | null
           referral_credit_balance: number
@@ -3655,6 +3656,7 @@ export type Database = {
           photo_watermark_text?: string | null
           pix_key?: string | null
           plan_id?: string
+          planejamento_cover_image_path?: string | null
           promotion_code_id?: string | null
           referral_code?: string | null
           referral_credit_balance?: number
@@ -3723,6 +3725,7 @@ export type Database = {
           photo_watermark_text?: string | null
           pix_key?: string | null
           plan_id?: string
+          planejamento_cover_image_path?: string | null
           promotion_code_id?: string | null
           referral_code?: string | null
           referral_credit_balance?: number

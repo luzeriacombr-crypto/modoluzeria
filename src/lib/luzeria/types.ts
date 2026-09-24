@@ -339,6 +339,8 @@ export interface Profile {
    * de feed, ou null pra usar a imagem padrão do Modo Criador. */
   orgFeedPreviewImageUrl?: string | null;
   orgFeedPreviewImagePath?: string | null;
+  orgPlanejamentoCoverImageUrl?: string | null;
+  orgPlanejamentoCoverImagePath?: string | null;
   /** Ícone próprio da agência (favicon da aba + apple-touch-icon), ou null
    * pra usar o ícone padrão do Modo Criador. */
   orgFaviconUrl?: string | null;

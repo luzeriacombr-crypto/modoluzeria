@@ -151,7 +151,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at, plan_id, subscription_status, trial_ends_at, deactivation_reason").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, planejamento_cover_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at, plan_id, subscription_status, trial_ends_at, deactivation_reason").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -161,19 +161,22 @@ export const getMe = createServerFn({ method: "GET" })
     const logoPath = (org as any)?.logo_path as string | null | undefined;
     const logoPathLight = (org as any)?.logo_path_light as string | null | undefined;
     const feedPreviewImagePath = (org as any)?.feed_preview_image_path as string | null | undefined;
+    const planejamentoCoverImagePath = (org as any)?.planejamento_cover_image_path as string | null | undefined;
     const faviconPath = (org as any)?.favicon_path as string | null | undefined;
     const photoWatermarkPath = (org as any)?.photo_watermark_path as string | null | undefined;
-    const [signed, logoSigned, logoLightSigned, feedPreviewSigned, faviconSigned, watermarkSigned] = await Promise.all([
+    const [signed, logoSigned, logoLightSigned, feedPreviewSigned, planejamentoCoverSigned, faviconSigned, watermarkSigned] = await Promise.all([
       signAvatarPaths(context.supabase, [profile.avatar_url]),
       signAvatarPaths(context.supabase, [logoPath], null),
       signAvatarPaths(context.supabase, [logoPathLight], null),
       signAvatarPaths(context.supabase, [feedPreviewImagePath], FEED_PREVIEW_THUMB),
+      signAvatarPaths(context.supabase, [planejamentoCoverImagePath], FEED_PREVIEW_THUMB),
       signAvatarPaths(context.supabase, [faviconPath], FAVICON_THUMB),
       signAvatarPaths(context.supabase, [photoWatermarkPath], null),
     ]);
     const orgLogoUrl = logoPath ? logoSigned.get(logoPath) ?? null : null;
     const orgLogoUrlLight = logoPathLight ? logoLightSigned.get(logoPathLight) ?? null : null;
     const orgFeedPreviewImageUrl = feedPreviewImagePath ? feedPreviewSigned.get(feedPreviewImagePath) ?? null : null;
+    const orgPlanejamentoCoverImageUrl = planejamentoCoverImagePath ? planejamentoCoverSigned.get(planejamentoCoverImagePath) ?? null : null;
     const orgFaviconUrl = faviconPath ? faviconSigned.get(faviconPath) ?? null : null;
     const orgPhotoWatermarkUrl = photoWatermarkPath ? watermarkSigned.get(photoWatermarkPath) ?? null : null;
     // Cargos atribuídos (pode ter vários) — cargoPermissions já é a união
@@ -221,6 +224,8 @@ export const getMe = createServerFn({ method: "GET" })
       orgLogoUrlLight,
       orgFeedPreviewImageUrl,
       orgFeedPreviewImagePath: feedPreviewImagePath ?? null,
+      orgPlanejamentoCoverImageUrl,
+      orgPlanejamentoCoverImagePath: planejamentoCoverImagePath ?? null,
       orgFaviconUrl,
       orgFaviconPath: faviconPath ?? null,
       orgPhotoWatermarkUrl,
@@ -280,7 +285,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     name?: string; tagline?: string | null; logoPath?: string | null; logoPathLight?: string | null;
     colorPrimary?: string | null; colorPrimaryLight?: string | null; colorSidebar?: string | null;
     colorAccentLight?: string | null;
-    taxId?: string | null; feedPreviewImagePath?: string | null; faviconPath?: string | null;
+    taxId?: string | null; feedPreviewImagePath?: string | null; planejamentoCoverImagePath?: string | null; faviconPath?: string | null;
     photoWatermarkPath?: string | null;
     photoWatermarkMode?: "none" | "text" | "image";
     photoWatermarkText?: string | null;
@@ -309,6 +314,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       colorAccentLight: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/).nullable().optional(),
       feedPreviewImagePath: z.string().max(300).nullable().optional(),
+      planejamentoCoverImagePath: z.string().max(300).nullable().optional(),
       faviconPath: z.string().max(300).nullable().optional(),
       photoWatermarkPath: z.string().max(300).nullable().optional(),
       photoWatermarkMode: z.enum(["none", "text", "image"]).optional(),
@@ -346,6 +352,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.colorAccentLight !== undefined) patch.color_accent_light = data.colorAccentLight;
     if (data.taxId !== undefined) patch.tax_id = data.taxId;
     if (data.feedPreviewImagePath !== undefined) patch.feed_preview_image_path = data.feedPreviewImagePath;
+    if (data.planejamentoCoverImagePath !== undefined) patch.planejamento_cover_image_path = data.planejamentoCoverImagePath;
     if (data.faviconPath !== undefined) patch.favicon_path = data.faviconPath;
     if (data.photoWatermarkPath !== undefined) patch.photo_watermark_path = data.photoWatermarkPath;
     if (data.photoWatermarkMode !== undefined) patch.photo_watermark_mode = data.photoWatermarkMode;

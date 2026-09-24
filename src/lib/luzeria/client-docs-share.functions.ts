@@ -83,6 +83,7 @@ export type PublicClientDocsPayload = {
   client: { name: string; color: string; photoUrl: string | null };
   orgName: string | null;
   orgLogoUrl: string | null;
+  orgPlanejamentoCoverImageUrl: string | null;
   roteiroDocs: PublicClientDoc[];
   planejamentoDocs: PublicClientDoc[];
   roteiroClientStatuses: PublicRoteiroClientStatus[];
@@ -115,14 +116,20 @@ export const getPublicClientDocs = createServerFn({ method: "GET" })
 
     let orgName: string | null = null;
     let orgLogoUrl: string | null = null;
+    let orgPlanejamentoCoverImageUrl: string | null = null;
     const orgId = (client as any).org_id as string | null;
     if (orgId) {
-      const { data: org } = await supabaseAdmin.from("orgs").select("name, logo_path").eq("id", orgId).maybeSingle();
+      const { data: org } = await supabaseAdmin.from("orgs").select("name, logo_path, planejamento_cover_image_path").eq("id", orgId).maybeSingle();
       orgName = org?.name ?? null;
       if ((org as any)?.logo_path) {
         const { data: signed } = await supabaseAdmin.storage
           .from("avatars").createSignedUrl((org as any).logo_path, 60 * 60 * 24 * 365);
         orgLogoUrl = signed?.signedUrl ?? null;
+      }
+      if ((org as any)?.planejamento_cover_image_path) {
+        const { data: signed } = await supabaseAdmin.storage
+          .from("avatars").createSignedUrl((org as any).planejamento_cover_image_path, 60 * 60 * 24 * 365);
+        orgPlanejamentoCoverImageUrl = signed?.signedUrl ?? null;
       }
     }
 
@@ -154,7 +161,7 @@ export const getPublicClientDocs = createServerFn({ method: "GET" })
         color: ((client as any).color as string) ?? "rgb(var(--lz-brand-rgb))",
         photoUrl,
       },
-      orgName, orgLogoUrl, roteiroDocs, planejamentoDocs, roteiroClientStatuses,
+      orgName, orgLogoUrl, orgPlanejamentoCoverImageUrl, roteiroDocs, planejamentoDocs, roteiroClientStatuses,
     };
   });
 
