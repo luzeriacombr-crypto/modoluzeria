@@ -14,6 +14,7 @@ import {
   reorganizeAllDriveFiles,
   getDriveConnectionStatus,
   getDriveConnectUrl,
+  disconnectDrive,
   listDriveFolderChildren,
   getClientFolderMatches,
   applyClientFolderMatches,
@@ -132,6 +133,7 @@ export function DriveSettingsTab() {
   const qc = useQueryClient();
   const getConnStatus = useServerFn(getDriveConnectionStatus);
   const getConnectUrl = useServerFn(getDriveConnectUrl);
+  const disconnect = useServerFn(disconnectDrive);
   const getCfg = useServerFn(getDriveConfig);
   const setRoot = useServerFn(setDriveRootFolder);
   const getMatches = useServerFn(getClientFolderMatches);
@@ -141,6 +143,7 @@ export function DriveSettingsTab() {
   const connStatus = useQuery({ queryKey: ["drive-connection-status"], queryFn: () => getConnStatus() });
   const cfg = useQuery({ queryKey: ["drive-config"], queryFn: () => getCfg() });
   const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const step1Done = !!connStatus.data?.connected;
   const step2Done = !!cfg.data?.isConfigured;
@@ -163,6 +166,25 @@ export function DriveSettingsTab() {
     } catch (e: any) {
       toastFriendlyError(e, "Falha ao iniciar conexão com o Drive");
       setConnecting(false);
+    }
+  }
+
+  async function disconnectDriveNow() {
+    if (!(await requestConfirm(
+      "Desconectar o Google Drive dessa agência? A conexão da conta atual para de funcionar até conectar de novo — os arquivos já organizados no Drive não são apagados.",
+      { danger: true },
+    ))) return;
+    setDisconnecting(true);
+    try {
+      await disconnect({} as any);
+      toast.success("Google Drive desconectado.");
+      qc.invalidateQueries({ queryKey: ["drive-connection-status"] });
+      qc.invalidateQueries({ queryKey: ["setup-checklist"] });
+      setManualStep(1);
+    } catch (e: any) {
+      toastFriendlyError(e, "Falha ao desconectar o Drive");
+    } finally {
+      setDisconnecting(false);
     }
   }
 
@@ -279,6 +301,10 @@ export function DriveSettingsTab() {
                   ✓ Conectado{status.driveEmail ? ` — ${status.driveEmail}` : ""}
                 </div>
                 <div className="flex items-center gap-3">
+                  <button onClick={disconnectDriveNow} disabled={disconnecting}
+                    className="text-[11px] text-red-400/70 hover:text-red-400 transition disabled:opacity-50">
+                    {disconnecting ? "Desconectando…" : "Desconectar"}
+                  </button>
                   <button onClick={connectDrive} disabled={connecting}
                     className="text-[11px] text-foreground/50 hover:text-foreground transition disabled:opacity-50">
                     Trocar de conta

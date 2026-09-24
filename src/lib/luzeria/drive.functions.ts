@@ -1171,6 +1171,20 @@ export const getDriveConnectionStatus = createServerFn({ method: "GET" })
     return { connected: false, driveEmail: null, connectedAt: null };
   });
 
+/** Desconecta o Google Drive da agência — mesma simplicidade de
+ * disconnectInstagram (instagram.functions.ts): só apaga a credencial,
+ * sem tentar revogar o token do lado do Google. Volta a tela de
+ * configuração pro passo 1 (Conectar conta). */
+export const disconnectDrive = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    await assertMaster(context.supabase, context.userId);
+    const { error } = await context.supabase
+      .from("org_google_credentials").delete().eq("org_id", context.orgId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /** Builds the Google consent URL for this org's master to connect their own Drive. */
 export const getDriveConnectUrl = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
