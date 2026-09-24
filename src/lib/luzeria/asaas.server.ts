@@ -96,10 +96,10 @@ export async function deleteAsaasPayment(paymentId: string) {
  * pending payment (if any) via updateAsaasPaymentValue so this month's
  * invoice reflects the new total too, same as applyPromotionCodeToOrg
  * already does for discount codes. */
-export async function updateAsaasSubscriptionValue(subscriptionId: string, valueCents: number) {
+export async function updateAsaasSubscriptionValue(subscriptionId: string, valueCents: number, description?: string) {
   return asaasFetch(`/subscriptions/${subscriptionId}`, {
     method: "PUT",
-    body: JSON.stringify({ value: valueCents / 100 }),
+    body: JSON.stringify({ value: valueCents / 100, ...(description ? { description } : {}) }),
   }) as Promise<{ id: string; value: number }>;
 }
 

@@ -855,7 +855,7 @@ export const adminUpdateOrgPlan = createServerFn({ method: "POST" })
     if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: plan } = await supabaseAdmin.from("plans").select("id, price_cents").eq("id", data.planId).maybeSingle();
+    const { data: plan } = await supabaseAdmin.from("plans").select("id, name, price_cents").eq("id", data.planId).maybeSingle();
     if (!plan) throw new Error("Plano não encontrado.");
 
     const { data: org } = await supabaseAdmin.from("orgs").select("asaas_subscription_id").eq("id", data.orgId).maybeSingle();
@@ -867,9 +867,16 @@ export const adminUpdateOrgPlan = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     let asaasSynced = false;
-    if ((org as any).asaas_subscription_id && plan.price_cents != null) {
-      const { updateAsaasSubscriptionValue } = await import("./asaas.server");
-      await updateAsaasSubscriptionValue((org as any).asaas_subscription_id, plan.price_cents);
+    const asaasSubscriptionId = (org as any).asaas_subscription_id;
+    if (asaasSubscriptionId && plan.price_cents != null) {
+      const { updateAsaasSubscriptionValue, getNextPendingPayment, updateAsaasPaymentValue } = await import("./asaas.server");
+      // O valor novo da assinatura só vale pros PRÓXIMOS ciclos — a fatura
+      // já gerada pro vencimento mais próximo (se ainda não paga) precisa
+      // ser corrigida à parte, senão a pessoa é cobrada pelo plano antigo
+      // uma última vez antes do valor novo entrar em vigor.
+      await updateAsaasSubscriptionValue(asaasSubscriptionId, plan.price_cents, `Modo Criador — Plano ${plan.name}`);
+      const pending = await getNextPendingPayment(asaasSubscriptionId);
+      if (pending) await updateAsaasPaymentValue(pending.id, plan.price_cents);
       asaasSynced = true;
     }
     return { ok: true, asaasSynced };
