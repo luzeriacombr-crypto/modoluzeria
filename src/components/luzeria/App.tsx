@@ -38,6 +38,7 @@ import { DriveReconnectBanner } from "./DriveReconnectBanner";
 import { LevelUpCelebration } from "./LevelUpCelebration";
 import { PageViewTracker } from "./PageViewTracker";
 import { ReferralAnnouncementBanner } from "./ReferralAnnouncementBanner";
+import { FeatureShowcaseBanner } from "./FeatureShowcaseBanner";
 import { SmartImportBanner } from "./SmartImportBanner";
 import { ClientLimitGraceBanner } from "./ClientLimitGraceBanner";
 import { GlobalConfirmDialog } from "./GlobalConfirmDialog";
@@ -290,6 +291,7 @@ export function App() {
         <PastDueBanner isMaster={me.data?.role === "master"} />
         <PaymentGraceModal isMaster={me.data?.role === "master"} />
         <WhatsAppCommunityModal isMaster={me.data?.role === "master"} whatsappCommunitySeenAt={me.data?.whatsappCommunitySeenAt} />
+        <FeatureShowcaseBanner isMaster={me.data?.role === "master"} />
         <ClientLimitGraceBanner isMaster={me.data?.role === "master"} />
         <InstagramLiveBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
         <DriveReconnectBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />

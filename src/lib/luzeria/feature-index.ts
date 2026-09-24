@@ -202,6 +202,13 @@ export const FEATURE_INDEX: FeatureEntry[] = [
     roles: ["master", "setor"],
   },
   {
+    id: "funcionalidades",
+    label: "Conheça o Modo Criador",
+    description: "Um resumo com destaque e passo a passo de cada função forte do sistema.",
+    keywords: ["funcionalidades", "recursos", "o que da pra fazer", "tour", "descobrir", "novidades", "tutorial rapido", "resumo"],
+    to: "/funcionalidades",
+  },
+  {
     id: "cfg-pagamentos",
     label: "Pagamentos",
     description: "Quem já pagou no mês, vencimentos e mensagem de cobrança pelo WhatsApp.",

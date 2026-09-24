@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
-import { CircleHelp, Paperclip, X, BookOpen, Compass, Bug, Lightbulb } from "lucide-react";
+import { CircleHelp, Paperclip, X, BookOpen, Compass, Bug, Lightbulb, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Modal } from "./Modals";
@@ -111,6 +111,11 @@ export function HelpButton() {
               icon={<BookOpen size={13} />}
               label="Tutoriais e dúvidas"
               onClick={() => { setMenuOpen(false); navigate({ to: "/ajuda" }); }}
+            />
+            <HelpMenuItem
+              icon={<Sparkles size={13} />}
+              label="Ver todas as funcionalidades"
+              onClick={() => { setMenuOpen(false); navigate({ to: "/funcionalidades" }); }}
             />
             <HelpMenuItem
               icon={<Compass size={13} />}
