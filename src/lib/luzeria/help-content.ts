@@ -115,7 +115,9 @@ export const TUTORIALS: HelpTutorial[] = [
   {
     title: "Gerar uma prévia de planejamento com IA (novidade)",
     steps: [
-      "No teste grátis ou no plano Solo, dá pra ativar em até 2 clientes; no plano Pro ou superior não tem limite — veja em Configurações → Cobrança.",
+      "Regra de acesso: sem assinatura registrada (teste grátis) ou no plano Solo, dá pra usar em até 2 clientes. No plano Pro ou superior, sem limite. Isso é por plano/pagamento, não por nível do Programa de Níveis.",
+      "Na primeira vez que usar num cliente novo, se a agência estiver no limite (teste grátis ou Solo), aparece uma confirmação avisando que vai gastar uma das vagas. Clientes que já usaram antes continuam gerando de graça, sem confirmar de novo.",
+      "Se a agência tinha Pro e caiu pro Solo (ou perdeu a assinatura) com mais clientes ativados do que o novo limite permite, a geração para até desativar em algum cliente ou fazer upgrade em Configurações → Cobrança.",
       "Abra a Ficha de um cliente e vá na aba \"Roteiros & Planejamento\".",
       "Clique no card \"Gerar prévia de planejamento com IA\", no topo da aba.",
       "Se teve reunião com o cliente recentemente, cola as anotações ou a transcrição inteira no campo de contexto extra — isso conta mais do que qualquer histórico antigo, mas é opcional.",
