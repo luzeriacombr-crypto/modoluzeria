@@ -8,6 +8,16 @@ import type { RoteiroStatus } from "@/lib/luzeria/client-docs.functions";
 
 const chipBase = "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors";
 
+/** Antes do roteiro ser aprovado (sem linha de status ainda), a única pista
+ * de formato é o sufixo no título — mesmo que displayRoteiroTitle já usa
+ * pra tirar da exibição (markdown-lite.ts). Sem isso, "Marcar gravado"
+ * aparecia até em Post/Carrossel que nunca foram gravados. */
+function guessContentTypeFromTitle(title: string): "post" | "reel" {
+  const m = title.match(/\((reel|post|carrossel|est[aá]tico)\)\s*$/i);
+  if (!m) return "reel";
+  return m[1].toLowerCase() === "reel" ? "reel" : "post";
+}
+
 /** Per-roteiro workflow controls, injected via RoteirosView's `renderFooter`
  * slot — admin-only, never rendered on the public client page. */
 export function RoteiroControls({
@@ -38,7 +48,7 @@ export function RoteiroControls({
   const current = status?.status ?? "pending";
   const gravado = status?.gravado ?? false;
   const contentItemId = status?.contentItemId ?? null;
-  const contentType = status?.contentType ?? "reel";
+  const contentType = status?.contentType ?? guessContentTypeFromTitle(title);
   const showNote = current === "ajustar";
 
   function setApprovalStatus(next: "aprovado" | "ajustar") {
@@ -144,14 +154,16 @@ export function RoteiroControls({
         >
           <PencilLine size={12} /> Ajustar
         </button>
-        <button type="button" onClick={toggleGravado} className={chipBase}
-          style={{
-            backgroundColor: gravado ? "rgba(var(--lz-brand-light-rgb),0.18)" : "color-mix(in srgb, var(--foreground) 5%, transparent)",
-            color: gravado ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
-          }}
-        >
-          <Video size={12} /> {gravado ? "Gravado" : "Marcar gravado"}
-        </button>
+        {contentType === "reel" && (
+          <button type="button" onClick={toggleGravado} className={chipBase}
+            style={{
+              backgroundColor: gravado ? "rgba(var(--lz-brand-light-rgb),0.18)" : "color-mix(in srgb, var(--foreground) 5%, transparent)",
+              color: gravado ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
+            }}
+          >
+            <Video size={12} /> {gravado ? "Gravado" : "Marcar gravado"}
+          </button>
+        )}
         {contentItemId ? (
           <button
             type="button"
