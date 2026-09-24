@@ -35,12 +35,17 @@ export type ClientPaymentRow = {
   color: string;
   icon: string | null;
   contractValue: number | null;
-  paymentDueDay: number;
-  nextDueDate: string;
+  paymentDueDay: number | null;
+  nextDueDate: string | null;
   paidThisPeriod: boolean;
   paidAt: string | null;
   whatsappPhone: string | null;
   postsDoneThisMonth: number;
+  /** true quando falta preencher valor e/ou dia de vencimento — sem isso,
+   * o cliente ficava simplesmente fora da lista (nunca aparecia), em vez
+   * de aparecer pedindo pra completar o cadastro. */
+  missingValue: boolean;
+  missingDueDay: boolean;
 };
 
 export const listClientPayments = createServerFn({ method: "GET" })
@@ -55,7 +60,6 @@ export const listClientPayments = createServerFn({ method: "GET" })
       .select("id, name, color, icon, contract_value, payment_due_day")
       .eq("org_id", context.orgId)
       .eq("archived", false)
-      .not("payment_due_day", "is", null)
       .order("name");
     const clientIds = (clients ?? []).map((c: any) => c.id);
     if (clientIds.length === 0) return { pixKey: org?.pix_key ?? null, messageTemplate: org?.payment_message_template ?? null, clients: [] as ClientPaymentRow[] };
@@ -97,12 +101,14 @@ export const listClientPayments = createServerFn({ method: "GET" })
       return {
         id: c.id, name: c.name, color: c.color, icon: c.icon,
         contractValue: c.contract_value ?? null,
-        paymentDueDay: c.payment_due_day,
-        nextDueDate: nextDueDate(c.payment_due_day, now),
+        paymentDueDay: c.payment_due_day ?? null,
+        nextDueDate: c.payment_due_day ? nextDueDate(c.payment_due_day, now) : null,
         paidThisPeriod: !!paidAt,
         paidAt,
         whatsappPhone: phoneByClient.get(c.id) ?? null,
         postsDoneThisMonth: monthId ? (doneCountByMonth.get(monthId) ?? 0) : 0,
+        missingValue: c.contract_value == null,
+        missingDueDay: c.payment_due_day == null,
       };
     });
 

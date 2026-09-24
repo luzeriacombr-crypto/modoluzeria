@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
+import { Plus, X, AlertCircle } from "lucide-react";
 import { cashFlowEntriesQO, clientPaymentsQO, useApi } from "@/lib/luzeria/queries";
 import type { CashFlowEntry } from "@/lib/luzeria/cash-flow.functions";
+import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
+import { Modal } from "./Modals";
 
 function money(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -34,6 +36,7 @@ export function CashFlowSection() {
   const [expenseLabel, setExpenseLabel] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseKind, setExpenseKind] = useState<"fixo" | "variavel">("fixo");
+  const [fillingClient, setFillingClient] = useState<ClientPaymentRow | null>(null);
 
   const clients = payments?.clients ?? [];
   const incomes = entries.filter((e) => e.direction === "entrada");
@@ -132,20 +135,36 @@ export function CashFlowSection() {
           <div className="text-[10px] font-bold uppercase tracking-wider text-foreground/30 mb-1.5">Clientes (recorrente)</div>
           <div className="space-y-1.5 mb-3">
             {clients.length === 0 ? (
-              <div className="text-[11px] text-foreground/35 py-2">Nenhum cliente com dia de vencimento cadastrado.</div>
-            ) : clients.map((c) => (
-              <div key={c.id} className="flex items-center gap-2.5 px-2.5 py-2 rounded-md" style={{ background: "color-mix(in srgb, var(--foreground) 2.5%, transparent)" }}>
-                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
-                <span className="flex-1 min-w-0 text-[13px] text-foreground truncate">{c.name}</span>
-                <span
-                  className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
-                  style={c.paidThisPeriod ? { backgroundColor: "rgba(91,168,138,0.15)", color: "#5BA88A" } : { backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 50%, transparent)" }}
-                >
-                  {c.paidThisPeriod ? "Recebido" : "Pendente"}
-                </span>
-                <span className="text-[13px] font-bold text-foreground w-20 text-right">{c.contractValue != null ? money(Math.round(c.contractValue * 100)) : "—"}</span>
-              </div>
-            ))}
+              <div className="text-[11px] text-foreground/35 py-2">Nenhum cliente cadastrado ainda.</div>
+            ) : clients.map((c) => {
+              const missing = c.missingValue || c.missingDueDay;
+              return (
+                <div key={c.id} className="flex items-center gap-2.5 px-2.5 py-2 rounded-md" style={{ background: "color-mix(in srgb, var(--foreground) 2.5%, transparent)" }}>
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                  <span className="flex-1 min-w-0 text-[13px] text-foreground truncate">{c.name}</span>
+                  {missing ? (
+                    <button
+                      onClick={() => setFillingClient(c)}
+                      className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-1 rounded"
+                      style={{ backgroundColor: "rgba(240,166,90,0.15)", color: "#F0A65A" }}
+                    >
+                      <AlertCircle size={11} />
+                      {c.missingValue && c.missingDueDay ? "Falta data e valor" : c.missingDueDay ? "Falta a data" : "Falta o valor"}
+                    </button>
+                  ) : (
+                    <>
+                      <span
+                        className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
+                        style={c.paidThisPeriod ? { backgroundColor: "rgba(91,168,138,0.15)", color: "#5BA88A" } : { backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 50%, transparent)" }}
+                      >
+                        {c.paidThisPeriod ? "Recebido" : "Pendente"}
+                      </span>
+                      <span className="text-[13px] font-bold text-foreground w-20 text-right">{c.contractValue != null ? money(Math.round(c.contractValue * 100)) : "—"}</span>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {incomes.length > 0 && (
@@ -230,6 +249,64 @@ export function CashFlowSection() {
           </div>
         </div>
       </div>
+
+      {fillingClient && (
+        <FillPaymentInfoModal client={fillingClient} onClose={() => setFillingClient(null)} />
+      )}
     </div>
+  );
+}
+
+/** Preenche direto da lista de Entradas o que falta pro cliente entrar como
+ * mensalidade recorrente (valor e/ou dia de vencimento) — mesmo patch que
+ * já existe em Configuração do cliente na Ficha, só que sem precisar sair
+ * daqui pra achar. Salva com updateClient, que já invalida client-payments
+ * sozinho (a linha vira Recebido/Pendente na hora). */
+function FillPaymentInfoModal({ client, onClose }: { client: ClientPaymentRow; onClose: () => void }) {
+  const api = useApi();
+  const [value, setValue] = useState(client.contractValue != null ? String(client.contractValue).replace(".", ",") : "");
+  const [dueDay, setDueDay] = useState(client.paymentDueDay != null ? String(client.paymentDueDay) : "");
+
+  function save() {
+    const patch: Record<string, any> = {};
+    if (client.missingValue) {
+      const n = parseFloat(value.replace(/\./g, "").replace(",", "."));
+      if (!n || n <= 0) { toast.error("Informe um valor válido."); return; }
+      patch.contract_value = n;
+    }
+    if (client.missingDueDay) {
+      const d = parseInt(dueDay, 10);
+      if (!d || d < 1 || d > 31) { toast.error("Informe um dia entre 1 e 31."); return; }
+      patch.payment_due_day = d;
+    }
+    api.updateClient.mutate(
+      { data: { id: client.id, patch } },
+      { onSuccess: () => { toast.success("Cadastro completo — já entra em Entradas."); onClose(); } },
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`Completar cadastro · ${client.name}`}>
+      <div className="space-y-3">
+        {client.missingValue && (
+          <label className="block">
+            <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Valor mensal (R$)</span>
+            <input autoFocus value={value} onChange={(e) => setValue(e.target.value)} placeholder="0,00" className={inp} />
+          </label>
+        )}
+        {client.missingDueDay && (
+          <label className="block">
+            <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Dia de vencimento</span>
+            <input autoFocus={!client.missingValue} value={dueDay} onChange={(e) => setDueDay(e.target.value.replace(/\D/g, ""))} placeholder="Ex: 15" maxLength={2} className={inp} />
+          </label>
+        )}
+      </div>
+      <div className="flex items-center justify-end gap-2 mt-5">
+        <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
+        <button onClick={save} disabled={api.updateClient.isPending} className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50">
+          {api.updateClient.isPending ? "Salvando…" : "Salvar"}
+        </button>
+      </div>
+    </Modal>
   );
 }

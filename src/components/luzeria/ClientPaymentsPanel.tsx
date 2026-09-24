@@ -17,11 +17,13 @@ function currentPeriod(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
   return new Date(iso + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
-function daysUntil(iso: string): number {
+function daysUntil(iso: string | null): number {
+  if (!iso) return Infinity;
   const due = new Date(iso + "T00:00:00").getTime();
   const today = new Date(); today.setHours(0, 0, 0, 0);
   return Math.round((due - today.getTime()) / 86400000);
@@ -128,29 +130,31 @@ function MessageTemplateForm({ template, isMaster }: { template: string | null; 
   );
 }
 
-function DueDayEditor({ clientId, clientName, day, isMaster }: { clientId: string; clientName: string; day: number; isMaster: boolean }) {
+function DueDayEditor({ clientId, clientName, day, isMaster }: { clientId: string; clientName: string; day: number | null; isMaster: boolean }) {
   const api = useApi();
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(String(day));
-  useEffect(() => setValue(String(day)), [day]);
+  const [value, setValue] = useState(day != null ? String(day) : "");
+  useEffect(() => setValue(day != null ? String(day) : ""), [day]);
 
   async function clear() {
-    if (await requestConfirm(`Parar de cobrar "${clientName}" automaticamente? O cliente sai dessa lista até você definir um dia de vencimento de novo.`, { danger: true })) {
+    if (await requestConfirm(`Parar de cobrar "${clientName}" automaticamente? Ele continua aparecendo em Entradas pedindo pra preencher de novo.`, { danger: true })) {
       api.updateClient.mutate({ data: { id: clientId, patch: { payment_due_day: null } } });
     }
   }
 
-  if (!isMaster) return <span className="text-[11px] text-foreground/40">dia {day}</span>;
+  if (!isMaster) return <span className="text-[11px] text-foreground/40">{day != null ? `dia ${day}` : "sem dia definido"}</span>;
   if (!editing) {
     return (
       <span className="inline-flex items-center gap-1">
         <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-[11px] text-foreground/40 hover:text-foreground transition">
-          dia {day} <Pencil size={10} />
+          {day != null ? `dia ${day}` : "definir dia"} <Pencil size={10} />
         </button>
-        <button onClick={clear} title="Parar de cobrar esse cliente (remove o dia de vencimento)"
-          className="text-foreground/25 hover:text-red-400 transition">
-          <X size={10} />
-        </button>
+        {day != null && (
+          <button onClick={clear} title="Parar de cobrar esse cliente (remove o dia de vencimento)"
+            className="text-foreground/25 hover:text-red-400 transition">
+            <X size={10} />
+          </button>
+        )}
       </span>
     );
   }
@@ -159,7 +163,7 @@ function DueDayEditor({ clientId, clientName, day, isMaster }: { clientId: strin
       className="inline-flex items-center gap-1"
       onSubmit={(e) => {
         e.preventDefault();
-        const n = Math.min(31, Math.max(1, Number(value) || day));
+        const n = value ? Math.min(31, Math.max(1, Number(value) || 1)) : null;
         setEditing(false);
         if (n !== day) api.updateClient.mutate({ data: { id: clientId, patch: { payment_due_day: n } } });
       }}
@@ -221,7 +225,7 @@ export function ClientPaymentsPanel() {
 
       {rows.length === 0 ? (
         <div className="text-center py-12 text-sm text-foreground/40">
-          Nenhum cliente com dia de vencimento cadastrado ainda. Configure em Ficha do Cliente → Configuração.
+          Nenhum cliente cadastrado ainda.
         </div>
       ) : (
         <div className="bg-card border border-foreground/7 rounded-xl overflow-hidden">
@@ -242,7 +246,7 @@ export function ClientPaymentsPanel() {
                 const days = daysUntil(r.nextDueDate);
                 const overdue = days < 0 && !r.paidThisPeriod;
                 const dueSoon = days >= 0 && days <= 7 && !r.paidThisPeriod;
-                const wa = waLink(r.whatsappPhone, buildPaymentMessage(r, data.pixKey, data.messageTemplate));
+                const wa = r.nextDueDate ? waLink(r.whatsappPhone, buildPaymentMessage(r, data.pixKey, data.messageTemplate)) : null;
                 const expanded = expandedId === r.id;
                 return (
                   <Fragment key={r.id}>
@@ -289,7 +293,8 @@ export function ClientPaymentsPanel() {
                           </a>
                         ) : (
                           <button onClick={() => openFicha(r.id)}
-                            className="p-1.5 rounded text-foreground/15 hover:text-foreground/40 hover:bg-foreground/5" title="Sem telefone cadastrado — clique pra adicionar na ficha do cliente">
+                            className="p-1.5 rounded text-foreground/15 hover:text-foreground/40 hover:bg-foreground/5"
+                            title={!r.nextDueDate ? "Falta o dia de vencimento — configure ao lado" : "Sem telefone cadastrado — clique pra adicionar na ficha do cliente"}>
                             <MessageCircle size={15} />
                           </button>
                         )}
