@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Download, Filter, ChevronDown, Clock, AlertOctagon, RotateCcw, Star,
-  BarChart3, Activity, Layers, Zap, Upload,
+  BarChart3, Activity, Layers, Zap, Upload, Trophy,
 } from "lucide-react";
 import { profilesQO, clientsQO, reportQO, reportExtrasQO, memberVelocityQO, fileUploadsReportQO, useApi, type ReportFilters } from "@/lib/luzeria/queries";
 import { Avatar } from "./Avatar";
@@ -74,10 +74,11 @@ export function ReportsTab() {
   const [page, setPage] = useState(0);
   const PER = 50;
 
-  type Tab = "produtividade" | "lead" | "status" | "retrabalho" | "qualidade" | "bloqueios" | "velocidade" | "uploads";
+  type Tab = "produtividade" | "rotina" | "lead" | "status" | "retrabalho" | "qualidade" | "bloqueios" | "velocidade" | "uploads";
   const [tab, setTab] = useState<Tab>("produtividade");
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "produtividade", label: "Produtividade", icon: <BarChart3 size={13} /> },
+    { id: "rotina", label: "Rotina", icon: <Trophy size={13} /> },
     { id: "velocidade", label: "Velocidade", icon: <Zap size={13} /> },
     { id: "lead", label: "Lead time", icon: <Clock size={13} /> },
     { id: "status", label: "Tempo por status", icon: <Activity size={13} /> },
@@ -156,7 +157,7 @@ export function ReportsTab() {
           </button>
           <button
             disabled={!report}
-            onClick={() => report && exportReportXlsx(report, { from: filters.from, to: filters.to, label: presetLabel })}
+            onClick={() => report && exportReportXlsx(report, { from: filters.from, to: filters.to, label: presetLabel }, extras?.rotina?.agencyStories)}
             className="text-xs font-semibold px-4 py-2 rounded-md border inline-flex items-center gap-2 transition-colors disabled:opacity-30"
             style={{ borderColor: "rgb(var(--lz-brand-rgb))", color: "var(--lz-accent-ink)", backgroundColor: "transparent" }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(var(--lz-brand-light-rgb),0.1)")}
@@ -387,6 +388,8 @@ export function ReportsTab() {
         </>
       )}
 
+      {tab === "rotina" && <RotinaView stories={extras?.rotina?.agencyStories} cleaning={report?.byMember ?? []} />}
+
       {tab === "velocidade" && <VelocityView from={filters.from} to={filters.to} />}
 
       {extras && tab === "lead" && <LeadTimeView data={extras.leadTime} />}
@@ -549,6 +552,105 @@ function QualityView({ data }: { data: any }) {
             );
           })}
         </div>
+      </Section>
+    </>
+  );
+}
+
+function RotinaView({ stories, cleaning }: { stories?: { byMember: any[]; days: any[] } | null; cleaning: any[] }) {
+  const byMember = stories?.byMember ?? [];
+  const days = stories?.days ?? [];
+  const topDone = byMember[0]?.done ?? 0;
+  const totalDone = byMember.reduce((a, m) => a + m.done, 0);
+  const totalMissed = byMember.reduce((a, m) => a + m.missed, 0);
+  const cleaningSorted = [...(cleaning ?? [])].filter((m: any) => m.cleaning > 0).sort((a: any, b: any) => b.cleaning - a.cleaning);
+  const totalCleaning = (cleaning ?? []).reduce((a: number, m: any) => a + (m.cleaning ?? 0), 0);
+
+  return (
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
+        <MetricCard label="Stories da agência feitos" value={totalDone} accent />
+        <MetricCard label="Stories perdidos" value={totalMissed} />
+        <MetricCard label="Tarefas de limpeza concluídas" value={totalCleaning} />
+      </div>
+
+      <Section title="Ranking de stories — quem fez mais">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-[10px] uppercase tracking-wider text-foreground/50">
+              <th className="text-left px-3 py-2">Membro</th>
+              <th className="text-right px-2 py-2">Feitos</th>
+              <th className="text-right px-2 py-2">Perdidos</th>
+              <th className="text-right px-3 py-2">Aproveitamento</th>
+            </tr>
+          </thead>
+          <tbody>
+            {byMember.length === 0 && (
+              <tr><td colSpan={4} className="px-3 py-4 text-foreground/40 text-center">Ninguém escalado pra stories da agência no período.</td></tr>
+            )}
+            {byMember.map((m: any, i: number) => {
+              const totalEscalado = m.done + m.missed;
+              const pct = totalEscalado ? Math.round((m.done / totalEscalado) * 100) : 0;
+              const isLeader = i === 0 && m.done > 0 && m.done === topDone;
+              return (
+                <tr key={m.userId} className="border-t border-foreground/5">
+                  <td className="px-3 py-2.5 flex items-center gap-2">
+                    <Avatar profile={{ id: m.userId, name: m.name, color: m.color, icon: m.icon } as any} size={26} />
+                    <span className="font-semibold" style={{ color: isLeader ? "var(--lz-accent-ink)" : "#FFF" }}>{m.name}</span>
+                    {isLeader && <Trophy size={13} style={{ color: "var(--lz-accent-ink)" }} />}
+                  </td>
+                  <td className="text-right px-2 py-2.5 font-bold tabular-nums" style={{ color: isLeader ? "var(--lz-accent-ink)" : "#FFF" }}>{m.done}</td>
+                  <td className="text-right px-2 py-2.5 tabular-nums" style={{ color: m.missed > 0 ? "#FF6B6B" : undefined }}>{m.missed}</td>
+                  <td className="text-right px-3 py-2.5 text-foreground/60 tabular-nums">{pct}%</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </Section>
+
+      <Section title="Dia a dia — quem fez e quem não fez">
+        {days.length === 0 ? (
+          <p className="text-foreground/40 text-sm px-3 py-8 text-center">Sem escala de stories da agência no período.</p>
+        ) : days.map((d: any, i: number) => (
+          <div key={i} className="flex items-center gap-3 px-4 py-2.5 border-t border-foreground/5 text-xs">
+            <span className="text-foreground/40 tabular-nums w-24 shrink-0">{new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR")}</span>
+            <Avatar profile={{ id: d.userId, name: d.userName, color: d.userColor } as any} size={22} />
+            <span className="text-foreground/80 flex-1 truncate">{d.userName}</span>
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded shrink-0"
+              style={{
+                backgroundColor: d.status === "done" ? "rgba(var(--lz-brand-light-rgb),0.15)" : d.status === "missed" ? "rgba(255,68,68,0.15)" : "color-mix(in srgb, var(--foreground) 8%, transparent)",
+                color: d.status === "done" ? "var(--lz-accent-ink)" : d.status === "missed" ? "#FF4444" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
+              }}>
+              {d.status === "done" ? "Fez" : d.status === "missed" ? "Não fez" : "Pendente"}
+            </span>
+          </div>
+        ))}
+      </Section>
+
+      <Section title="Limpeza — tarefas concluídas por membro">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-[10px] uppercase tracking-wider text-foreground/50">
+              <th className="text-left px-3 py-2">Membro</th>
+              <th className="text-right px-3 py-2">Tarefas concluídas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cleaningSorted.length === 0 && (
+              <tr><td colSpan={2} className="px-3 py-4 text-foreground/40 text-center">Sem tarefas de limpeza concluídas no período.</td></tr>
+            )}
+            {cleaningSorted.map((m: any) => (
+              <tr key={m.userId} className="border-t border-foreground/5">
+                <td className="px-3 py-2.5 flex items-center gap-2">
+                  <Avatar profile={{ id: m.userId, name: m.name, color: m.color, icon: m.icon } as any} size={26} />
+                  <span className="font-semibold text-foreground">{m.name}</span>
+                </td>
+                <td className="text-right px-3 py-2.5 font-bold text-foreground tabular-nums">{m.cleaning}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </Section>
     </>
   );

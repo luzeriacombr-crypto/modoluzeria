@@ -663,12 +663,54 @@ export const getReportExtras = createServerFn({ method: "GET" })
         .sort((a, b) => b.avgHours - a.avgHours);
     }
 
+    // ---- Rotina: Stories da agência (perfil próprio, escala do time) ----
+    const fromDay = data.from.slice(0, 10);
+    const toDay = data.to.slice(0, 10);
+    let agencyStoriesQ = context.supabase
+      .from("agency_stories_schedule")
+      .select("date, user_id, done_at")
+      .eq("org_id", context.orgId)
+      .gte("date", fromDay).lt("date", toDay);
+    if (data.userId) agencyStoriesQ = agencyStoriesQ.eq("user_id", data.userId);
+    const { data: agencyStoryRows } = await agencyStoriesQ;
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const { data: allProfiles } = await context.supabase
+      .from("profiles").select("id, name, color, icon");
+    const profileByIdForStories = new Map<string, any>();
+    (allProfiles ?? []).forEach((p: any) => profileByIdForStories.set(p.id, p));
+
+    const agencyStoriesAgg = new Map<string, { done: number; missed: number }>();
+    const agencyStoriesDays: { date: string; userId: string; userName: string; userColor: string; status: "done" | "missed" | "pending" }[] = [];
+    ((agencyStoryRows ?? []) as any[]).forEach((r: any) => {
+      // "missed" só depois que o dia já passou — antes disso é "pending" (ainda dá tempo).
+      const status: "done" | "missed" | "pending" = r.done_at ? "done" : (r.date < todayStr ? "missed" : "pending");
+      const agg = agencyStoriesAgg.get(r.user_id) ?? { done: 0, missed: 0 };
+      if (status === "done") agg.done++;
+      else if (status === "missed") agg.missed++;
+      agencyStoriesAgg.set(r.user_id, agg);
+      const p = profileByIdForStories.get(r.user_id);
+      agencyStoriesDays.push({
+        date: r.date, userId: r.user_id,
+        userName: p?.name ?? "—", userColor: p?.color ?? "#888",
+        status,
+      });
+    });
+    const agencyStoriesByMember = [...agencyStoriesAgg.entries()]
+      .map(([userId, v]) => {
+        const p = profileByIdForStories.get(userId);
+        return { userId, name: p?.name ?? "—", color: p?.color ?? "#888", icon: p?.icon ?? null, done: v.done, missed: v.missed };
+      })
+      .sort((a, b) => b.done - a.done);
+    agencyStoriesDays.sort((a, b) => b.date.localeCompare(a.date));
+
     return {
       leadTime: { avgHours: avgLead, count: leadHours.length, fastest, slowest, all: leadHours },
       blocked: currentlyBlocked,
       rework: { items: rework, ratePercent: reworkRate, total: rework.length },
       quality: { avg: qualityAvg, count: rated.length, distribution: qualityDist },
       statusDuration: statusDur,
+      rotina: { agencyStories: { byMember: agencyStoriesByMember, days: agencyStoriesDays } },
     };
   });
 

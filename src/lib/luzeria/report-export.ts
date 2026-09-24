@@ -15,6 +15,7 @@ function fmtDate(iso: string) {
 export async function exportReportXlsx(
   report: any,
   range: { from: string; to: string; label: string },
+  rotina?: { byMember: any[]; days: any[] } | null,
 ) {
   const XLSX = await import("xlsx");
   const wb = XLSX.utils.book_new();
@@ -67,6 +68,26 @@ export async function exportReportXlsx(
     h.description ?? "",
   ]);
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([histHead, ...histRows]), "Histórico");
+
+  // Aba 5 — Rotina de stories da agência (feitos/perdidos + dia a dia, pra
+  // decidir quem ganha o prêmio de quem mais fez story no mês)
+  if (rotina) {
+    const rotinaHead = ["Membro", "Stories feitos", "Stories perdidos", "Aproveitamento"];
+    const rotinaRows = rotina.byMember.map((m: any) => {
+      const totalEscalado = m.done + m.missed;
+      const pct = totalEscalado ? Math.round((m.done / totalEscalado) * 100) : 0;
+      return [m.name, m.done, m.missed, `${pct}%`];
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([rotinaHead, ...rotinaRows]), "Rotina (Stories)");
+
+    const diaHead = ["Data", "Membro", "Status"];
+    const diaRows = rotina.days.map((d: any) => [
+      new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR"),
+      d.userName,
+      d.status === "done" ? "Fez" : d.status === "missed" ? "Não fez" : "Pendente",
+    ]);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([diaHead, ...diaRows]), "Stories dia a dia");
+  }
 
   const refDate = new Date(range.to);
   const fname = `Relatorio_${MONTHS_PT[refDate.getMonth()]}_${refDate.getFullYear()}.xlsx`;
