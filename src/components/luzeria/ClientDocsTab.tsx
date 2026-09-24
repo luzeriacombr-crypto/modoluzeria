@@ -704,6 +704,7 @@ function ExportRoteirosPdfModal({
   const { exportRoteirosPdf } = useApi();
   const [mode, setMode] = useState<ExportMode>("todos");
   const [selected, setSelected] = useState<Set<string>>(new Set(groups.map((g) => g.title)));
+  const [showCaptions, setShowCaptions] = useState(true);
 
   const aprovadosCount = groups.filter((g) => statusByTitle.get(g.title)?.status === "aprovado").length;
   const reelsCount = groups.filter((g) => (statusByTitle.get(g.title)?.contentType ?? "reel") === "reel").length;
@@ -718,7 +719,7 @@ function ExportRoteirosPdfModal({
 
   function download() {
     exportRoteirosPdf.mutate(
-      { data: { docId, mode, selectedTitles: mode === "selecionados" ? [...selected] : undefined } },
+      { data: { docId, mode, selectedTitles: mode === "selecionados" ? [...selected] : undefined, showCaptions } },
       {
         onSuccess: (r: any) => {
           const bytes = Uint8Array.from(atob(r.pdfBase64), (c) => c.charCodeAt(0));
@@ -770,6 +771,10 @@ function ExportRoteirosPdfModal({
           ))}
         </div>
       )}
+      <label className="flex items-center gap-2 text-xs text-foreground/70 cursor-pointer mb-4 px-1">
+        <input type="checkbox" checked={showCaptions} onChange={(e) => setShowCaptions(e.target.checked)} />
+        Exibir legendas
+      </label>
       <div className="flex items-center justify-end gap-2">
         <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
         <button

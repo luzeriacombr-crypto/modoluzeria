@@ -380,11 +380,12 @@ export const addRoteiroSection = createServerFn({ method: "POST" })
  * exportação sob demanda, não um registro permanente como o contrato. */
 export const exportRoteirosPdf = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { docId: string; mode: "todos" | "selecionados" | "aprovados" | "reels"; selectedTitles?: string[] }) =>
+  .inputValidator((d: { docId: string; mode: "todos" | "selecionados" | "aprovados" | "reels"; selectedTitles?: string[]; showCaptions?: boolean }) =>
     z.object({
       docId: z.string().uuid(),
       mode: z.enum(["todos", "selecionados", "aprovados", "reels"]),
       selectedTitles: z.array(z.string().trim().min(1).max(300)).max(60).optional(),
+      showCaptions: z.boolean().optional().default(true),
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -412,7 +413,9 @@ export const exportRoteirosPdf = createServerFn({ method: "POST" })
     let allItems = groups.map((g) => ({
       title: g.title,
       displayTitle: displayRoteiroTitle(g.title),
-      body: g.blocks.map(blockText).join("\n\n"),
+      body: g.blocks
+        .filter((b: any) => data.showCaptions || !(b.kind === "p" && /^legenda:/i.test(b.text.trim())))
+        .map(blockText).join("\n\n"),
       contentType: (statusByTitle.get(g.title)?.content_type ?? "reel") as "post" | "reel",
       status: (statusByTitle.get(g.title)?.status ?? "pending") as string,
     }));
