@@ -2,7 +2,8 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Sparkles, Wallet, TrendingUp, Handshake, Link2, Route, Calendar,
-  LayoutDashboard, Bookmark, Zap, ChevronDown, Compass,
+  LayoutDashboard, Bookmark, Zap, ChevronDown, Compass, Instagram, FolderTree, CalendarClock, Megaphone,
+  MessageCircle, Bot, ListChecks,
 } from "lucide-react";
 import { useMe } from "@/lib/luzeria/queries";
 import { FEATURE_SHOWCASE, SHOWCASE_CATEGORY_LABEL, type ShowcaseCategory, type ShowcaseEntry } from "@/lib/luzeria/feature-showcase-content";
@@ -10,7 +11,8 @@ import { FEATURE_SHOWCASE, SHOWCASE_CATEGORY_LABEL, type ShowcaseCategory, type 
 const ICONS: Record<ShowcaseEntry["icon"], typeof Sparkles> = {
   wallet: Wallet, "trending-up": TrendingUp, handshake: Handshake, link: Link2,
   route: Route, sparkles: Sparkles, calendar: Calendar, "layout-dashboard": LayoutDashboard,
-  bookmark: Bookmark, zap: Zap,
+  bookmark: Bookmark, zap: Zap, instagram: Instagram, "folder-tree": FolderTree, "calendar-clock": CalendarClock,
+  "message-circle": MessageCircle, bot: Bot, "list-checks": ListChecks,
 };
 
 const CATEGORY_ORDER: ShowcaseCategory[] = ["financeiro", "cliente", "ia", "organizacao"];
@@ -109,6 +111,23 @@ export function FeatureShowcasePage() {
           })}
         </div>
       )}
+
+      <div className="mt-8 rounded-xl p-5 flex items-center gap-4 flex-wrap" style={{ background: "rgba(var(--lz-brand-rgb),0.08)" }}>
+        <span className="inline-flex items-center justify-center h-10 w-10 rounded-lg shrink-0" style={{ background: "rgba(var(--lz-brand-rgb),0.15)" }}>
+          <Megaphone size={18} className="text-[var(--lz-accent-ink)]" />
+        </span>
+        <div className="flex-1 min-w-[200px]">
+          <p className="text-sm font-bold text-foreground">Isso é só um resumo — o Modo Criador não para de evoluir.</p>
+          <p className="text-[13px] text-foreground/55 mt-0.5">Fique de olho em todas as novidades e melhorias.</p>
+        </div>
+        <button
+          onClick={() => navigate({ to: "/configuracoes", search: { tab: "updates" } as any })}
+          className="text-xs font-bold uppercase px-4 py-2.5 rounded-md transition-opacity hover:opacity-90 shrink-0"
+          style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+        >
+          Ver atualizações →
+        </button>
+      </div>
     </div>
   );
 }

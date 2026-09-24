@@ -25,7 +25,7 @@ export const SHOWCASE_CATEGORY_LABEL: Record<ShowcaseCategory, string> = {
 export type ShowcaseEntry = {
   id: string;
   category: ShowcaseCategory;
-  icon: "wallet" | "trending-up" | "handshake" | "link" | "route" | "sparkles" | "calendar" | "layout-dashboard" | "bookmark" | "zap";
+  icon: "wallet" | "trending-up" | "handshake" | "link" | "route" | "sparkles" | "calendar" | "layout-dashboard" | "bookmark" | "zap" | "instagram" | "folder-tree" | "calendar-clock" | "message-circle" | "bot" | "list-checks";
   label: string;
   highlight: string;
   steps: string[];
@@ -163,6 +163,97 @@ export const FEATURE_SHOWCASE: ShowcaseEntry[] = [
     ],
     to: "/biblioteca",
     hideIfDisabled: "reference_library",
+  },
+  {
+    id: "instagram-auto-publish",
+    category: "organizacao",
+    icon: "instagram",
+    label: "Publicação Automática no Instagram",
+    highlight: "Quando o cliente aprova um post com **data e horário já definidos**, o Modo Criador publica sozinho no Instagram, direto pela API oficial da Meta.",
+    steps: [
+      "Conecte o Instagram do cliente em Configurações → Integrações (ou direto na ficha dele).",
+      "Defina a data e o horário do post — ao ser aprovado pelo cliente, a publicação já é agendada sem você precisar fazer nada.",
+      "Acompanhe o que foi publicado e os insights de cada post na aba Instagram.",
+      "Em breve: os mesmos insights também pro Facebook e o TikTok.",
+    ],
+    to: "/instagram",
+    hideIfDisabled: "instagram",
+    roles: ["master", "setor"],
+  },
+  {
+    id: "google-drive",
+    category: "organizacao",
+    icon: "folder-tree",
+    label: "Google Drive",
+    highlight: "Conecte o **Google Drive** e o Modo Criador organiza sozinho uma pasta por cliente, já com a estrutura de mês e tipo de conteúdo.",
+    steps: [
+      "Conecte sua conta Google em Configurações → Integrações.",
+      "Escolha a pasta raiz — o sistema cria a estrutura de clientes e meses automaticamente.",
+      "Os arquivos ficam organizados no Drive sem precisar subir nada manualmente.",
+    ],
+    to: "/configuracoes",
+    toSearch: { tab: "integrations" },
+    hideIfDisabled: "drive",
+    roles: ["master"],
+  },
+  {
+    id: "google-agenda",
+    category: "organizacao",
+    icon: "calendar-clock",
+    label: "Google Agenda",
+    highlight: "Conecte sua **Google Agenda** pessoal e crie compromissos direto do Modo Criador, sem trocar de aba.",
+    steps: [
+      "Cada pessoa conecta a própria Google Agenda no Perfil.",
+      "Crie um compromisso com título, data e horário — ele já aparece na sua Google Agenda de verdade.",
+      "Os compromissos de hoje aparecem direto em Minhas Demandas.",
+    ],
+    to: "/configuracoes",
+    toSearch: { tab: "integrations" },
+    hideIfDisabled: "google_calendar",
+  },
+  {
+    id: "rotina",
+    category: "organizacao",
+    icon: "list-checks",
+    label: "Rotina",
+    highlight: "Escala tarefas de **limpeza e organização** recorrentes, e a escala de quem posta o Stories do perfil da agência.",
+    steps: [
+      "Cadastre as tarefas recorrentes e quem fica responsável por cada dia.",
+      "Cada pessoa marca como feito no seu próprio dia.",
+      "No Relatório, a aba Rotina mostra quem fez e quem não fez cada dia, com um ranking de stories — dá pra usar até pra premiar quem mais fez no mês.",
+    ],
+    to: "/rotina",
+    hideIfDisabled: "rotina",
+  },
+  {
+    id: "forum",
+    category: "organizacao",
+    icon: "message-circle",
+    label: "Fórum entre Agências",
+    highlight: "Troque ideia direto com **outras agências** que usam o Modo Criador, dentro do próprio app.",
+    steps: [
+      "Abra Ajuda → Fórum.",
+      "Poste uma dúvida, uma dica ou um caso — só masters participam.",
+      "Curta e comente nos posts de outras agências.",
+    ],
+    to: "/ajuda",
+    hideIfDisabled: "forum",
+    roles: ["master"],
+  },
+  {
+    id: "assistente-ia",
+    category: "ia",
+    icon: "bot",
+    label: "Conecte o Claude ou o ChatGPT",
+    highlight: "Deixe uma IA **consultar seus dados de verdade** — clientes, demandas, calendário — direto de dentro do Claude ou do ChatGPT.",
+    steps: [
+      "Vá em Configurações → Integrações → Assistente de IA e gere sua chave.",
+      "Conecte como um conector MCP no Claude ou no ChatGPT.",
+      "Pergunte coisas como \"o que falta entregar essa semana?\" e a IA já responde com os dados reais da sua agência.",
+    ],
+    to: "/configuracoes",
+    toSearch: { tab: "integrations" },
+    roles: ["master"],
   },
   {
     id: "automacoes",
