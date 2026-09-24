@@ -243,7 +243,11 @@ function PublicPreviewPage() {
           initialAuthorName={savedName || undefined}
           onClose={() => setActiveId(null)}
           onApproveItem={async () => {
-            const author = savedName || "Cliente";
+            // O link já é específico desse cliente — não faz sentido pedir
+            // pra digitar o nome só pra aprovar. Sem nome salvo ainda
+            // (nunca comentou antes), usa o nome real do cliente em vez do
+            // genérico "Cliente" (que aparecia sem graça nas notificações).
+            const author = savedName || client.name;
             await approveItem({ data: { token, itemId: activeItem!.id, authorName: author } });
             await q.refetch();
           }}
