@@ -1164,10 +1164,12 @@ export const getDriveConnectionStatus = createServerFn({ method: "GET" })
       .select("drive_email, connected_at")
       .eq("org_id", context.orgId)
       .maybeSingle();
+    // De propósito, sem o fallback pro GOOGLE_REFRESH_TOKEN legado da
+    // Luzeria que existe em getAccessToken() (linha ~45) — aqui é só o
+    // status mostrado na tela, e ele precisa refletir a credencial de
+    // verdade (pra "Desconectar" fazer a tela parecer desconectada mesmo).
+    // As operações reais de Drive continuam cobertas pelo fallback lá.
     if (data) return { connected: true, driveEmail: data.drive_email, connectedAt: data.connected_at };
-    if (context.orgId === LUZERIA_ORG_ID && process.env.GOOGLE_REFRESH_TOKEN) {
-      return { connected: true, driveEmail: null, connectedAt: null };
-    }
     return { connected: false, driveEmail: null, connectedAt: null };
   });
 
