@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useServerFn } from "@tanstack/react-start";
@@ -345,6 +345,90 @@ function DocsShareButton({ clientId }: { clientId: string }) {
   );
 }
 
+const REWRITE_TONE_PRESETS = ["Mais analítico", "Mais humano", "Mais curto", "Mais formal"];
+
+/** Botão de "Reescrever com IA" (sparkles) — em vez de já disparar com um
+ * tom fixo, abre um menu pra escolher o tom antes. Fica dentro da linha
+ * inteira que também é um <button> (onToggle do doc), por isso tudo aqui
+ * dispara stopPropagation, senão qualquer clique também abre/fecha o
+ * documento por baixo. */
+function RewriteToneMenu({ disabled, onPick }: { disabled: boolean; onPick: (tone: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [custom, setCustom] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setCustomOpen(false); } };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  function pick(tone: string) {
+    setOpen(false); setCustomOpen(false); setCustom("");
+    onPick(tone);
+  }
+
+  return (
+    <div ref={ref} className="relative inline-flex shrink-0" onClick={(e) => e.stopPropagation()}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            onClick={() => { if (!disabled) setOpen((v) => !v); }}
+            className={"p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0" + (disabled ? " opacity-40" : "")}
+          >
+            <Sparkles size={13} />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Reescrever com IA</TooltipContent>
+      </Tooltip>
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 w-48 rounded-md bg-card border border-foreground/10 shadow-xl py-1 z-50">
+          {!customOpen ? (
+            <>
+              {REWRITE_TONE_PRESETS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => pick(p)}
+                  className="w-full text-left px-3 py-1.5 text-xs text-foreground/80 hover:bg-foreground/5 transition-colors"
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                onClick={() => setCustomOpen(true)}
+                className="w-full text-left px-3 py-1.5 text-xs text-foreground/80 hover:bg-foreground/5 transition-colors"
+              >
+                Outro (escreva aqui)
+              </button>
+            </>
+          ) : (
+            <div className="p-2 space-y-1.5">
+              <input
+                autoFocus
+                value={custom}
+                onChange={(e) => setCustom(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && custom.trim()) pick(custom.trim()); }}
+                placeholder="Ex: mais engraçado"
+                className="w-full bg-background border border-foreground/10 rounded px-2 py-1 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+              />
+              <button
+                disabled={!custom.trim()}
+                onClick={() => pick(custom.trim())}
+                className="w-full text-xs font-bold uppercase px-2 py-1 rounded disabled:opacity-40"
+                style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+              >
+                Aplicar
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DocRow({
   doc, clientId, isOpen, onToggle, onEdit, onRemove,
 }: {
@@ -371,13 +455,13 @@ function DocRow({
     return b.text;
   };
 
-  async function regenerate() {
+  async function regenerate(tone: string) {
     if (!(await requestConfirm(
-      "Reescrever todos os roteiros desse documento com IA — tom mais natural, mais aprofundado e com emoji ocasional? Isso substitui o texto atual (o Pilar de cada um é mantido). Não dá pra desfazer.",
+      `Reescrever todos os roteiros desse documento com IA, num tom "${tone}"? Isso substitui o texto atual (o Pilar de cada um é mantido). Não dá pra desfazer.`,
       { danger: true },
     ))) return;
     regenerateRoteiroDoc.mutate(
-      { data: { docId: doc.id } },
+      { data: { docId: doc.id, tone } },
       { onSuccess: () => toast.success("Roteiros reescritos!") },
     );
   }
@@ -402,17 +486,7 @@ function DocRow({
           {CLIENT_DOC_TYPE_LABEL[doc.type].label}
         </span>
         {isRoteiro && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                onClick={(e) => { e.stopPropagation(); if (!regenerateRoteiroDoc.isPending) regenerate(); }}
-                className={"p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0" + (regenerateRoteiroDoc.isPending ? " opacity-40" : "")}
-              >
-                <Sparkles size={13} />
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>Reescrever com IA — tom mais natural e aprofundado</TooltipContent>
-          </Tooltip>
+          <RewriteToneMenu disabled={regenerateRoteiroDoc.isPending} onPick={regenerate} />
         )}
         {isRoteiro && (
           <Tooltip>

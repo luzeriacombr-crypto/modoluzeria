@@ -469,7 +469,8 @@ export const exportRoteirosPdf = createServerFn({ method: "POST" })
  * pisaria em trabalho já feito. */
 export const regenerateRoteiroDoc = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { docId: string }) => z.object({ docId: z.string().uuid() }).parse(d))
+  .inputValidator((d: { docId: string; tone: string }) =>
+    z.object({ docId: z.string().uuid(), tone: z.string().trim().min(1).max(200) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
 
@@ -512,7 +513,7 @@ export const regenerateRoteiroDoc = createServerFn({ method: "POST" })
       "REGRAS OBRIGATÓRIAS pra essa reescrita:",
       '- Mantenha exatamente os mesmos "## Roteiro N: título" de cada seção, na mesma ordem e quantidade. Só ajuste o sufixo de formato entre parênteses no final do título se necessário: " (Carrossel)" se o roteiro usa SLIDE N:, " (Post)" se usa TEXTO:, ou " (Reel)" se for roteiro corrido de vídeo sem SLIDE/TEXTO.',
       '- Se houver uma linha "Pilar: ..." ou qualquer nota interna de racional/estratégia (referenciando reunião, briefing etc) no corpo do roteiro, REMOVA essa linha por completo. Esse documento é visível pro cliente final, nada de anotação interna nele.',
-      '- Reescreva o corpo do roteiro (captionDraft, no mesmo formato TEXTO:/SLIDE N:/roteiro corrido que já está usado) e a linha "Legenda: ..." de cada um. Mesmo tema/fatos de cada roteiro, mas seguindo à risca o formato de casa acima (tom natural, aprofundado com fatos concretos, emoji ocasional, sem cara de texto gerado por IA, sem travessão).',
+      `- Reescreva o corpo do roteiro (captionDraft, no mesmo formato TEXTO:/SLIDE N:/roteiro corrido que já está usado) e a linha "Legenda: ..." de cada um. Mesmo tema/fatos de cada roteiro, mas com o tom ajustado pra: ${data.tone}. Sem cara de texto gerado por IA, sem travessão.`,
       "- Não mude a quantidade de roteiros, não adicione nem remova nenhum.",
       "- Não use blocos de código (```), não escreva nada fora da estrutura dos roteiros (sem introdução, sem comentários, sem despedida).",
       "",
