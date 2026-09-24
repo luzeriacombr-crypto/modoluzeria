@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, lazy, Suspense } from "react";
-import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO, cargosQO } from "@/lib/luzeria/queries";
+import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO, cargosQO, myPendingInvoiceQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
@@ -1054,8 +1054,9 @@ function PlanCardSection() {
 function BillingSection() {
   const { data: status, isLoading } = useQuery(orgPlanStatusQO());
   const { data: plans } = useQuery(plansQO());
-  const { updateMyOrg, subscribeToPlan, cancelMySubscription } = useApi();
   const me = useMe().data;
+  const { data: pendingInvoice } = useQuery({ ...myPendingInvoiceQO(), enabled: me?.role === "master" });
+  const { updateMyOrg, subscribeToPlan, cancelMySubscription } = useApi();
   const [taxId, setTaxId] = useState("");
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -1098,6 +1099,37 @@ function BillingSection() {
         <Star size={12} /> Assinatura e cobrança
       </h2>
       <div className="bg-card rounded-lg p-5 mb-8 space-y-4">
+        {me?.role === "master" && status.hasAsaasSubscription && status.subscriptionStatus !== "active" && pendingInvoice && (
+          <div className="rounded-lg p-4" style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)" }}>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-sm font-bold text-foreground">
+                  Fatura em aberto — R$ {(pendingInvoice.valueCents / 100).toFixed(2).replace(".", ",")}
+                </div>
+                <div className="text-[11px] text-foreground/50 mt-0.5">
+                  {pendingInvoice.dueDate
+                    ? <>Vencimento: {new Date(pendingInvoice.dueDate + "T12:00:00").toLocaleDateString("pt-BR")} · pague por PIX, boleto ou cartão</>
+                    : "Pague por PIX, boleto ou cartão."}
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                {pendingInvoice.bankSlipUrl && (
+                  <a href={pendingInvoice.bankSlipUrl} target="_blank" rel="noreferrer"
+                    className="lz-btn-ghost text-xs px-3 py-2 rounded-md whitespace-nowrap">
+                    Baixar boleto
+                  </a>
+                )}
+                {pendingInvoice.invoiceUrl && (
+                  <a href={pendingInvoice.invoiceUrl} target="_blank" rel="noreferrer"
+                    className="text-xs font-bold px-3 py-2 rounded-md whitespace-nowrap"
+                    style={{ backgroundColor: "#f87171", color: "#1A0D0D" }}>
+                    Ver fatura e pagar
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         <Field label="CNPJ ou CPF da agência (necessário para assinar um plano)">
           <div className="flex gap-2">
             <input value={taxId} onChange={(e) => setTaxId(e.target.value)} maxLength={18} className="lz-input"

@@ -496,8 +496,10 @@ export const getOrgPlanStatus = createServerFn({ method: "GET" })
 
 /** Master-only, self-service version of getOrgNextInvoice (that one is
  * platform-admin-only, for Luzeria looking at any agency) — used by the
- * régua de cobrança's "Pagar agora" so an overdue master can jump straight
- * to their existing invoice instead of creating a new subscription. */
+ * régua de cobrança's "Pagar agora" e pelo card de "Fatura em aberto"
+ * dentro de Configurações → Cobrança (BillingSection), pra um master
+ * atrasado conseguir a segunda via (boleto/PIX/cartão) sozinho, sem
+ * precisar achar o e-mail antigo ou pedir pro suporte. */
 export const getMyPendingInvoice = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
@@ -509,7 +511,13 @@ export const getMyPendingInvoice = createServerFn({ method: "GET" })
     const { getNextPendingPayment } = await import("./asaas.server");
     const payment = await getNextPendingPayment((org as any).asaas_subscription_id);
     return payment
-      ? { id: payment.id, valueCents: Math.round(payment.value * 100), invoiceUrl: payment.invoiceUrl ?? null }
+      ? {
+          id: payment.id,
+          valueCents: Math.round(payment.value * 100),
+          invoiceUrl: payment.invoiceUrl ?? null,
+          bankSlipUrl: payment.bankSlipUrl ?? null,
+          dueDate: payment.dueDate ?? null,
+        }
       : null;
   });
 

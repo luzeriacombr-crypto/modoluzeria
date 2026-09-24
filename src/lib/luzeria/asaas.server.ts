@@ -68,11 +68,14 @@ export async function createAsaasSubscription(params: {
 }
 
 /** The next unpaid invoice for a subscription — the one a manually-applied
- * discount should land on, since past/paid invoices can't be changed. */
+ * discount should land on, since past/paid invoices can't be changed. Also
+ * o que alimenta a "segunda via" self-service (getMyPendingInvoice,
+ * api.functions.ts): dueDate e bankSlipUrl já vêm nesse mesmo payload da
+ * Asaas, só não eram lidos antes. */
 export async function getNextPendingPayment(asaasSubscriptionId: string) {
   const payments = (await asaasFetch(
     `/payments?subscription=${asaasSubscriptionId}&status=PENDING&limit=1`,
-  )) as { data?: { id: string; value: number; invoiceUrl?: string }[] };
+  )) as { data?: { id: string; value: number; invoiceUrl?: string; bankSlipUrl?: string; dueDate?: string }[] };
   return payments.data?.[0] ?? null;
 }
 
