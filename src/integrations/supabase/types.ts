@@ -1597,6 +1597,66 @@ export type Database = {
           },
         ]
       }
+      client_linkedin_credentials: {
+        Row: {
+          access_token: string
+          access_token_expires_at: string
+          client_id: string
+          connected_at: string
+          connected_by: string | null
+          organization_name: string | null
+          organization_urn: string | null
+          person_name: string | null
+          person_urn: string | null
+          refresh_token: string | null
+          refresh_token_expires_at: string | null
+          scopes: string | null
+        }
+        Insert: {
+          access_token: string
+          access_token_expires_at: string
+          client_id: string
+          connected_at?: string
+          connected_by?: string | null
+          organization_name?: string | null
+          organization_urn?: string | null
+          person_name?: string | null
+          person_urn?: string | null
+          refresh_token?: string | null
+          refresh_token_expires_at?: string | null
+          scopes?: string | null
+        }
+        Update: {
+          access_token?: string
+          access_token_expires_at?: string
+          client_id?: string
+          connected_at?: string
+          connected_by?: string | null
+          organization_name?: string | null
+          organization_urn?: string | null
+          person_name?: string | null
+          person_urn?: string | null
+          refresh_token?: string | null
+          refresh_token_expires_at?: string | null
+          scopes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_linkedin_credentials_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_linkedin_credentials_connected_by_fkey"
+            columns: ["connected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_links: {
         Row: {
           client_id: string
@@ -2127,6 +2187,47 @@ export type Database = {
             foreignKeyName: "comments_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_item_linkedin: {
+        Row: {
+          auto_publish: boolean
+          item_id: string
+          last_error: string | null
+          last_error_at: string | null
+          post_urn: string | null
+          published_at: string | null
+          updated_at: string
+          visibility: string | null
+        }
+        Insert: {
+          auto_publish?: boolean
+          item_id: string
+          last_error?: string | null
+          last_error_at?: string | null
+          post_urn?: string | null
+          published_at?: string | null
+          updated_at?: string
+          visibility?: string | null
+        }
+        Update: {
+          auto_publish?: boolean
+          item_id?: string
+          last_error?: string | null
+          last_error_at?: string | null
+          post_urn?: string | null
+          published_at?: string | null
+          updated_at?: string
+          visibility?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_item_linkedin_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
             referencedRelation: "content_items"
             referencedColumns: ["id"]
           },
