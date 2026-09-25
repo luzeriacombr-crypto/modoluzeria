@@ -1749,8 +1749,8 @@ export function DetailPanel() {
           </ModalSection>
         )}
 
-        {/* Publicar no TikTok (só vídeo: Posts e Reels com vídeo anexado, mesma permissão do Instagram) */}
-        {(item.type === "post" || item.type === "reel") && me?.orgId === LUZERIA_ORG_ID && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && selectedClientId && (
+        {/* Publicar no TikTok (só vídeo: Posts e Reels com vídeo anexado, mesma permissão do Instagram) — app aprovado pelo TikTok em 2026-09-24, liberado pra todas as agências */}
+        {(item.type === "post" || item.type === "reel") && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && selectedClientId && (
           <ModalSection label="Publicar no TikTok">
             <TikTokPublishPanel itemId={item.id} clientId={selectedClientId} scheduledAt={item.scheduledAt} caption={item.caption} />
           </ModalSection>

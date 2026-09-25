@@ -144,14 +144,15 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
           <InstagramSection clientId={client.id} />
         </FichaCard>
       )}
-      <div className={`grid gap-3 grid-cols-1 ${canManageInstagram && isLuzeriaOrg ? "@[760px]:grid-cols-2" : ""}`}>
+      <div className={`grid gap-3 grid-cols-1 ${canManageInstagram ? "@[760px]:grid-cols-2" : ""}`}>
         {/* Facebook: só na conta interna (Luzeria) enquanto a integração não está liberada pra todos */}
         {canManageInstagram && isLuzeriaOrg && (
           <FichaCard label="Facebook">
             <FacebookSection clientId={client.id} />
           </FichaCard>
         )}
-        {canManageInstagram && me?.orgId === LUZERIA_ORG_ID && (
+        {/* TikTok: app aprovado pelo TikTok em 2026-09-24 — liberado pra todas as agências */}
+        {canManageInstagram && (
           <FichaCard label="TikTok">
             <TikTokConnectSection clientId={client.id} />
           </FichaCard>

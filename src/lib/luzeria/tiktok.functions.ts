@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
-import { LUZERIA_ORG_ID } from "./api.functions";
 
 // TikTok Content Posting API (Direct Post) + Login Kit. Credenciais próprias
 // do TikTok for Developers (TIKTOK_CLIENT_KEY/SECRET), sem nada em comum com
@@ -28,13 +27,6 @@ const settingsSchema = z.object({
   brandContent: z.boolean(),
 });
 export type TikTokPostSettings = z.infer<typeof settingsSchema>;
-
-// Liberação restrita: até o TikTok aprovar o app (auditoria), só a Luzeria usa.
-// Pra abrir pra todas as agências, é só trocar por `return;` aqui e tirar a
-// mesma checagem de ClientFichaPanel.tsx e DetailPanel.tsx.
-function assertTikTokEnabled(orgId: string) {
-  if (orgId !== LUZERIA_ORG_ID) throw new Error("O TikTok ainda não está disponível pra sua conta.");
-}
 
 // Enquanto o app não passa na auditoria do TikTok, a API só aceita publicar
 // como "SELF_ONLY" (e em conta privada), mas o creator_info ainda lista as
@@ -136,7 +128,6 @@ export const getTikTokConnectionStatus = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    assertTikTokEnabled(context.orgId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const db = await admin();
     const { data: row } = await db
@@ -152,7 +143,6 @@ export const getTikTokConnectUrl = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    assertTikTokEnabled(context.orgId);
     await assertCanPublish(context.supabase, context.userId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const { key } = credentials();
@@ -173,7 +163,6 @@ export const connectTikTok = createServerFn({ method: "POST" })
   .inputValidator((d: { code: string; clientId: string }) =>
     z.object({ code: z.string().min(1), clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    assertTikTokEnabled(context.orgId);
     await assertCanPublish(context.supabase, context.userId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
 
@@ -216,7 +205,6 @@ export const disconnectTikTok = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    assertTikTokEnabled(context.orgId);
     await assertCanPublish(context.supabase, context.userId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const db = await admin();
@@ -254,7 +242,6 @@ export const getTikTokCreatorInfo = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<TikTokCreatorInfo> => {
-    assertTikTokEnabled(context.orgId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const { token } = await getFreshTikTokToken(data.clientId);
     const json = await ttJson("/post/publish/creator_info/query/", token, {});
@@ -287,7 +274,6 @@ export const getTikTokItemState = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { itemId: string }) => z.object({ itemId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<TikTokItemState | null> => {
-    assertTikTokEnabled(context.orgId);
     const { data: item } = await context.supabase
       .from("content_items")
       .select("id, months(clients!months_client_id_fkey(org_id))")
@@ -486,7 +472,6 @@ export const publishToTikTok = createServerFn({ method: "POST" })
   .inputValidator((d: { itemId: string; settings: TikTokPostSettings }) =>
     z.object({ itemId: z.string().uuid(), settings: settingsSchema }).parse(d))
   .handler(async ({ data, context }) => {
-    assertTikTokEnabled(context.orgId);
     await assertCanPublish(context.supabase, context.userId);
     assertSettingsValid(data.settings);
     const { data: item } = await context.supabase
@@ -508,7 +493,6 @@ export const setTikTokAutoPublish = createServerFn({ method: "POST" })
   .inputValidator((d: { itemId: string; enabled: boolean; settings?: TikTokPostSettings }) =>
     z.object({ itemId: z.string().uuid(), enabled: z.boolean(), settings: settingsSchema.optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    assertTikTokEnabled(context.orgId);
     await assertCanPublish(context.supabase, context.userId);
     const { data: item } = await context.supabase
       .from("content_items")

@@ -30,10 +30,11 @@ export const EXTRA_FEATURES: [string, string][] = [
  * páginas de recurso (feito só dentro da function, nunca no topo do
  * arquivo) — evita puxar módulos de rota pro grafo de módulos server-only. */
 export async function buildSalesKnowledgeText(): Promise<string> {
-  const [aprovacao, drive, instagram, selecao, biblioteca, contrato] = await Promise.all([
+  const [aprovacao, drive, instagram, tiktok, selecao, biblioteca, contrato] = await Promise.all([
     import("@/routes/aprovacao-de-conteudo-por-link"),
     import("@/routes/backup-automatico-drive"),
     import("@/routes/publicacao-automatica-instagram"),
+    import("@/routes/publicacao-automatica-tiktok"),
     import("@/routes/selecao-de-fotos-para-fotografos"),
     import("@/routes/biblioteca-de-referencias"),
     import("@/routes/assinatura-eletronica-de-contratos"),
@@ -42,7 +43,7 @@ export async function buildSalesKnowledgeText(): Promise<string> {
   const faqText = SALES_FAQ.map(([q, a]) => `P: ${q}\nR: ${a}`).join("\n\n");
   const extraText = EXTRA_FEATURES.map(([q, a]) => `P: ${q}\nR: ${a}`).join("\n\n");
 
-  const features = [aprovacao.CONTENT, drive.CONTENT, instagram.CONTENT, selecao.CONTENT, biblioteca.CONTENT, contrato.CONTENT];
+  const features = [aprovacao.CONTENT, drive.CONTENT, instagram.CONTENT, tiktok.CONTENT, selecao.CONTENT, biblioteca.CONTENT, contrato.CONTENT];
   const featuresText = features.map((f) => {
     const benefits = f.benefits.map((b) => `- ${b.title}: ${b.text}`).join("\n");
     const faq = f.faqGroups.flatMap((g) => g.items).map(([q, a]) => `P: ${q}\nR: ${a}`).join("\n\n");

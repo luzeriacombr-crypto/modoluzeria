@@ -456,6 +456,7 @@ export function SalesPage() {
           <Link to="/aprovacao-de-conteudo-por-link" className="underline hover:text-foreground/50 transition">Aprovação por Link</Link>
           <Link to="/backup-automatico-drive" className="underline hover:text-foreground/50 transition">Backup no Drive</Link>
           <Link to="/publicacao-automatica-instagram" className="underline hover:text-foreground/50 transition">Publicação no Instagram</Link>
+          <Link to="/publicacao-automatica-tiktok" className="underline hover:text-foreground/50 transition">Publicação no TikTok</Link>
           <Link to="/biblioteca-de-referencias" className="underline hover:text-foreground/50 transition">Biblioteca de Referências</Link>
           <Link to="/assinatura-eletronica-de-contratos" className="underline hover:text-foreground/50 transition">Contrato com Assinatura Eletrônica</Link>
         </div>

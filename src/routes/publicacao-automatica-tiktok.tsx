@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Music2, CalendarClock, ShieldCheck, SlidersHorizontal, Zap, Unplug } from "lucide-react";
+import { Music2, CalendarClock, ShieldCheck, SlidersHorizontal, Zap, Unplug, BadgeCheck } from "lucide-react";
 import { FeatureLandingPage, type FeatureLandingContent } from "@/components/luzeria/FeatureLandingPage";
 
 const TITLE = "Publicação no TikTok — Modo Criador";
@@ -19,9 +19,9 @@ export const CONTENT: FeatureLandingContent = {
   whatsappMessage: "Oi! Vi a página de Publicação no TikTok do Modo Criador e quero saber mais.",
   illustrationKey: "calendar",
   heroBadges: [
+    { icon: BadgeCheck, label: "Integração aprovada pelo TikTok" },
     { icon: ShieldCheck, label: "Login oficial do TikTok" },
     { icon: SlidersHorizontal, label: "Você escolhe cada opção" },
-    { icon: Unplug, label: "Desconecta quando quiser" },
   ],
   benefits: [
     {
@@ -38,6 +38,11 @@ export const CONTENT: FeatureLandingContent = {
       icon: SlidersHorizontal,
       title: "Você decide como o vídeo sai",
       text: "Privacidade, comentários, Dueto, Stitch e a marcação de conteúdo comercial são escolhidos por você em cada vídeo, nada vem marcado por padrão.",
+    },
+    {
+      icon: BadgeCheck,
+      title: "Integração oficial, aprovada pelo TikTok",
+      text: "Não é uma gambiarra por fora — é uma integração oficial com a Content Posting API do TikTok, com o app revisado e aprovado.",
     },
     {
       icon: ShieldCheck,
@@ -80,9 +85,6 @@ export const Route = createFileRoute("/publicacao-automatica-tiktok")({
     meta: [
       { title: TITLE },
       { name: "description", content: DESCRIPTION },
-      // Sem indexar por enquanto: a integração ainda está em fase de testes
-      // (app do TikTok em revisão). Tirar esta linha ao liberar pras agências.
-      { name: "robots", content: "noindex" },
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "website" },

@@ -28,6 +28,7 @@ const FEATURE_PAGES = [
   { href: "/aprovacao-de-conteudo-por-link", label: "Aprovação de Conteúdo por Link" },
   { href: "/backup-automatico-drive", label: "Backup Automático no Drive" },
   { href: "/publicacao-automatica-instagram", label: "Publicação Automática no Instagram" },
+  { href: "/publicacao-automatica-tiktok", label: "Publicação no TikTok" },
   { href: "/biblioteca-de-referencias", label: "Biblioteca de Referências" },
   { href: "/revenda", label: "Revenda white label" },
   { href: "/", label: "Home (Conhecer o Modo Criador)" },
