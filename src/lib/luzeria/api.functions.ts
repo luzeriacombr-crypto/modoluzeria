@@ -1111,7 +1111,7 @@ export const subscribeToPlan = createServerFn({ method: "POST" })
     if (!isMaster) throw new Error("Forbidden");
 
     const { data: org } = await context.supabase
-      .from("orgs").select("name, tax_id, asaas_customer_id").eq("id", context.orgId).maybeSingle();
+      .from("orgs").select("name, tax_id, asaas_customer_id, subscription_status, trial_ends_at").eq("id", context.orgId).maybeSingle();
     if (!org?.tax_id) throw new Error("Preencha o CNPJ/CPF da agência antes de assinar um plano.");
 
     const { data: plan } = await context.supabase.from("plans").select("id, name, price_cents").eq("id", data.planId).maybeSingle();
@@ -1126,10 +1126,20 @@ export const subscribeToPlan = createServerFn({ method: "POST" })
       customerId = customer.id;
     }
 
+    // Quem ainda está no teste grátis não pode ganhar uma fatura vencendo
+    // hoje só por escolher o plano com antecedência — a primeira cobrança
+    // só deve cair quando o teste realmente acabar (trial_ends_at).
+    const trialEndsAt = (org as any).subscription_status === "trialing" && org.trial_ends_at
+      ? new Date(org.trial_ends_at as string) : null;
+    const trialDays = trialEndsAt
+      ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000))
+      : 0;
+
     const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
       customerId,
       valueCents: plan.price_cents,
       description: `Modo Criador — Plano ${plan.name}`,
+      trialDays,
     });
 
     const { error } = await context.supabase

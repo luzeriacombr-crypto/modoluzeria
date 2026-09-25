@@ -1085,7 +1085,13 @@ function BillingSection() {
     });
   }
 
-  function subscribe(planId: string) {
+  async function subscribe(planId: string) {
+    const stillInTrial = status?.subscriptionStatus === "trialing" && status?.trialEndsAt && new Date(status.trialEndsAt) > new Date();
+    const trialEndLabel = stillInTrial ? new Date(status!.trialEndsAt as string).toLocaleDateString("pt-BR") : null;
+    const confirmMsg = trialEndLabel
+      ? `Isso gera sua fatura de pagamento, com vencimento só no fim do seu teste grátis (${trialEndLabel}). Confirma?`
+      : "Isso gera sua fatura de pagamento agora. Confirma?";
+    if (!(await requestConfirm(confirmMsg))) return;
     subscribeToPlan.mutate({ data: { planId } }, {
       onSuccess: (r: any) => {
         toast.success("Assinatura criada! Abrindo a fatura para pagamento…");
