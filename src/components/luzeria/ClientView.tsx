@@ -170,6 +170,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { exitSelectMode(); }, [tab, effectiveMonthKey]);
 
+  // Prévia de planejamento com IA — gate por plano/pagamento (não mais por
+  // nível): sem assinatura registrada no Asaas ou no plano Solo, teto de 2
+  // clientes; Pro+ sem teto específico. Precisa vir antes do "if (!client)"
+  // abaixo — hook não pode ser condicional (Rules of Hooks).
+  const { data: orgPlanStatus } = useQuery({ ...orgPlanStatusQO(), enabled: !!me });
+
   if (!client) return null;
 
   // Itens marcados como "interno" numa campanha continuam existindo em
@@ -200,11 +206,8 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   const showDocsSubTab = isAdmin;
   const showBibliotecaSubTab = !disabledFeatures.has("reference_library");
 
-  // Prévia de planejamento com IA — gate por plano/pagamento (não mais por
-  // nível): sem assinatura registrada no Asaas ou no plano Solo, teto de 2
-  // clientes; Pro+ sem teto específico. Dentro dessa cota, ESSE cliente
-  // precisa estar marcado (client.aiPlanningEnabled, escolhido na Ficha).
-  const { data: orgPlanStatus } = useQuery({ ...orgPlanStatusQO(), enabled: !!me });
+  // Dentro da cota calculada acima, ESSE cliente precisa estar marcado
+  // (client.aiPlanningEnabled, escolhido na Ficha).
   const isLuzeriaOrgForAi = me?.orgId === LUZERIA_ORG_ID;
   const aiPlanningLimited = !isLuzeriaOrgForAi && (!orgPlanStatus?.hasAsaasSubscription || orgPlanStatus?.planId === "solo");
   const aiPlanningQuota = aiPlanningLimited ? 2 : Infinity;
