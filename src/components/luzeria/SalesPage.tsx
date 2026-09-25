@@ -204,7 +204,6 @@ export function SalesPage() {
         <div className="flex items-center justify-between max-w-[1100px] mx-auto w-full">
           <div className="flex items-center gap-4">
             <span className="inline-flex items-center gap-2.5">
-              <img src="/favicon.svg" alt="" aria-hidden="true" className="h-7 w-7 rounded-[9px]" />
               <ModoCriadorLogo variant="brand" className="h-6 w-auto" />
             </span>
             <Link
