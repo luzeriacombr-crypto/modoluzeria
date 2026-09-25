@@ -200,19 +200,19 @@ export function SalesNumbers({ content = DEFAULT_LANDING }: { content?: LandingC
     <section style={{ background: BG_BLUE, color: "#fff" }}>
       <div ref={ref} className="grid grid-cols-1 sm:grid-cols-3 max-w-[1200px] mx-auto relative">
         {items.map((it, i) => (
-          <div key={it.label} className="py-10 px-8 sm:px-12 relative"
+          <div key={it.label} className="py-10 px-8 sm:px-12 relative text-center sm:text-left"
             style={i === 1 ? { borderLeft: "1px solid rgba(215,255,63,0.14)", borderRight: "1px solid rgba(215,255,63,0.14)" } : undefined}>
             {i === 0 && <span className="hidden sm:block absolute top-6 left-6 w-3.5 h-3.5" style={{ borderTop: `2px solid rgba(215,255,63,0.45)`, borderLeft: `2px solid rgba(215,255,63,0.45)` }} />}
             {i === items.length - 1 && <span className="hidden sm:block absolute bottom-6 right-6 w-3.5 h-3.5" style={{ borderBottom: `2px solid rgba(215,255,63,0.45)`, borderRight: `2px solid rgba(215,255,63,0.45)` }} />}
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center justify-center sm:justify-start gap-2 mb-4">
               <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: LIME }} />
               <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "rgba(255,255,255,0.4)" }}>{it.eyebrow}</span>
             </div>
             <div className="font-black leading-none tabular-nums text-[clamp(44px,6vw,72px)]" style={{ color: LIME, letterSpacing: "-0.02em", textShadow: "0 0 44px rgba(215,255,63,0.3)" }}>
               {animatedDisplay(it.value, t)}
             </div>
-            <div className="mt-4 text-[14px] font-medium max-w-[220px]" style={{ color: "rgba(255,255,255,0.55)" }}>{it.label}</div>
-            <div className="mt-5 h-[3px] rounded-full max-w-[220px] overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+            <div className="mt-4 mx-auto sm:mx-0 text-[14px] font-medium max-w-[220px]" style={{ color: "rgba(255,255,255,0.55)" }}>{it.label}</div>
+            <div className="mt-5 mx-auto sm:mx-0 h-[3px] rounded-full max-w-[220px] overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
               <div className="h-full" style={{ background: LIME, width: `${Math.round(t * 100)}%` }} />
             </div>
           </div>
