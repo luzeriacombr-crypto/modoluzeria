@@ -137,8 +137,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Modo Criador" },
       { name: "twitter:description", content: "Gestão de conteúdo, equipe e entregas para agências de social media." },
-      { property: "og:image", content: "https://www.modocriador.com.br/og-image.png" },
-      { name: "twitter:image", content: "https://www.modocriador.com.br/og-image.png" },
+      { property: "og:image", content: "https://www.modocriador.com.br/og-image.png?v=2" },
+      { name: "twitter:image", content: "https://www.modocriador.com.br/og-image.png?v=2" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
