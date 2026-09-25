@@ -13,7 +13,7 @@ import {
 import { getPublicSalesStats } from "@/lib/luzeria/sales-stats.functions";
 import { ConstellationBackground } from "./ConstellationBackground";
 import { DEFAULT_LANDING, type LandingContent, type LandingTab } from "@/lib/luzeria/sales-landing-content";
-import { LIME, BG_BLUE, BG_GRAY, BG_WHITE, Reveal } from "./salesPageBlocks";
+import { LIME, BG_BLUE, BG_GRAY, BG_WHITE, Reveal, useReveal } from "./salesPageBlocks";
 import boardImg from "@/assets/sales/board.webp";
 import approvalImg from "@/assets/sales/aprovacao-mobile.webp";
 import dashboardImg from "@/assets/sales/dashboard.webp";
@@ -144,26 +144,76 @@ export function SalesHero({ onCta, content = DEFAULT_LANDING }: { onCta: () => v
 
 const FALLBACK_STATS = { clients: 230, deliveries: 1365 };
 
+/** Reconhece o número no início do texto (funciona pra "367" e pra "30"
+ * dentro de "30 dias", já que trialValue é um campo livre editável pela
+ * agência) — o resto do texto vira sufixo. Sem número no início, devolve
+ * null e quem chama cai pra exibição estática, sem quebrar customização. */
+function parseLeadingNumber(raw: string): { target: number; prefix: string; suffix: string } | null {
+  const m = raw.match(/^([+-]?)[\d.,]+/);
+  if (!m) return null;
+  const numPart = m[0];
+  const digitsOnly = numPart.replace(/[^\d]/g, "");
+  if (!digitsOnly) return null;
+  return { target: parseInt(digitsOnly, 10), prefix: numPart.startsWith("+") ? "+" : "", suffix: raw.slice(numPart.length) };
+}
+
+/** Contagem de 0 até 1 (com ease-out) quando `visible` vira true — os três
+ * números do placar sobem juntos, uma vez só, ao entrar na tela. */
+function useCountProgress(visible: boolean, durationMs = 1400) {
+  const [t, setT] = useState(0);
+  useEffect(() => {
+    if (!visible) return;
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / durationMs);
+      setT(1 - Math.pow(1 - p, 3));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [visible, durationMs]);
+  return t;
+}
+
+function animatedDisplay(raw: string, t: number): string {
+  const parsed = parseLeadingNumber(raw);
+  if (!parsed) return raw;
+  const current = Math.round(parsed.target * t);
+  return `${parsed.prefix}${current.toLocaleString("pt-BR")}${parsed.suffix}`;
+}
+
 export function SalesNumbers({ content = DEFAULT_LANDING }: { content?: LandingContent }) {
   const nm = content.numbers;
   const { data } = useQuery({ queryKey: ["sales-stats"], queryFn: () => getPublicSalesStats(), staleTime: 60 * 60_000, retry: false });
   const s = data ?? FALLBACK_STATS;
   const roundedDeliveries = Math.max(100, Math.floor(s.deliveries / 100) * 100);
   const fmt = (n: number) => n.toLocaleString("pt-BR");
+  const { ref, visible } = useReveal<HTMLDivElement>();
+  const t = useCountProgress(visible);
   const items = [
-    { value: fmt(s.clients), label: nm.clientsLabel },
-    { value: `+${fmt(roundedDeliveries)}`, label: nm.deliveriesLabel },
-    { value: nm.trialValue, label: nm.trialLabel },
+    { eyebrow: "Clientes", value: fmt(s.clients), label: nm.clientsLabel },
+    { eyebrow: "Entregas", value: `+${fmt(roundedDeliveries)}`, label: nm.deliveriesLabel },
+    { eyebrow: "Teste grátis", value: nm.trialValue, label: nm.trialLabel },
   ];
   return (
-    <section style={{ background: LIME, color: BG_BLUE }}>
-      <div className="grid grid-cols-1 sm:grid-cols-3">
+    <section style={{ background: BG_BLUE, color: "#fff" }}>
+      <div ref={ref} className="grid grid-cols-1 sm:grid-cols-3 max-w-[1200px] mx-auto relative">
         {items.map((it, i) => (
-          <div key={it.label} className="py-8 px-5 sm:px-10 text-center sm:text-left"
-            style={{ background: i === 1 ? "linear-gradient(180deg,#F3FFC2,#E2FF7A)" : "linear-gradient(105deg,#DCFF4D 0%,#C9F52F 100%)" }}>
-            <div className="max-w-[340px] mx-auto sm:mx-0 sm:ml-auto sm:mr-auto lg:max-w-[300px]">
-              <div className={`${SERIF} text-[clamp(40px,5vw,58px)] leading-none`} style={{ fontStyle: "italic", letterSpacing: "-0.02em" }}>{it.value}</div>
-              <div className="mt-2 text-[13.5px] font-semibold whitespace-pre-line" style={{ color: "rgba(10,14,35,0.72)" }}>{it.label}</div>
+          <div key={it.label} className="py-10 px-8 sm:px-12 relative"
+            style={i === 1 ? { borderLeft: "1px solid rgba(215,255,63,0.14)", borderRight: "1px solid rgba(215,255,63,0.14)" } : undefined}>
+            {i === 0 && <span className="hidden sm:block absolute top-6 left-6 w-3.5 h-3.5" style={{ borderTop: `2px solid rgba(215,255,63,0.45)`, borderLeft: `2px solid rgba(215,255,63,0.45)` }} />}
+            {i === items.length - 1 && <span className="hidden sm:block absolute bottom-6 right-6 w-3.5 h-3.5" style={{ borderBottom: `2px solid rgba(215,255,63,0.45)`, borderRight: `2px solid rgba(215,255,63,0.45)` }} />}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: LIME }} />
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "rgba(255,255,255,0.4)" }}>{it.eyebrow}</span>
+            </div>
+            <div className="font-black leading-none tabular-nums text-[clamp(44px,6vw,72px)]" style={{ color: LIME, letterSpacing: "-0.02em", textShadow: "0 0 44px rgba(215,255,63,0.3)" }}>
+              {animatedDisplay(it.value, t)}
+            </div>
+            <div className="mt-4 text-[14px] font-medium max-w-[220px]" style={{ color: "rgba(255,255,255,0.55)" }}>{it.label}</div>
+            <div className="mt-5 h-[3px] rounded-full max-w-[220px] overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+              <div className="h-full" style={{ background: LIME, width: `${Math.round(t * 100)}%` }} />
             </div>
           </div>
         ))}
