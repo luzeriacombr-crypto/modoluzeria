@@ -449,7 +449,7 @@ export function SalesStickyCta({ onCta }: { onCta: () => void }) {
         transform: show ? "translateY(0)" : "translateY(110%)",
         boxShadow: "0 -8px 30px rgba(10,14,35,0.35)",
       }}>
-      Teste grátis por 30 dias →
+      TESTE GRÁTIS POR 30 DIAS
     </button>
   );
 }
