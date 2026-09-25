@@ -2,14 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw, FileDown } from "lucide-react";
+import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw, FileDown, ArrowUpDown, GripVertical } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { clientDocsQO, roteiroStatusesQO, clientsQO, useApi } from "@/lib/luzeria/queries";
 import { openAiPlanningModal } from "@/lib/luzeria/ai-planning-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { setClientAiPlanningEnabled } from "@/lib/luzeria/ai-planning.functions";
 import { CLIENT_DOC_TYPE_LABEL, CLIENT_DOC_PROMPT, type ClientDocType } from "@/lib/luzeria/client-doc-templates";
-import { parseMarkdownLite, groupByH2, type MdBlock } from "@/lib/luzeria/markdown-lite";
+import { parseMarkdownLite, groupByH2, displayRoteiroTitle, type MdBlock } from "@/lib/luzeria/markdown-lite";
 import { formatClientDocWithAI, type ClientDoc } from "@/lib/luzeria/client-docs.functions";
 import { RoteirosView, PlanejamentoView } from "./MarkdownLiteView";
 import { RoteiroControls } from "./RoteiroControls";
@@ -466,6 +466,7 @@ function DocRow({
   const [pickingMonth, setPickingMonth] = useState(false);
   const [editingRoteiro, setEditingRoteiro] = useState<{ index: number; title: string; body: string } | null>(null);
   const [addingRoteiro, setAddingRoteiro] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   const rawBlockText = (b: MdBlock): string => {
     if (b.kind === "ul") return b.items.map((i) => `- ${i}`).join("\n");
@@ -505,6 +506,19 @@ function DocRow({
         </span>
         {isRoteiro && (
           <RewriteToneMenu disabled={regenerateRoteiroDoc.isPending} onPick={regenerate} />
+        )}
+        {isRoteiro && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                onClick={(e) => { e.stopPropagation(); setReordering(true); }}
+                className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition shrink-0"
+              >
+                <ArrowUpDown size={13} />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Reordenar</TooltipContent>
+          </Tooltip>
         )}
         {isRoteiro && (
           <Tooltip>
@@ -604,6 +618,13 @@ function DocRow({
       {addingRoteiro && (
         <AddRoteiroModal docId={doc.id} onClose={() => setAddingRoteiro(false)} />
       )}
+      {reordering && (
+        <ReorderRoteirosModal
+          docId={doc.id}
+          groups={groupByH2(parseMarkdownLite(doc.content))}
+          onClose={() => setReordering(false)}
+        />
+      )}
       {exportingPdf && (
         <ExportRoteirosPdfModal
           docId={doc.id}
@@ -702,6 +723,82 @@ function AddRoteiroModal({ docId, onClose }: { docId: string; onClose: () => voi
           className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50"
         >
           {addRoteiroSection.isPending ? "Adicionando…" : "Adicionar"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/** Pop-up de reordenar roteiros — arrasta e solta na hora, sem setinha de
+ * subir/descer (pedido explícito do Junior: "clique, segure e reordene").
+ * Drag and drop nativo do navegador, mesmo padrão já usado pra reordenar os
+ * cards do calendário em ClientView.tsx. */
+function ReorderRoteirosModal({
+  docId, groups, onClose,
+}: {
+  docId: string; groups: { title: string; blocks: MdBlock[] }[]; onClose: () => void;
+}) {
+  const { reorderRoteiroSections } = useApi();
+  const [order, setOrder] = useState<number[]>(() => groups.map((_, i) => i));
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  function dropAt(targetPos: number) {
+    if (dragIndex == null || dragIndex === targetPos) { setDragIndex(null); setOverIndex(null); return; }
+    setOrder((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(targetPos, 0, moved);
+      return next;
+    });
+    setDragIndex(null);
+    setOverIndex(null);
+  }
+
+  function save() {
+    reorderRoteiroSections.mutate(
+      { data: { docId, order } },
+      { onSuccess: () => { toast.success("Ordem salva."); onClose(); } },
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Reordenar roteiros" maxWidthClass="max-w-lg">
+      <p className="text-xs text-foreground/50 mb-3.5">Clique, segure e arraste um roteiro pra mudar a posição dele.</p>
+      <div className="space-y-1.5 max-h-[60vh] overflow-y-auto pr-1">
+        {order.map((originalIndex, pos) => (
+          <div
+            key={originalIndex}
+            draggable
+            onDragStart={() => setDragIndex(pos)}
+            onDragOver={(e) => { e.preventDefault(); if (dragIndex != null && dragIndex !== pos) setOverIndex(pos); }}
+            onDragLeave={() => { if (overIndex === pos) setOverIndex(null); }}
+            onDrop={() => dropAt(pos)}
+            onDragEnd={() => { setDragIndex(null); setOverIndex(null); }}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 cursor-grab active:cursor-grabbing select-none transition-colors"
+            style={{
+              background: overIndex === pos ? "rgba(var(--lz-brand-rgb),0.1)" : "var(--card)",
+              border: `1px solid ${overIndex === pos ? "rgba(var(--lz-brand-rgb),0.4)" : "color-mix(in srgb, var(--foreground) 6%, transparent)"}`,
+              opacity: dragIndex === pos ? 0.4 : 1,
+            }}
+          >
+            <GripVertical size={14} className="text-foreground/25 shrink-0" />
+            <span
+              className="shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold"
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
+            >{String(pos + 1).padStart(2, "0")}</span>
+            <span className="flex-1 min-w-0 text-sm text-foreground truncate">{displayRoteiroTitle(groups[originalIndex].title)}</span>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-end gap-2 mt-4">
+        <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
+        <button
+          onClick={save}
+          disabled={reorderRoteiroSections.isPending}
+          className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50"
+        >
+          {reorderRoteiroSections.isPending ? "Salvando…" : "Salvar ordem"}
         </button>
       </div>
     </Modal>

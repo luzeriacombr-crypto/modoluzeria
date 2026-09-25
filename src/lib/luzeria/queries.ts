@@ -116,7 +116,7 @@ import {
 import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
 import { listLeads, upsertLead, moveLeadStage, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts, listSalesStages, upsertSalesStage, deleteSalesStage } from "./sales-pipeline.functions";
 import { listTrash, restoreItem, purgeItem } from "./trash.functions";
-import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus, createRoteirosFromPlan, regenerateRoteiroDoc, updateRoteiroSection, addRoteiroSection, exportRoteirosPdf } from "./client-docs.functions";
+import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus, createRoteirosFromPlan, regenerateRoteiroDoc, updateRoteiroSection, addRoteiroSection, reorderRoteiroSections, exportRoteirosPdf } from "./client-docs.functions";
 import { listOrgKnowledge, saveOrgKnowledgeText, saveOrgKnowledgeFile, deleteOrgKnowledge } from "./org-knowledge.functions";
 import { listAiPlanningFeedback } from "./ai-planning.functions";
 import { listReferenceLibrary, upsertReferenceLibraryItem, deleteReferenceLibraryItem } from "./reference-library.functions";
@@ -1435,6 +1435,11 @@ export function useApi() {
       mutationFn: useServerFn(addRoteiroSection),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
       onError: (e: any) => toastFriendlyError(e, "Erro ao adicionar o roteiro."),
+    }),
+    reorderRoteiroSections: useMutation({
+      mutationFn: useServerFn(reorderRoteiroSections),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["client-docs"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao reordenar os roteiros."),
     }),
     exportRoteirosPdf: useMutation({
       mutationFn: useServerFn(exportRoteirosPdf),

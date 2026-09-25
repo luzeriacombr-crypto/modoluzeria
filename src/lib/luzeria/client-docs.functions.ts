@@ -373,6 +373,54 @@ export const addRoteiroSection = createServerFn({ method: "POST" })
     return { content: newContent };
   });
 
+/** Reordena os roteiros de um documento (arrastar e soltar na tela) — recorta
+ * cada seção "## Roteiro N: título\n<corpo>" pela posição atual e recoloca
+ * na ordem nova pedida. Só muda a POSIÇÃO de cada bloco: o texto de cada
+ * heading (incluindo o "Roteiro N:" antigo) não é tocado, então
+ * client_doc_roteiro_status.roteiro_title continua batendo sem precisar
+ * migrar nada — o número "01/02/03" que aparece na tela é calculado pela
+ * posição no array (RoteirosView), não pelo texto do heading, então já sai
+ * certo sozinho. `order` é a lista dos índices ANTIGOS na ordem nova (ex.:
+ * [2,0,1] bota o que era o 3º primeiro). */
+export const reorderRoteiroSections = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { docId: string; order: number[] }) =>
+    z.object({
+      docId: z.string().uuid(),
+      order: z.array(z.number().int().min(0)).min(1).max(200),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+
+    const { data: doc, error: docErr } = await (context.supabase as any)
+      .from("client_docs").select("id, type, content").eq("id", data.docId).single();
+    if (docErr || !doc) throw new Error("Documento não encontrado.");
+    if (doc.type !== "roteiro") throw new Error("Só dá pra reordenar documentos de Roteiros.");
+
+    const content = doc.content as string;
+    const headingRe = /^## (.+)$/gm;
+    const matches = [...content.matchAll(headingRe)];
+    if (matches.length === 0) throw new Error("Esse documento não tem roteiros pra reordenar.");
+
+    const prefix = content.slice(0, matches[0].index!);
+    const sections = matches.map((m, i) => {
+      const start = m.index!;
+      const end = i + 1 < matches.length ? matches[i + 1].index! : content.length;
+      return content.slice(start, end).trim();
+    });
+
+    if (data.order.length !== sections.length || new Set(data.order).size !== sections.length || data.order.some((i) => i < 0 || i >= sections.length)) {
+      throw new Error("Esse documento mudou desde que você abriu — recarregue a página antes de reordenar.");
+    }
+
+    const newContent = (prefix + data.order.map((i) => sections[i]).join("\n\n")).replace(/\n{3,}/g, "\n\n").trim() + "\n";
+
+    const { error: updErr } = await (context.supabase as any)
+      .from("client_docs").update({ content: newContent }).eq("id", data.docId);
+    if (updErr) throw new Error(updErr.message);
+    return { content: newContent };
+  });
+
 /** Exporta um doc de Roteiros em PDF — todos, uma seleção de títulos, só os
  * aprovados (client_doc_roteiro_status.status='aprovado') ou só os Reels
  * (content_type='reel'). Mockup aprovado: claude.ai/artifact/N1Vhikuq6VwWq2JM4WkGYY.
