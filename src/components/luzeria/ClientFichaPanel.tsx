@@ -22,6 +22,7 @@ import { ClientBlockedItemsModal } from "./ClientBlockedItemsModal";
 import { getInstagramConnectionStatus, getInstagramConnectUrl, disconnectInstagram } from "@/lib/luzeria/instagram.functions";
 import { getFacebookConnectionStatus, getFacebookConnectUrl, disconnectFacebook } from "@/lib/luzeria/facebook.functions";
 import { TikTokConnectSection } from "./TikTokSections";
+import { LinkedInConnectSection } from "./LinkedInSections";
 
 function formatHours(h: number | null) {
   if (h == null) return "—";
@@ -155,6 +156,12 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         {canManageInstagram && (
           <FichaCard label="TikTok">
             <TikTokConnectSection clientId={client.id} />
+          </FichaCard>
+        )}
+        {/* LinkedIn: só na conta interna (Luzeria) enquanto o app está no tier de desenvolvimento do LinkedIn */}
+        {canManageInstagram && isLuzeriaOrg && (
+          <FichaCard label="LinkedIn">
+            <LinkedInConnectSection clientId={client.id} />
           </FichaCard>
         )}
         <FichaCard label="Pasta de entregas (Drive)">

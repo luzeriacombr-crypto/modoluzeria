@@ -63,12 +63,14 @@ import { Route as ApiCronSendAutomationEmailsRouteImport } from './routes/api.cr
 import { Route as ApiCronRetentionCleanupRouteImport } from './routes/api.cron.retention-cleanup'
 import { Route as ApiCronRefreshInstagramTokensRouteImport } from './routes/api.cron.refresh-instagram-tokens'
 import { Route as ApiCronPublishTiktokRouteImport } from './routes/api.cron.publish-tiktok'
+import { Route as ApiCronPublishLinkedinRouteImport } from './routes/api.cron.publish-linkedin'
 import { Route as ApiCronPublishInstagramRouteImport } from './routes/api.cron.publish-instagram'
 import { Route as ApiCronPublishFacebookRouteImport } from './routes/api.cron.publish-facebook'
 import { Route as ApiCronCheckAgencyReferralsRouteImport } from './routes/api.cron.check-agency-referrals'
 import { Route as ApiCronActivationNudgesRouteImport } from './routes/api.cron.activation-nudges'
 import { Route as AuthenticatedSelecaoDeFotosClientIdRouteImport } from './routes/_authenticated/selecao-de-fotos_.$clientId'
 import { Route as AuthenticatedOauthTiktokCallbackRouteImport } from './routes/_authenticated/oauth.tiktok-callback'
+import { Route as AuthenticatedOauthLinkedinCallbackRouteImport } from './routes/_authenticated/oauth.linkedin-callback'
 import { Route as AuthenticatedOauthInstagramCallbackRouteImport } from './routes/_authenticated/oauth.instagram-callback'
 import { Route as AuthenticatedOauthGoogleCalendarCallbackRouteImport } from './routes/_authenticated/oauth.google-calendar-callback'
 import { Route as AuthenticatedOauthFacebookCallbackRouteImport } from './routes/_authenticated/oauth.facebook-callback'
@@ -359,6 +361,11 @@ const ApiCronPublishTiktokRoute = ApiCronPublishTiktokRouteImport.update({
   path: '/api/cron/publish-tiktok',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronPublishLinkedinRoute = ApiCronPublishLinkedinRouteImport.update({
+  id: '/api/cron/publish-linkedin',
+  path: '/api/cron/publish-linkedin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCronPublishInstagramRoute = ApiCronPublishInstagramRouteImport.update({
   id: '/api/cron/publish-instagram',
   path: '/api/cron/publish-instagram',
@@ -390,6 +397,12 @@ const AuthenticatedOauthTiktokCallbackRoute =
   AuthenticatedOauthTiktokCallbackRouteImport.update({
     id: '/oauth/tiktok-callback',
     path: '/oauth/tiktok-callback',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOauthLinkedinCallbackRoute =
+  AuthenticatedOauthLinkedinCallbackRouteImport.update({
+    id: '/oauth/linkedin-callback',
+    path: '/oauth/linkedin-callback',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedOauthInstagramCallbackRoute =
@@ -488,12 +501,14 @@ export interface FileRoutesByFullPath {
   '/oauth/facebook-callback': typeof AuthenticatedOauthFacebookCallbackRoute
   '/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
+  '/oauth/linkedin-callback': typeof AuthenticatedOauthLinkedinCallbackRoute
   '/oauth/tiktok-callback': typeof AuthenticatedOauthTiktokCallbackRoute
   '/selecao-de-fotos/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
   '/api/cron/publish-facebook': typeof ApiCronPublishFacebookRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
+  '/api/cron/publish-linkedin': typeof ApiCronPublishLinkedinRoute
   '/api/cron/publish-tiktok': typeof ApiCronPublishTiktokRoute
   '/api/cron/refresh-instagram-tokens': typeof ApiCronRefreshInstagramTokensRoute
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
@@ -556,12 +571,14 @@ export interface FileRoutesByTo {
   '/oauth/facebook-callback': typeof AuthenticatedOauthFacebookCallbackRoute
   '/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
+  '/oauth/linkedin-callback': typeof AuthenticatedOauthLinkedinCallbackRoute
   '/oauth/tiktok-callback': typeof AuthenticatedOauthTiktokCallbackRoute
   '/selecao-de-fotos/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
   '/api/cron/publish-facebook': typeof ApiCronPublishFacebookRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
+  '/api/cron/publish-linkedin': typeof ApiCronPublishLinkedinRoute
   '/api/cron/publish-tiktok': typeof ApiCronPublishTiktokRoute
   '/api/cron/refresh-instagram-tokens': typeof ApiCronRefreshInstagramTokensRoute
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
@@ -626,12 +643,14 @@ export interface FileRoutesById {
   '/_authenticated/oauth/facebook-callback': typeof AuthenticatedOauthFacebookCallbackRoute
   '/_authenticated/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/_authenticated/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
+  '/_authenticated/oauth/linkedin-callback': typeof AuthenticatedOauthLinkedinCallbackRoute
   '/_authenticated/oauth/tiktok-callback': typeof AuthenticatedOauthTiktokCallbackRoute
   '/_authenticated/selecao-de-fotos_/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
   '/api/cron/publish-facebook': typeof ApiCronPublishFacebookRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
+  '/api/cron/publish-linkedin': typeof ApiCronPublishLinkedinRoute
   '/api/cron/publish-tiktok': typeof ApiCronPublishTiktokRoute
   '/api/cron/refresh-instagram-tokens': typeof ApiCronRefreshInstagramTokensRoute
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
@@ -696,12 +715,14 @@ export interface FileRouteTypes {
     | '/oauth/facebook-callback'
     | '/oauth/google-calendar-callback'
     | '/oauth/instagram-callback'
+    | '/oauth/linkedin-callback'
     | '/oauth/tiktok-callback'
     | '/selecao-de-fotos/$clientId'
     | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
     | '/api/cron/publish-facebook'
     | '/api/cron/publish-instagram'
+    | '/api/cron/publish-linkedin'
     | '/api/cron/publish-tiktok'
     | '/api/cron/refresh-instagram-tokens'
     | '/api/cron/retention-cleanup'
@@ -764,12 +785,14 @@ export interface FileRouteTypes {
     | '/oauth/facebook-callback'
     | '/oauth/google-calendar-callback'
     | '/oauth/instagram-callback'
+    | '/oauth/linkedin-callback'
     | '/oauth/tiktok-callback'
     | '/selecao-de-fotos/$clientId'
     | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
     | '/api/cron/publish-facebook'
     | '/api/cron/publish-instagram'
+    | '/api/cron/publish-linkedin'
     | '/api/cron/publish-tiktok'
     | '/api/cron/refresh-instagram-tokens'
     | '/api/cron/retention-cleanup'
@@ -833,12 +856,14 @@ export interface FileRouteTypes {
     | '/_authenticated/oauth/facebook-callback'
     | '/_authenticated/oauth/google-calendar-callback'
     | '/_authenticated/oauth/instagram-callback'
+    | '/_authenticated/oauth/linkedin-callback'
     | '/_authenticated/oauth/tiktok-callback'
     | '/_authenticated/selecao-de-fotos_/$clientId'
     | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
     | '/api/cron/publish-facebook'
     | '/api/cron/publish-instagram'
+    | '/api/cron/publish-linkedin'
     | '/api/cron/publish-tiktok'
     | '/api/cron/refresh-instagram-tokens'
     | '/api/cron/retention-cleanup'
@@ -887,6 +912,7 @@ export interface RootRouteChildren {
   ApiCronCheckAgencyReferralsRoute: typeof ApiCronCheckAgencyReferralsRoute
   ApiCronPublishFacebookRoute: typeof ApiCronPublishFacebookRoute
   ApiCronPublishInstagramRoute: typeof ApiCronPublishInstagramRoute
+  ApiCronPublishLinkedinRoute: typeof ApiCronPublishLinkedinRoute
   ApiCronPublishTiktokRoute: typeof ApiCronPublishTiktokRoute
   ApiCronRefreshInstagramTokensRoute: typeof ApiCronRefreshInstagramTokensRoute
   ApiCronRetentionCleanupRoute: typeof ApiCronRetentionCleanupRoute
@@ -1277,6 +1303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronPublishTiktokRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/publish-linkedin': {
+      id: '/api/cron/publish-linkedin'
+      path: '/api/cron/publish-linkedin'
+      fullPath: '/api/cron/publish-linkedin'
+      preLoaderRoute: typeof ApiCronPublishLinkedinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/publish-instagram': {
       id: '/api/cron/publish-instagram'
       path: '/api/cron/publish-instagram'
@@ -1317,6 +1350,13 @@ declare module '@tanstack/react-router' {
       path: '/oauth/tiktok-callback'
       fullPath: '/oauth/tiktok-callback'
       preLoaderRoute: typeof AuthenticatedOauthTiktokCallbackRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/oauth/linkedin-callback': {
+      id: '/_authenticated/oauth/linkedin-callback'
+      path: '/oauth/linkedin-callback'
+      fullPath: '/oauth/linkedin-callback'
+      preLoaderRoute: typeof AuthenticatedOauthLinkedinCallbackRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/oauth/instagram-callback': {
@@ -1391,6 +1431,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOauthFacebookCallbackRoute: typeof AuthenticatedOauthFacebookCallbackRoute
   AuthenticatedOauthGoogleCalendarCallbackRoute: typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   AuthenticatedOauthInstagramCallbackRoute: typeof AuthenticatedOauthInstagramCallbackRoute
+  AuthenticatedOauthLinkedinCallbackRoute: typeof AuthenticatedOauthLinkedinCallbackRoute
   AuthenticatedOauthTiktokCallbackRoute: typeof AuthenticatedOauthTiktokCallbackRoute
   AuthenticatedSelecaoDeFotosClientIdRoute: typeof AuthenticatedSelecaoDeFotosClientIdRoute
 }
@@ -1418,6 +1459,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedOauthGoogleCalendarCallbackRoute,
   AuthenticatedOauthInstagramCallbackRoute:
     AuthenticatedOauthInstagramCallbackRoute,
+  AuthenticatedOauthLinkedinCallbackRoute:
+    AuthenticatedOauthLinkedinCallbackRoute,
   AuthenticatedOauthTiktokCallbackRoute: AuthenticatedOauthTiktokCallbackRoute,
   AuthenticatedSelecaoDeFotosClientIdRoute:
     AuthenticatedSelecaoDeFotosClientIdRoute,
@@ -1475,6 +1518,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronCheckAgencyReferralsRoute: ApiCronCheckAgencyReferralsRoute,
   ApiCronPublishFacebookRoute: ApiCronPublishFacebookRoute,
   ApiCronPublishInstagramRoute: ApiCronPublishInstagramRoute,
+  ApiCronPublishLinkedinRoute: ApiCronPublishLinkedinRoute,
   ApiCronPublishTiktokRoute: ApiCronPublishTiktokRoute,
   ApiCronRefreshInstagramTokensRoute: ApiCronRefreshInstagramTokensRoute,
   ApiCronRetentionCleanupRoute: ApiCronRetentionCleanupRoute,

@@ -12,6 +12,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { getInstagramConnectionStatus, getStoryRepeatStatus, setStoryRepeatRule, getInstagramPostLink } from "@/lib/luzeria/instagram.functions";
 import { getFacebookConnectionStatus } from "@/lib/luzeria/facebook.functions";
 import { TikTokPublishPanel } from "./TikTokSections";
+import { LinkedInPublishPanel } from "./LinkedInSections";
 import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
 import { downloadDriveFile, downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
@@ -1753,6 +1754,13 @@ export function DetailPanel() {
         {(item.type === "post" || item.type === "reel") && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && selectedClientId && (
           <ModalSection label="Publicar no TikTok">
             <TikTokPublishPanel itemId={item.id} clientId={selectedClientId} scheduledAt={item.scheduledAt} caption={item.caption} />
+          </ModalSection>
+        )}
+
+        {/* Publicar no LinkedIn (Posts e Reels, imagem/carrossel ou vídeo) — só na conta interna (Luzeria) enquanto o app está no tier de desenvolvimento do LinkedIn */}
+        {(item.type === "post" || item.type === "reel") && me?.orgId === LUZERIA_ORG_ID && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && selectedClientId && (
+          <ModalSection label="Publicar no LinkedIn">
+            <LinkedInPublishPanel itemId={item.id} clientId={selectedClientId} scheduledAt={item.scheduledAt} caption={item.caption} />
           </ModalSection>
         )}
 
