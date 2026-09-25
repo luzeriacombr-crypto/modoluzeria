@@ -13,7 +13,7 @@ import {
 import { getPublicSalesStats } from "@/lib/luzeria/sales-stats.functions";
 import { ConstellationBackground } from "./ConstellationBackground";
 import { DEFAULT_LANDING, type LandingContent, type LandingTab } from "@/lib/luzeria/sales-landing-content";
-import { LIME, BG_BLUE, BG_GRAY, BG_WHITE, Reveal, useReveal } from "./salesPageBlocks";
+import { LIME, BG_BLUE, BG_GRAY, BG_WHITE, Reveal } from "./salesPageBlocks";
 import boardImg from "@/assets/sales/board.webp";
 import approvalImg from "@/assets/sales/aprovacao-mobile.webp";
 import dashboardImg from "@/assets/sales/dashboard.webp";
@@ -144,79 +144,6 @@ export function SalesHero({ onCta, content = DEFAULT_LANDING }: { onCta: () => v
 
 const FALLBACK_STATS = { clients: 230, deliveries: 1365 };
 
-/** Um caractere do contador em "bloco" — visual de placar digital, pedido
- * pelo Junior no lugar do número itálico solto (queria algo "mais forte e
- * futurista"). Fundo escuro + número lima, igual à paleta do resto do site. */
-function CounterTile({ char }: { char: string }) {
-  return (
-    <span
-      className="inline-flex items-center justify-center rounded-[10px] sm:rounded-xl font-black tabular-nums shrink-0"
-      style={{
-        background: BG_BLUE,
-        color: LIME,
-        width: "clamp(26px,6.2vw,44px)",
-        height: "clamp(36px,8.2vw,58px)",
-        fontSize: "clamp(20px,4.4vw,34px)",
-        boxShadow: "0 10px 22px -12px rgba(10,14,35,0.45), inset 0 0 0 1px rgba(215,255,63,0.18)",
-      }}
-    >
-      {char}
-    </span>
-  );
-}
-
-/** Reconhece o número no início do texto (funciona pra "367", "+1.500" e
- * pra "30" dentro de "30 dias", já que trialValue é um campo livre editável
- * — o resto do texto vira sufixo simples). Sem número no início, devolve
- * null e quem chama cai pra exibição estática, sem quebrar textos livres
- * que a agência tenha customizado. */
-function parseCounterValue(raw: string): { target: number; showPlus: boolean; suffix: string } | null {
-  const m = raw.match(/^([+-]?)[\d.,]+/);
-  if (!m) return null;
-  const numPart = m[0];
-  const digitsOnly = numPart.replace(/[^\d]/g, "");
-  if (!digitsOnly) return null;
-  return { target: parseInt(digitsOnly, 10), showPlus: numPart.startsWith("+"), suffix: raw.slice(numPart.length) };
-}
-
-/** Conta de 0 até o valor real quando a seção entra na tela (uma vez só),
- * dígito a dígito em blocos. Respeita "reduced motion" via useReveal. */
-function AnimatedStatValue({ value }: { value: string }) {
-  const { ref, visible } = useReveal<HTMLDivElement>();
-  const parsed = parseCounterValue(value);
-  const [current, setCurrent] = useState(0);
-
-  useEffect(() => {
-    if (!parsed || !visible) return;
-    const target = parsed.target;
-    const duration = 1200;
-    const start = performance.now();
-    let raf = 0;
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setCurrent(Math.round(eased * target));
-      if (t < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [visible, parsed?.target]);
-
-  if (!parsed) {
-    return <div ref={ref} className="font-black" style={{ fontSize: "clamp(40px,5vw,58px)", lineHeight: 1 }}>{value}</div>;
-  }
-
-  const chars = [...(parsed.showPlus ? "+" : ""), ...current.toLocaleString("pt-BR")];
-  return (
-    <div ref={ref} className="flex items-center flex-wrap gap-[5px] sm:gap-1.5">
-      {chars.map((c, i) => <CounterTile key={i} char={c} />)}
-      {parsed.suffix.trim() && (
-        <span className="font-black" style={{ fontSize: "clamp(20px,4vw,32px)", marginLeft: 4 }}>{parsed.suffix.trim()}</span>
-      )}
-    </div>
-  );
-}
-
 export function SalesNumbers({ content = DEFAULT_LANDING }: { content?: LandingContent }) {
   const nm = content.numbers;
   const { data } = useQuery({ queryKey: ["sales-stats"], queryFn: () => getPublicSalesStats(), staleTime: 60 * 60_000, retry: false });
@@ -235,10 +162,8 @@ export function SalesNumbers({ content = DEFAULT_LANDING }: { content?: LandingC
           <div key={it.label} className="py-8 px-5 sm:px-10 text-center sm:text-left"
             style={{ background: i === 1 ? "linear-gradient(180deg,#F3FFC2,#E2FF7A)" : "linear-gradient(105deg,#DCFF4D 0%,#C9F52F 100%)" }}>
             <div className="max-w-[340px] mx-auto sm:mx-0 sm:ml-auto sm:mr-auto lg:max-w-[300px]">
-              <div className="flex justify-center sm:justify-start">
-                <AnimatedStatValue value={it.value} />
-              </div>
-              <div className="mt-3 text-[13.5px] font-semibold whitespace-pre-line" style={{ color: "rgba(10,14,35,0.72)" }}>{it.label}</div>
+              <div className={`${SERIF} text-[clamp(40px,5vw,58px)] leading-none`} style={{ fontStyle: "italic", letterSpacing: "-0.02em" }}>{it.value}</div>
+              <div className="mt-2 text-[13.5px] font-semibold whitespace-pre-line" style={{ color: "rgba(10,14,35,0.72)" }}>{it.label}</div>
             </div>
           </div>
         ))}
