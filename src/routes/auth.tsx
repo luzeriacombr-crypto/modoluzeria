@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ArrowLeft } from "lucide-react";
 import luzeriaLogo from "@/assets/luzeria-logo-login.png";
 import { PasswordInput } from "@/components/luzeria/PasswordInput";
+import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -16,15 +17,6 @@ export const Route = createFileRoute("/auth")({
     if (data.session) throw redirect({ to: "/minhas-tarefas" });
   },
 });
-
-function FaviconMark({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 286 286" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
-      <rect width="286" height="286" rx="60" fill="#CDFF00" />
-      <rect x="25.5" y="68" width="235" height="149" rx="38" fill="#090E24" />
-    </svg>
-  );
-}
 
 function GoogleMark({ size = 16 }: { size?: number }) {
   return (
@@ -155,11 +147,7 @@ function AuthPage() {
       </Link>
       <div className="w-full max-w-sm rounded-2xl p-8 shadow-2xl" style={{ background: "#16215C" }}>
         <div className="flex flex-col items-center mb-7">
-          <div className="flex items-center gap-1.5">
-            <FaviconMark size={16} />
-            <span className="text-white text-sm font-semibold tracking-wide">MODO</span>
-          </div>
-          <div className="font-criador-serif text-[40px] leading-tight -mt-1" style={{ color: "#E2FF3E" }}>CRIADOR</div>
+          <ModoCriadorLogo variant="brand" className="h-12 w-auto" />
         </div>
 
         <p className="text-white text-xs uppercase tracking-widest text-center font-semibold mb-6">
