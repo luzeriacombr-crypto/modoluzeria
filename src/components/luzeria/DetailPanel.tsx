@@ -26,6 +26,7 @@ import { ItemTimeline } from "./ItemTimeline";
 import { QualityModal } from "./QualityModal";
 import { FilesSection } from "./FilesSection";
 import { BriefingUploads } from "./BriefingUploads";
+import { MateriaisBrutosUploads } from "./MateriaisBrutosUploads";
 import { CarouselLightbox } from "./CarouselLightbox";
 import { ReelCoverEditor } from "./ReelCoverEditor";
 import { useItemFileUpload } from "@/lib/luzeria/use-item-file-upload";
@@ -1081,7 +1082,10 @@ export function DetailPanel() {
                 </div>
               )}
               {!isActivity && (
-                <BriefingUploads itemId={item.id} clientId={selectedClientId} canEdit={canEditFiles} />
+                <>
+                  <BriefingUploads itemId={item.id} clientId={selectedClientId} canEdit={canEditFiles} />
+                  <MateriaisBrutosUploads itemId={item.id} clientId={selectedClientId} canEdit={canEditFiles} />
+                </>
               )}
             </ModalSection>
 

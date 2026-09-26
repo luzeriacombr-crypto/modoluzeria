@@ -523,7 +523,7 @@ export const itemTimelineQO = (itemId: string | null) =>
     enabled: !!itemId,
   });
 
-export const itemFilesQO = (itemId: string | null, kind: "media" | "briefing" = "media") =>
+export const itemFilesQO = (itemId: string | null, kind: "media" | "briefing" | "raw" = "media") =>
   queryOptions({
     queryKey: ["item-files", itemId, kind],
     queryFn: () => listItemFiles({ data: { itemId: itemId!, kind } }),

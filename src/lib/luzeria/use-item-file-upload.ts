@@ -40,7 +40,7 @@ export type UploadProgress = { done: number; total: number; pct: number; phase: 
 async function uploadOneFile(
   itemId: string,
   file: File,
-  kind: "media" | "briefing",
+  kind: "media" | "briefing" | "raw",
   api: ReturnType<typeof useApi>,
   onProgress: (pct: number) => void,
 ): Promise<{ id: string; name: string }> {
@@ -91,11 +91,12 @@ async function uploadOneFile(
 }
 
 /** Shared upload orchestration used by "Arquivos" (kind: "media", the
- * default), the Mídia preview's direct-upload (kind: "media"), and the
- * Briefing section's reference-image uploader (kind: "briefing") — same
- * relay (chunked straight into Google Drive), just tagged differently so
- * each lands in its own folder/list. */
-export function useItemFileUpload(itemId: string, kind: "media" | "briefing" = "media") {
+ * default), the Mídia preview's direct-upload (kind: "media"), the
+ * Briefing section's reference-image uploader (kind: "briefing"), and the
+ * Materiais Brutos uploader (kind: "raw") — same relay (chunked straight
+ * into Google Drive), just tagged differently so each lands in its own
+ * folder/list. */
+export function useItemFileUpload(itemId: string, kind: "media" | "briefing" | "raw" = "media") {
   const api = useApi();
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);

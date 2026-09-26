@@ -277,12 +277,13 @@ const TYPE_FOLDER_LABEL: Record<string, string> = { post: "Posts", reel: "Reels"
 
 /** Resolve the target month (or month/type) folder for an item; null if cannot organize.
  * `kind: "briefing"` bypasses the month/type tree entirely — briefing/reference
- * images all land in one shared "Imagens de Briefing" folder per client. */
+ * images all land in one shared "Imagens de Briefing" folder per client.
+ * `kind: "raw"` works the same way, into a sibling "Materiais Brutos" folder. */
 async function resolveTargetFolderForItem(
   supabase: any,
   userId: string,
   itemId: string,
-  opts: { autoCreate?: boolean; forceClientFolderId?: string; kind?: "media" | "briefing" } = {},
+  opts: { autoCreate?: boolean; forceClientFolderId?: string; kind?: "media" | "briefing" | "raw" } = {},
 ): Promise<string | null> {
   const { data: item } = await supabase
     .from("content_items")
@@ -300,6 +301,9 @@ async function resolveTargetFolderForItem(
   if (map?.deliveries_folder_id) {
     if (opts.kind === "briefing") {
       return ensureMonthFolder(map.deliveries_folder_id, "Imagens de Briefing");
+    }
+    if (opts.kind === "raw") {
+      return ensureMonthFolder(map.deliveries_folder_id, "Materiais Brutos");
     }
     const label = monthLabelWithYear(months?.key);
     if (!label) return null;
@@ -370,8 +374,8 @@ async function syncLegacyDriveLink(supabase: any, itemId: string) {
 
 export const listItemFiles = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { itemId: string; kind?: "media" | "briefing" }) =>
-    z.object({ itemId: z.string().uuid(), kind: z.enum(["media", "briefing"]).default("media") }).parse(d))
+  .inputValidator((d: { itemId: string; kind?: "media" | "briefing" | "raw" }) =>
+    z.object({ itemId: z.string().uuid(), kind: z.enum(["media", "briefing", "raw"]).default("media") }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("item_files")
@@ -629,12 +633,12 @@ export const attachDriveFile = createServerFn({ method: "POST" })
  * (uploadDriveChunk) também passa pelo servidor, em pedaços pequenos. */
 export const startDriveUploadSession = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { itemId: string; name: string; mimeType: string; kind?: "media" | "briefing" }) =>
+  .inputValidator((d: { itemId: string; name: string; mimeType: string; kind?: "media" | "briefing" | "raw" }) =>
     z.object({
       itemId: z.string().uuid(),
       name: z.string().min(1).max(255),
       mimeType: z.string().min(1).max(200),
-      kind: z.enum(["media", "briefing"]).default("media"),
+      kind: z.enum(["media", "briefing", "raw"]).default("media"),
     }).parse(d))
   .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     await assertCanWrite(context.supabase, context.userId, data.itemId);
@@ -724,12 +728,12 @@ export const uploadDriveChunk = createServerFn({ method: "POST" })
 export const finalizeDriveUpload = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: {
-    itemId: string; kind?: "media" | "briefing";
+    itemId: string; kind?: "media" | "briefing" | "raw";
     driveFile: { id: string; name: string; mimeType?: string; iconLink?: string; thumbnailLink?: string; webViewLink?: string; size?: string | number };
   }) =>
     z.object({
       itemId: z.string().uuid(),
-      kind: z.enum(["media", "briefing"]).default("media"),
+      kind: z.enum(["media", "briefing", "raw"]).default("media"),
       driveFile: z.object({
         id: z.string().min(1),
         name: z.string().min(1),
