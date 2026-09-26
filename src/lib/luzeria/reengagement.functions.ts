@@ -26,16 +26,26 @@ export type InactiveOrgRow = {
   ownerEmail: string | null;
   whatsapp: string | null;
   clientCount: number;
+  teamCount: number;
   lastActiveAt: string | null;
   lastMessageSentAt: string | null;
 };
 
 export const listInactiveOrgsForReengagement = createServerFn({ method: "GET" })
-  .inputValidator((d: { noClients?: boolean; minDaysInactive?: number; neverVisitedPages?: boolean }) =>
+  .inputValidator((d: {
+    noClients?: boolean; minClients?: number; maxClients?: number; noTeam?: boolean;
+    minDaysInactive?: number; neverVisitedPages?: boolean;
+    onlyTrialing?: boolean; excludeResold?: boolean;
+  }) =>
     z.object({
       noClients: z.boolean().optional(),
+      minClients: z.number().int().min(0).optional(),
+      maxClients: z.number().int().min(0).optional(),
+      noTeam: z.boolean().optional(),
       minDaysInactive: z.number().int().min(1).max(365).optional(),
       neverVisitedPages: z.boolean().optional(),
+      onlyTrialing: z.boolean().optional(),
+      excludeResold: z.boolean().optional(),
     }).parse(d))
   .middleware([requireActiveProfile])
   .handler(async ({ data, context }): Promise<InactiveOrgRow[]> => {
@@ -45,7 +55,7 @@ export const listInactiveOrgsForReengagement = createServerFn({ method: "GET" })
 
     const { data: orgs, error } = await supabaseAdmin
       .from("orgs")
-      .select("id, name, whatsapp, created_at")
+      .select("id, name, whatsapp, created_at, subscription_status, is_reseller, reseller_org_id")
       .neq("id", LUZERIA_ORG_ID);
     if (error) throw new Error(error.message);
 
@@ -57,7 +67,14 @@ export const listInactiveOrgsForReengagement = createServerFn({ method: "GET" })
     const { data: masterRoles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "master");
     const masterIds = new Set((masterRoles ?? []).map((r: any) => r.user_id));
     const { data: profiles } = await supabaseAdmin
-      .from("profiles").select("id, org_id, name, email, created_at, last_active_at");
+      .from("profiles").select("id, org_id, name, email, created_at, last_active_at, active");
+    // Equipe = quantos perfis ATIVOS a org tem contando o próprio dono — 1
+    // significa que nunca chamou ninguém (mesma lógica de listOrgsBilling).
+    const teamByOrg = new Map<string, number>();
+    (profiles ?? []).forEach((p: any) => {
+      if (!p.active) return;
+      teamByOrg.set(p.org_id, (teamByOrg.get(p.org_id) ?? 0) + 1);
+    });
     const ownerByOrg = new Map<string, { name: string; email: string }>();
     (profiles ?? [])
       .filter((p: any) => masterIds.has(p.id))
@@ -89,7 +106,13 @@ export const listInactiveOrgsForReengagement = createServerFn({ method: "GET" })
 
     return (orgs ?? [])
       .filter((o: any) => {
-        if (data.noClients && (clientsByOrg.get(o.id) ?? 0) > 0) return false;
+        const clientCount = clientsByOrg.get(o.id) ?? 0;
+        if (data.noClients && clientCount > 0) return false;
+        if (data.minClients != null && clientCount < data.minClients) return false;
+        if (data.maxClients != null && clientCount > data.maxClients) return false;
+        if (data.noTeam && (teamByOrg.get(o.id) ?? 1) !== 1) return false;
+        if (data.onlyTrialing && o.subscription_status !== "trialing") return false;
+        if (data.excludeResold && (o.is_reseller || o.reseller_org_id)) return false;
         if (cutoffMs != null) {
           const lastActive = lastActiveByOrg.get(o.id);
           if (lastActive && new Date(lastActive).getTime() > cutoffMs) return false;
@@ -107,6 +130,7 @@ export const listInactiveOrgsForReengagement = createServerFn({ method: "GET" })
         ownerEmail: ownerByOrg.get(o.id)?.email ?? null,
         whatsapp: o.whatsapp,
         clientCount: clientsByOrg.get(o.id) ?? 0,
+        teamCount: teamByOrg.get(o.id) ?? 1,
         lastActiveAt: lastActiveByOrg.get(o.id) ?? null,
         lastMessageSentAt: lastMessageByOrg.get(o.id) ?? null,
       }))
@@ -149,6 +173,10 @@ export const sendReengagementEmails = createServerFn({ method: "POST" })
       .filter((p: any) => masterIds.has(p.id))
       .sort((a: any, b: any) => a.created_at.localeCompare(b.created_at))
       .forEach((p: any) => { if (!ownerByOrg.has(p.org_id)) ownerByOrg.set(p.org_id, { name: p.name, email: p.email }); });
+    const { data: clientRows } = await supabaseAdmin
+      .from("clients").select("org_id").eq("archived", false).neq("category", "Ex-clientes").in("org_id", data.orgIds);
+    const clientsByOrg = new Map<string, number>();
+    (clientRows ?? []).forEach((c: any) => clientsByOrg.set(c.org_id, (clientsByOrg.get(c.org_id) ?? 0) + 1));
 
     const results: { orgId: string; ok: boolean; error?: string }[] = [];
     for (const orgId of data.orgIds) {
@@ -156,7 +184,10 @@ export const sendReengagementEmails = createServerFn({ method: "POST" })
       if (!owner?.email) { results.push({ orgId, ok: false, error: "Sem e-mail de responsável." }); continue; }
       try {
         const firstName = owner.name?.trim().split(" ")[0] ?? "";
-        const personalized = data.body.replaceAll("{nome}", firstName ? ` ${firstName}` : "");
+        const clientCount = clientsByOrg.get(orgId) ?? 0;
+        const personalized = data.body
+          .replaceAll("{nome}", firstName ? ` ${firstName}` : "")
+          .replaceAll("{clientes}", `${clientCount} cliente${clientCount === 1 ? "" : "s"}`);
         await sendEmail({ to: owner.email, subject: data.subject, html: buildReengagementEmailHtml(personalized) });
         await supabaseAdmin.from("agency_reengagement_messages").insert({
           org_id: orgId, channel: "email", subject: data.subject, body: personalized, sent_by: context.userId,
@@ -191,6 +222,10 @@ export const getReengagementWhatsappLinks = createServerFn({ method: "POST" })
       .filter((p: any) => masterIds.has(p.id))
       .sort((a: any, b: any) => a.created_at.localeCompare(b.created_at))
       .forEach((p: any) => { if (!ownerNameByOrg.has(p.org_id)) ownerNameByOrg.set(p.org_id, p.name); });
+    const { data: clientRows } = await supabaseAdmin
+      .from("clients").select("org_id").eq("archived", false).neq("category", "Ex-clientes").in("org_id", data.orgIds);
+    const clientsByOrg = new Map<string, number>();
+    (clientRows ?? []).forEach((c: any) => clientsByOrg.set(c.org_id, (clientsByOrg.get(c.org_id) ?? 0) + 1));
 
     const rows: { orgId: string; orgName: string; whatsapp: string | null; link: string | null }[] = [];
     const logRows: { org_id: string; channel: "whatsapp"; body: string; sent_by: string }[] = [];
@@ -199,7 +234,10 @@ export const getReengagementWhatsappLinks = createServerFn({ method: "POST" })
       if (!rawDigits) { rows.push({ orgId: org.id, orgName: org.name, whatsapp: null, link: null }); continue; }
       const digits = rawDigits.length <= 11 ? `55${rawDigits}` : rawDigits;
       const firstName = ownerNameByOrg.get(org.id)?.trim().split(" ")[0] ?? "";
-      const personalized = data.message.replaceAll("{nome}", firstName ? ` ${firstName}` : "");
+      const clientCount = clientsByOrg.get(org.id) ?? 0;
+      const personalized = data.message
+        .replaceAll("{nome}", firstName ? ` ${firstName}` : "")
+        .replaceAll("{clientes}", `${clientCount} cliente${clientCount === 1 ? "" : "s"}`);
       rows.push({ orgId: org.id, orgName: org.name, whatsapp: org.whatsapp, link: `https://wa.me/${digits}?text=${encodeURIComponent(personalized)}` });
       logRows.push({ org_id: org.id, channel: "whatsapp", body: personalized, sent_by: context.userId });
     }

@@ -184,7 +184,7 @@ function formatLastLogin(iso: string | null) {
   return `${months}${months === 1 ? " mês" : " meses"} atrás`;
 }
 
-export function AgenciesBillingPanel() {
+export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivationPreset?: (key: "noClients" | "fewClients" | "noTeam") => void } = {}) {
   const queryClient = useQueryClient();
   const { data: orgs = [], isLoading } = useQuery(orgsBillingQO());
   const [invoiceForId, setInvoiceForId] = useState<string | null>(null);
@@ -418,17 +418,31 @@ export function AgenciesBillingPanel() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Cadastros", value: cohort.length, sub: null },
-            { label: "Importaram cliente", value: withClient, sub: `${pct(withClient)}%` },
-            { label: "Já ativos (2+ clientes)", value: withActiveClients, sub: `${pct(withActiveClients)}%` },
-            { label: "Chamaram equipe", value: withTeam, sub: `${pct(withTeam)}%` },
-          ].map((s) => (
+            { label: "Cadastros", value: cohort.length, sub: null, preset: null },
+            { label: "Importaram cliente", value: withClient, sub: `${pct(withClient)}%`, preset: "noClients" as const },
+            { label: "Já ativos (2+ clientes)", value: withActiveClients, sub: `${pct(withActiveClients)}%`, preset: "fewClients" as const },
+            { label: "Chamaram equipe", value: withTeam, sub: `${pct(withTeam)}%`, preset: "noTeam" as const },
+          ].map((s) => s.preset && onOpenActivationPreset ? (
+            <button
+              key={s.label}
+              type="button"
+              onClick={() => onOpenActivationPreset(s.preset)}
+              title="Ver e mandar mensagem pra quem falta"
+              className="text-left bg-foreground/[0.03] hover:bg-foreground/[0.06] rounded-lg px-3 py-2.5 transition-colors"
+            >
+              <div className="text-lg font-bold text-foreground">{s.value}{s.sub && <span className="text-xs font-semibold text-foreground/40 ml-1.5">{s.sub}</span>}</div>
+              <div className="text-[11px] text-foreground/50 mt-0.5">{s.label}</div>
+            </button>
+          ) : (
             <div key={s.label} className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
               <div className="text-lg font-bold text-foreground">{s.value}{s.sub && <span className="text-xs font-semibold text-foreground/40 ml-1.5">{s.sub}</span>}</div>
               <div className="text-[11px] text-foreground/50 mt-0.5">{s.label}</div>
             </div>
           ))}
         </div>
+        <p className="text-[10.5px] text-foreground/35 mt-2 leading-relaxed">
+          Clique em "Importaram cliente", "Já ativos" ou "Chamaram equipe" pra ver quem falta e mandar a campanha certa (abre em Mensagens, logo abaixo).
+        </p>
         {cold3d.length > 0 && (
           <div className="mt-3 pt-3 border-t border-foreground/6 text-xs text-foreground/60">
             <span className="font-semibold text-foreground/80">{cold3d.length}</span> agência{cold3d.length > 1 ? "s" : ""} com 3+ dias e nenhum cliente cadastrado: {cold3d.map((o: any) => o.name).join(", ")}

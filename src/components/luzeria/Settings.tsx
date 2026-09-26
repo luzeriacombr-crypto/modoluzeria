@@ -59,6 +59,9 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
   const { setUserActive, deleteUser, adminCreateUser, createAgency } = useApi();
   const [adding, setAdding] = useState(false);
   const [creatingAgency, setCreatingAgency] = useState(false);
+  // Ponte entre os cartões clicáveis de AgenciesBillingPanel ("quem falta")
+  // e a campanha pronta correspondente em MessagesPanel, logo abaixo.
+  const [activationPreset, setActivationPreset] = useState<"noClients" | "fewClients" | "noTeam" | null>(null);
 
   if (!me) return null;
   const isMaster = me.role === "master";
@@ -185,11 +188,11 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               Luzeria. Pra quem não é admin nada muda: o painel nem renderiza
               e "Seu plano" continua sendo a primeira seção. */}
           {me.isPlatformAdmin && (
-            <AgenciesBillingPanel />
+            <AgenciesBillingPanel onOpenActivationPreset={setActivationPreset} />
           )}
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-foreground/10">
-              <MessagesPanel />
+              <MessagesPanel openPreset={activationPreset} onConsumeOpenPreset={() => setActivationPreset(null)} />
             </div>
           )}
           {me.isPlatformAdmin && (
