@@ -114,7 +114,7 @@ import {
   getPublishedBlogPosts, getPublishedBlogPost,
 } from "./blog-admin.functions";
 import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
-import { listContentGroups, createContentGroup, renameContentGroup, deleteContentGroup, setItemGroup } from "./content-groups.functions";
+import { listContentGroups, createContentGroup, renameContentGroup, deleteContentGroup, setItemGroup, reorderContentGroups } from "./content-groups.functions";
 import { listLeads, upsertLead, moveLeadStage, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts, listSalesStages, upsertSalesStage, deleteSalesStage } from "./sales-pipeline.functions";
 import { listTrash, restoreItem, purgeItem } from "./trash.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus, createRoteirosFromPlan, regenerateRoteiroDoc, updateRoteiroSection, addRoteiroSection, reorderRoteiroSections, exportRoteirosPdf } from "./client-docs.functions";
@@ -1372,6 +1372,11 @@ export function useApi() {
       mutationFn: useServerFn(setItemGroup),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["content-groups"] }); invalidateAll(); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao mover item de grupo."),
+    }),
+    reorderContentGroups: useMutation({
+      mutationFn: useServerFn(reorderContentGroups),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["content-groups"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao reordenar grupos."),
     }),
     upsertLead: useMutation({
       mutationFn: useServerFn(upsertLead),

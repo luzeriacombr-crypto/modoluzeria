@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, ChevronDown, Copy, Info, Plus, LayoutGrid, List, CheckSquare, Trash2, X, Settings2, FolderInput, Tags, FolderPlus, Pencil, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Copy, Info, Plus, LayoutGrid, List, CheckSquare, Trash2, X, Settings2, FolderInput, Tags, FolderPlus, Pencil, Check, Calendar } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { reportAppError } from "@/lib/error-reporting";
@@ -116,7 +116,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
     : (visibleTabs[0] ?? "posts");
   const [maisSubTab, setMaisSubTab] = useState<MaisSubTab>("atividades");
   const [customizingTabs, setCustomizingTabs] = useState(false);
-  const { duplicateMonth, addContentItem, deleteItem, deleteContentItems, updateMyOrg, updateClient, reorderContentItems, moveItemToMonth, moveContentItemsToMonth, setContentItemsStatus, createContentGroup, renameContentGroup, deleteContentGroup, setItemGroup } = useApi();
+  const { duplicateMonth, addContentItem, deleteItem, deleteContentItems, updateMyOrg, updateClient, reorderContentItems, moveItemToMonth, moveContentItemsToMonth, setContentItemsStatus, createContentGroup, renameContentGroup, deleteContentGroup, setItemGroup, reorderContentGroups } = useApi();
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
@@ -124,22 +124,42 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
   // Grupos dentro da grade — só existem hoje pra clientes Avulsos (não têm
   // meses de verdade pra organizar o conteúdo de outro jeito). Colapso de
-  // grupo é só estado local (não persiste), igual viewMode antes de virar
-  // localStorage — não parecia valer a complexidade de sincronizar entre
-  // dispositivos só pra isso.
+  // grupo é automático por padrão (fechado quando 100% concluído, aberto
+  // quando tem pendência) — só guardamos aqui as vezes que a pessoa decidiu
+  // manualmente contrariar isso, pra não brigar com o clique dela; é estado
+  // local (não persiste), igual viewMode antes de virar localStorage.
   const { data: contentGroups = [] } = useQuery({ ...contentGroupsQO(clientId), enabled: isAvulso });
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [groupCollapseOverride, setGroupCollapseOverride] = useState<Map<string, boolean>>(new Map());
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
   const [groupDragOverId, setGroupDragOverId] = useState<string | "ungrouped" | null>(null);
-  function toggleGroupCollapsed(id: string) {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+  // Arrastar-e-soltar pra reordenar os GRUPOS entre si — diferente de `dragId`
+  // acima, que é o item de conteúdo sendo arrastado pra DENTRO de um grupo.
+  const [draggingGroupId, setDraggingGroupId] = useState<string | null>(null);
+  const [groupReorderOverId, setGroupReorderOverId] = useState<string | null>(null);
+  function isGroupCollapsed(id: string, groupItems: ContentItem[]) {
+    const manual = groupCollapseOverride.get(id);
+    if (manual !== undefined) return manual;
+    return groupItems.length > 0 && groupItems.every((it) => isDoneStatus(it.status));
+  }
+  function toggleGroupCollapsed(id: string, groupItems: ContentItem[]) {
+    setGroupCollapseOverride((prev) => {
+      const next = new Map(prev);
+      next.set(id, !isGroupCollapsed(id, groupItems));
       return next;
     });
+  }
+  function handleGroupReorder(draggedId: string, targetId: string) {
+    const ids = contentGroups.map((g) => g.id);
+    const from = ids.indexOf(draggedId);
+    const to = ids.indexOf(targetId);
+    if (from === -1 || to === -1 || from === to) return;
+    const next = [...ids];
+    next.splice(from, 1);
+    next.splice(to, 0, draggedId);
+    reorderContentGroups.mutate({ data: { ids: next } });
   }
   function saveNewGroup() {
     if (!newGroupName.trim()) { setCreatingGroup(false); return; }
@@ -468,25 +488,43 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             );
           }
           function renderGroupHeader(group: ContentGroup, groupItems: ContentItem[]) {
-            const collapsed = collapsedGroups.has(group.id);
+            const collapsed = isGroupCollapsed(group.id, groupItems);
             const isDragOver = groupDragOverId === group.id;
+            const isReorderOver = groupReorderOverId === group.id && draggingGroupId !== group.id;
             const isEditing = editingGroupId === group.id;
             const doneCount = groupItems.filter((it) => isDoneStatus(it.status)).length;
+            const lastDeliveryDate = groupItems.reduce<string | null>((max, it) => {
+              const d = it.finishedAt ?? null;
+              if (!d) return max;
+              return !max || d > max ? d : max;
+            }, null);
             return (
               <div
-                onDragOver={(e) => { if (dragId) { e.preventDefault(); setGroupDragOverId(group.id); } }}
-                onDragLeave={() => { if (groupDragOverId === group.id) setGroupDragOverId(null); }}
-                onDrop={() => {
-                  if (dragId) setItemGroup.mutate({ data: { itemId: dragId, groupId: group.id } });
-                  setDragId(null); setGroupDragOverId(null);
+                draggable={isAdmin && !isEditing}
+                onDragStart={(e) => { setDraggingGroupId(group.id); e.dataTransfer.effectAllowed = "move"; }}
+                onDragEnd={() => { setDraggingGroupId(null); setGroupReorderOverId(null); }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (draggingGroupId && draggingGroupId !== group.id) setGroupReorderOverId(group.id);
+                  else if (dragId) setGroupDragOverId(group.id);
                 }}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 mb-2 transition-colors"
+                onDragLeave={() => {
+                  if (groupReorderOverId === group.id) setGroupReorderOverId(null);
+                  if (groupDragOverId === group.id) setGroupDragOverId(null);
+                }}
+                onDrop={() => {
+                  if (draggingGroupId && draggingGroupId !== group.id) handleGroupReorder(draggingGroupId, group.id);
+                  else if (dragId) setItemGroup.mutate({ data: { itemId: dragId, groupId: group.id } });
+                  setDragId(null); setGroupDragOverId(null); setDraggingGroupId(null); setGroupReorderOverId(null);
+                }}
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 mb-2 transition-colors ${isAdmin && !isEditing ? "cursor-grab active:cursor-grabbing" : ""}`}
                 style={{
-                  backgroundColor: isDragOver ? "rgba(var(--lz-brand-rgb),0.15)" : "color-mix(in srgb, var(--foreground) 4%, transparent)",
-                  outline: isDragOver ? "2px dashed rgb(var(--lz-brand-rgb))" : "none",
+                  backgroundColor: isDragOver || isReorderOver ? "rgba(var(--lz-brand-rgb),0.15)" : "color-mix(in srgb, var(--foreground) 4%, transparent)",
+                  outline: isDragOver || isReorderOver ? "2px dashed rgb(var(--lz-brand-rgb))" : "none",
+                  opacity: draggingGroupId === group.id ? 0.4 : 1,
                 }}
               >
-                <button onClick={() => toggleGroupCollapsed(group.id)} className="text-foreground/50 hover:text-foreground transition-colors">
+                <button onClick={() => toggleGroupCollapsed(group.id, groupItems)} className="text-foreground/50 hover:text-foreground transition-colors">
                   <ChevronDown size={15} style={{ transform: collapsed ? "rotate(-90deg)" : undefined, transition: "transform .15s" }} />
                 </button>
                 {isEditing ? (
@@ -509,9 +547,15 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                   </>
                 ) : (
                   <>
-                    <button onClick={() => toggleGroupCollapsed(group.id)} className="flex-1 text-left text-sm font-bold text-foreground">
+                    <button onClick={() => toggleGroupCollapsed(group.id, groupItems)} className="flex-1 text-left text-sm font-bold text-foreground">
                       {group.name}
                     </button>
+                    {lastDeliveryDate && (
+                      <span className="inline-flex items-center gap-1 text-[11px] shrink-0 text-foreground/30">
+                        <Calendar size={11} />
+                        {new Date(lastDeliveryDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                      </span>
+                    )}
                     <span className="text-[11px] tabular-nums shrink-0" style={{ color: groupItems.length > 0 && doneCount === groupItems.length ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 40%, transparent)" }}>
                       {groupItems.length === 0 ? "vazio" : `${String(doneCount).padStart(2, "0")} de ${String(groupItems.length).padStart(2, "0")} concluídos`}
                     </span>
@@ -662,7 +706,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                 <div className="space-y-5">
                   {contentGroups.map((g) => {
                     const gItems = groupedItems.get(g.id) ?? [];
-                    const collapsed = collapsedGroups.has(g.id);
+                    const collapsed = isGroupCollapsed(g.id, gItems);
                     return (
                       <div key={g.id}>
                         {renderGroupHeader(g, gItems)}

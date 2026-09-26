@@ -20,7 +20,7 @@ export const listContentGroups = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<ContentGroup[]> => {
     const { data: rows, error } = await context.supabase
       .from("content_groups").select("id, client_id, name, created_at")
-      .eq("client_id", data.clientId).order("created_at", { ascending: true });
+      .eq("client_id", data.clientId).order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
     const groupIds = (rows ?? []).map((g: any) => g.id);
     const countByGroup = new Map<string, number>();
@@ -72,6 +72,22 @@ export const deleteContentGroup = createServerFn({ method: "POST" })
     // normalmente — apagar grupo nunca apaga conteúdo.
     const { error } = await context.supabase.from("content_groups").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Reordena os grupos de um cliente (arrastar-e-soltar) — recebe a lista
+ * completa de ids já na nova ordem e grava o índice de cada um. */
+export const reorderContentGroups = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { ids: string[] }) => z.object({ ids: z.array(z.string().uuid()).min(1) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const results = await Promise.all(data.ids.map((id, i) =>
+      (context.supabase as any).from("content_groups").update({ sort_order: i }).eq("id", id)
+    ));
+    const failed = results.find((r) => r.error);
+    if (failed?.error) throw new Error(failed.error.message);
     return { ok: true };
   });
 
