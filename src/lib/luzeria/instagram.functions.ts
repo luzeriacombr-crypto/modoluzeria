@@ -433,7 +433,7 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
   // story_fit ainda não está nos tipos gerados do Supabase.
   const { data: item } = await (supabaseAdmin as any)
     .from("content_items")
-    .select("id, type, status, caption, ig_collaborators, story_fit, month_id, months(client_id, clients!months_client_id_fkey(id, org_id))")
+    .select("id, type, status, caption, ig_collaborators, story_fit, cover_path, cover_source, month_id, months(client_id, clients!months_client_id_fkey(id, org_id))")
     .eq("id", itemId)
     .maybeSingle();
   if (!item) throw new Error("Item não encontrado.");
@@ -617,12 +617,25 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       // Stories não aceitam legenda pela API — o texto precisa já estar na
       // própria imagem/vídeo.
       const sendsCaption = item.type !== "story";
+      // Capa do Reel (frame escolhido ou imagem própria enviada em
+      // ReelCoverEditor.tsx) — sem isso, a Meta ignora silenciosamente
+      // qualquer capa definida no app e escolhe um frame aleatória do
+      // vídeo na hora de publicar. cover_url precisa ser uma URL pública
+      // que a Meta consegue buscar — reaproveita o mesmo signCoverPaths
+      // usado pra mostrar a capa dentro do próprio app.
+      let coverUrl: string | null = null;
+      if (item.type === "reel" && (item as any).cover_path) {
+        const { signCoverPaths } = await import("./api.functions");
+        const signed = await signCoverPaths(supabaseAdmin, [(item as any).cover_path]);
+        coverUrl = signed.get((item as any).cover_path) ?? null;
+      }
       const containerRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           ...(isVideoFile ? { video_url: url } : { image_url: url }),
           ...(igMediaType ? { media_type: igMediaType } : {}),
+          ...(coverUrl ? { cover_url: coverUrl } : {}),
           ...(sendsCaption ? { caption: item.caption ?? "" } : {}),
           ...(collaborators.length > 0 ? { collaborators: JSON.stringify(collaborators) } : {}),
           access_token: creds.access_token,
