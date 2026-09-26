@@ -195,7 +195,7 @@ export function AgenciesBillingPanel() {
   const [creatingReseller, setCreatingReseller] = useState(false);
   const [infoPeriod, setInfoPeriod] = useState<"7d" | "30d" | "total">("7d");
   // Detalhe aberto por toque/clique nos cartões de receita e online (inline, sem balão flutuante).
-  const [detail, setDetail] = useState<"receita" | "online" | null>(null);
+  const [detail, setDetail] = useState<"receita" | "online" | "realista" | null>(null);
   const [ordem, setOrdem] = useState<{ coluna: ColunaOrdenavel; dir: "asc" | "desc" } | null>(null);
   const [tabelaExpandida, setTabelaExpandida] = useState(false);
 
@@ -277,6 +277,58 @@ export function AgenciesBillingPanel() {
   const realRevenueCents = payingOrgs.reduce((s: number, o: any) => s + (o.priceCents ?? 0), 0);
   const trialRevenueCents = trialOrgs.reduce((s: number, o: any) => s + (o.priceCents ?? 0), 0);
   const fmtBRL = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  // "Previsão realista" — pontuação por critérios de uso (não é modelo
+  // estatístico: o produto é novo demais pra ter histórico de conversão em
+  // volume que sustente isso). Cada sinal soma/subtrai pontos; o resultado
+  // classifica a agência em teste num dos 3 baldes abaixo. Pesos são um
+  // julgamento razoável, não uma calibração — ajustar aqui é seguro e não
+  // afeta nada além do texto exibido nesse card.
+  function trialForecastScore(o: any): number {
+    let score = 0;
+    score += o.clientsUsed > 0 ? 3 : -3;
+    score += Math.min(o.clientsUsed ?? 0, 5) * 0.5;
+    score += o.finalizedCount > 0 ? 2 : 0;
+    score += o.driveConnected ? 1 : 0;
+    score += o.instagramConnected > 0 ? 1 : 0;
+    score += o.activeDaysCount >= 3 ? 2 : o.activeDaysCount === 0 ? -2 : 0;
+    score += (o.activitySecondsTotal ?? 0) >= 1800 ? 1 : 0;
+    if (o.lastLoginAt) {
+      const daysSinceLogin = daysSince(o.lastLoginAt);
+      score += daysSinceLogin <= 2 ? 2 : daysSinceLogin <= 5 ? 0 : daysSinceLogin <= 10 ? -2 : -4;
+    } else {
+      score -= 4;
+    }
+    // Quanto mais perto do fim do teste sem nenhum cliente cadastrado, mais
+    // forte o sinal de que não vai continuar — dia 1 sem cliente é normal,
+    // dia 25 sem cliente não é.
+    if (o.trialEndsAt) {
+      const totalTrialDays = daysSince(o.createdAt) + daysUntil(o.trialEndsAt);
+      const pctElapsed = totalTrialDays > 0 ? daysSince(o.createdAt) / totalTrialDays : 0;
+      if (pctElapsed > 0.7 && o.clientsUsed === 0) score -= 3;
+    }
+    return score;
+  }
+  const TRIAL_BUCKET_WEIGHT = { continuar: 0.9, incerta: 0.4, cancelar: 0.1 } as const;
+  function trialForecastBucket(score: number): keyof typeof TRIAL_BUCKET_WEIGHT {
+    if (score >= 4) return "continuar";
+    if (score <= -2) return "cancelar";
+    return "incerta";
+  }
+  const trialOrgsScored = trialOrgs.map((o: any) => {
+    const score = trialForecastScore(o);
+    return { ...o, forecastScore: score, forecastBucket: trialForecastBucket(score) };
+  });
+  const trialByBucket = {
+    continuar: trialOrgsScored.filter((o: any) => o.forecastBucket === "continuar"),
+    incerta: trialOrgsScored.filter((o: any) => o.forecastBucket === "incerta"),
+    cancelar: trialOrgsScored.filter((o: any) => o.forecastBucket === "cancelar"),
+  };
+  const realisticTrialRevenueCents = trialOrgsScored.reduce(
+    (s: number, o: any) => s + (o.priceCents ?? 0) * TRIAL_BUCKET_WEIGHT[o.forecastBucket as keyof typeof TRIAL_BUCKET_WEIGHT], 0);
+  const realisticRevenueCents = realRevenueCents + realisticTrialRevenueCents;
+  const FORECAST_BUCKET_LABEL: Record<string, string> = { continuar: "Provável continuar", incerta: "Incerta", cancelar: "Provável cancelar" };
+  const FORECAST_BUCKET_COLOR: Record<string, string> = { continuar: "#4ADE80", incerta: "#FFD97E", cancelar: "#FF6B6B" };
   const stateCounts = new Map<string, number>();
   orgs.forEach((o: any) => {
     const uf = ufFromWhatsapp(o.whatsapp);
@@ -385,7 +437,7 @@ export function AgenciesBillingPanel() {
 
         <div className="mt-4 pt-4 border-t border-foreground/6">
           <div className="text-[11px] text-foreground/50 mb-2">Receita mensal</div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <button type="button" aria-expanded={detail === "receita"} disabled={payingOrgs.length === 0}
               onClick={() => setDetail((d) => (d === "receita" ? null : "receita"))}
               className="text-left bg-foreground/[0.03] hover:bg-foreground/[0.06] rounded-lg px-3 py-2.5 transition-colors disabled:cursor-default"
@@ -395,8 +447,17 @@ export function AgenciesBillingPanel() {
             </button>
             <div className="bg-foreground/[0.03] rounded-lg px-3 py-2.5">
               <div className="text-lg font-bold text-foreground">{fmtBRL(realRevenueCents + trialRevenueCents)}</div>
-              <div className="text-[11px] text-foreground/50 mt-0.5">Previsto — +{trialOrgs.length} em teste</div>
+              <div className="text-[11px] text-foreground/50 mt-0.5">Previsão geral — +{trialOrgs.length} em teste</div>
             </div>
+            <button type="button" aria-expanded={detail === "realista"} disabled={trialOrgsScored.length === 0}
+              onClick={() => setDetail((d) => (d === "realista" ? null : "realista"))}
+              className="text-left bg-foreground/[0.03] hover:bg-foreground/[0.06] rounded-lg px-3 py-2.5 transition-colors disabled:cursor-default"
+              style={detail === "realista" ? { boxShadow: "0 0 0 1px rgb(var(--lz-brand-rgb)) inset" } : undefined}>
+              <div className="text-lg font-bold text-foreground">{fmtBRL(realisticRevenueCents)}</div>
+              <div className="text-[11px] text-foreground/50 mt-0.5">
+                Previsão realista — {trialByBucket.continuar.length} continuam, {trialByBucket.incerta.length} incertas, {trialByBucket.cancelar.length} cancelam
+              </div>
+            </button>
           </div>
           {detail === "receita" && payingOrgs.length > 0 && (
             <div className="mt-2 rounded-lg border border-foreground/8 bg-foreground/[0.03] px-3 py-2">
@@ -408,8 +469,27 @@ export function AgenciesBillingPanel() {
               ))}
             </div>
           )}
+          {detail === "realista" && trialOrgsScored.length > 0 && (
+            <div className="mt-2 rounded-lg border border-foreground/8 bg-foreground/[0.03] px-3 py-2">
+              {(["continuar", "incerta", "cancelar"] as const).map((bucket) => trialByBucket[bucket].length > 0 && (
+                <div key={bucket} className="py-1">
+                  <div className="text-[10px] font-bold uppercase tracking-wider mt-1.5 mb-1" style={{ color: FORECAST_BUCKET_COLOR[bucket] }}>
+                    {FORECAST_BUCKET_LABEL[bucket]} ({trialByBucket[bucket].length})
+                  </div>
+                  {trialByBucket[bucket]
+                    .sort((a: any, b: any) => a.forecastScore - b.forecastScore)
+                    .map((o: any) => (
+                      <div key={o.id} className="flex items-center gap-4 justify-between text-xs py-1">
+                        <span className="text-foreground/80 font-medium truncate">{o.name}</span>
+                        <span className="text-foreground/40 tabular-nums shrink-0">{o.clientsUsed} cliente{o.clientsUsed === 1 ? "" : "s"} · {fmtBRL(o.priceCents ?? 0)}</span>
+                      </div>
+                    ))}
+                </div>
+              ))}
+            </div>
+          )}
           <p className="text-[10.5px] text-foreground/35 mt-2 leading-relaxed">
-            "Previsto" assume 100% de conversão de quem está em teste — é o teto, não uma estimativa realista (ainda não temos histórico pra calcular uma taxa de conversão de verdade).
+            "Previsão geral" assume 100% de conversão de quem está em teste — é o teto. "Previsão realista" pontua cada agência em teste por sinais de uso (clientes cadastrados, conteúdo entregue, Drive/Instagram conectado, dias ativos, tempo de uso, último acesso e quanto do teste já passou sem cliente) — é uma estimativa por critério, não um modelo estatístico (ainda não temos histórico de conversão em volume suficiente pra isso).
           </p>
         </div>
 

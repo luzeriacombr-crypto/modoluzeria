@@ -674,6 +674,22 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
       .from("org_google_credentials").select("org_id");
     const orgsWithDrive = new Set((driveRows ?? []).map((r: any) => r.org_id as string));
 
+    // Tempo de uso real (page_activity, com duração em segundos) — insumo
+    // pra "Previsão realista" de conversão (AgenciesBillingPanel). Tabela só
+    // existe a partir de 16/09/2026, então orgs mais antigas simplesmente
+    // não têm esse dado (fica 0 / sem dias ativos).
+    const { data: activityRows } = await supabaseAdmin
+      .from("page_activity").select("org_id, duration_seconds, created_at");
+    const activitySecondsByOrg = new Map<string, number>();
+    const activeDaysByOrg = new Map<string, Set<string>>();
+    (activityRows ?? []).forEach((r: any) => {
+      activitySecondsByOrg.set(r.org_id, (activitySecondsByOrg.get(r.org_id) ?? 0) + (r.duration_seconds ?? 0));
+      const day = (r.created_at as string).slice(0, 10);
+      const set = activeDaysByOrg.get(r.org_id) ?? new Set<string>();
+      set.add(day);
+      activeDaysByOrg.set(r.org_id, set);
+    });
+
     // Instagram conectado — conta clientes ativos com credencial, por org
     // (client_instagram_credentials não tem org_id, precisa passar pelos
     // clientes da própria org pra saber de quem é cada credencial).
@@ -733,6 +749,8 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         teamCount: teamCountByOrg.get(o.id) ?? 0,
         finalizedCount: finalizedByOrg.get(o.id) ?? 0,
         onlineCount: onlineByOrg.get(o.id) ?? 0,
+        activitySecondsTotal: activitySecondsByOrg.get(o.id) ?? 0,
+        activeDaysCount: activeDaysByOrg.get(o.id)?.size ?? 0,
       };
     });
   });
