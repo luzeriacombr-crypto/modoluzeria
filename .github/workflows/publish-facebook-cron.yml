@@ -1,8 +1,12 @@
 name: Publish scheduled Facebook posts
 
 on:
-  schedule:
-    - cron: "4,14,24,34,44,54 * * * *"
+  # Agendamento migrado para cron-job.org em 2026-09-26 — o GitHub Actions
+  # não estava disparando na frequência configurada quando havia muitos
+  # workflows agendados no mesmo repositório (rodava a cada 2-5h em vez de
+  # a cada 5-10min). Mantido aqui só pra rodar manualmente se precisar.
+  # schedule:
+  #   - cron: "4,14,24,34,44,54 * * * *"
   workflow_dispatch: {}
 
 jobs:
