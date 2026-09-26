@@ -1933,7 +1933,7 @@ export const getMonth = createServerFn({ method: "GET" })
     // migração for confirmada como aplicada.
     const { data: items } = (await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, ig_published_at, story_fit, ig_collaborators, activity_location, activity_quantity, campaign_id, campaign_internal")
+      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, ig_published_at, story_fit, ig_collaborators, activity_location, activity_quantity, campaign_id, campaign_internal, group_id")
       .eq("month_id", month.id).order("type").order("idx")) as any as { data: any[] | null };
     const itemIds = (items ?? []).map((it: any) => it.id);
     const [{ data: assignees }, { data: comments }] = await Promise.all([
@@ -1996,6 +1996,7 @@ export const getMonth = createServerFn({ method: "GET" })
       campaignId: (it as any).campaign_id ?? null,
       campaignName: (it as any).campaign_id ? campaignNameById.get((it as any).campaign_id) ?? null : null,
       campaignInternal: (it as any).campaign_internal ?? false,
+      groupId: (it as any).group_id ?? null,
     }));
     const coverPaths = (items ?? []).map((it: any) => it.cover_path).filter(Boolean);
     const signedCovers = await signCoverPaths(context.supabase, coverPaths);

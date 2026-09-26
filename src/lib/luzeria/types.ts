@@ -211,6 +211,10 @@ export interface ContentItem {
   /** Quando true, esse item some de Posts/Reels/Preview de Feed — só
    * existe dentro da própria campanha. Irrelevante se campaignId é null. */
   campaignInternal?: boolean;
+  /** Grupo dentro da grade de um cliente Avulso (ex.: "Projeto X") — null
+   * quando o item não está em nenhum grupo. Só usado hoje pra clientes com
+   * category === "Avulsos" (ver content-groups.functions.ts). */
+  groupId?: string | null;
 }
 
 export interface MonthData {

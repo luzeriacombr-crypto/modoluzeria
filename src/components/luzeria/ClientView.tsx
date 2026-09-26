@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Copy, Info, Plus, LayoutGrid, List, CheckSquare, Trash2, X, Settings2, FolderInput, Tags } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Copy, Info, Plus, LayoutGrid, List, CheckSquare, Trash2, X, Settings2, FolderInput, Tags, FolderPlus, Pencil, Check } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { reportAppError } from "@/lib/error-reporting";
-import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi, orgPlanStatusQO, contentStatusesQO } from "@/lib/luzeria/queries";
+import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi, orgPlanStatusQO, contentStatusesQO, contentGroupsQO } from "@/lib/luzeria/queries";
+import type { ContentGroup } from "@/lib/luzeria/content-groups.functions";
 import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { CONTENT_TYPE_LABEL, statusOptionsFor, getStatusMeta, statusLabel, hasSetorPermission, type ContentItem, type ContentType, type Status } from "@/lib/luzeria/types";
@@ -115,12 +116,41 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
     : (visibleTabs[0] ?? "posts");
   const [maisSubTab, setMaisSubTab] = useState<MaisSubTab>("atividades");
   const [customizingTabs, setCustomizingTabs] = useState(false);
-  const { duplicateMonth, addContentItem, deleteItem, deleteContentItems, updateMyOrg, updateClient, reorderContentItems, moveItemToMonth, moveContentItemsToMonth, setContentItemsStatus } = useApi();
+  const { duplicateMonth, addContentItem, deleteItem, deleteContentItems, updateMyOrg, updateClient, reorderContentItems, moveItemToMonth, moveContentItemsToMonth, setContentItemsStatus, createContentGroup, renameContentGroup, deleteContentGroup, setItemGroup } = useApi();
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
+  // Grupos dentro da grade — só existem hoje pra clientes Avulsos (não têm
+  // meses de verdade pra organizar o conteúdo de outro jeito). Colapso de
+  // grupo é só estado local (não persiste), igual viewMode antes de virar
+  // localStorage — não parecia valer a complexidade de sincronizar entre
+  // dispositivos só pra isso.
+  const { data: contentGroups = [] } = useQuery({ ...contentGroupsQO(clientId), enabled: isAvulso });
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [editGroupName, setEditGroupName] = useState("");
+  const [groupDragOverId, setGroupDragOverId] = useState<string | "ungrouped" | null>(null);
+  function toggleGroupCollapsed(id: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function saveNewGroup() {
+    if (!newGroupName.trim()) { setCreatingGroup(false); return; }
+    createContentGroup.mutate({ data: { clientId, name: newGroupName.trim() } });
+    setNewGroupName("");
+    setCreatingGroup(false);
+  }
+  async function handleDeleteGroup(group: ContentGroup) {
+    if (!(await requestConfirm(`Excluir o grupo "${group.name}"? Os itens dele voltam pra "Sem grupo" (nada é apagado).`, { danger: true }))) return;
+    deleteContentGroup.mutate({ data: { id: group.id } });
+  }
   const [movingItem, setMovingItem] = useState<ContentItem | null>(null);
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
   const [bulkStatusType, setBulkStatusType] = useState<ContentType | null>(null);
@@ -335,6 +365,170 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           const cfg = TAB_CONFIG[tab as keyof typeof TAB_CONFIG];
           const items = orderMode === "cronologica" ? [...cfg.items].sort(byScheduledAt(orderDirection)) : applyLocalOrder(cfg.items);
           const navList = items.map((it) => it.id);
+          // Grupos só existem hoje em Posts/Reels de clientes Avulsos, e só
+          // no modo Personalizada (é o mesmo modo que já liga o
+          // arrastar-pra-reordenar) — no modo Cronológica a lista fica
+          // plana de propósito, pra não misturar duas lógicas de ordem.
+          const useGroups = isAvulso && (tab === "posts" || tab === "reels") && orderMode === "personalizada";
+          const groupById = new Map(contentGroups.map((g) => [g.id, g]));
+          const groupedItems = new Map<string, ContentItem[]>();
+          const ungroupedItems: ContentItem[] = [];
+          if (useGroups) {
+            for (const it of items) {
+              if (it.groupId && groupById.has(it.groupId)) {
+                const arr = groupedItems.get(it.groupId) ?? [];
+                arr.push(it);
+                groupedItems.set(it.groupId, arr);
+              } else {
+                ungroupedItems.push(it);
+              }
+            }
+          }
+          function renderCards(sectionItems: ContentItem[], showAddButton: boolean) {
+            return viewMode === "grade" ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lz-stagger-cards">
+                {sectionItems.map((item, i) => (
+                  <ContentCard
+                    key={item.id}
+                    item={item}
+                    profiles={profiles}
+                    idx={i + 1}
+                    isAvulso={isAvulso}
+                    isAdmin={isAdmin}
+                    navList={navList}
+                    batchedThumbUrl={gridThumbs?.[item.id]?.thumbUrl ?? null}
+                    batched
+                    onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
+                    onMove={!isAvulso ? () => setMovingItem(item) : undefined}
+                    selectMode={selectMode}
+                    selected={selectedIds.has(item.id)}
+                    onToggleSelect={() => toggleSelected(item.id)}
+                    draggable={canDragReorder}
+                    isDragging={dragId === item.id}
+                    isOver={overId === item.id}
+                    onDragStart={() => setDragId(item.id)}
+                    onDragOver={(e) => { e.preventDefault(); if (dragId && dragId !== item.id) setOverId(item.id); }}
+                    onDragLeave={() => { if (overId === item.id) setOverId(null); }}
+                    onDrop={() => onDropReorder(item.id, sectionItems, month!.id, cfg.type as "post" | "reel")}
+                    onDragEnd={() => { setDragId(null); setOverId(null); }}
+                  />
+                ))}
+                {showAddButton && !selectMode && isAdmin && tab !== "finalizados" && (
+                  <button
+                    onClick={() => addContentItem.mutate({
+                      data: { clientId, key: effectiveMonthKey, type: cfg.type },
+                    })}
+                    className="flex flex-col items-center justify-center gap-2 min-h-[200px] rounded-xl border border-dashed border-foreground/15 text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
+                    style={{ transitionTimingFunction: "var(--ease-premium)" }}>
+                    <Plus size={20} />
+                    <span className="text-xs font-semibold">Adicionar {cfg.label}</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1.5 lz-stagger">
+                {sectionItems.map((item, i) => (
+                  <ContentListRow
+                    key={item.id}
+                    item={item}
+                    profiles={profiles}
+                    idx={i + 1}
+                    isAvulso={isAvulso}
+                    isAdmin={isAdmin}
+                    navList={navList}
+                    batchedThumbUrl={gridThumbs?.[item.id]?.thumbUrl ?? null}
+                    batched
+                    onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
+                    onMove={!isAvulso ? () => setMovingItem(item) : undefined}
+                    selectMode={selectMode}
+                    selected={selectedIds.has(item.id)}
+                    onToggleSelect={() => toggleSelected(item.id)}
+                    draggable={canDragReorder}
+                    isDragging={dragId === item.id}
+                    isOver={overId === item.id}
+                    onDragStart={() => setDragId(item.id)}
+                    onDragOver={(e) => { e.preventDefault(); if (dragId && dragId !== item.id) setOverId(item.id); }}
+                    onDragLeave={() => { if (overId === item.id) setOverId(null); }}
+                    onDrop={() => onDropReorder(item.id, sectionItems, month!.id, cfg.type as "post" | "reel")}
+                    onDragEnd={() => { setDragId(null); setOverId(null); }}
+                  />
+                ))}
+                {showAddButton && !selectMode && isAdmin && tab !== "finalizados" && (
+                  <button
+                    onClick={() => addContentItem.mutate({
+                      data: { clientId, key: effectiveMonthKey, type: cfg.type },
+                    })}
+                    className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-foreground/15 text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] transition-colors"
+                  >
+                    <Plus size={14} />
+                    <span className="text-xs font-semibold">Adicionar {cfg.label}</span>
+                  </button>
+                )}
+              </div>
+            );
+          }
+          function renderGroupHeader(group: ContentGroup, count: number) {
+            const collapsed = collapsedGroups.has(group.id);
+            const isDragOver = groupDragOverId === group.id;
+            const isEditing = editingGroupId === group.id;
+            return (
+              <div
+                onDragOver={(e) => { if (dragId) { e.preventDefault(); setGroupDragOverId(group.id); } }}
+                onDragLeave={() => { if (groupDragOverId === group.id) setGroupDragOverId(null); }}
+                onDrop={() => {
+                  if (dragId) setItemGroup.mutate({ data: { itemId: dragId, groupId: group.id } });
+                  setDragId(null); setGroupDragOverId(null);
+                }}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 mb-2 transition-colors"
+                style={{
+                  backgroundColor: isDragOver ? "rgba(var(--lz-brand-rgb),0.15)" : "color-mix(in srgb, var(--foreground) 4%, transparent)",
+                  outline: isDragOver ? "2px dashed rgb(var(--lz-brand-rgb))" : "none",
+                }}
+              >
+                <button onClick={() => toggleGroupCollapsed(group.id)} className="text-foreground/50 hover:text-foreground transition-colors">
+                  <ChevronDown size={15} style={{ transform: collapsed ? "rotate(-90deg)" : undefined, transition: "transform .15s" }} />
+                </button>
+                {isEditing ? (
+                  <>
+                    <input
+                      autoFocus
+                      value={editGroupName}
+                      onChange={(e) => setEditGroupName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && editGroupName.trim()) { renameContentGroup.mutate({ data: { id: group.id, name: editGroupName.trim() } }); setEditingGroupId(null); }
+                        if (e.key === "Escape") setEditingGroupId(null);
+                      }}
+                      className="flex-1 bg-foreground/[0.08] border border-foreground/15 rounded-md px-2 py-1 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                    />
+                    <button
+                      onClick={() => { if (editGroupName.trim()) { renameContentGroup.mutate({ data: { id: group.id, name: editGroupName.trim() } }); } setEditingGroupId(null); }}
+                      className="text-foreground/50 hover:text-foreground transition-colors"
+                    ><Check size={14} /></button>
+                    <button onClick={() => setEditingGroupId(null)} className="text-foreground/50 hover:text-foreground transition-colors"><X size={14} /></button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => toggleGroupCollapsed(group.id)} className="flex-1 text-left text-sm font-bold text-foreground">
+                      {group.name}
+                    </button>
+                    <span className="text-[11px] text-foreground/40 tabular-nums">{count}</span>
+                    {isAdmin && (
+                      <button
+                        onClick={() => { setEditingGroupId(group.id); setEditGroupName(group.name); }}
+                        title="Renomear grupo"
+                        className="text-foreground/30 hover:text-foreground transition-colors"
+                      ><Pencil size={13} /></button>
+                    )}
+                    {isAdmin && (
+                      <button onClick={() => handleDeleteGroup(group)} title="Excluir grupo" className="text-foreground/30 hover:text-red-400 transition-colors">
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          }
           return (
             <>
               {selectMode ? (
@@ -382,6 +576,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                 </div>
               ) : (
               <div className="flex items-center justify-end gap-1.5 mb-3">
+                {useGroups && isAdmin && !creatingGroup && (
+                  <button
+                    onClick={() => setCreatingGroup(true)}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full text-foreground/60 hover:text-foreground border border-foreground/10 hover:border-foreground/25 transition-colors mr-2"
+                  ><FolderPlus size={13} /> Criar grupo</button>
+                )}
                 {isAdmin && tab !== "finalizados" && items.length > 0 && (
                   <button
                     onClick={() => setSelectMode(true)}
@@ -441,86 +641,52 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                 )}
               </div>
               )}
-              {viewMode === "grade" ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lz-stagger-cards">
-                  {items.map((item, i) => (
-                    <ContentCard
-                      key={item.id}
-                      item={item}
-                      profiles={profiles}
-                      idx={i + 1}
-                      isAvulso={isAvulso}
-                      isAdmin={isAdmin}
-                      navList={navList}
-                      batchedThumbUrl={gridThumbs?.[item.id]?.thumbUrl ?? null}
-                      batched
-                      onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
-                      onMove={!isAvulso ? () => setMovingItem(item) : undefined}
-                      selectMode={selectMode}
-                      selected={selectedIds.has(item.id)}
-                      onToggleSelect={() => toggleSelected(item.id)}
-                      draggable={canDragReorder}
-                      isDragging={dragId === item.id}
-                      isOver={overId === item.id}
-                      onDragStart={() => setDragId(item.id)}
-                      onDragOver={(e) => { e.preventDefault(); if (dragId && dragId !== item.id) setOverId(item.id); }}
-                      onDragLeave={() => { if (overId === item.id) setOverId(null); }}
-                      onDrop={() => onDropReorder(item.id, items, month!.id, cfg.type as "post" | "reel")}
-                      onDragEnd={() => { setDragId(null); setOverId(null); }}
-                    />
-                  ))}
-                  {!selectMode && isAdmin && tab !== "finalizados" && (
-                    <button
-                      onClick={() => addContentItem.mutate({
-                        data: { clientId, key: effectiveMonthKey, type: cfg.type },
-                      })}
-                      className="flex flex-col items-center justify-center gap-2 min-h-[200px] rounded-xl border border-dashed border-foreground/15 text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
-                      style={{ transitionTimingFunction: "var(--ease-premium)" }}>
-                      <Plus size={20} />
-                      <span className="text-xs font-semibold">Adicionar {cfg.label}</span>
-                    </button>
-                  )}
+              {useGroups && creatingGroup && (
+                <div className="flex items-center gap-2 mb-3">
+                  <input
+                    autoFocus
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") saveNewGroup(); if (e.key === "Escape") setCreatingGroup(false); }}
+                    placeholder="Nome do grupo (ex: Campanha de aniversário)"
+                    className="flex-1 bg-foreground/[0.08] border border-foreground/15 rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+                  />
+                  <button onClick={saveNewGroup} className="lz-btn-primary text-xs px-3 py-2 rounded-md">Criar</button>
+                  <button onClick={() => { setCreatingGroup(false); setNewGroupName(""); }} className="text-xs text-foreground/50 hover:text-foreground px-2">Cancelar</button>
+                </div>
+              )}
+              {useGroups && contentGroups.length > 0 ? (
+                <div className="space-y-5">
+                  {contentGroups.map((g) => {
+                    const gItems = groupedItems.get(g.id) ?? [];
+                    const collapsed = collapsedGroups.has(g.id);
+                    return (
+                      <div key={g.id}>
+                        {renderGroupHeader(g, gItems.length)}
+                        {!collapsed && (gItems.length > 0 ? renderCards(gItems, false) : (
+                          <p className="text-foreground/25 text-[12px] px-3 pb-2">Arraste um item pra cá.</p>
+                        ))}
+                      </div>
+                    );
+                  })}
+                  <div>
+                    <div
+                      onDragOver={(e) => { if (dragId) { e.preventDefault(); setGroupDragOverId("ungrouped"); } }}
+                      onDragLeave={() => { if (groupDragOverId === "ungrouped") setGroupDragOverId(null); }}
+                      onDrop={() => {
+                        if (dragId) setItemGroup.mutate({ data: { itemId: dragId, groupId: null } });
+                        setDragId(null); setGroupDragOverId(null);
+                      }}
+                      className="text-[11px] uppercase font-semibold tracking-wider text-foreground/30 rounded-lg px-3 py-1.5 mb-2 transition-colors"
+                      style={{ outline: groupDragOverId === "ungrouped" ? "2px dashed rgb(var(--lz-brand-rgb))" : "none" }}
+                    >
+                      Sem grupo
+                    </div>
+                    {renderCards(ungroupedItems, true)}
+                  </div>
                 </div>
               ) : (
-                <div className="flex flex-col gap-1.5 lz-stagger">
-                  {items.map((item, i) => (
-                    <ContentListRow
-                      key={item.id}
-                      item={item}
-                      profiles={profiles}
-                      idx={i + 1}
-                      isAvulso={isAvulso}
-                      isAdmin={isAdmin}
-                      navList={navList}
-                      batchedThumbUrl={gridThumbs?.[item.id]?.thumbUrl ?? null}
-                      batched
-                      onDelete={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }}
-                      onMove={!isAvulso ? () => setMovingItem(item) : undefined}
-                      selectMode={selectMode}
-                      selected={selectedIds.has(item.id)}
-                      onToggleSelect={() => toggleSelected(item.id)}
-                      draggable={canDragReorder}
-                      isDragging={dragId === item.id}
-                      isOver={overId === item.id}
-                      onDragStart={() => setDragId(item.id)}
-                      onDragOver={(e) => { e.preventDefault(); if (dragId && dragId !== item.id) setOverId(item.id); }}
-                      onDragLeave={() => { if (overId === item.id) setOverId(null); }}
-                      onDrop={() => onDropReorder(item.id, items, month!.id, cfg.type as "post" | "reel")}
-                      onDragEnd={() => { setDragId(null); setOverId(null); }}
-                    />
-                  ))}
-                  {!selectMode && isAdmin && tab !== "finalizados" && (
-                    <button
-                      onClick={() => addContentItem.mutate({
-                        data: { clientId, key: effectiveMonthKey, type: cfg.type },
-                      })}
-                      className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-foreground/15 text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:border-[rgb(var(--lz-brand-rgb))] transition-colors"
-                    >
-                      <Plus size={14} />
-                      <span className="text-xs font-semibold">Adicionar {cfg.label}</span>
-                    </button>
-                  )}
-                </div>
+                renderCards(items, true)
               )}
               {monthError && (
                 <div className="px-4 py-10 text-center text-sm" style={{ color: "#E76F51" }}>

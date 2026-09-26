@@ -114,6 +114,7 @@ import {
   getPublishedBlogPosts, getPublishedBlogPost,
 } from "./blog-admin.functions";
 import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
+import { listContentGroups, createContentGroup, renameContentGroup, deleteContentGroup, setItemGroup } from "./content-groups.functions";
 import { listLeads, upsertLead, moveLeadStage, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts, listSalesStages, upsertSalesStage, deleteSalesStage } from "./sales-pipeline.functions";
 import { listTrash, restoreItem, purgeItem } from "./trash.functions";
 import { listClientDocs, upsertClientDoc, deleteClientDoc, listRoteiroStatuses, upsertRoteiroStatus, createRoteirosFromPlan, regenerateRoteiroDoc, updateRoteiroSection, addRoteiroSection, reorderRoteiroSections, exportRoteirosPdf } from "./client-docs.functions";
@@ -347,6 +348,9 @@ export const cashFlowEntriesQO = (monthKey: string) =>
 
 export const campaignsQO = (clientId: string) =>
   queryOptions({ queryKey: ["campaigns", clientId], queryFn: () => listCampaigns({ data: { clientId } }) });
+
+export const contentGroupsQO = (clientId: string) =>
+  queryOptions({ queryKey: ["content-groups", clientId], queryFn: () => listContentGroups({ data: { clientId } }) });
 
 export const campaignItemsQO = (campaignId: string | null) =>
   queryOptions({
@@ -1348,6 +1352,26 @@ export function useApi() {
         invalidateAll();
       },
       onError: (e: any) => toastFriendlyError(e, "Erro ao atualizar campanha do item."),
+    }),
+    createContentGroup: useMutation({
+      mutationFn: useServerFn(createContentGroup),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["content-groups"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao criar grupo."),
+    }),
+    renameContentGroup: useMutation({
+      mutationFn: useServerFn(renameContentGroup),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["content-groups"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao renomear grupo."),
+    }),
+    deleteContentGroup: useMutation({
+      mutationFn: useServerFn(deleteContentGroup),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["content-groups"] }); invalidateAll(); },
+      onError: (e: any) => toastFriendlyError(e, "Erro ao excluir grupo."),
+    }),
+    setItemGroup: useMutation({
+      mutationFn: useServerFn(setItemGroup),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["content-groups"] }); invalidateAll(); },
+      onError: (e: any) => toastFriendlyError(e, "Erro ao mover item de grupo."),
     }),
     upsertLead: useMutation({
       mutationFn: useServerFn(upsertLead),

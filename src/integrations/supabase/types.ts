@@ -2230,6 +2230,55 @@ export type Database = {
           },
         ]
       }
+      content_groups: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          org_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          org_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_groups_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_groups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_groups_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_item_linkedin: {
         Row: {
           auto_publish: boolean
@@ -2375,6 +2424,7 @@ export type Database = {
           editor_id: string | null
           feed_order: number | null
           finished_at: string | null
+          group_id: string | null
           id: string
           idx: number
           ig_auto_publish: boolean
@@ -2420,6 +2470,7 @@ export type Database = {
           editor_id?: string | null
           feed_order?: number | null
           finished_at?: string | null
+          group_id?: string | null
           id?: string
           idx: number
           ig_auto_publish?: boolean
@@ -2465,6 +2516,7 @@ export type Database = {
           editor_id?: string | null
           feed_order?: number | null
           finished_at?: string | null
+          group_id?: string | null
           id?: string
           idx?: number
           ig_auto_publish?: boolean
@@ -2512,6 +2564,13 @@ export type Database = {
             columns: ["editor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "content_groups"
             referencedColumns: ["id"]
           },
           {
