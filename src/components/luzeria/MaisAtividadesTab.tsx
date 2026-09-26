@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock, FolderInput, CheckSquare, X, Tags } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock, FolderInput, CheckSquare, X, Tags, Video, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useApi } from "@/lib/luzeria/queries";
@@ -7,6 +7,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { ACTIVITY_QUANTITY_LABEL, type ContentItem, type ContentType, type Profile } from "@/lib/luzeria/types";
 import { MoveItemModal, BulkMoveModal, BulkStatusModal } from "./ClientView";
+import { AvatarStack } from "./Avatar";
 
 type ActivityType = "gravacao" | "roteiro" | "sistema" | "outros";
 
@@ -49,9 +50,9 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
   const [bulkStatusType, setBulkStatusType] = useState<ContentType | null>(null);
 
-  const groups: { key: GroupKey; label: string; cfg: typeof ACTIVITY_CONFIG[ActivityType]; items: ContentItem[]; registerType: ActivityType }[] = [
-    { key: "gravacao", label: ACTIVITY_CONFIG.gravacao.label, cfg: ACTIVITY_CONFIG.gravacao, items: gravacoes, registerType: "gravacao" },
-    { key: "outras", label: "Outras atividades", cfg: ACTIVITY_CONFIG.outros, items: [...roteiros, ...sistemas, ...outros], registerType: "outros" },
+  const groups: { key: GroupKey; label: string; ctaLabel: string; icon: typeof Video; cfg: typeof ACTIVITY_CONFIG[ActivityType]; items: ContentItem[]; registerType: ActivityType }[] = [
+    { key: "gravacao", label: ACTIVITY_CONFIG.gravacao.label, ctaLabel: "Registrar nova gravação", icon: Video, cfg: ACTIVITY_CONFIG.gravacao, items: gravacoes, registerType: "gravacao" },
+    { key: "outras", label: "Outras atividades", ctaLabel: "Registrar nova atividade", icon: FileText, cfg: ACTIVITY_CONFIG.outros, items: [...roteiros, ...sistemas, ...outros], registerType: "outros" },
   ];
   const allItems = [...gravacoes, ...roteiros, ...sistemas, ...outros];
   const allSelected = allItems.length > 0 && allItems.every((it) => selectedIds.has(it.id));
@@ -134,10 +135,13 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
       )}
 
       {groups.map((group) => {
-        const { key, label, cfg, items, registerType } = group;
+        const { key, label, ctaLabel, icon: TypeIcon, cfg, items, registerType } = group;
         const type = registerType;
         const isCollapsed = collapsed[key];
         const formOpen = openForm === key;
+        // Escondido quando a caixa de vazio (que já traz seu próprio CTA)
+        // vai aparecer logo abaixo — evita dois botões de registrar empilhados.
+        const showCtaRow = isAdmin && !formOpen && !(items.length === 0 && !isCollapsed);
 
         return (
           <section key={key}>
@@ -156,15 +160,18 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                 )}
               </button>
               <div className="flex-1 h-px bg-foreground/[0.06]" />
-              {isAdmin && !formOpen && (
+            </div>
+
+            {showCtaRow && (
+              <div className="flex justify-end mb-3">
                 <button
                   onClick={() => setOpenForm(key)}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-foreground/50 hover:text-[var(--lz-accent-ink)] transition"
+                  className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-1.5"
                 >
-                  <Plus size={13} /> Registrar
+                  <Plus size={13} /> {ctaLabel}
                 </button>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Inline registration form */}
             {formOpen && isAdmin && (
@@ -210,65 +217,104 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
 
             {/* Items list */}
             {!isCollapsed && items.length > 0 && (
-              <div className="space-y-0.5">
-                {items.map((item, i) => (
-                  <div
-                    key={item.id}
-                    className="group/row flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-foreground/[0.03] transition cursor-pointer"
-                    onClick={() => (selectMode ? toggleSelected(item.id) : openItem(item.id))}
-                  >
-                    {selectMode ? (
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(item.id)}
-                        onChange={() => toggleSelected(item.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-4 h-4 shrink-0 accent-[rgb(var(--lz-brand-rgb))]"
-                      />
-                    ) : (
-                      <span className="text-[11px] font-bold text-foreground/30 w-5 text-right shrink-0">{String(i + 1).padStart(2, "0")}</span>
-                    )}
-                    <span className="flex-1 text-sm text-foreground truncate">{item.title}</span>
-                    {typeof item.activityQuantity === "number" && (
-                      <span className="flex items-center gap-1 text-[11px] text-foreground/40 shrink-0">
-                        <Hash size={11} /> {item.activityQuantity}
-                      </span>
-                    )}
-                    {item.status === "CONCLUIDO" && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0"
-                        style={{ backgroundColor: "#1A3A1A", color: "var(--lz-accent-ink)" }}>
-                        Concluído
-                      </span>
-                    )}
-                    {item.dueDate && (
-                      <span className="flex items-center gap-1 text-[11px] text-foreground/40 shrink-0">
-                        <Calendar size={11} /> {new Date(item.dueDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
-                      </span>
-                    )}
-                    {!selectMode && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => openItem(item.id)} title="Editar" className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition">
-                          <Pencil size={13} />
-                        </button>
-                        {isAdmin && !isAvulso && (
-                          <button onClick={() => setMovingItem(item)} title="Mover para outro mês" className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition">
-                            <FolderInput size={13} />
-                          </button>
-                        )}
-                        {isAdmin && (
-                          <button onClick={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }} title="Excluir" className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition">
-                            <Trash2 size={13} />
-                          </button>
-                        )}
+              <div className="space-y-2">
+                {items.map((item) => {
+                  const assignees = item.assigneeIds
+                    .map((id) => profiles.find((p) => p.id === id))
+                    .filter(Boolean) as Profile[];
+                  const done = item.status === "CONCLUIDO";
+                  return (
+                    <div
+                      key={item.id}
+                      className="group/row flex items-center gap-3 rounded-xl border border-foreground/8 bg-card p-3 hover:-translate-y-0.5 hover:shadow-lg hover:border-foreground/15 transition-all duration-200 cursor-pointer"
+                      onClick={() => (selectMode ? toggleSelected(item.id) : openItem(item.id))}
+                    >
+                      {selectMode ? (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => toggleSelected(item.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 shrink-0 accent-[rgb(var(--lz-brand-rgb))]"
+                        />
+                      ) : (
+                        <div
+                          className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
+                          style={type === "gravacao"
+                            ? { backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }
+                            : { backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}
+                        >
+                          <TypeIcon size={17} />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-foreground truncate">{item.title}</div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                          {item.dueDate && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-foreground/40">
+                              <Calendar size={11} /> {new Date(item.dueDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                            </span>
+                          )}
+                          {item.location && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-foreground/40">
+                              <MapPin size={11} /> {item.location}
+                            </span>
+                          )}
+                          {typeof item.activityQuantity === "number" && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-foreground/40">
+                              <Hash size={11} /> {item.activityQuantity}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <span
+                          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: done ? "var(--status-concluido-bg)" : "var(--status-pendente-bg)", color: done ? "var(--status-concluido-color)" : "var(--status-pendente-color)" }}
+                        >
+                          {done ? <Check size={10} /> : <Clock size={10} />} {done ? "Concluído" : "Pendente"}
+                        </span>
+                        {assignees.length > 0 && <AvatarStack profiles={assignees} size={22} />}
+                      </div>
+                      {!selectMode && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition" onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => openItem(item.id)} title="Editar" className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition">
+                            <Pencil size={13} />
+                          </button>
+                          {isAdmin && !isAvulso && (
+                            <button onClick={() => setMovingItem(item)} title="Mover para outro mês" className="p-1.5 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5 transition">
+                              <FolderInput size={13} />
+                            </button>
+                          )}
+                          {isAdmin && (
+                            <button onClick={async () => { if (await requestConfirm(`Excluir "${item.title}"?`, { danger: true })) deleteItem.mutate({ data: { id: item.id } }); }} title="Excluir" className="p-1.5 rounded text-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition">
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
             {!isCollapsed && items.length === 0 && !formOpen && isAdmin && (
-              <div className="text-[12px] text-foreground/30 px-2 py-1">Nenhum(a) {label.toLowerCase()} registrado(a). Use "+ Registrar" para adicionar.</div>
+              <div className="border border-dashed border-foreground/10 rounded-xl p-8 text-center">
+                <div
+                  className="mx-auto mb-3 h-10 w-10 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}
+                >
+                  <TypeIcon size={18} />
+                </div>
+                <p className="text-sm text-foreground/40 mb-4">Nenhum(a) {label.toLowerCase()} registrado(a) ainda.</p>
+                <button
+                  onClick={() => setOpenForm(key)}
+                  className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-1.5"
+                >
+                  <Plus size={13} /> {ctaLabel}
+                </button>
+              </div>
             )}
           </section>
         );
@@ -479,8 +525,7 @@ function ActivityForm({
         <button
           onClick={submit}
           disabled={!title.trim() || loading}
-          className="text-xs font-bold px-4 py-2 rounded-md transition disabled:opacity-40"
-          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+          className="lz-btn-primary text-xs px-4 py-2.5 rounded-md disabled:opacity-40"
         >
           {loading ? "Registrando…" : `Registrar ${cfg.label}`}
         </button>
