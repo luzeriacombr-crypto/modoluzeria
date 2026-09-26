@@ -476,6 +476,7 @@ export function AgenciesBillingPanel() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-foreground/7">
+                <th className="text-left px-3 py-3 text-xs font-semibold text-foreground/60 whitespace-nowrap">#</th>
                 <ThOrdenavel coluna="name" label="Agência" ordem={ordem} onClick={alternarOrdem} />
                 <ThOrdenavel coluna="nivel" label="Nível" ordem={ordem} onClick={alternarOrdem} />
                 <ThOrdenavel coluna="plano" label="Plano" ordem={ordem} onClick={alternarOrdem} />
@@ -489,7 +490,7 @@ export function AgenciesBillingPanel() {
               </tr>
             </thead>
             <tbody>
-              {orgsNaTela.map((o: any) => {
+              {orgsNaTela.map((o: any, i: number) => {
                 const status = STATUS_LABEL[o.subscriptionStatus] ?? { label: o.subscriptionStatus, color: "#9AA4B2" };
                 const trialDays = o.subscriptionStatus === "trialing" && o.trialEndsAt ? daysUntil(o.trialEndsAt) : null;
                 const isFetchingThis = fetchInvoice.isPending && invoiceForId === o.id;
@@ -497,6 +498,7 @@ export function AgenciesBillingPanel() {
                 const invoiceError = invoiceForId === o.id ? fetchInvoice.error : undefined;
                 return (
                   <tr key={o.id} className="border-b border-foreground/4 hover:bg-foreground/[0.02] transition">
+                    <td className="px-3 py-3 text-sm text-foreground/40 tabular-nums">{i + 1}</td>
                     <td className="px-3 py-3 text-sm">
                       <div className="flex flex-col items-start gap-1 max-w-[220px]">
                         <button
