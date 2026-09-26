@@ -181,6 +181,44 @@ export type Database = {
           },
         ]
       }
+      agency_reengagement_messages: {
+        Row: {
+          body: string
+          channel: string
+          id: string
+          org_id: string
+          sent_at: string
+          sent_by: string | null
+          subject: string | null
+        }
+        Insert: {
+          body: string
+          channel: string
+          id?: string
+          org_id: string
+          sent_at?: string
+          sent_by?: string | null
+          subject?: string | null
+        }
+        Update: {
+          body?: string
+          channel?: string
+          id?: string
+          org_id?: string
+          sent_at?: string
+          sent_by?: string | null
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_reengagement_messages_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agency_referrals: {
         Row: {
           confirmed_at: string | null
@@ -3385,6 +3423,53 @@ export type Database = {
           },
           {
             foreignKeyName: "months_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nativo_projects: {
+        Row: {
+          created_at: string
+          doc: Json
+          format: string
+          id: string
+          kind: string
+          name: string
+          org_id: string
+          owner_id: string
+          thumb: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          doc?: Json
+          format?: string
+          id?: string
+          kind?: string
+          name?: string
+          org_id?: string
+          owner_id?: string
+          thumb?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          doc?: Json
+          format?: string
+          id?: string
+          kind?: string
+          name?: string
+          org_id?: string
+          owner_id?: string
+          thumb?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nativo_projects_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "orgs"

@@ -838,7 +838,7 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-card border border-foreground/10 rounded-2xl p-6 max-w-sm w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card border border-foreground/10 rounded-2xl p-6 max-w-sm sm:max-w-2xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
             <Building2 size={18} className="text-[var(--lz-accent-ink)]" />
@@ -849,7 +849,8 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
           </button>
         </div>
 
-        <div className="space-y-3 text-sm">
+        <div className="text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-x-6">
           {org.ownerName && (
             <div>
               <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider mb-0.5">Responsável</p>
@@ -951,7 +952,9 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
               </p>
             )}
           </div>
+        </div>
 
+        <div className="space-y-3 mt-3">
           <div>
             <div className="flex items-center justify-between mb-0.5">
               <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider">WhatsApp</p>
@@ -989,6 +992,35 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
               <p className="text-foreground/30 text-[13px]">Não cadastrado.</p>
             )}
           </div>
+
+          {!editing && digits && (
+            <div className="flex gap-2">
+              <a
+                href={`https://wa.me/${digits}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-black transition"
+                style={{ backgroundColor: "#25D366" }}
+              >
+                <MessageCircle size={15} /> Enviar mensagem
+              </a>
+              <a
+                href={`https://wa.me/${digits}?text=${encodeURIComponent(welcomeMessage)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-black transition border-2"
+                style={{ backgroundColor: "transparent", borderColor: "#25D366", color: "#25D366" }}
+              >
+                <PartyPopper size={15} /> Enviar boas-vindas
+              </a>
+            </div>
+          )}
+
+          {!editing && digits && (
+            <button onClick={openTemplateEditor} className="text-[11px] text-foreground/40 hover:text-foreground transition inline-flex items-center gap-1">
+              <Pencil size={11} /> Editar mensagem de boas-vindas (vale pra todas as agências)
+            </button>
+          )}
 
           <div>
             <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider mb-0.5">Revenda</p>
@@ -1040,35 +1072,7 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
             )}
           </div>
         </div>
-
-        {!editing && digits && (
-          <div className="mt-5 flex gap-2">
-            <a
-              href={`https://wa.me/${digits}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-black transition"
-              style={{ backgroundColor: "#25D366" }}
-            >
-              <MessageCircle size={15} /> Enviar mensagem
-            </a>
-            <a
-              href={`https://wa.me/${digits}?text=${encodeURIComponent(welcomeMessage)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-black transition border-2"
-              style={{ backgroundColor: "transparent", borderColor: "#25D366", color: "#25D366" }}
-            >
-              <PartyPopper size={15} /> Enviar boas-vindas
-            </a>
-          </div>
-        )}
-
-        {!editing && digits && (
-          <button onClick={openTemplateEditor} className="mt-2 text-[11px] text-foreground/40 hover:text-foreground transition inline-flex items-center gap-1">
-            <Pencil size={11} /> Editar mensagem de boas-vindas (vale pra todas as agências)
-          </button>
-        )}
+        </div>
 
         {editingTemplate && (
           <div className="mt-3 bg-background rounded-lg border border-foreground/10 p-3">

@@ -9,6 +9,17 @@ import { MODO_CRIADOR_OWNER_ID } from "./api.functions";
 
 const PLATFORM_SUPPORT_EMAIL = "junioreisfoto2@gmail.com";
 
+// Valida DDD (2 dígitos, não começando em 0) + 8 ou 9 dígitos, e normaliza
+// pra sempre gravar com o "55" na frente — o formato que wa.me e o cálculo
+// de UF por DDD (AgenciesBillingPanel) já esperam. Sem isso, número digitado
+// torto (faltando dígito, com "+55" duplicado etc.) só quebrava mais na
+// frente, silenciosamente, na hora de montar o link do WhatsApp.
+const whatsappSchema = z.string()
+  .trim()
+  .transform((v) => v.replace(/\D/g, ""))
+  .refine((v) => /^[1-9][0-9]\d{8,9}$/.test(v), "WhatsApp inválido. Informe DDD + número, ex: 11987654321.")
+  .transform((v) => `55${v}`);
+
 /** Avisa o Junior (sino + e-mail) quando uma agência nova se cadastra
  * sozinha pelo /assinar — mesmo padrão de requestDemo em
  * demo-request.functions.ts. Best-effort: nunca derruba o signup, que já
@@ -70,7 +81,7 @@ export const publicSignup = createServerFn({ method: "POST" })
       password: z.string().min(8).max(72),
       planId: z.string().min(1),
       taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/, "CNPJ ou CPF inválido."),
-      whatsapp: z.string().trim().min(8, "WhatsApp inválido.").max(30),
+      whatsapp: whatsappSchema,
       website: z.string().max(0).optional().or(z.literal("")), // honeypot — must stay empty
       promoCode: z.string().optional(),
       affiliateCode: z.string().optional(),
@@ -296,7 +307,7 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
       agencyName: z.string().trim().min(2).max(80),
       name: z.string().trim().min(2).max(80),
       taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/, "CNPJ ou CPF inválido."),
-      whatsapp: z.string().trim().min(8, "WhatsApp inválido.").max(30),
+      whatsapp: whatsappSchema,
       planId: z.string().min(1),
       promoCode: z.string().optional(),
       affiliateCode: z.string().optional(),

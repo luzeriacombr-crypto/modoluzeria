@@ -32,6 +32,7 @@ const NewUserJourneyReportPanel = lazy(() => import("./NewUserJourneyReportPanel
 const AiPlanningFeedbackPanel = lazy(() => import("./AiPlanningFeedbackPanel").then((m) => ({ default: m.AiPlanningFeedbackPanel })));
 const ClientMarginPanel = lazy(() => import("./ClientMarginPanel").then((m) => ({ default: m.ClientMarginPanel })));
 const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => ({ default: m.DemoRequestsPanel })));
+const MessagesPanel = lazy(() => import("./MessagesPanel").then((m) => ({ default: m.MessagesPanel })));
 import { DeleteAccountSection } from "./DeleteAccountSection";
 const SalesPageEditorTab = lazy(() => import("./SalesLandingEditorTab").then((m) => ({ default: m.SalesLandingEditorTab })));
 const BlogAdminTab = lazy(() => import("./BlogAdminTab").then((m) => ({ default: m.BlogAdminTab })));
@@ -185,6 +186,11 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               e "Seu plano" continua sendo a primeira seção. */}
           {me.isPlatformAdmin && (
             <AgenciesBillingPanel />
+          )}
+          {me.isPlatformAdmin && (
+            <div className="pt-2 border-t border-foreground/10">
+              <MessagesPanel />
+            </div>
           )}
           {me.isPlatformAdmin && (
             <div className="pt-2 border-t border-foreground/10">

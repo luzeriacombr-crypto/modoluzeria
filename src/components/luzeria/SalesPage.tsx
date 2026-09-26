@@ -19,6 +19,17 @@ import { PasswordInput } from "./PasswordInput";
 const PENDING_GOOGLE_SIGNUP_KEY = "modocriador:pending-google-signup";
 const DEMO_POPUP_SHOWN_KEY = "modocriador:demo-popup-shown";
 
+// Formata o WhatsApp em (DD) DDDDD-DDDD conforme a pessoa digita — reduz
+// erro de digitação mostrando a estrutura esperada, em vez de deixar
+// digitar qualquer coisa num campo livre.
+function formatWhatsappInput(raw: string) {
+  const digits = raw.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
 function GoogleMark({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" className="shrink-0">
@@ -79,12 +90,16 @@ export function SalesPage() {
     e.preventDefault();
     if (!planId) { askForPlan(); return; }
     if (!consent) { setError("Você precisa aceitar a Política de Privacidade para continuar."); return; }
+    if (!/^[1-9][0-9]\d{8,9}$/.test(whatsapp.replace(/\D/g, ""))) {
+      setError("Confere o número de WhatsApp — precisa ser DDD + número, ex: (11) 98765-4321.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const r = await signup({
         data: {
-          agencyName, name, email, password, planId, taxId: taxId.replace(/\D/g, ""), whatsapp, website,
+          agencyName, name, email, password, planId, taxId: taxId.replace(/\D/g, ""), whatsapp: whatsapp.replace(/\D/g, ""), website,
           promoCode,
           affiliateCode,
           refCode,
@@ -104,13 +119,17 @@ export function SalesPage() {
       setError("Preenche o nome da agência, seu nome, o CNPJ/CPF e o WhatsApp antes de continuar com o Google.");
       return;
     }
+    if (!/^[1-9][0-9]\d{8,9}$/.test(whatsapp.replace(/\D/g, ""))) {
+      setError("Confere o número de WhatsApp — precisa ser DDD + número, ex: (11) 98765-4321.");
+      return;
+    }
     if (!planId) { askForPlan(); return; }
     if (!consent) { setError("Você precisa aceitar a Política de Privacidade para continuar."); return; }
     setError(null);
     setGoogleLoading(true);
     try {
       sessionStorage.setItem(PENDING_GOOGLE_SIGNUP_KEY, JSON.stringify({
-        agencyName, name, taxId: taxId.replace(/\D/g, ""), whatsapp, planId,
+        agencyName, name, taxId: taxId.replace(/\D/g, ""), whatsapp: whatsapp.replace(/\D/g, ""), planId,
         promoCode,
         affiliateCode,
         refCode,
@@ -374,7 +393,7 @@ export function SalesPage() {
               <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="lz-input-onlight" />
             </Field>
             <Field label="Seu WhatsApp">
-              <input required type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="lz-input-onlight" placeholder="(99) 99999-9999" maxLength={30} />
+              <input required type="tel" value={whatsapp} onChange={(e) => setWhatsapp(formatWhatsappInput(e.target.value))} className="lz-input-onlight" placeholder="(99) 99999-9999" maxLength={16} />
             </Field>
             <Field label="Crie uma senha">
               <PasswordInput required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)}
