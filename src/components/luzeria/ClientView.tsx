@@ -7,7 +7,7 @@ import { clientsQO, monthKeysQO, monthQO, profilesQO, gridThumbnailsQO, useApi, 
 import type { ContentGroup } from "@/lib/luzeria/content-groups.functions";
 import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { CONTENT_TYPE_LABEL, statusOptionsFor, getStatusMeta, statusLabel, hasSetorPermission, type ContentItem, type ContentType, type Status } from "@/lib/luzeria/types";
+import { CONTENT_TYPE_LABEL, statusOptionsFor, getStatusMeta, statusLabel, hasSetorPermission, isDoneStatus, type ContentItem, type ContentType, type Status } from "@/lib/luzeria/types";
 import { getStatusIcon } from "./icons";
 import { Avatar } from "./Avatar";
 import { ContentCard, ContentListRow } from "./ContentCard";
@@ -467,10 +467,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
               </div>
             );
           }
-          function renderGroupHeader(group: ContentGroup, count: number) {
+          function renderGroupHeader(group: ContentGroup, groupItems: ContentItem[]) {
             const collapsed = collapsedGroups.has(group.id);
             const isDragOver = groupDragOverId === group.id;
             const isEditing = editingGroupId === group.id;
+            const doneCount = groupItems.filter((it) => isDoneStatus(it.status)).length;
+            const openCount = groupItems.length - doneCount;
             return (
               <div
                 onDragOver={(e) => { if (dragId) { e.preventDefault(); setGroupDragOverId(group.id); } }}
@@ -511,7 +513,17 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                     <button onClick={() => toggleGroupCollapsed(group.id)} className="flex-1 text-left text-sm font-bold text-foreground">
                       {group.name}
                     </button>
-                    <span className="text-[11px] text-foreground/40 tabular-nums">{count}</span>
+                    <span className="text-[11px] tabular-nums flex items-center gap-1 shrink-0">
+                      {groupItems.length === 0 ? (
+                        <span className="text-foreground/30">vazio</span>
+                      ) : (
+                        <>
+                          {doneCount > 0 && <span style={{ color: "var(--lz-accent-ink)" }}>{doneCount} concluíd{doneCount === 1 ? "o" : "os"}</span>}
+                          {doneCount > 0 && openCount > 0 && <span className="text-foreground/25">·</span>}
+                          {openCount > 0 && <span className="text-foreground/40">{openCount} aberto{openCount === 1 ? "" : "s"}</span>}
+                        </>
+                      )}
+                    </span>
                     {isAdmin && (
                       <button
                         onClick={() => { setEditingGroupId(group.id); setEditGroupName(group.name); }}
@@ -662,7 +674,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                     const collapsed = collapsedGroups.has(g.id);
                     return (
                       <div key={g.id}>
-                        {renderGroupHeader(g, gItems.length)}
+                        {renderGroupHeader(g, gItems)}
                         {!collapsed && (gItems.length > 0 ? renderCards(gItems, false) : (
                           <p className="text-foreground/25 text-[12px] px-3 pb-2">Arraste um item pra cá.</p>
                         ))}
