@@ -472,7 +472,6 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             const isDragOver = groupDragOverId === group.id;
             const isEditing = editingGroupId === group.id;
             const doneCount = groupItems.filter((it) => isDoneStatus(it.status)).length;
-            const openCount = groupItems.length - doneCount;
             return (
               <div
                 onDragOver={(e) => { if (dragId) { e.preventDefault(); setGroupDragOverId(group.id); } }}
@@ -513,16 +512,8 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                     <button onClick={() => toggleGroupCollapsed(group.id)} className="flex-1 text-left text-sm font-bold text-foreground">
                       {group.name}
                     </button>
-                    <span className="text-[11px] tabular-nums flex items-center gap-1 shrink-0">
-                      {groupItems.length === 0 ? (
-                        <span className="text-foreground/30">vazio</span>
-                      ) : (
-                        <>
-                          {doneCount > 0 && <span style={{ color: "var(--lz-accent-ink)" }}>{doneCount} concluíd{doneCount === 1 ? "o" : "os"}</span>}
-                          {doneCount > 0 && openCount > 0 && <span className="text-foreground/25">·</span>}
-                          {openCount > 0 && <span className="text-foreground/40">{openCount} aberto{openCount === 1 ? "" : "s"}</span>}
-                        </>
-                      )}
+                    <span className="text-[11px] tabular-nums shrink-0" style={{ color: groupItems.length > 0 && doneCount === groupItems.length ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 40%, transparent)" }}>
+                      {groupItems.length === 0 ? "vazio" : `${String(doneCount).padStart(2, "0")} de ${String(groupItems.length).padStart(2, "0")} concluídos`}
                     </span>
                     {isAdmin && (
                       <button
