@@ -660,7 +660,20 @@ export function MyTasks() {
   ]);
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-5xl mx-auto" data-tour="my-tasks">
+    <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-5xl mx-auto relative" data-tour="my-tasks">
+      {/* Luz sutil vindo do canto superior direito — único elemento da
+          direção visual nova que o Junior aprovou (27/09/2026); o resto
+          (fonte serifada, KPIs sem card) voltou como estava. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute"
+        style={{
+          top: 0, right: 0, width: "520px", height: "520px", zIndex: 0,
+          transform: "translate(50%, -50%)",
+          background: "radial-gradient(circle, rgba(var(--lz-brand-rgb),0.08) 0%, rgba(var(--lz-brand-rgb),0.03) 35%, transparent 65%)",
+          filter: "blur(70px)",
+        }}
+      />
       {!isMeView && targetProfile && (
         <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-4 px-3 py-2 rounded-lg text-[12.5px]"
           style={{ backgroundColor: "rgba(74,158,255,0.12)", color: "#7EB3FF" }}>
@@ -1095,8 +1108,13 @@ function CalendarEventModal({ event, onClose }: { event: any; onClose: () => voi
 
 function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: string }) {
   const { data: counts } = useQuery(myActivityCountsQO(monthKey, userId));
+  // gravacao e roteiro já aparecem nos cards do WorkStatsWidget (mesma
+  // contagem, vinda da mesma tabela finalizations) — mostrar aqui de novo
+  // é redundante. sistema e outros não têm card lá, então continuam aqui.
   const entries = counts
-    ? (Object.entries(counts) as [string, number][]).filter(([, n]) => n > 0)
+    ? (Object.entries(counts) as [string, number][]).filter(
+        ([type, n]) => n > 0 && type !== "gravacao" && type !== "roteiro",
+      )
     : [];
   const [openType, setOpenType] = useState<string | null>(null);
   const { data: finalizations = [], isLoading: itemsLoading } = useQuery({

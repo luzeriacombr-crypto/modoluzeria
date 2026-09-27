@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock, FolderInput, CheckSquare, X, Tags, Video, FileText } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock, FolderInput, CheckSquare, X, Tags, Video, FileText, ScrollText } from "lucide-react";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useApi } from "@/lib/luzeria/queries";
@@ -11,19 +11,19 @@ import { AvatarStack } from "./Avatar";
 
 type ActivityType = "gravacao" | "roteiro" | "sistema" | "outros";
 
-const ACTIVITY_CONFIG: Record<ActivityType, { label: string; hasLocation: boolean; dateLabel: string; quantityLabel: string | null }> = {
-  gravacao: { label: "Gravação",       hasLocation: true,  dateLabel: "Data para gravação", quantityLabel: ACTIVITY_QUANTITY_LABEL.gravacao },
-  roteiro:  { label: "Roteiro",        hasLocation: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.roteiro },
-  sistema:  { label: "Sistema",        hasLocation: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.sistema },
-  outros:   { label: "Outro",          hasLocation: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.outros },
+const ACTIVITY_CONFIG: Record<ActivityType, { label: string; gender: "f" | "m"; hasLocation: boolean; dateLabel: string; quantityLabel: string | null }> = {
+  gravacao: { label: "Gravação",       gender: "f", hasLocation: true,  dateLabel: "Data para gravação", quantityLabel: ACTIVITY_QUANTITY_LABEL.gravacao },
+  roteiro:  { label: "Roteiro",        gender: "m", hasLocation: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.roteiro },
+  sistema:  { label: "Sistema",        gender: "m", hasLocation: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.sistema },
+  outros:   { label: "Outro",          gender: "m", hasLocation: false, dateLabel: "Data de entrega",    quantityLabel: ACTIVITY_QUANTITY_LABEL.outros },
 };
 
-// Gravação continua com seção própria — entra na contagem do relatório de
-// atividades e tem campos específicos (local, data pra gravação). Roteiro,
-// Sistema e Outros viram uma única seção "Outras atividades": itens antigos
-// desses 3 tipos continuam aparecendo juntos ali, e todo registro novo feito
-// nessa seção passa a entrar como "outros".
-type GroupKey = "gravacao" | "outras";
+// Gravação e Roteiro têm seção própria — entram na contagem do relatório de
+// atividades com o tipo certo. Sistema e Outros viram uma única seção
+// "Outras atividades": itens antigos desses 2 tipos continuam aparecendo
+// juntos ali, e todo registro novo feito nessa seção passa a entrar como
+// "outros".
+type GroupKey = "gravacao" | "roteiro" | "outras";
 
 interface Props {
   clientId: string;
@@ -43,7 +43,7 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
   const [openForm, setOpenForm] = useState<GroupKey | null>(null);
   const [movingItem, setMovingItem] = useState<ContentItem | null>(null);
   const [collapsed, setCollapsed] = useState<Record<GroupKey, boolean>>({
-    gravacao: false, outras: false,
+    gravacao: false, roteiro: false, outras: false,
   });
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -52,7 +52,8 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
 
   const groups: { key: GroupKey; label: string; ctaLabel: string; icon: typeof Video; cfg: typeof ACTIVITY_CONFIG[ActivityType]; items: ContentItem[]; registerType: ActivityType }[] = [
     { key: "gravacao", label: ACTIVITY_CONFIG.gravacao.label, ctaLabel: "Registrar nova gravação", icon: Video, cfg: ACTIVITY_CONFIG.gravacao, items: gravacoes, registerType: "gravacao" },
-    { key: "outras", label: "Outras atividades", ctaLabel: "Registrar nova atividade", icon: FileText, cfg: ACTIVITY_CONFIG.outros, items: [...roteiros, ...sistemas, ...outros], registerType: "outros" },
+    { key: "roteiro", label: ACTIVITY_CONFIG.roteiro.label, ctaLabel: "Registrar criação de roteiro", icon: ScrollText, cfg: ACTIVITY_CONFIG.roteiro, items: roteiros, registerType: "roteiro" },
+    { key: "outras", label: "Outras atividades", ctaLabel: "Registrar nova atividade", icon: FileText, cfg: ACTIVITY_CONFIG.outros, items: [...sistemas, ...outros], registerType: "outros" },
   ];
   const allItems = [...gravacoes, ...roteiros, ...sistemas, ...outros];
   const allSelected = allItems.length > 0 && allItems.every((it) => selectedIds.has(it.id));
@@ -134,14 +135,33 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
         )
       )}
 
+      {isAdmin && (
+        <div className="flex flex-col sm:flex-row gap-2">
+          {groups.map((g) => {
+            const Icon = g.icon;
+            const active = openForm === g.key;
+            return (
+              <button
+                key={g.key}
+                onClick={() => {
+                  setCollapsed((p) => ({ ...p, [g.key]: false }));
+                  setOpenForm((prev) => (prev === g.key ? null : g.key));
+                }}
+                className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center justify-center gap-1.5 sm:flex-1"
+                style={active ? { outline: "2px solid #0D0D0D", outlineOffset: "-3px" } : undefined}
+              >
+                <Icon size={13} /> {g.ctaLabel}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {groups.map((group) => {
-        const { key, label, ctaLabel, icon: TypeIcon, cfg, items, registerType } = group;
+        const { key, label, icon: TypeIcon, cfg, items, registerType } = group;
         const type = registerType;
         const isCollapsed = collapsed[key];
         const formOpen = openForm === key;
-        // Escondido quando a caixa de vazio (que já traz seu próprio CTA)
-        // vai aparecer logo abaixo — evita dois botões de registrar empilhados.
-        const showCtaRow = isAdmin && !formOpen && !(items.length === 0 && !isCollapsed);
 
         return (
           <section key={key}>
@@ -161,17 +181,6 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
               </button>
               <div className="flex-1 h-px bg-foreground/[0.06]" />
             </div>
-
-            {showCtaRow && (
-              <div className="flex justify-end mb-3">
-                <button
-                  onClick={() => setOpenForm(key)}
-                  className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-1.5"
-                >
-                  <Plus size={13} /> {ctaLabel}
-                </button>
-              </div>
-            )}
 
             {/* Inline registration form */}
             {formOpen && isAdmin && (
@@ -204,7 +213,10 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                     if (status === "CONCLUIDO" && newId) {
                       await setItemStatus.mutateAsync({ data: { id: newId, status: "CONCLUIDO" } });
                     }
-                    toast.success(`${label} registrada com sucesso`);
+                    // "Outras atividades" (o rótulo do grupo) é plural feminino;
+                    // gravação/roteiro têm concordância própria via cfg.gender.
+                    const participle = key === "outras" ? "registrada" : cfg.gender === "f" ? "registrada" : "registrado";
+                    toast.success(`${label} ${participle} com sucesso`);
                     setOpenForm(null);
                   } catch (e: any) {
                     toastFriendlyError(e, "Erro ao registrar. Tente novamente.");
@@ -300,20 +312,14 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
             )}
 
             {!isCollapsed && items.length === 0 && !formOpen && isAdmin && (
-              <div className="border border-dashed border-foreground/10 rounded-xl p-8 text-center">
+              <div className="border border-dashed border-foreground/10 rounded-xl p-6 text-center">
                 <div
-                  className="mx-auto mb-3 h-10 w-10 rounded-full flex items-center justify-center"
+                  className="mx-auto mb-2 h-10 w-10 rounded-full flex items-center justify-center"
                   style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}
                 >
                   <TypeIcon size={18} />
                 </div>
-                <p className="text-sm text-foreground/40 mb-4">Nenhum(a) {label.toLowerCase()} registrado(a) ainda.</p>
-                <button
-                  onClick={() => setOpenForm(key)}
-                  className="lz-btn-primary text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-1.5"
-                >
-                  <Plus size={13} /> {ctaLabel}
-                </button>
+                <p className="text-sm text-foreground/40">Nenhum(a) {label.toLowerCase()} registrado(a) ainda.</p>
               </div>
             )}
           </section>
@@ -370,7 +376,7 @@ function ActivityForm({
   type, cfg, profiles, onSubmit, onCancel, loading,
 }: {
   type: ActivityType;
-  cfg: { label: string; hasLocation: boolean; dateLabel: string; quantityLabel: string | null };
+  cfg: { label: string; gender: "f" | "m"; hasLocation: boolean; dateLabel: string; quantityLabel: string | null };
   clientId: string;
   monthKey: string;
   profiles: Profile[];
@@ -404,7 +410,7 @@ function ActivityForm({
 
   return (
     <div className="mb-4 rounded-lg border border-foreground/8 p-4 space-y-3" style={{ background: "var(--card)" }}>
-      <div className="text-xs font-bold uppercase tracking-wider text-foreground/50 mb-1">Nova {cfg.label}</div>
+      <div className="text-xs font-bold uppercase tracking-wider text-foreground/50 mb-1">{cfg.gender === "f" ? "Nova" : "Novo"} {cfg.label}</div>
 
       <input
         value={title}
