@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
+import { signCoverPaths } from "./api.functions";
 
 const RETENTION_DAYS = 7;
 
@@ -14,6 +15,7 @@ export type TrashedItem = {
   deletedAt: string;
   deletedByName: string | null;
   daysLeft: number;
+  coverUrl: string | null;
 };
 
 /** Lista os posts excluídos da agência, mais antigos primeiro purgados
@@ -41,12 +43,17 @@ export const listTrash = createServerFn({ method: "GET" })
 
     const { data: rows, error } = await supabaseAdmin
       .from("content_items")
-      .select("id, title, type, deleted_at, deleted_by, month_id")
+      .select("id, title, type, deleted_at, deleted_by, month_id, cover_path")
       .eq("org_id", context.orgId)
       .not("deleted_at", "is", null)
       .order("deleted_at", { ascending: false });
     if (error) throw new Error(error.message);
     if (!rows?.length) return [] as TrashedItem[];
+
+    // Auditoria de UX (2.3): sem miniatura, vários "(sem título)" do mesmo
+    // tipo ficavam indistinguíveis antes de restaurar — mesma capa já
+    // usada nos cards de Posts/Reels.
+    const coverUrlByPath = await signCoverPaths(supabaseAdmin, rows.map((r: any) => r.cover_path));
 
     const monthIds = [...new Set(rows.map((r: any) => r.month_id))];
     const { data: months } = await supabaseAdmin.from("months").select("id, client_id").in("id", monthIds);
@@ -77,6 +84,7 @@ export const listTrash = createServerFn({ method: "GET" })
         deletedAt: r.deleted_at,
         deletedByName: r.deleted_by ? (deleterNameById.get(r.deleted_by) ?? null) : null,
         daysLeft,
+        coverUrl: r.cover_path ? coverUrlByPath.get(r.cover_path) ?? null : null,
       };
     }) as TrashedItem[];
   });

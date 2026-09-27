@@ -111,6 +111,11 @@ export function RoteiroControls({
   }
 
   const clientStatus = status?.clientStatus ?? "pending";
+  // Auditoria de UX (3.2): só nos roteiros vindos da prévia de IA (tem
+  // targetMonthKey) o clique em "Aprovado" cria uma publicação de verdade
+  // no board, sem confirmação — o texto do botão avisa esse efeito só
+  // nesse caso; roteiro manual continua "Aprovado" normal.
+  const willCreateBoardItem = !!targetMonthKey && !contentItemId;
 
   return (
     <div className="mt-3 pt-3 border-t border-foreground/6">
@@ -141,7 +146,7 @@ export function RoteiroControls({
             color: current === "aprovado" ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
           }}
         >
-          <CheckCircle2 size={12} /> Aprovado
+          <CheckCircle2 size={12} /> {willCreateBoardItem ? "Aprovar e criar no board" : "Aprovado"}
         </button>
         <button
           type="button"

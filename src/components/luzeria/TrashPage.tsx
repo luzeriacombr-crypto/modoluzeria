@@ -63,7 +63,11 @@ export function TrashPage() {
         <div className="space-y-2">
           {items.map((item) => (
             <div key={item.id} className="flex items-center gap-3 rounded-lg border border-foreground/10 bg-card px-3 py-2.5">
-              <Avatar name={item.clientName} color={item.clientColor ?? undefined} size={30} />
+              {item.coverUrl ? (
+                <img src={item.coverUrl} alt="" className="shrink-0 h-10 w-10 rounded-md object-cover" />
+              ) : (
+                <Avatar name={item.clientName} color={item.clientColor ?? undefined} size={30} />
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate">
                   {TYPE_ICON[item.type]}

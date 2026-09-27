@@ -42,12 +42,18 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
       <h1 className="text-[32px] font-bold text-foreground tracking-tight">Central de ajuda</h1>
       <p className="text-sm text-foreground/50 mt-2">Dúvidas frequentes, tutoriais, o histórico do que você já reportou e o fórum entre agências.</p>
 
-      <div className="flex items-center gap-1 border-b border-foreground/10 mt-6 mb-6 flex-wrap">
+      {/* Auditoria de UX (2.5): pra platform-admin (7 abas: as 3 de todo
+          mundo + Todas as solicitações/Chats/Assuntos, só dele) essa linha
+          não cabia numa tela média e quebrava em 2 fileiras, parecendo duas
+          navegações empilhadas. `overflow-x-auto` é o mesmo padrão já usado
+          na barra de abas de Configurações pro mesmo problema (muitas
+          abas, tela estreita) — rola direto em vez de quebrar linha. */}
+      <div className="flex items-center gap-1 border-b border-foreground/10 mt-6 mb-6 overflow-x-auto overflow-y-hidden">
         {tabs.map((t) => {
           const active = tab === t.id;
           return (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
+              className="shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
               style={{
                 color: active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
                 borderColor: active ? "rgb(var(--lz-brand-rgb))" : "transparent",

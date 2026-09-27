@@ -81,44 +81,27 @@ export function ProfilePage() {
         {roleLabel(me.role)}
       </span>
 
+      {/* Auditoria de UX (2.4): antes "Foto de perfil" e "Dados da conta"
+          dividiam um card só, cada um com seu próprio botão de salvar
+          (um embaixo à direita do card inteiro, outro dentro do form) —
+          parecia um formulário único, mas eram 2 ações independentes.
+          Agora cada um tem seu próprio card, deixando claro que salvar um
+          não salva o outro. */}
       <div className="mt-8 bg-card rounded-lg p-6 md:p-8">
-        <div className="flex flex-col sm:flex-row gap-6 sm:gap-8">
-          <div className="flex flex-col items-center shrink-0">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-4">
-              Foto de perfil
-            </div>
-            <AvatarEditor
-              me={meUser}
-              draftColor={color}
-              draftAvatarUrl={avatarPreview}
-              uploading={uploading}
-              onPickFile={onPickFile}
-              onRemovePhoto={onRemovePhoto}
-              readOnly={isDemoReadOnly}
-              size={80}
-            />
+        <div className="flex flex-col items-center">
+          <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-4 self-start">
+            Foto de perfil
           </div>
-
-          <div className="flex-1 min-w-0 sm:border-l sm:border-foreground/10 sm:pl-8">
-            {isDemoReadOnly ? (
-              <p className="text-[11px] text-foreground/30">Conta de demonstração — perfil somente leitura.</p>
-            ) : (
-              <AccountSection
-                initialName={me.name}
-                initialEmail={me.email}
-                loading={updateMyAccount.isPending}
-                onSave={(payload) =>
-                  updateMyAccount.mutate(
-                    { data: payload },
-                    {
-                      onSuccess: () => toast.success("Dados da conta atualizados."),
-                      onError: (e: any) => toastFriendlyError(e, "Erro ao atualizar"),
-                    },
-                  )
-                }
-              />
-            )}
-          </div>
+          <AvatarEditor
+            me={meUser}
+            draftColor={color}
+            draftAvatarUrl={avatarPreview}
+            uploading={uploading}
+            onPickFile={onPickFile}
+            onRemovePhoto={onRemovePhoto}
+            readOnly={isDemoReadOnly}
+            size={80}
+          />
         </div>
 
         {!isDemoReadOnly && (
@@ -133,6 +116,27 @@ export function ProfilePage() {
               {updateMyProfile.isPending ? "Salvando…" : "Salvar foto"}
             </button>
           </div>
+        )}
+      </div>
+
+      <div className="mt-6 bg-card rounded-lg p-6 md:p-8">
+        {isDemoReadOnly ? (
+          <p className="text-[11px] text-foreground/30">Conta de demonstração — perfil somente leitura.</p>
+        ) : (
+          <AccountSection
+            initialName={me.name}
+            initialEmail={me.email}
+            loading={updateMyAccount.isPending}
+            onSave={(payload) =>
+              updateMyAccount.mutate(
+                { data: payload },
+                {
+                  onSuccess: () => toast.success("Dados da conta atualizados."),
+                  onError: (e: any) => toastFriendlyError(e, "Erro ao atualizar"),
+                },
+              )
+            }
+          />
         )}
       </div>
 

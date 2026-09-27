@@ -156,7 +156,7 @@ export function ClientDocsTab({
         <div className="text-[11px] font-bold uppercase tracking-wide text-foreground/35 mb-3">Como funciona</div>
         <div className="flex flex-col gap-3">
           {[
-            <>Clique em <span className="text-foreground font-medium">Formatar com IA</span> e cole o material bruto do cliente — a gente já formata pra você (ou use <span className="text-foreground font-medium">Copiar modelo</span> pra formatar numa IA sua).</>,
+            <>Clique em <span className="text-foreground font-medium">Formatar com IA</span> e cole o material bruto do cliente — a gente já formata pra você, de graça (ou use <span className="text-foreground font-medium">Copiar modelo</span> se preferir formatar numa IA própria que você já assina).</>,
             <>Revise o texto formatado — ajuste o que quiser.</>,
             <>Clique em <span className="text-foreground font-medium">Salvar</span>.</>,
             <>Pronto — o cliente já vê organizado no link de preview dele.</>,

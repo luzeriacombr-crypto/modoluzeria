@@ -115,11 +115,16 @@ export function SmartImportStep({ onDone, onSkip }: { onDone: () => void; onSkip
     <div>
       {phase === "pick" && (
         <div className="grid grid-cols-2 gap-2.5">
-          <SourceCard icon={<FileText size={18} />} title="Arquivo" desc="Planilha, CSV, PDF ou export de qualquer sistema." onClick={() => pickSource("file")} />
+          <SourceCard icon={<FileText size={18} />} title="Arquivo" desc="Planilha, CSV, PDF ou export de qualquer sistema." onClick={() => pickSource("file")} recommended />
           <SourceCard icon={<ImageIcon size={18} />} title="Prints de tela" desc="Foto da lista de clientes de onde você organiza hoje." onClick={() => pickSource("shot")} />
           <SourceCard icon={<Link2 size={18} />} title="Trello / ClickUp / Notion" desc="Conecta direto com um token." onClick={() => pickSource("api")} />
           <SourceCard icon={<PenLine size={18} />} title="Vou cadastrar na mão" desc="Sem importar nada, começa direto." onClick={() => pickSource("manual")} />
         </div>
+      )}
+      {phase === "pick" && (
+        <p className="text-[11px] text-foreground/35 mt-2.5">
+          Já organiza seus clientes no Trello, ClickUp ou Notion? A conexão direta (acima) traz os dados certinhos, sem precisar tirar print de nada.
+        </p>
       )}
 
       {phase === "upload" && source === "api" && (
@@ -254,10 +259,18 @@ export function SmartImportStep({ onDone, onSkip }: { onDone: () => void; onSkip
   );
 }
 
-function SourceCard({ icon, title, desc, onClick }: { icon: React.ReactNode; title: string; desc: string; onClick: () => void }) {
+function SourceCard({ icon, title, desc, onClick, recommended }: { icon: React.ReactNode; title: string; desc: string; onClick: () => void; recommended?: boolean }) {
   return (
     <button onClick={onClick}
-      className="flex flex-col items-start gap-2 text-left bg-foreground/[0.03] hover:bg-[rgba(var(--lz-brand-rgb),0.06)] border border-foreground/8 hover:border-[rgba(var(--lz-brand-rgb),0.4)] rounded-xl p-3.5 transition">
+      className={`relative flex flex-col items-start gap-2 text-left hover:bg-[rgba(var(--lz-brand-rgb),0.06)] hover:border-[rgba(var(--lz-brand-rgb),0.4)] rounded-xl p-3.5 transition border ${
+        recommended ? "bg-[rgba(var(--lz-brand-rgb),0.05)] border-[rgba(var(--lz-brand-rgb),0.4)]" : "bg-foreground/[0.03] border-foreground/8"
+      }`}
+    >
+      {recommended && (
+        <span className="absolute -top-2 right-3 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+          Mais rápido
+        </span>
+      )}
       <div className="h-8 w-8 rounded-md flex items-center justify-center" style={{ backgroundColor: "rgba(var(--lz-brand-rgb),0.14)", color: "var(--lz-accent-ink)" }}>
         {icon}
       </div>
