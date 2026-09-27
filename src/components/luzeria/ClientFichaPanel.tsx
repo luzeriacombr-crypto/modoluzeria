@@ -5,11 +5,11 @@ import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   EyeOff, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
   Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save, Camera, Instagram, Facebook,
-  MessageCircle, Milestone, Users, Upload, Download, Film, Image as ImageIcon,
+  MessageCircle, Milestone, Users, Upload, Download, Film, Image as ImageIcon, Megaphone,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, driveThumbnailQO, journeyStagesQO, contractRequestsQO, instagramConnectRequestsQO } from "@/lib/luzeria/queries";
+import { clientFichaQO, clientsQO, clientOnboardingQO, recurringQO, profilesQO, useApi, useMe, clientDeliveriesFolderQO, clientContractQO, clientBrandAssetsQO, driveThumbnailQO, journeyStagesQO, contractRequestsQO, instagramConnectRequestsQO, campaignsQO } from "@/lib/luzeria/queries";
 import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { useClientAssetUpload } from "@/lib/luzeria/use-client-asset-upload";
 import { useClientContractUpload } from "@/lib/luzeria/use-client-contract-upload";
@@ -194,6 +194,9 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
           )}
         </FichaCard>
       </div>
+      <FichaCard label="Projetos" wide>
+        <ClientProjectsSummary clientId={clientId} />
+      </FichaCard>
         {showBlockedModal && <ClientBlockedItemsModal clientId={clientId} onClose={() => setShowBlockedModal(false)} />}
 
       {/* Sub-abas: caixa de seleção no espaço estreito, abas no largo */}
@@ -1576,6 +1579,40 @@ function MetricMini({ icon, label, value, color, onClick }: { icon: React.ReactN
       </div>
       <div className="text-xl font-bold tabular-nums mt-0.5" style={{ color: color ?? "var(--foreground)" }}>{value}</div>
     </Comp>
+  );
+}
+
+/** Resumo dos projetos/campanhas do cliente na própria Ficha — edição
+ * completa (briefing, serviços, materiais, valor) continua em Mais >
+ * Campanhas, isso aqui é só pra ver rápido sem trocar de aba. */
+function ClientProjectsSummary({ clientId }: { clientId: string }) {
+  const { data: campaigns = [] } = useQuery(campaignsQO(clientId));
+  if (campaigns.length === 0) {
+    return <p className="text-xs text-foreground/40">Nenhum projeto criado ainda — crie um em Mais → Campanhas.</p>;
+  }
+  return (
+    <div className="space-y-2">
+      {campaigns.slice(0, 5).map((c) => (
+        <div key={c.id} className="flex items-center gap-3 bg-foreground/[0.03] rounded-lg px-3 py-2.5">
+          <Megaphone size={14} className="text-[var(--lz-accent-ink)] shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-medium text-foreground truncate">{c.name}</div>
+            {(c.services || c.description) && (
+              <div className="text-[11px] text-foreground/40 truncate">{c.services || c.description}</div>
+            )}
+          </div>
+          <span className="text-[11px] text-foreground/30 shrink-0">{c.itemCount} ite{c.itemCount === 1 ? "m" : "ns"}</span>
+          {c.valueCents != null && (
+            <span className="text-[12px] font-semibold shrink-0" style={{ color: "var(--lz-accent-ink)" }}>
+              {(c.valueCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            </span>
+          )}
+        </div>
+      ))}
+      {campaigns.length > 5 && (
+        <p className="text-[11px] text-foreground/30">+ {campaigns.length - 5} projeto{campaigns.length - 5 === 1 ? "" : "s"} — veja todos em Mais → Campanhas.</p>
+      )}
+    </div>
   );
 }
 

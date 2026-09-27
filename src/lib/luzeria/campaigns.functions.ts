@@ -8,6 +8,14 @@ export type Campaign = {
   clientId: string;
   name: string;
   description: string | null;
+  /** Briefing completo do projeto — todas as informações, prazo, contexto. */
+  briefing: string | null;
+  /** O que vai ser produzido (ex.: "3 reels, 1 cobertura em stories"). */
+  materials: string | null;
+  /** O que vai ser prestado de serviço (ex.: "Cobertura em forma de entrevista"). */
+  services: string | null;
+  /** Valor cobrado pelo trabalho, em centavos — null quando ainda não definido. */
+  valueCents: number | null;
   createdAt: string;
   itemCount: number;
 };
@@ -17,7 +25,7 @@ export const listCampaigns = createServerFn({ method: "GET" })
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
-      .from("campaigns").select("id, client_id, name, description, created_at")
+      .from("campaigns").select("id, client_id, name, description, briefing, materials, services, value_cents, created_at")
       .eq("client_id", data.clientId).order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const campaignIds = (rows ?? []).map((c: any) => c.id);
@@ -29,31 +37,46 @@ export const listCampaigns = createServerFn({ method: "GET" })
     }
     return (rows ?? []).map((c: any) => ({
       id: c.id, clientId: c.client_id, name: c.name, description: c.description,
+      briefing: c.briefing, materials: c.materials, services: c.services, valueCents: c.value_cents,
       createdAt: c.created_at, itemCount: countByCampaign.get(c.id) ?? 0,
     })) as Campaign[];
   });
 
 export const upsertCampaign = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { id?: string; clientId: string; name: string; description?: string | null }) =>
+  .inputValidator((d: {
+    id?: string; clientId: string; name: string; description?: string | null;
+    briefing?: string | null; materials?: string | null; services?: string | null; valueCents?: number | null;
+  }) =>
     z.object({
       id: z.string().uuid().optional(),
       clientId: z.string().uuid(),
       name: z.string().trim().min(1).max(120),
       description: z.string().trim().max(1000).nullable().optional(),
+      briefing: z.string().trim().max(5000).nullable().optional(),
+      materials: z.string().trim().max(2000).nullable().optional(),
+      services: z.string().trim().max(2000).nullable().optional(),
+      valueCents: z.number().int().min(0).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
     const db: any = context.supabase;
+    const patch = {
+      name: data.name,
+      description: data.description ?? null,
+      briefing: data.briefing ?? null,
+      materials: data.materials ?? null,
+      services: data.services ?? null,
+      value_cents: data.valueCents ?? null,
+    };
     if (data.id) {
-      const { error } = await db.from("campaigns")
-        .update({ name: data.name, description: data.description ?? null }).eq("id", data.id);
+      const { error } = await db.from("campaigns").update(patch).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
     const { data: created, error } = await db.from("campaigns")
-      .insert({ client_id: data.clientId, org_id: context.orgId, name: data.name, description: data.description ?? null, created_by: context.userId })
+      .insert({ ...patch, client_id: data.clientId, org_id: context.orgId, created_by: context.userId })
       .select("id").single();
     if (error) throw new Error(error.message);
     return { id: created.id as string };

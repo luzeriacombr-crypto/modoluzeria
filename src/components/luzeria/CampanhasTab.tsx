@@ -9,12 +9,17 @@ import type { Campaign } from "@/lib/luzeria/campaigns.functions";
 
 const ITEM_TYPES: ContentType[] = ["post", "reel", "story", "outros", "gravacao", "roteiro", "sistema"];
 const inp = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
+const label = "block text-[10px] font-bold uppercase tracking-wider text-foreground/40 mb-1";
+
+function fmtBRL(cents: number) {
+  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 export function CampanhasTab({ clientId, monthKey, isAdmin }: { clientId: string; monthKey: string; isAdmin: boolean }) {
   const { data: campaigns = [] } = useQuery(campaignsQO(clientId));
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [editingCampaign, setEditingCampaign] = useState<{ id: string; name: string; description: string } | null>(null);
+  const [editingCampaign, setEditingCampaign] = useState<{ id: string; name: string; description: string; briefing: string; materials: string; services: string; valueCents: number | null } | null>(null);
   const api = useApi();
 
   const activeCampaign = campaigns.find((c) => c.id === activeCampaignId) ?? null;
@@ -51,7 +56,7 @@ export function CampanhasTab({ clientId, monthKey, isAdmin }: { clientId: string
           {campaigns.map((c) => (
             editingCampaign?.id === c.id ? (
               <CampaignForm key={c.id}
-                initial={{ name: editingCampaign.name, description: editingCampaign.description }}
+                initial={editingCampaign}
                 onCancel={() => setEditingCampaign(null)}
                 onSave={(vals) => { api.upsertCampaign.mutate({ data: { id: c.id, clientId, ...vals } }); setEditingCampaign(null); }} />
             ) : (
@@ -67,7 +72,7 @@ export function CampanhasTab({ clientId, monthKey, isAdmin }: { clientId: string
                   </div>
                   {isAdmin && (
                     <div className="flex items-center gap-1 shrink-0">
-                      <span onClick={(e) => { e.stopPropagation(); setEditingCampaign({ id: c.id, name: c.name, description: c.description ?? "" }); }}
+                      <span onClick={(e) => { e.stopPropagation(); setEditingCampaign({ id: c.id, name: c.name, description: c.description ?? "", briefing: c.briefing ?? "", materials: c.materials ?? "", services: c.services ?? "", valueCents: c.valueCents }); }}
                         className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5"><Pencil size={12} /></span>
                       <span
                         onClick={async (e) => {
@@ -82,7 +87,12 @@ export function CampanhasTab({ clientId, monthKey, isAdmin }: { clientId: string
                   )}
                 </div>
                 {c.description && <p className="text-[11px] text-foreground/40 mt-1.5 line-clamp-2">{c.description}</p>}
-                <div className="text-[10px] text-foreground/30 mt-2">{c.itemCount} ite{c.itemCount === 1 ? "m" : "ns"}</div>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-[10px] text-foreground/30">{c.itemCount} ite{c.itemCount === 1 ? "m" : "ns"}</span>
+                  {c.valueCents != null && (
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--lz-accent-ink)" }}>{fmtBRL(c.valueCents)}</span>
+                  )}
+                </div>
               </div>
             )
           ))}
@@ -93,21 +103,56 @@ export function CampanhasTab({ clientId, monthKey, isAdmin }: { clientId: string
 }
 
 function CampaignForm({ initial, onCancel, onSave }: {
-  initial?: { name: string; description: string };
+  initial?: { name: string; description: string; briefing: string; materials: string; services: string; valueCents: number | null };
   onCancel: () => void;
-  onSave: (vals: { name: string; description: string | null }) => void;
+  onSave: (vals: { name: string; description: string | null; briefing: string | null; materials: string | null; services: string | null; valueCents: number | null }) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
+  const [briefing, setBriefing] = useState(initial?.briefing ?? "");
+  const [materials, setMaterials] = useState(initial?.materials ?? "");
+  const [services, setServices] = useState(initial?.services ?? "");
+  const [value, setValue] = useState<string | number>(initial?.valueCents != null ? (initial.valueCents / 100).toFixed(2) : "");
   return (
-    <div className="rounded-lg p-4 space-y-2.5" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
-      <input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Nome da campanha (ex: Aniversário da loja)" className={inp} />
-      <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Descrição (opcional)" className={inp + " resize-none"} />
+    <div className="rounded-lg p-4 space-y-3" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
+      <div>
+        <label className={label}>Nome</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Ex: Cobertura Bloco Travestido" className={inp} />
+      </div>
+      <div>
+        <label className={label}>Descrição curta (opcional)</label>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Resumo em 1 linha, aparece no card" className={inp + " resize-none"} />
+      </div>
+      <div>
+        <label className={label}>Briefing completo (opcional)</label>
+        <textarea value={briefing} onChange={(e) => setBriefing(e.target.value)} rows={4} placeholder="Contexto do projeto, prazo, referências, tudo que precisa saber" className={inp + " resize-y"} />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className={label}>Serviços a prestar (opcional)</label>
+          <textarea value={services} onChange={(e) => setServices(e.target.value)} rows={3} placeholder="Ex: Cobertura em forma de entrevista" className={inp + " resize-y"} />
+        </div>
+        <div>
+          <label className={label}>Materiais a produzir (opcional)</label>
+          <textarea value={materials} onChange={(e) => setMaterials(e.target.value)} rows={3} placeholder="Ex: 3 reels, 5 fotos tratadas" className={inp + " resize-y"} />
+        </div>
+      </div>
+      <div>
+        <label className={label}>Valor cobrado (opcional)</label>
+        <input type="number" min="0" step="0.01" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Não informado" className={inp + " sm:w-40"} />
+      </div>
       <div className="flex items-center justify-end gap-2">
         <button onClick={onCancel} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
         <button
           disabled={!name.trim()}
-          onClick={() => onSave({ name: name.trim(), description: description.trim() || null })}
+          onClick={() => onSave({
+            name: name.trim(),
+            description: description.trim() || null,
+            briefing: briefing.trim() || null,
+            materials: materials.trim() || null,
+            services: services.trim() || null,
+            valueCents: value === "" ? null : Math.round(Number(value) * 100),
+          })}
           className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-40"
         >Salvar</button>
       </div>
@@ -120,8 +165,9 @@ function CampaignDetail({ campaign, clientId, monthKey, isAdmin, onBack }: {
 }) {
   const { data: items = [] } = useQuery(campaignItemsQO(campaign.id));
   const { selectMonth, openItem } = useUI();
-  const { addContentItem, setItemCampaign } = useApi();
+  const { addContentItem, setItemCampaign, upsertCampaign } = useApi();
   const [adding, setAdding] = useState(false);
+  const [editingProject, setEditingProject] = useState(false);
   const [newType, setNewType] = useState<ContentType>("post");
   const [newTitle, setNewTitle] = useState("");
   const [newInternal, setNewInternal] = useState(false);
@@ -143,11 +189,60 @@ function CampaignDetail({ campaign, clientId, monthKey, isAdmin, onBack }: {
       <button onClick={onBack} className="text-xs text-foreground/50 hover:text-foreground inline-flex items-center gap-1 mb-4">
         <ChevronLeft size={13} /> Campanhas
       </button>
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="min-w-0">
-          <h3 className="text-base font-semibold text-foreground truncate">{campaign.name}</h3>
-          {campaign.description && <p className="text-xs text-foreground/40 mt-0.5">{campaign.description}</p>}
+
+      {editingProject ? (
+        <div className="mb-4">
+          <CampaignForm
+            initial={{ name: campaign.name, description: campaign.description ?? "", briefing: campaign.briefing ?? "", materials: campaign.materials ?? "", services: campaign.services ?? "", valueCents: campaign.valueCents }}
+            onCancel={() => setEditingProject(false)}
+            onSave={(vals) => { upsertCampaign.mutate({ data: { id: campaign.id, clientId, ...vals } }); setEditingProject(false); }}
+          />
         </div>
+      ) : (
+        <div className="rounded-lg p-4 mb-4 space-y-3" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-foreground truncate">{campaign.name}</h3>
+              {campaign.description && <p className="text-xs text-foreground/40 mt-0.5">{campaign.description}</p>}
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              {campaign.valueCents != null && (
+                <span className="text-sm font-bold" style={{ color: "var(--lz-accent-ink)" }}>{fmtBRL(campaign.valueCents)}</span>
+              )}
+              {isAdmin && (
+                <button onClick={() => setEditingProject(true)} title="Editar projeto" className="p-1.5 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5">
+                  <Pencil size={13} />
+                </button>
+              )}
+            </div>
+          </div>
+          {(campaign.briefing || campaign.services || campaign.materials) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {campaign.briefing && (
+                <div className="sm:col-span-2">
+                  <div className={label}>Briefing</div>
+                  <p className="text-sm text-foreground/80 whitespace-pre-wrap">{campaign.briefing}</p>
+                </div>
+              )}
+              {campaign.services && (
+                <div>
+                  <div className={label}>Serviços a prestar</div>
+                  <p className="text-sm text-foreground/80 whitespace-pre-wrap">{campaign.services}</p>
+                </div>
+              )}
+              {campaign.materials && (
+                <div>
+                  <div className={label}>Materiais a produzir</div>
+                  <p className="text-sm text-foreground/80 whitespace-pre-wrap">{campaign.materials}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-foreground/40">Itens do projeto ({items.length})</span>
         {isAdmin && !adding && (
           <button onClick={() => setAdding(true)} className="shrink-0 lz-btn-primary text-xs px-3 py-2 rounded-md inline-flex items-center gap-1.5">
             <Plus size={13} /> Adicionar item
