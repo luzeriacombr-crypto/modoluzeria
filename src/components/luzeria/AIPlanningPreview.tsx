@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2, Star, BookMarked, Check } from "lucide-react";
@@ -8,7 +9,7 @@ import {
   useAiPlanningStore, startAiPlanningJob, resolveAiPlanningJob, failAiPlanningJob,
   minimizeAiPlanningModal, dismissAiPlanningJob, updateAiPlanningJobResult,
 } from "@/lib/luzeria/ai-planning-store";
-import { useApi } from "@/lib/luzeria/queries";
+import { useApi, orgKnowledgeQO } from "@/lib/luzeria/queries";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { Modal } from "./Modals";
 import { MonthPickerList } from "./MonthPickerList";
@@ -126,6 +127,11 @@ export function AIPlanningPreview() {
   const submitFeedback = useServerFn(submitAiPlanningFeedback);
   const navigate = useNavigate();
   const api = useApi();
+  // Auditoria de UX (3.1): antes disso o aviso de "base vazia" só aparecia
+  // DEPOIS de gerar a prévia (gastando a geração à toa) — agora mostra
+  // antes, na tela de configurar, pra pessoa poder preencher primeiro se
+  // quiser.
+  const { data: knowledge = [] } = useQuery(orgKnowledgeQO());
   const [extraContext, setExtraContext] = useState("");
   const [contentTypes, setContentTypes] = useState<Set<ContentTypeKey>>(new Set(["reel", "estatico", "carrossel"]));
   const [pickingMonth, setPickingMonth] = useState(false);
@@ -244,6 +250,19 @@ export function AIPlanningPreview() {
     <Modal open onClose={handleClose} title={`Prévia de planejamento com IA — ${job.clientName}`} maxWidthClass="max-w-xl">
       {job.status === "configuring" && (
         <div className="space-y-3">
+          {knowledge.length === 0 && (
+            <button
+              type="button"
+              onClick={() => { dismissAiPlanningJob(clientId); navigate({ to: "/configuracoes", search: { tab: "knowledge" } }); }}
+              className="w-full flex items-center gap-2.5 rounded-lg p-3 text-left transition hover:opacity-90"
+              style={{ background: "rgba(var(--lz-brand-rgb),0.08)", border: "1px solid rgba(var(--lz-brand-rgb),0.2)" }}
+            >
+              <BookMarked size={15} className="shrink-0" style={{ color: "var(--lz-accent-ink)" }} />
+              <div className="text-[12px] text-foreground/70 leading-relaxed">
+                <span className="font-semibold text-foreground">Sua Base de Conhecimento está vazia.</span> A prévia fica melhor com contexto de como sua agência cria conteúdo — clique pra preencher antes de gerar (ou continue sem, se preferir).
+              </div>
+            </button>
+          )}
           <p className="text-sm text-foreground/70">
             Pra esse próximo planejamento, teve alguma reunião com o cliente? Você tem algum briefing específico do mês ou transcrição? Cola aqui embaixo — isso conta mais do que o histórico antigo.
           </p>

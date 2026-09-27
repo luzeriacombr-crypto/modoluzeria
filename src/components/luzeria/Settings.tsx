@@ -9,7 +9,7 @@ import type { Role } from "@/lib/luzeria/types";
 import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Gift, Archive, PlayCircle, ChevronDown } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Archive, PlayCircle, ChevronDown } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
 import { ContentStatusesSection } from "./ContentStatusesSection";
 import { ClientCategoriesSection } from "./ClientCategoriesSection";
@@ -51,8 +51,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "auditoria" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "indicacoes" | "updates" | "site" | "blog" | "journey" | "cliente" | "knowledge";
-const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "indicacoes", "updates", "site", "blog", "journey", "cliente", "knowledge"];
+type SettingsTab = "team" | "report" | "auditoria" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "indicacoes" | "plataforma" | "updates" | "site" | "blog" | "journey" | "cliente" | "knowledge";
+const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "indicacoes", "plataforma", "updates", "site", "blog", "journey", "cliente", "knowledge"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -108,6 +108,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
              tab === "integrations" ? "Conecte o Google Drive da agência, a sua Google Agenda e acompanhe o Instagram de cada cliente." :
              tab === "automations" ? "Lembretes automáticos e rotinas que o sistema executa sozinho." :
              tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
+             tab === "plataforma" ? "Todas as agências do Modo Criador, mensagens de ativação e pedidos de demonstração." :
              tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? "Visão geral, jornada, margem e pagamentos de cada cliente." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
@@ -128,7 +129,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
           { id: "knowledge", label: "Base de conhecimento" },
-          ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }, { id: "blog", label: "Blog" }] : []),
+          ...(me.isPlatformAdmin ? [{ id: "plataforma", label: "Plataforma" }, { id: "site", label: "Site" }, { id: "blog", label: "Blog" }] : []),
         ].filter((t) => allowedTabs.includes(t.id as SettingsTab));
         const isActive = (id: string) =>
           tab === (id as any) ||
@@ -183,60 +184,73 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
       <Suspense fallback={<TabLoadingFallback />}>
       {tab === "general" ? <GeneralSettings /> :
        tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" ? (
-        <div className="space-y-10">
-          {/* Pro admin da plataforma o painel de agências é o que interessa
-              no dia a dia, então ele vem antes do plano/cobrança da própria
-              Luzeria. Pra quem não é admin nada muda: o painel nem renderiza
-              e "Seu plano" continua sendo a primeira seção. */}
-          {me.isPlatformAdmin && (
-            <AgenciesBillingPanel onOpenActivationPreset={setActivationPreset} />
-          )}
-          {me.isPlatformAdmin && (
-            <div className="pt-2 border-t border-foreground/10">
-              <MessagesPanel openPreset={activationPreset} onConsumeOpenPreset={() => setActivationPreset(null)} />
-            </div>
-          )}
-          {me.isPlatformAdmin && (
-            <div className="pt-2 border-t border-foreground/10">
-              <DemoRequestsPanel />
-            </div>
-          )}
-          <div className={me.isPlatformAdmin ? "pt-2 border-t border-foreground/10" : undefined}>
-            <PlanCardSection />
-          </div>
-          <div className="pt-2 border-t border-foreground/10">
-            <BillingSection />
-          </div>
-          {!me.isPlatformAdmin && (
-            <div className="pt-2 border-t border-foreground/10">
-              <DeleteAccountSection />
-            </div>
-          )}
-          {me.isPlatformAdmin && (
-            <div className="pt-2 border-t border-foreground/10">
-              <PromotionCodesPanel />
-            </div>
-          )}
-          {me.isPlatformAdmin && (
-            <div className="pt-2 border-t border-foreground/10">
-              <NewUserJourneyReportPanel />
-            </div>
-          )}
-          {me.isPlatformAdmin && (
-            <div className="pt-2 border-t border-foreground/10">
-              <PageActivityReportPanel />
-            </div>
-          )}
-          {me.isPlatformAdmin && (
-            <div className="pt-2 border-t border-foreground/10">
-              <AiPlanningFeedbackPanel />
-            </div>
-          )}
+        <div>
+          {/* Auditoria de UX (2.2 / "afiliados vs indicações confusos"):
+              antes disso as 3 sub-seções (Afiliados, Revenda, Indique e
+              ganhe) não tinham nenhuma aba clicável — só eram alcançáveis
+              editando a URL na mão (?tab=afiliados etc), então na prática
+              ninguém fora do próprio time via essas telas. Agora têm abas
+              de verdade, com 1 frase explicando o público de cada uma
+              (pra não confundir "indicar outra agência" com "ser afiliado"). */}
           {isMaster && (
-            <ReferralsSection initiallyOpen={tab === "indicacoes"} />
+            <div className="flex items-center gap-1 mb-6 -mt-2 flex-wrap">
+              <SubTabPill active={tab === "cobranca"} onClick={() => setTab("cobranca")} label="Meu plano" />
+              <SubTabPill active={tab === "afiliados"} onClick={() => setTab("afiliados")} label="Afiliados" />
+              <SubTabPill active={tab === "revenda"} onClick={() => setTab("revenda")} label="Revenda" />
+              <SubTabPill active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} label="Indique e ganhe" />
+            </div>
+          )}
+
+          {tab === "afiliados" ? (
+            <div className="space-y-3">
+              <p className="text-xs text-foreground/40">Pra parceiros externos (agências de marketing, consultores) que indicam o Modo Criador e ganham comissão em dinheiro — não confundir com "Indique e ganhe", que é entre agências já clientes.</p>
+              <AffiliateProgramPanel isPlatformAdmin={me.isPlatformAdmin} />
+            </div>
+          ) : tab === "revenda" ? (
+            <ResellerPanel />
+          ) : tab === "indicacoes" ? (
+            <div className="space-y-3">
+              <p className="text-xs text-foreground/40">Pra agências que já são clientes do Modo Criador: indique outra agência e ambas ganham um mês grátis — não confundir com "Afiliados", que é pra parceiros externos ganhando comissão.</p>
+              <ReferralsTab />
+            </div>
+          ) : (
+            <div className="space-y-10">
+              <PlanCardSection />
+              <div className="pt-2 border-t border-foreground/10">
+                <BillingSection />
+              </div>
+              {!me.isPlatformAdmin && (
+                <div className="pt-2 border-t border-foreground/10">
+                  <DeleteAccountSection />
+                </div>
+              )}
+            </div>
           )}
         </div>
        ) :
+       tab === "plataforma" ? (me.isPlatformAdmin ? (
+        <div className="space-y-10">
+          <AgenciesBillingPanel onOpenActivationPreset={setActivationPreset} />
+          <div className="pt-2 border-t border-foreground/10">
+            <MessagesPanel openPreset={activationPreset} onConsumeOpenPreset={() => setActivationPreset(null)} />
+          </div>
+          <div className="pt-2 border-t border-foreground/10">
+            <DemoRequestsPanel />
+          </div>
+          <div className="pt-2 border-t border-foreground/10">
+            <PromotionCodesPanel />
+          </div>
+          <div className="pt-2 border-t border-foreground/10">
+            <NewUserJourneyReportPanel />
+          </div>
+          <div className="pt-2 border-t border-foreground/10">
+            <PageActivityReportPanel />
+          </div>
+          <div className="pt-2 border-t border-foreground/10">
+            <AiPlanningFeedbackPanel />
+          </div>
+        </div>
+       ) : null) :
        tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? (
         <ClienteTab
           initialSub={tab === "margem" ? "margem" : tab === "journey" ? "jornada" : tab === "pagamentos" ? "pagamentos" : "overview"}
@@ -1313,47 +1327,6 @@ function ClienteTab({ initialSub, canJourney, canMargem, isAdmin }: {
        sub === "jornada" ? <JourneyStagesTab /> :
        sub === "margem" ? <ClientMarginPanel /> :
        sub === "pagamentos" ? <ClientPaymentsPanel /> : null}
-    </div>
-  );
-}
-
-function GanheComModoCriadorSection({ initiallyOpen, isPlatformAdmin }: { initiallyOpen: boolean; isPlatformAdmin: boolean }) {
-  const [open, setOpen] = useState(initiallyOpen);
-  return (
-    <div className="pt-2 border-t border-foreground/10">
-      <button onClick={() => setOpen((v) => !v)}
-        className="lz-btn-ghost text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
-        <Gift size={14} /> Ganhe com o Modo Criador!
-      </button>
-      {open && (
-        <div className="mt-6 space-y-10">
-          <AffiliateProgramPanel isPlatformAdmin={isPlatformAdmin} />
-          <div className="pt-2 border-t border-foreground/10">
-            <ResellerPanel />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Programa de indicação entre agências — vive dentro de "Plano e
- * Cobrança" (não é aba própria, pedido do Junior pra não inflar a barra
- * de abas) no mesmo molde retrátil de GanheComModoCriadorSection, que fica
- * bem ao lado. */
-function ReferralsSection({ initiallyOpen }: { initiallyOpen: boolean }) {
-  const [open, setOpen] = useState(initiallyOpen);
-  return (
-    <div className="pt-2 border-t border-foreground/10">
-      <button onClick={() => setOpen((v) => !v)}
-        className="lz-btn-ghost text-xs px-4 py-2.5 rounded-md inline-flex items-center gap-2">
-        <Gift size={14} /> Indique e Ganhe
-      </button>
-      {open && (
-        <div className="mt-6">
-          <ReferralsTab />
-        </div>
-      )}
     </div>
   );
 }

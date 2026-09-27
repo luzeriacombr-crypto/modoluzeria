@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useRouterState } from "@tanstack/react-router";
 import { Sparkles, X } from "lucide-react";
 import { clientsQO } from "@/lib/luzeria/queries";
 import { SmartImportStep } from "./SmartImportStep";
@@ -10,20 +11,26 @@ const DISMISS_KEY = "modocriador:smart-import-banner-dismissed";
  * assim que a agência passar disso, e some (por essa sessão) se a pessoa
  * dispensar. Diferente do wizard já embutido no primeiro acesso
  * (WelcomeOnboarding): esse cobre quem pulou aquele passo, ou voltou
- * depois de um tempo sem completar o cadastro. */
+ * depois de um tempo sem completar o cadastro.
+ * Auditoria de UX (1.1): não mostra no Dashboard (`/admin`) — o
+ * `SetupChecklist` de lá já cobre exatamente o mesmo pedido ("traga seus
+ * clientes"), então mostrar os dois juntos ali era duplicar o aviso na
+ * mesma tela. Nas outras telas continua aparecendo normalmente. */
 export function SmartImportBanner({ isAdmin }: { isAdmin: boolean }) {
+  const routeId = useRouterState({ select: (s) => s.matches.at(-1)?.routeId ?? "" });
+  const onDashboard = routeId.endsWith("/admin");
   // Sem valor padrão `[]` de propósito — enquanto a query ainda não
   // carregou, `clients` fica `undefined`, e o banner não decide nada até
   // ter a contagem real. Com `= []`, uma agência com 50 clientes via o
   // aviso "Traga seus clientes" piscar na tela por um instante a cada
   // carregamento, porque 0 (o array vazio) sempre bate no "< 2".
-  const { data: clients } = useQuery({ ...clientsQO(), enabled: isAdmin });
+  const { data: clients } = useQuery({ ...clientsQO(), enabled: isAdmin && !onDashboard });
   const [dismissed, setDismissed] = useState(() => {
     try { return sessionStorage.getItem(DISMISS_KEY) === "1"; } catch { return false; }
   });
   const [open, setOpen] = useState(false);
 
-  if (!clients) return null;
+  if (onDashboard || !clients) return null;
   const activeCount = clients.filter((c: any) => !c.archived && c.category !== "Ex-clientes").length;
   const shouldShow = isAdmin && !dismissed && activeCount < 2;
   if (!shouldShow) return null;

@@ -434,7 +434,12 @@ export const getSetupChecklist = createServerFn({ method: "GET" })
 
     const { data: clientRows, count } = await context.supabase
       .from("clients").select("id", { count: "exact" }).eq("archived", false).neq("category", "Ex-clientes");
-    const hasClients = (count ?? 0) > 0;
+    // >= 2, não > 0 — mesmo critério do SmartImportBanner (que só some com
+    // 2+ clientes ativos). Antes cada um calculava por conta própria: com
+    // exatamente 1 cliente, esse passo já aparecia "concluído" aqui mas o
+    // banner (em toda tela) continuava pedindo pra importar mais — dois
+    // avisos se contradizendo sobre a mesma coisa (achado da auditoria de UX).
+    const hasClients = (count ?? 0) >= 2;
     const clientIds = ((clientRows ?? []) as any[]).map((c) => c.id);
 
     let driveConnected = false;
