@@ -565,18 +565,19 @@ export const getPublicDriveVideoToken = createServerFn({ method: "GET" })
     if (!ok) throw new Error("Arquivo não encontrado nesse link.");
     const { data: orgId } = await supabase.rpc("get_org_id_for_token", { _token: data.token });
     if (!orgId) throw new Error("Link inválido.");
-    return withDriveOrg(orgId as string, async () => {
-      const token = await getAccessToken();
-      const meta: any = await driveFetch(
-        `/files/${encodeURIComponent(data.fileId)}?fields=mimeType,name&supportsAllDrives=true`,
-      );
-      return {
-        token,
-        url: `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(data.fileId)}?alt=media&supportsAllDrives=true`,
-        mimeType: (meta?.mimeType as string) ?? "video/mp4",
-        name: (meta?.name as string) ?? "arquivo",
-      };
-    });
+    const meta: any = await withDriveOrg(orgId as string, () =>
+      driveFetch(`/files/${encodeURIComponent(data.fileId)}?fields=mimeType,name&supportsAllDrives=true`));
+    // NUNCA mais devolve o token OAuth de verdade — isso dava acesso de
+    // leitura/escrita ao Drive INTEIRO da agência pra qualquer pessoa com
+    // o link público (achado numa auditoria de segurança, 27/09/2026). Os
+    // bytes agora passam pelo proxy api/public-drive-file, que revalida o
+    // token por-arquivo e usa a credencial real só no servidor.
+    return {
+      token: "",
+      url: `/api/public-drive-file?token=${encodeURIComponent(data.token)}&fileId=${encodeURIComponent(data.fileId)}`,
+      mimeType: (meta?.mimeType as string) ?? "video/mp4",
+      name: (meta?.name as string) ?? "arquivo",
+    };
   });
 
 /* ============ PUBLIC: add feedback ============ */

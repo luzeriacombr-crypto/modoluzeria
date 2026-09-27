@@ -43,6 +43,7 @@ import { Route as ConectarInstagramTokenRouteImport } from './routes/conectar-in
 import { Route as CampanhaTokenRouteImport } from './routes/campanha.$token'
 import { Route as BlogSlugRouteImport } from './routes/blog_.$slug'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
+import { Route as ApiPublicDriveFileRouteImport } from './routes/api.public-drive-file'
 import { Route as ApiMcpRouteImport } from './routes/api.mcp'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AuthenticatedSelecaoDeFotosRouteImport } from './routes/_authenticated/selecao-de-fotos'
@@ -254,6 +255,11 @@ const AssinarCompletarRoute = AssinarCompletarRouteImport.update({
   id: '/completar',
   path: '/completar',
   getParentRoute: () => AssinarRoute,
+} as any)
+const ApiPublicDriveFileRoute = ApiPublicDriveFileRouteImport.update({
+  id: '/api/public-drive-file',
+  path: '/api/public-drive-file',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMcpRoute = ApiMcpRouteImport.update({
   id: '/api/mcp',
@@ -491,6 +497,7 @@ export interface FileRoutesByFullPath {
   '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
   '/api/mcp': typeof ApiMcpRoute
+  '/api/public-drive-file': typeof ApiPublicDriveFileRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/campanha/$token': typeof CampanhaTokenRoute
@@ -562,6 +569,7 @@ export interface FileRoutesByTo {
   '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
   '/api/mcp': typeof ApiMcpRoute
+  '/api/public-drive-file': typeof ApiPublicDriveFileRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/campanha/$token': typeof CampanhaTokenRoute
@@ -635,6 +643,7 @@ export interface FileRoutesById {
   '/_authenticated/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/api/mcp': typeof ApiMcpRoute
+  '/api/public-drive-file': typeof ApiPublicDriveFileRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog_/$slug': typeof BlogSlugRoute
   '/campanha/$token': typeof CampanhaTokenRoute
@@ -708,6 +717,7 @@ export interface FileRouteTypes {
     | '/selecao-de-fotos'
     | '/vendas'
     | '/api/mcp'
+    | '/api/public-drive-file'
     | '/assinar/completar'
     | '/blog/$slug'
     | '/campanha/$token'
@@ -779,6 +789,7 @@ export interface FileRouteTypes {
     | '/selecao-de-fotos'
     | '/vendas'
     | '/api/mcp'
+    | '/api/public-drive-file'
     | '/assinar/completar'
     | '/blog/$slug'
     | '/campanha/$token'
@@ -851,6 +862,7 @@ export interface FileRouteTypes {
     | '/_authenticated/selecao-de-fotos'
     | '/_authenticated/vendas'
     | '/api/mcp'
+    | '/api/public-drive-file'
     | '/assinar/completar'
     | '/blog_/$slug'
     | '/campanha/$token'
@@ -911,6 +923,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermosRoute: typeof TermosRoute
   ApiMcpRoute: typeof ApiMcpRoute
+  ApiPublicDriveFileRoute: typeof ApiPublicDriveFileRoute
   BlogSlugRoute: typeof BlogSlugRoute
   CampanhaTokenRoute: typeof CampanhaTokenRoute
   ConectarInstagramTokenRoute: typeof ConectarInstagramTokenRoute
@@ -1175,6 +1188,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/assinar/completar'
       preLoaderRoute: typeof AssinarCompletarRouteImport
       parentRoute: typeof AssinarRoute
+    }
+    '/api/public-drive-file': {
+      id: '/api/public-drive-file'
+      path: '/api/public-drive-file'
+      fullPath: '/api/public-drive-file'
+      preLoaderRoute: typeof ApiPublicDriveFileRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/mcp': {
       id: '/api/mcp'
@@ -1525,6 +1545,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermosRoute: TermosRoute,
   ApiMcpRoute: ApiMcpRoute,
+  ApiPublicDriveFileRoute: ApiPublicDriveFileRoute,
   BlogSlugRoute: BlogSlugRoute,
   CampanhaTokenRoute: CampanhaTokenRoute,
   ConectarInstagramTokenRoute: ConectarInstagramTokenRoute,
