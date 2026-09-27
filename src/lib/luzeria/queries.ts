@@ -113,7 +113,7 @@ import {
   listBlogPostsAdmin, getBlogPostAdmin, createBlogPost, updateBlogPost, deleteBlogPost,
   getPublishedBlogPosts, getPublishedBlogPost,
 } from "./blog-admin.functions";
-import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
+import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign, setCampaignCapture } from "./campaigns.functions";
 import { getOrCreateCampaignShareToken, rotateCampaignShareToken, getPublicCampaign } from "./campaign-share.functions";
 import { listContentGroups, createContentGroup, renameContentGroup, deleteContentGroup, setItemGroup, reorderContentGroups } from "./content-groups.functions";
 import { listLeads, upsertLead, moveLeadStage, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts, listSalesStages, upsertSalesStage, deleteSalesStage } from "./sales-pipeline.functions";
@@ -1369,6 +1369,15 @@ export function useApi() {
         invalidateAll();
       },
       onError: (e: any) => toastFriendlyError(e, "Erro ao atualizar campanha do item."),
+    }),
+    setCampaignCapture: useMutation({
+      mutationFn: useServerFn(setCampaignCapture),
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["campaigns"] });
+        qc.invalidateQueries({ queryKey: ["campaign-items"] });
+        invalidateAll();
+      },
+      onError: (e: any) => toastFriendlyError(e, "Erro ao definir data de captação."),
     }),
     createContentGroup: useMutation({
       mutationFn: useServerFn(createContentGroup),

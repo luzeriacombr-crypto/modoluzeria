@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { hexToRgbChannels, deriveSecondaryHex } from "@/lib/luzeria/utils";
 import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO, cargosQO, myPendingInvoiceQO, myInvoiceHistoryQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
@@ -1399,6 +1400,57 @@ function OrgBrandingSection({
   useEffect(() => { setHeroFrom(heroGradientFrom); }, [heroGradientFrom]);
   useEffect(() => { setHeroTo(heroGradientTo); }, [heroGradientTo]);
 
+  // Pré-visualização ao vivo: enquanto essa seção está aberta, a barra
+  // lateral e o resto da UI de verdade (não uma maquete à parte) refletem
+  // as cores sendo digitadas aqui, antes de salvar — dá pra julgar
+  // contraste na prática. Mesma fórmula que App.tsx usa a partir do valor
+  // salvo; aqui aplicamos a partir do estado local (ainda não salvo).
+  useEffect(() => {
+    const root = document.documentElement.style;
+    const primary = colorPrimary ? hexToRgbChannels(colorPrimary) : null;
+    const lightHex = colorPrimaryLight && colorPrimaryLight !== "#C8D44E"
+      ? colorPrimaryLight
+      : colorPrimary ? deriveSecondaryHex(colorPrimary) : null;
+    const light = lightHex ? hexToRgbChannels(lightHex) : null;
+    const sidebar = colorSidebar ? hexToRgbChannels(colorSidebar) : null;
+    const accentLight = colorAccentLight ? hexToRgbChannels(colorAccentLight) : null;
+    if (primary) root.setProperty("--lz-brand-rgb", primary);
+    if (light) root.setProperty("--lz-brand-light-rgb", light);
+    if (sidebar) root.setProperty("--lz-sidebar-rgb", sidebar);
+    if (accentLight) root.setProperty("--lz-accent-ink-override", `rgb(${accentLight})`);
+    else root.removeProperty("--lz-accent-ink-override");
+  }, [colorPrimary, colorPrimaryLight, colorSidebar, colorAccentLight]);
+
+  // Guarda sempre os valores REALMENTE salvos (as props), pra restaurar
+  // certo ao sair da seção sem salvar — sem isso, quem só desse uma olhada
+  // nas cores e trocasse de aba ficaria com a UI inteira na cor "abandonada".
+  // É uma ref (não state) porque só é lida no cleanup do efeito de
+  // desmontagem abaixo, que roda com um closure "congelado" no momento do
+  // mount — sem a ref, ele restauraria pra cor salva de quando a tela abriu,
+  // não pra mais recente (ex: depois de um Salvar bem-sucedido).
+  const savedColorsRef = useRef({ orgColorPrimary, orgColorPrimaryLight, orgColorSidebar, orgColorAccentLight });
+  useEffect(() => {
+    savedColorsRef.current = { orgColorPrimary, orgColorPrimaryLight, orgColorSidebar, orgColorAccentLight };
+  }, [orgColorPrimary, orgColorPrimaryLight, orgColorSidebar, orgColorAccentLight]);
+
+  useEffect(() => {
+    return () => {
+      const { orgColorPrimary, orgColorPrimaryLight, orgColorSidebar, orgColorAccentLight } = savedColorsRef.current;
+      const root = document.documentElement.style;
+      const primary = orgColorPrimary ? hexToRgbChannels(orgColorPrimary) : null;
+      const lightHex = orgColorPrimaryLight && orgColorPrimaryLight !== "#C8D44E"
+        ? orgColorPrimaryLight
+        : orgColorPrimary ? deriveSecondaryHex(orgColorPrimary) : null;
+      const light = lightHex ? hexToRgbChannels(lightHex) : null;
+      const sidebar = orgColorSidebar ? hexToRgbChannels(orgColorSidebar) : null;
+      const accentLight = orgColorAccentLight ? hexToRgbChannels(orgColorAccentLight) : null;
+      if (primary) root.setProperty("--lz-brand-rgb", primary); else root.removeProperty("--lz-brand-rgb");
+      if (light) root.setProperty("--lz-brand-light-rgb", light); else root.removeProperty("--lz-brand-light-rgb");
+      if (sidebar) root.setProperty("--lz-sidebar-rgb", sidebar); else root.removeProperty("--lz-sidebar-rgb");
+      if (accentLight) root.setProperty("--lz-accent-ink-override", `rgb(${accentLight})`); else root.removeProperty("--lz-accent-ink-override");
+    };
+  }, []);
+
   function save() {
     updateMyOrg.mutate({
       data: {
@@ -1650,6 +1702,27 @@ function OrgBrandingSection({
           <ColorPickerField label="Cor principal" value={colorPrimary} onChange={setColorPrimary} presets={BRAND_PRESETS} />
           <ColorPickerField label="Cor clara (fundos suaves)" value={colorPrimaryLight} onChange={setColorPrimaryLight} presets={BRAND_LIGHT_PRESETS} />
           <ColorPickerField label="Cor da barra lateral" value={colorSidebar} onChange={setColorSidebar} presets={SIDEBAR_PRESETS} />
+        </div>
+
+        {/* Pré-visualização ao vivo — enquanto você mexe nas 3 cores acima
+            (antes de salvar), a barra lateral de verdade já muda também (dá
+            uma olhada à esquerda). Esse bloco existe pra quem tá no celular
+            (sem barra lateral visível) conseguir ver o mesmo contraste. */}
+        <div className="rounded-lg p-4 flex items-center gap-4" style={{ background: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}>
+          <div className="h-16 w-10 rounded-md shrink-0" style={{ backgroundColor: colorSidebar || "#111F5C" }} />
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40">Pré-visualização ao vivo</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold px-3 py-1.5 rounded-md" style={{ backgroundColor: colorPrimary || "#C8D44E", color: "#0D0D0D" }}>Botão principal</span>
+              <span
+                className="text-xs font-semibold px-3 py-1.5 rounded-full"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${colorPrimaryLight || "#C8D44E"} 22%, transparent)`,
+                  color: colorAccentLight || darkenHex(colorPrimary || "#C8D44E", 0.55),
+                }}
+              >Cor de destaque</span>
+            </div>
+          </div>
         </div>
 
         <div className="pt-2 border-t border-foreground/6">

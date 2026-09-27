@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ChevronLeft, Megaphone, Eye, EyeOff, X, Share2, Copy, Check, RefreshCw, UserPlus } from "lucide-react";
-import { campaignsQO, campaignItemsQO, clientsQO, useApi } from "@/lib/luzeria/queries";
+import { Plus, Pencil, Trash2, ChevronLeft, Megaphone, Eye, EyeOff, X, Share2, Copy, Check, RefreshCw, UserPlus, FolderOpen, CalendarDays } from "lucide-react";
+import { campaignsQO, campaignItemsQO, clientsQO, profilesQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { CONTENT_TYPE_LABEL, type ContentType } from "@/lib/luzeria/types";
+import { CONTENT_TYPE_LABEL, type ContentType, type Profile } from "@/lib/luzeria/types";
 import type { Campaign } from "@/lib/luzeria/campaigns.functions";
 
 const PUBLIC_BASE = import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com.br";
@@ -22,7 +22,7 @@ export function CampanhasTab({ clientId, monthKey, isAdmin }: { clientId: string
   const { data: campaigns = [] } = useQuery(campaignsQO(clientId));
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [editingCampaign, setEditingCampaign] = useState<{ id: string; name: string; description: string; briefing: string; materials: string; services: string; valueCents: number | null } | null>(null);
+  const [editingCampaign, setEditingCampaign] = useState<{ id: string; name: string; description: string; briefing: string; materials: string; services: string; valueCents: number | null; driveFolderUrl: string } | null>(null);
   const api = useApi();
 
   const activeCampaign = campaigns.find((c) => c.id === activeCampaignId) ?? null;
@@ -75,7 +75,7 @@ export function CampanhasTab({ clientId, monthKey, isAdmin }: { clientId: string
                   </div>
                   {isAdmin && (
                     <div className="flex items-center gap-1 shrink-0">
-                      <span onClick={(e) => { e.stopPropagation(); setEditingCampaign({ id: c.id, name: c.name, description: c.description ?? "", briefing: c.briefing ?? "", materials: c.materials ?? "", services: c.services ?? "", valueCents: c.valueCents }); }}
+                      <span onClick={(e) => { e.stopPropagation(); setEditingCampaign({ id: c.id, name: c.name, description: c.description ?? "", briefing: c.briefing ?? "", materials: c.materials ?? "", services: c.services ?? "", valueCents: c.valueCents, driveFolderUrl: c.driveFolderUrl ?? "" }); }}
                         className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5"><Pencil size={12} /></span>
                       <span
                         onClick={async (e) => {
@@ -106,9 +106,9 @@ export function CampanhasTab({ clientId, monthKey, isAdmin }: { clientId: string
 }
 
 function CampaignForm({ initial, onCancel, onSave }: {
-  initial?: { name: string; description: string; briefing: string; materials: string; services: string; valueCents: number | null };
+  initial?: { name: string; description: string; briefing: string; materials: string; services: string; valueCents: number | null; driveFolderUrl?: string };
   onCancel: () => void;
-  onSave: (vals: { name: string; description: string | null; briefing: string | null; materials: string | null; services: string | null; valueCents: number | null }) => void;
+  onSave: (vals: { name: string; description: string | null; briefing: string | null; materials: string | null; services: string | null; valueCents: number | null; driveFolderUrl: string | null }) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -116,6 +116,7 @@ function CampaignForm({ initial, onCancel, onSave }: {
   const [materials, setMaterials] = useState(initial?.materials ?? "");
   const [services, setServices] = useState(initial?.services ?? "");
   const [value, setValue] = useState<string | number>(initial?.valueCents != null ? (initial.valueCents / 100).toFixed(2) : "");
+  const [driveFolderUrl, setDriveFolderUrl] = useState(initial?.driveFolderUrl ?? "");
   return (
     <div className="rounded-lg p-4 space-y-3" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
       <div>
@@ -140,9 +141,15 @@ function CampaignForm({ initial, onCancel, onSave }: {
           <textarea value={materials} onChange={(e) => setMaterials(e.target.value)} rows={3} placeholder="Ex: 3 reels, 5 fotos tratadas" className={inp + " resize-y"} />
         </div>
       </div>
-      <div>
-        <label className={label}>Valor cobrado (opcional)</label>
-        <input type="number" min="0" step="0.01" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Não informado" className={inp + " sm:w-40"} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className={label}>Valor cobrado (opcional)</label>
+          <input type="number" min="0" step="0.01" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Não informado" className={inp} />
+        </div>
+        <div>
+          <label className={label}>Link da pasta no Drive (opcional)</label>
+          <input value={driveFolderUrl} onChange={(e) => setDriveFolderUrl(e.target.value)} placeholder="https://drive.google.com/..." className={inp} />
+        </div>
       </div>
       <div className="flex items-center justify-end gap-2">
         <button onClick={onCancel} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
@@ -155,6 +162,7 @@ function CampaignForm({ initial, onCancel, onSave }: {
             materials: materials.trim() || null,
             services: services.trim() || null,
             valueCents: value === "" ? null : Math.round(Number(value) * 100),
+            driveFolderUrl: driveFolderUrl.trim() || null,
           })}
           className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-40"
         >Salvar</button>
@@ -198,7 +206,7 @@ function CampaignDetail({ campaign, clientId, monthKey, isAdmin, onBack }: {
       {editingProject ? (
         <div className="mb-4">
           <CampaignForm
-            initial={{ name: campaign.name, description: campaign.description ?? "", briefing: campaign.briefing ?? "", materials: campaign.materials ?? "", services: campaign.services ?? "", valueCents: campaign.valueCents }}
+            initial={{ name: campaign.name, description: campaign.description ?? "", briefing: campaign.briefing ?? "", materials: campaign.materials ?? "", services: campaign.services ?? "", valueCents: campaign.valueCents, driveFolderUrl: campaign.driveFolderUrl ?? "" }}
             onCancel={() => setEditingProject(false)}
             onSave={(vals) => { upsertCampaign.mutate({ data: { id: campaign.id, clientId, ...vals } }); setEditingProject(false); }}
           />
@@ -243,8 +251,19 @@ function CampaignDetail({ campaign, clientId, monthKey, isAdmin, onBack }: {
               )}
             </div>
           )}
+          {campaign.driveFolderUrl && (
+            <a
+              href={campaign.driveFolderUrl} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold pt-1"
+              style={{ color: "var(--lz-accent-ink)" }}
+            >
+              <FolderOpen size={13} /> Abrir pasta no Drive
+            </a>
+          )}
         </div>
       )}
+
+      <CampaignCaptureSection campaign={campaign} clientId={clientId} monthKey={monthKey} isAdmin={isAdmin} />
 
       {isAdmin && (
         <div className="flex items-center gap-2 mb-4">
@@ -333,6 +352,108 @@ function CampaignDetail({ campaign, clientId, monthKey, isAdmin, onBack }: {
               )}
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function fmtCaptureDate(iso: string) {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+/** Data em que o material dessa campanha vai ser gravado/captado. Ao
+ * definir, cria (ou atualiza) um item "Gravação" ligado à campanha — que já
+ * aparece em Minhas Demandas dos responsáveis escolhidos — e tenta criar um
+ * evento de dia inteiro na Google Agenda pessoal de cada um (quem não
+ * conectou é ignorado, sem erro nenhum aparecer aqui). */
+function CampaignCaptureSection({ campaign, clientId, monthKey, isAdmin }: {
+  campaign: Campaign; clientId: string; monthKey: string; isAdmin: boolean;
+}) {
+  const { data: profiles = [] } = useQuery(profilesQO());
+  const { setCampaignCapture } = useApi();
+  const [editing, setEditing] = useState(false);
+  const [date, setDate] = useState(campaign.captureDate ?? "");
+  const [assigneeIds, setAssigneeIds] = useState<string[]>(campaign.captureAssigneeIds);
+
+  function startEditing() {
+    setDate(campaign.captureDate ?? "");
+    setAssigneeIds(campaign.captureAssigneeIds);
+    setEditing(true);
+  }
+
+  function save() {
+    setCampaignCapture.mutate(
+      { data: { campaignId: campaign.id, clientId, monthKey, date: date || null, assigneeIds } },
+      { onSuccess: () => setEditing(false) },
+    );
+  }
+
+  const assigneeNames = campaign.captureAssigneeIds
+    .map((id) => profiles.find((p: Profile) => p.id === id)?.name)
+    .filter(Boolean);
+
+  if (!isAdmin && !campaign.captureDate) return null;
+
+  return (
+    <div className="rounded-lg p-4 mb-4" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
+      {editing ? (
+        <div className="space-y-3">
+          <div className={label}>Data de captação</div>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inp + " sm:w-48"} />
+          <div>
+            <label className={label}>Responsáveis</label>
+            <div className="flex flex-wrap gap-1.5">
+              {profiles.map((p: Profile) => {
+                const checked = assigneeIds.includes(p.id);
+                return (
+                  <button
+                    key={p.id} type="button"
+                    onClick={() => setAssigneeIds((ids) => checked ? ids.filter((id) => id !== p.id) : [...ids, p.id])}
+                    className="inline-flex items-center gap-1.5 rounded-full pl-1 pr-2.5 py-1 text-xs font-semibold transition-colors border"
+                    style={{
+                      backgroundColor: checked ? "rgba(var(--lz-brand-light-rgb),0.15)" : "color-mix(in srgb, var(--foreground) 5%, transparent)",
+                      borderColor: checked ? "rgb(var(--lz-brand-rgb))" : "transparent",
+                      color: checked ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
+                    }}
+                  >
+                    {checked ? <Check size={12} /> : <span className="w-3" />} {p.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <p className="text-[11px] text-foreground/35">
+            Isso cria/atualiza uma demanda de Gravação pra essa campanha e tenta agendar na Google Agenda de cada
+            responsável (quem não conectou a agenda pessoal em Perfil só não recebe o evento).
+          </p>
+          <div className="flex items-center justify-end gap-2">
+            <button onClick={() => setEditing(false)} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
+            <button onClick={save} disabled={setCampaignCapture.isPending} className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50">
+              {setCampaignCapture.isPending ? "Salvando…" : "Salvar"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <CalendarDays size={15} className="text-[var(--lz-accent-ink)] shrink-0" />
+            {campaign.captureDate ? (
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-foreground">Captação em {fmtCaptureDate(campaign.captureDate)}</div>
+                {assigneeNames.length > 0 && (
+                  <div className="text-[11px] text-foreground/40 truncate">{assigneeNames.join(", ")}</div>
+                )}
+              </div>
+            ) : (
+              <span className="text-sm text-foreground/40">Data de captação não definida</span>
+            )}
+          </div>
+          {isAdmin && (
+            <button onClick={startEditing} className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-md text-foreground/60 hover:text-foreground border border-foreground/10 hover:border-foreground/25 transition-colors">
+              {campaign.captureDate ? "Editar" : "Definir data"}
+            </button>
+          )}
         </div>
       )}
     </div>

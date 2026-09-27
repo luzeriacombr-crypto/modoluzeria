@@ -130,7 +130,7 @@ export const getMyCalendarConnection = createServerFn({ method: "GET" })
     };
   });
 
-async function getValidCalendarAccessToken(supabase: any, userId: string): Promise<string | null> {
+export async function getValidCalendarAccessToken(supabase: any, userId: string): Promise<string | null> {
   const { data: row } = await supabase
     .from("user_calendar_tokens")
     .select("refresh_token, access_token, access_token_expires_at")
@@ -298,3 +298,62 @@ export const createCalendarEvent = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+/* ===== EVENTOS DE CAMPANHA (criados pelo admin em nome de um responsável)
+ * — diferente de createCalendarEvent acima (a pessoa cria pra si mesma),
+ * aqui quem chama recebe explicitamente um supabase de SERVICE ROLE (nunca
+ * o context.supabase de quem está logado), porque precisa ler o refresh
+ * token de OUTRA pessoa — user_calendar_tokens só deixa cada um ler a
+ * própria linha. Falha (sem conexão, token revogado, API fora do ar) nunca
+ * derruba a campanha: só retorna null/não faz nada, por decisão do Junior
+ * de ignorar silenciosamente quem não conectou a agenda. ===== */
+
+/** Cria (POST) ou atualiza (PATCH, se já existir um evento anterior) um
+ * evento de DIA INTEIRO — a data de captação é só uma data, sem horário.
+ * Retorna o id do evento (novo ou existente) pra guardar em
+ * campaign_calendar_events, ou null se a pessoa não tem Google Agenda
+ * conectado. */
+export async function upsertCampaignCalendarEvent(
+  supabaseAdmin: any,
+  userId: string,
+  existingEventId: string | null,
+  event: { title: string; date: string },
+): Promise<string | null> {
+  const accessToken = await getValidCalendarAccessToken(supabaseAdmin, userId);
+  if (!accessToken) return null;
+
+  const [y, mo, d] = event.date.split("-").map(Number);
+  const next = new Date(Date.UTC(y, mo - 1, d + 1));
+  const nextDay = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}-${String(next.getUTCDate()).padStart(2, "0")}`;
+  const body = { summary: event.title, start: { date: event.date }, end: { date: nextDay } };
+  const url = existingEventId ? `${GCAL_EVENTS_URL}/${existingEventId}` : GCAL_EVENTS_URL;
+
+  const res = await fetch(url, {
+    method: existingEventId ? "PATCH" : "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    // O evento antigo pode ter sido apagado manualmente na agenda da
+    // pessoa (PATCH em algo que não existe mais dá 404) — tenta criar um
+    // novo em vez de deixar essa pessoa sem evento nenhum.
+    if (existingEventId && res.status === 404) {
+      return upsertCampaignCalendarEvent(supabaseAdmin, userId, null, event);
+    }
+    console.error("[gcal] falha ao criar/atualizar evento de campanha", res.status, await res.text().catch(() => ""));
+    return null;
+  }
+  const json: any = await res.json();
+  return (json?.id as string) ?? null;
+}
+
+/** Apaga o evento de campanha da agenda de alguém — usado quando a pessoa
+ * sai da lista de responsáveis, ou a data de captação é removida. */
+export async function deleteCampaignCalendarEvent(supabaseAdmin: any, userId: string, eventId: string): Promise<void> {
+  const accessToken = await getValidCalendarAccessToken(supabaseAdmin, userId);
+  if (!accessToken) return;
+  await fetch(`${GCAL_EVENTS_URL}/${eventId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  }).catch(() => {});
+}
