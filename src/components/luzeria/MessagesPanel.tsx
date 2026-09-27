@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { MessageSquare, ChevronDown, Loader2, Mail, Phone, ExternalLink, Sparkles } from "lucide-react";
+import { MessageSquare, ChevronDown, Loader2, Mail, Phone, ExternalLink, Sparkles, Check, Save } from "lucide-react";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { listInactiveOrgsForReengagement, sendReengagementEmails, getReengagementWhatsappLinks } from "@/lib/luzeria/reengagement.functions";
-import type { InactiveOrgRow } from "@/lib/luzeria/reengagement.functions";
+import { listInactiveOrgsForReengagement, sendReengagementEmails, getReengagementWhatsappLinks, getMessageTemplateOverrides, saveMessageTemplate } from "@/lib/luzeria/reengagement.functions";
+import type { InactiveOrgRow, MessageTemplateKey } from "@/lib/luzeria/reengagement.functions";
 
 function formatDate(iso: string | null) {
   if (!iso) return "Nunca";
@@ -91,6 +91,16 @@ export function MessagesPanel({ openPreset, onConsumeOpenPreset }: { openPreset?
   const [subject, setSubject] = useState("Sentimos sua falta no Modo Criador");
   const [body, setBody] = useState(DEFAULT_MESSAGE);
   const [waLinks, setWaLinks] = useState<{ orgId: string; orgName: string; whatsapp: string | null; link: string | null }[] | null>(null);
+  // Marca quem já foi aberto — sem isso, numa lista de dezenas de agências
+  // sem separação visual nenhuma, era fácil perder a linha e clicar duas
+  // vezes na mesma (feedback real do Junior).
+  const [openedWaIds, setOpenedWaIds] = useState<Set<string>>(new Set());
+
+  const qc = useQueryClient();
+  const { data: templateOverrides = {} } = useQuery({
+    queryKey: ["message-template-overrides"],
+    queryFn: () => getMessageTemplateOverrides(),
+  });
 
   const search = useMutation({
     mutationFn: useServerFn(listInactiveOrgsForReengagement),
@@ -109,15 +119,33 @@ export function MessagesPanel({ openPreset, onConsumeOpenPreset }: { openPreset?
 
   const genWaLinks = useMutation({
     mutationFn: useServerFn(getReengagementWhatsappLinks),
-    onSuccess: (rows: any) => setWaLinks(rows),
+    onSuccess: (rows: any) => { setWaLinks(rows); setOpenedWaIds(new Set()); },
     onError: (e: any) => toastFriendlyError(e, "Não consegui gerar os links de WhatsApp."),
+  });
+
+  const saveTemplate = useMutation({
+    mutationFn: useServerFn(saveMessageTemplate),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["message-template-overrides"] });
+      toast.success("Salvo como padrão — na próxima vez já abre assim.");
+    },
+    onError: (e: any) => toastFriendlyError(e, "Não consegui salvar como padrão."),
   });
 
   function selectActivationPreset(key: ActivationPresetKey) {
     setMode(key);
-    setSubject(ACTIVATION_PRESETS[key].subject);
-    setBody(ACTIVATION_PRESETS[key].body);
+    const tpl = (templateOverrides as Record<string, { subject: string; body: string }>)[key] ?? ACTIVATION_PRESETS[key];
+    setSubject(tpl.subject);
+    setBody(tpl.body);
     search.mutate({ data: ACTIVATION_PRESETS[key].filters });
+  }
+
+  function toggleCustomMode() {
+    if (mode === "custom") { setMode(null); return; }
+    setMode("custom");
+    const tpl = (templateOverrides as Record<string, { subject: string; body: string }>).custom;
+    setSubject(tpl?.subject ?? "Sentimos sua falta no Modo Criador");
+    setBody(tpl?.body ?? DEFAULT_MESSAGE);
   }
 
   useEffect(() => {
@@ -181,7 +209,7 @@ export function MessagesPanel({ openPreset, onConsumeOpenPreset }: { openPreset?
               ))}
             </div>
             <button
-              onClick={() => setMode(mode === "custom" ? null : "custom")}
+              onClick={toggleCustomMode}
               className="mt-2 text-[11px] text-foreground/50 hover:text-foreground underline underline-offset-2"
             >
               {mode === "custom" ? "Esconder filtro personalizado" : "ou personalize o filtro"}
@@ -287,6 +315,16 @@ export function MessagesPanel({ openPreset, onConsumeOpenPreset }: { openPreset?
               <p className="text-[10.5px] text-foreground/35 mt-1">
                 Use <code className="text-foreground/60">{"{nome}"}</code> pro primeiro nome do responsável, e <code className="text-foreground/60">{"{clientes}"}</code> pra quantidade de clientes da agência (ex.: "2 clientes") — os dois são preenchidos sozinhos por agência.
               </p>
+              {mode && (
+                <button
+                  onClick={() => saveTemplate.mutate({ data: { key: mode, subject, body } })}
+                  disabled={saveTemplate.isPending || !body.trim()}
+                  className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-foreground/50 hover:text-foreground disabled:opacity-40 transition"
+                >
+                  {saveTemplate.isPending ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
+                  Salvar como padrão desse preset
+                </button>
+              )}
 
               <div className="flex flex-wrap gap-2 mt-3">
                 <button
@@ -313,20 +351,43 @@ export function MessagesPanel({ openPreset, onConsumeOpenPreset }: { openPreset?
 
           {waLinks && (
             <div>
-              <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider mb-2">Links de WhatsApp — clique um por um pra mandar</p>
-              <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                {waLinks.map((r) => (
-                  <div key={r.orgId} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="text-foreground/80 truncate">{r.orgName}</span>
-                    {r.link ? (
-                      <a href={r.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] font-semibold shrink-0" style={{ color: "#25D366" }}>
-                        Abrir <ExternalLink size={11} />
-                      </a>
-                    ) : (
-                      <span className="text-[11px] text-foreground/30 shrink-0">sem WhatsApp</span>
-                    )}
-                  </div>
-                ))}
+              <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider mb-2">
+                Links de WhatsApp — clique um por um pra mandar
+                {openedWaIds.size > 0 && <span className="normal-case font-normal text-foreground/30"> · {openedWaIds.size} já aberto{openedWaIds.size === 1 ? "" : "s"}</span>}
+              </p>
+              <div className="max-h-64 overflow-y-auto pr-1 divide-y divide-foreground/8 border border-foreground/8 rounded-lg">
+                {waLinks.map((r) => {
+                  const opened = openedWaIds.has(r.orgId);
+                  function toggleOpened() {
+                    setOpenedWaIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(r.orgId)) next.delete(r.orgId); else next.add(r.orgId);
+                      return next;
+                    });
+                  }
+                  return (
+                    <div key={r.orgId} className="flex items-center gap-2 text-sm px-2.5 py-2" style={opened ? { opacity: 0.45 } : undefined}>
+                      <input
+                        type="checkbox" checked={opened} onChange={toggleOpened}
+                        title="Marcar como já aberto/enviado"
+                        className="shrink-0 accent-[#25D366]"
+                      />
+                      <span className="text-foreground/80 truncate min-w-0 flex-1">{r.orgName}</span>
+                      {r.link ? (
+                        <a
+                          href={r.link} target="_blank" rel="noopener noreferrer"
+                          onClick={() => setOpenedWaIds((prev) => new Set(prev).add(r.orgId))}
+                          className="inline-flex items-center gap-1 text-[12px] font-semibold shrink-0"
+                          style={{ color: opened ? "color-mix(in srgb, var(--foreground) 50%, transparent)" : "#25D366" }}
+                        >
+                          {opened ? <>Aberto <Check size={11} /></> : <>Abrir <ExternalLink size={11} /></>}
+                        </a>
+                      ) : (
+                        <span className="text-[11px] text-foreground/30 shrink-0">sem WhatsApp</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

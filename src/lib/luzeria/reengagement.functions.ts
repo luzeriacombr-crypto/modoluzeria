@@ -244,3 +244,38 @@ export const getReengagementWhatsappLinks = createServerFn({ method: "POST" })
     if (logRows.length > 0) await supabaseAdmin.from("agency_reengagement_messages").insert(logRows);
     return rows;
   });
+
+/* ===== Assunto/mensagem editados viram o novo padrão desse preset (ou do
+ * filtro personalizado) — sem isso, toda edição se perdia ao trocar de aba
+ * ou preset, e o Junior tinha que reescrever do zero (feedback real dele). */
+
+const MESSAGE_TEMPLATE_KEYS = ["noClients", "fewClients", "noTeam", "custom"] as const;
+export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
+
+export const getMessageTemplateOverrides = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    assertPlatformAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await (supabaseAdmin as any).from("message_templates").select("key, subject, body");
+    const byKey: Record<string, { subject: string; body: string }> = {};
+    (rows ?? []).forEach((r: any) => { byKey[r.key] = { subject: r.subject ?? "", body: r.body }; });
+    return byKey;
+  });
+
+export const saveMessageTemplate = createServerFn({ method: "POST" })
+  .inputValidator((d: { key: MessageTemplateKey; subject: string; body: string }) =>
+    z.object({
+      key: z.enum(MESSAGE_TEMPLATE_KEYS),
+      subject: z.string().trim().max(200),
+      body: z.string().trim().min(1).max(2000),
+    }).parse(d))
+  .middleware([requireActiveProfile])
+  .handler(async ({ data, context }) => {
+    assertPlatformAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as any).from("message_templates")
+      .upsert({ key: data.key, subject: data.subject, body: data.body, updated_by: context.userId, updated_at: new Date().toISOString() });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

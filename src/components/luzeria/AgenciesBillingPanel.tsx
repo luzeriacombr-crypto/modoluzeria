@@ -894,7 +894,11 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
   // quebrado (WhatsApp tenta interpretar como outro país e falha).
   const rawDigits = (org.whatsapp ?? "").replace(/\D/g, "");
   const digits = rawDigits && rawDigits.length <= 11 ? `55${rawDigits}` : rawDigits;
-  const namePart = org.ownerName ? ` ${org.ownerName}` : "";
+  // Só o primeiro nome — o campo ownerName às vezes tem nome completo
+  // ("Adriano Silva"), e a mensagem de boas-vindas fica mais natural/curta
+  // chamando só de "Adriano".
+  const firstName = org.ownerName ? org.ownerName.trim().split(/\s+/)[0] : "";
+  const namePart = firstName ? ` ${firstName}` : "";
   const welcomeMessage = (customTemplate ?? DEFAULT_WELCOME_TEMPLATE).replaceAll("{nome}", namePart);
 
   const approveResellerMutation = useMutation({

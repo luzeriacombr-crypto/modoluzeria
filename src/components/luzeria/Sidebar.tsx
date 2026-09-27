@@ -562,8 +562,8 @@ function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCa
           key={cat}
           name={cat}
           color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
-          defaultOpen={cat !== "Ex-clientes"}
-          forceOpen={search.trim().length > 0}
+          defaultOpen={false}
+          forceOpen={search.trim().length > 0 || list.some((c) => pathname === `/cliente/${c.id}`)}
           count={list.length}
           onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
           addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
