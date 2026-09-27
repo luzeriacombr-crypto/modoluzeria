@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, ChevronLeft, Megaphone, Eye, EyeOff, X } from "lucide-react";
-import { campaignsQO, campaignItemsQO, useApi } from "@/lib/luzeria/queries";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, ChevronLeft, Megaphone, Eye, EyeOff, X, Share2, Copy, Check, RefreshCw, UserPlus } from "lucide-react";
+import { campaignsQO, campaignItemsQO, clientsQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { CONTENT_TYPE_LABEL, type ContentType } from "@/lib/luzeria/types";
 import type { Campaign } from "@/lib/luzeria/campaigns.functions";
+
+const PUBLIC_BASE = import.meta.env.VITE_APP_URL ?? "https://www.modocriador.com.br";
 
 const ITEM_TYPES: ContentType[] = ["post", "reel", "story", "outros", "gravacao", "roteiro", "sistema"];
 const inp = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
@@ -168,6 +171,8 @@ function CampaignDetail({ campaign, clientId, monthKey, isAdmin, onBack }: {
   const { addContentItem, setItemCampaign, upsertCampaign } = useApi();
   const [adding, setAdding] = useState(false);
   const [editingProject, setEditingProject] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const [newType, setNewType] = useState<ContentType>("post");
   const [newTitle, setNewTitle] = useState("");
   const [newInternal, setNewInternal] = useState(false);
@@ -241,6 +246,29 @@ function CampaignDetail({ campaign, clientId, monthKey, isAdmin, onBack }: {
         </div>
       )}
 
+      {isAdmin && (
+        <div className="flex items-center gap-2 mb-4">
+          <button
+            onClick={() => { setSharing((v) => !v); setInviting(false); }}
+            className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full text-foreground/60 hover:text-foreground border border-foreground/10 hover:border-foreground/25 transition-colors"
+          ><Share2 size={12} /> Compartilhar</button>
+          <button
+            onClick={() => { setInviting((v) => !v); setSharing(false); }}
+            className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full text-foreground/60 hover:text-foreground border border-foreground/10 hover:border-foreground/25 transition-colors"
+          ><UserPlus size={12} /> Convidar pessoa</button>
+        </div>
+      )}
+      {sharing && (
+        <div className="mb-4">
+          <CampaignShareBlock campaignId={campaign.id} />
+        </div>
+      )}
+      {inviting && (
+        <div className="mb-4">
+          <InviteCollaboratorForm clientId={clientId} onDone={() => setInviting(false)} />
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-3 mb-4">
         <span className="text-[11px] font-bold uppercase tracking-wider text-foreground/40">Itens do projeto ({items.length})</span>
         {isAdmin && !adding && (
@@ -307,6 +335,111 @@ function CampaignDetail({ campaign, clientId, monthKey, isAdmin, onBack }: {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Link público "só pra ver" desse projeto — pra mandar pra quem não faz
+ * parte da equipe (ex.: uma influenciadora acompanhando o trabalho), sem
+ * precisar de login e sem contar como vaga. Não mostra o valor cobrado. */
+function CampaignShareBlock({ campaignId }: { campaignId: string }) {
+  const { getOrCreateCampaignShareToken, rotateCampaignShareToken } = useApi();
+  const [url, setUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function ensureLink() {
+    if (url) return url;
+    const r = await getOrCreateCampaignShareToken.mutateAsync({ data: { campaignId } });
+    const link = `${PUBLIC_BASE}/campanha/${r.token}`;
+    setUrl(link);
+    return link;
+  }
+
+  async function copy() {
+    const link = await ensureLink();
+    await navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function regenerate() {
+    const r = await rotateCampaignShareToken.mutateAsync({ data: { campaignId } });
+    setUrl(`${PUBLIC_BASE}/campanha/${r.token}`);
+    toast.success("Novo link gerado — o anterior parou de funcionar.");
+  }
+
+  return (
+    <div className="rounded-lg p-4 space-y-2.5" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
+      <p className="text-[11px] text-foreground/40">
+        Qualquer pessoa com esse link vê o briefing, serviços, materiais e itens desse projeto — sem login e sem poder editar nada. Não mostra o valor cobrado.
+      </p>
+      <div className="flex items-center gap-2">
+        <input readOnly value={url ?? ""} placeholder="Clique em copiar pra gerar o link" className={inp + " text-foreground/60"} />
+        <button
+          onClick={copy}
+          disabled={getOrCreateCampaignShareToken.isPending}
+          className="lz-btn-primary text-xs px-3 py-2 rounded-md inline-flex items-center gap-1.5 shrink-0"
+        >{copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "Copiado" : "Copiar"}</button>
+        {url && (
+          <button
+            onClick={regenerate}
+            disabled={rotateCampaignShareToken.isPending}
+            title="Gerar novo link (o de antes para de funcionar)"
+            className="p-2 rounded text-foreground/40 hover:text-foreground hover:bg-foreground/5 shrink-0"
+          ><RefreshCw size={13} /></button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Convida um colaborador restrito a UM cliente (todo o cliente, não só
+ * essa campanha — restrição por campanha específica ainda não existe).
+ * Reaproveita o convite de equipe normal (adminCreateUser) + a restrição
+ * de acesso por cliente que já existe (setProfileClientAccess): a pessoa
+ * entra como membro de verdade e conta na vaga do plano. */
+function InviteCollaboratorForm({ clientId, onDone }: { clientId: string; onDone: () => void }) {
+  const { data: clients = [] } = useQuery(clientsQO());
+  const clientName = clients.find((c) => c.id === clientId)?.name ?? "esse cliente";
+  const { adminCreateUser, setProfileClientAccess } = useApi();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState(() => Math.random().toString(36).slice(-8));
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit() {
+    if (!name.trim() || !email.trim() || password.length < 6) return;
+    setSubmitting(true);
+    try {
+      const result: any = await adminCreateUser.mutateAsync({ data: { name: name.trim(), email: email.trim(), password, role: "member" } });
+      if (result?.id) {
+        await setProfileClientAccess.mutateAsync({ data: { profileId: result.id, restricted: true, clientIds: [clientId] } });
+      }
+      toast.success(`${name.trim()} convidado(a) — recebeu login por e-mail e só vê o cliente ${clientName}.`);
+      onDone();
+    } catch {
+      // erro específico já vira toast dentro de cada mutation
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="rounded-lg p-4 space-y-2.5" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
+      <p className="text-[11px] text-foreground/40">
+        Essa pessoa entra como colaboradora de verdade — vê e mexe só no cliente <b className="text-foreground/70">{clientName}</b> (não os outros clientes da sua agência), recebe login por e-mail, e conta como 1 vaga da sua equipe.
+      </p>
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" className={inp} />
+      <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="E-mail" className={inp} />
+      <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Senha provisória" className={inp} />
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={onDone} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
+        <button
+          disabled={!name.trim() || !email.trim() || password.length < 6 || submitting}
+          onClick={submit}
+          className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-40"
+        >{submitting ? "Convidando…" : "Convidar"}</button>
+      </div>
     </div>
   );
 }

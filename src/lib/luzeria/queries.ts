@@ -114,6 +114,7 @@ import {
   getPublishedBlogPosts, getPublishedBlogPost,
 } from "./blog-admin.functions";
 import { listCampaigns, upsertCampaign, deleteCampaign, listCampaignItems, setItemCampaign } from "./campaigns.functions";
+import { getOrCreateCampaignShareToken, rotateCampaignShareToken, getPublicCampaign } from "./campaign-share.functions";
 import { listContentGroups, createContentGroup, renameContentGroup, deleteContentGroup, setItemGroup, reorderContentGroups } from "./content-groups.functions";
 import { listLeads, upsertLead, moveLeadStage, scheduleLeadFollowup, markLeadLost, deleteLead, markLeadWon, linkLeadToClient, markLeadWonNoClient, logLeadContact, listLeadContacts, listSalesStages, upsertSalesStage, deleteSalesStage } from "./sales-pipeline.functions";
 import { listTrash, restoreItem, purgeItem } from "./trash.functions";
@@ -694,6 +695,14 @@ export const clientFeedbackQO = (itemId: string | null) =>
     queryFn: () => listClientFeedback({ data: { itemId: itemId! } }),
     enabled: !!itemId,
     staleTime: 15_000,
+  });
+
+export const publicCampaignQO = (token: string | null) =>
+  queryOptions({
+    queryKey: ["public-campaign", token],
+    queryFn: () => getPublicCampaign({ data: { token: token! } }),
+    enabled: !!token,
+    staleTime: 30_000,
   });
 
 export const publicFeedQO = (token: string | null) =>
@@ -1343,6 +1352,14 @@ export function useApi() {
       mutationFn: useServerFn(deleteCampaign),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["campaigns"] }); invalidateAll(); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao remover campanha."),
+    }),
+    getOrCreateCampaignShareToken: useMutation({
+      mutationFn: useServerFn(getOrCreateCampaignShareToken),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao gerar link de compartilhamento."),
+    }),
+    rotateCampaignShareToken: useMutation({
+      mutationFn: useServerFn(rotateCampaignShareToken),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao gerar novo link."),
     }),
     setItemCampaign: useMutation({
       mutationFn: useServerFn(setItemCampaign),

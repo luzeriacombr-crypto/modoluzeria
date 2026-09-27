@@ -40,6 +40,7 @@ import { Route as PlanejamentoTokenRouteImport } from './routes/planejamento.$to
 import { Route as OauthInstagramCallbackClienteRouteImport } from './routes/oauth.instagram-callback-cliente'
 import { Route as ContratoTokenRouteImport } from './routes/contrato.$token'
 import { Route as ConectarInstagramTokenRouteImport } from './routes/conectar-instagram.$token'
+import { Route as CampanhaTokenRouteImport } from './routes/campanha.$token'
 import { Route as BlogSlugRouteImport } from './routes/blog_.$slug'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
 import { Route as ApiMcpRouteImport } from './routes/api.mcp'
@@ -237,6 +238,11 @@ const ContratoTokenRoute = ContratoTokenRouteImport.update({
 const ConectarInstagramTokenRoute = ConectarInstagramTokenRouteImport.update({
   id: '/conectar-instagram/$token',
   path: '/conectar-instagram/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CampanhaTokenRoute = CampanhaTokenRouteImport.update({
+  id: '/campanha/$token',
+  path: '/campanha/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
@@ -487,6 +493,7 @@ export interface FileRoutesByFullPath {
   '/api/mcp': typeof ApiMcpRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/campanha/$token': typeof CampanhaTokenRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
@@ -557,6 +564,7 @@ export interface FileRoutesByTo {
   '/api/mcp': typeof ApiMcpRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/campanha/$token': typeof CampanhaTokenRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
@@ -629,6 +637,7 @@ export interface FileRoutesById {
   '/api/mcp': typeof ApiMcpRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog_/$slug': typeof BlogSlugRoute
+  '/campanha/$token': typeof CampanhaTokenRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
@@ -701,6 +710,7 @@ export interface FileRouteTypes {
     | '/api/mcp'
     | '/assinar/completar'
     | '/blog/$slug'
+    | '/campanha/$token'
     | '/conectar-instagram/$token'
     | '/contrato/$token'
     | '/oauth/instagram-callback-cliente'
@@ -771,6 +781,7 @@ export interface FileRouteTypes {
     | '/api/mcp'
     | '/assinar/completar'
     | '/blog/$slug'
+    | '/campanha/$token'
     | '/conectar-instagram/$token'
     | '/contrato/$token'
     | '/oauth/instagram-callback-cliente'
@@ -842,6 +853,7 @@ export interface FileRouteTypes {
     | '/api/mcp'
     | '/assinar/completar'
     | '/blog_/$slug'
+    | '/campanha/$token'
     | '/conectar-instagram/$token'
     | '/contrato/$token'
     | '/oauth/instagram-callback-cliente'
@@ -900,6 +912,7 @@ export interface RootRouteChildren {
   TermosRoute: typeof TermosRoute
   ApiMcpRoute: typeof ApiMcpRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  CampanhaTokenRoute: typeof CampanhaTokenRoute
   ConectarInstagramTokenRoute: typeof ConectarInstagramTokenRoute
   ContratoTokenRoute: typeof ContratoTokenRoute
   OauthInstagramCallbackClienteRoute: typeof OauthInstagramCallbackClienteRoute
@@ -1140,6 +1153,13 @@ declare module '@tanstack/react-router' {
       path: '/conectar-instagram/$token'
       fullPath: '/conectar-instagram/$token'
       preLoaderRoute: typeof ConectarInstagramTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/campanha/$token': {
+      id: '/campanha/$token'
+      path: '/campanha/$token'
+      fullPath: '/campanha/$token'
+      preLoaderRoute: typeof CampanhaTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog_/$slug': {
@@ -1506,6 +1526,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermosRoute: TermosRoute,
   ApiMcpRoute: ApiMcpRoute,
   BlogSlugRoute: BlogSlugRoute,
+  CampanhaTokenRoute: CampanhaTokenRoute,
   ConectarInstagramTokenRoute: ConectarInstagramTokenRoute,
   ContratoTokenRoute: ContratoTokenRoute,
   OauthInstagramCallbackClienteRoute: OauthInstagramCallbackClienteRoute,
