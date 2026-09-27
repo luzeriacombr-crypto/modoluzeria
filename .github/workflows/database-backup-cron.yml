@@ -62,7 +62,9 @@ jobs:
           set -euo pipefail
           # Lista fixa — os buckets que existem hoje no projeto. Um bucket
           # novo criado depois precisa ser adicionado aqui manualmente.
-          BUCKETS="avatars bug-reports comment-audio marketing-assets org-knowledge reel-covers"
+          # (item-uploads-temp e instagram-publish-temp ficam de fora de
+          # propósito — são pastas temporárias, não dado permanente.)
+          BUCKETS="avatars bug-reports comment-audio marketing-assets org-knowledge reel-covers client-contracts nativo-media"
           mkdir -p storage-backup
           for b in $BUCKETS; do
             for attempt in 1 2 3; do
