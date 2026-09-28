@@ -1292,11 +1292,12 @@ export type InstagramAccountOverview = {
   followersSeries: { date: string; value: number }[];
   followersChangePct: number | null;
   postingFrequency: { day: string; count: number }[];
-  /** Média de seguidores online por hora do dia (0-23, agregado — a Meta
-   * não abre isso por dia da semana) — ajuda a decidir o melhor horário pra
-   * publicar. Vem `null` quando a Meta não libera esse dado pra essa conta
-   * (mesmo caso de demographics). */
-  onlineFollowers: { hour: number; value: number }[] | null;
+  /** Engajamento médio (curtidas + comentários) por horário de publicação,
+   * calculado a partir do histórico real de posts/reels do próprio cliente
+   * — substitui o metric "online_followers" da Meta, que ela vem
+   * restringindo/zerando pra várias contas. Vem `null` quando não há posts
+   * suficientes (mínimo 3) pra um horário confiável. */
+  engagementByHour: { hour: number; value: number }[] | null;
   demographics: {
     gender: { label: string; value: number; pct: number }[];
     /** Faixa etária já cruzada com gênero (mesma resposta da API, só
@@ -1373,7 +1374,7 @@ export const getInstagramAccountOverview = createServerFn({ method: "GET" })
       return { total: a + b, changePct: a === 0 ? null : Math.round(((b - a) / a) * 1000) / 10 };
     }
 
-    const mediaRes = await fetch(`${IG_GRAPH_API}/${acct}/media?fields=timestamp&limit=50&access_token=${tok}`);
+    const mediaRes = await fetch(`${IG_GRAPH_API}/${acct}/media?fields=timestamp,like_count,comments_count&limit=50&access_token=${tok}`);
     const mediaJson: any = await mediaRes.json();
     const dayCounts = [0, 0, 0, 0, 0, 0, 0];
     for (const m of mediaJson.data ?? []) {
@@ -1381,18 +1382,22 @@ export const getInstagramAccountOverview = createServerFn({ method: "GET" })
       dayCounts[(jsDay + 6) % 7]++; // reindexa pra 0=Seg..6=Dom
     }
 
-    let onlineFollowers: InstagramAccountOverview["onlineFollowers"] = null;
-    try {
-      const onlineRes = await fetch(
-        `${IG_GRAPH_API}/${acct}/insights?metric=online_followers&period=lifetime&access_token=${tok}`,
-      );
-      const onlineJson: any = await onlineRes.json();
-      if (!onlineRes.ok) throw new Error(onlineJson?.error?.message ?? "sem dado de horário online");
-      const byHour: Record<string, number> = onlineJson.data?.[0]?.values?.[0]?.value ?? {};
-      onlineFollowers = Array.from({ length: 24 }, (_, h) => ({ hour: h, value: byHour[String(h)] ?? 0 }));
-    } catch {
-      // Conta sem esse dado liberado — a tela esconde a seção, igual demographics.
-      onlineFollowers = null;
+    // Engajamento médio por horário de publicação, a partir do próprio
+    // histórico de posts — troca o antigo "online_followers" da Meta, que
+    // ela vem restringindo/zerando pra várias contas.
+    let engagementByHour: InstagramAccountOverview["engagementByHour"] = null;
+    const mediaList: any[] = mediaJson.data ?? [];
+    if (mediaList.length >= 3) {
+      const sumByHour = Array(24).fill(0);
+      const countByHour = Array(24).fill(0);
+      for (const m of mediaList) {
+        const hour = new Date(m.timestamp).getHours();
+        sumByHour[hour] += (m.like_count ?? 0) + (m.comments_count ?? 0);
+        countByHour[hour]++;
+      }
+      engagementByHour = Array.from({ length: 24 }, (_, h) => ({
+        hour: h, value: countByHour[h] > 0 ? Math.round(sumByHour[h] / countByHour[h]) : 0,
+      }));
     }
 
     let demographics: InstagramAccountOverview["demographics"] = null;
@@ -1458,7 +1463,7 @@ export const getInstagramAccountOverview = createServerFn({ method: "GET" })
       followersSeries: followersValues.map((v: any) => ({ date: v.end_time, value: v.value ?? 0 })),
       followersChangePct: changePct(followersValues.map((v: any) => v.value ?? 0)),
       postingFrequency: WEEKDAY_LABELS.map((day, i) => ({ day, count: dayCounts[i] })),
-      onlineFollowers,
+      engagementByHour,
       demographics,
     };
   });

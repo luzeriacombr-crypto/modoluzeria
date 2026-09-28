@@ -451,8 +451,8 @@ function VisaoGeralPane({ clientId, mediaState }: { clientId: string; mediaState
 
   const maxReach = Math.max(...data.reachSeries.map((r) => r.value), 1);
   const maxFreq = Math.max(...data.postingFrequency.map((d) => d.count), 1);
-  const maxOnline = Math.max(...(data.onlineFollowers?.map((h) => h.value) ?? []), 1);
-  const bestHour = data.onlineFollowers ? [...data.onlineFollowers].sort((a, b) => b.value - a.value)[0] : null;
+  const maxEngagementHour = Math.max(...(data.engagementByHour?.map((h) => h.value) ?? []), 1);
+  const bestHour = data.engagementByHour ? [...data.engagementByHour].sort((a, b) => b.value - a.value)[0] : null;
 
   // "Conteúdo mais relevante" — reaproveita o que a aba Conteúdo já carregou
   // (sem chamada extra), ordenado por visualizações (ou alcance, se o tipo
@@ -569,32 +569,33 @@ function VisaoGeralPane({ clientId, mediaState }: { clientId: string; mediaState
           </div>
         </div>
 
-        {data.onlineFollowers && (
+        {data.engagementByHour && (
           <div className="rounded-2xl bg-card p-4">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Seguidores online por horário</span>
+              <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Melhor horário por engajamento</span>
               {bestHour && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ color: "var(--lz-accent-ink)", backgroundColor: "rgba(var(--lz-brand-rgb),0.12)" }}>
                   Melhor: {String(bestHour.hour).padStart(2, "0")}h
                 </span>
               )}
             </div>
+            <p className="text-[10px] text-foreground/35 mb-1">Curtidas + comentários por horário de publicação, baseado no histórico de posts</p>
             <div className="h-32 mt-2 -ml-2">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.onlineFollowers.map((h) => ({ ...h, label: `${String(h.hour).padStart(2, "0")}h` }))}>
+                <BarChart data={data.engagementByHour.map((h) => ({ ...h, label: `${String(h.hour).padStart(2, "0")}h` }))}>
                   <XAxis dataKey="label" axisLine={false} tickLine={false} interval={2}
                     tick={{ fill: "color-mix(in srgb, var(--foreground) 40%, transparent)", fontSize: 9 }} />
                   <Tooltip
                     cursor={{ fill: "rgba(var(--lz-brand-light-rgb),0.08)" }}
                     content={({ active, payload }: any) => active && payload?.length ? (
                       <div className="bg-background border border-foreground/10 rounded-md px-2 py-1 text-[10px] text-foreground/80 shadow-xl">
-                        {payload[0].payload.label}: <b>{payload[0].value.toLocaleString("pt-BR")}</b> online
+                        {payload[0].payload.label}: <b>{payload[0].value.toLocaleString("pt-BR")}</b> engajamento médio
                       </div>
                     ) : null}
                   />
                   <Bar dataKey="value" radius={[3, 3, 0, 0]}>
-                    {data.onlineFollowers.map((h, i) => (
-                      <Cell key={i} fill={h.value === maxOnline && maxOnline > 0 ? "var(--lz-accent-ink)" : "rgba(var(--lz-brand-light-rgb),0.4)"} />
+                    {data.engagementByHour.map((h, i) => (
+                      <Cell key={i} fill={h.value === maxEngagementHour && maxEngagementHour > 0 ? "var(--lz-accent-ink)" : "rgba(var(--lz-brand-light-rgb),0.4)"} />
                     ))}
                   </Bar>
                 </BarChart>
