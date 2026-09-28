@@ -1015,6 +1015,46 @@ export const adminUpdateOrgOwnerEmail = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Platform-admin only: corrige o nome de uma agência (ex.: erro de
+ * digitação no cadastro, "MARKETING" em vez do nome de verdade). */
+export const adminUpdateOrgName = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { orgId: string; newName: string }) =>
+    z.object({
+      orgId: z.string().uuid(),
+      newName: z.string().trim().min(1).max(120),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("orgs").update({ name: data.newName }).eq("id", data.orgId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Platform-admin only: corrige o nome do responsável de uma agência
+ * (mesmo cenário do e-mail: erro de digitação no cadastro trocando o
+ * nome da pessoa pelo nome da agência, ou vice-versa). */
+export const adminUpdateOrgOwnerName = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { profileId: string; orgId: string; newName: string }) =>
+    z.object({
+      profileId: z.string().uuid(),
+      orgId: z.string().uuid(),
+      newName: z.string().trim().min(1).max(120),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: profile } = await supabaseAdmin.from("profiles").select("id, org_id").eq("id", data.profileId).maybeSingle();
+    if (!profile || (profile as any).org_id !== data.orgId) throw new Error("Perfil não encontrado nessa agência.");
+
+    const { error } = await supabaseAdmin.from("profiles").update({ name: data.newName }).eq("id", data.profileId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /** Platform-admin only: fetches an org's next pending Asaas invoice on
  * demand (not batched with listOrgsBilling — avoids one Asaas call per
  * agency on every load). */

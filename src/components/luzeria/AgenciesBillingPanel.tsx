@@ -7,7 +7,7 @@ import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, Mes
 import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, orgPageViewsQO, useApi } from "@/lib/luzeria/queries";
 import { computeAgencyPoints, getAgencyLevel } from "@/lib/luzeria/agency-level";
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
-import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, adminUpdateOrgPlan, adminUpdateOrgOwnerEmail, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
+import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, adminUpdateOrgPlan, adminUpdateOrgOwnerEmail, adminUpdateOrgName, adminUpdateOrgOwnerName, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { approveReseller, revokeReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { BrazilAgenciesMap } from "@/components/luzeria/BrazilAgenciesMap";
@@ -836,6 +836,10 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
   const [editingTemplate, setEditingTemplate] = useState(false);
   const [editingEmail, setEditingEmail] = useState(false);
   const [emailDraft, setEmailDraft] = useState(org.ownerEmail ?? "");
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(org.name ?? "");
+  const [editingOwnerName, setEditingOwnerName] = useState(false);
+  const [ownerNameDraft, setOwnerNameDraft] = useState(org.ownerName ?? "");
   const [editingPlan, setEditingPlan] = useState(false);
   const [planDraft, setPlanDraft] = useState(org.planId);
   const [collabDraft, setCollabDraft] = useState(org.maxCollaboratorsOverride != null ? String(org.maxCollaboratorsOverride) : "");
@@ -867,6 +871,26 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
       onClose();
     },
     onError: (e: any) => toastFriendlyError(e, "Erro ao salvar e-mail."),
+  });
+
+  const saveName = useMutation({
+    mutationFn: useServerFn(adminUpdateOrgName),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orgs-billing"] });
+      toast.success("Nome da agência atualizado.");
+      onClose();
+    },
+    onError: (e: any) => toastFriendlyError(e, "Erro ao salvar nome."),
+  });
+
+  const saveOwnerName = useMutation({
+    mutationFn: useServerFn(adminUpdateOrgOwnerName),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orgs-billing"] });
+      toast.success("Nome do responsável atualizado.");
+      onClose();
+    },
+    onError: (e: any) => toastFriendlyError(e, "Erro ao salvar nome."),
   });
 
   const savePlan = useMutation({
@@ -939,22 +963,75 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-card border border-foreground/10 rounded-2xl p-6 max-w-sm sm:max-w-2xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Building2 size={18} className="text-[var(--lz-accent-ink)]" />
-            <h3 className="text-lg font-bold text-foreground">{org.name}</h3>
+        <div className="flex items-start justify-between mb-4 gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Building2 size={18} className="text-[var(--lz-accent-ink)] shrink-0" />
+            {editingName ? (
+              <div className="flex items-center gap-2 flex-1">
+                <input
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  autoFocus
+                  className="flex-1 px-3 py-1.5 bg-foreground/[0.08] border border-foreground/15 rounded-lg text-foreground text-sm outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition"
+                />
+                <button
+                  onClick={() => saveName.mutate({ data: { orgId: org.id, newName: nameDraft.trim() } })}
+                  disabled={saveName.isPending || !nameDraft.trim()}
+                  className="p-1.5 rounded-lg text-black disabled:opacity-50 shrink-0"
+                  style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+                >
+                  {saveName.isPending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                </button>
+                <button onClick={() => setEditingName(false)} className="text-foreground/40 hover:text-foreground p-1.5 shrink-0"><X size={13} /></button>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-lg font-bold text-foreground truncate">{org.name}</h3>
+                <button onClick={() => { setNameDraft(org.name ?? ""); setEditingName(true); }} className="text-foreground/40 hover:text-foreground transition shrink-0">
+                  <Pencil size={13} />
+                </button>
+              </>
+            )}
           </div>
-          <button onClick={onClose} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5 transition">
+          <button onClick={onClose} className="text-foreground/50 hover:text-foreground p-1 rounded hover:bg-foreground/5 transition shrink-0">
             <X size={16} />
           </button>
         </div>
 
         <div className="text-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-x-6">
-          {org.ownerName && (
+          {(org.ownerName || org.ownerId) && (
             <div>
-              <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider mb-0.5">Responsável</p>
-              <p className="text-foreground">{org.ownerName}</p>
+              <div className="flex items-center justify-between mb-0.5">
+                <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider">Responsável</p>
+                {!editingOwnerName && org.ownerId && (
+                  <button onClick={() => { setOwnerNameDraft(org.ownerName ?? ""); setEditingOwnerName(true); }} className="text-foreground/40 hover:text-foreground transition">
+                    <Pencil size={12} />
+                  </button>
+                )}
+              </div>
+              {editingOwnerName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    value={ownerNameDraft}
+                    onChange={(e) => setOwnerNameDraft(e.target.value)}
+                    autoFocus
+                    placeholder="Nome do responsável"
+                    className="flex-1 px-3 py-2 bg-foreground/[0.08] border border-foreground/15 rounded-lg text-foreground text-sm placeholder:text-foreground/30 focus:outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition"
+                  />
+                  <button
+                    onClick={() => saveOwnerName.mutate({ data: { profileId: org.ownerId, orgId: org.id, newName: ownerNameDraft.trim() } })}
+                    disabled={saveOwnerName.isPending || !ownerNameDraft.trim()}
+                    className="p-2 rounded-lg text-black disabled:opacity-50"
+                    style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+                  >
+                    {saveOwnerName.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  </button>
+                  <button onClick={() => setEditingOwnerName(false)} className="text-foreground/40 hover:text-foreground p-2"><X size={14} /></button>
+                </div>
+              ) : (
+                <p className="text-foreground">{org.ownerName || <span className="text-foreground/30">Sem nome.</span>}</p>
+              )}
             </div>
           )}
           <div>
