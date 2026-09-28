@@ -97,18 +97,18 @@ export function ContentCard({
       <div className="relative w-full aspect-[4/5] shrink-0">
         <CardThumb itemId={item.id} coverUrl={item.coverUrl ?? null} batchedThumbUrl={batchedThumbUrl} batched={batched} />
         {item.status === "FINALIZADO" ? (
-          <div className="absolute top-0 right-0 w-[150px] h-[125px] overflow-hidden pointer-events-none z-10">
+          <div className="absolute top-0 right-0 w-[145px] h-[130px] overflow-hidden pointer-events-none z-10">
             <div
-              className="absolute top-[20px] -right-[28px] w-[150px] rotate-45 text-center py-1 text-[10px] font-bold uppercase tracking-wider"
+              className="absolute top-[20px] -right-[34px] w-[150px] rotate-45 text-center py-1 text-[10px] font-bold uppercase tracking-wider"
               style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D", boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }}
             >
               Publicado
             </div>
           </div>
         ) : item.igAutoPublish && item.scheduledAt && !item.igPublishedAt && (
-          <div className="absolute top-0 right-0 w-[150px] h-[125px] overflow-hidden pointer-events-none z-10">
+          <div className="absolute top-0 right-0 w-[145px] h-[130px] overflow-hidden pointer-events-none z-10">
             <div
-              className="absolute top-[23px] -right-[28px] w-[168px] rotate-45 text-center py-1 text-[10px] font-bold uppercase tracking-wider"
+              className="absolute top-[23px] -right-[34px] w-[168px] rotate-45 text-center py-1 text-[10px] font-bold uppercase tracking-wider"
               style={{ backgroundColor: "#0D0D0D", color: "rgb(var(--lz-brand-rgb))", boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }}
             >
               Programado
