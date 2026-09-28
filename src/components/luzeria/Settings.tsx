@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { hexToRgbChannels, deriveSecondaryHex } from "@/lib/luzeria/utils";
-import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO, cargosQO, myPendingInvoiceQO, myInvoiceHistoryQO } from "@/lib/luzeria/queries";
+import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO, cargosQO, myPendingInvoiceQO, myInvoiceHistoryQO, contentStatusesQO, clientCategoriesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
-import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
+import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, CUSTOMIZABLE_BUILTIN_STATUS_KEYS, PROTECTED_STATUS_KEYS, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Archive, PlayCircle, ChevronDown } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Archive, PlayCircle, ChevronDown, Users, UserCog, Rocket, Zap, Crown, FileDigit, ArrowRight, LayoutGrid, FileText, CheckCircle2, Tags, HelpCircle, Moon, Sun, ImagePlus, Palette, Eye, Sparkles } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
 import { ContentStatusesSection } from "./ContentStatusesSection";
 import { ClientCategoriesSection } from "./ClientCategoriesSection";
@@ -570,12 +570,57 @@ function ContractTemplateForm({ template, isMaster }: { template: string | null;
   );
 }
 
+/** Cabeçalho clicável que recolhe/expande uma seção inteira de Configurações
+ * > Geral. Existe porque a aba crescia demais (7 seções empilhadas) e quem só
+ * queria mexer em uma coisa (normalmente Recursos) tinha que rolar por tudo
+ * — as seções de "configura uma vez e esquece" (Contrato, Status, Categorias)
+ * começam fechadas, mostrando um resumo no próprio cabeçalho. */
+function CollapsibleSection({ icon: Icon, title, badge, defaultOpen, accent, children }: {
+  icon: React.ComponentType<{ size?: number }>;
+  title: string;
+  badge?: React.ReactNode;
+  defaultOpen?: boolean;
+  accent?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(!!defaultOpen);
+  return (
+    <div className="bg-card rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-3 px-5 py-4 text-left"
+      >
+        <div className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
+          style={accent
+            ? { backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }
+            : { backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>
+          <Icon size={13} />
+        </div>
+        <span className="flex-1 text-sm font-semibold text-foreground truncate">{title}</span>
+        {badge && <span className="text-[10.5px] font-semibold text-foreground/40 shrink-0 hidden sm:block">{badge}</span>}
+        <ChevronDown size={14} className={`text-foreground/40 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="px-5 pb-5 pt-1 border-t border-foreground/6">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GeneralSettings() {
   const { data: settings } = useQuery(appSettingsQO());
   const { updateAppSettings, updateMyOrg } = useApi();
   const me = useMe().data;
+  const { data: statusRows = [] } = useQuery(contentStatusesQO());
+  const { data: categoryRows = [] } = useQuery(clientCategoriesQO());
   if (!settings) return <div className="text-foreground/40 text-sm">Carregando…</div>;
   const isMaster = me?.role === "master";
+  const disabledFeatures = me?.disabledFeatures ?? [];
+  const statusCount = CUSTOMIZABLE_BUILTIN_STATUS_KEYS.length + PROTECTED_STATUS_KEYS.length + statusRows.filter((r) => r.isCustom).length;
+  const categoryCount = 2 + categoryRows.length;
 
   const toggle = (next: boolean) =>
     updateAppSettings.mutate({ data: { requireRatingOnFinalize: next } }, {
@@ -590,115 +635,126 @@ function GeneralSettings() {
     });
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl space-y-3">
       {me?.orgId && (
-        <OrgBrandingSection
-          orgId={me.orgId}
-          orgName={me.orgName ?? ""}
-          orgTagline={me.orgTagline ?? null}
-          orgLogoUrl={me.orgLogoUrl ?? null}
-          orgLogoUrlLight={me.orgLogoUrlLight ?? null}
-          orgColorPrimary={me.orgColorPrimary ?? "#C8D44E"}
-          orgColorPrimaryLight={me.orgColorPrimaryLight ?? "#C8D44E"}
-          orgColorSidebar={me.orgColorSidebar ?? "#1A3A2E"}
-          orgColorAccentLight={me.orgColorAccentLight ?? null}
-          orgFeedPreviewImageUrl={me.orgFeedPreviewImageUrl ?? null}
-          orgPlanejamentoCoverImageUrl={me.orgPlanejamentoCoverImageUrl ?? null}
-          orgFaviconUrl={me.orgFaviconUrl ?? null}
-          borderRadius={me.borderRadius ?? 12}
-          heroGradientFrom={me.heroGradientFrom ?? null}
-          heroGradientTo={me.heroGradientTo ?? null}
-        />
+        <CollapsibleSection icon={Star} title="Marca da agência" defaultOpen accent
+          badge={
+            <span className="flex items-center gap-2">
+              <span className="flex gap-0.5">
+                <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: me.orgColorPrimary ?? "#C8D44E" }} />
+                <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: me.orgColorSidebar ?? "#1A3A2E" }} />
+              </span>
+              Personalizada
+            </span>
+          }
+        >
+          <OrgBrandingSection
+            orgId={me.orgId}
+            orgName={me.orgName ?? ""}
+            orgTagline={me.orgTagline ?? null}
+            orgLogoUrl={me.orgLogoUrl ?? null}
+            orgLogoUrlLight={me.orgLogoUrlLight ?? null}
+            orgColorPrimary={me.orgColorPrimary ?? "#C8D44E"}
+            orgColorPrimaryLight={me.orgColorPrimaryLight ?? "#C8D44E"}
+            orgColorSidebar={me.orgColorSidebar ?? "#1A3A2E"}
+            orgColorAccentLight={me.orgColorAccentLight ?? null}
+            orgFeedPreviewImageUrl={me.orgFeedPreviewImageUrl ?? null}
+            orgPlanejamentoCoverImageUrl={me.orgPlanejamentoCoverImageUrl ?? null}
+            orgFaviconUrl={me.orgFaviconUrl ?? null}
+            borderRadius={me.borderRadius ?? 12}
+            heroGradientFrom={me.heroGradientFrom ?? null}
+            heroGradientTo={me.heroGradientTo ?? null}
+          />
+        </CollapsibleSection>
       )}
 
-      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
-        <SettingsIcon size={12} /> Operação
-      </h2>
-      <div className="bg-card rounded-lg p-5 flex items-start gap-4">
-        <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
-          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
-          <Star size={16} />
-        </div>
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-foreground">Exigir avaliação ao finalizar</div>
-          <div className="text-[11px] text-foreground/50 mt-1">
-            Ao mudar status de uma tarefa para <span className="text-[var(--lz-accent-ink)] font-semibold">Pronto para publicar</span>,
-            o responsável é obrigado a dar uma nota de qualidade (1–5 estrelas).
-          </div>
-        </div>
-        <button onClick={() => toggle(!settings.requireRatingOnFinalize)}
-          className={`relative h-6 w-11 rounded-full transition-colors ${
-            settings.requireRatingOnFinalize ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-foreground/15"}`}>
-          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-foreground transition-all ${
-            settings.requireRatingOnFinalize ? "left-[22px]" : "left-0.5"}`} />
-        </button>
-      </div>
-
-      {isMaster && (
-        <div className="bg-card rounded-lg p-5 flex items-start gap-4 mt-3">
-          <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
-            style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
-            <Archive size={16} />
-          </div>
-          <div className="flex-1">
-            <div className="text-sm font-semibold text-foreground">"Finalizados" em aba separada</div>
-            <div className="text-[11px] text-foreground/50 mt-1">
-              Por padrão, um post/reel publicado continua na aba de origem (Posts/Reels), só com uma fita
-              "Publicado" na miniatura. Ligue aqui se preferir o jeito antigo: publicado sai da aba principal e
-              vai pra uma aba "Finalizados" separada.
+      <CollapsibleSection icon={SettingsIcon} title="Operação"
+        badge={settings.requireRatingOnFinalize ? "Avaliação obrigatória: ligada" : "Avaliação obrigatória: desligada"}>
+        <div className="space-y-3">
+          <div className="flex items-start gap-4">
+            <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+              <Star size={16} />
             </div>
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-foreground">Exigir avaliação ao finalizar</div>
+              <div className="text-[11px] text-foreground/50 mt-1">
+                Ao mudar status de uma tarefa para <span className="text-[var(--lz-accent-ink)] font-semibold">Pronto para publicar</span>,
+                o responsável é obrigado a dar uma nota de qualidade (1–5 estrelas).
+              </div>
+            </div>
+            <button onClick={() => toggle(!settings.requireRatingOnFinalize)}
+              className={`relative h-6 w-11 rounded-full transition-colors shrink-0 ${
+                settings.requireRatingOnFinalize ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-foreground/15"}`}>
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-foreground transition-all ${
+                settings.requireRatingOnFinalize ? "left-[22px]" : "left-0.5"}`} />
+            </button>
           </div>
-          <button onClick={() => toggleFinalizadosSeparateTab(!me?.finalizadosSeparateTab)}
-            className={`relative h-6 w-11 rounded-full transition-colors shrink-0 ${
-              me?.finalizadosSeparateTab ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-foreground/15"}`}>
-            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-foreground transition-all ${
-              me?.finalizadosSeparateTab ? "left-[22px]" : "left-0.5"}`} />
-          </button>
+
+          {isMaster && (
+            <div className="flex items-start gap-4 pt-3 border-t border-foreground/6">
+              <div className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
+                style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+                <Archive size={16} />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-foreground">"Finalizados" em aba separada</div>
+                <div className="text-[11px] text-foreground/50 mt-1">
+                  Por padrão, um post/reel publicado continua na aba de origem (Posts/Reels), só com uma fita
+                  "Publicado" na miniatura. Ligue aqui se preferir o jeito antigo: publicado sai da aba principal e
+                  vai pra uma aba "Finalizados" separada.
+                </div>
+              </div>
+              <button onClick={() => toggleFinalizadosSeparateTab(!me?.finalizadosSeparateTab)}
+                className={`relative h-6 w-11 rounded-full transition-colors shrink-0 ${
+                  me?.finalizadosSeparateTab ? "bg-[rgb(var(--lz-brand-rgb))]" : "bg-foreground/15"}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-foreground transition-all ${
+                  me?.finalizadosSeparateTab ? "left-[22px]" : "left-0.5"}`} />
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </CollapsibleSection>
 
       {isMaster && (
         <>
-          <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
-            <SettingsIcon size={12} /> Contrato
-          </h2>
-          <ContractTemplateForm template={me?.contractTemplate ?? null} isMaster={isMaster} />
+          <CollapsibleSection icon={FileText} title="Contrato"
+            badge={me?.contractTemplate?.trim() ? "Modelo configurado" : "Nenhum modelo definido"}>
+            <ContractTemplateForm template={me?.contractTemplate ?? null} isMaster={isMaster} />
+          </CollapsibleSection>
 
-          <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
-            <SettingsIcon size={12} /> Status
-          </h2>
-          <ContentStatusesSection />
+          <CollapsibleSection icon={CheckCircle2} title="Status" badge={`${statusCount} configurados`}>
+            <ContentStatusesSection />
+          </CollapsibleSection>
 
-          <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
-            <SettingsIcon size={12} /> Categorias de clientes
-          </h2>
-          <ClientCategoriesSection />
+          <CollapsibleSection icon={Tags} title="Categorias de clientes" badge={`${categoryCount} categorias`}>
+            <ClientCategoriesSection />
+          </CollapsibleSection>
         </>
       )}
 
-      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
-        <SettingsIcon size={12} /> Recursos
-      </h2>
-      <FeatureTogglesSection disabledFeatures={me?.disabledFeatures ?? []} />
+      <CollapsibleSection icon={LayoutGrid} title="Recursos" defaultOpen accent
+        badge={disabledFeatures.length > 0 ? `${disabledFeatures.length} desativado${disabledFeatures.length > 1 ? "s" : ""}` : "Tudo ativado"}>
+        <FeatureTogglesSection disabledFeatures={disabledFeatures} />
+      </CollapsibleSection>
 
-      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
-        <SettingsIcon size={12} /> Ajuda
-      </h2>
-      <div className="bg-card rounded-lg p-5 flex items-center gap-4">
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-foreground">Tour guiado do app</div>
-          <div className="text-[11px] text-foreground/50 mt-1">
-            Refaça o passo a passo de boas-vindas mostrando as principais áreas da plataforma.
+      <CollapsibleSection icon={HelpCircle} title="Ajuda" badge="Tour guiado">
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <div className="text-sm font-semibold text-foreground">Tour guiado do app</div>
+            <div className="text-[11px] text-foreground/50 mt-1">
+              Refaça o passo a passo de boas-vindas mostrando as principais áreas da plataforma.
+            </div>
           </div>
+          <button
+            onClick={() => window.dispatchEvent(new Event("lz:start-tour"))}
+            className="text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-black shrink-0"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+          >
+            Refazer tour
+          </button>
         </div>
-        <button
-          onClick={() => window.dispatchEvent(new Event("lz:start-tour"))}
-          className="text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-md text-black"
-          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
-        >
-          Refazer tour
-        </button>
-      </div>
+      </CollapsibleSection>
     </div>
   );
 }
@@ -1019,23 +1075,6 @@ function HeroColorField({ label, value, fallback, onChange }: {
   );
 }
 
-function UsageBar({ label, used, max, pct }: { label: string; used: number; max: number | null; pct: number }) {
-  return (
-    <div>
-      <div className="flex items-center justify-between text-[11px] text-foreground/60 mb-1">
-        <span>{label}</span>
-        <span>{used}{max != null ? ` / ${max}` : " (ilimitado)"}</span>
-      </div>
-      {max != null && (
-        <div className="h-1.5 rounded-full bg-foreground/[0.06] overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${pct}%`, background: pct >= 100 ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))" }} />
-        </div>
-      )}
-    </div>
-  );
-}
-
 const SUBSCRIPTION_STATUS_LABEL: Record<string, { label: string; color: string }> = {
   active: { label: "Assinatura ativa", color: "#4ADE80" },
   past_due: { label: "Pagamento atrasado", color: "#FF6B6B" },
@@ -1072,27 +1111,58 @@ function PlanCardSection() {
       <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
         <Star size={12} /> Seu plano
       </h2>
-      <div className="bg-card rounded-lg p-5 mb-8 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-lg font-bold text-foreground">{status.planName}</div>
-            <div className="text-[11px] text-foreground/50">{priceLabel}</div>
+      <div className="rounded-xl p-5 mb-8 space-y-5" style={{ background: "linear-gradient(135deg, color-mix(in srgb, var(--card) 100%, transparent), rgba(var(--lz-brand-rgb),0.06))", border: "1px solid rgba(var(--lz-brand-rgb),0.16)" }}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, rgb(var(--lz-brand-rgb)), color-mix(in srgb, rgb(var(--lz-brand-rgb)) 70%, black))" }}>
+              <Rocket size={20} color="#0D0D0D" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold text-foreground truncate">{status.planName}</div>
+              <div className="text-[11px] text-foreground/50">{priceLabel}</div>
+            </div>
           </div>
           {status.subscriptionStatus === "trialing" && trialDaysLeft !== null ? (
-            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded"
+            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded whitespace-nowrap shrink-0"
               style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
               {trialDaysLeft > 0 ? `${trialDaysLeft} dias de teste` : "Teste expirado"}
             </span>
           ) : statusInfo ? (
-            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded"
+            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded whitespace-nowrap shrink-0"
               style={{ backgroundColor: `${statusInfo.color}26`, color: statusInfo.color }}>
               {statusInfo.label}
             </span>
           ) : null}
         </div>
-        <UsageBar label="Clientes ativos" used={status.clientsUsed} max={status.maxClients} pct={clientsPct} />
-        <UsageBar label="Colaboradores" used={status.collaboratorsUsed} max={status.maxCollaborators} pct={collabPct} />
+        <div className="grid grid-cols-2 gap-3">
+          <UsageTile icon={<Users size={15} />} label="Clientes ativos" used={status.clientsUsed} max={status.maxClients} pct={clientsPct} />
+          <UsageTile icon={<UserCog size={15} />} label="Colaboradores" used={status.collaboratorsUsed} max={status.maxCollaborators} pct={collabPct} />
+        </div>
       </div>
+    </div>
+  );
+}
+
+/** Cartão de uso (clientes/colaboradores) — número grande + barrinha, com
+ * ícone pra dar mais identidade visual do que só texto (pedido do Junior:
+ * "Meu plano" parecia sem graça). */
+function UsageTile({ icon, label, used, max, pct }: { icon: React.ReactNode; label: string; used: number; max: number | null; pct: number }) {
+  const nearLimit = max != null && pct >= 90;
+  return (
+    <div className="rounded-lg p-3.5" style={{ background: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}>
+      <div className="flex items-center gap-1.5 text-[11px] text-foreground/50 mb-2">
+        <span style={{ color: "var(--lz-accent-ink)" }}>{icon}</span> {label}
+      </div>
+      <div className="flex items-baseline gap-1 mb-2">
+        <span className="text-xl font-extrabold text-foreground tabular-nums">{used}</span>
+        <span className="text-xs text-foreground/40">{max != null ? `/ ${max}` : "ilimitado"}</span>
+      </div>
+      {max != null && (
+        <div className="h-1.5 rounded-full bg-foreground/[0.08] overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${pct}%`, background: nearLimit ? "#FF6B6B" : "rgb(var(--lz-brand-rgb))" }} />
+        </div>
+      )}
     </div>
   );
 }
@@ -1196,40 +1266,70 @@ function BillingSection() {
             </div>
           </div>
         )}
-        <Field label="CNPJ ou CPF da agência (necessário para assinar um plano)">
-          <div className="flex gap-2">
-            <input value={taxId} onChange={(e) => setTaxId(e.target.value)} maxLength={18} className="lz-input"
-              placeholder="Somente números" />
-            <button onClick={saveTaxId} disabled={updateMyOrg.isPending}
-              className="lz-btn-ghost text-xs px-4 py-2 rounded-md whitespace-nowrap disabled:opacity-50">
-              {updateMyOrg.isPending ? "Salvando…" : "Salvar"}
-            </button>
+        <div className="rounded-lg p-4 flex items-start gap-3" style={{ background: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}>
+          <div className="h-8 w-8 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+            <FileDigit size={16} />
           </div>
-        </Field>
-
-        <div className="space-y-2 pt-2 border-t border-foreground/6">
-          {(plans ?? []).map((plan) => (
-            <div key={plan.id} className="flex items-center justify-between bg-black/20 rounded-md px-3 py-2.5">
-              <div>
-                <div className="text-sm text-foreground font-semibold">{plan.name}</div>
-                <div className="text-[11px] text-foreground/50">
-                  {plan.priceCents != null ? `R$ ${(plan.priceCents / 100).toFixed(2).replace(".", ",")}/mês` : "Sob consulta"}
-                  {" · "}até {plan.maxClients} clientes · até {plan.maxCollaborators} colaboradores
-                </div>
-              </div>
-              {plan.id === status.planId && status.hasAsaasSubscription ? (
-                <span className="text-[10px] uppercase font-bold text-foreground/40 px-2">Plano atual</span>
-              ) : plan.priceCents == null ? (
-                <a href="https://wa.me/" target="_blank" rel="noreferrer"
-                  className="lz-btn-ghost text-xs px-3 py-1.5 rounded-md whitespace-nowrap">Fale conosco</a>
-              ) : (
-                <button onClick={() => subscribe(plan.id)} disabled={subscribeToPlan.isPending}
-                  className="lz-btn-primary text-xs px-3 py-1.5 rounded-md whitespace-nowrap disabled:opacity-50">
-                  {subscribeToPlan.isPending ? "Aguarde…" : "Assinar"}
-                </button>
-              )}
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-1.5">CNPJ ou CPF da agência</div>
+            <div className="flex gap-2">
+              <input value={taxId} onChange={(e) => setTaxId(e.target.value)} maxLength={18} className="lz-input"
+                placeholder="Somente números — necessário pra assinar um plano" />
+              <button onClick={saveTaxId} disabled={updateMyOrg.isPending}
+                className="lz-btn-ghost text-xs px-4 py-2 rounded-md whitespace-nowrap disabled:opacity-50">
+                {updateMyOrg.isPending ? "Salvando…" : "Salvar"}
+              </button>
             </div>
-          ))}
+          </div>
+        </div>
+
+        <div className="pt-3 border-t border-foreground/6">
+          <div className="flex items-center gap-1.5 text-sm font-bold text-foreground mb-1">
+            <Rocket size={14} style={{ color: "var(--lz-accent-ink)" }} /> Quer fazer upgrade?
+          </div>
+          <p className="text-[11px] text-foreground/40 mb-3">Mais espaço pra clientes e colaboradores, sempre que sua agência crescer.</p>
+          <div className="space-y-2">
+            {(plans ?? []).map((plan, i) => {
+              const isCurrent = plan.id === status.planId && status.hasAsaasSubscription;
+              const TierIcon = i === 0 ? Zap : i === plans!.length - 1 ? Crown : Rocket;
+              return (
+                <div key={plan.id} className="flex items-center gap-3 rounded-lg px-3.5 py-3 transition-colors"
+                  style={isCurrent
+                    ? { background: "rgba(var(--lz-brand-rgb),0.06)", border: "1px solid rgba(var(--lz-brand-rgb),0.25)" }
+                    : { background: "color-mix(in srgb, var(--foreground) 4%, transparent)", border: "1px solid transparent" }}>
+                  <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+                    <TierIcon size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm text-foreground font-semibold">{plan.name}</span>
+                      {isCurrent && (
+                        <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+                          Atual
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-foreground/50 flex items-center gap-1 flex-wrap">
+                      {plan.priceCents != null ? `R$ ${(plan.priceCents / 100).toFixed(2).replace(".", ",")}/mês` : "Sob consulta"}
+                      <span className="text-foreground/25">·</span>
+                      <Users size={11} className="inline" /> até {plan.maxClients} clientes
+                      <span className="text-foreground/25">·</span>
+                      <UserCog size={11} className="inline" /> até {plan.maxCollaborators}
+                    </div>
+                  </div>
+                  {isCurrent ? null : plan.priceCents == null ? (
+                    <a href="https://wa.me/" target="_blank" rel="noreferrer"
+                      className="lz-btn-ghost text-xs px-3 py-1.5 rounded-md whitespace-nowrap shrink-0">Fale conosco</a>
+                  ) : (
+                    <button onClick={() => subscribe(plan.id)} disabled={subscribeToPlan.isPending}
+                      className="lz-btn-primary text-xs px-3 py-1.5 rounded-md whitespace-nowrap shrink-0 disabled:opacity-50 inline-flex items-center gap-1">
+                      {subscribeToPlan.isPending ? "Aguarde…" : <>Assinar <ArrowRight size={12} /></>}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {me?.role === "master" && status.hasAsaasSubscription && (invoiceHistory?.length ?? 0) > 0 && (
@@ -1606,29 +1706,85 @@ function OrgBrandingSection({
     });
   }
 
+  const effectiveLight = colorPrimaryLight && colorPrimaryLight !== "#C8D44E" ? colorPrimaryLight : deriveSecondaryHex(colorPrimary);
+  const effectiveAccentInk = colorAccentLight || darkenHex(colorPrimary || "#C8D44E", 0.55);
+  const previewOuterRadius = Math.round(radius * 1.3);
+  const previewInnerRadius = Math.max(6, Math.round(radius * 0.6));
+  // Mesma receita do degradê real do cabeçalho do Dashboard (AdminDashboard.tsx):
+  // dois halos radiais suaves (nunca uma cor sólida por trás do texto) sobre
+  // a base card→background — é assim que o texto continua legível mesmo
+  // quando uma das cores é bem escura (a cor da barra lateral, por exemplo).
+  const heroARgb = hexToRgbChannels(heroFrom || effectiveLight) ?? "200, 212, 78";
+  const heroBRgb = hexToRgbChannels(heroTo || colorSidebar) ?? "26, 58, 46";
+
   return (
     <>
-      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
-        <Star size={12} /> Marca da agência
-      </h2>
-      <div className="bg-card rounded-lg p-5 mb-8 space-y-4" data-tour="org-branding">
+      <div className="space-y-4" data-tour="org-branding">
         <p className="text-[11px] text-foreground/50 leading-relaxed">
           Aparece na barra lateral e no título da aba, depois que sua equipe faz login.
           A tela de login em si continua igual pra todas as agências.
         </p>
 
+        {/* Pré-visualização ao vivo — fica logo no topo e "grudada" (sticky)
+            enquanto você rola pra mexer nos campos abaixo, porque senão ela
+            fica fora da tela bem na hora que você mais precisa ver o efeito
+            (feedback real: mexer na cor lá em cima e não conseguir ver o
+            resultado sem rolar até embaixo). Reproduz a MESMA receita visual
+            do cabeçalho real do Dashboard, não um degradê inventado. */}
+        <div className="sticky top-16 z-20">
+          <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-2 flex items-center gap-1.5">
+            <Eye size={11} /> Pré-visualização ao vivo
+          </div>
+          <div className="rounded-2xl p-3 shadow-lg shadow-black/20" style={{ background: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}>
+            <div className="flex overflow-hidden border border-foreground/10" style={{ borderRadius: previewOuterRadius }}>
+              <div className="w-16 shrink-0 flex flex-col items-center gap-2.5 py-3" style={{ backgroundColor: colorSidebar || "#1A3A2E" }}>
+                <div className="h-6 w-6 flex items-center justify-center font-serif font-bold text-[10px] text-white"
+                  style={{ borderRadius: previewInnerRadius, backgroundColor: "rgba(255,255,255,0.12)" }}>
+                  {(name || "L").trim().charAt(0).toUpperCase()}
+                </div>
+                <span className="w-5 h-[3px] rounded-full" style={{ backgroundColor: colorPrimary || "#C8D44E" }} />
+                <span className="w-5 h-[3px] rounded-full bg-white/20" />
+              </div>
+              <div className="relative overflow-hidden flex-1 p-3"
+                style={{
+                  background:
+                    `radial-gradient(120% 140% at 0% 0%, rgba(${heroARgb},0.18) 0%, color-mix(in srgb, rgb(${heroARgb}) 10%, transparent) 35%, transparent 70%), ` +
+                    `radial-gradient(80% 120% at 100% 100%, color-mix(in srgb, color-mix(in srgb, rgb(${heroBRgb}) 40%, var(--background)) 55%, transparent) 0%, transparent 65%), ` +
+                    "linear-gradient(180deg, var(--card) 0%, var(--background) 100%)",
+                }}>
+                <div className="pointer-events-none absolute -top-6 -left-6 h-14 w-14 rounded-full opacity-30 blur-2xl" style={{ background: `rgb(${heroARgb})` }} />
+                <div className="pointer-events-none absolute -bottom-8 right-2 h-16 w-16 rounded-full opacity-25 blur-2xl" style={{ background: `rgb(${heroBRgb})` }} />
+                <div className="relative">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8.5px] font-bold uppercase tracking-wider"
+                    style={{ backgroundColor: `color-mix(in srgb, ${effectiveLight} 15%, transparent)`, color: effectiveAccentInk }}>
+                    <Sparkles size={9} /> Dashboard
+                  </span>
+                  <div className="mt-1.5 text-foreground font-bold text-[15px] tracking-tight">ENTREGAS</div>
+                  <div className="mt-0.5 italic text-foreground/60 text-[10px]">Bom ritmo, vamos fechar o mês com tudo!</div>
+                  <span className="mt-2 inline-block text-[10.5px] font-extrabold px-3 py-1.5"
+                    style={{ borderRadius: previewInnerRadius, backgroundColor: colorPrimary || "#C8D44E", color: "#0D0D0D" }}>
+                    Botão principal
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <p className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-2">Logo (modo escuro)</p>
+          <div className="rounded-xl p-4 bg-black/20 space-y-3">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-foreground/40">
+              <Moon size={11} /> Logo · modo escuro
+            </div>
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-md bg-black/30 border border-foreground/10 flex items-center justify-center overflow-hidden shrink-0">
+              <div className="h-16 w-16 rounded-xl bg-black/40 border border-foreground/10 flex items-center justify-center overflow-hidden shrink-0">
                 {orgLogoUrl ? (
                   <img src={orgLogoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
                 ) : (
-                  <span className="text-[10px] text-foreground/30 text-center px-1">Sem logo</span>
+                  <ImagePlus size={18} className="text-foreground/20" />
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col items-start gap-1.5">
                 <label className="lz-btn-ghost text-xs px-4 py-2 rounded-md cursor-pointer disabled:opacity-50">
                   {uploading ? "Enviando…" : "Enviar logo"}
                   <input type="file" accept="image/*" className="hidden" onChange={pickLogo} disabled={uploading} />
@@ -1642,17 +1798,19 @@ function OrgBrandingSection({
               </div>
             </div>
           </div>
-          <div>
-            <p className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-2">Logo (modo claro) — opcional</p>
+          <div className="rounded-xl p-4 bg-black/20 space-y-3">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-foreground/40">
+              <Sun size={11} /> Logo · modo claro <span className="text-foreground/25 font-semibold normal-case tracking-normal">(opcional)</span>
+            </div>
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-md bg-white border border-foreground/10 flex items-center justify-center overflow-hidden shrink-0">
+              <div className="h-16 w-16 rounded-xl bg-white border border-foreground/10 flex items-center justify-center overflow-hidden shrink-0">
                 {orgLogoUrlLight ? (
                   <img src={orgLogoUrlLight} alt="Logo (claro)" className="max-h-full max-w-full object-contain" />
                 ) : (
-                  <span className="text-[10px] text-black/30 text-center px-1">Usa a mesma</span>
+                  <ImagePlus size={18} className="text-black/20" />
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col items-start gap-1.5">
                 <label className="lz-btn-ghost text-xs px-4 py-2 rounded-md cursor-pointer disabled:opacity-50">
                   {uploadingLight ? "Enviando…" : "Enviar logo"}
                   <input type="file" accept="image/*" className="hidden" onChange={pickLogoLight} disabled={uploadingLight} />
@@ -1672,60 +1830,47 @@ function OrgBrandingSection({
           segunda versão aqui — só pra esse tema. Se não enviar, o app usa a mesma logo nos dois.
         </p>
 
-        <Field label="Nome da agência">
-          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} className="lz-input" />
-        </Field>
-        <Field label="Slogan (opcional)">
-          <input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={120} disabled={hideTagline}
-            className="lz-input disabled:opacity-40" placeholder="Ex: Conteúdo que conecta" />
-          <label className="flex items-center gap-2 mt-2 text-xs text-foreground/50 cursor-pointer">
-            <input type="checkbox" checked={hideTagline} onChange={(e) => setHideTagline(e.target.checked)} />
-            Não mostrar nenhum slogan (fica só o nome da agência, sem o texto padrão)
-          </label>
-        </Field>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-foreground/6">
-          <ColorPickerField label="Cor principal" value={colorPrimary} onChange={setColorPrimary} presets={BRAND_PRESETS} />
-          <ColorPickerField label="Cor clara (fundos suaves)" value={colorPrimaryLight} onChange={setColorPrimaryLight} presets={BRAND_LIGHT_PRESETS} />
-          <ColorPickerField label="Cor da barra lateral" value={colorSidebar} onChange={setColorSidebar} presets={SIDEBAR_PRESETS} />
+        <div className="rounded-xl p-4 bg-black/20 space-y-4">
+          <Field label="Nome da agência">
+            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} className="lz-input" />
+          </Field>
+          <Field label="Slogan (opcional)">
+            <input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={120} disabled={hideTagline}
+              className="lz-input disabled:opacity-40" placeholder="Ex: Conteúdo que conecta" />
+            <label className="flex items-center gap-2 mt-2 text-xs text-foreground/50 cursor-pointer">
+              <input type="checkbox" checked={hideTagline} onChange={(e) => setHideTagline(e.target.checked)} />
+              Não mostrar nenhum slogan (fica só o nome da agência, sem o texto padrão)
+            </label>
+          </Field>
         </div>
 
-        {/* Pré-visualização ao vivo — enquanto você mexe nas 3 cores acima
-            (antes de salvar), a barra lateral de verdade já muda também (dá
-            uma olhada à esquerda). Esse bloco existe pra quem tá no celular
-            (sem barra lateral visível) conseguir ver o mesmo contraste. */}
-        <div className="rounded-lg p-4 flex items-center gap-4" style={{ background: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}>
-          <div className="h-16 w-10 rounded-md shrink-0" style={{ backgroundColor: colorSidebar || "#111F5C" }} />
-          <div className="flex-1 min-w-0 space-y-2">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40">Pré-visualização ao vivo</div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold px-3 py-1.5 rounded-md" style={{ backgroundColor: colorPrimary || "#C8D44E", color: "#0D0D0D" }}>Botão principal</span>
-              <span
-                className="text-xs font-semibold px-3 py-1.5 rounded-full"
-                style={{
-                  backgroundColor: `color-mix(in srgb, ${colorPrimaryLight || "#C8D44E"} 22%, transparent)`,
-                  color: colorAccentLight || darkenHex(colorPrimary || "#C8D44E", 0.55),
-                }}
-              >Cor de destaque</span>
-            </div>
+        <div>
+          <div className="flex items-center gap-1.5 mb-2 text-[10px] uppercase font-bold tracking-wider text-foreground/40">
+            <Palette size={11} /> Identidade visual
+          </div>
+          <div className="rounded-xl p-4 bg-black/20 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <ColorPickerField label="Cor principal" value={colorPrimary} onChange={setColorPrimary} presets={BRAND_PRESETS} />
+            <ColorPickerField label="Cor clara (fundos suaves)" value={colorPrimaryLight} onChange={setColorPrimaryLight} presets={BRAND_LIGHT_PRESETS} />
+            <ColorPickerField label="Cor da barra lateral" value={colorSidebar} onChange={setColorSidebar} presets={SIDEBAR_PRESETS} />
           </div>
         </div>
 
-        <div className="pt-2 border-t border-foreground/6">
-          <label className="block text-[11px] uppercase tracking-wide text-foreground/40 mb-2">
+        <div className="rounded-xl p-4 bg-black/20 space-y-3">
+          <label className="block text-[11px] uppercase tracking-wide text-foreground/40">
             Cor de destaque nos gráficos (modo claro)
           </label>
-          <p className="text-[11px] text-foreground/40 mb-3">
+          <p className="text-[11px] text-foreground/40">
             No modo claro, o gráfico do Dashboard e a linha de "Como estou indo?" escurecem a cor principal
             sozinhos, pra manter contraste no fundo claro. Escolha a sua própria cor aqui se preferir.
           </p>
           <HeroColorField label="Cor de destaque" value={colorAccentLight} fallback={darkenHex(colorPrimary, 0.55)} onChange={setColorAccentLight} />
         </div>
 
-        <div className="pt-2 border-t border-foreground/6">
-          <label className="block text-[11px] uppercase tracking-wide text-foreground/40 mb-2">
-            Cantos dos cards e painéis — {radius}px
-          </label>
+        <div className="rounded-xl p-4 bg-black/20 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] uppercase tracking-wide text-foreground/40 font-semibold">Cantos dos cards e painéis</label>
+            <span className="text-xs font-bold" style={{ color: "var(--lz-accent-ink)" }}>{radius}px</span>
+          </div>
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-foreground/30 shrink-0">Retos</span>
             <input
@@ -1735,22 +1880,19 @@ function OrgBrandingSection({
             />
             <span className="text-[10px] text-foreground/30 shrink-0">Arredondados</span>
           </div>
-          <div className="mt-3 h-12 w-full max-w-[180px]" style={{ background: "color-mix(in srgb, var(--foreground) 6%, transparent)", borderRadius: `${radius}px` }} />
         </div>
 
-        <div className="pt-2 border-t border-foreground/6">
-          <label className="block text-[11px] uppercase tracking-wide text-foreground/40 mb-2">
+        <div className="rounded-xl p-4 bg-black/20 space-y-3">
+          <label className="block text-[11px] uppercase tracking-wide text-foreground/40 font-semibold">
             Degradê do cabeçalho do Dashboard
           </label>
-          <p className="text-[11px] text-foreground/40 mb-3">
+          <p className="text-[11px] text-foreground/40">
             Por padrão usa a cor clara e a cor da barra lateral. Escolha as suas se quiser outra combinação.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <HeroColorField label="Cor 1" value={heroFrom} fallback={colorPrimaryLight} onChange={setHeroFrom} />
             <HeroColorField label="Cor 2" value={heroTo} fallback={colorSidebar} onChange={setHeroTo} />
           </div>
-          <div className="mt-3 h-16 w-full max-w-[280px] rounded-lg"
-            style={{ background: `linear-gradient(135deg, ${heroFrom || colorPrimaryLight} 0%, ${heroTo || colorSidebar} 100%)` }} />
         </div>
 
         <button onClick={save} disabled={updateMyOrg.isPending || !name.trim()}
@@ -1759,7 +1901,7 @@ function OrgBrandingSection({
         </button>
       </div>
 
-      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
+      <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 mt-8 flex items-center gap-1.5">
         <Star size={12} /> Preview de feed
       </h2>
       <div className="bg-card rounded-lg p-5 mb-8 space-y-4">
