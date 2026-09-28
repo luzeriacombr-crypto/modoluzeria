@@ -223,7 +223,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             <ResellerPanel />
           ) : tab === "indicacoes" ? (
             <div className="space-y-3">
-              <p className="text-xs text-foreground/40">Pra agências que já são clientes do Modo Criador: indique outra agência e ambas ganham um mês grátis — não confundir com "Afiliados", que é pra parceiros externos ganhando comissão.</p>
+              <p className="text-xs text-foreground/40">Pra agências que já são clientes do Modo Criador: indique outra agência e ambas ganham um mês grátis.</p>
               <ReferralsTab />
             </div>
           ) : (
