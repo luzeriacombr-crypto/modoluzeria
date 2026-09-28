@@ -402,6 +402,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
   const [niche, setNiche] = useState<string>(client.customFields.niche ?? "");
   const [postsPerWeek, setPostsPerWeek] = useState<string | number>(client.customFields.postsPerWeek ?? 0);
   const [reelsPerWeek, setReelsPerWeek] = useState<string | number>(client.customFields.reelsPerWeek ?? 0);
+  const [storiesPerWeek, setStoriesPerWeek] = useState<string | number>(client.customFields.storiesPerWeek ?? 0);
   const [responsible, setResponsible] = useState<string>(client.customFields.fixedResponsibleId ?? "");
   const [reviewDay, setReviewDay] = useState<string>(client.customFields.reviewDay ?? "");
   const [notes, setNotes] = useState<string>(client.customFields.notes ?? "");
@@ -425,6 +426,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     setNiche(client.customFields.niche ?? "");
     setPostsPerWeek(client.customFields.postsPerWeek ?? 0);
     setReelsPerWeek(client.customFields.reelsPerWeek ?? 0);
+    setStoriesPerWeek(client.customFields.storiesPerWeek ?? 0);
     setResponsible(client.customFields.fixedResponsibleId ?? "");
     setReviewDay(client.customFields.reviewDay ?? "");
     setNotes(client.customFields.notes ?? "");
@@ -476,6 +478,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
     onSave({
       niche, posts_per_week: Number(postsPerWeek) || 0,
       reels_per_week: Number(reelsPerWeek) || 0,
+      stories_per_week: Number(storiesPerWeek) || 0,
       fixed_responsible_id: responsible || null,
       review_day: reviewDay, notes, competitors,
       content_briefing: contentBriefing, recent_roteiros: recentRoteiros,
@@ -556,6 +559,9 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       </ConfigField>
       <ConfigField label="Reels / mês">
         <input type="number" value={reelsPerWeek} disabled={!canEdit} onChange={(e) => setReelsPerWeek(e.target.value)} className={inp} />
+      </ConfigField>
+      <ConfigField label="Stories / mês">
+        <input type="number" value={storiesPerWeek} disabled={!canEdit} onChange={(e) => setStoriesPerWeek(e.target.value)} className={inp} />
       </ConfigField>
       <ConfigField label="Responsável fixo">
         <select value={responsible} disabled={!canEdit} onChange={(e) => setResponsible(e.target.value)} className={inp}>

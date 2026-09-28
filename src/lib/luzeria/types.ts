@@ -238,6 +238,7 @@ export interface CustomFields {
   niche: string;
   postsPerWeek: number;
   reelsPerWeek: number;
+  storiesPerWeek: number;
   fixedResponsibleId: string | null;
   reviewDay: string;
   notes: string;

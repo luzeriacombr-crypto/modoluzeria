@@ -3,10 +3,11 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { Client } from "@/lib/luzeria/types";
 import { useQuery } from "@tanstack/react-query";
-import { profilesQO, useApi } from "@/lib/luzeria/queries";
+import { profilesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { PRESET_COLORS } from "@/lib/luzeria/utils";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
 export function Modal({ open, onClose, title, children, maxWidthClass = "max-w-md" }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; maxWidthClass?: string }) {
   if (!open) return null;
@@ -30,9 +31,46 @@ export function Modal({ open, onClose, title, children, maxWidthClass = "max-w-m
 export function NewClientModal({ open, onClose, category }: { open: boolean; onClose: () => void; category?: string }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState<string>(PRESET_COLORS[0]);
-  const { createClient } = useApi();
-  useEffect(() => { if (open) { setName(""); setColor(PRESET_COLORS[0]); } }, [open]);
+  const [postsPerWeek, setPostsPerWeek] = useState("");
+  const [reelsPerWeek, setReelsPerWeek] = useState("");
+  const [storiesPerWeek, setStoriesPerWeek] = useState("");
+  const { createClient, updateClient } = useApi();
+  const me = useMe().data;
+  useEffect(() => {
+    if (open) {
+      setName(""); setColor(PRESET_COLORS[0]);
+      setPostsPerWeek(""); setReelsPerWeek(""); setStoriesPerWeek("");
+    }
+  }, [open]);
   const isAvulso = category === "Avulsos";
+
+  async function handleCreate() {
+    let client: { id: string };
+    try {
+      client = await createClient.mutateAsync({ data: { name: name.trim(), category, color, icon: null } });
+    } catch (e: any) {
+      toastFriendlyError(e, "Não consegui criar o cliente. Tenta de novo?");
+      return;
+    }
+    const patch: Record<string, any> = {};
+    if (postsPerWeek.trim() !== "") patch.posts_per_week = Number(postsPerWeek) || 0;
+    if (reelsPerWeek.trim() !== "") patch.reels_per_week = Number(reelsPerWeek) || 0;
+    if (storiesPerWeek.trim() !== "") patch.stories_per_week = Number(storiesPerWeek) || 0;
+    if (Object.keys(patch).length > 0) {
+      await updateClient.mutateAsync({ data: { id: client.id, patch } }).catch(() => {});
+    }
+    if (Number(storiesPerWeek) === 0 && storiesPerWeek.trim() !== "") {
+      const hide = await requestConfirm(`"${name.trim()}" não tem Stories. Ocultar a aba Stories pra esse cliente?`);
+      if (hide) {
+        const base = new Set(me?.disabledFeatures ?? []);
+        base.add("stories");
+        await updateClient.mutateAsync({ data: { id: client.id, patch: { hidden_tabs: [...base] } } }).catch(() => {});
+      }
+    }
+    toast.success(`Cliente "${name.trim()}" criado.`);
+    onClose();
+  }
+
   return (
     <Modal open={open} onClose={onClose} title={isAvulso ? "Nova demanda avulsa" : "Novo cliente"}>
       <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Nome</label>
@@ -51,14 +89,25 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
         </div>
       </div>
 
+      {!isAvulso && (
+        <div className="mt-4">
+          <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Volume mensal (opcional)</div>
+          <div className="grid grid-cols-3 gap-2">
+            <input type="number" min={0} value={postsPerWeek} onChange={(e) => setPostsPerWeek(e.target.value)} placeholder="Posts"
+              className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]" />
+            <input type="number" min={0} value={reelsPerWeek} onChange={(e) => setReelsPerWeek(e.target.value)} placeholder="Reels"
+              className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]" />
+            <input type="number" min={0} value={storiesPerWeek} onChange={(e) => setStoriesPerWeek(e.target.value)} placeholder="Stories"
+              className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]" />
+          </div>
+          <p className="text-[11px] text-foreground/40 mt-1.5">Vai direto pra ficha do cliente. Deixa em branco se ainda não sabe.</p>
+        </div>
+      )}
+
       <div className="flex items-center justify-end gap-2 mt-5">
         <button onClick={onClose} className="px-3 py-2 text-sm text-foreground/60 hover:text-foreground">Cancelar</button>
-        <button disabled={!name.trim() || createClient.isPending}
-          onClick={() => createClient.mutateAsync({
-            data: { name: name.trim(), category, color, icon: null },
-          })
-            .then(() => { toast.success(`Cliente "${name.trim()}" criado.`); onClose(); })
-            .catch((e: any) => toastFriendlyError(e, "Não consegui criar o cliente. Tenta de novo?"))}
+        <button disabled={!name.trim() || createClient.isPending || updateClient.isPending}
+          onClick={handleCreate}
           className="px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50 transition-opacity hover:opacity-90"
           style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
           Criar
@@ -74,6 +123,7 @@ export function CustomFieldsModal({ client, onClose }: { client: Client | null; 
   const [niche, setNiche] = useState("");
   const [postsPerWeek, setPostsPerWeek] = useState(0);
   const [reelsPerWeek, setReelsPerWeek] = useState(0);
+  const [storiesPerWeek, setStoriesPerWeek] = useState(0);
   const [responsible, setResponsible] = useState("");
   const [reviewDay, setReviewDay] = useState("");
   const [notes, setNotes] = useState("");
@@ -83,6 +133,7 @@ export function CustomFieldsModal({ client, onClose }: { client: Client | null; 
     setNiche(client.customFields.niche);
     setPostsPerWeek(client.customFields.postsPerWeek);
     setReelsPerWeek(client.customFields.reelsPerWeek);
+    setStoriesPerWeek(client.customFields.storiesPerWeek);
     setResponsible(client.customFields.fixedResponsibleId ?? "");
     setReviewDay(client.customFields.reviewDay);
     setNotes(client.customFields.notes);
@@ -99,6 +150,7 @@ export function CustomFieldsModal({ client, onClose }: { client: Client | null; 
         patch: {
           niche, posts_per_week: Number(postsPerWeek) || 0,
           reels_per_week: Number(reelsPerWeek) || 0,
+          stories_per_week: Number(storiesPerWeek) || 0,
           fixed_responsible_id: responsible || null,
           review_day: reviewDay, notes,
         },
@@ -113,9 +165,10 @@ export function CustomFieldsModal({ client, onClose }: { client: Client | null; 
     <Modal open={!!client} onClose={onClose} title={`Campos · ${client.name}`}>
       <div className="space-y-3">
         <F label="Nicho"><input value={niche} onChange={(e) => setNiche(e.target.value)} className={inp} /></F>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <F label="Posts / mês"><input type="number" value={postsPerWeek} onChange={(e) => setPostsPerWeek(+e.target.value)} className={inp} /></F>
           <F label="Reels / mês"><input type="number" value={reelsPerWeek} onChange={(e) => setReelsPerWeek(+e.target.value)} className={inp} /></F>
+          <F label="Stories / mês"><input type="number" value={storiesPerWeek} onChange={(e) => setStoriesPerWeek(+e.target.value)} className={inp} /></F>
         </div>
         <F label="Responsável fixo">
           <select value={responsible} onChange={(e) => setResponsible(e.target.value)} className={inp}>

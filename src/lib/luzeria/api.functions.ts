@@ -1696,7 +1696,7 @@ export const listClients = createServerFn({ method: "GET" })
     // colunas novas — cast até os tipos do Supabase serem regenerados
     // depois da migração rodar.
     const { data, error } = await (context.supabase as any).from("clients")
-      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, contract_start_date, contract_end_date, hidden_tabs, cnpj_cpf, address, legal_responsible_name, legal_responsible_cpf, ai_planning_enabled, competitors, content_briefing, recent_roteiros")
+      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, stories_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, contract_start_date, contract_end_date, hidden_tabs, cnpj_cpf, address, legal_responsible_name, legal_responsible_cpf, ai_planning_enabled, competitors, content_briefing, recent_roteiros")
       .order("name");
     if (error) throw new Error(error.message);
     const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
@@ -1712,6 +1712,7 @@ export const listClients = createServerFn({ method: "GET" })
         niche: c.niche ?? "",
         postsPerWeek: c.posts_per_week ?? 0,
         reelsPerWeek: c.reels_per_week ?? 0,
+        storiesPerWeek: c.stories_per_week ?? 0,
         fixedResponsibleId: c.fixed_responsible_id,
         reviewDay: c.review_day ?? "",
         notes: c.notes ?? "",
