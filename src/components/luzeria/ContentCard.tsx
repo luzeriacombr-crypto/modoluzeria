@@ -98,14 +98,14 @@ export function ContentCard({
         <CardThumb itemId={item.id} coverUrl={item.coverUrl ?? null} batchedThumbUrl={batchedThumbUrl} batched={batched} />
         {item.status === "FINALIZADO" ? (
           <div
-            className="absolute top-[16px] -right-[38px] w-[150px] rotate-45 text-center py-1 text-[10px] font-bold uppercase tracking-wider z-10 pointer-events-none"
+            className="absolute top-[52px] -right-[38px] w-[150px] rotate-45 text-center py-1 text-[10px] font-bold uppercase tracking-wider z-10 pointer-events-none"
             style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D", boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }}
           >
             Publicado
           </div>
         ) : item.igAutoPublish && item.scheduledAt && !item.igPublishedAt && (
           <div
-            className="absolute top-[16px] -right-[38px] w-[150px] rotate-45 text-center py-1 text-[8.5px] font-bold uppercase tracking-normal z-10 pointer-events-none"
+            className="absolute top-[52px] -right-[38px] w-[150px] rotate-45 text-center py-1 text-[8.5px] font-bold uppercase tracking-normal z-10 pointer-events-none"
             style={{ backgroundColor: "#0D0D0D", color: "rgb(var(--lz-brand-rgb))", boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }}
           >
             Programado

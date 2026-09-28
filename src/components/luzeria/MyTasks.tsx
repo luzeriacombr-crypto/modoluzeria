@@ -402,7 +402,7 @@ export function MyTasks() {
               onClick={() => setFilter(on && k.id !== "all" ? "all" : k.id)}
               className="text-left rounded-2xl bg-card border px-4 py-3.5 transition hover:-translate-y-0.5"
               style={{ borderColor: on ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 7%, transparent)", boxShadow: on ? "0 0 0 1px rgb(var(--lz-brand-rgb)) inset" : undefined }}>
-              <span className="block text-[30px] font-extrabold leading-none tabular-nums tracking-tight"
+              <span className="block text-[30px] font-extrabold leading-none tabular-nums tracking-tight text-foreground"
                 style={{ color: "danger" in k && k.danger && k.n > 0 ? "#FF5A47" : undefined }}>{k.n}</span>
               <span className="block mt-1.5 text-[11.5px] font-medium text-foreground/60">{k.label}</span>
             </button>
