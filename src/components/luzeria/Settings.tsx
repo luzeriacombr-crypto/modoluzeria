@@ -83,7 +83,13 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
     ...(hasPermission(me, "view_client_overview") ? (["cliente"] as SettingsTab[]) : []),
     ...(isAdmin ? (["cliente"] as SettingsTab[]) : []),
   ];
-  const allowedTabs: SettingsTab[] = isMaster ? VALID_TABS : setorAllowedTabs;
+  // Pedido do Junior: "Afiliados" e "Revenda" ficam escondidas de verdade
+  // por enquanto (só "Indique e ganhe" está disponível) — nem a aba
+  // aparece, nem ?tab=afiliados/revenda na URL funciona (cai no padrão).
+  // Os componentes continuam intactos, só filtrados daqui — reativar depois
+  // é só tirar essa linha.
+  const HIDDEN_TABS: SettingsTab[] = ["afiliados", "revenda"];
+  const allowedTabs: SettingsTab[] = (isMaster ? VALID_TABS : setorAllowedTabs).filter((t) => !HIDDEN_TABS.includes(t));
   // Pedido do Junior: "Plataforma" só existe pra ele (isPlatformAdmin), e é
   // a aba que ele mais usa no dia a dia — clicar na engrenagem sem escolher
   // aba nenhuma (search vazio) cai direto nela pra ele, em vez de "Equipe"
@@ -204,8 +210,6 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           {isMaster && (
             <div className="flex items-center gap-1 mb-6 -mt-2 flex-wrap">
               <SubTabPill active={tab === "cobranca"} onClick={() => setTab("cobranca")} label="Meu plano" />
-              <SubTabPill active={tab === "afiliados"} onClick={() => setTab("afiliados")} label="Afiliados" />
-              <SubTabPill active={tab === "revenda"} onClick={() => setTab("revenda")} label="Revenda" />
               <SubTabPill active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} label="Indique e ganhe" />
             </div>
           )}
