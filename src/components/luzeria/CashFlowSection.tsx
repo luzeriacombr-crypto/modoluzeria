@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, X, AlertCircle } from "lucide-react";
+import { Plus, X, AlertCircle, Pencil } from "lucide-react";
 import { cashFlowEntriesQO, clientPaymentsQO, useApi } from "@/lib/luzeria/queries";
 import type { CashFlowEntry } from "@/lib/luzeria/cash-flow.functions";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
@@ -36,7 +36,9 @@ export function CashFlowSection() {
   const [expenseLabel, setExpenseLabel] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseKind, setExpenseKind] = useState<"fixo" | "variavel">("fixo");
+  const [expenseDueDay, setExpenseDueDay] = useState("");
   const [fillingClient, setFillingClient] = useState<ClientPaymentRow | null>(null);
+  const [editingEntry, setEditingEntry] = useState<CashFlowEntry | null>(null);
 
   const clients = payments?.clients ?? [];
   const incomes = entries.filter((e) => e.direction === "entrada");
@@ -72,9 +74,10 @@ export function CashFlowSection() {
   function saveExpense() {
     const cents = parseAmount(expenseAmount);
     if (!expenseLabel.trim() || !cents) { toast.error("Preencha descrição e valor."); return; }
+    const dueDay = expenseDueDay ? parseInt(expenseDueDay, 10) : null;
     addCashFlowEntry.mutate(
-      { data: { direction: "saida", label: expenseLabel.trim(), amountCents: cents, kind: expenseKind, monthKey } },
-      { onSuccess: () => { setExpenseLabel(""); setExpenseAmount(""); setExpenseKind("fixo"); setAddingExpense(false); } },
+      { data: { direction: "saida", label: expenseLabel.trim(), amountCents: cents, kind: expenseKind, monthKey, dueDay } },
+      { onSuccess: () => { setExpenseLabel(""); setExpenseAmount(""); setExpenseKind("fixo"); setExpenseDueDay(""); setAddingExpense(false); } },
     );
   }
 
@@ -173,8 +176,12 @@ export function CashFlowSection() {
               <div className="space-y-1.5">
                 {incomes.map((it) => (
                   <div key={it.id} className="flex items-center gap-2.5 px-2.5 py-2 rounded-md" style={{ background: "color-mix(in srgb, var(--foreground) 2.5%, transparent)" }}>
-                    <span className="flex-1 min-w-0 text-[13px] text-foreground truncate">{it.label}</span>
+                    <span className="flex-1 min-w-0 text-[13px] text-foreground truncate">
+                      {it.label}
+                      {it.dueDay && <span className="text-foreground/35 font-normal"> · vence dia {it.dueDay}</span>}
+                    </span>
                     <span className="text-[13px] font-bold text-foreground w-20 text-right">{money(it.amountCents)}</span>
+                    <button onClick={() => setEditingEntry(it)} className="text-foreground/30 hover:text-[var(--lz-accent-ink)] transition"><Pencil size={13} /></button>
                     <button onClick={() => remove(it)} className="text-foreground/30 hover:text-red-400 transition"><X size={14} /></button>
                   </div>
                 ))}
@@ -199,7 +206,10 @@ export function CashFlowSection() {
           {addingExpense && (
             <div className="rounded-lg p-3 mb-3 space-y-2" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
               <input value={expenseLabel} onChange={(e) => setExpenseLabel(e.target.value)} placeholder="Ex: Assinatura Canva" className={inp} />
-              <input value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} placeholder="Valor (R$)" className={inp} />
+              <div className="flex gap-2">
+                <input value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} placeholder="Valor (R$)" className={inp} />
+                <input value={expenseDueDay} onChange={(e) => setExpenseDueDay(e.target.value.replace(/\D/g, ""))} placeholder="Dia venc." maxLength={2} className={`${inp} w-28 shrink-0`} />
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setExpenseKind("fixo")}
@@ -241,8 +251,12 @@ export function CashFlowSection() {
                 >
                   {ex.kind === "fixo" ? "Fixo" : "Variável"}
                 </span>
-                <span className="flex-1 min-w-0 text-[13px] text-foreground truncate">{ex.label}</span>
+                <span className="flex-1 min-w-0 text-[13px] text-foreground truncate">
+                  {ex.label}
+                  {ex.dueDay && <span className="text-foreground/35 font-normal"> · vence dia {ex.dueDay}</span>}
+                </span>
                 <span className="text-[13px] font-bold text-foreground w-20 text-right">{money(ex.amountCents)}</span>
+                <button onClick={() => setEditingEntry(ex)} className="text-foreground/30 hover:text-[var(--lz-accent-ink)] transition"><Pencil size={13} /></button>
                 <button onClick={() => remove(ex)} className="text-foreground/30 hover:text-red-400 transition"><X size={14} /></button>
               </div>
             ))}
@@ -253,7 +267,71 @@ export function CashFlowSection() {
       {fillingClient && (
         <FillPaymentInfoModal client={fillingClient} onClose={() => setFillingClient(null)} />
       )}
+      {editingEntry && (
+        <EditEntryModal entry={editingEntry} monthKey={monthKey} onClose={() => setEditingEntry(null)} />
+      )}
     </div>
+  );
+}
+
+/** Corrige um lançamento (Saída ou outra Entrada) já existente — antes só
+ * dava pra apagar e lançar de novo. Kind (Fixo/Variável) só aparece pra
+ * saída; entrada avulsa é sempre do mês em que aconteceu. */
+function EditEntryModal({ entry, monthKey, onClose }: { entry: CashFlowEntry; monthKey: string; onClose: () => void }) {
+  const api = useApi();
+  const [label, setLabel] = useState(entry.label);
+  const [amount, setAmount] = useState((entry.amountCents / 100).toFixed(2).replace(".", ","));
+  const [kind, setKind] = useState<"fixo" | "variavel">(entry.kind);
+  const [dueDay, setDueDay] = useState(entry.dueDay != null ? String(entry.dueDay) : "");
+
+  function save() {
+    const cents = parseFloat(amount.replace(/\./g, "").replace(",", ".")) * 100;
+    if (!label.trim() || !cents || cents <= 0) { toast.error("Preencha descrição e valor."); return; }
+    api.updateCashFlowEntry.mutate(
+      { data: { id: entry.id, label: label.trim(), amountCents: Math.round(cents), kind, monthKey, dueDay: dueDay ? parseInt(dueDay, 10) : null } },
+      { onSuccess: () => { toast.success("Lançamento atualizado."); onClose(); } },
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`Editar ${entry.direction === "saida" ? "saída" : "entrada"}`}>
+      <div className="space-y-3">
+        <label className="block">
+          <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Descrição</span>
+          <input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} className={inp} />
+        </label>
+        <div className="flex gap-2">
+          <label className="block flex-1">
+            <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Valor (R$)</span>
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} className={inp} />
+          </label>
+          <label className="block w-28 shrink-0">
+            <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Dia venc.</span>
+            <input value={dueDay} onChange={(e) => setDueDay(e.target.value.replace(/\D/g, ""))} placeholder="Ex: 10" maxLength={2} className={inp} />
+          </label>
+        </div>
+        {entry.direction === "saida" && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setKind("fixo")}
+              className="flex-1 text-xs font-bold py-2 rounded-md transition"
+              style={kind === "fixo" ? { background: "#6FA4FF", color: "#0D0D0D" } : { background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
+            >Fixo</button>
+            <button
+              onClick={() => setKind("variavel")}
+              className="flex-1 text-xs font-bold py-2 rounded-md transition"
+              style={kind === "variavel" ? { background: "#F0765A", color: "#1A0D0D" } : { background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
+            >Variável</button>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center justify-end gap-2 mt-5">
+        <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
+        <button onClick={save} disabled={api.updateCashFlowEntry.isPending} className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50">
+          {api.updateCashFlowEntry.isPending ? "Salvando…" : "Salvar"}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

@@ -21,6 +21,9 @@ export type CashFlowEntry = {
   amountCents: number;
   kind: "fixo" | "variavel";
   monthKey: string | null;
+  /** Dia do mês (1-31) em que essa conta/recebimento vence — opcional,
+   * só pra acompanhamento (não dispara nenhuma cobrança sozinho). */
+  dueDay: number | null;
   createdAt: string;
 };
 
@@ -33,20 +36,20 @@ export const listCashFlowEntries = createServerFn({ method: "GET" })
     await assertFinanceiroAccess(context.supabase, context.userId);
     const { data: rows, error } = await (context.supabase as any)
       .from("cash_flow_entries")
-      .select("id, direction, label, amount_cents, kind, month_key, created_at")
+      .select("id, direction, label, amount_cents, kind, month_key, due_day, created_at")
       .eq("org_id", context.orgId)
       .or(`kind.eq.fixo,month_key.eq.${data.monthKey}`)
       .order("created_at");
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
       id: r.id, direction: r.direction, label: r.label, amountCents: r.amount_cents,
-      kind: r.kind, monthKey: r.month_key, createdAt: r.created_at,
+      kind: r.kind, monthKey: r.month_key, dueDay: r.due_day, createdAt: r.created_at,
     }));
   });
 
 export const addCashFlowEntry = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { direction: "entrada" | "saida"; label: string; amountCents: number; kind: "fixo" | "variavel"; monthKey: string }) =>
+  .inputValidator((d: { direction: "entrada" | "saida"; label: string; amountCents: number; kind: "fixo" | "variavel"; monthKey: string; dueDay?: number | null }) =>
     z.object({
       direction: z.enum(["entrada", "saida"]),
       label: z.string().trim().min(1).max(140),
@@ -56,6 +59,7 @@ export const addCashFlowEntry = createServerFn({ method: "POST" })
       // mas força aqui também, pra uma chamada direta não furar a regra.
       kind: z.enum(["fixo", "variavel"]),
       monthKey: z.string().regex(/^\d{4}-\d{2}$/),
+      dueDay: z.number().int().min(1).max(31).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
@@ -67,8 +71,41 @@ export const addCashFlowEntry = createServerFn({ method: "POST" })
       amount_cents: data.amountCents,
       kind,
       month_key: kind === "fixo" ? null : data.monthKey,
+      due_day: data.dueDay ?? null,
       created_by: context.userId,
     });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Corrige um lançamento já existente (valor errado, nome errado, quer
+ * marcar o dia de vencimento) — antes só dava pra apagar e lançar de novo. */
+export const updateCashFlowEntry = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string; label: string; amountCents: number; kind: "fixo" | "variavel"; monthKey: string; dueDay?: number | null }) =>
+    z.object({
+      id: z.string().uuid(),
+      label: z.string().trim().min(1).max(140),
+      amountCents: z.number().int().min(1),
+      kind: z.enum(["fixo", "variavel"]),
+      monthKey: z.string().regex(/^\d{4}-\d{2}$/),
+      dueDay: z.number().int().min(1).max(31).nullable().optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertFinanceiroAccess(context.supabase, context.userId);
+    const { data: existing, error: fetchErr } = await (context.supabase as any)
+      .from("cash_flow_entries").select("direction").eq("id", data.id).eq("org_id", context.orgId).maybeSingle();
+    if (fetchErr) throw new Error(fetchErr.message);
+    if (!existing) throw new Error("Lançamento não encontrado.");
+    // Entrada avulsa é sempre variável — mesma regra do addCashFlowEntry.
+    const kind = existing.direction === "entrada" ? "variavel" : data.kind;
+    const { error } = await (context.supabase as any).from("cash_flow_entries").update({
+      label: data.label.trim(),
+      amount_cents: data.amountCents,
+      kind,
+      month_key: kind === "fixo" ? null : data.monthKey,
+      due_day: data.dueDay ?? null,
+    }).eq("id", data.id).eq("org_id", context.orgId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
