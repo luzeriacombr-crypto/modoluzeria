@@ -84,7 +84,12 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
     ...(isAdmin ? (["cliente"] as SettingsTab[]) : []),
   ];
   const allowedTabs: SettingsTab[] = isMaster ? VALID_TABS : setorAllowedTabs;
-  const tab: SettingsTab = (allowedTabs as string[]).includes(tabParam ?? "") ? (tabParam as SettingsTab) : allowedTabs[0];
+  // Pedido do Junior: "Plataforma" só existe pra ele (isPlatformAdmin), e é
+  // a aba que ele mais usa no dia a dia — clicar na engrenagem sem escolher
+  // aba nenhuma (search vazio) cai direto nela pra ele, em vez de "Equipe"
+  // (que continua sendo o padrão pra qualquer outra agência master).
+  const defaultTab: SettingsTab = me.isPlatformAdmin ? "plataforma" : allowedTabs[0];
+  const tab: SettingsTab = (allowedTabs as string[]).includes(tabParam ?? "") ? (tabParam as SettingsTab) : defaultTab;
   const setTab = onTabChange;
 
   const pending = profiles.filter((p) => !p.active);
@@ -121,6 +126,10 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
 
       {(() => {
         const tabItems = [
+          // Pedido do Junior: "Plataforma" é só dele (isPlatformAdmin) e é a
+          // aba que ele mais usa — fica em primeiro lugar pra facilitar,
+          // igual o comportamento padrão de "cair direto nela" acima.
+          ...(me.isPlatformAdmin ? [{ id: "plataforma", label: "Plataforma" }] : []),
           { id: "team", label: "Equipe" },
           { id: "integrations", label: "Integrações" },
           { id: "automations", label: "Automações" },
@@ -129,7 +138,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
           { id: "knowledge", label: "Base de conhecimento" },
-          ...(me.isPlatformAdmin ? [{ id: "plataforma", label: "Plataforma" }, { id: "site", label: "Site" }, { id: "blog", label: "Blog" }] : []),
+          ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }, { id: "blog", label: "Blog" }] : []),
         ].filter((t) => allowedTabs.includes(t.id as SettingsTab));
         const isActive = (id: string) =>
           tab === (id as any) ||
