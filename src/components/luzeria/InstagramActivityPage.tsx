@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import {
   Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ExternalLink, ChevronDown, ChevronUp,
-  Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown, MessageCircle, Send, X, Mail, CalendarDays,
+  Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown, MessageCircle, Send, X, Mail, CalendarDays, UserCheck,
 } from "lucide-react";
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
 import {
@@ -162,23 +162,41 @@ export function InstagramActivityPage() {
   );
 }
 
-function KpiTile({ label, value, changePct }: { label: string; value: number; changePct: number | null }) {
+const KPI_ACCENT: Record<string, string> = {
+  seguidores: "rgb(var(--lz-brand-rgb))",
+  alcance: "#7AA7FF",
+  visitas: "#FFA67A",
+  interacoes: "#D896FF",
+};
+
+function KpiTile({ label, value, changePct, icon, accent = "seguidores" }: {
+  label: string; value: number; changePct: number | null; icon: React.ReactNode; accent?: keyof typeof KPI_ACCENT;
+}) {
+  const color = KPI_ACCENT[accent];
   return (
-    <div className="rounded-lg border border-foreground/8 bg-card p-3 text-center">
-      <div className="text-[9.5px] uppercase font-bold tracking-wider text-foreground/35 mb-1.5 truncate" title={label}>{label}</div>
-      <div className="text-lg font-extrabold text-foreground tabular-nums">{value.toLocaleString("pt-BR")}</div>
-      {changePct !== null && (
-        <div
-          className="mt-1 inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded"
-          style={{
-            color: changePct >= 0 ? "#7ED957" : "#FF6B6B",
-            backgroundColor: changePct >= 0 ? "rgba(126,217,87,0.12)" : "rgba(255,107,107,0.12)",
-          }}
-        >
-          {changePct >= 0 ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
-          {Math.abs(changePct)}%
+    <div className="rounded-2xl bg-card p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div className="h-[34px] w-[34px] rounded-[9px] flex items-center justify-center shrink-0"
+          style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}>
+          {icon}
         </div>
-      )}
+        {changePct !== null && (
+          <div
+            className="inline-flex items-center gap-0.5 text-[10.5px] font-extrabold px-1.5 py-0.5 rounded-full"
+            style={{
+              color: changePct >= 0 ? "#7ED957" : "#FF6B6B",
+              backgroundColor: changePct >= 0 ? "rgba(126,217,87,0.14)" : "rgba(255,107,107,0.14)",
+            }}
+          >
+            {changePct >= 0 ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+            {Math.abs(changePct)}%
+          </div>
+        )}
+      </div>
+      <div>
+        <div className="text-2xl font-extrabold text-foreground tabular-nums tracking-tight">{value.toLocaleString("pt-BR")}</div>
+        <div className="text-[11.5px] font-semibold text-foreground/40 mt-0.5 truncate" title={label}>{label}</div>
+      </div>
     </div>
   );
 }
@@ -295,8 +313,16 @@ function csvEscape(v: string) {
 const SHOW_DIRECT_TAB = false;
 
 function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; clientName: string }) {
+  const me = useMe().data;
   const [pane, setPane] = useState<"geral" | "conteudo" | "publico" | "direct">("geral");
   const mediaState = useAccountMediaWithInsights(clientId);
+  // Mesma queryKey da Visão geral — o React Query deduplica, então mostrar o
+  // @ aqui não dispara uma segunda chamada à Meta.
+  const getOverview = useServerFn(getInstagramAccountOverview);
+  const { data: overview } = useQuery({
+    queryKey: ["instagram-account-overview", clientId],
+    queryFn: () => getOverview({ data: { clientId } }),
+  });
 
   const TABS: { key: typeof pane; label: string }[] = [
     { key: "geral", label: "Visão geral" },
@@ -306,23 +332,49 @@ function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; cli
   ];
 
   return (
-    <div className="mb-8 rounded-lg border border-foreground/8 bg-card p-4">
-      <div className="flex items-center gap-1.5 mb-3 text-foreground/60">
-        <BarChart3 size={14} />
-        <span className="text-[11px] uppercase font-bold tracking-wider">Insights de {clientName}</span>
+    <div className="mb-8">
+      {/* Cabeçalho "hero" — mesma receita visual do cabeçalho do Dashboard
+          (halos radiais suaves sobre o fundo do card, nunca uma cor sólida
+          atrás do texto), com a marca da própria agência (cores + nome). */}
+      <div className="relative overflow-hidden rounded-2xl mb-4"
+        style={{
+          background:
+            "radial-gradient(120% 140% at 0% 0%, rgba(var(--lz-hero-a-rgb),0.18) 0%, color-mix(in srgb, rgb(var(--lz-hero-a-rgb)) 10%, transparent) 35%, transparent 70%), " +
+            "radial-gradient(80% 120% at 100% 100%, color-mix(in srgb, color-mix(in srgb, rgb(var(--lz-hero-b-rgb)) 40%, var(--background)) 55%, transparent) 0%, transparent 65%), " +
+            "linear-gradient(180deg, var(--card) 0%, var(--background) 100%)",
+          border: "1px solid rgba(var(--lz-hero-a-rgb),0.18)",
+        }}>
+        <div className="pointer-events-none absolute -top-16 -left-16 h-56 w-56 rounded-full opacity-25 blur-3xl" style={{ background: "rgb(var(--lz-hero-a-rgb))" }} />
+        <div className="pointer-events-none absolute -bottom-20 right-10 h-64 w-64 rounded-full opacity-20 blur-3xl" style={{ background: "rgb(var(--lz-hero-b-rgb))" }} />
+        <div className="relative flex items-center justify-between gap-4 p-6 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+              style={{ backgroundColor: "var(--lz-hero-badge-bg)", color: "var(--lz-accent-ink)" }}>
+              <Instagram size={11} /> Instagram
+            </div>
+            <div className="mt-2.5 text-[28px] font-extrabold text-foreground tracking-tight leading-none">Insights</div>
+            <div className="mt-1.5 text-base font-bold text-foreground/75">@{overview?.username ?? clientName}</div>
+          </div>
+          <div className="text-right flex flex-col items-end gap-1.5">
+            <div className="h-9 w-9 rounded-[10px] flex items-center justify-center font-serif font-bold text-sm text-foreground shrink-0"
+              style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 12%, transparent)" }}>
+              {(me?.orgName ?? "M").trim().charAt(0).toUpperCase()}
+            </div>
+            <div className="text-[9.5px] uppercase tracking-wider font-bold text-foreground/35">Feito por</div>
+            <div className="text-[12.5px] font-bold text-foreground/75">{me?.orgName ?? "Modo Criador"}</div>
+          </div>
+        </div>
       </div>
-      <div className="flex items-center gap-1 border-b border-foreground/8 mb-4 -mt-1">
+
+      <div className="inline-flex items-center gap-1 rounded-full bg-card p-1 mb-4">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setPane(t.key)}
-            className="px-3 py-2.5 text-xs font-semibold relative shrink-0"
-            style={{ color: pane === t.key ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 35%, transparent)" }}
+            className="px-4 py-2 rounded-full text-xs font-bold transition shrink-0"
+            style={pane === t.key ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" } : { color: "color-mix(in srgb, var(--foreground) 50%, transparent)" }}
           >
             {t.label}
-            {pane === t.key && (
-              <span className="absolute left-2 right-2 -bottom-px h-[2px] rounded-full" style={{ background: "rgb(var(--lz-brand-rgb))" }} />
-            )}
           </button>
         ))}
       </div>
@@ -362,17 +414,15 @@ function VisaoGeralPane({ clientId, mediaState }: { clientId: string; mediaState
 
   return (
     <div>
-      {data.username && <p className="text-[11px] text-foreground/35 mb-3">@{data.username}</p>}
-
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5">
-        <KpiTile label="Seguidores" value={data.followersCount} changePct={data.followersChangePct} />
-        <KpiTile label="Alcance (30d)" value={data.kpis.reach} changePct={data.kpis.reachChangePct} />
-        <KpiTile label="Visitas ao perfil" value={data.kpis.profileViews} changePct={data.kpis.profileViewsChangePct} />
-        <KpiTile label="Interações" value={data.kpis.totalInteractions} changePct={data.kpis.totalInteractionsChangePct} />
+        <KpiTile label="Seguidores" value={data.followersCount} changePct={data.followersChangePct} accent="seguidores" icon={<Users size={16} />} />
+        <KpiTile label="Alcance (30d)" value={data.kpis.reach} changePct={data.kpis.reachChangePct} accent="alcance" icon={<Eye size={16} />} />
+        <KpiTile label="Visitas ao perfil" value={data.kpis.profileViews} changePct={data.kpis.profileViewsChangePct} accent="visitas" icon={<UserCheck size={16} />} />
+        <KpiTile label="Interações" value={data.kpis.totalInteractions} changePct={data.kpis.totalInteractionsChangePct} accent="interacoes" icon={<Heart size={16} />} />
       </div>
 
       <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-        <div className="rounded-lg border border-foreground/8 bg-card p-4">
+        <div className="rounded-2xl bg-card p-4">
           <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Alcance por dia (30 dias)</span>
           <div className="h-40 mt-2 -ml-2">
             <ResponsiveContainer width="100%" height="100%">
@@ -397,7 +447,7 @@ function VisaoGeralPane({ clientId, mediaState }: { clientId: string; mediaState
           </div>
         </div>
 
-        <div className="rounded-lg border border-foreground/8 bg-card p-4">
+        <div className="rounded-2xl bg-card p-4">
           <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Seguidores por dia (30 dias)</span>
           <div className="h-40 mt-2 -ml-2">
             <ResponsiveContainer width="100%" height="100%">
@@ -440,7 +490,7 @@ function VisaoGeralPane({ clientId, mediaState }: { clientId: string; mediaState
       )}
 
       <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-        <div className="rounded-lg border border-foreground/8 bg-card p-4">
+        <div className="rounded-2xl bg-card p-4">
           <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Frequência de postagem</span>
           <div className="h-40 mt-2 -ml-2">
             <ResponsiveContainer width="100%" height="100%">
@@ -466,7 +516,7 @@ function VisaoGeralPane({ clientId, mediaState }: { clientId: string; mediaState
         </div>
 
         {data.onlineFollowers && (
-          <div className="rounded-lg border border-foreground/8 bg-card p-4">
+          <div className="rounded-2xl bg-card p-4">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Seguidores online por horário</span>
               {bestHour && (
