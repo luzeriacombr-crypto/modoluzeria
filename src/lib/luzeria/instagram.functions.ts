@@ -421,6 +421,44 @@ export async function runInstagramTokenRefresh() {
   return results;
 }
 
+/** Retrato diário do número de seguidores de cada cliente conectado —
+ * guardado aqui porque a API do Instagram só devolve uma janela recente de
+ * histórico. Rodando uma vez por dia (cron), depois de alguns meses dá pra
+ * comparar "há X tempo você tinha Y seguidores, hoje tem Z" (pedido real de
+ * cliente numa call de demonstração). Upsert por (client_id, captured_on):
+ * se o cron rodar mais de uma vez no mesmo dia, não duplica nem quebra. */
+export async function runInstagramFollowerSnapshots() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: creds } = await (supabaseAdmin as any)
+    .from("client_instagram_credentials")
+    .select("client_id, access_token, instagram_business_account_id");
+
+  const results: { clientId: string; ok: boolean; error?: string }[] = [];
+  for (const row of (creds ?? []) as any[]) {
+    try {
+      const res = await fetch(
+        `${IG_GRAPH_API}/${row.instagram_business_account_id}?fields=followers_count&access_token=${encodeURIComponent(row.access_token)}`,
+      );
+      const json: any = await res.json();
+      if (json.error) throw new Error(json.error.message ?? "Erro desconhecido da Meta");
+      const followersCount = json.followers_count;
+      if (typeof followersCount !== "number") throw new Error("Resposta sem followers_count");
+
+      const { error } = await (supabaseAdmin as any).from("instagram_client_snapshots").upsert(
+        { client_id: row.client_id, captured_on: today, followers_count: followersCount },
+        { onConflict: "client_id,captured_on" },
+      );
+      if (error) throw new Error(error.message);
+      results.push({ clientId: row.client_id, ok: true });
+    } catch (e: any) {
+      results.push({ clientId: row.client_id, ok: false, error: e?.message ?? String(e) });
+    }
+  }
+  return results;
+}
+
 /** Does the actual work of publishing a "post" content_item to Instagram —
  * shared by the manual "Publicar agora" button and the scheduled-publish
  * cron endpoint. Always runs against supabaseAdmin (no user session in the
@@ -1422,6 +1460,51 @@ export const getInstagramAccountOverview = createServerFn({ method: "GET" })
       postingFrequency: WEEKDAY_LABELS.map((day, i) => ({ day, count: dayCounts[i] })),
       onlineFollowers,
       demographics,
+    };
+  });
+
+export type InstagramFollowerHistory = {
+  /** Data do retrato mais antigo que temos — o front usa isso pra escrever
+   * "desde 12/06" em vez de inventar um período fixo tipo "3 meses". */
+  earliestDate: string | null;
+  earliestFollowers: number | null;
+  latestDate: string | null;
+  latestFollowers: number | null;
+  /** Toda a série (pouca coisa no início, cresce sozinha com o tempo) —
+   * dá pra desenhar um gráfico simples de evolução, não só o comparativo. */
+  series: { date: string; followers: number }[];
+};
+
+/** Comparativo histórico de seguidores (pedido real de cliente numa call:
+ * "eu quero mostrar pro meu cliente que ele tinha X seguidores há 3 meses e
+ * hoje tem Y"). Como a API do Instagram só devolve uma janela recente, isso
+ * lê da nossa própria tabela de retratos diários (runInstagramFollowerSnapshots,
+ * agendada via cron) — só existe dado a partir de quando essa tabela passou
+ * a existir, nunca antes disso. */
+export const getInstagramFollowerHistory = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<InstagramFollowerHistory> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+
+    const { data: rows, error } = await (context.supabase as any)
+      .from("instagram_client_snapshots")
+      .select("captured_on, followers_count")
+      .eq("client_id", data.clientId)
+      .order("captured_on", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    const series = (rows ?? []).map((r: any) => ({ date: r.captured_on as string, followers: r.followers_count as number }));
+    const first = series[0] ?? null;
+    const last = series[series.length - 1] ?? null;
+    return {
+      earliestDate: first?.date ?? null,
+      earliestFollowers: first?.followers ?? null,
+      latestDate: last?.date ?? null,
+      latestFollowers: last?.followers ?? null,
+      series,
     };
   });
 

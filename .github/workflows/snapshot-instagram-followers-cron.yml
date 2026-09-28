@@ -1,0 +1,16 @@
+name: Snapshot Instagram followers
+
+on:
+  schedule:
+    - cron: "35 6 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call snapshot endpoint
+        run: |
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.modocriador.com.br/api/cron/snapshot-instagram-followers

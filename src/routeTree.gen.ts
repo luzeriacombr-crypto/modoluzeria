@@ -60,6 +60,7 @@ import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as ApiSelecaoOgTokenRouteImport } from './routes/api.selecao-og.$token'
 import { Route as ApiIgMediaTokenRouteImport } from './routes/api.ig-media.$token'
+import { Route as ApiCronSnapshotInstagramFollowersRouteImport } from './routes/api.cron.snapshot-instagram-followers'
 import { Route as ApiCronSendPushNotificationsRouteImport } from './routes/api.cron.send-push-notifications'
 import { Route as ApiCronSendAutomationEmailsRouteImport } from './routes/api.cron.send-automation-emails'
 import { Route as ApiCronRetentionCleanupRouteImport } from './routes/api.cron.retention-cleanup'
@@ -345,6 +346,12 @@ const ApiIgMediaTokenRoute = ApiIgMediaTokenRouteImport.update({
   path: '/api/ig-media/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronSnapshotInstagramFollowersRoute =
+  ApiCronSnapshotInstagramFollowersRouteImport.update({
+    id: '/api/cron/snapshot-instagram-followers',
+    path: '/api/cron/snapshot-instagram-followers',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiCronSendPushNotificationsRoute =
   ApiCronSendPushNotificationsRouteImport.update({
     id: '/api/cron/send-push-notifications',
@@ -528,6 +535,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-automation-emails': typeof ApiCronSendAutomationEmailsRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
+  '/api/cron/snapshot-instagram-followers': typeof ApiCronSnapshotInstagramFollowersRoute
   '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
   '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
@@ -600,6 +608,7 @@ export interface FileRoutesByTo {
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-automation-emails': typeof ApiCronSendAutomationEmailsRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
+  '/api/cron/snapshot-instagram-followers': typeof ApiCronSnapshotInstagramFollowersRoute
   '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
   '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
@@ -674,6 +683,7 @@ export interface FileRoutesById {
   '/api/cron/retention-cleanup': typeof ApiCronRetentionCleanupRoute
   '/api/cron/send-automation-emails': typeof ApiCronSendAutomationEmailsRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
+  '/api/cron/snapshot-instagram-followers': typeof ApiCronSnapshotInstagramFollowersRoute
   '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
   '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
@@ -748,6 +758,7 @@ export interface FileRouteTypes {
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-automation-emails'
     | '/api/cron/send-push-notifications'
+    | '/api/cron/snapshot-instagram-followers'
     | '/api/ig-media/$token'
     | '/api/selecao-og/$token'
     | '/api/selecao-download/$token/$fileId'
@@ -820,6 +831,7 @@ export interface FileRouteTypes {
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-automation-emails'
     | '/api/cron/send-push-notifications'
+    | '/api/cron/snapshot-instagram-followers'
     | '/api/ig-media/$token'
     | '/api/selecao-og/$token'
     | '/api/selecao-download/$token/$fileId'
@@ -893,6 +905,7 @@ export interface FileRouteTypes {
     | '/api/cron/retention-cleanup'
     | '/api/cron/send-automation-emails'
     | '/api/cron/send-push-notifications'
+    | '/api/cron/snapshot-instagram-followers'
     | '/api/ig-media/$token'
     | '/api/selecao-og/$token'
     | '/api/selecao-download/$token/$fileId'
@@ -944,6 +957,7 @@ export interface RootRouteChildren {
   ApiCronRetentionCleanupRoute: typeof ApiCronRetentionCleanupRoute
   ApiCronSendAutomationEmailsRoute: typeof ApiCronSendAutomationEmailsRoute
   ApiCronSendPushNotificationsRoute: typeof ApiCronSendPushNotificationsRoute
+  ApiCronSnapshotInstagramFollowersRoute: typeof ApiCronSnapshotInstagramFollowersRoute
   ApiIgMediaTokenRoute: typeof ApiIgMediaTokenRoute
   ApiSelecaoOgTokenRoute: typeof ApiSelecaoOgTokenRoute
   ApiSelecaoDownloadTokenFileIdRoute: typeof ApiSelecaoDownloadTokenFileIdRoute
@@ -1308,6 +1322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiIgMediaTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/snapshot-instagram-followers': {
+      id: '/api/cron/snapshot-instagram-followers'
+      path: '/api/cron/snapshot-instagram-followers'
+      fullPath: '/api/cron/snapshot-instagram-followers'
+      preLoaderRoute: typeof ApiCronSnapshotInstagramFollowersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/send-push-notifications': {
       id: '/api/cron/send-push-notifications'
       path: '/api/cron/send-push-notifications'
@@ -1566,6 +1587,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronRetentionCleanupRoute: ApiCronRetentionCleanupRoute,
   ApiCronSendAutomationEmailsRoute: ApiCronSendAutomationEmailsRoute,
   ApiCronSendPushNotificationsRoute: ApiCronSendPushNotificationsRoute,
+  ApiCronSnapshotInstagramFollowersRoute:
+    ApiCronSnapshotInstagramFollowersRoute,
   ApiIgMediaTokenRoute: ApiIgMediaTokenRoute,
   ApiSelecaoOgTokenRoute: ApiSelecaoOgTokenRoute,
   ApiSelecaoDownloadTokenFileIdRoute: ApiSelecaoDownloadTokenFileIdRoute,

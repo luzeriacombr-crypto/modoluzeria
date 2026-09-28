@@ -9,11 +9,11 @@ import {
 } from "lucide-react";
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
 import {
-  getInstagramAccountMedia, getInstagramAccountMediaInsights, getInstagramAccountOverview,
+  getInstagramAccountMedia, getInstagramAccountMediaInsights, getInstagramAccountOverview, getInstagramFollowerHistory,
   getInstagramComments, replyToInstagramComment, postInstagramComment,
   getInstagramConversations, getInstagramConversationMessages, sendInstagramDirectMessage,
   type InstagramActivityItem, type InstagramAccountMedia, type InstagramMediaInsights, type InstagramAccountOverview,
-  type InstagramComment, type InstagramConversation, type InstagramDirectMessage,
+  type InstagramComment, type InstagramConversation, type InstagramDirectMessage, type InstagramFollowerHistory,
 } from "@/lib/luzeria/instagram.functions";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { POST_FORMAT_LABEL, CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
@@ -383,11 +383,67 @@ function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; cli
   );
 }
 
+/** Comparativo "de lá pra cá" (pedido real de cliente numa call de
+ * demonstração) — enquanto não tem pelo menos 2 retratos guardados
+ * (runInstagramFollowerSnapshots roda 1x/dia), mostra um aviso em vez do
+ * comparativo, já que ainda não tem o que comparar. */
+function FollowerComparisonCard({ history }: { history: InstagramFollowerHistory }) {
+  const { series, earliestDate, earliestFollowers, latestDate, latestFollowers } = history;
+
+  if (series.length < 2 || earliestFollowers == null || latestFollowers == null || !earliestDate || !latestDate) {
+    return (
+      <div className="rounded-2xl bg-card p-4 mb-5 flex items-center gap-3">
+        <div className="h-8 w-8 rounded-[9px] flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+          <TrendingUp size={15} />
+        </div>
+        <p className="text-[11.5px] text-foreground/40">
+          Estamos guardando um retrato diário dos seguidores a partir de hoje — em alguns dias dá pra ver aqui a evolução "de lá pra cá".
+        </p>
+      </div>
+    );
+  }
+
+  const delta = latestFollowers - earliestFollowers;
+  const deltaPct = earliestFollowers > 0 ? Math.round((delta / earliestFollowers) * 1000) / 10 : 0;
+  const days = Math.round((new Date(latestDate).getTime() - new Date(earliestDate).getTime()) / 86400000);
+  const periodLabel = days <= 1 ? "Ontem" : days < 60 ? `Há ${days} dias` : `Desde ${new Date(earliestDate).toLocaleDateString("pt-BR")}`;
+
+  return (
+    <div className="rounded-2xl bg-card p-4 mb-5 flex items-center gap-4 flex-wrap">
+      <div className="h-9 w-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+        <TrendingUp size={16} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40">Comparativo de seguidores</div>
+        <div className="text-sm font-semibold text-foreground mt-0.5">
+          {periodLabel}: {earliestFollowers.toLocaleString("pt-BR")} → hoje {latestFollowers.toLocaleString("pt-BR")}
+        </div>
+      </div>
+      <div
+        className="inline-flex items-center gap-1 text-[12px] font-extrabold px-2.5 py-1.5 rounded-full shrink-0"
+        style={{
+          color: delta >= 0 ? "#7ED957" : "#FF6B6B",
+          backgroundColor: delta >= 0 ? "rgba(126,217,87,0.14)" : "rgba(255,107,107,0.14)",
+        }}
+      >
+        {delta >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+        {delta >= 0 ? "+" : ""}{delta.toLocaleString("pt-BR")} ({deltaPct >= 0 ? "+" : ""}{deltaPct}%)
+      </div>
+    </div>
+  );
+}
+
 function VisaoGeralPane({ clientId, mediaState }: { clientId: string; mediaState: ReturnType<typeof useAccountMediaWithInsights> }) {
   const getOverview = useServerFn(getInstagramAccountOverview);
   const { data, isLoading, error } = useQuery({
     queryKey: ["instagram-account-overview", clientId],
     queryFn: () => getOverview({ data: { clientId } }),
+  });
+
+  const getFollowerHistory = useServerFn(getInstagramFollowerHistory);
+  const { data: history } = useQuery({
+    queryKey: ["instagram-follower-history", clientId],
+    queryFn: () => getFollowerHistory({ data: { clientId } }),
   });
 
   if (isLoading) return <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>;
@@ -416,6 +472,8 @@ function VisaoGeralPane({ clientId, mediaState }: { clientId: string; mediaState
         <KpiTile label="Visitas ao perfil" value={data.kpis.profileViews} changePct={data.kpis.profileViewsChangePct} accent="visitas" icon={<UserCheck size={16} />} />
         <KpiTile label="Interações" value={data.kpis.totalInteractions} changePct={data.kpis.totalInteractionsChangePct} accent="interacoes" icon={<Heart size={16} />} />
       </div>
+
+      {history && <FollowerComparisonCard history={history} />}
 
       <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
         <div className="rounded-2xl bg-card p-4">
