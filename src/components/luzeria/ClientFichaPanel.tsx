@@ -5,7 +5,7 @@ import {
   X, Plus, Trash2, Link as LinkIcon, ExternalLink, Mail, Phone, User,
   EyeOff, FileText, Clock, CheckCircle2, AlertOctagon, Copy, Check,
   Repeat, ListChecks, Zap, Power, FolderOpen, Loader2, Save, Camera, Instagram, Facebook,
-  MessageCircle, Milestone, Users, Upload, Download, Film, Image as ImageIcon, Megaphone,
+  MessageCircle, Milestone, Users, Upload, Download, Film, Image as ImageIcon, Megaphone, Pencil,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -1907,6 +1907,37 @@ function OnboardingBlock({ clientId }: { clientId: string }) {
 
 /* ============== RECURRING ============== */
 
+const DOW_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const HORIZON_OPTIONS: { value: number; label: string }[] = [
+  { value: 7, label: "7 dias" },
+  { value: 14, label: "14 dias" },
+  { value: 30, label: "1 mês" },
+  { value: 365, label: "Para sempre" },
+];
+function horizonLabel(days: number) {
+  return HORIZON_OPTIONS.find((o) => o.value === days)?.label ?? `${days} dias`;
+}
+
+/** Fileira de dias da semana clicáveis (multi-seleção) — mesmo padrão visual
+ * já usado pros "Responsáveis padrão" logo abaixo, só que pra dia da semana.
+ * Sempre mantém pelo menos 1 dia marcado (não dá pra desmarcar o último). */
+function WeekdayPicker({ value, onChange }: { value: number[]; onChange: (v: number[]) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {DOW_LABELS.map((label, i) => {
+        const sel = value.includes(i);
+        return (
+          <button key={i} type="button"
+            onClick={() => onChange(sel ? (value.length > 1 ? value.filter((d) => d !== i) : value) : [...value, i].sort())}
+            className="px-2.5 py-1 rounded text-[10.5px] font-semibold transition-colors"
+            style={{ backgroundColor: sel ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)", color: sel ? "#0D0D0D" : "#FFFFFF" }}
+          >{label}</button>
+        );
+      })}
+    </div>
+  );
+}
+
 function RecurringBlock({ clientId }: { clientId: string }) {
   const api = useApi();
   const { data: templates = [] } = useQuery(recurringQO(clientId));
@@ -1916,7 +1947,7 @@ function RecurringBlock({ clientId }: { clientId: string }) {
   return (
     <div>
       <p className="text-[11px] text-foreground/50 mb-3">
-        Tarefas geradas automaticamente. Use "Gerar agora" para criar os itens dos próximos 14 dias.
+        Tarefas geradas automaticamente. Cada recorrência tem seu próprio período — use "Gerar agora" pra criar os itens.
       </p>
       <div className="space-y-2">
         {templates.length === 0 && !adding && (
@@ -1927,7 +1958,7 @@ function RecurringBlock({ clientId }: { clientId: string }) {
             key={t.id}
             tpl={t}
             profiles={profiles}
-            onUpdate={(patch) => api.upsertRecurring.mutate({ data: { id: t.id, clientId, type: t.type, title: t.title, cadence: t.cadence, dayOfWeek: t.dayOfWeek, dayOfMonth: t.dayOfMonth, defaultAssignees: t.defaultAssignees, active: t.active, ...patch } })}
+            onUpdate={(patch) => api.upsertRecurring.mutate({ data: { id: t.id, clientId, type: t.type, title: t.title, cadence: t.cadence, daysOfWeek: t.daysOfWeek, dayOfMonth: t.dayOfMonth, horizonDays: t.horizonDays, defaultAssignees: t.defaultAssignees, active: t.active, ...patch } })}
             onDelete={async () => { if (await requestConfirm(`Excluir recorrência "${t.title}"?`, { danger: true })) api.deleteRecurring.mutate({ data: { id: t.id } }); }}
           />
         ))}
@@ -1949,7 +1980,7 @@ function RecurringBlock({ clientId }: { clientId: string }) {
         )}
         {templates.some((t) => t.active) && (
           <button
-            onClick={() => api.generateRecurring.mutate({ data: { clientId, days: 14 } }, {
+            onClick={() => api.generateRecurring.mutate({ data: { clientId } }, {
               onSuccess: (r) => toast.success(`${(r as any).generated ?? 0} tarefa(s) geradas`),
             })}
             disabled={api.generateRecurring.isPending}
@@ -1965,19 +1996,40 @@ function RecurringBlock({ clientId }: { clientId: string }) {
 function RecurringRow({ tpl, profiles, onUpdate, onDelete }: {
   tpl: any; profiles: any[]; onUpdate: (p: any) => void; onDelete: () => void;
 }) {
-  const DOW = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const [editing, setEditing] = useState(false);
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(tpl.daysOfWeek?.length ? tpl.daysOfWeek : [1]);
+  const [dayOfMonth, setDayOfMonth] = useState(tpl.dayOfMonth ?? 1);
+  const [horizonDays, setHorizonDays] = useState(tpl.horizonDays ?? 14);
+
   const when = tpl.cadence === "weekly"
-    ? `Toda ${DOW[tpl.dayOfWeek ?? 1]}`
+    ? (tpl.daysOfWeek?.length ? tpl.daysOfWeek.map((d: number) => DOW_LABELS[d]).join(", ") : "—")
     : `Dia ${tpl.dayOfMonth ?? 1} do mês`;
   const typeLabel = CONTENT_TYPE_LABEL[tpl.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item";
+
+  function saveEdit() {
+    onUpdate({
+      daysOfWeek: tpl.cadence === "weekly" ? daysOfWeek : tpl.daysOfWeek,
+      dayOfMonth: tpl.cadence === "monthly" ? dayOfMonth : tpl.dayOfMonth,
+      horizonDays,
+    });
+    setEditing(false);
+  }
+
   return (
     <div className="bg-card border border-foreground/6 rounded-md px-3 py-2.5">
       <div className="flex items-center gap-2">
         <Repeat size={13} style={{ color: tpl.active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 30%, transparent)" }} />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-foreground truncate">{tpl.title}</div>
-          <div className="text-[10px] text-foreground/40">{typeLabel} · {when}</div>
+          <div className="text-[10px] text-foreground/40">{typeLabel} · {when} · Gera {horizonLabel(tpl.horizonDays ?? 14).toLowerCase()}</div>
         </div>
+        {!editing && (
+          <button
+            onClick={() => { setDaysOfWeek(tpl.daysOfWeek?.length ? tpl.daysOfWeek : [1]); setDayOfMonth(tpl.dayOfMonth ?? 1); setHorizonDays(tpl.horizonDays ?? 14); setEditing(true); }}
+            className="p-1 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5"
+            title="Editar"
+          ><Pencil size={12} /></button>
+        )}
         <button
           onClick={() => onUpdate({ active: !tpl.active })}
           className="p-1 rounded text-foreground/40 hover:text-[var(--lz-accent-ink)] hover:bg-foreground/5"
@@ -2000,6 +2052,34 @@ function RecurringRow({ tpl, profiles, onUpdate, onDelete }: {
       {tpl.lastGeneratedAt && (
         <div className="text-[10px] text-foreground/30 mt-1">Última geração: {new Date(tpl.lastGeneratedAt).toLocaleDateString("pt-BR")}</div>
       )}
+      {editing && (
+        <div className="mt-2.5 pt-2.5 border-t border-foreground/8 space-y-2.5">
+          {tpl.cadence === "weekly" ? (
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-foreground/40 mb-1">Dias da semana</div>
+              <WeekdayPicker value={daysOfWeek} onChange={setDaysOfWeek} />
+            </div>
+          ) : (
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-foreground/40 mb-1">Dia do mês</div>
+              <input type="number" min={1} max={31} value={dayOfMonth} onChange={(e) => setDayOfMonth(Number(e.target.value))}
+                className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] w-20" />
+            </div>
+          )}
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-foreground/40 mb-1">Gerar por quanto tempo</div>
+            <select value={horizonDays} onChange={(e) => setHorizonDays(Number(e.target.value))}
+              className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
+              {HORIZON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button onClick={() => setEditing(false)} className="text-[11px] text-foreground/50 hover:text-foreground px-2 py-1">Cancelar</button>
+            <button onClick={saveEdit} className="px-3 py-1.5 rounded-md text-[11px] font-bold"
+              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>Salvar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2010,8 +2090,9 @@ function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
   const [title, setTitle] = useState("");
   const [type, setType] = useState<"post" | "reel" | "outros">("post");
   const [cadence, setCadence] = useState<"weekly" | "monthly">("weekly");
-  const [dayOfWeek, setDayOfWeek] = useState(1);
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1]);
   const [dayOfMonth, setDayOfMonth] = useState(1);
+  const [horizonDays, setHorizonDays] = useState(14);
   const [assignees, setAssignees] = useState<string[]>([]);
 
   return (
@@ -2033,18 +2114,23 @@ function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
           <option value="weekly">Semanal</option>
           <option value="monthly">Mensal</option>
         </select>
-        {cadence === "weekly" ? (
-          <select value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))}
-            className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
-            {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d, i) => (
-              <option key={i} value={i}>{d}</option>
-            ))}
-          </select>
-        ) : (
-          <input type="number" min={1} max={31} value={dayOfMonth} onChange={(e) => setDayOfMonth(Number(e.target.value))}
-            className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
-        )}
+        <select value={horizonDays} onChange={(e) => setHorizonDays(Number(e.target.value))}
+          className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
+          {HORIZON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
       </div>
+      {cadence === "weekly" ? (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-foreground/40 mb-1">Dias da semana</div>
+          <WeekdayPicker value={daysOfWeek} onChange={setDaysOfWeek} />
+        </div>
+      ) : (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-foreground/40 mb-1">Dia do mês</div>
+          <input type="number" min={1} max={31} value={dayOfMonth} onChange={(e) => setDayOfMonth(Number(e.target.value))}
+            className="bg-background border border-foreground/10 rounded px-2 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] w-20" />
+        </div>
+      )}
       <div>
         <div className="text-[10px] uppercase tracking-wider text-foreground/40 mb-1">Responsáveis padrão</div>
         <div className="flex flex-wrap gap-1.5">
@@ -2065,8 +2151,9 @@ function NewRecurringRow({ clientId, profiles, onSubmit, onCancel }: {
         <button disabled={!title.trim()}
           onClick={() => onSubmit({
             clientId, type, title: title.trim(), cadence,
-            dayOfWeek: cadence === "weekly" ? dayOfWeek : null,
+            daysOfWeek: cadence === "weekly" ? daysOfWeek : null,
             dayOfMonth: cadence === "monthly" ? dayOfMonth : null,
+            horizonDays,
             defaultAssignees: assignees, active: true,
           })}
           className="px-3 py-1.5 rounded-md text-[11px] font-bold disabled:opacity-30"

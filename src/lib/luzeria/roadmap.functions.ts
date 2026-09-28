@@ -392,12 +392,13 @@ export const listRecurring = createServerFn({ method: "GET" })
     const db: any = context.supabase;
     const { data: rows } = await db
       .from("recurring_templates")
-      .select("id, client_id, type, title, cadence, day_of_week, day_of_month, default_assignees, active, last_generated_at")
+      .select("id, client_id, type, title, cadence, days_of_week, day_of_month, horizon_days, default_assignees, active, last_generated_at")
       .eq("client_id", data.clientId)
       .order("created_at");
     return (rows ?? []).map((r: any) => ({
       id: r.id, clientId: r.client_id, type: r.type, title: r.title,
-      cadence: r.cadence, dayOfWeek: r.day_of_week, dayOfMonth: r.day_of_month,
+      cadence: r.cadence, daysOfWeek: r.days_of_week, dayOfMonth: r.day_of_month,
+      horizonDays: r.horizon_days ?? 14,
       defaultAssignees: r.default_assignees ?? [], active: r.active,
       lastGeneratedAt: r.last_generated_at,
     }));
@@ -408,7 +409,7 @@ export const upsertRecurring = createServerFn({ method: "POST" })
   .inputValidator((d: {
     id?: string; clientId: string; type: "post" | "reel" | "outros";
     title: string; cadence: "weekly" | "monthly";
-    dayOfWeek?: number | null; dayOfMonth?: number | null;
+    daysOfWeek?: number[] | null; dayOfMonth?: number | null; horizonDays?: number;
     defaultAssignees?: string[]; active?: boolean;
   }) => z.object({
     id: z.string().uuid().optional(),
@@ -416,8 +417,9 @@ export const upsertRecurring = createServerFn({ method: "POST" })
     type: z.enum(["post", "reel", "outros"]),
     title: z.string().trim().min(1).max(200),
     cadence: z.enum(["weekly", "monthly"]),
-    dayOfWeek: z.number().int().min(0).max(6).nullable().optional(),
+    daysOfWeek: z.array(z.number().int().min(0).max(6)).min(1).max(7).nullable().optional(),
     dayOfMonth: z.number().int().min(1).max(31).nullable().optional(),
+    horizonDays: z.number().int().min(1).max(365).optional(),
     defaultAssignees: z.array(z.string().uuid()).max(20).optional(),
     active: z.boolean().optional(),
   }).parse(d))
@@ -427,8 +429,9 @@ export const upsertRecurring = createServerFn({ method: "POST" })
     const db: any = context.supabase;
     const payload: any = {
       type: data.type, title: data.title, cadence: data.cadence,
-      day_of_week: data.cadence === "weekly" ? (data.dayOfWeek ?? 1) : null,
+      days_of_week: data.cadence === "weekly" ? (data.daysOfWeek ?? [1]) : null,
       day_of_month: data.cadence === "monthly" ? (data.dayOfMonth ?? 1) : null,
+      horizon_days: data.horizonDays ?? 14,
       default_assignees: data.defaultAssignees ?? [],
       active: data.active ?? true,
     };
@@ -461,15 +464,13 @@ export const deleteRecurring = createServerFn({ method: "POST" })
  */
 export const generateRecurring = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; days?: number }) =>
+  .inputValidator((d: { clientId: string }) =>
     z.object({
       clientId: z.string().uuid(),
-      days: z.number().int().min(1).max(60).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
-    const horizon = data.days ?? 14;
     const db: any = context.supabase;
     const { data: templates } = await db.from("recurring_templates")
       .select("*").eq("client_id", data.clientId).eq("active", true);
@@ -489,13 +490,17 @@ export const generateRecurring = createServerFn({ method: "POST" })
     }
 
     let generated = 0;
-    for (let d = 0; d < horizon; d++) {
-      const dt = new Date(now); dt.setDate(now.getDate() + d);
-      const dow = dt.getDay();
-      const dom = dt.getDate();
-      for (const tpl of templates as any[]) {
+    // Cada recorrência tem seu próprio horizonte agora (7/14/30/365 dias,
+    // escolhido por quem cadastrou), então o loop é por template primeiro,
+    // não mais um horizonte único compartilhado por todos.
+    for (const tpl of templates as any[]) {
+      const horizon = tpl.horizon_days ?? 14;
+      for (let d = 0; d < horizon; d++) {
+        const dt = new Date(now); dt.setDate(now.getDate() + d);
+        const dow = dt.getDay();
+        const dom = dt.getDate();
         const matches =
-          (tpl.cadence === "weekly" && tpl.day_of_week === dow) ||
+          (tpl.cadence === "weekly" && Array.isArray(tpl.days_of_week) && tpl.days_of_week.includes(dow)) ||
           (tpl.cadence === "monthly" && tpl.day_of_month === dom);
         if (!matches) continue;
         const lastGen = tpl.last_generated_at ? new Date(tpl.last_generated_at) : null;

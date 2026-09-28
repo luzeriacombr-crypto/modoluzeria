@@ -858,8 +858,12 @@ export interface RecurringTemplate {
   type: ContentType;
   title: string;
   cadence: RecurringCadence;
-  dayOfWeek: number | null;   // 0 (Dom) – 6 (Sáb)
-  dayOfMonth: number | null;  // 1 – 31
+  daysOfWeek: number[] | null;  // 0 (Dom) – 6 (Sáb), um ou mais
+  dayOfMonth: number | null;    // 1 – 31
+  /** Quantos dias pra frente "Gerar agora" cria itens — escolhido por
+   * recorrência (7/14/30/365; "365" representa "pra sempre" na prática,
+   * já que não dá pra inserir linhas infinitas num clique só). */
+  horizonDays: number;
   defaultAssignees: string[];
   active: boolean;
   lastGeneratedAt: string | null;
