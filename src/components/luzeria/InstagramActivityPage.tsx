@@ -355,11 +355,7 @@ function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; cli
             <div className="mt-2.5 text-[28px] font-extrabold text-foreground tracking-tight leading-none">Insights</div>
             <div className="mt-1.5 text-base font-bold text-foreground/75">@{overview?.username ?? clientName}</div>
           </div>
-          <div className="text-right flex flex-col items-end gap-1.5">
-            <div className="h-9 w-9 rounded-[10px] flex items-center justify-center font-serif font-bold text-sm text-foreground shrink-0"
-              style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 12%, transparent)" }}>
-              {(me?.orgName ?? "M").trim().charAt(0).toUpperCase()}
-            </div>
+          <div className="text-right flex flex-col items-end gap-1">
             <div className="text-[9.5px] uppercase tracking-wider font-bold text-foreground/35">Feito por</div>
             <div className="text-[12.5px] font-bold text-foreground/75">{me?.orgName ?? "Modo Criador"}</div>
           </div>
