@@ -1725,52 +1725,6 @@ function OrgBrandingSection({
           A tela de login em si continua igual pra todas as agências.
         </p>
 
-        {/* Pré-visualização ao vivo — fica logo no topo e "grudada" (sticky)
-            enquanto você rola pra mexer nos campos abaixo, porque senão ela
-            fica fora da tela bem na hora que você mais precisa ver o efeito
-            (feedback real: mexer na cor lá em cima e não conseguir ver o
-            resultado sem rolar até embaixo). Reproduz a MESMA receita visual
-            do cabeçalho real do Dashboard, não um degradê inventado. */}
-        <div className="sticky top-16 z-20">
-          <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-2 flex items-center gap-1.5">
-            <Eye size={11} /> Pré-visualização ao vivo
-          </div>
-          <div className="rounded-2xl p-3 shadow-lg shadow-black/20" style={{ background: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}>
-            <div className="flex overflow-hidden border border-foreground/10" style={{ borderRadius: previewOuterRadius }}>
-              <div className="w-16 shrink-0 flex flex-col items-center gap-2.5 py-3" style={{ backgroundColor: colorSidebar || "#1A3A2E" }}>
-                <div className="h-6 w-6 flex items-center justify-center font-serif font-bold text-[10px] text-white"
-                  style={{ borderRadius: previewInnerRadius, backgroundColor: "rgba(255,255,255,0.12)" }}>
-                  {(name || "L").trim().charAt(0).toUpperCase()}
-                </div>
-                <span className="w-5 h-[3px] rounded-full" style={{ backgroundColor: colorPrimary || "#C8D44E" }} />
-                <span className="w-5 h-[3px] rounded-full bg-white/20" />
-              </div>
-              <div className="relative overflow-hidden flex-1 p-3"
-                style={{
-                  background:
-                    `radial-gradient(120% 140% at 0% 0%, rgba(${heroARgb},0.18) 0%, color-mix(in srgb, rgb(${heroARgb}) 10%, transparent) 35%, transparent 70%), ` +
-                    `radial-gradient(80% 120% at 100% 100%, color-mix(in srgb, color-mix(in srgb, rgb(${heroBRgb}) 40%, var(--background)) 55%, transparent) 0%, transparent 65%), ` +
-                    "linear-gradient(180deg, var(--card) 0%, var(--background) 100%)",
-                }}>
-                <div className="pointer-events-none absolute -top-6 -left-6 h-14 w-14 rounded-full opacity-30 blur-2xl" style={{ background: `rgb(${heroARgb})` }} />
-                <div className="pointer-events-none absolute -bottom-8 right-2 h-16 w-16 rounded-full opacity-25 blur-2xl" style={{ background: `rgb(${heroBRgb})` }} />
-                <div className="relative">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8.5px] font-bold uppercase tracking-wider"
-                    style={{ backgroundColor: `color-mix(in srgb, ${effectiveLight} 15%, transparent)`, color: effectiveAccentInk }}>
-                    <Sparkles size={9} /> Dashboard
-                  </span>
-                  <div className="mt-1.5 text-foreground font-bold text-[15px] tracking-tight">ENTREGAS</div>
-                  <div className="mt-0.5 italic text-foreground/60 text-[10px]">Bom ritmo, vamos fechar o mês com tudo!</div>
-                  <span className="mt-2 inline-block text-[10.5px] font-extrabold px-3 py-1.5"
-                    style={{ borderRadius: previewInnerRadius, backgroundColor: colorPrimary || "#C8D44E", color: "#0D0D0D" }}>
-                    Botão principal
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="rounded-xl p-4 bg-black/20 space-y-3">
             <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-foreground/40">
@@ -1848,22 +1802,61 @@ function OrgBrandingSection({
           <div className="flex items-center gap-1.5 mb-2 text-[10px] uppercase font-bold tracking-wider text-foreground/40">
             <Palette size={11} /> Identidade visual
           </div>
-          <div className="rounded-xl p-4 bg-black/20 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="rounded-xl p-4 bg-black/20 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <ColorPickerField label="Cor principal" value={colorPrimary} onChange={setColorPrimary} presets={BRAND_PRESETS} />
             <ColorPickerField label="Cor clara (fundos suaves)" value={colorPrimaryLight} onChange={setColorPrimaryLight} presets={BRAND_LIGHT_PRESETS} />
             <ColorPickerField label="Cor da barra lateral" value={colorSidebar} onChange={setColorSidebar} presets={SIDEBAR_PRESETS} />
+            <HeroColorField label="Cor de destaque nos gráficos" value={colorAccentLight} fallback={darkenHex(colorPrimary, 0.55)} onChange={setColorAccentLight} />
           </div>
+          <p className="text-[11px] text-foreground/35 mt-3 leading-relaxed">
+            No modo claro, o gráfico do Dashboard e a linha de "Como estou indo?" escurecem a cor principal sozinhos
+            pra manter contraste no fundo claro — a "Cor de destaque" acima escolhe a sua própria cor pra isso, se preferir.
+          </p>
         </div>
 
-        <div className="rounded-xl p-4 bg-black/20 space-y-3">
-          <label className="block text-[11px] uppercase tracking-wide text-foreground/40">
-            Cor de destaque nos gráficos (modo claro)
-          </label>
-          <p className="text-[11px] text-foreground/40">
-            No modo claro, o gráfico do Dashboard e a linha de "Como estou indo?" escurecem a cor principal
-            sozinhos, pra manter contraste no fundo claro. Escolha a sua própria cor aqui se preferir.
-          </p>
-          <HeroColorField label="Cor de destaque" value={colorAccentLight} fallback={darkenHex(colorPrimary, 0.55)} onChange={setColorAccentLight} />
+        {/* Pré-visualização ao vivo — logo depois das cores (é ali que a
+            pessoa começa a mexer) e "grudada" (sticky) enquanto rola pelos
+            campos de cantos/degradê abaixo, pra nunca sumir de tela bem na
+            hora que mais importa. Reproduz a MESMA receita visual do
+            cabeçalho real do Dashboard, não um degradê inventado. */}
+        <div className="sticky top-16 z-20">
+          <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-2 flex items-center gap-1.5">
+            <Eye size={11} /> Pré-visualização ao vivo
+          </div>
+          <div className="rounded-2xl p-3 shadow-lg shadow-black/20" style={{ background: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}>
+            <div className="flex overflow-hidden border border-foreground/10" style={{ borderRadius: previewOuterRadius }}>
+              <div className="w-16 shrink-0 flex flex-col items-center gap-2.5 py-3" style={{ backgroundColor: colorSidebar || "#1A3A2E" }}>
+                <div className="h-6 w-6 flex items-center justify-center font-serif font-bold text-[10px] text-white"
+                  style={{ borderRadius: previewInnerRadius, backgroundColor: "rgba(255,255,255,0.12)" }}>
+                  {(name || "L").trim().charAt(0).toUpperCase()}
+                </div>
+                <span className="w-5 h-[3px] rounded-full" style={{ backgroundColor: colorPrimary || "#C8D44E" }} />
+                <span className="w-5 h-[3px] rounded-full bg-white/20" />
+              </div>
+              <div className="relative overflow-hidden flex-1 p-3"
+                style={{
+                  background:
+                    `radial-gradient(120% 140% at 0% 0%, rgba(${heroARgb},0.18) 0%, color-mix(in srgb, rgb(${heroARgb}) 10%, transparent) 35%, transparent 70%), ` +
+                    `radial-gradient(80% 120% at 100% 100%, color-mix(in srgb, color-mix(in srgb, rgb(${heroBRgb}) 40%, var(--background)) 55%, transparent) 0%, transparent 65%), ` +
+                    "linear-gradient(180deg, var(--card) 0%, var(--background) 100%)",
+                }}>
+                <div className="pointer-events-none absolute -top-6 -left-6 h-14 w-14 rounded-full opacity-30 blur-2xl" style={{ background: `rgb(${heroARgb})` }} />
+                <div className="pointer-events-none absolute -bottom-8 right-2 h-16 w-16 rounded-full opacity-25 blur-2xl" style={{ background: `rgb(${heroBRgb})` }} />
+                <div className="relative">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8.5px] font-bold uppercase tracking-wider"
+                    style={{ backgroundColor: `color-mix(in srgb, ${effectiveLight} 15%, transparent)`, color: effectiveAccentInk }}>
+                    <Sparkles size={9} /> Dashboard
+                  </span>
+                  <div className="mt-1.5 text-foreground font-bold text-[15px] tracking-tight">ENTREGAS</div>
+                  <div className="mt-0.5 italic text-foreground/60 text-[10px]">Bom ritmo, vamos fechar o mês com tudo!</div>
+                  <span className="mt-2 inline-block text-[10.5px] font-extrabold px-3 py-1.5"
+                    style={{ borderRadius: previewInnerRadius, backgroundColor: colorPrimary || "#C8D44E", color: "#0D0D0D" }}>
+                    Botão principal
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="rounded-xl p-4 bg-black/20 space-y-3">
