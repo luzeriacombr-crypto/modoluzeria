@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import {
   Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ExternalLink, ChevronDown, ChevronUp,
-  Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown, MessageCircle, Send, X, Mail, CalendarDays, UserCheck,
+  Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown, MessageCircle, Send, X, Mail, CalendarDays, UserCheck, Cake, MapPin,
 } from "lucide-react";
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
 import {
@@ -658,40 +658,42 @@ function ConteudoPane({ clientId, clientName, mediaState }: { clientId: string; 
       {mediaError && <p className="text-xs text-red-400/80">{mediaError}</p>}
       {!loadingMedia && sorted.length === 0 && <p className="text-xs text-foreground/40 text-center py-6">Nenhuma publicação encontrada nessa conta do Instagram.</p>}
 
-      <div className="divide-y divide-foreground/8">
-        {sorted.map((m) => {
-          const r = results.get(m.id);
-          const bigValue = r?.error ? null : r?.[metric] ?? null;
-          return (
-            <button key={m.id} onClick={() => setSelected(m)} className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-foreground/[0.02] transition-colors">
-              <div className="relative w-12 h-12 rounded-md overflow-hidden bg-foreground/5 shrink-0">
-                {m.thumbnailUrl ? (
-                  <img src={m.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center"><ImageIcon size={16} className="text-foreground/15" /></div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] text-foreground truncate">
-                  {m.caption ? m.caption.slice(0, 42) + (m.caption.length > 42 ? "…" : "") : "(sem legenda)"}
-                  <span className="text-foreground/35 text-[11px] ml-1.5">{timeAgo(m.timestamp)}</span>
-                </p>
-                <div className="flex items-center gap-3 text-[11px] text-foreground/35 mt-1">
-                  <span className="flex items-center gap-1"><Heart size={11} />{r?.error ? "—" : r?.likes ?? "—"}</span>
-                  <span className="flex items-center gap-1"><MessageCircle size={11} />{r?.error ? "—" : r?.comments ?? "—"}</span>
-                  <span className="flex items-center gap-1"><Send size={11} />{r?.error ? "—" : r?.shares ?? "—"}</span>
+      {sorted.length > 0 && (
+        <div className="rounded-2xl bg-card p-2 divide-y divide-foreground/6">
+          {sorted.map((m) => {
+            const r = results.get(m.id);
+            const bigValue = r?.error ? null : r?.[metric] ?? null;
+            return (
+              <button key={m.id} onClick={() => setSelected(m)} className="w-full flex items-center gap-3.5 px-2.5 py-3 text-left hover:bg-foreground/[0.03] rounded-xl transition-colors">
+                <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-foreground/5 shrink-0">
+                  {m.thumbnailUrl ? (
+                    <img src={m.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center"><ImageIcon size={16} className="text-foreground/15" /></div>
+                  )}
                 </div>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="text-[15px] font-extrabold tabular-nums text-foreground">
-                  {r ? (r.error ? "—" : bigValue != null ? bigValue.toLocaleString("pt-BR") : "—") : (loadingInsights ? <Loader2 size={13} className="animate-spin inline" /> : "—")}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-foreground truncate">
+                    {m.caption ? m.caption.slice(0, 42) + (m.caption.length > 42 ? "…" : "") : "(sem legenda)"}
+                  </p>
+                  <div className="flex items-center gap-3 text-[11px] text-foreground/35 mt-1">
+                    <span>{timeAgo(m.timestamp)}</span>
+                    <span className="flex items-center gap-1"><Heart size={11} />{r?.error ? "—" : r?.likes ?? "—"}</span>
+                    <span className="flex items-center gap-1"><MessageCircle size={11} />{r?.error ? "—" : r?.comments ?? "—"}</span>
+                    <span className="flex items-center gap-1"><Send size={11} />{r?.error ? "—" : r?.shares ?? "—"}</span>
+                  </div>
                 </div>
-                <div className="text-[9.5px] text-foreground/35">{metricLabel}</div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+                <div className="text-right shrink-0">
+                  <div className="text-lg font-extrabold tabular-nums text-foreground tracking-tight">
+                    {r ? (r.error ? "—" : bigValue != null ? bigValue.toLocaleString("pt-BR") : "—") : (loadingInsights ? <Loader2 size={13} className="animate-spin inline" /> : "—")}
+                  </div>
+                  <div className="text-[9.5px] font-semibold text-foreground/35">{metricLabel}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {selected && (
         <PostDetailModal clientId={clientId} media={selected} insights={results.get(selected.id) ?? null} onClose={() => setSelected(null)} />
@@ -715,14 +717,24 @@ function PublicoPane({ clientId }: { clientId: string }) {
   if (!data.demographics) return <p className="text-xs text-foreground/40 text-center py-8">Essa conta ainda não tem seguidores suficientes pra Meta liberar dados de público.</p>;
 
   return (
-    <div>
-      <div className="mb-6">
-        <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-3">Gênero</span>
+    <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+      <div className="rounded-2xl bg-card p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-7 w-7 rounded-[8px] flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+            <Users size={14} />
+          </div>
+          <span className="text-[11.5px] font-extrabold uppercase tracking-wider text-foreground/60">Gênero</span>
+        </div>
         {data.demographics.gender.map((g) => <ThinBar key={g.label} label={g.label} pct={g.pct} />)}
       </div>
 
-      <div className="mb-6">
-        <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-2">Faixa etária</span>
+      <div className="rounded-2xl bg-card p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="h-7 w-7 rounded-[8px] flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+            <Cake size={14} />
+          </div>
+          <span className="text-[11.5px] font-extrabold uppercase tracking-wider text-foreground/60">Faixa etária</span>
+        </div>
         <div className="flex items-center gap-3 text-[10.5px] text-foreground/40 mb-3">
           <span className="flex items-center gap-1.5"><i className="inline-block w-2 h-2 rounded-full" style={{ background: "rgb(var(--lz-brand-rgb))" }} />Mulheres</span>
           <span className="flex items-center gap-1.5"><i className="inline-block w-2 h-2 rounded-full" style={{ background: "rgba(var(--lz-brand-rgb),0.35)" }} />Homens</span>
@@ -730,8 +742,13 @@ function PublicoPane({ clientId }: { clientId: string }) {
         {data.demographics.age.map((a) => <AgeGenderBar key={a.label} {...a} />)}
       </div>
 
-      <div>
-        <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 block mb-3">Principais localizações</span>
+      <div className="rounded-2xl bg-card p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-7 w-7 rounded-[8px] flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+            <MapPin size={14} />
+          </div>
+          <span className="text-[11.5px] font-extrabold uppercase tracking-wider text-foreground/60">Principais localizações</span>
+        </div>
         {data.demographics.countries.map((c) => <ThinBar key={c.label} label={c.label} pct={c.pct} />)}
       </div>
     </div>
