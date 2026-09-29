@@ -2,11 +2,25 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, X, AlertCircle, Pencil, Check, ChevronDown } from "lucide-react";
-import { cashFlowEntriesQO, clientPaymentsQO, useApi } from "@/lib/luzeria/queries";
+import { bankAccountsQO, cashFlowEntriesQO, clientPaymentsQO, useApi } from "@/lib/luzeria/queries";
 import type { CashFlowEntry } from "@/lib/luzeria/cash-flow.functions";
+import type { BankAccount } from "@/lib/luzeria/bank-accounts.functions";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
 import { Modal } from "./Modals";
 import { BankAccountsSection } from "./BankAccountsSection";
+
+const selectCls = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
+
+function BankAccountSelect({ accounts, value, onChange }: { accounts: BankAccount[]; value: string | null; onChange: (v: string | null) => void }) {
+  return (
+    <select value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} className={selectCls}>
+      <option value="">Carteira / espécie</option>
+      {accounts.map((a) => (
+        <option key={a.id} value={a.id}>{a.name}</option>
+      ))}
+    </select>
+  );
+}
 
 function money(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -28,16 +42,20 @@ export function CashFlowSection() {
   const monthKey = currentMonthKey();
   const { data: payments } = useQuery(clientPaymentsQO());
   const { data: entries = [] } = useQuery(cashFlowEntriesQO(monthKey));
+  const { data: bankAccounts = [] } = useQuery(bankAccountsQO());
   const { addCashFlowEntry, removeCashFlowEntry, setCashFlowEntryPaid } = useApi();
 
   const [addingIncome, setAddingIncome] = useState(false);
   const [addingExpense, setAddingExpense] = useState(false);
   const [incomeLabel, setIncomeLabel] = useState("");
   const [incomeAmount, setIncomeAmount] = useState("");
+  const [incomeBankAccountId, setIncomeBankAccountId] = useState<string | null>(null);
   const [expenseLabel, setExpenseLabel] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseKind, setExpenseKind] = useState<"fixo" | "variavel" | "investimento">("fixo");
   const [expenseDueDay, setExpenseDueDay] = useState("");
+  const [expenseBankAccountId, setExpenseBankAccountId] = useState<string | null>(null);
+  const [expenseNotes, setExpenseNotes] = useState("");
   const [fillingClient, setFillingClient] = useState<ClientPaymentRow | null>(null);
   const [editingEntry, setEditingEntry] = useState<CashFlowEntry | null>(null);
   const [clientsOpen, setClientsOpen] = useState(true);
@@ -74,8 +92,8 @@ export function CashFlowSection() {
     const cents = parseAmount(incomeAmount);
     if (!incomeLabel.trim() || !cents) { toast.error("Preencha descrição e valor."); return; }
     addCashFlowEntry.mutate(
-      { data: { direction: "entrada", label: incomeLabel.trim(), amountCents: cents, kind: "variavel", monthKey } },
-      { onSuccess: () => { setIncomeLabel(""); setIncomeAmount(""); setAddingIncome(false); } },
+      { data: { direction: "entrada", label: incomeLabel.trim(), amountCents: cents, kind: "variavel", monthKey, bankAccountId: incomeBankAccountId } },
+      { onSuccess: () => { setIncomeLabel(""); setIncomeAmount(""); setIncomeBankAccountId(null); setAddingIncome(false); } },
     );
   }
 
@@ -84,9 +102,20 @@ export function CashFlowSection() {
     if (!expenseLabel.trim() || !cents) { toast.error("Preencha descrição e valor."); return; }
     const dueDay = expenseDueDay ? parseInt(expenseDueDay, 10) : null;
     addCashFlowEntry.mutate(
-      { data: { direction: "saida", label: expenseLabel.trim(), amountCents: cents, kind: expenseKind, monthKey, dueDay } },
-      { onSuccess: () => { setExpenseLabel(""); setExpenseAmount(""); setExpenseKind("fixo"); setExpenseDueDay(""); setAddingExpense(false); } },
+      {
+        data: {
+          direction: "saida", label: expenseLabel.trim(), amountCents: cents, kind: expenseKind, monthKey, dueDay,
+          bankAccountId: expenseBankAccountId,
+          notes: expenseKind === "investimento" ? expenseNotes.trim() || null : null,
+        },
+      },
+      { onSuccess: () => { setExpenseLabel(""); setExpenseAmount(""); setExpenseKind("fixo"); setExpenseDueDay(""); setExpenseBankAccountId(null); setExpenseNotes(""); setAddingExpense(false); } },
     );
+  }
+
+  function bankAccountName(id: string | null): string | null {
+    if (!id) return null;
+    return bankAccounts.find((a) => a.id === id)?.name ?? null;
   }
 
   function remove(entry: CashFlowEntry) {
@@ -151,7 +180,12 @@ export function CashFlowSection() {
           {addingIncome && (
             <div className="rounded-lg p-3 mb-3 space-y-2" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
               <input value={incomeLabel} onChange={(e) => setIncomeLabel(e.target.value)} placeholder="Ex: Projeto avulso — Cliente X" className={inp} />
-              <input value={incomeAmount} onChange={(e) => setIncomeAmount(e.target.value)} placeholder="Valor (R$)" className={inp} />
+              <div className="flex gap-2">
+                <input value={incomeAmount} onChange={(e) => setIncomeAmount(e.target.value)} placeholder="Valor (R$)" className={`${inp} flex-1 min-w-0`} />
+                <div className="w-40 shrink-0">
+                  <BankAccountSelect accounts={bankAccounts} value={incomeBankAccountId} onChange={setIncomeBankAccountId} />
+                </div>
+              </div>
               <div className="flex justify-end gap-2">
                 <button onClick={() => setAddingIncome(false)} className="text-xs text-foreground/50 hover:text-foreground px-2 py-1.5">Cancelar</button>
                 <button onClick={saveIncome} disabled={addCashFlowEntry.isPending} className="lz-btn-primary text-xs px-4 py-1.5 rounded-md disabled:opacity-50">Salvar</button>
@@ -210,6 +244,7 @@ export function CashFlowSection() {
                     <span className="flex-1 min-w-0 text-[13px] text-foreground truncate">
                       {it.label}
                       {it.dueDay && <span className="text-foreground/35 font-normal"> · vence dia {it.dueDay}</span>}
+                      <span className="text-foreground/35 font-normal"> · {bankAccountName(it.bankAccountId) ?? "carteira/espécie"}</span>
                     </span>
                     <span className="text-[13px] font-bold text-foreground w-20 text-right">{money(it.amountCents)}</span>
                     <button onClick={() => setEditingEntry(it)} className="text-foreground/30 hover:text-[var(--lz-accent-ink)] transition"><Pencil size={13} /></button>
@@ -246,6 +281,7 @@ export function CashFlowSection() {
                   <input value={expenseDueDay} onChange={(e) => setExpenseDueDay(e.target.value.replace(/\D/g, ""))} placeholder="Dia venc." maxLength={2} className={inp} />
                 </div>
               </div>
+              <BankAccountSelect accounts={bankAccounts} value={expenseBankAccountId} onChange={setExpenseBankAccountId} />
               <div className="flex gap-2">
                 <button
                   onClick={() => setExpenseKind("fixo")}
@@ -269,6 +305,15 @@ export function CashFlowSection() {
                   Investimento
                 </button>
               </div>
+              {expenseKind === "investimento" && (
+                <textarea
+                  value={expenseNotes}
+                  onChange={(e) => setExpenseNotes(e.target.value)}
+                  placeholder="Observações (ex: CDB Nubank, resgate em 2027)"
+                  rows={2}
+                  className={`${inp} resize-none`}
+                />
+              )}
               <div className="flex justify-end gap-2">
                 <button onClick={() => setAddingExpense(false)} className="text-xs text-foreground/50 hover:text-foreground px-2 py-1.5">Cancelar</button>
                 <button
@@ -298,9 +343,11 @@ export function CashFlowSection() {
                 >
                   {ex.kind === "fixo" ? "Fixo" : ex.kind === "investimento" ? "Investimento" : "Variável"}
                 </span>
-                <span className="flex-1 min-w-0 text-[13px] text-foreground truncate">
+                <span className="flex-1 min-w-0 text-[13px] text-foreground truncate" title={ex.notes ?? undefined}>
                   {ex.label}
                   {ex.dueDay && <span className="text-foreground/35 font-normal"> · vence dia {ex.dueDay}</span>}
+                  <span className="text-foreground/35 font-normal"> · {bankAccountName(ex.bankAccountId) ?? "carteira/espécie"}</span>
+                  {ex.notes && <span className="text-foreground/35 font-normal"> · {ex.notes}</span>}
                 </span>
                 <span className="text-[13px] font-bold text-foreground w-20 text-right">{money(ex.amountCents)}</span>
                 <button
@@ -336,16 +383,26 @@ export function CashFlowSection() {
  * saída; entrada avulsa é sempre do mês em que aconteceu. */
 function EditEntryModal({ entry, monthKey, onClose }: { entry: CashFlowEntry; monthKey: string; onClose: () => void }) {
   const api = useApi();
+  const { data: bankAccounts = [] } = useQuery(bankAccountsQO());
   const [label, setLabel] = useState(entry.label);
   const [amount, setAmount] = useState((entry.amountCents / 100).toFixed(2).replace(".", ","));
   const [kind, setKind] = useState<"fixo" | "variavel" | "investimento">(entry.kind);
   const [dueDay, setDueDay] = useState(entry.dueDay != null ? String(entry.dueDay) : "");
+  const [bankAccountId, setBankAccountId] = useState<string | null>(entry.bankAccountId);
+  const [notes, setNotes] = useState(entry.notes ?? "");
 
   function save() {
     const cents = parseFloat(amount.replace(/\./g, "").replace(",", ".")) * 100;
     if (!label.trim() || !cents || cents <= 0) { toast.error("Preencha descrição e valor."); return; }
     api.updateCashFlowEntry.mutate(
-      { data: { id: entry.id, label: label.trim(), amountCents: Math.round(cents), kind, monthKey, dueDay: dueDay ? parseInt(dueDay, 10) : null } },
+      {
+        data: {
+          id: entry.id, label: label.trim(), amountCents: Math.round(cents), kind, monthKey,
+          dueDay: dueDay ? parseInt(dueDay, 10) : null,
+          bankAccountId,
+          notes: kind === "investimento" ? notes.trim() || null : null,
+        },
+      },
       { onSuccess: () => { toast.success("Lançamento atualizado."); onClose(); } },
     );
   }
@@ -367,6 +424,10 @@ function EditEntryModal({ entry, monthKey, onClose }: { entry: CashFlowEntry; mo
             <input value={dueDay} onChange={(e) => setDueDay(e.target.value.replace(/\D/g, ""))} placeholder="Ex: 10" maxLength={2} className={inp} />
           </label>
         </div>
+        <label className="block">
+          <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Conta</span>
+          <BankAccountSelect accounts={bankAccounts} value={bankAccountId} onChange={setBankAccountId} />
+        </label>
         {entry.direction === "saida" && (
           <div className="flex gap-2">
             <button
@@ -385,6 +446,12 @@ function EditEntryModal({ entry, monthKey, onClose }: { entry: CashFlowEntry; mo
               style={kind === "investimento" ? { background: "#B79CFF", color: "#1A0D2E" } : { background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
             >Investimento</button>
           </div>
+        )}
+        {entry.direction === "saida" && kind === "investimento" && (
+          <label className="block">
+            <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Observações</span>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: CDB Nubank, resgate em 2027" rows={2} className={`${inp} resize-none`} />
+          </label>
         )}
       </div>
       <div className="flex items-center justify-end gap-2 mt-5">

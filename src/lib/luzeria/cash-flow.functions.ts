@@ -30,6 +30,11 @@ export type CashFlowEntry = {
    * Só faz sentido pra direction="saida" (entrada usa client_payments). */
   paidAt: string | null;
   createdAt: string;
+  /** Conta bancária de onde saiu/pra onde entrou (bank_accounts.id) — nulo
+   * significa "carteira/espécie" (dinheiro fora de qualquer conta). */
+  bankAccountId: string | null;
+  /** Observação livre — pensado pra investimento (ex: "CDB Nubank, resgate em 2027"). */
+  notes: string | null;
 };
 
 /** Tudo que vale pro mês pedido: fixas (recorrem sempre, month_key nulo) +
@@ -41,7 +46,7 @@ export const listCashFlowEntries = createServerFn({ method: "GET" })
     await assertFinanceiroAccess(context.supabase, context.userId);
     const { data: rows, error } = await (context.supabase as any)
       .from("cash_flow_entries")
-      .select("id, direction, label, amount_cents, kind, month_key, due_day, created_at")
+      .select("id, direction, label, amount_cents, kind, month_key, due_day, created_at, bank_account_id, notes")
       .eq("org_id", context.orgId)
       .or(`kind.eq.fixo,month_key.eq.${data.monthKey}`)
       .order("created_at");
@@ -59,12 +64,13 @@ export const listCashFlowEntries = createServerFn({ method: "GET" })
       id: r.id, direction: r.direction, label: r.label, amountCents: r.amount_cents,
       kind: r.kind, monthKey: r.month_key, dueDay: r.due_day,
       paidAt: paidByEntry.get(r.id) ?? null, createdAt: r.created_at,
+      bankAccountId: r.bank_account_id, notes: r.notes,
     }));
   });
 
 export const addCashFlowEntry = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { direction: "entrada" | "saida"; label: string; amountCents: number; kind: "fixo" | "variavel" | "investimento"; monthKey: string; dueDay?: number | null }) =>
+  .inputValidator((d: { direction: "entrada" | "saida"; label: string; amountCents: number; kind: "fixo" | "variavel" | "investimento"; monthKey: string; dueDay?: number | null; bankAccountId?: string | null; notes?: string | null }) =>
     z.object({
       direction: z.enum(["entrada", "saida"]),
       label: z.string().trim().min(1).max(140),
@@ -76,6 +82,8 @@ export const addCashFlowEntry = createServerFn({ method: "POST" })
       kind: z.enum(["fixo", "variavel", "investimento"]),
       monthKey: z.string().regex(/^\d{4}-\d{2}$/),
       dueDay: z.number().int().min(1).max(31).nullable().optional(),
+      bankAccountId: z.string().uuid().nullable().optional(),
+      notes: z.string().trim().max(500).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
@@ -88,6 +96,8 @@ export const addCashFlowEntry = createServerFn({ method: "POST" })
       kind,
       month_key: kind === "fixo" ? null : data.monthKey,
       due_day: data.dueDay ?? null,
+      bank_account_id: data.bankAccountId ?? null,
+      notes: data.notes?.trim() || null,
       created_by: context.userId,
     });
     if (error) throw new Error(error.message);
@@ -98,7 +108,7 @@ export const addCashFlowEntry = createServerFn({ method: "POST" })
  * marcar o dia de vencimento) — antes só dava pra apagar e lançar de novo. */
 export const updateCashFlowEntry = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string; label: string; amountCents: number; kind: "fixo" | "variavel" | "investimento"; monthKey: string; dueDay?: number | null }) =>
+  .inputValidator((d: { id: string; label: string; amountCents: number; kind: "fixo" | "variavel" | "investimento"; monthKey: string; dueDay?: number | null; bankAccountId?: string | null; notes?: string | null }) =>
     z.object({
       id: z.string().uuid(),
       label: z.string().trim().min(1).max(140),
@@ -106,6 +116,8 @@ export const updateCashFlowEntry = createServerFn({ method: "POST" })
       kind: z.enum(["fixo", "variavel", "investimento"]),
       monthKey: z.string().regex(/^\d{4}-\d{2}$/),
       dueDay: z.number().int().min(1).max(31).nullable().optional(),
+      bankAccountId: z.string().uuid().nullable().optional(),
+      notes: z.string().trim().max(500).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
@@ -121,6 +133,8 @@ export const updateCashFlowEntry = createServerFn({ method: "POST" })
       kind,
       month_key: kind === "fixo" ? null : data.monthKey,
       due_day: data.dueDay ?? null,
+      bank_account_id: data.bankAccountId ?? null,
+      notes: data.notes?.trim() || null,
     }).eq("id", data.id).eq("org_id", context.orgId);
     if (error) throw new Error(error.message);
     return { ok: true };
