@@ -1649,7 +1649,15 @@ export const adminResendWelcomeEmail = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string }) => z.object({ userId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: target } = await context.supabase
+    // profiles tem RLS estrita (org_id = current_org_id()) pra todo mundo,
+    // inclusive Luzeria — então buscar com context.supabase nunca acha o
+    // perfil de outra agência, mesmo quando a checagem de Forbidden logo
+    // abaixo deveria liberar (era um bug: a função nunca funcionava de
+    // verdade pra reenviar cross-org, só parecia "usuário não encontrado").
+    // A leitura roda com supabaseAdmin só aqui, com a autorização real
+    // continuando na checagem explícita de org_id/LUZERIA_ORG_ID abaixo.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: target } = await supabaseAdmin
       .from("profiles").select("id, org_id, email, name").eq("id", data.userId).maybeSingle();
     if (!target) throw new Error("Usuário não encontrado.");
     if (target.org_id !== context.orgId && context.orgId !== LUZERIA_ORG_ID) {
