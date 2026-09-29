@@ -23,6 +23,7 @@ import { getInstagramConnectionStatus, getInstagramConnectUrl, disconnectInstagr
 import { getFacebookConnectionStatus, getFacebookConnectUrl, disconnectFacebook } from "@/lib/luzeria/facebook.functions";
 import { TikTokConnectSection } from "./TikTokSections";
 import { LinkedInConnectSection } from "./LinkedInSections";
+import { useDrivePicker } from "@/lib/luzeria/use-drive-picker";
 
 function formatHours(h: number | null) {
   if (h == null) return "—";
@@ -1043,6 +1044,7 @@ function GenerateInstagramLinkBlock({ clientId }: { clientId: string }) {
 function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmin: boolean }) {
   const { data, isLoading } = useQuery(clientDeliveriesFolderQO(clientId));
   const { setClientDeliveriesFolder, clearClientDeliveriesFolder } = useApi();
+  const drivePicker = useDrivePicker();
   const [value, setValue] = useState("");
   const [dirty, setDirty] = useState(false);
 
@@ -1051,8 +1053,8 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
     setDirty(false);
   }, [data?.webViewUrl, clientId]);
 
-  function save() {
-    const v = value.trim();
+  function save(folderIdOrUrl?: string) {
+    const v = (folderIdOrUrl ?? value).trim();
     if (!v) return;
     setClientDeliveriesFolder.mutate(
       { data: { clientId, folderIdOrUrl: v } },
@@ -1078,7 +1080,18 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
   }
 
   const openHref = data?.webViewUrl ?? null;
-  const busy = setClientDeliveriesFolder.isPending || clearClientDeliveriesFolder.isPending;
+  const busy = setClientDeliveriesFolder.isPending || clearClientDeliveriesFolder.isPending || drivePicker.opening;
+
+  /** Agências com acesso limitado ao Drive escolhem a pasta na janela do
+   * Google em vez de colar o link. */
+  async function pickFolder() {
+    try {
+      const [folder] = await drivePicker.pick({ kind: "folder", title: "Escolha a pasta de entregas" });
+      if (folder) save(folder.id);
+    } catch (e: any) {
+      toastFriendlyError(e, "Falha ao abrir o Drive.");
+    }
+  }
 
   return (
     <div className="space-y-2">
@@ -1086,6 +1099,17 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
         Todos os uploads desse cliente vão para esta pasta, em subpasta <span className="text-foreground/80">[Mês Ano]</span>.
       </p>
       <div className="flex flex-col sm:flex-row gap-2">
+        {drivePicker.isLimited ? (
+          <button
+            type="button"
+            disabled={!isAdmin || isLoading || busy}
+            onClick={pickFolder}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 disabled:opacity-60 transition"
+          >
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <FolderOpen size={12} />}
+            {data?.folderId ? "Trocar pasta no Drive" : "Escolher pasta no Drive"}
+          </button>
+        ) : (
         <div className="relative flex-1">
           <FolderOpen size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground/40" />
           <input
@@ -1096,6 +1120,7 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
             className="w-full pl-8 pr-3 py-2 bg-card border border-foreground/8 rounded-md text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 disabled:opacity-60"
           />
         </div>
+        )}
         <div className="flex gap-2">
           <button
             type="button"
@@ -1106,11 +1131,11 @@ function DeliveriesFolderBlock({ clientId, isAdmin }: { clientId: string; isAdmi
           >
             Abrir pasta <ExternalLink size={11} />
           </button>
-          {isAdmin && (
+          {isAdmin && !drivePicker.isLimited && (
             <button
               type="button"
               disabled={!dirty || !value.trim() || busy}
-              onClick={save}
+              onClick={() => save()}
               className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-[11px] font-bold disabled:opacity-30 transition"
               style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
             >

@@ -1,10 +1,15 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { Plus, Copy, Trash2, ExternalLink, Image as ImageIcon, Lock, Unlock, ChevronDown, ChevronRight, Star } from "lucide-react";
+import { Plus, Copy, Trash2, ExternalLink, Image as ImageIcon, Lock, Unlock, ChevronDown, ChevronRight, Star, Upload, Loader2 } from "lucide-react";
 import { photoSelectionsQO, photoSelectionDetailQO, selectionDriveImagesQO, driveThumbnailQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { useDrivePicker } from "@/lib/luzeria/use-drive-picker";
+import { startPhotoSelectionUpload } from "@/lib/luzeria/photo-selection.functions";
+import { uploadDriveChunk } from "@/lib/luzeria/drive.functions";
+import { CHUNK_SIZE, MAX_CHUNK_ATTEMPTS, arrayBufferToBase64 } from "@/lib/luzeria/use-item-file-upload";
 
 type PhotoOrder = "nome" | "horario";
 const ORDER_LABEL: Record<PhotoOrder, string> = { nome: "Nome", horario: "Horário" };
@@ -29,6 +34,9 @@ export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string 
   const [showNew, setShowNew] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [pickingCoverFor, setPickingCoverFor] = useState<string | null>(null);
+  // Agências com acesso limitado ao Drive: o app cria a pasta da seleção e
+  // as fotos são enviadas por aqui, em vez de colar o link de uma pasta.
+  const { isLimited } = useDrivePicker();
 
   async function handleDelete(id: string) {
     if (!(await requestConfirm("Remover essa seleção de fotos? O link público deixa de funcionar.", { danger: true }))) return;
@@ -41,7 +49,9 @@ export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string 
     <div className="max-w-2xl">
       <div className="flex items-center justify-between gap-3 mb-5">
         <div className="text-sm text-foreground/50">
-          Gere um link pra o cliente escolher fotos direto de uma pasta do Google Drive.
+          {isLimited
+            ? "Envie as fotos e gere um link pro cliente escolher as favoritas."
+            : "Gere um link pra o cliente escolher fotos direto de uma pasta do Google Drive."}
         </div>
         <button
           onClick={() => setShowNew(true)}
@@ -77,6 +87,7 @@ export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string 
                 onError: (e: any) => toastFriendlyError(e, "Erro ao atualizar."),
               })}
               onPickCover={() => setPickingCoverFor(s.id)}
+              canUpload={isLimited}
             />
           ))}
         </div>
@@ -84,11 +95,20 @@ export function PhotoSelectionsPanel({ photoClientId }: { photoClientId: string 
 
       {showNew && (
         <NewSelectionModal
+          uploadMode={isLimited}
           onClose={() => setShowNew(false)}
           saving={createPhotoSelection.isPending}
           onCreate={(vals) => {
             createPhotoSelection.mutate({ data: { photoClientId, ...vals } }, {
-              onSuccess: () => { setShowNew(false); toast.success("Seleção criada — copie o link pro cliente."); },
+              onSuccess: (r: any) => {
+                setShowNew(false);
+                if (isLimited) {
+                  setOpenId(r?.id ?? null);
+                  toast.success("Seleção criada — agora envie as fotos.");
+                } else {
+                  toast.success("Seleção criada — copie o link pro cliente.");
+                }
+              },
               onError: (e: any) => toastFriendlyError(e, "Erro ao criar seleção."),
             });
           }}
@@ -136,7 +156,7 @@ function stripExtension(name: string) {
   return idx > 0 ? name.slice(0, idx) : name;
 }
 
-function SelectionRow({ selection, isOpen, onToggle, onDelete, onToggleStatus, togglingStatus, onChangeOrder, onPickCover }: {
+function SelectionRow({ selection, isOpen, onToggle, onDelete, onToggleStatus, togglingStatus, onChangeOrder, onPickCover, canUpload }: {
   selection: { id: string; title: string; status: "aberta" | "encerrada"; token: string; deadline: string | null; submissionCount: number };
   isOpen: boolean;
   onToggle: () => void;
@@ -145,6 +165,7 @@ function SelectionRow({ selection, isOpen, onToggle, onDelete, onToggleStatus, t
   togglingStatus: boolean;
   onChangeOrder: (order: PhotoOrder) => void;
   onPickCover: () => void;
+  canUpload: boolean;
 }) {
   const { data: detail } = useQuery({ ...photoSelectionDetailQO(selection.id), enabled: isOpen });
   const [copied, setCopied] = useState(false);
@@ -213,6 +234,7 @@ function SelectionRow({ selection, isOpen, onToggle, onDelete, onToggleStatus, t
                 className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/25 transition">
                 <Star size={12} /> {detail.coverDriveFileId ? "Trocar capa" : "Escolher capa"}
               </button>
+              {canUpload && <PhotoUploadButton selectionId={selection.id} />}
             </div>
           )}
 
@@ -295,10 +317,82 @@ function ChoiceThumb({ fileId, fileName }: { fileId: string; fileName: string })
   );
 }
 
-function NewSelectionModal({ onClose, onCreate, saving }: {
+/** Envia fotos direto pra pasta da seleção no Drive — mesmo caminho em
+ * pedaços dos uploads de posts (o navegador não consegue mandar direto pro
+ * Drive por causa do CORS, ver use-item-file-upload.ts). Uma foto por vez. */
+function PhotoUploadButton({ selectionId }: { selectionId: string }) {
+  const qc = useQueryClient();
+  const startUpload = useServerFn(startPhotoSelectionUpload);
+  const sendChunk = useServerFn(uploadDriveChunk);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number; pct: number } | null>(null);
+
+  async function uploadOne(file: File, onPct: (pct: number) => void) {
+    const mimeType = file.type || "image/jpeg";
+    const { uploadUrl } = await startUpload({ data: { id: selectionId, name: file.name, mimeType } });
+    const total = file.size;
+    let offset = 0;
+    while (offset < total) {
+      const end = Math.min(offset + CHUNK_SIZE, total);
+      const chunkBase64 = arrayBufferToBase64(await file.slice(offset, end).arrayBuffer());
+      let result: { done: boolean } | null = null;
+      let lastErr: unknown;
+      for (let attempt = 1; attempt <= MAX_CHUNK_ATTEMPTS; attempt++) {
+        try {
+          result = await sendChunk({ data: { uploadUrl, chunkBase64, rangeStart: offset, rangeEnd: end - 1, totalSize: total, mimeType } });
+          break;
+        } catch (err) {
+          lastErr = err;
+          if (attempt < MAX_CHUNK_ATTEMPTS) await new Promise((r) => setTimeout(r, 800 * attempt));
+        }
+      }
+      if (!result) throw lastErr instanceof Error ? lastErr : new Error("Falha ao enviar a foto.");
+      onPct(Math.round((end / total) * 100));
+      if (result.done) return;
+      offset = end;
+    }
+  }
+
+  async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith("image/"));
+    e.target.value = "";
+    if (files.length === 0) return;
+    setProgress({ done: 0, total: files.length, pct: 0 });
+    const failed: string[] = [];
+    for (const file of files) {
+      try {
+        await uploadOne(file, (pct) => setProgress((p) => (p ? { ...p, pct } : p)));
+      } catch {
+        failed.push(file.name);
+      }
+      setProgress((p) => (p ? { ...p, done: p.done + 1, pct: 0 } : p));
+    }
+    setProgress(null);
+    qc.invalidateQueries({ queryKey: ["selection-drive-images", selectionId] });
+    if (failed.length) toast.error(`Não consegui enviar ${failed.length} foto(s): ${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""}`);
+    else toast.success(`${files.length} foto${files.length === 1 ? "" : "s"} enviada${files.length === 1 ? "" : "s"}.`);
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => fileRef.current?.click()}
+        disabled={!!progress}
+        className="lz-btn-primary inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-md disabled:opacity-60"
+      >
+        {progress ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+        {progress ? `Enviando ${Math.min(progress.done + 1, progress.total)}/${progress.total} (${progress.pct}%)` : "Enviar fotos"}
+      </button>
+      <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onFiles} />
+    </>
+  );
+}
+
+function NewSelectionModal({ onClose, onCreate, saving, uploadMode }: {
   onClose: () => void;
-  onCreate: (vals: { title: string; driveFolderLink: string; deadline?: string | null; photoOrder: PhotoOrder; mode: PhotoMode }) => void;
+  onCreate: (vals: { title: string; driveFolderLink: string | null; deadline?: string | null; photoOrder: PhotoOrder; mode: PhotoMode }) => void;
   saving: boolean;
+  uploadMode: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [link, setLink] = useState("");
@@ -308,8 +402,8 @@ function NewSelectionModal({ onClose, onCreate, saving }: {
 
   function submit() {
     if (!title.trim()) { toast.error("Dá um título pra essa seleção."); return; }
-    if (!link.trim()) { toast.error("Cola o link da pasta do Drive."); return; }
-    onCreate({ title: title.trim(), driveFolderLink: link.trim(), deadline: deadline || null, photoOrder, mode });
+    if (!uploadMode && !link.trim()) { toast.error("Cola o link da pasta do Drive."); return; }
+    onCreate({ title: title.trim(), driveFolderLink: uploadMode ? null : link.trim(), deadline: deadline || null, photoOrder, mode });
   }
 
   return (
@@ -324,12 +418,20 @@ function NewSelectionModal({ onClose, onCreate, saving }: {
           className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-3"
         />
 
-        <label className="block text-[11px] font-bold uppercase tracking-wide text-foreground/40 mb-1.5">Link da pasta do Google Drive</label>
-        <input
-          value={link} onChange={(e) => setLink(e.target.value)}
-          placeholder="Cole o link de compartilhamento da pasta"
-          className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-3"
-        />
+        {uploadMode ? (
+          <p className="text-[11px] text-foreground/45 mb-3 leading-relaxed">
+            O Modo Criador cria a pasta dessa seleção no seu Google Drive. Depois de criar, é só clicar em <span className="text-foreground/70 font-semibold">Enviar fotos</span>.
+          </p>
+        ) : (
+          <>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-foreground/40 mb-1.5">Link da pasta do Google Drive</label>
+            <input
+              value={link} onChange={(e) => setLink(e.target.value)}
+              placeholder="Cole o link de compartilhamento da pasta"
+              className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-3"
+            />
+          </>
+        )}
 
         <label className="block text-[11px] font-bold uppercase tracking-wide text-foreground/40 mb-1.5">Prazo (opcional)</label>
         <input

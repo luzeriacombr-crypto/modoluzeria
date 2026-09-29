@@ -8,6 +8,7 @@ import { itemFilesQO, driveThumbnailQO, useApi, useMe } from "@/lib/luzeria/quer
 import { useItemFileUpload, parseDriveError } from "@/lib/luzeria/use-item-file-upload";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
+import { useDrivePicker } from "@/lib/luzeria/use-drive-picker";
 
 function formatSize(n: number | null | undefined) {
   if (!n || n <= 0) return "";
@@ -66,6 +67,7 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
   } = useItemFileUpload(itemId, "media");
 
   const [showLink, setShowLink] = useState(false);
+  const drivePicker = useDrivePicker();
   const [linkValue, setLinkValue] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -144,7 +146,25 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
     }
   }
 
-  const busy = uploadBusy || attachDriveFile.isPending;
+  /** Agências com acesso limitado ao Drive: em vez de colar o link, a
+   * pessoa escolhe os arquivos na janela do Google (é isso que libera o
+   * acesso do app a eles). */
+  async function onPickFromDrive() {
+    setError(null);
+    setMissingClientId(null);
+    try {
+      const picked = await drivePicker.pick({ kind: "files", multiple: true, title: "Escolha os arquivos pra vincular" });
+      for (const item of picked) {
+        await attachDriveFile.mutateAsync({ data: { itemId, fileIdOrUrl: item.id } });
+      }
+    } catch (err: any) {
+      const p = parseDriveError(err?.message);
+      if (p.kind === "missing") setMissingClientId(p.clientId);
+      else setError(p.msg);
+    }
+  }
+
+  const busy = uploadBusy || attachDriveFile.isPending || drivePicker.opening;
 
   return (
     <div>
@@ -285,10 +305,10 @@ export function FilesSection({ itemId, canEdit, clientId }: { itemId: string; ca
             <button
               type="button"
               disabled={busy}
-              onClick={() => setShowLink((v) => !v)}
+              onClick={() => (drivePicker.isLimited ? onPickFromDrive() : setShowLink((v) => !v))}
               className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition disabled:opacity-50"
             >
-              <Link2 size={12} /> Colar link do Drive
+              <Link2 size={12} /> {drivePicker.isLimited ? "Escolher do Drive" : "Colar link do Drive"}
             </button>
             <input
               ref={fileRef}

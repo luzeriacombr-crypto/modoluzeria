@@ -1191,6 +1191,95 @@ export const disconnectDrive = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/* ============== ACESSO LIMITADO (drive.file) + GOOGLE PICKER ============== */
+
+const FULL_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
+
+/** O acesso limitado só é pedido depois que a chave do Picker e o número
+ * do projeto estão configurados na Vercel — sem o Picker, a agência não
+ * teria como escolher arquivos/pastas que já existem no Drive dela. */
+function isLimitedDriveScopeEnabled(): boolean {
+  return !!process.env.VITE_GOOGLE_PICKER_API_KEY && !!process.env.VITE_GOOGLE_CLOUD_PROJECT_NUMBER;
+}
+
+/** "full": conexão antiga (scope NULL) ou com acesso completo — tudo
+ * continua funcionando como sempre, colando links.
+ * "limited": conexão nova com `drive.file` — o app só enxerga o que ele
+ * mesmo criou ou o que for escolhido no Picker.
+ * "none": a agência ainda não conectou o Drive. */
+async function readDriveAccessMode(orgId: string): Promise<"full" | "limited" | "none"> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await (supabaseAdmin as any)
+    .from("org_google_credentials").select("scope").eq("org_id", orgId).maybeSingle();
+  if (!data) return orgId === LUZERIA_ORG_ID && process.env.GOOGLE_REFRESH_TOKEN ? "full" : "none";
+  const scope = (data.scope as string | null) ?? null;
+  if (!scope) return "full";
+  return scope.split(/\s+/).includes(FULL_DRIVE_SCOPE) ? "full" : "limited";
+}
+
+/** Qualquer membro precisa saber o modo (pra mostrar "Escolher do Drive"
+ * em vez de "Colar link") — só o modo sai daqui, nunca a credencial. */
+export const getDriveAccessMode = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => ({ mode: await readDriveAccessMode(context.orgId) }));
+
+/** Token de curta duração da conta do Drive da agência, só pro Picker abrir
+ * no navegador — mesmo padrão de getDriveVideoToken. Com `drive.file`, esse
+ * token só alcança o que o app criou ou o que já foi escolhido no Picker. */
+export const getDrivePickerToken = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => withDriveOrg(context.orgId, async () => ({ token: await getAccessToken() })));
+
+/** Passo 2 do assistente, no acesso limitado: cria (ou reaproveita) a pasta
+ * "Modo Criador" no Meu Drive e define como raiz. */
+export const createDefaultDriveRootFolder = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => withDriveOrg(context.orgId, async () => {
+    await assertMaster(context.supabase, context.userId);
+    const name = "Modo Criador";
+    const id = (await findChildFolderByName("root", name)) ?? (await driveCreateFolder(name, "root"));
+    const { error } = await context.supabase
+      .from("app_settings")
+      .upsert({ key: rootFolderSettingKey(context.orgId), value: { id, name } });
+    if (error) throw new Error(error.message);
+    return { ok: true, id, name };
+  }));
+
+/** Seleção de Fotos no acesso limitado: cria a pasta
+ * "Seleção de Fotos / <Cliente> / <Título>" dentro da raiz da agência.
+ * Callers are responsible for already being inside withDriveOrg(orgId, ...). */
+export async function createPhotoSelectionDriveFolder(supabase: any, clientName: string, title: string): Promise<string> {
+  const rootId = await readRootFolderId(supabase);
+  const base = (await findChildFolderByName(rootId, "Seleção de Fotos")) ?? (await driveCreateFolder("Seleção de Fotos", rootId));
+  const clientFolder = (await findChildFolderByName(base, clientName)) ?? (await driveCreateFolder(clientName, base));
+  return driveCreateFolder(title, clientFolder);
+}
+
+/** Abre uma sessão de upload resumível direto numa pasta (usada pelo envio
+ * de fotos da Seleção de Fotos; os bytes seguem por uploadDriveChunk).
+ * Callers are responsible for already being inside withDriveOrg(orgId, ...). */
+export async function openDriveUploadSessionInFolder(parentId: string, name: string, mimeType: string): Promise<string> {
+  const res = await fetch(
+    `${UPLOAD_BASE}/files?uploadType=resumable&supportsAllDrives=true&fields=${encodeURIComponent(DRIVE_FIELDS)}`,
+    {
+      method: "POST",
+      headers: {
+        ...await driveHeaders(),
+        "Content-Type": "application/json; charset=UTF-8",
+        "X-Upload-Content-Type": mimeType,
+      },
+      body: JSON.stringify({ name, mimeType, parents: [parentId] }),
+    },
+  );
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(`Não foi possível iniciar o envio pro Drive (${res.status}): ${txt.slice(0, 240)}`);
+  }
+  const uploadUrl = res.headers.get("Location");
+  if (!uploadUrl) throw new Error("O Drive não retornou uma URL de upload.");
+  return uploadUrl;
+}
+
 /** Builds the Google consent URL for this org's master to connect their own Drive. */
 export const getDriveConnectUrl = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
@@ -1201,8 +1290,15 @@ export const getDriveConnectUrl = createServerFn({ method: "POST" })
     const clientId = process.env.GOOGLE_CLIENT_ID;
     if (!clientId) throw new Error("GOOGLE_CLIENT_ID ausente no servidor.");
     const redirectUri = `${data.redirectOrigin}/oauth/drive-callback`;
+    // Conexões novas pedem só `drive.file` (sem aviso de "app não
+    // verificado") — mas só depois que o Picker estiver configurado, porque
+    // sem ele a agência não teria como escolher arquivos/pastas que já
+    // existem no Drive. Conexões antigas não são afetadas (ver
+    // readDriveAccessMode).
     const scope = [
-      "https://www.googleapis.com/auth/drive",
+      isLimitedDriveScopeEnabled()
+        ? "https://www.googleapis.com/auth/drive.file"
+        : FULL_DRIVE_SCOPE,
       "https://www.googleapis.com/auth/userinfo.email",
     ].join(" ");
     const params = new URLSearchParams({
@@ -1256,12 +1352,14 @@ export const completeDriveConnect = createServerFn({ method: "POST" })
       if (uiRes.ok) driveEmail = (await uiRes.json())?.email ?? null;
     } catch { /* cosmetic only, connection still succeeds without it */ }
 
-    const { error } = await context.supabase
+    // `as any`: coluna `scope` é nova e ainda não está nos tipos gerados.
+    const { error } = await (context.supabase as any)
       .from("org_google_credentials")
       .upsert({
         org_id: context.orgId,
         refresh_token: tokens.refresh_token,
         drive_email: driveEmail,
+        scope: typeof tokens.scope === "string" ? tokens.scope : null,
         connected_by: context.userId,
         connected_at: new Date().toISOString(),
       }, { onConflict: "org_id" });

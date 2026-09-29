@@ -18,7 +18,14 @@ import {
   listDriveFolderChildren,
   getClientFolderMatches,
   applyClientFolderMatches,
+  createDefaultDriveRootFolder,
 } from "@/lib/luzeria/drive.functions";
+import { useDrivePicker } from "@/lib/luzeria/use-drive-picker";
+
+/** Com o Picker configurado, conexões novas pedem só o acesso limitado
+ * (`drive.file`), que não mostra o aviso de "app não verificado" — ver
+ * getDriveConnectUrl. */
+const PICKER_CONFIGURED = !!import.meta.env.VITE_GOOGLE_PICKER_API_KEY && !!import.meta.env.VITE_GOOGLE_CLOUD_PROJECT_NUMBER;
 
 type WizardStep = 1 | 2 | 3;
 
@@ -139,6 +146,8 @@ export function DriveSettingsTab() {
   const getMatches = useServerFn(getClientFolderMatches);
   const applyMatches = useServerFn(applyClientFolderMatches);
   const reorganize = useServerFn(reorganizeAllDriveFiles);
+  const createDefaultRoot = useServerFn(createDefaultDriveRootFolder);
+  const drivePicker = useDrivePicker();
 
   const connStatus = useQuery({ queryKey: ["drive-connection-status"], queryFn: () => getConnStatus() });
   const cfg = useQuery({ queryKey: ["drive-config"], queryFn: () => getCfg() });
@@ -152,7 +161,7 @@ export function DriveSettingsTab() {
   const activeStep: WizardStep = manualStep ?? (!step1Done ? 1 : !step2Done ? 2 : 3);
 
   async function connectDrive() {
-    if (!(await requestConfirm(
+    if (!PICKER_CONFIGURED && !(await requestConfirm(
       <>
         <p>O Google pode mostrar um aviso dizendo que "o app não foi verificado". Isso é normal, acontece com qualquer sistema novo.</p>
         <p>Clique em <strong className="text-foreground">Avançado</strong> e depois em <strong className="text-foreground">Acessar Modo Criador (não seguro)</strong> pra continuar.</p>
@@ -206,6 +215,30 @@ export function DriveSettingsTab() {
       toastFriendlyError(e, "Falha ao salvar pasta raiz");
     } finally {
       setSavingRoot(false);
+    }
+  }
+
+  async function createDefaultRootNow() {
+    setSavingRoot(true);
+    try {
+      await createDefaultRoot({} as any);
+      toast.success("Pasta \"Modo Criador\" criada no seu Drive.");
+      qc.invalidateQueries({ queryKey: ["drive-config"] });
+      qc.invalidateQueries({ queryKey: ["setup-checklist"] });
+      setManualStep(3);
+    } catch (e: any) {
+      toastFriendlyError(e, "Falha ao criar a pasta");
+    } finally {
+      setSavingRoot(false);
+    }
+  }
+
+  async function pickRootFolder() {
+    try {
+      const [folder] = await drivePicker.pick({ kind: "folder", title: "Escolha a pasta raiz" });
+      if (folder) await saveRoot(folder.id);
+    } catch (e: any) {
+      toastFriendlyError(e, "Falha ao abrir o Drive");
     }
   }
 
@@ -341,12 +374,35 @@ export function DriveSettingsTab() {
               </div>
             )}
 
-            <DriveFolderPicker onPicked={(id, name) => saveRoot(id)} />
+            {drivePicker.isLimited ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={createDefaultRootNow}
+                  disabled={savingRoot || drivePicker.opening}
+                  className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 disabled:opacity-50"
+                >
+                  {savingRoot ? <Loader2 size={14} className="animate-spin" /> : <Folder size={14} />}
+                  Criar pasta "Modo Criador" (recomendado)
+                </button>
+                <button
+                  onClick={pickRootFolder}
+                  disabled={savingRoot || drivePicker.opening}
+                  className="text-xs px-4 py-2 rounded-md border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition inline-flex items-center gap-2 disabled:opacity-50"
+                >
+                  {drivePicker.opening ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+                  Escolher outra pasta no Drive
+                </button>
+              </div>
+            ) : (
+              <DriveFolderPicker onPicked={(id, name) => saveRoot(id)} />
+            )}
 
+            {!drivePicker.isLimited && (
             <button onClick={() => setShowPaste((v) => !v)} className="text-[11px] text-foreground/40 hover:text-foreground/70 mt-3 underline">
               {showPaste ? "Esconder" : "Prefiro colar o ID ou link da pasta"}
             </button>
-            {showPaste && (
+            )}
+            {showPaste && !drivePicker.isLimited && (
               <div className="flex gap-2 mt-2">
                 <input
                   value={pasteInput}

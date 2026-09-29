@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
-import { parseDriveId, listDriveFolderImages, withDriveOrg, getAccessToken } from "./drive.functions";
+import { parseDriveId, listDriveFolderImages, withDriveOrg, getAccessToken, createPhotoSelectionDriveFolder, openDriveUploadSessionInFolder } from "./drive.functions";
 import { protectPhotoBytes, buildPreviewBackground, resizeForSocialMedia, GRID_THUMB_MAX_DIMENSION, type WatermarkSpec } from "./photo-watermark.server";
 
 /** Resolve a config de marca d'água salva pra uma org — usado tanto na
@@ -124,26 +124,39 @@ export type PhotoSelectionSummary = {
 
 export const createPhotoSelection = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { photoClientId: string; title: string; driveFolderLink: string; deadline?: string | null; photoOrder?: "nome" | "horario"; mode?: "selecao" | "entrega" }) =>
+  .inputValidator((d: { photoClientId: string; title: string; driveFolderLink?: string | null; deadline?: string | null; photoOrder?: "nome" | "horario"; mode?: "selecao" | "entrega" }) =>
     z.object({
       photoClientId: z.string().uuid(),
       title: z.string().trim().min(1).max(120),
-      driveFolderLink: z.string().trim().min(5).max(500),
+      // Sem link = o app cria a pasta e as fotos são enviadas pelo próprio
+      // Modo Criador (agências com acesso limitado ao Drive).
+      driveFolderLink: z.string().trim().min(5).max(500).optional().nullable(),
       deadline: z.string().trim().max(10).optional().nullable(),
       photoOrder: z.enum(["nome", "horario"]).optional(),
       mode: z.enum(["selecao", "entrega"]).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
     await assertAdmin(context.supabase, context.userId);
-    const folderId = parseDriveId(data.driveFolderLink);
-    if (!folderId) throw new Error("Link/ID da pasta do Drive inválido.");
+    let folderId: string | null;
+    let folderLink: string;
+    if (data.driveFolderLink) {
+      folderId = parseDriveId(data.driveFolderLink);
+      if (!folderId) throw new Error("Link/ID da pasta do Drive inválido.");
 
-    // Valida que a pasta existe e está acessível antes de gerar o link
-    // público — melhor descobrir agora do que só quando o cliente abrir.
-    try {
-      await listDriveFolderImages(folderId);
-    } catch {
-      throw new Error("Não consegui acessar essa pasta do Drive. Confira o link e o compartilhamento.");
+      // Valida que a pasta existe e está acessível antes de gerar o link
+      // público — melhor descobrir agora do que só quando o cliente abrir.
+      try {
+        await listDriveFolderImages(folderId);
+      } catch {
+        throw new Error("Não consegui acessar essa pasta do Drive. Confira o link e o compartilhamento.");
+      }
+      folderLink = data.driveFolderLink;
+    } else {
+      const { data: client } = await context.supabase
+        .from("photo_clients").select("name").eq("id", data.photoClientId).maybeSingle();
+      if (!client) throw new Error("Cliente de fotografia não encontrado.");
+      folderId = await createPhotoSelectionDriveFolder(context.supabase, client.name as string, data.title);
+      folderLink = `https://drive.google.com/drive/folders/${folderId}`;
     }
 
     const token = randomToken(22);
@@ -160,7 +173,7 @@ export const createPhotoSelection = createServerFn({ method: "POST" })
         photo_client_id: data.photoClientId,
         title: data.title,
         drive_folder_id: folderId,
-        drive_folder_link: data.driveFolderLink,
+        drive_folder_link: folderLink,
         deadline: data.deadline || null,
         photo_order: data.photoOrder ?? "nome",
         selection_mode: data.mode ?? "selecao",
@@ -272,6 +285,26 @@ export const listSelectionDriveImages = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Seleção não encontrada.");
     return listDriveFolderImages(row.drive_folder_id as string, "nome");
+  }));
+
+/** Admin: abre o envio de uma foto direto pra pasta da seleção (os bytes
+ * seguem por uploadDriveChunk, igual aos uploads de posts). */
+export const startPhotoSelectionUpload = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string; name: string; mimeType: string }) =>
+    z.object({
+      id: z.string().uuid(),
+      name: z.string().min(1).max(255),
+      mimeType: z.string().regex(/^image\//, "Só dá pra enviar imagens."),
+    }).parse(d))
+  .handler(async ({ data, context }) => withDriveOrg(context.orgId, async () => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data: row, error } = await context.supabase
+      .from("photo_selections").select("drive_folder_id").eq("id", data.id).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Seleção não encontrada.");
+    const uploadUrl = await openDriveUploadSessionInFolder(row.drive_folder_id as string, data.name, data.mimeType);
+    return { uploadUrl };
   }));
 
 export const setPhotoSelectionCover = createServerFn({ method: "POST" })
