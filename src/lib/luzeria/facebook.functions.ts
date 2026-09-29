@@ -4,8 +4,12 @@ import { requireActiveProfile } from "./require-active";
 
 // Login do Facebook clássico (graph.facebook.com) — diferente do Instagram
 // Business Login (graph.instagram.com), não dá pra reaproveitar o mesmo
-// fluxo de troca de código. Mesmo App da Meta (INSTAGRAM_APP_ID/SECRET),
-// produto "Facebook Login for Business" ativado à parte, redirect_uri própria.
+// fluxo de troca de código. É o mesmo App "Modo Criador" na Meta, mas o
+// produto "Instagram API with Instagram Login" tem seu próprio ID/Secret
+// (INSTAGRAM_APP_ID/SECRET), diferente do ID principal do app usado pelo
+// Login do Facebook clássico — por isso FACEBOOK_APP_ID/SECRET são
+// variáveis à parte (descoberto em produção: reusar INSTAGRAM_APP_ID aqui
+// gerava "PLATFORM__INVALID_APP_ID" na Meta).
 const FB_GRAPH_API = "https://graph.facebook.com/v21.0";
 const FB_REDIRECT_URI = "https://www.modocriador.com.br/oauth/facebook-callback";
 const FB_SCOPES = ["pages_show_list", "pages_manage_posts", "pages_read_engagement"].join(",");
@@ -56,7 +60,7 @@ export const getFacebookConnectUrl = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCanPublish(context.supabase, context.userId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
-    const appId = process.env.INSTAGRAM_APP_ID;
+    const appId = process.env.FACEBOOK_APP_ID;
     if (!appId) throw new Error("Credenciais do Facebook ausentes no servidor.");
     const params = new URLSearchParams({
       client_id: appId,
@@ -80,8 +84,8 @@ export const exchangeFacebookCode = createServerFn({ method: "POST" })
   .inputValidator((d: { code: string; clientId: string }) =>
     z.object({ code: z.string().min(1), clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data }): Promise<{ pages: FacebookPageOption[] }> => {
-    const appId = process.env.INSTAGRAM_APP_ID;
-    const appSecret = process.env.INSTAGRAM_APP_SECRET;
+    const appId = process.env.FACEBOOK_APP_ID;
+    const appSecret = process.env.FACEBOOK_APP_SECRET;
     if (!appId || !appSecret) throw new Error("Credenciais do Facebook ausentes no servidor.");
 
     const shortRes = await fetch(`${FB_GRAPH_API}/oauth/access_token?` + new URLSearchParams({
