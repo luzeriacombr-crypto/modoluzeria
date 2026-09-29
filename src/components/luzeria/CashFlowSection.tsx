@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, X, AlertCircle, Pencil } from "lucide-react";
+import { Plus, X, AlertCircle, Pencil, Check } from "lucide-react";
 import { cashFlowEntriesQO, clientPaymentsQO, useApi } from "@/lib/luzeria/queries";
 import type { CashFlowEntry } from "@/lib/luzeria/cash-flow.functions";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
@@ -27,7 +27,7 @@ export function CashFlowSection() {
   const monthKey = currentMonthKey();
   const { data: payments } = useQuery(clientPaymentsQO());
   const { data: entries = [] } = useQuery(cashFlowEntriesQO(monthKey));
-  const { addCashFlowEntry, removeCashFlowEntry } = useApi();
+  const { addCashFlowEntry, removeCashFlowEntry, setCashFlowEntryPaid } = useApi();
 
   const [addingIncome, setAddingIncome] = useState(false);
   const [addingExpense, setAddingExpense] = useState(false);
@@ -207,8 +207,10 @@ export function CashFlowSection() {
             <div className="rounded-lg p-3 mb-3 space-y-2" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
               <input value={expenseLabel} onChange={(e) => setExpenseLabel(e.target.value)} placeholder="Ex: Assinatura Canva" className={inp} />
               <div className="flex gap-2">
-                <input value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} placeholder="Valor (R$)" className={inp} />
-                <input value={expenseDueDay} onChange={(e) => setExpenseDueDay(e.target.value.replace(/\D/g, ""))} placeholder="Dia venc." maxLength={2} className={`${inp} w-28 shrink-0`} />
+                <input value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} placeholder="Valor (R$)" className={`${inp} flex-1 min-w-0`} />
+                <div className="w-28 shrink-0">
+                  <input value={expenseDueDay} onChange={(e) => setExpenseDueDay(e.target.value.replace(/\D/g, ""))} placeholder="Dia venc." maxLength={2} className={inp} />
+                </div>
               </div>
               <div className="flex gap-2">
                 <button
@@ -256,6 +258,16 @@ export function CashFlowSection() {
                   {ex.dueDay && <span className="text-foreground/35 font-normal"> · vence dia {ex.dueDay}</span>}
                 </span>
                 <span className="text-[13px] font-bold text-foreground w-20 text-right">{money(ex.amountCents)}</span>
+                <button
+                  onClick={() => setCashFlowEntryPaid.mutate({ data: { entryId: ex.id, monthKey, paid: !ex.paidAt } })}
+                  title={ex.paidAt ? "Marcar como não paga" : "Marcar como paga"}
+                  className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 transition"
+                  style={ex.paidAt
+                    ? { backgroundColor: "rgba(126,217,87,0.15)", color: "#7ED957" }
+                    : { backgroundColor: "color-mix(in srgb, var(--foreground) 8%, transparent)", color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}
+                >
+                  {ex.paidAt && <Check size={10} />} {ex.paidAt ? "Pago" : "A pagar"}
+                </button>
                 <button onClick={() => setEditingEntry(ex)} className="text-foreground/30 hover:text-[var(--lz-accent-ink)] transition"><Pencil size={13} /></button>
                 <button onClick={() => remove(ex)} className="text-foreground/30 hover:text-red-400 transition"><X size={14} /></button>
               </div>

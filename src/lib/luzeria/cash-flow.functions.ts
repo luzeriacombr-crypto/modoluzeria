@@ -24,6 +24,11 @@ export type CashFlowEntry = {
   /** Dia do mês (1-31) em que essa conta/recebimento vence — opcional,
    * só pra acompanhamento (não dispara nenhuma cobrança sozinho). */
   dueDay: number | null;
+  /** Se essa saída já foi paga NO MÊS QUE ESTÁ SENDO VISTO (monthKey do
+   * pedido) — uma saída fixa é a mesma linha todo mês, então "pago" tem
+   * que ser por mês, não fixo na linha (senão marcava pago pra sempre).
+   * Só faz sentido pra direction="saida" (entrada usa client_payments). */
+  paidAt: string | null;
   createdAt: string;
 };
 
@@ -41,9 +46,19 @@ export const listCashFlowEntries = createServerFn({ method: "GET" })
       .or(`kind.eq.fixo,month_key.eq.${data.monthKey}`)
       .order("created_at");
     if (error) throw new Error(error.message);
+
+    const ids = (rows ?? []).map((r: any) => r.id);
+    const { data: payments } = ids.length
+      ? await (context.supabase as any)
+          .from("cash_flow_entry_payments").select("entry_id, paid_at")
+          .eq("month_key", data.monthKey).in("entry_id", ids)
+      : { data: [] as any[] };
+    const paidByEntry = new Map((payments ?? []).map((p: any) => [p.entry_id, p.paid_at as string]));
+
     return (rows ?? []).map((r: any) => ({
       id: r.id, direction: r.direction, label: r.label, amountCents: r.amount_cents,
-      kind: r.kind, monthKey: r.month_key, dueDay: r.due_day, createdAt: r.created_at,
+      kind: r.kind, monthKey: r.month_key, dueDay: r.due_day,
+      paidAt: paidByEntry.get(r.id) ?? null, createdAt: r.created_at,
     }));
   });
 
@@ -107,6 +122,34 @@ export const updateCashFlowEntry = createServerFn({ method: "POST" })
       due_day: data.dueDay ?? null,
     }).eq("id", data.id).eq("org_id", context.orgId);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Marca/desmarca uma saída como paga NUM MÊS ESPECÍFICO — sempre o mês
+ * que a pessoa está vendo na tela, não a saída como um todo (ver comentário
+ * em cash_flow_entry_payments). */
+export const setCashFlowEntryPaid = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { entryId: string; monthKey: string; paid: boolean }) =>
+    z.object({ entryId: z.string().uuid(), monthKey: z.string().regex(/^\d{4}-\d{2}$/), paid: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertFinanceiroAccess(context.supabase, context.userId);
+    const { data: entry, error: fetchErr } = await (context.supabase as any)
+      .from("cash_flow_entries").select("id").eq("id", data.entryId).eq("org_id", context.orgId).maybeSingle();
+    if (fetchErr) throw new Error(fetchErr.message);
+    if (!entry) throw new Error("Lançamento não encontrado.");
+
+    if (data.paid) {
+      const { error } = await (context.supabase as any)
+        .from("cash_flow_entry_payments")
+        .upsert({ entry_id: data.entryId, month_key: data.monthKey, marked_by: context.userId }, { onConflict: "entry_id,month_key" });
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await (context.supabase as any)
+        .from("cash_flow_entry_payments").delete()
+        .eq("entry_id", data.entryId).eq("month_key", data.monthKey);
+      if (error) throw new Error(error.message);
+    }
     return { ok: true };
   });
 

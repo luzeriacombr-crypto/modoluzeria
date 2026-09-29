@@ -104,7 +104,7 @@ import { listContentStatuses, upsertContentStatus, deleteContentStatus, setConte
 import { listClientCategories, createClientCategory, renameClientCategory, deleteClientCategory } from "./client-categories.functions";
 import { setProfileClientAccess } from "./client-access.functions";
 import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, setContractTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
-import { listCashFlowEntries, addCashFlowEntry, updateCashFlowEntry, removeCashFlowEntry } from "./cash-flow.functions";
+import { listCashFlowEntries, addCashFlowEntry, updateCashFlowEntry, removeCashFlowEntry, setCashFlowEntryPaid } from "./cash-flow.functions";
 import {
   listContractRequests, createContractRequest, cancelContractRequest,
   getPublicContractRequest,
@@ -1342,6 +1342,11 @@ export function useApi() {
       mutationFn: useServerFn(updateCashFlowEntry),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }),
       onError: (e: any) => toastFriendlyError(e, "Erro ao salvar."),
+    }),
+    setCashFlowEntryPaid: useMutation({
+      mutationFn: useServerFn(setCashFlowEntryPaid),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao marcar pagamento."),
     }),
     removeCashFlowEntry: useMutation({
       mutationFn: useServerFn(removeCashFlowEntry),
