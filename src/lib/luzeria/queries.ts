@@ -107,6 +107,7 @@ import { listClientCategories, createClientCategory, renameClientCategory, delet
 import { setProfileClientAccess } from "./client-access.functions";
 import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, setContractTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
 import { listCashFlowEntries, addCashFlowEntry, updateCashFlowEntry, removeCashFlowEntry, setCashFlowEntryPaid } from "./cash-flow.functions";
+import { listBankAccounts, addBankAccount, updateBankAccount, removeBankAccount } from "./bank-accounts.functions";
 import {
   listContractRequests, createContractRequest, cancelContractRequest,
   getPublicContractRequest,
@@ -348,6 +349,9 @@ export const clientPaymentHistoryQO = (clientId: string | null) =>
 
 export const cashFlowEntriesQO = (monthKey: string) =>
   queryOptions({ queryKey: ["cash-flow-entries", monthKey], queryFn: () => listCashFlowEntries({ data: { monthKey } }) });
+
+export const bankAccountsQO = () =>
+  queryOptions({ queryKey: ["bank-accounts"], queryFn: () => listBankAccounts() });
 
 export const campaignsQO = (clientId: string) =>
   queryOptions({ queryKey: ["campaigns", clientId], queryFn: () => listCampaigns({ data: { clientId } }) });
@@ -1366,6 +1370,21 @@ export function useApi() {
       mutationFn: useServerFn(removeCashFlowEntry),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }),
       onError: (e: any) => toastFriendlyError(e, "Erro ao remover."),
+    }),
+    addBankAccount: useMutation({
+      mutationFn: useServerFn(addBankAccount),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["bank-accounts"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao adicionar conta."),
+    }),
+    updateBankAccount: useMutation({
+      mutationFn: useServerFn(updateBankAccount),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["bank-accounts"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar conta."),
+    }),
+    removeBankAccount: useMutation({
+      mutationFn: useServerFn(removeBankAccount),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["bank-accounts"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover conta."),
     }),
     upsertCampaign: useMutation({
       mutationFn: useServerFn(upsertCampaign),

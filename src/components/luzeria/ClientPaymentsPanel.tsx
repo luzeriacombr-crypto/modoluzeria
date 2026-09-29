@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, MessageCircle, Check, Undo2, Pencil, History, ChevronDown, X } from "lucide-react";
+import { Loader2, MessageCircle, Check, Undo2, Pencil, History, ChevronDown, X, QrCode } from "lucide-react";
 import { clientPaymentsQO, clientPaymentHistoryQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -48,54 +48,108 @@ function waLink(phone: string | null, text: string): string | null {
 }
 
 const DEFAULT_MESSAGE_TEMPLATE =
-`Olá! Passando pra lembrar do pagamento referente a esse mês, com vencimento em {data}.
+`Oi, {nome}! Tudo bem? \u{1F60A}
 
-\u{1F4CB} Resumo do mês: {posts}.
+Passando só pra lembrar da mensalidade desse mês, que vence em {data}.
+
+\u{1F4CB} Esse mês entregamos: {posts}.
 
 \u{1F4B0} Valor: {valor}
 
-{pix}`;
+{pix}
+
+Qualquer coisa é só chamar por aqui!`;
 
 function buildPaymentMessage(row: ClientPaymentRow, pixKey: string | null, template: string | null): string {
   const postsPhrase = `${row.postsDoneThisMonth} publicaç${row.postsDoneThisMonth === 1 ? "ão feita" : "ões feitas"}`;
   if (template) {
     return template
+      .replaceAll("{nome}", row.name)
       .replaceAll("{data}", formatDate(row.nextDueDate))
       .replaceAll("{valor}", row.contractValue != null ? money(row.contractValue) : "")
       .replaceAll("{posts}", postsPhrase)
-      .replaceAll("{pix}", pixKey ? `Chave Pix pra pagamento: ${pixKey}` : "")
+      .replaceAll("{pix}", pixKey ? `\u{1F511} Pix: ${pixKey}` : "")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
   }
   const lines = [
-    `Olá! Passando pra lembrar do pagamento referente a esse mês, com vencimento em ${formatDate(row.nextDueDate)}.`,
+    `Oi, ${row.name}! Tudo bem? \u{1F60A}`,
     "",
-    `\u{1F4CB} Resumo do mês: ${postsPhrase}.`,
+    `Passando só pra lembrar da mensalidade desse mês, que vence em ${formatDate(row.nextDueDate)}.`,
+    "",
+    `\u{1F4CB} Esse mês entregamos: ${postsPhrase}.`,
   ];
   if (row.contractValue != null) lines.push("", `\u{1F4B0} Valor: ${money(row.contractValue)}`);
-  if (pixKey) lines.push("", `Chave Pix pra pagamento: ${pixKey}`);
+  if (pixKey) lines.push("", `\u{1F511} Pix: ${pixKey}`);
+  lines.push("", "Qualquer coisa é só chamar por aqui!");
   return lines.join("\n");
+}
+
+/** Detecta o tipo da chave Pix só pra mostrar visualmente (CPF/CNPJ têm
+ * formato numérico fixo, telefone Pix sempre vem com "+" na frente por
+ * padrão do Bacen, e-mail tem "@", aleatória é um UUID) — não valida nada,
+ * é só uma dica visual, a chave em si nunca é conferida contra o Bacen. */
+function detectPixKeyType(raw: string): string | null {
+  const key = raw.trim();
+  if (!key) return null;
+  if (key.includes("@")) return "e-mail";
+  if (/^\+\d{10,14}$/.test(key.replace(/[\s()-]/g, ""))) return "telefone";
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key)) return "chave aleatória";
+  const digits = key.replace(/\D/g, "");
+  if (digits.length === key.replace(/[.\-/]/g, "").length) {
+    if (digits.length === 11) return "CPF";
+    if (digits.length === 14) return "CNPJ";
+  }
+  return null;
 }
 
 function PixKeyForm({ pixKey, isMaster }: { pixKey: string | null; isMaster: boolean }) {
   const api = useApi();
+  const [editing, setEditing] = useState(!pixKey);
   const [value, setValue] = useState(pixKey ?? "");
-  useEffect(() => setValue(pixKey ?? ""), [pixKey]);
+  useEffect(() => { setValue(pixKey ?? ""); setEditing(!pixKey); }, [pixKey]);
   if (!isMaster) return null;
+
+  const detectedType = detectPixKeyType(value);
+
   return (
     <div className="bg-card border border-foreground/7 rounded-xl p-4">
-      <label className="text-xs text-foreground/50 mb-1.5 block">Chave Pix da agência (vai junto na cobrança pro cliente)</label>
-      <div className="flex items-center gap-2">
-        <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Ex: contato@suaagencia.com.br" className={inp} />
-        <button
-          onClick={() => api.setOrgPixKey.mutate({ data: { pixKey: value.trim() || null } })}
-          disabled={api.setOrgPixKey.isPending}
-          className="shrink-0 rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
-        >
-          {api.setOrgPixKey.isPending ? "Salvando…" : "Salvar"}
-        </button>
-      </div>
+      <div className="text-sm font-bold text-foreground mb-0.5">Chave Pix da agência</div>
+      <p className="text-[11px] text-foreground/35 mb-3">Vai junto no texto de cobrança pro cliente.</p>
+
+      {editing ? (
+        <div className="flex items-center gap-2">
+          <input autoFocus value={value} onChange={(e) => setValue(e.target.value)} placeholder="Ex: contato@suaagencia.com.br" className={inp} />
+          <button
+            onClick={() => api.setOrgPixKey.mutate({ data: { pixKey: value.trim() || null } }, { onSuccess: () => setEditing(false) })}
+            disabled={api.setOrgPixKey.isPending || !value.trim()}
+            className="shrink-0 rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+          >
+            {api.setOrgPixKey.isPending ? "Salvando…" : "Salvar"}
+          </button>
+          {pixKey && (
+            <button onClick={() => { setValue(pixKey); setEditing(false); }} className="shrink-0 text-xs text-foreground/40 hover:text-foreground px-2">Cancelar</button>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(var(--lz-brand-rgb),0.06)", border: "1px solid rgba(var(--lz-brand-rgb),0.25)" }}>
+          <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(var(--lz-brand-rgb),0.16)" }}>
+            <QrCode size={17} style={{ color: "var(--lz-accent-ink)" }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[13.5px] font-bold text-foreground truncate">{pixKey}</div>
+            {detectedType && (
+              <div className="text-[10.5px] font-bold uppercase tracking-wide mt-0.5" style={{ color: "var(--lz-accent-ink)" }}>
+                Detectado: chave {detectedType}
+              </div>
+            )}
+          </div>
+          <button onClick={() => setEditing(true)} className="shrink-0 text-xs font-semibold text-foreground/60 hover:text-foreground bg-foreground/5 hover:bg-foreground/10 rounded-md px-3 py-2 transition">
+            Trocar
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -109,7 +163,7 @@ function MessageTemplateForm({ template, isMaster }: { template: string | null; 
     <div className="bg-card border border-foreground/7 rounded-xl p-4">
       <label className="text-xs text-foreground/50 mb-1.5 block">Mensagem de cobrança pelo WhatsApp</label>
       <p className="text-[11px] text-foreground/35 mb-2 leading-relaxed">
-        Use <code className="text-foreground/50">{"{data}"}</code>, <code className="text-foreground/50">{"{valor}"}</code>, <code className="text-foreground/50">{"{posts}"}</code> e <code className="text-foreground/50">{"{pix}"}</code> onde quiser
+        Use <code className="text-foreground/50">{"{nome}"}</code>, <code className="text-foreground/50">{"{data}"}</code>, <code className="text-foreground/50">{"{valor}"}</code>, <code className="text-foreground/50">{"{posts}"}</code> e <code className="text-foreground/50">{"{pix}"}</code> onde quiser
         — a chave Pix some sozinha da mensagem se você não tiver uma cadastrada.
       </p>
       <textarea value={value} onChange={(e) => setValue(e.target.value)} rows={7} className={inp + " resize-none font-mono text-xs"} />

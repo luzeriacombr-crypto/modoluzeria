@@ -19,7 +19,7 @@ export type CashFlowEntry = {
   direction: "entrada" | "saida";
   label: string;
   amountCents: number;
-  kind: "fixo" | "variavel";
+  kind: "fixo" | "variavel" | "investimento";
   monthKey: string | null;
   /** Dia do mês (1-31) em que essa conta/recebimento vence — opcional,
    * só pra acompanhamento (não dispara nenhuma cobrança sozinho). */
@@ -64,15 +64,16 @@ export const listCashFlowEntries = createServerFn({ method: "GET" })
 
 export const addCashFlowEntry = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { direction: "entrada" | "saida"; label: string; amountCents: number; kind: "fixo" | "variavel"; monthKey: string; dueDay?: number | null }) =>
+  .inputValidator((d: { direction: "entrada" | "saida"; label: string; amountCents: number; kind: "fixo" | "variavel" | "investimento"; monthKey: string; dueDay?: number | null }) =>
     z.object({
       direction: z.enum(["entrada", "saida"]),
       label: z.string().trim().min(1).max(140),
       amountCents: z.number().int().min(1),
       // Entrada avulsa é sempre do mês em que aconteceu — só saída pode
-      // ser fixa (recorrente). O front nem oferece a escolha pra entrada,
-      // mas força aqui também, pra uma chamada direta não furar a regra.
-      kind: z.enum(["fixo", "variavel"]),
+      // ser fixa (recorrente) ou investimento. O front nem oferece a
+      // escolha pra entrada, mas força aqui também, pra uma chamada direta
+      // não furar a regra.
+      kind: z.enum(["fixo", "variavel", "investimento"]),
       monthKey: z.string().regex(/^\d{4}-\d{2}$/),
       dueDay: z.number().int().min(1).max(31).nullable().optional(),
     }).parse(d))
@@ -97,12 +98,12 @@ export const addCashFlowEntry = createServerFn({ method: "POST" })
  * marcar o dia de vencimento) — antes só dava pra apagar e lançar de novo. */
 export const updateCashFlowEntry = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string; label: string; amountCents: number; kind: "fixo" | "variavel"; monthKey: string; dueDay?: number | null }) =>
+  .inputValidator((d: { id: string; label: string; amountCents: number; kind: "fixo" | "variavel" | "investimento"; monthKey: string; dueDay?: number | null }) =>
     z.object({
       id: z.string().uuid(),
       label: z.string().trim().min(1).max(140),
       amountCents: z.number().int().min(1),
-      kind: z.enum(["fixo", "variavel"]),
+      kind: z.enum(["fixo", "variavel", "investimento"]),
       monthKey: z.string().regex(/^\d{4}-\d{2}$/),
       dueDay: z.number().int().min(1).max(31).nullable().optional(),
     }).parse(d))

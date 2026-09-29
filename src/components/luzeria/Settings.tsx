@@ -120,7 +120,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
              tab === "automations" ? "Lembretes automáticos e rotinas que o sistema executa sozinho." :
              tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
              tab === "plataforma" ? "Todas as agências do Modo Criador, mensagens de ativação e pedidos de demonstração." :
-             tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? "Visão geral, jornada, margem e pagamentos de cada cliente." :
+             tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? "Visão geral, jornada, margem e financeiro de cada cliente." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
              tab === "blog" ? "Escreva e edite os artigos do blog (modocriador.com.br/blog)." :
@@ -1629,7 +1629,7 @@ function ClienteTab({ initialSub, canJourney, canMargem, isAdmin }: {
     ...(isAdmin ? [{ id: "overview" as const, label: "Visão Geral" }] : []),
     ...(canJourney ? [{ id: "jornada" as const, label: "Jornada" }] : []),
     ...(canMargem ? [{ id: "margem" as const, label: "Margem" }] : []),
-    ...(canMargem ? [{ id: "pagamentos" as const, label: "Pagamentos" }] : []),
+    ...(canMargem ? [{ id: "pagamentos" as const, label: "Financeiro" }] : []),
   ];
   const [sub, setSub] = useState<"overview" | "jornada" | "margem" | "pagamentos">(
     subs.some((s) => s.id === initialSub) ? initialSub : (subs[0]?.id ?? "overview"),

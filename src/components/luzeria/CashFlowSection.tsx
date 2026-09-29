@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, X, AlertCircle, Pencil, Check } from "lucide-react";
+import { Plus, X, AlertCircle, Pencil, Check, ChevronDown } from "lucide-react";
 import { cashFlowEntriesQO, clientPaymentsQO, useApi } from "@/lib/luzeria/queries";
 import type { CashFlowEntry } from "@/lib/luzeria/cash-flow.functions";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
 import { Modal } from "./Modals";
+import { BankAccountsSection } from "./BankAccountsSection";
 
 function money(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -35,17 +36,23 @@ export function CashFlowSection() {
   const [incomeAmount, setIncomeAmount] = useState("");
   const [expenseLabel, setExpenseLabel] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
-  const [expenseKind, setExpenseKind] = useState<"fixo" | "variavel">("fixo");
+  const [expenseKind, setExpenseKind] = useState<"fixo" | "variavel" | "investimento">("fixo");
   const [expenseDueDay, setExpenseDueDay] = useState("");
   const [fillingClient, setFillingClient] = useState<ClientPaymentRow | null>(null);
   const [editingEntry, setEditingEntry] = useState<CashFlowEntry | null>(null);
+  const [clientsOpen, setClientsOpen] = useState(true);
+  const [saidasOpen, setSaidasOpen] = useState(true);
 
   const clients = payments?.clients ?? [];
   const incomes = entries.filter((e) => e.direction === "entrada");
+  // "Saída" aqui é só fixo/variável de verdade — investimento é dinheiro
+  // guardado, não gasto, então some pro cálculo de gastos/saldo e fica na
+  // própria lista (renderizada junto, mas com contagem separada abaixo).
   const expenses = entries.filter((e) => e.direction === "saida");
 
   const clientsTotalCents = clients.reduce((s, c) => s + Math.round((c.contractValue ?? 0) * 100), 0);
   const clientsReceivedCents = clients.reduce((s, c) => s + (c.paidThisPeriod ? Math.round((c.contractValue ?? 0) * 100) : 0), 0);
+  const clientsPaidCount = clients.filter((c) => c.paidThisPeriod).length;
   const incomesTotalCents = incomes.reduce((s, i) => s + i.amountCents, 0);
   const recebimentoPrevistoCents = clientsTotalCents + incomesTotalCents;
   const recebidoCents = clientsReceivedCents + incomesTotalCents;
@@ -53,6 +60,7 @@ export function CashFlowSection() {
 
   const fixosCents = expenses.filter((e) => e.kind === "fixo").reduce((s, e) => s + e.amountCents, 0);
   const variaveisCents = expenses.filter((e) => e.kind === "variavel").reduce((s, e) => s + e.amountCents, 0);
+  const investidoCents = expenses.filter((e) => e.kind === "investimento").reduce((s, e) => s + e.amountCents, 0);
   const gastosTotalCents = fixosCents + variaveisCents;
   const saldoCents = recebimentoPrevistoCents - gastosTotalCents;
 
@@ -88,26 +96,42 @@ export function CashFlowSection() {
   return (
     <div className="space-y-4">
       {/* Resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-card border border-foreground/7 rounded-xl p-4">
           <div className="text-[10.5px] font-bold uppercase tracking-wider text-foreground/40 mb-2">Recebimentos do mês</div>
           <div className="text-xl font-extrabold text-foreground">{money(recebidoCents)}</div>
           <div className="text-[11px] text-foreground/45 mb-2">de {money(recebimentoPrevistoCents)} previstos</div>
-          <div className="h-1.5 rounded-full bg-foreground/8 overflow-hidden">
+          <div className="h-1.5 rounded-full bg-foreground/8 overflow-hidden mb-2">
             <div className="h-full rounded-full" style={{ width: `${recebidoPct}%`, background: "linear-gradient(90deg, rgb(var(--lz-brand-rgb)), #8FE3B0)" }} />
           </div>
+          {clients.length > 0 && (
+            <div className="text-[10.5px] text-foreground/40">{clientsPaidCount} de {clients.length} clientes pagaram</div>
+          )}
         </div>
         <div className="bg-card border border-foreground/7 rounded-xl p-4">
           <div className="text-[10.5px] font-bold uppercase tracking-wider text-foreground/40 mb-2">Gastos previstos do mês</div>
           <div className="text-xl font-extrabold text-foreground">{money(gastosTotalCents)}</div>
           <div className="text-[11px] text-foreground/45">{money(fixosCents)} fixos · {money(variaveisCents)} variáveis</div>
         </div>
-        <div className="bg-card border border-foreground/7 rounded-xl p-4">
-          <div className="text-[10.5px] font-bold uppercase tracking-wider text-foreground/40 mb-2">Saldo previsto do mês</div>
-          <div className="text-xl font-extrabold" style={{ color: saldoCents >= 0 ? "#5BA88A" : "#F0765A" }}>{money(saldoCents)}</div>
-          <div className="text-[11px] text-foreground/45">recebimentos previstos − gastos previstos</div>
+        <div className="bg-card rounded-xl p-4" style={{ border: "1px solid rgba(183,156,255,0.35)" }}>
+          <div className="text-[10.5px] font-bold uppercase tracking-wider mb-2" style={{ color: "#B79CFF" }}>Investido esse mês</div>
+          <div className="text-xl font-extrabold text-foreground">{money(investidoCents)}</div>
+          <div className="text-[11px] text-foreground/45">Guardado, não é gasto — não entra no saldo</div>
+        </div>
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: `color-mix(in srgb, ${saldoCents >= 0 ? "#8FE3B0" : "#F0765A"} 14%, var(--card))`,
+            border: `1px solid color-mix(in srgb, ${saldoCents >= 0 ? "#8FE3B0" : "#F0765A"} 35%, transparent)`,
+          }}
+        >
+          <div className="text-[10.5px] font-bold uppercase tracking-wider mb-2" style={{ color: saldoCents >= 0 ? "#8FE3B0" : "#F0765A" }}>Saldo previsto do mês</div>
+          <div className="text-xl font-extrabold text-foreground">{money(saldoCents)}</div>
+          <div className="text-[11px] text-foreground/45">recebimentos previstos − gastos (sem contar investimento)</div>
         </div>
       </div>
+
+      <BankAccountsSection />
 
       {/* Entradas / Saídas */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -135,8 +159,15 @@ export function CashFlowSection() {
             </div>
           )}
 
-          <div className="text-[10px] font-bold uppercase tracking-wider text-foreground/30 mb-1.5">Clientes (recorrente)</div>
-          <div className="space-y-1.5 mb-3">
+          <button
+            onClick={() => setClientsOpen((v) => !v)}
+            className="w-full flex items-center gap-1.5 mb-1.5 text-left"
+          >
+            <ChevronDown size={12} className={`text-foreground/40 transition-transform ${clientsOpen ? "" : "-rotate-90"}`} />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-foreground/30">Clientes (recorrente)</span>
+            <span className="text-[10px] font-bold text-foreground/20">· {clients.length}</span>
+          </button>
+          <div className={`space-y-1.5 mb-3 ${clientsOpen ? "" : "hidden"}`}>
             {clients.length === 0 ? (
               <div className="text-[11px] text-foreground/35 py-2">Nenhum cliente recorrente (Social Media/Pack Digital) cadastrado ainda.</div>
             ) : clients.map((c) => {
@@ -192,7 +223,10 @@ export function CashFlowSection() {
 
         <div className="bg-card border border-foreground/7 rounded-xl p-4">
           <div className="flex items-center justify-between mb-1">
-            <div className="text-sm font-bold text-foreground">Saídas</div>
+            <button onClick={() => setSaidasOpen((v) => !v)} className="flex items-center gap-1.5">
+              <ChevronDown size={13} className={`text-foreground/50 transition-transform ${saidasOpen ? "" : "-rotate-90"}`} />
+              <span className="text-sm font-bold text-foreground">Saídas</span>
+            </button>
             <button
               onClick={() => setAddingExpense((v) => !v)}
               className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-md"
@@ -201,7 +235,7 @@ export function CashFlowSection() {
               <Plus size={12} /> Nova saída
             </button>
           </div>
-          <p className="text-[11px] text-foreground/35 mb-3">Fixa entra todo mês sozinha até você remover. Variável é só desse mês.</p>
+          <p className="text-[11px] text-foreground/35 mb-3">Fixa entra todo mês sozinha. Variável é só desse mês. Investimento não conta como gasto no saldo.</p>
 
           {addingExpense && (
             <div className="rounded-lg p-3 mb-3 space-y-2" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
@@ -227,6 +261,13 @@ export function CashFlowSection() {
                 >
                   Variável
                 </button>
+                <button
+                  onClick={() => setExpenseKind("investimento")}
+                  className="flex-1 text-xs font-bold py-2 rounded-md transition"
+                  style={expenseKind === "investimento" ? { background: "#B79CFF", color: "#1A0D2E" } : { background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
+                >
+                  Investimento
+                </button>
               </div>
               <div className="flex justify-end gap-2">
                 <button onClick={() => setAddingExpense(false)} className="text-xs text-foreground/50 hover:text-foreground px-2 py-1.5">Cancelar</button>
@@ -242,16 +283,20 @@ export function CashFlowSection() {
             </div>
           )}
 
-          <div className="space-y-1.5">
+          <div className={`space-y-1.5 ${saidasOpen ? "" : "hidden"}`}>
             {expenses.length === 0 ? (
               <div className="text-[11px] text-foreground/35 py-2">Nenhuma saída lançada ainda.</div>
             ) : expenses.map((ex) => (
               <div key={ex.id} className="flex items-center gap-2.5 px-2.5 py-2 rounded-md" style={{ background: "color-mix(in srgb, var(--foreground) 2.5%, transparent)" }}>
                 <span
                   className="text-[9.5px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
-                  style={ex.kind === "fixo" ? { backgroundColor: "rgba(111,164,255,0.15)", color: "#6FA4FF" } : { backgroundColor: "rgba(240,118,90,0.15)", color: "#F0765A" }}
+                  style={
+                    ex.kind === "fixo" ? { backgroundColor: "rgba(111,164,255,0.15)", color: "#6FA4FF" }
+                    : ex.kind === "investimento" ? { backgroundColor: "rgba(183,156,255,0.15)", color: "#B79CFF" }
+                    : { backgroundColor: "rgba(240,118,90,0.15)", color: "#F0765A" }
+                  }
                 >
-                  {ex.kind === "fixo" ? "Fixo" : "Variável"}
+                  {ex.kind === "fixo" ? "Fixo" : ex.kind === "investimento" ? "Investimento" : "Variável"}
                 </span>
                 <span className="flex-1 min-w-0 text-[13px] text-foreground truncate">
                   {ex.label}
@@ -293,7 +338,7 @@ function EditEntryModal({ entry, monthKey, onClose }: { entry: CashFlowEntry; mo
   const api = useApi();
   const [label, setLabel] = useState(entry.label);
   const [amount, setAmount] = useState((entry.amountCents / 100).toFixed(2).replace(".", ","));
-  const [kind, setKind] = useState<"fixo" | "variavel">(entry.kind);
+  const [kind, setKind] = useState<"fixo" | "variavel" | "investimento">(entry.kind);
   const [dueDay, setDueDay] = useState(entry.dueDay != null ? String(entry.dueDay) : "");
 
   function save() {
@@ -334,6 +379,11 @@ function EditEntryModal({ entry, monthKey, onClose }: { entry: CashFlowEntry; mo
               className="flex-1 text-xs font-bold py-2 rounded-md transition"
               style={kind === "variavel" ? { background: "#F0765A", color: "#1A0D0D" } : { background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
             >Variável</button>
+            <button
+              onClick={() => setKind("investimento")}
+              className="flex-1 text-xs font-bold py-2 rounded-md transition"
+              style={kind === "investimento" ? { background: "#B79CFF", color: "#1A0D2E" } : { background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
+            >Investimento</button>
           </div>
         )}
       </div>
