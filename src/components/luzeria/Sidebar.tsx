@@ -17,6 +17,7 @@ import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { reportAppError } from "@/lib/error-reporting";
 import { toast } from "sonner";
 import { hasSetorPermission, hasPermission, type Client } from "@/lib/luzeria/types";
+import { useLogoOpticalBox } from "@/lib/luzeria/logo-optical-center";
 
 export const DEFAULT_NAV_LABELS: Record<string, string> = {
   "minhas-demandas": "Minhas demandas", dashboard: "Dashboard", clientes: "Clientes",
@@ -50,6 +51,9 @@ export function Sidebar({
   onCreateClient,
 }: { collapsed?: boolean; onOpenCustomFields: (c: Client) => void; onCreateClient: (category?: string) => void }) {
   const me = useMe().data;
+  // 240 = w-[240px] da aside (só importa quando expandida, que é quando a
+  // logo aparece); 20 = margem mínima de segurança dos dois lados.
+  const logoBox = useLogoOpticalBox(me?.orgLogoUrl, 240, 20);
   const { data: levelInputs } = useQuery({ ...myAgencyLevelInputsQO(), enabled: !!me && !(me?.disabledFeatures ?? []).includes("agency_levels") });
   const { data: clients = [], isLoading: clientsLoading, isError: clientsError, error: clientsErrObj } = useQuery(clientsQO());
   const { data: customCategories = [] } = useQuery(clientCategoriesQO());
@@ -169,42 +173,45 @@ export function Sidebar({
     <aside data-tour="sidebar" className={`sidebar-gradient ${collapsed ? "w-[64px]" : "w-[240px]"} h-screen flex flex-col text-white shrink-0 overflow-hidden`}>
       {/* Logo — some no modo reduzido, a logo aparece no cabeçalho nesse caso (App.tsx) */}
       {!collapsed && (
-        <div className="pl-6 pr-8 pt-5 pb-4">
+        <div className="pt-5 pb-4">
           {me?.orgLogoUrl ? (
-            // Preenche a largura útil da sidebar (dentro do padding do
-            // container), independente da logo ser retangular ou quadrada —
-            // uma quadrada fica proporcionalmente maior (e empurra o menu
-            // um pouco pra baixo), o que é intencional (pedido do Junior).
-            // O padding é do container (não só da img), então o slogan e o
-            // selo de nível logo abaixo ganham a mesma margem — tudo fica
-            // alinhado. pl-6/pr-8 (em vez de simétrico) é de propósito: a
-            // arte da logo da Luzeria tem o "L" sólido colado na borda
-            // esquerda em toda a altura, mas o traço diagonal da direita só
-            // toca a borda no canto de cima e recua embaixo — então uma
-            // margem simétrica em pixels parecia visualmente desbalanceada
-            // (a esquerda "pesava" mais). Isso é um ajuste óptico pra ESSA
-            // logo específica, pode precisar reajustar se a logo mudar.
-            <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="block w-full h-auto object-contain" />
+            // Tamanho/posição vêm do centro de massa real da arte (ver
+            // useLogoOpticalBox) — não é só "encher a largura" com padding
+            // simétrico, que pode parecer torto se a logo tiver algum
+            // elemento (ícone, traço) que pesa visualmente mais pra um
+            // lado. Uma logo quadrada fica proporcionalmente maior (e
+            // empurra o menu um pouco pra baixo), intencional (pedido do
+            // Junior). O slogan/selo abaixo usa o px-5 padrão da sidebar —
+            // não precisam alinhar exatamente com a logo, que agora tem
+            // posição própria calculada por imagem.
+            <img
+              src={me.orgLogoUrl}
+              alt={me.orgName ?? "Logo"}
+              className="block h-auto object-contain"
+              style={{ width: logoBox.width, marginLeft: logoBox.marginLeft }}
+            />
           ) : (
-            <div className="text-white font-extrabold text-lg uppercase tracking-wide truncate" title={me?.orgName ?? ""}>
+            <div className="px-5 text-white font-extrabold text-lg uppercase tracking-wide truncate" title={me?.orgName ?? ""}>
               {me?.orgName ?? "Modo Criador"}
             </div>
           )}
-          {/* `??` (não `||`) de propósito: uma string vazia salva de propósito
-           * (o master removeu o slogan em Configurações) precisa continuar
-           * vazia — só null/undefined (nunca configurado) cai no padrão. */}
-          {(me?.orgTagline ?? "Gestão de conteúdo e criação") && (
-            <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-1.5">
-              {me?.orgTagline ?? "Gestão de conteúdo e criação"}
-            </p>
-          )}
-          {levelInputs && !disabled.has("agency_levels") && <AgencyLevelSidebarBadge inputs={levelInputs} />}
-          {isDemoReadOnly && (
-            <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)", color: "var(--lz-accent-ink)" }}>
-              Demonstração — somente visualização
-            </span>
-          )}
+          <div className="px-5">
+            {/* `??` (não `||`) de propósito: uma string vazia salva de propósito
+             * (o master removeu o slogan em Configurações) precisa continuar
+             * vazia — só null/undefined (nunca configurado) cai no padrão. */}
+            {(me?.orgTagline ?? "Gestão de conteúdo e criação") && (
+              <p className="text-white/90 text-[10px] font-light italic tracking-wide mt-1.5">
+                {me?.orgTagline ?? "Gestão de conteúdo e criação"}
+              </p>
+            )}
+            {levelInputs && !disabled.has("agency_levels") && <AgencyLevelSidebarBadge inputs={levelInputs} />}
+            {isDemoReadOnly && (
+              <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)", color: "var(--lz-accent-ink)" }}>
+                Demonstração — somente visualização
+              </span>
+            )}
+          </div>
         </div>
       )}
       <div className={collapsed ? "mx-3 h-px mt-5" : "mx-5 h-px"} style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.2)" }} />
