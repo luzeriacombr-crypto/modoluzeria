@@ -1013,7 +1013,7 @@ function AgendaRail() {
               className="rounded-xl py-1.5 text-center transition-colors hover:bg-foreground/[0.05]"
               style={on ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" } : undefined}>
               <span className="block text-[9.5px] font-bold uppercase tracking-wide" style={on ? { opacity: 0.65 } : { color: "var(--muted-foreground)" }}>{d.wd}</span>
-              <span className="block text-[15px] font-bold tabular-nums leading-tight">{d.num}</span>
+              <span className={`block text-[15px] font-bold tabular-nums leading-tight ${on ? "" : "text-foreground"}`}>{d.num}</span>
               <i className="block w-1 h-1 rounded-full mx-auto mt-1" style={{ background: on ? "#0D0D0D" : "rgb(var(--lz-brand-rgb))", opacity: has ? 1 : 0 }} />
             </button>
           );

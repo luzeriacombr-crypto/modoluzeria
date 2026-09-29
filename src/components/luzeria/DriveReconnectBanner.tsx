@@ -27,7 +27,7 @@ export function DriveReconnectBanner({ isAdmin }: { isAdmin: boolean }) {
   }
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 text-sm text-white" style={{ background: "rgba(200,212,78,0.14)", borderBottom: "1px solid rgba(200,212,78,0.3)" }}>
+    <div className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground" style={{ background: "rgba(200,212,78,0.14)", borderBottom: "1px solid rgba(200,212,78,0.3)" }}>
       <RefreshCw size={16} className="shrink-0" style={{ color: "#C8D44E" }} />
       <button
         onClick={() => navigate({ to: "/configuracoes", search: { tab: "integrations" } })}
