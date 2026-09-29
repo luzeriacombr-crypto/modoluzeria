@@ -315,6 +315,44 @@ export const setFacebookAutoPublish = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export type FacebookPostEngagement = { likes: number; comments: number; shares: number };
+
+/** Curtidas, comentários e compartilhamentos do post já publicado — usa
+ * pages_read_engagement pra ler de volta o que o próprio Modo Criador
+ * publicou (mesma ideia de getInstagramItemInsights). */
+export const getFacebookItemEngagement = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string }) => z.object({ itemId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<FacebookPostEngagement> => {
+    const { data: item } = await context.supabase
+      .from("content_items")
+      .select("id, fb_media_id, month_id, months(client_id, clients!months_client_id_fkey(org_id))")
+      .eq("id", data.itemId)
+      .maybeSingle();
+    if (!item || (item as any).months?.clients?.org_id !== context.orgId) throw new Error("Item não encontrado.");
+    const fbMediaId = (item as any).fb_media_id as string | null;
+    if (!fbMediaId) throw new Error("Esse item ainda não foi publicado no Facebook.");
+    const clientId = (item as any).months?.client_id;
+
+    const { data: creds } = await (context.supabase as any)
+      .from("client_facebook_credentials")
+      .select("access_token")
+      .eq("client_id", clientId)
+      .maybeSingle();
+    if (!creds) throw new Error("Esse cliente ainda não conectou o Facebook.");
+
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${fbMediaId}?fields=likes.summary(true).limit(0),comments.summary(true).limit(0),shares&access_token=${encodeURIComponent(creds.access_token)}`,
+    );
+    const json: any = await res.json();
+    if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao buscar métricas do Facebook.");
+    return {
+      likes: json.likes?.summary?.total_count ?? 0,
+      comments: json.comments?.summary?.total_count ?? 0,
+      shares: json.shares?.count ?? 0,
+    };
+  });
+
 async function markScheduledFacebookFailure(
   supabaseAdmin: any,
   item: { id: string; title: string; orgId: string | undefined; hadPreviousError: boolean },

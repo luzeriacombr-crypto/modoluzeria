@@ -1989,15 +1989,9 @@ export const getMonth = createServerFn({ method: "GET" })
     const { data: month } = await context.supabase
       .from("months").select("id, key, feed_order_mode, feed_order_direction").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
     if (!month) return null;
-    // fb_auto_publish tirado do select de propósito — a migração que cria
-    // essa coluna (20260919020000_facebook_publishing.sql) ainda não rodou
-    // em produção, e selecionar uma coluna inexistente derrubava a query
-    // inteira em silêncio (React Query caía no `?? []` default), fazendo
-    // posts/reels/stories sumirem pra toda agência. Recolocar assim que a
-    // migração for confirmada como aplicada.
     const { data: items } = (await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, ig_published_at, story_fit, ig_collaborators, activity_location, activity_quantity, campaign_id, campaign_internal, group_id")
+      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, ig_published_at, story_fit, ig_collaborators, activity_location, activity_quantity, campaign_id, campaign_internal, group_id, fb_auto_publish, fb_media_id")
       .eq("month_id", month.id).order("type").order("idx")) as any as { data: any[] | null };
     const itemIds = (items ?? []).map((it: any) => it.id);
     const [{ data: assignees }, { data: comments }] = await Promise.all([
@@ -2047,7 +2041,8 @@ export const getMonth = createServerFn({ method: "GET" })
       igPublishedAt: ((it as any).ig_published_at ?? null) as any,
       storyFit: ((it as any).story_fit ?? null) as any,
       igCollaborators: ((it as any).ig_collaborators ?? null) as any,
-      fbAutoPublish: false as any, // ver comentário acima do select — coluna ainda não existe em produção
+      fbAutoPublish: ((it as any).fb_auto_publish ?? false) as any,
+      fbMediaId: ((it as any).fb_media_id ?? null) as any,
       startedAt: ((it as any).started_at ?? null) as any,
       finishedAt: ((it as any).finished_at ?? null) as any,
       blockedReason: ((it as any).blocked_reason ?? null) as any,

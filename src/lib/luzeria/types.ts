@@ -179,6 +179,7 @@ export interface ContentItem {
   igCollaborators?: string | null;
   /** When true, the scheduled-publish cron auto-publishes this post to the client's Facebook Page once scheduledAt arrives. Posts only. */
   fbAutoPublish?: boolean;
+  fbMediaId?: string | null;
   /** Set automatically when item leaves PLANEJAMENTO for the first time. */
   startedAt?: string | null;
   /** Set automatically when item reaches PRONTO_PARA_PUBLICAR. */

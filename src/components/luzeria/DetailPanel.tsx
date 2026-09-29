@@ -5,12 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Facebook, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus, Play, Film, HardDrive } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Facebook, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus, Play, Film, HardDrive, Heart, MessageCircle } from "lucide-react";
 import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getInstagramConnectionStatus, getStoryRepeatStatus, setStoryRepeatRule, getInstagramPostLink } from "@/lib/luzeria/instagram.functions";
-import { getFacebookConnectionStatus } from "@/lib/luzeria/facebook.functions";
+import { getFacebookConnectionStatus, getFacebookItemEngagement } from "@/lib/luzeria/facebook.functions";
 import { TikTokPublishPanel } from "./TikTokSections";
 import { LinkedInPublishPanel } from "./LinkedInSections";
 import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
@@ -1663,6 +1663,13 @@ export function DetailPanel() {
           </ModalSection>
         )}
 
+        {/* Já publicado pelo Modo Criador: métricas + atalho pro post no Facebook */}
+        {item.type === "post" && me?.orgId === LUZERIA_ORG_ID && canPublishInstagram && item.fbMediaId && (
+          <ModalSection label="No Facebook">
+            <PublishedOnFacebook itemId={item.id} />
+          </ModalSection>
+        )}
+
         {/* Publicar no Facebook (v1: só Posts, mesma permissão do Instagram) */}
         {item.type === "post" && me?.orgId === LUZERIA_ORG_ID && canPublishInstagram && item.status === "PRONTO_PARA_PUBLICAR" && (
           <ModalSection label="Publicar no Facebook">
@@ -2048,6 +2055,30 @@ function PublishedOnInstagram({ itemId, publishedAt }: { itemId: string; publish
       <p className="text-[11px] text-foreground/45 mt-2.5 leading-relaxed">
         Para <b className="text-foreground/70">excluir</b> do Instagram, abra o post por aqui e apague direto no app (três pontinhos → Excluir). A Meta ainda não deixa o Modo Criador apagar publicações por você.
       </p>
+    </div>
+  );
+}
+
+/** Curtidas/comentários/compartilhamentos do post já publicado na Página do
+ * Facebook do cliente — busca ao vivo na Graph API (pages_read_engagement),
+ * não fica guardado no nosso banco. */
+function PublishedOnFacebook({ itemId }: { itemId: string }) {
+  const getEngagement = useServerFn(getFacebookItemEngagement);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["facebook-item-engagement", itemId],
+    queryFn: () => getEngagement({ data: { itemId } }),
+  });
+  return (
+    <div>
+      {isLoading && <Loader2 size={14} className="animate-spin text-foreground/30" />}
+      {error && <p className="text-[11px] text-red-400/80">{(error as any)?.message ?? "Não consegui buscar as métricas."}</p>}
+      {data && (
+        <div className="flex items-center gap-4 text-sm text-foreground/70">
+          <span className="flex items-center gap-1.5"><Heart size={14} /> {data.likes.toLocaleString("pt-BR")}</span>
+          <span className="flex items-center gap-1.5"><MessageCircle size={14} /> {data.comments.toLocaleString("pt-BR")}</span>
+          <span className="flex items-center gap-1.5"><Send size={14} /> {data.shares.toLocaleString("pt-BR")}</span>
+        </div>
+      )}
     </div>
   );
 }
