@@ -68,6 +68,38 @@ export type AgencyLevel = {
   progressPct: number;
 };
 
+/** Insumos "crus" de uma org, no formato que `listOrgsBilling` já devolve
+ * (ver api.functions.ts) — usado tanto pelo painel admin (AgenciesBillingPanel)
+ * quanto pelo cron do ranking entre agências (agency-rank.functions.ts), pra
+ * nunca duplicar a fórmula de pontos em dois lugares. */
+export type BillingRowForPoints = {
+  clientsUsed?: number;
+  finalizedCount?: number;
+  subscriptionStatus?: string;
+  hasAsaasSubscription?: boolean;
+  driveConnected?: boolean;
+  instagramConnected?: number;
+  teamCount?: number;
+  planId?: string | null;
+};
+
+export function agencyPointsFromBillingRow(
+  o: BillingRowForPoints,
+  plans: { id: string; maxClients?: number | null; maxCollaborators?: number | null }[],
+): number {
+  const plan = plans.find((p) => p.id === o.planId);
+  return computeAgencyPoints({
+    activeClients: o.clientsUsed ?? 0,
+    planMaxClients: plan?.maxClients ?? 10,
+    finalizedCount: o.finalizedCount ?? 0,
+    isPayingCustomer: o.subscriptionStatus === "active" && !!o.hasAsaasSubscription,
+    driveConnected: !!o.driveConnected,
+    instagramConnectedCount: o.instagramConnected ?? 0,
+    teamSize: Math.max(0, (o.teamCount ?? 1) - 1),
+    planMaxCollaborators: plan?.maxCollaborators ?? 2,
+  });
+}
+
 export function getAgencyLevel(points: number): AgencyLevel {
   let idx = 0;
   for (let i = THRESHOLDS.length - 1; i >= 0; i--) {

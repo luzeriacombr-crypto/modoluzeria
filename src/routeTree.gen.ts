@@ -70,6 +70,7 @@ import { Route as ApiCronPublishTiktokRouteImport } from './routes/api.cron.publ
 import { Route as ApiCronPublishLinkedinRouteImport } from './routes/api.cron.publish-linkedin'
 import { Route as ApiCronPublishInstagramRouteImport } from './routes/api.cron.publish-instagram'
 import { Route as ApiCronPublishFacebookRouteImport } from './routes/api.cron.publish-facebook'
+import { Route as ApiCronComputeAgencyRanksRouteImport } from './routes/api.cron.compute-agency-ranks'
 import { Route as ApiCronCheckAgencyReferralsRouteImport } from './routes/api.cron.check-agency-referrals'
 import { Route as ApiCronActivationNudgesRouteImport } from './routes/api.cron.activation-nudges'
 import { Route as AuthenticatedSelecaoDeFotosClientIdRouteImport } from './routes/_authenticated/selecao-de-fotos_.$clientId'
@@ -401,6 +402,12 @@ const ApiCronPublishFacebookRoute = ApiCronPublishFacebookRouteImport.update({
   path: '/api/cron/publish-facebook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronComputeAgencyRanksRoute =
+  ApiCronComputeAgencyRanksRouteImport.update({
+    id: '/api/cron/compute-agency-ranks',
+    path: '/api/cron/compute-agency-ranks',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiCronCheckAgencyReferralsRoute =
   ApiCronCheckAgencyReferralsRouteImport.update({
     id: '/api/cron/check-agency-referrals',
@@ -534,6 +541,7 @@ export interface FileRoutesByFullPath {
   '/selecao-de-fotos/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
+  '/api/cron/compute-agency-ranks': typeof ApiCronComputeAgencyRanksRoute
   '/api/cron/publish-facebook': typeof ApiCronPublishFacebookRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/publish-linkedin': typeof ApiCronPublishLinkedinRoute
@@ -608,6 +616,7 @@ export interface FileRoutesByTo {
   '/selecao-de-fotos/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
+  '/api/cron/compute-agency-ranks': typeof ApiCronComputeAgencyRanksRoute
   '/api/cron/publish-facebook': typeof ApiCronPublishFacebookRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/publish-linkedin': typeof ApiCronPublishLinkedinRoute
@@ -684,6 +693,7 @@ export interface FileRoutesById {
   '/_authenticated/selecao-de-fotos_/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
+  '/api/cron/compute-agency-ranks': typeof ApiCronComputeAgencyRanksRoute
   '/api/cron/publish-facebook': typeof ApiCronPublishFacebookRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/publish-linkedin': typeof ApiCronPublishLinkedinRoute
@@ -760,6 +770,7 @@ export interface FileRouteTypes {
     | '/selecao-de-fotos/$clientId'
     | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
+    | '/api/cron/compute-agency-ranks'
     | '/api/cron/publish-facebook'
     | '/api/cron/publish-instagram'
     | '/api/cron/publish-linkedin'
@@ -834,6 +845,7 @@ export interface FileRouteTypes {
     | '/selecao-de-fotos/$clientId'
     | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
+    | '/api/cron/compute-agency-ranks'
     | '/api/cron/publish-facebook'
     | '/api/cron/publish-instagram'
     | '/api/cron/publish-linkedin'
@@ -909,6 +921,7 @@ export interface FileRouteTypes {
     | '/_authenticated/selecao-de-fotos_/$clientId'
     | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
+    | '/api/cron/compute-agency-ranks'
     | '/api/cron/publish-facebook'
     | '/api/cron/publish-instagram'
     | '/api/cron/publish-linkedin'
@@ -962,6 +975,7 @@ export interface RootRouteChildren {
   SelecaoTokenRoute: typeof SelecaoTokenRoute
   ApiCronActivationNudgesRoute: typeof ApiCronActivationNudgesRoute
   ApiCronCheckAgencyReferralsRoute: typeof ApiCronCheckAgencyReferralsRoute
+  ApiCronComputeAgencyRanksRoute: typeof ApiCronComputeAgencyRanksRoute
   ApiCronPublishFacebookRoute: typeof ApiCronPublishFacebookRoute
   ApiCronPublishInstagramRoute: typeof ApiCronPublishInstagramRoute
   ApiCronPublishLinkedinRoute: typeof ApiCronPublishLinkedinRoute
@@ -1405,6 +1419,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronPublishFacebookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/compute-agency-ranks': {
+      id: '/api/cron/compute-agency-ranks'
+      path: '/api/cron/compute-agency-ranks'
+      fullPath: '/api/cron/compute-agency-ranks'
+      preLoaderRoute: typeof ApiCronComputeAgencyRanksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/check-agency-referrals': {
       id: '/api/cron/check-agency-referrals'
       path: '/api/cron/check-agency-referrals'
@@ -1600,6 +1621,7 @@ const rootRouteChildren: RootRouteChildren = {
   SelecaoTokenRoute: SelecaoTokenRoute,
   ApiCronActivationNudgesRoute: ApiCronActivationNudgesRoute,
   ApiCronCheckAgencyReferralsRoute: ApiCronCheckAgencyReferralsRoute,
+  ApiCronComputeAgencyRanksRoute: ApiCronComputeAgencyRanksRoute,
   ApiCronPublishFacebookRoute: ApiCronPublishFacebookRoute,
   ApiCronPublishInstagramRoute: ApiCronPublishInstagramRoute,
   ApiCronPublishLinkedinRoute: ApiCronPublishLinkedinRoute,

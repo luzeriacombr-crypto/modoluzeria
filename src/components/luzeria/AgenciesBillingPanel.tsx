@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react";
 import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, orgPageViewsQO, useApi } from "@/lib/luzeria/queries";
-import { computeAgencyPoints, getAgencyLevel } from "@/lib/luzeria/agency-level";
+import { agencyPointsFromBillingRow, getAgencyLevel } from "@/lib/luzeria/agency-level";
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
 import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, adminUpdateOrgPlan, adminUpdateOrgOwnerEmail, adminUpdateOrgName, adminUpdateOrgOwnerName, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { approveReseller, revokeReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
@@ -61,19 +61,10 @@ function ThOrdenavel({ coluna, label, ordem, onClick, align = "left" }: {
   );
 }
 
-/** Pontos da agência — usado pelo selo e pela ordenação da coluna "Nível". */
+/** Pontos da agência — usado pelo selo e pela ordenação da coluna "Nível".
+ * Mesma fórmula usada pelo cron do ranking entre agências (agency-level.ts). */
 function pontosDaAgencia(o: any, plans: any[]) {
-  const plan = plans.find((p: any) => p.id === o.planId);
-  return computeAgencyPoints({
-    activeClients: o.clientsUsed ?? 0,
-    planMaxClients: plan?.maxClients ?? 10,
-    finalizedCount: o.finalizedCount ?? 0,
-    isPayingCustomer: o.subscriptionStatus === "active" && o.hasAsaasSubscription,
-    driveConnected: !!o.driveConnected,
-    instagramConnectedCount: o.instagramConnected ?? 0,
-    teamSize: Math.max(0, (o.teamCount ?? 1) - 1),
-    planMaxCollaborators: plan?.maxCollaborators ?? 2,
-  });
+  return agencyPointsFromBillingRow(o, plans);
 }
 
 function AgencyLevelBadge({ o }: { o: any }) {

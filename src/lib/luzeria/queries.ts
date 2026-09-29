@@ -58,6 +58,7 @@ import {
 import { listAutomationRules, createAutomationRule, deleteAutomationRule, setAutomationRuleActive, testAutomationRule } from "./automation-rules.functions";
 import { listClientTemplates, upsertClientTemplate, deleteClientTemplate } from "./client-templates.functions";
 import { listAgencyStories, listMyStoriesToday, setAgencyStoriesDay, setAgencyStoriesDone, getStoriesInspiracoes, setStoriesInspiracoes, gerarStoriesInspiracoes } from "./agency-stories.functions";
+import { getMyAgencyRank } from "./agency-rank.functions";
 import { listMyBugReports, listAllBugReports, updateBugReportStatus, sendBugReportMessage } from "./bug-reports.functions";
 import { getMySupportThread, sendSupportMessage, listOpenSupportThreads, getSupportThreadMessages, replyToSupportThread, closeSupportThread } from "./support-chat.functions";
 import {
@@ -467,6 +468,10 @@ export const orgsBillingQO = () =>
   queryOptions({ queryKey: ["orgs-billing"], queryFn: () => listOrgsBilling(), refetchInterval: 60_000 });
 export const myAgencyLevelInputsQO = () =>
   queryOptions({ queryKey: ["my-agency-level-inputs"], queryFn: () => getMyAgencyLevelInputs(), staleTime: 5 * 60_000 });
+export const myAgencyRankQO = () =>
+  // Recalculado 1x por dia pelo cron — staleTime longo, não tem motivo pra
+  // refazer a query toda hora.
+  queryOptions({ queryKey: ["my-agency-rank"], queryFn: () => getMyAgencyRank(), staleTime: 60 * 60_000 });
 export const orgPageViewsQO = (orgId: string) =>
   // staleTime curto de propósito: é pra conferir o que a pessoa está
   // acessando "agora", faz sentido recarregar toda vez que o modal reabre.

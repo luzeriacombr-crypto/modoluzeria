@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { setMyTasksDefaultLayout } from "@/lib/luzeria/my-tasks-layout.functions";
-import { myTasksDefaultLayoutQO, topMembersQO, myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, contentStatusesQO, myStoriesTodayQO, useMe, useApi } from "@/lib/luzeria/queries";
+import { myTasksDefaultLayoutQO, topMembersQO, myTasksQO, myTodayQO, productivityQO, myActivityCountsQO, memberFinalizationsQO, myWorkStatsQO, profilesQO, myMentionsQO, weeklyClientRemindersQO, todayPublicationsQO, upcomingCalendarEventsQO, clientsQO, clientPaymentsQO, contentStatusesQO, myStoriesTodayQO, myAgencyRankQO, useMe, useApi } from "@/lib/luzeria/queries";
 import { STATUS_ORDER, CONTENT_TYPE_LABEL, POST_FORMAT_LABEL, hasPermission, getStatusMeta, type Status } from "@/lib/luzeria/types";
 import { getStatusIcon } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -240,6 +240,53 @@ function RankBadge({ position }: { position: number }) {
   );
 }
 
+/** Cores por faixa do selo de ranking ENTRE agências (Top 1-20, diferente do
+ * RankBadge acima que é o ranking pessoal dentro da própria agência). Top
+ * 1/2/3 ganham a cor de medalha; 4-20 usam a mesma cor de marca que o resto
+ * dos selos de "Nível" já usa hoje (AgencyLevelIcons), pra parecer familiar. */
+function agencyRankColor(rank: number) {
+  if (rank === 1) return { bg: "#E8B93F", text: "#3A2A05" };
+  if (rank === 2) return { bg: "#C7CBD1", text: "#33363B" };
+  if (rank === 3) return { bg: "#C97B4A", text: "#3A2005" };
+  return { bg: "#C8D44E", text: "#0D0D0D" };
+}
+
+/** Selo "Agência Top N" — posição da AGÊNCIA (não da pessoa) entre todas as
+ * agências do Modo Criador, calculado 1x por dia (agency-rank.functions.ts).
+ * Empilhado ao lado do RankBadge pessoal na saudação, a pedido do Junior. */
+function AgencyRankBadge({ rank, streakDays }: { rank: number; streakDays: number }) {
+  const [open, setOpen] = useState(false);
+  const veteran = streakDays >= 7;
+  const { bg, text } = agencyRankColor(rank);
+  const msg = `Sua agência está em ${rank}º lugar entre as agências que mais usam o Modo Criador!${veteran ? ` Já são ${streakDays} dias seguidos no Top 20.` : ""}`;
+  return (
+    <span className="relative inline-flex align-middle ml-2"
+      onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button type="button" aria-label={msg} aria-expanded={open}
+        onClick={() => setOpen((v) => !v)} onBlur={() => setOpen(false)}
+        className="inline-flex items-center gap-1.5 rounded-full transition-transform hover:scale-105"
+        style={{ height: 34, padding: "0 11px 0 3px", background: `linear-gradient(180deg, ${bg}38, ${bg}14)`, boxShadow: `0 0 0 1px ${bg}55 inset` }}>
+        <span className="relative flex items-center justify-center shrink-0" style={{ width: 26, height: 26 }}>
+          {veteran && (
+            <Flame size={13} className="absolute -top-1.5 -right-1.5 rounded-full p-[1px]" style={{ color: "#FF9B54", background: "#0D0D0D" }} />
+          )}
+          <span className="flex items-center justify-center rounded-full text-[11px] font-extrabold"
+            style={{ width: 26, height: 26, background: `radial-gradient(circle at 32% 28%, color-mix(in srgb, ${bg} 55%, white), ${bg} 60%, color-mix(in srgb, ${bg} 70%, black))`, color: text }}>
+            {rank}
+          </span>
+        </span>
+        <span className="text-[12.5px] font-extrabold whitespace-nowrap" style={{ color: bg }}>Agência Top {rank}</span>
+      </button>
+      {open && (
+        <span role="tooltip" className="absolute left-0 top-full mt-2 z-30 w-max max-w-[240px] rounded-xl px-3 py-2 text-[12.5px] font-semibold leading-snug shadow-2xl"
+          style={{ background: "#fff", color: "#0D0D0D" }}>
+          {msg}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function MyTasks() {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
@@ -298,6 +345,7 @@ export function MyTasks() {
     return i >= 0 && i < 3 && (list[i] as any).count > 0 ? i : -1;
   })();
   const { data: prod } = useQuery(productivityQO(monthKey, targetId));
+  const { data: agencyRank } = useQuery(myAgencyRankQO());
 
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -699,6 +747,7 @@ export function MyTasks() {
             })()}!{" "}
             <img src="/emoji/1f929.png" alt="🤩" width={44} height={44} className="inline-block h-[0.95em] w-[0.95em] align-[-0.12em]" />
             {myRankIdx >= 0 && <RankBadge position={myRankIdx} />}
+            {agencyRank && <AgencyRankBadge rank={agencyRank.rank} streakDays={agencyRank.streakDays} />}
           </h1>
           {!disabledFeatures.has("daily_verse") && (
             <div className="max-w-sm mt-3">
