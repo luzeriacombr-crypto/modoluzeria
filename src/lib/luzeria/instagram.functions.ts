@@ -1308,21 +1308,12 @@ export type InstagramAccountOverview = {
   } | null;
 };
 
-/** Visão geral da conta do cliente, no estilo "dashboard de insights" —
- * seguidores, alcance/visitas/interações dos últimos 30 dias (com variação
- * vs. os 15 dias anteriores), frequência de postagem por dia da semana, e
- * dados demográficos dos seguidores (idade, gênero, país). `demographics`
- * vem `null` quando a conta não tem audiência suficiente pra Meta liberar
- * esse dado — a tela deve esconder essa seção nesse caso, não tratar como
- * erro. */
-export const getInstagramAccountOverview = createServerFn({ method: "GET" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }): Promise<InstagramAccountOverview> => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
-    const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+/** Corpo de fato do "Visão geral" — extraído pra função à parte pra poder
+ * ser chamado tanto pelo server fn autenticado quanto pelo público (link
+ * de compartilhamento), sem duplicar toda a lógica de chamadas à Graph
+ * API. Quem chama já validou a autorização (admin+org OU token público). */
+async function fetchInstagramOverview(supabase: any, clientId: string): Promise<InstagramAccountOverview> {
+    const creds = await getClientInstagramCreds(supabase, clientId);
     const tok = encodeURIComponent(creds.access_token);
     const acct = creds.instagram_business_account_id;
 
@@ -1466,6 +1457,23 @@ export const getInstagramAccountOverview = createServerFn({ method: "GET" })
       engagementByHour,
       demographics,
     };
+}
+
+/** Visão geral da conta do cliente, no estilo "dashboard de insights" —
+ * seguidores, alcance/visitas/interações dos últimos 30 dias (com variação
+ * vs. os 15 dias anteriores), frequência de postagem por dia da semana, e
+ * dados demográficos dos seguidores (idade, gênero, país). `demographics`
+ * vem `null` quando a conta não tem audiência suficiente pra Meta liberar
+ * esse dado — a tela deve esconder essa seção nesse caso, não tratar como
+ * erro. */
+export const getInstagramAccountOverview = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<InstagramAccountOverview> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    return fetchInstagramOverview(context.supabase, data.clientId);
   });
 
 export type InstagramFollowerHistory = {
@@ -1486,18 +1494,11 @@ export type InstagramFollowerHistory = {
  * lê da nossa própria tabela de retratos diários (runInstagramFollowerSnapshots,
  * agendada via cron) — só existe dado a partir de quando essa tabela passou
  * a existir, nunca antes disso. */
-export const getInstagramFollowerHistory = createServerFn({ method: "GET" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }): Promise<InstagramFollowerHistory> => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
-
-    const { data: rows, error } = await (context.supabase as any)
+async function fetchInstagramFollowerHistory(supabase: any, clientId: string): Promise<InstagramFollowerHistory> {
+    const { data: rows, error } = await supabase
       .from("instagram_client_snapshots")
       .select("captured_on, followers_count")
-      .eq("client_id", data.clientId)
+      .eq("client_id", clientId)
       .order("captured_on", { ascending: true });
     if (error) throw new Error(error.message);
 
@@ -1511,6 +1512,16 @@ export const getInstagramFollowerHistory = createServerFn({ method: "GET" })
       latestFollowers: last?.followers ?? null,
       series,
     };
+}
+
+export const getInstagramFollowerHistory = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<InstagramFollowerHistory> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    return fetchInstagramFollowerHistory(context.supabase, data.clientId);
   });
 
 export type InstagramAccountMedia = {
@@ -1533,27 +1544,20 @@ export type InstagramAccountMedia = {
  * Usa `instagram_business_basic`, já aprovado; as métricas de cada uma
  * (endpoint separado) que dependem da permissão de insights ainda não
  * aprovada. */
-export const getInstagramAccountMedia = createServerFn({ method: "GET" })
-  .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; after?: string }) =>
-    z.object({ clientId: z.string().uuid(), after: z.string().optional() }).parse(d))
-  .handler(async ({ data, context }): Promise<{ items: InstagramAccountMedia[]; nextAfter: string | null }> => {
-    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
-    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
-    const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+async function fetchInstagramAccountMedia(supabase: any, clientId: string, after?: string): Promise<{ items: InstagramAccountMedia[]; nextAfter: string | null }> {
+    const creds = await getClientInstagramCreds(supabase, clientId);
 
     const fields = "id,caption,media_type,media_product_type,timestamp,permalink,thumbnail_url";
     const params = new URLSearchParams({ fields, limit: "25", access_token: creds.access_token });
-    if (data.after) params.set("after", data.after);
+    if (after) params.set("after", after);
     const res = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media?${params.toString()}`);
     const json: any = await res.json();
     if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao listar publicações do Instagram.");
 
-    const { data: appItems } = await context.supabase
+    const { data: appItems } = await supabase
       .from("content_items")
       .select("ig_media_id, months!inner(client_id)")
-      .eq("months.client_id", data.clientId)
+      .eq("months.client_id", clientId)
       .not("ig_media_id", "is", null);
     const appMediaIds = new Set((appItems ?? []).map((r: any) => r.ig_media_id));
 
@@ -1568,6 +1572,23 @@ export const getInstagramAccountMedia = createServerFn({ method: "GET" })
       publishedByApp: appMediaIds.has(m.id),
     }));
     return { items, nextAfter: json.paging?.cursors?.after ?? null };
+}
+
+/** Lista as publicações reais da conta do Instagram do cliente — direto da
+ * Meta, não do nosso banco — pra dar uma visão completa (o que foi
+ * publicado pelo Modo Criador E o que foi postado direto pelo Instagram).
+ * Usa `instagram_business_basic`, já aprovado; as métricas de cada uma
+ * (endpoint separado) que dependem da permissão de insights ainda não
+ * aprovada. */
+export const getInstagramAccountMedia = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; after?: string }) =>
+    z.object({ clientId: z.string().uuid(), after: z.string().optional() }).parse(d))
+  .handler(async ({ data, context }): Promise<{ items: InstagramAccountMedia[]; nextAfter: string | null }> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    return fetchInstagramAccountMedia(context.supabase, data.clientId, data.after);
   });
 
 /** Métricas de uma mídia da conta (pode não ter item correspondente no
@@ -1581,6 +1602,144 @@ export const getInstagramAccountMediaInsights = createServerFn({ method: "GET" }
     if (!isAdmin) throw new Error("Forbidden");
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+    const result = await fetchMediaInsights(creds.access_token, data.mediaId, data.mediaProductType);
+    return { itemId: data.mediaId, ...result } as InstagramMediaInsights;
+  });
+
+/* ============== LINK PÚBLICO DE INSIGHTS (sem login) ==============
+ * A agência gera um link (1 por cliente, revogável/rotacionável) pra
+ * mandar pro próprio cliente acompanhar as métricas — mesmo padrão de
+ * getPublicInstagramConnectInfo acima e de campaign-share.functions.ts:
+ * token opaco validado via RPC SECURITY DEFINER, resto dos dados vem ao
+ * vivo da Graph API via supabaseAdmin (nunca expõe o access_token real). */
+
+export const getOrCreateInsightsShareToken = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<{ token: string }> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Apenas admins podem compartilhar os insights.");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const db: any = context.supabase;
+    const { data: existing } = await db
+      .from("insights_share_tokens").select("token, revoked_at")
+      .eq("client_id", data.clientId).maybeSingle();
+    if (existing && !existing.revoked_at) return { token: existing.token as string };
+
+    const token = randomToken(22);
+    if (existing) {
+      const { error } = await db
+        .from("insights_share_tokens")
+        .update({ token, revoked_at: null, created_by: context.userId })
+        .eq("client_id", data.clientId);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await db
+        .from("insights_share_tokens")
+        .insert({ client_id: data.clientId, token, created_by: context.userId });
+      if (error) throw new Error(error.message);
+    }
+    return { token };
+  });
+
+/** Gera um link novo, invalidando o anterior — é como se "revogasse" o de
+ * antes, já que ele para de bater com o token guardado. */
+export const rotateInsightsShareToken = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<{ token: string }> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Apenas admins podem compartilhar os insights.");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const token = randomToken(22);
+    const { error } = await (context.supabase as any)
+      .from("insights_share_tokens")
+      .upsert({ client_id: data.clientId, token, revoked_at: null, created_by: context.userId }, { onConflict: "client_id" });
+    if (error) throw new Error(error.message);
+    return { token };
+  });
+
+export type PublicInstagramInsightsInfo = {
+  clientId: string;
+  clientName: string;
+  orgName: string;
+  orgLogoUrl: string | null;
+  colorPrimary: string | null;
+};
+
+async function resolvePublicInsightsClientId(token: string): Promise<string | null> {
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
+  const { data: info, error } = await supabase.rpc("get_public_instagram_insights_info", { _token: token });
+  if (error || !info) return null;
+  return (info as any).clientId as string;
+}
+
+/** Dados pro cabeçalho da página pública (nome do cliente, marca da
+ * agência) — chamado uma vez ao carregar a página, separado dos dados de
+ * métrica em si pra poder mostrar o cabeçalho mesmo se alguma métrica
+ * falhar depois. */
+export const getPublicInstagramInsightsInfo = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string }) => z.object({ token: z.string().min(8).max(60) }).parse(d))
+  .handler(async ({ data }): Promise<PublicInstagramInsightsInfo | null> => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
+    const { data: info, error } = await supabase.rpc("get_public_instagram_insights_info", { _token: data.token });
+    if (error || !info) return null;
+    const r = info as any;
+
+    let orgLogoUrl: string | null = null;
+    if (r.orgLogoPath) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: signed } = await supabaseAdmin.storage
+          .from("avatars").createSignedUrl(r.orgLogoPath as string, 60 * 60 * 24);
+        orgLogoUrl = signed?.signedUrl ?? null;
+      } catch { /* branding é só cosmético, segue sem logo se falhar */ }
+    }
+
+    return {
+      clientId: r.clientId, clientName: r.clientName, orgName: r.orgName,
+      orgLogoUrl, colorPrimary: r.colorPrimary ?? null,
+    };
+  });
+
+export const getPublicInstagramOverview = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string }) => z.object({ token: z.string().min(8).max(60) }).parse(d))
+  .handler(async ({ data }): Promise<InstagramAccountOverview | null> => {
+    const clientId = await resolvePublicInsightsClientId(data.token);
+    if (!clientId) return null;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return fetchInstagramOverview(supabaseAdmin, clientId);
+  });
+
+export const getPublicInstagramFollowerHistory = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string }) => z.object({ token: z.string().min(8).max(60) }).parse(d))
+  .handler(async ({ data }): Promise<InstagramFollowerHistory | null> => {
+    const clientId = await resolvePublicInsightsClientId(data.token);
+    if (!clientId) return null;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return fetchInstagramFollowerHistory(supabaseAdmin, clientId);
+  });
+
+export const getPublicInstagramAccountMedia = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string; after?: string }) =>
+    z.object({ token: z.string().min(8).max(60), after: z.string().optional() }).parse(d))
+  .handler(async ({ data }): Promise<{ items: InstagramAccountMedia[]; nextAfter: string | null } | null> => {
+    const clientId = await resolvePublicInsightsClientId(data.token);
+    if (!clientId) return null;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return fetchInstagramAccountMedia(supabaseAdmin, clientId, data.after);
+  });
+
+export const getPublicInstagramAccountMediaInsights = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string; mediaId: string; mediaProductType: string }) =>
+    z.object({ token: z.string().min(8).max(60), mediaId: z.string().min(1), mediaProductType: z.string().min(1) }).parse(d))
+  .handler(async ({ data }): Promise<InstagramMediaInsights | null> => {
+    const clientId = await resolvePublicInsightsClientId(data.token);
+    if (!clientId) return null;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const creds = await getClientInstagramCreds(supabaseAdmin, clientId);
     const result = await fetchMediaInsights(creds.access_token, data.mediaId, data.mediaProductType);
     return { itemId: data.mediaId, ...result } as InstagramMediaInsights;
   });

@@ -38,6 +38,7 @@ import { Route as PromoSlugRouteImport } from './routes/promo/$slug'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
 import { Route as PlanejamentoTokenRouteImport } from './routes/planejamento.$token'
 import { Route as OauthInstagramCallbackClienteRouteImport } from './routes/oauth.instagram-callback-cliente'
+import { Route as InsightsTokenRouteImport } from './routes/insights.$token'
 import { Route as ContratoTokenRouteImport } from './routes/contrato.$token'
 import { Route as ConectarInstagramTokenRouteImport } from './routes/conectar-instagram.$token'
 import { Route as CampanhaTokenRouteImport } from './routes/campanha.$token'
@@ -232,6 +233,11 @@ const OauthInstagramCallbackClienteRoute =
     path: '/oauth/instagram-callback-cliente',
     getParentRoute: () => rootRouteImport,
   } as any)
+const InsightsTokenRoute = InsightsTokenRouteImport.update({
+  id: '/insights/$token',
+  path: '/insights/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContratoTokenRoute = ContratoTokenRouteImport.update({
   id: '/contrato/$token',
   path: '/contrato/$token',
@@ -510,6 +516,7 @@ export interface FileRoutesByFullPath {
   '/campanha/$token': typeof CampanhaTokenRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
+  '/insights/$token': typeof InsightsTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
   '/planejamento/$token': typeof PlanejamentoTokenRoute
   '/preview/$token': typeof PreviewTokenRoute
@@ -583,6 +590,7 @@ export interface FileRoutesByTo {
   '/campanha/$token': typeof CampanhaTokenRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
+  '/insights/$token': typeof InsightsTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
   '/planejamento/$token': typeof PlanejamentoTokenRoute
   '/preview/$token': typeof PreviewTokenRoute
@@ -658,6 +666,7 @@ export interface FileRoutesById {
   '/campanha/$token': typeof CampanhaTokenRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
+  '/insights/$token': typeof InsightsTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
   '/planejamento/$token': typeof PlanejamentoTokenRoute
   '/preview/$token': typeof PreviewTokenRoute
@@ -733,6 +742,7 @@ export interface FileRouteTypes {
     | '/campanha/$token'
     | '/conectar-instagram/$token'
     | '/contrato/$token'
+    | '/insights/$token'
     | '/oauth/instagram-callback-cliente'
     | '/planejamento/$token'
     | '/preview/$token'
@@ -806,6 +816,7 @@ export interface FileRouteTypes {
     | '/campanha/$token'
     | '/conectar-instagram/$token'
     | '/contrato/$token'
+    | '/insights/$token'
     | '/oauth/instagram-callback-cliente'
     | '/planejamento/$token'
     | '/preview/$token'
@@ -880,6 +891,7 @@ export interface FileRouteTypes {
     | '/campanha/$token'
     | '/conectar-instagram/$token'
     | '/contrato/$token'
+    | '/insights/$token'
     | '/oauth/instagram-callback-cliente'
     | '/planejamento/$token'
     | '/preview/$token'
@@ -941,6 +953,7 @@ export interface RootRouteChildren {
   CampanhaTokenRoute: typeof CampanhaTokenRoute
   ConectarInstagramTokenRoute: typeof ConectarInstagramTokenRoute
   ContratoTokenRoute: typeof ContratoTokenRoute
+  InsightsTokenRoute: typeof InsightsTokenRoute
   OauthInstagramCallbackClienteRoute: typeof OauthInstagramCallbackClienteRoute
   PlanejamentoTokenRoute: typeof PlanejamentoTokenRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
@@ -1166,6 +1179,13 @@ declare module '@tanstack/react-router' {
       path: '/oauth/instagram-callback-cliente'
       fullPath: '/oauth/instagram-callback-cliente'
       preLoaderRoute: typeof OauthInstagramCallbackClienteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/insights/$token': {
+      id: '/insights/$token'
+      path: '/insights/$token'
+      fullPath: '/insights/$token'
+      preLoaderRoute: typeof InsightsTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contrato/$token': {
@@ -1571,6 +1591,7 @@ const rootRouteChildren: RootRouteChildren = {
   CampanhaTokenRoute: CampanhaTokenRoute,
   ConectarInstagramTokenRoute: ConectarInstagramTokenRoute,
   ContratoTokenRoute: ContratoTokenRoute,
+  InsightsTokenRoute: InsightsTokenRoute,
   OauthInstagramCallbackClienteRoute: OauthInstagramCallbackClienteRoute,
   PlanejamentoTokenRoute: PlanejamentoTokenRoute,
   PreviewTokenRoute: PreviewTokenRoute,

@@ -6,12 +6,16 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import {
   Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ExternalLink, ChevronDown, ChevronUp,
   Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown, MessageCircle, Send, X, Mail, CalendarDays, UserCheck, Cake, MapPin,
+  Share2, Link2, Copy, Check,
 } from "lucide-react";
+import { Modal } from "./Modals";
+import { toast } from "sonner";
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
 import {
   getInstagramAccountMedia, getInstagramAccountMediaInsights, getInstagramAccountOverview, getInstagramFollowerHistory,
   getInstagramComments, replyToInstagramComment, postInstagramComment,
   getInstagramConversations, getInstagramConversationMessages, sendInstagramDirectMessage,
+  getOrCreateInsightsShareToken, rotateInsightsShareToken,
   type InstagramActivityItem, type InstagramAccountMedia, type InstagramMediaInsights, type InstagramAccountOverview,
   type InstagramComment, type InstagramConversation, type InstagramDirectMessage, type InstagramFollowerHistory,
 } from "@/lib/luzeria/instagram.functions";
@@ -230,13 +234,37 @@ function AgeGenderBar({ label, female, male, other, pct }: { label: string; fema
   );
 }
 
+/** Ponto único de acesso aos dados dos Insights — a versão autenticada
+ * (dentro do app) e a pública (link de compartilhamento, sem login) batem
+ * em server fns diferentes mas com o mesmo formato de resposta; todo o
+ * resto da tela (panes, gráficos, cards) não precisa saber qual delas
+ * está em uso. */
+export type InsightsSource = {
+  getOverview: () => Promise<InstagramAccountOverview | null>;
+  getFollowerHistory: () => Promise<InstagramFollowerHistory | null>;
+  getMedia: (after?: string) => Promise<{ items: InstagramAccountMedia[]; nextAfter: string | null } | null>;
+  getMediaInsights: (mediaId: string, mediaProductType: string) => Promise<InstagramMediaInsights | null>;
+};
+
+export function useInstagramInsightsSource(clientId: string): InsightsSource {
+  const getOverview = useServerFn(getInstagramAccountOverview);
+  const getHistory = useServerFn(getInstagramFollowerHistory);
+  const getMedia = useServerFn(getInstagramAccountMedia);
+  const getMediaInsights = useServerFn(getInstagramAccountMediaInsights);
+  return useMemo(() => ({
+    getOverview: () => getOverview({ data: { clientId } }),
+    getFollowerHistory: () => getHistory({ data: { clientId } }),
+    getMedia: (after?: string) => getMedia({ data: { clientId, after } }),
+    getMediaInsights: (mediaId: string, mediaProductType: string) => getMediaInsights({ data: { clientId, mediaId, mediaProductType } }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [clientId]);
+}
+
 /** Carrega mídia real da conta + insights por post (1 chamada por post, com
  * pausa entre elas pra não estourar limite de taxa da Meta) — compartilhado
  * entre a aba "Conteúdo" (lista completa) e "Visão geral" ("conteúdo mais
  * relevante"), pra não duplicar a busca ao trocar de aba. */
-function useAccountMediaWithInsights(clientId: string) {
-  const getMedia = useServerFn(getInstagramAccountMedia);
-  const getInsights = useServerFn(getInstagramAccountMediaInsights);
+function useAccountMediaWithInsights(cacheKey: string, source: InsightsSource) {
   const [loadingMedia, setLoadingMedia] = useState(true);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [media, setMedia] = useState<InstagramAccountMedia[] | null>(null);
@@ -251,9 +279,9 @@ function useAccountMediaWithInsights(clientId: string) {
       setResults(new Map());
       let items: InstagramAccountMedia[] = [];
       try {
-        const r = await getMedia({ data: { clientId } });
+        const r = await source.getMedia();
         if (cancelled) return;
-        items = r.items;
+        items = r?.items ?? [];
         setMedia(items);
       } catch (e: any) {
         if (!cancelled) { setMediaError(e?.message ?? "Falha ao listar publicações do Instagram."); setLoadingMedia(false); }
@@ -265,8 +293,8 @@ function useAccountMediaWithInsights(clientId: string) {
       for (const m of items) {
         if (cancelled) return;
         try {
-          const insights = await getInsights({ data: { clientId, mediaId: m.id, mediaProductType: m.mediaProductType } });
-          if (!cancelled) setResults((prev) => new Map(prev).set(m.id, insights));
+          const insights = await source.getMediaInsights(m.id, m.mediaProductType);
+          if (!cancelled && insights) setResults((prev) => new Map(prev).set(m.id, insights));
         } catch (e: any) {
           if (!cancelled) setResults((prev) => new Map(prev).set(m.id, {
             itemId: m.id, reach: null, likes: null, comments: null, saved: null, shares: null, views: null,
@@ -280,7 +308,8 @@ function useAccountMediaWithInsights(clientId: string) {
     }
     loadAll();
     return () => { cancelled = true; };
-  }, [clientId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cacheKey]);
 
   return { media, mediaError, loadingMedia, loadingInsights, results };
 }
@@ -312,23 +341,126 @@ function csvEscape(v: string) {
 // acesso Standard). Voltar pra true quando a permissão for aprovada.
 const SHOW_DIRECT_TAB = false;
 
+/** Botão + modal pra gerar/copiar o link público desses Insights (o
+ * cliente acessa sem login) — 1 link por cliente, rotacionável (gerar um
+ * novo invalida o anterior, já que ele para de bater com o token salvo). */
+function ShareInsightsButton({ clientId }: { clientId: string }) {
+  const [open, setOpen] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const getOrCreate = useServerFn(getOrCreateInsightsShareToken);
+  const rotate = useServerFn(rotateInsightsShareToken);
+
+  async function openModal() {
+    setOpen(true);
+    if (token) return;
+    setLoading(true);
+    try {
+      const r = await getOrCreate({ data: { clientId } });
+      setToken(r.token);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Não consegui gerar o link.");
+      setOpen(false);
+    }
+    setLoading(false);
+  }
+
+  async function regenerate() {
+    setLoading(true);
+    try {
+      const r = await rotate({ data: { clientId } });
+      setToken(r.token);
+      setCopied(false);
+      toast.success("Novo link gerado — o anterior parou de funcionar.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Não consegui gerar o link.");
+    }
+    setLoading(false);
+  }
+
+  const url = token ? `${window.location.origin}/insights/${token}` : "";
+
+  function copy() {
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <>
+      <button
+        onClick={openModal}
+        title="Compartilhar com o cliente (link sem login)"
+        className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition hover:opacity-80"
+        style={{ backgroundColor: "var(--lz-hero-badge-bg)", color: "var(--lz-accent-ink)" }}
+      >
+        <Share2 size={14} />
+      </button>
+      {open && (
+        <Modal open onClose={() => setOpen(false)} title="Compartilhar Insights">
+          <p className="text-xs text-foreground/50 mb-3">Qualquer pessoa com esse link vê essas métricas, sem precisar de login.</p>
+          {loading && !token ? (
+            <div className="py-6 text-center"><Loader2 className="animate-spin inline text-foreground/30" size={18} /></div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <input readOnly value={url} onFocus={(e) => e.target.select()}
+                  className="flex-1 min-w-0 bg-background border border-foreground/10 rounded-md px-3 py-2 text-xs text-foreground/70" />
+                <button onClick={copy} title="Copiar link"
+                  className="shrink-0 h-9 w-9 rounded-md flex items-center justify-center border border-foreground/10 text-foreground/60 hover:text-foreground">
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+              </div>
+              <button onClick={regenerate} disabled={loading}
+                className="text-[11px] text-foreground/40 hover:text-foreground underline inline-flex items-center gap-1">
+                <Link2 size={11} /> Gerar novo link (desativa o atual)
+              </button>
+            </>
+          )}
+        </Modal>
+      )}
+    </>
+  );
+}
+
 function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; clientName: string }) {
   const me = useMe().data;
+  const source = useInstagramInsightsSource(clientId);
+  return (
+    <InsightsTabsView
+      cacheKey={clientId}
+      source={source}
+      clientName={clientName}
+      brandingLabel={me?.orgName ?? "Modo Criador"}
+      headerRight={<ShareInsightsButton clientId={clientId} />}
+    />
+  );
+}
+
+/** Miolo compartilhado entre a versão autenticada (dentro do app) e a
+ * pública (link de compartilhamento, sem login) — recebe a fonte de dados
+ * já resolvida (`InsightsSource`) e não sabe nem precisa saber qual é. */
+export function InsightsTabsView({ cacheKey, source, clientName, brandingLabel, headerRight, readOnly }: {
+  cacheKey: string; source: InsightsSource; clientName: string; brandingLabel: string;
+  headerRight?: React.ReactNode; readOnly?: boolean;
+}) {
   const [pane, setPane] = useState<"geral" | "conteudo" | "publico" | "direct">("geral");
-  const mediaState = useAccountMediaWithInsights(clientId);
-  // Mesma queryKey da Visão geral — o React Query deduplica, então mostrar o
-  // @ aqui não dispara uma segunda chamada à Meta.
-  const getOverview = useServerFn(getInstagramAccountOverview);
-  const { data: overview } = useQuery({
-    queryKey: ["instagram-account-overview", clientId],
-    queryFn: () => getOverview({ data: { clientId } }),
+  const mediaState = useAccountMediaWithInsights(cacheKey, source);
+  const { data: overview, isLoading: overviewLoading, error: overviewError } = useQuery({
+    queryKey: ["instagram-account-overview", cacheKey],
+    queryFn: () => source.getOverview(),
+  });
+  const { data: history } = useQuery({
+    queryKey: ["instagram-follower-history", cacheKey],
+    queryFn: () => source.getFollowerHistory(),
   });
 
   const TABS: { key: typeof pane; label: string }[] = [
     { key: "geral", label: "Visão geral" },
     { key: "conteudo", label: "Conteúdo" },
     { key: "publico", label: "Público" },
-    ...(SHOW_DIRECT_TAB ? [{ key: "direct" as const, label: "Direct" }] : []),
+    ...(SHOW_DIRECT_TAB && !readOnly ? [{ key: "direct" as const, label: "Direct" }] : []),
   ];
 
   return (
@@ -355,9 +487,12 @@ function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; cli
             <div className="mt-2.5 text-[28px] font-extrabold text-foreground tracking-tight leading-none">Insights</div>
             <div className="mt-1.5 text-base font-bold text-foreground/75">@{overview?.username ?? clientName}</div>
           </div>
-          <div className="text-right flex flex-col items-end gap-1">
-            <div className="text-[9.5px] uppercase tracking-wider font-bold text-foreground/35">Feito por</div>
-            <div className="text-[12.5px] font-bold text-foreground/75">{me?.orgName ?? "Modo Criador"}</div>
+          <div className="flex items-center gap-3">
+            {headerRight}
+            <div className="text-right flex flex-col items-end gap-1">
+              <div className="text-[9.5px] uppercase tracking-wider font-bold text-foreground/35">Feito por</div>
+              <div className="text-[12.5px] font-bold text-foreground/75">{brandingLabel}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -375,10 +510,10 @@ function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; cli
         ))}
       </div>
 
-      {pane === "geral" && <VisaoGeralPane clientId={clientId} mediaState={mediaState} />}
-      {pane === "conteudo" && <ConteudoPane clientId={clientId} clientName={clientName} mediaState={mediaState} />}
-      {pane === "publico" && <PublicoPane clientId={clientId} />}
-      {SHOW_DIRECT_TAB && pane === "direct" && <DirectMessagesPanel clientId={clientId} />}
+      {pane === "geral" && <VisaoGeralPane overview={overview ?? null} isLoading={overviewLoading} error={overviewError} history={history ?? null} mediaState={mediaState} />}
+      {pane === "conteudo" && <ConteudoPane clientId={readOnly ? undefined : cacheKey} clientName={clientName} mediaState={mediaState} readOnly={readOnly} />}
+      {pane === "publico" && <PublicoPane overview={overview ?? null} isLoading={overviewLoading} error={overviewError} />}
+      {SHOW_DIRECT_TAB && pane === "direct" && <DirectMessagesPanel clientId={cacheKey} />}
     </div>
   );
 }
@@ -433,19 +568,10 @@ function FollowerComparisonCard({ history }: { history: InstagramFollowerHistory
   );
 }
 
-function VisaoGeralPane({ clientId, mediaState }: { clientId: string; mediaState: ReturnType<typeof useAccountMediaWithInsights> }) {
-  const getOverview = useServerFn(getInstagramAccountOverview);
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["instagram-account-overview", clientId],
-    queryFn: () => getOverview({ data: { clientId } }),
-  });
-
-  const getFollowerHistory = useServerFn(getInstagramFollowerHistory);
-  const { data: history } = useQuery({
-    queryKey: ["instagram-follower-history", clientId],
-    queryFn: () => getFollowerHistory({ data: { clientId } }),
-  });
-
+function VisaoGeralPane({ overview: data, isLoading, error, history, mediaState }: {
+  overview: InstagramAccountOverview | null; isLoading: boolean; error: unknown;
+  history: InstagramFollowerHistory | null; mediaState: ReturnType<typeof useAccountMediaWithInsights>;
+}) {
   if (isLoading) return <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>;
   if (error || !data) return <p className="text-xs text-red-400/80 py-4">{(error as any)?.message ?? "Não foi possível carregar o painel de insights."}</p>;
 
@@ -611,7 +737,7 @@ function VisaoGeralPane({ clientId, mediaState }: { clientId: string; mediaState
 /** Lista de conteúdo no estilo Instagram: miniatura + legenda + horário +
  * ícones de engajamento, número grande à direita conforme a métrica
  * escolhida nas pills. Clicar abre o detalhe (comentários + resposta). */
-function ConteudoPane({ clientId, clientName, mediaState }: { clientId: string; clientName: string; mediaState: ReturnType<typeof useAccountMediaWithInsights> }) {
+function ConteudoPane({ clientId, clientName, mediaState, readOnly }: { clientId?: string; clientName: string; mediaState: ReturnType<typeof useAccountMediaWithInsights>; readOnly?: boolean }) {
   const { media, mediaError, loadingMedia, loadingInsights, results } = mediaState;
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [metric, setMetric] = useState<keyof InstagramMediaInsights>("views");
@@ -675,7 +801,7 @@ function ConteudoPane({ clientId, clientName, mediaState }: { clientId: string; 
         >
           {CONTENT_TYPE_FILTERS.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
         </select>
-        {media && media.length > 0 && (
+        {!readOnly && media && media.length > 0 && (
           <button onClick={exportCsv} className="text-xs px-3 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground inline-flex items-center gap-1.5">
             <Download size={13} /> Exportar CSV
           </button>
@@ -718,8 +844,9 @@ function ConteudoPane({ clientId, clientName, mediaState }: { clientId: string; 
           {sorted.map((m) => {
             const r = results.get(m.id);
             const bigValue = r?.error ? null : r?.[metric] ?? null;
+            const Row = readOnly ? "div" : "button";
             return (
-              <button key={m.id} onClick={() => setSelected(m)} className="w-full flex items-center gap-3.5 px-2.5 py-3 text-left hover:bg-foreground/[0.03] rounded-xl transition-colors">
+              <Row key={m.id} onClick={readOnly ? undefined : () => setSelected(m)} className={`w-full flex items-center gap-3.5 px-2.5 py-3 text-left rounded-xl transition-colors${readOnly ? "" : " hover:bg-foreground/[0.03]"}`}>
                 <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-foreground/5 shrink-0">
                   {m.thumbnailUrl ? (
                     <img src={m.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
@@ -744,13 +871,13 @@ function ConteudoPane({ clientId, clientName, mediaState }: { clientId: string; 
                   </div>
                   <div className="text-[9.5px] font-semibold text-foreground/35">{metricLabel}</div>
                 </div>
-              </button>
+              </Row>
             );
           })}
         </div>
       )}
 
-      {selected && (
+      {!readOnly && selected && clientId && (
         <PostDetailModal clientId={clientId} media={selected} insights={results.get(selected.id) ?? null} onClose={() => setSelected(null)} />
       )}
     </div>
@@ -758,15 +885,9 @@ function ConteudoPane({ clientId, clientName, mediaState }: { clientId: string; 
 }
 
 /** Público (demografia dos seguidores) — mesmos dados de sempre
- * (getInstagramAccountOverview), reaproveitando o cache da aba Visão geral
- * (mesma queryKey) — trocar de aba não refaz a chamada. */
-function PublicoPane({ clientId }: { clientId: string }) {
-  const getOverview = useServerFn(getInstagramAccountOverview);
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["instagram-account-overview", clientId],
-    queryFn: () => getOverview({ data: { clientId } }),
-  });
-
+ * (overview, já buscado pelo pai), reaproveitando o cache da aba Visão
+ * geral — trocar de aba não refaz a chamada. */
+function PublicoPane({ overview: data, isLoading, error }: { overview: InstagramAccountOverview | null; isLoading: boolean; error: unknown }) {
   if (isLoading) return <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>;
   if (error || !data) return <p className="text-xs text-red-400/80 py-4">{(error as any)?.message ?? "Não foi possível carregar o painel de insights."}</p>;
   if (!data.demographics) return <p className="text-xs text-foreground/40 text-center py-8">Essa conta ainda não tem seguidores suficientes pra Meta liberar dados de público.</p>;

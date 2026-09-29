@@ -78,6 +78,7 @@ import {
 import {
   publishToInstagram, setInstagramAutoPublish, getInstagramActivity, getTodayPublications, hasUsedInstagramPublish, getInstagramConnectionSummary,
   createInstagramConnectRequest, listInstagramConnectRequests, cancelInstagramConnectRequest, getPublicInstagramConnectInfo,
+  getPublicInstagramInsightsInfo,
 } from "./instagram.functions";
 import { publishToFacebook, setFacebookAutoPublish } from "./facebook.functions";
 import {
@@ -701,6 +702,14 @@ export const publicCampaignQO = (token: string | null) =>
   queryOptions({
     queryKey: ["public-campaign", token],
     queryFn: () => getPublicCampaign({ data: { token: token! } }),
+    enabled: !!token,
+    staleTime: 30_000,
+  });
+
+export const publicInstagramInsightsInfoQO = (token: string | null) =>
+  queryOptions({
+    queryKey: ["public-instagram-insights-info", token],
+    queryFn: () => getPublicInstagramInsightsInfo({ data: { token: token! } }),
     enabled: !!token,
     staleTime: 30_000,
   });
