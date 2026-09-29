@@ -548,14 +548,11 @@ export function InsightsTabsView({ cacheKey, source, clientName, brandingLabel, 
           atrás do texto), com a marca da própria agência (cores + nome). */}
       <div className="relative overflow-hidden rounded-2xl mb-4"
         style={{
-          background:
-            "radial-gradient(120% 140% at 0% 0%, rgba(var(--lz-hero-a-rgb),0.18) 0%, color-mix(in srgb, rgb(var(--lz-hero-a-rgb)) 10%, transparent) 35%, transparent 70%), " +
-            "radial-gradient(80% 120% at 100% 100%, color-mix(in srgb, color-mix(in srgb, rgb(var(--lz-hero-b-rgb)) 40%, var(--background)) 55%, transparent) 0%, transparent 65%), " +
-            "linear-gradient(180deg, var(--card) 0%, var(--background) 100%)",
+          background: "var(--lz-hero-bg)",
           border: "1px solid rgba(var(--lz-hero-a-rgb),0.18)",
         }}>
         <div className="pointer-events-none absolute -top-16 -left-16 h-56 w-56 rounded-full opacity-25 blur-3xl" style={{ background: "rgb(var(--lz-hero-a-rgb))" }} />
-        <div className="pointer-events-none absolute -bottom-20 right-10 h-64 w-64 rounded-full opacity-20 blur-3xl" style={{ background: "rgb(var(--lz-hero-b-rgb))" }} />
+        <div className="pointer-events-none absolute -bottom-20 right-10 h-64 w-64 rounded-full opacity-20 blur-3xl" style={{ background: "rgb(var(--lz-hero-blob-b-rgb))" }} />
         <div className="relative flex items-center justify-between gap-4 p-6 flex-wrap">
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
