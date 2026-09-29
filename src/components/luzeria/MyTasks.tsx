@@ -745,9 +745,11 @@ export function MyTasks() {
               const raw = ((isMeView ? me?.name : targetProfile?.name) ?? "você").trim().split(" ")[0];
               return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
             })()}!{" "}
-            <img src="/emoji/1f929.png" alt="🤩" width={44} height={44} className="inline-block h-[0.95em] w-[0.95em] align-[-0.12em]" />
-            {myRankIdx >= 0 && <RankBadge position={myRankIdx} />}
-            {agencyRank && <AgencyRankBadge rank={agencyRank.rank} streakDays={agencyRank.streakDays} />}
+            <span className="inline-flex items-center whitespace-nowrap">
+              <img src="/emoji/1f929.png" alt="🤩" width={44} height={44} className="inline-block h-[0.95em] w-[0.95em] align-[-0.12em]" />
+              {myRankIdx >= 0 && <RankBadge position={myRankIdx} />}
+              {agencyRank && <AgencyRankBadge rank={agencyRank.rank} streakDays={agencyRank.streakDays} />}
+            </span>
           </h1>
           {!disabledFeatures.has("daily_verse") && (
             <div className="max-w-sm mt-3">
