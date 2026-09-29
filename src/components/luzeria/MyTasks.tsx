@@ -275,7 +275,7 @@ function AgencyRankBadge({ rank, streakDays }: { rank: number; streakDays: numbe
             {rank}
           </span>
         </span>
-        <span className="text-[12.5px] font-extrabold whitespace-nowrap" style={{ color: bg }}>Agência Top {rank}</span>
+        <span className="text-[12.5px] font-extrabold whitespace-nowrap" style={{ color: `color-mix(in srgb, ${bg} 60%, var(--foreground))` }}>Agência Top {rank}</span>
       </button>
       {open && (
         <span role="tooltip" className="absolute left-0 top-full mt-2 z-30 w-max max-w-[240px] rounded-xl px-3 py-2 text-[12.5px] font-semibold leading-snug shadow-2xl"
