@@ -17,7 +17,7 @@ export function PrivacyPolicyPage() {
 
       <main className="max-w-[720px] mx-auto px-5 sm:px-10 py-14">
         <h1 className="text-3xl font-black mb-2">Política de Privacidade</h1>
-        <p className="text-foreground/50 text-sm mb-10">Última atualização: 20 de setembro de 2026</p>
+        <p className="text-foreground/50 text-sm mb-10">Última atualização: 29 de setembro de 2026</p>
 
         <div className="space-y-8 text-foreground/80 text-sm leading-relaxed">
           <section>
@@ -101,7 +101,67 @@ export function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">8. Extensão do Chrome</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">8. Integração com Google (Login, Drive e Agenda)</h2>
+            <p className="mb-3">
+              Todas as conexões com o Google são feitas pelo login oficial do Google — nós nunca recebemos a
+              sua senha. Cada conexão é opcional e pode ser desfeita a qualquer momento.
+            </p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>
+                <strong className="text-foreground">Entrar com Google:</strong> recebemos seu nome, e-mail e
+                foto de perfil, usados apenas para criar e identificar sua conta no Modo Criador.
+              </li>
+              <li>
+                <strong className="text-foreground">Google Drive (conectado pela agência):</strong> o Modo
+                Criador acessa apenas os arquivos e pastas que ele mesmo cria (por exemplo, as pastas
+                "Entregas" de cada cliente e os arquivos que a equipe envia pela plataforma) e os que a
+                agência escolhe ou vincula. Esses arquivos são usados para organizar as entregas por
+                cliente e mês, mostrar miniaturas e prévias dentro da plataforma, publicar nas redes
+                sociais que a agência conectou os conteúdos que ela aprovar, montar as seleções e entregas
+                de fotos compartilhadas com os clientes dela e, quando a agência usa o planejamento com
+                inteligência artificial, enviar os arquivos de marca daquele cliente ao nosso provedor de
+                IA apenas para gerar esse planejamento. Guardamos o e-mail da conta conectada e um token de
+                acesso, que fica só no servidor, sem acesso pelos usuários da plataforma.
+              </li>
+              <li>
+                <strong className="text-foreground">Google Agenda (conectada por cada usuário):</strong>
+                lemos os eventos dos próximos 7 dias da sua agenda principal, apenas para mostrá-los a você
+                no painel "Minhas demandas" — ninguém mais da sua equipe vê a sua agenda. Também criamos
+                eventos na sua agenda quando você pede (por exemplo, datas de captação de campanhas). Não
+                guardamos o conteúdo dos seus eventos; guardamos apenas um token de acesso e o
+                identificador dos eventos que o próprio Modo Criador criou, para poder atualizá-los ou
+                removê-los.
+              </li>
+            </ul>
+            <p className="mt-3">
+              O uso e a transferência, para qualquer outro aplicativo, das informações recebidas das APIs do
+              Google pelo Modo Criador seguem a{" "}
+              <a
+                href="https://developers.google.com/terms/api-services-user-data-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                Política de Dados do Usuário dos Serviços de API do Google
+              </a>
+              , incluindo os requisitos de Uso Limitado. Não vendemos esses dados, não os usamos para
+              publicidade e não os usamos para treinar modelos de inteligência artificial. Ninguém da nossa
+              equipe lê esses dados, exceto com a sua autorização expressa (por exemplo, num atendimento de
+              suporte), por motivo de segurança ou quando exigido por lei.
+            </p>
+            <p className="mt-3">
+              Para desconectar, use a opção "Desconectar" dentro da plataforma (em Configurações, para o
+              Drive, e no seu Perfil, para a Agenda), o que exclui os dados de conexão armazenados. Você
+              também pode revogar o acesso a qualquer momento em{" "}
+              <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="underline">
+                myaccount.google.com/permissions
+              </a>
+              .
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-foreground mb-2">9. Extensão do Chrome</h2>
             <p>
               A extensão "Modo Criador — Salvar referência" fala diretamente com o mesmo banco de dados
               da plataforma, sem servidor próprio. Ela usa seu e-mail e senha para autenticar sua conta —
@@ -115,7 +175,7 @@ export function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">9. Seus direitos</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">10. Seus direitos</h2>
             <p>
               Você pode solicitar, a qualquer momento, a confirmação, correção, exportação ou exclusão dos
               seus dados pessoais, conforme previsto na LGPD. Para isso, entre em contato pelo e-mail
@@ -124,7 +184,7 @@ export function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">10. Contato</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">11. Contato</h2>
             <p>
               Dúvidas sobre esta política ou solicitações relacionadas aos seus dados podem ser enviadas
               para{" "}

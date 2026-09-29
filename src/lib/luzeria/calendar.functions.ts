@@ -72,7 +72,9 @@ export const getGoogleCalendarAuthUrl = createServerFn({ method: "POST" })
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: "code",
-      scope: GCAL_SCOPE,
+      // userinfo.email: sem ele, fetchGoogleUserEmail no callback volta
+      // vazio e a conexão fica salva como "conta do Google" sem e-mail.
+      scope: `${GCAL_SCOPE} https://www.googleapis.com/auth/userinfo.email`,
       access_type: "offline",
       prompt: "consent",
     });
