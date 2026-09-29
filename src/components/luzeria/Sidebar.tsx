@@ -169,13 +169,17 @@ export function Sidebar({
     <aside data-tour="sidebar" className={`sidebar-gradient ${collapsed ? "w-[64px]" : "w-[240px]"} h-screen flex flex-col text-white shrink-0 overflow-hidden`}>
       {/* Logo — some no modo reduzido, a logo aparece no cabeçalho nesse caso (App.tsx) */}
       {!collapsed && (
-        <div className="px-5 pt-5 pb-4">
+        <div className="px-7 pt-5 pb-4">
           {me?.orgLogoUrl ? (
-            // Preenche toda a largura útil da sidebar (respeitando o px-5 do
+            // Preenche a largura útil da sidebar (dentro do px-7 do
             // container), independente da logo ser retangular ou quadrada —
             // uma quadrada fica proporcionalmente maior (e empurra o menu
             // um pouco pra baixo), o que é intencional (pedido do Junior).
-            <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="block w-full h-auto object-contain object-left" />
+            // px-7 (em vez do px-5 do resto da sidebar) é a "sangria" de
+            // segurança pra logo não encostar na borda — como o padding é
+            // do container (não só da img), o slogan e o selo de nível
+            // logo abaixo ganham a mesma margem, então tudo fica alinhado.
+            <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="block w-full h-auto object-contain" />
           ) : (
             <div className="text-white font-extrabold text-lg uppercase tracking-wide truncate" title={me?.orgName ?? ""}>
               {me?.orgName ?? "Modo Criador"}
