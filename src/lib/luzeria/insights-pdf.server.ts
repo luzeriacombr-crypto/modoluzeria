@@ -93,7 +93,7 @@ export type InsightsPdfInput = {
   followersSeries: { date: string; value: number }[];
   postingFrequency: { day: string; count: number }[];
   engagementByHour: { hour: number; value: number }[] | null;
-  topContent: { label: string; metricLabel: string; metricValue: number }[];
+  topContent: { label: string; metricLabel: string; metricValue: number; thumbnailBytes: Uint8Array | null }[];
   demographics: {
     gender: { label: string; pct: number }[];
     age: { label: string; pct: number }[];
@@ -271,12 +271,31 @@ export async function renderInsightsPdf(input: InsightsPdfInput): Promise<Uint8A
 
     if (input.topContent.length > 0) {
       y = sectionHeader(page, y, "Conteúdo mais relevante");
+      const thumbSize = 28;
+      const rowH = 34;
       for (const c of input.topContent.slice(0, 6)) {
-        page.drawText(sanitizeForPdf(c.label), { x: MARGIN, y, size: 9, font: fontRegular, color: rgb(...T.inkSoft) });
+        let thumbImg: Awaited<ReturnType<typeof doc.embedJpg>> | null = null;
+        if (c.thumbnailBytes) {
+          try { thumbImg = await doc.embedJpg(c.thumbnailBytes); }
+          catch { try { thumbImg = await doc.embedPng(c.thumbnailBytes); } catch { thumbImg = null; } }
+        }
+        // Recuo fixo (com ou sem miniatura) pra lista ficar alinhada mesmo
+        // quando algum item não tem thumbnail_url (comum em vídeo/carrossel).
+        const textX = MARGIN + thumbSize + 10;
+        const textY = y - (rowH - 9) / 2 + 3;
+        if (thumbImg) {
+          // Encaixa dentro do quadrado pelo menor lado ("contain", não
+          // recorta) — simples e sem precisar de clip path no pdf-lib.
+          const scale = thumbSize / Math.max(thumbImg.width, thumbImg.height);
+          const w = thumbImg.width * scale, h = thumbImg.height * scale;
+          const boxY = y - rowH + (rowH - thumbSize) / 2;
+          page.drawImage(thumbImg, { x: MARGIN + (thumbSize - w) / 2, y: boxY + (thumbSize - h) / 2, width: w, height: h });
+        }
+        page.drawText(sanitizeForPdf(c.label), { x: textX, y: textY, size: 9, font: fontRegular, color: rgb(...T.inkSoft) });
         const valTxt = `${fmtInt(c.metricValue)} ${sanitizeForPdf(c.metricLabel).toLowerCase()}`;
         const vw = fontBold.widthOfTextAtSize(valTxt, 9);
-        page.drawText(valTxt, { x: MARGIN + CONTENT_W - vw, y, size: 9, font: fontBold, color: rgb(...T.ink) });
-        y -= 17;
+        page.drawText(valTxt, { x: MARGIN + CONTENT_W - vw, y: textY, size: 9, font: fontBold, color: rgb(...T.ink) });
+        y -= rowH;
       }
     }
   }

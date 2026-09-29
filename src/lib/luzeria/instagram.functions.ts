@@ -1766,8 +1766,9 @@ export const generateInsightsPdf = createServerFn({ method: "POST" })
 
     // Top conteúdo: só pega insight de até 8 mídias recentes (roda uma vez,
     // sob pedido — não precisa da pausa de 250ms usada na tela pra não
-    // estourar limite de taxa quando é a lista inteira).
-    let topContent: { label: string; metricLabel: string; metricValue: number }[] = [];
+    // estourar limite de taxa quando é a lista inteira). Miniatura vem
+    // direto do CDN da Meta (thumbnailUrl já é pública, sem token).
+    let topContent: { label: string; metricLabel: string; metricValue: number; thumbnailBytes: Uint8Array | null }[] = [];
     try {
       const creds = await getClientInstagramCreds(context.supabase, data.clientId);
       const candidates = mediaList.items.slice(0, 8);
@@ -1775,16 +1776,26 @@ export const generateInsightsPdf = createServerFn({ method: "POST" })
         try { return { m, r: await fetchMediaInsights(creds.access_token, m.id, m.mediaProductType) }; }
         catch { return { m, r: null }; }
       }));
-      topContent = withInsights
+      const top = withInsights
         .filter((x): x is { m: InstagramAccountMedia; r: NonNullable<Awaited<ReturnType<typeof fetchMediaInsights>>> } =>
           !!x.r && (x.r.views != null || x.r.reach != null))
         .sort((a, b) => (b.r.views ?? b.r.reach ?? 0) - (a.r.views ?? a.r.reach ?? 0))
-        .slice(0, 6)
-        .map(({ m, r }) => ({
+        .slice(0, 6);
+      topContent = await Promise.all(top.map(async ({ m, r }) => {
+        let thumbnailBytes: Uint8Array | null = null;
+        if (m.thumbnailUrl) {
+          try {
+            const res = await fetch(m.thumbnailUrl);
+            if (res.ok) thumbnailBytes = new Uint8Array(await res.arrayBuffer());
+          } catch { /* segue sem miniatura se não conseguir baixar */ }
+        }
+        return {
           label: (m.caption ?? "(sem legenda)").slice(0, 60),
           metricLabel: r.views != null ? "Visualizações" : "Alcance",
           metricValue: r.views ?? r.reach ?? 0,
-        }));
+          thumbnailBytes,
+        };
+      }));
     } catch { /* PDF sai sem a seção de conteúdo se isso falhar */ }
 
     const { data: org } = await context.supabase
