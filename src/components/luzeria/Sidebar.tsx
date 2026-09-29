@@ -171,7 +171,11 @@ export function Sidebar({
       {!collapsed && (
         <div className="px-5 pt-5 pb-4">
           {me?.orgLogoUrl ? (
-            <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="block max-h-10 max-w-[170px] w-auto object-contain object-left" />
+            // Preenche toda a largura útil da sidebar (respeitando o px-5 do
+            // container), independente da logo ser retangular ou quadrada —
+            // uma quadrada fica proporcionalmente maior (e empurra o menu
+            // um pouco pra baixo), o que é intencional (pedido do Junior).
+            <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="block w-full h-auto object-contain object-left" />
           ) : (
             <div className="text-white font-extrabold text-lg uppercase tracking-wide truncate" title={me?.orgName ?? ""}>
               {me?.orgName ?? "Modo Criador"}
