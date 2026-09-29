@@ -319,11 +319,15 @@ export const setFacebookAutoPublish = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export type FacebookPostEngagement = { likes: number; comments: number; shares: number };
+export type FacebookPostEngagement = { likes: number; shares: number };
 
-/** Curtidas, comentários e compartilhamentos do post já publicado — usa
- * pages_read_engagement pra ler de volta o que o próprio Modo Criador
- * publicou (mesma ideia de getInstagramItemInsights). */
+/** Curtidas via Insights (post_reactions_like_total) + compartilhamentos
+ * via o campo direto do post. NÃO usa likes.summary/comments.summary — só
+ * o edge de "resumo" do post exige Acesso Avançado da Meta (fica indisponível
+ * até a revisão do App ser aprovada, mesmo com pages_read_engagement
+ * concedido); Insights por post é uma família de endpoint diferente e já
+ * funciona com Acesso Padrão. Comentário não entra aqui — precisa de
+ * pages_read_user_content, outra permissão, fora de escopo por ora. */
 export const getFacebookItemEngagement = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { itemId: string }) => z.object({ itemId: z.string().uuid() }).parse(d))
@@ -345,17 +349,23 @@ export const getFacebookItemEngagement = createServerFn({ method: "GET" })
       .maybeSingle();
     if (!creds) throw new Error("Esse cliente ainda não conectou o Facebook.");
 
-    const res = await fetch(
-      `https://graph.facebook.com/v21.0/${fbMediaId}?fields=likes.summary(true).limit(0),comments.summary(true).limit(0),shares&access_token=${encodeURIComponent(creds.access_token)}`,
-    );
-    const json: any = await res.json();
-    if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao buscar métricas do Facebook.");
-    return {
-      likes: json.likes?.summary?.total_count ?? 0,
-      comments: json.comments?.summary?.total_count ?? 0,
-      shares: json.shares?.count ?? 0,
-    };
+    return fetchFacebookPostEngagement(fbMediaId, creds.access_token);
   });
+
+async function fetchFacebookPostEngagement(postId: string, accessToken: string): Promise<FacebookPostEngagement> {
+  const tok = encodeURIComponent(accessToken);
+  const [insightsRes, postRes] = await Promise.all([
+    fetch(`${FB_GRAPH_API}/${postId}/insights?metric=post_reactions_like_total&access_token=${tok}`),
+    fetch(`${FB_GRAPH_API}/${postId}?fields=shares&access_token=${tok}`),
+  ]);
+  const insightsJson: any = await insightsRes.json();
+  if (!insightsRes.ok) throw new Error(insightsJson?.error?.message ?? "Falha ao buscar curtidas do Facebook.");
+  const postJson: any = await postRes.json();
+  return {
+    likes: insightsJson.data?.[0]?.values?.[0]?.value ?? 0,
+    shares: postJson.shares?.count ?? 0,
+  };
+}
 
 export type FacebookPagePost = {
   id: string;
@@ -363,13 +373,15 @@ export type FacebookPagePost = {
   createdTime: string;
   permalink: string | null;
   likes: number;
-  comments: number;
   shares: number;
 };
 
-/** Lista as publicações reais da Página do Facebook do cliente (direto da
- * Meta, com engajamento já embutido) — pra mostrar junto com os Insights
- * do Instagram no mesmo lugar, em vez de precisar abrir item por item. */
+/** Lista as publicações reais da Página do Facebook do cliente, com
+ * curtidas (via Insights) e compartilhamentos — pra mostrar junto com os
+ * Insights do Instagram no mesmo lugar, em vez de precisar abrir item por
+ * item. Não pede likes.summary/comments.summary na listagem — incluir
+ * qualquer um dos dois faz a Meta recusar a chamada inteira com 400
+ * enquanto o app não tem Acesso Avançado (ver fetchFacebookPostEngagement). */
 export const getFacebookPagePosts = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
@@ -385,20 +397,26 @@ export const getFacebookPagePosts = createServerFn({ method: "GET" })
       .maybeSingle();
     if (!creds) throw new Error("Esse cliente ainda não conectou o Facebook.");
 
-    const fields = "id,message,created_time,permalink_url,likes.summary(true).limit(0),comments.summary(true).limit(0),shares";
+    const fields = "id,message,created_time,permalink_url";
     const res = await fetch(
-      `${FB_GRAPH_API}/${creds.facebook_page_id}/posts?fields=${fields}&limit=25&access_token=${encodeURIComponent(creds.access_token)}`,
+      `${FB_GRAPH_API}/${creds.facebook_page_id}/posts?fields=${fields}&limit=10&access_token=${encodeURIComponent(creds.access_token)}`,
     );
     const json: any = await res.json();
     if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao listar publicações do Facebook.");
-    return ((json.data ?? []) as any[]).map((p) => ({
+    const posts = (json.data ?? []) as any[];
+
+    const withEngagement = await Promise.all(posts.map(async (p) => {
+      const engagement = await fetchFacebookPostEngagement(p.id, creds.access_token).catch(() => ({ likes: 0, shares: 0 }));
+      return { p, engagement };
+    }));
+
+    return withEngagement.map(({ p, engagement }) => ({
       id: p.id,
       message: p.message ?? null,
       createdTime: p.created_time,
       permalink: p.permalink_url ?? null,
-      likes: p.likes?.summary?.total_count ?? 0,
-      comments: p.comments?.summary?.total_count ?? 0,
-      shares: p.shares?.count ?? 0,
+      likes: engagement.likes,
+      shares: engagement.shares,
     }));
   });
 

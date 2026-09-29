@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Facebook, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus, Play, Film, HardDrive, Heart, MessageCircle } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Facebook, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus, Play, Film, HardDrive, Heart } from "lucide-react";
 import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -2075,7 +2075,6 @@ function PublishedOnFacebook({ itemId }: { itemId: string }) {
       {data && (
         <div className="flex items-center gap-4 text-sm text-foreground/70">
           <span className="flex items-center gap-1.5"><Heart size={14} /> {data.likes.toLocaleString("pt-BR")}</span>
-          <span className="flex items-center gap-1.5"><MessageCircle size={14} /> {data.comments.toLocaleString("pt-BR")}</span>
           <span className="flex items-center gap-1.5"><Send size={14} /> {data.shares.toLocaleString("pt-BR")}</span>
         </div>
       )}

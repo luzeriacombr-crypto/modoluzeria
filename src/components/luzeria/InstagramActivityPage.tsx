@@ -1036,7 +1036,6 @@ function FacebookPane({ clientId }: { clientId: string }) {
             <div className="flex items-center gap-3 text-[11px] text-foreground/35 mt-1">
               <span>{timeAgo(p.createdTime)}</span>
               <span className="flex items-center gap-1"><Heart size={11} />{p.likes.toLocaleString("pt-BR")}</span>
-              <span className="flex items-center gap-1"><MessageCircle size={11} />{p.comments.toLocaleString("pt-BR")}</span>
               <span className="flex items-center gap-1"><Send size={11} />{p.shares.toLocaleString("pt-BR")}</span>
             </div>
           </div>
