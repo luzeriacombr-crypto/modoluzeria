@@ -169,16 +169,21 @@ export function Sidebar({
     <aside data-tour="sidebar" className={`sidebar-gradient ${collapsed ? "w-[64px]" : "w-[240px]"} h-screen flex flex-col text-white shrink-0 overflow-hidden`}>
       {/* Logo — some no modo reduzido, a logo aparece no cabeçalho nesse caso (App.tsx) */}
       {!collapsed && (
-        <div className="px-7 pt-5 pb-4">
+        <div className="pl-6 pr-8 pt-5 pb-4">
           {me?.orgLogoUrl ? (
-            // Preenche a largura útil da sidebar (dentro do px-7 do
+            // Preenche a largura útil da sidebar (dentro do padding do
             // container), independente da logo ser retangular ou quadrada —
             // uma quadrada fica proporcionalmente maior (e empurra o menu
             // um pouco pra baixo), o que é intencional (pedido do Junior).
-            // px-7 (em vez do px-5 do resto da sidebar) é a "sangria" de
-            // segurança pra logo não encostar na borda — como o padding é
-            // do container (não só da img), o slogan e o selo de nível
-            // logo abaixo ganham a mesma margem, então tudo fica alinhado.
+            // O padding é do container (não só da img), então o slogan e o
+            // selo de nível logo abaixo ganham a mesma margem — tudo fica
+            // alinhado. pl-6/pr-8 (em vez de simétrico) é de propósito: a
+            // arte da logo da Luzeria tem o "L" sólido colado na borda
+            // esquerda em toda a altura, mas o traço diagonal da direita só
+            // toca a borda no canto de cima e recua embaixo — então uma
+            // margem simétrica em pixels parecia visualmente desbalanceada
+            // (a esquerda "pesava" mais). Isso é um ajuste óptico pra ESSA
+            // logo específica, pode precisar reajustar se a logo mudar.
             <img src={me.orgLogoUrl} alt={me.orgName ?? "Logo"} className="block w-full h-auto object-contain" />
           ) : (
             <div className="text-white font-extrabold text-lg uppercase tracking-wide truncate" title={me?.orgName ?? ""}>
