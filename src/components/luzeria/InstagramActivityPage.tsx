@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Modal } from "./Modals";
 import { toast } from "sonner";
+import { getFacebookConnectionStatus, getFacebookPagePosts } from "@/lib/luzeria/facebook.functions";
 import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
 import {
   getInstagramAccountMedia, getInstagramAccountMediaInsights, getInstagramAccountOverview, getInstagramFollowerHistory,
@@ -495,6 +496,11 @@ function DownloadInsightsPdfButton({ clientId, clientName }: { clientId: string;
 function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; clientName: string }) {
   const me = useMe().data;
   const source = useInstagramInsightsSource(clientId);
+  const getFbStatus = useServerFn(getFacebookConnectionStatus);
+  const { data: fbStatus } = useQuery({
+    queryKey: ["facebook-connection-status", clientId],
+    queryFn: () => getFbStatus({ data: { clientId } }),
+  });
   return (
     <InsightsTabsView
       cacheKey={clientId}
@@ -502,18 +508,21 @@ function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; cli
       clientName={clientName}
       brandingLabel={me?.orgName ?? "Modo Criador"}
       headerRight={<div className="flex items-center gap-2"><DownloadInsightsPdfButton clientId={clientId} clientName={clientName} /><ShareInsightsButton clientId={clientId} /></div>}
+      facebookClientId={fbStatus?.connected ? clientId : undefined}
     />
   );
 }
 
 /** Miolo compartilhado entre a versão autenticada (dentro do app) e a
  * pública (link de compartilhamento, sem login) — recebe a fonte de dados
- * já resolvida (`InsightsSource`) e não sabe nem precisa saber qual é. */
-export function InsightsTabsView({ cacheKey, source, clientName, brandingLabel, headerRight, readOnly }: {
+ * já resolvida (`InsightsSource`) e não sabe nem precisa saber qual é.
+ * `facebookClientId` só vem preenchido quando o cliente tem Facebook
+ * conectado — liga a aba extra "Facebook" (mesma tela, dado diferente). */
+export function InsightsTabsView({ cacheKey, source, clientName, brandingLabel, headerRight, readOnly, facebookClientId }: {
   cacheKey: string; source: InsightsSource; clientName: string; brandingLabel: string;
-  headerRight?: React.ReactNode; readOnly?: boolean;
+  headerRight?: React.ReactNode; readOnly?: boolean; facebookClientId?: string;
 }) {
-  const [pane, setPane] = useState<"geral" | "conteudo" | "publico" | "direct">("geral");
+  const [pane, setPane] = useState<"geral" | "conteudo" | "publico" | "direct" | "facebook">("geral");
   const mediaState = useAccountMediaWithInsights(cacheKey, source);
   const { data: overview, isLoading: overviewLoading, error: overviewError } = useQuery({
     queryKey: ["instagram-account-overview", cacheKey],
@@ -528,6 +537,7 @@ export function InsightsTabsView({ cacheKey, source, clientName, brandingLabel, 
     { key: "geral", label: "Visão geral" },
     { key: "conteudo", label: "Conteúdo" },
     { key: "publico", label: "Público" },
+    ...(facebookClientId ? [{ key: "facebook" as const, label: "Facebook" }] : []),
     ...(SHOW_DIRECT_TAB && !readOnly ? [{ key: "direct" as const, label: "Direct" }] : []),
   ];
 
@@ -581,6 +591,7 @@ export function InsightsTabsView({ cacheKey, source, clientName, brandingLabel, 
       {pane === "geral" && <VisaoGeralPane overview={overview ?? null} isLoading={overviewLoading} error={overviewError} history={history ?? null} mediaState={mediaState} />}
       {pane === "conteudo" && <ConteudoPane clientId={readOnly ? undefined : cacheKey} clientName={clientName} mediaState={mediaState} readOnly={readOnly} />}
       {pane === "publico" && <PublicoPane overview={overview ?? null} isLoading={overviewLoading} error={overviewError} />}
+      {pane === "facebook" && facebookClientId && <FacebookPane clientId={facebookClientId} />}
       {SHOW_DIRECT_TAB && pane === "direct" && <DirectMessagesPanel clientId={cacheKey} />}
     </div>
   );
@@ -995,6 +1006,43 @@ function PublicoPane({ overview: data, isLoading, error }: { overview: Instagram
         </div>
         {data.demographics.countries.map((c) => <ThinBar key={c.label} label={c.label} pct={c.pct} />)}
       </div>
+    </div>
+  );
+}
+
+/** Publicações da Página do Facebook do cliente, com engajamento — mesma
+ * ideia da aba Conteúdo do Instagram, só que puxando direto da Graph API
+ * do Facebook (pages_read_engagement), sem passar pelo nosso banco. */
+function FacebookPane({ clientId }: { clientId: string }) {
+  const getPosts = useServerFn(getFacebookPagePosts);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["facebook-page-posts", clientId],
+    queryFn: () => getPosts({ data: { clientId } }),
+  });
+
+  if (isLoading) return <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>;
+  if (error) return <p className="text-xs text-red-400/80 py-4">{(error as any)?.message ?? "Não foi possível carregar as publicações do Facebook."}</p>;
+  if (!data || data.length === 0) return <p className="text-xs text-foreground/40 text-center py-6">Nenhuma publicação encontrada nessa Página do Facebook.</p>;
+
+  return (
+    <div className="rounded-2xl bg-card p-2 divide-y divide-foreground/6">
+      {data.map((p) => (
+        <a key={p.id} href={p.permalink ?? undefined} target="_blank" rel="noopener noreferrer"
+          className="w-full flex items-center gap-3.5 px-2.5 py-3 text-left hover:bg-foreground/[0.03] rounded-xl transition-colors">
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-foreground truncate">
+              {p.message ? p.message.slice(0, 60) + (p.message.length > 60 ? "…" : "") : "(sem legenda)"}
+            </p>
+            <div className="flex items-center gap-3 text-[11px] text-foreground/35 mt-1">
+              <span>{timeAgo(p.createdTime)}</span>
+              <span className="flex items-center gap-1"><Heart size={11} />{p.likes.toLocaleString("pt-BR")}</span>
+              <span className="flex items-center gap-1"><MessageCircle size={11} />{p.comments.toLocaleString("pt-BR")}</span>
+              <span className="flex items-center gap-1"><Send size={11} />{p.shares.toLocaleString("pt-BR")}</span>
+            </div>
+          </div>
+          <ExternalLink size={13} className="text-foreground/25 shrink-0" />
+        </a>
+      ))}
     </div>
   );
 }

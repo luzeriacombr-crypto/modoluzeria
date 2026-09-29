@@ -357,6 +357,51 @@ export const getFacebookItemEngagement = createServerFn({ method: "GET" })
     };
   });
 
+export type FacebookPagePost = {
+  id: string;
+  message: string | null;
+  createdTime: string;
+  permalink: string | null;
+  likes: number;
+  comments: number;
+  shares: number;
+};
+
+/** Lista as publicações reais da Página do Facebook do cliente (direto da
+ * Meta, com engajamento já embutido) — pra mostrar junto com os Insights
+ * do Instagram no mesmo lugar, em vez de precisar abrir item por item. */
+export const getFacebookPagePosts = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<FacebookPagePost[]> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+
+    const { data: creds } = await (context.supabase as any)
+      .from("client_facebook_credentials")
+      .select("facebook_page_id, access_token")
+      .eq("client_id", data.clientId)
+      .maybeSingle();
+    if (!creds) throw new Error("Esse cliente ainda não conectou o Facebook.");
+
+    const fields = "id,message,created_time,permalink_url,likes.summary(true).limit(0),comments.summary(true).limit(0),shares";
+    const res = await fetch(
+      `${FB_GRAPH_API}/${creds.facebook_page_id}/posts?fields=${fields}&limit=25&access_token=${encodeURIComponent(creds.access_token)}`,
+    );
+    const json: any = await res.json();
+    if (!res.ok) throw new Error(json?.error?.message ?? "Falha ao listar publicações do Facebook.");
+    return ((json.data ?? []) as any[]).map((p) => ({
+      id: p.id,
+      message: p.message ?? null,
+      createdTime: p.created_time,
+      permalink: p.permalink_url ?? null,
+      likes: p.likes?.summary?.total_count ?? 0,
+      comments: p.comments?.summary?.total_count ?? 0,
+      shares: p.shares?.count ?? 0,
+    }));
+  });
+
 async function markScheduledFacebookFailure(
   supabaseAdmin: any,
   item: { id: string; title: string; orgId: string | undefined; hadPreviousError: boolean },
