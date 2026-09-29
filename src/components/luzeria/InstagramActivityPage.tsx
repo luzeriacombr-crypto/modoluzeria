@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import {
   Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ExternalLink, ChevronDown, ChevronUp,
   Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown, MessageCircle, Send, X, Mail, CalendarDays, UserCheck, Cake, MapPin,
-  Share2, Link2, Copy, Check,
+  Share2, Link2, Copy, Check, Sun, Moon,
 } from "lucide-react";
 import { Modal } from "./Modals";
 import { toast } from "sonner";
@@ -15,7 +15,7 @@ import {
   getInstagramAccountMedia, getInstagramAccountMediaInsights, getInstagramAccountOverview, getInstagramFollowerHistory,
   getInstagramComments, replyToInstagramComment, postInstagramComment,
   getInstagramConversations, getInstagramConversationMessages, sendInstagramDirectMessage,
-  getOrCreateInsightsShareToken, rotateInsightsShareToken,
+  getOrCreateInsightsShareToken, rotateInsightsShareToken, generateInsightsPdf,
   type InstagramActivityItem, type InstagramAccountMedia, type InstagramMediaInsights, type InstagramAccountOverview,
   type InstagramComment, type InstagramConversation, type InstagramDirectMessage, type InstagramFollowerHistory,
 } from "@/lib/luzeria/instagram.functions";
@@ -424,6 +424,74 @@ function ShareInsightsButton({ clientId }: { clientId: string }) {
   );
 }
 
+/** Botão + modal pra exportar os Insights em PDF (capa + Visão geral +
+ * Atividade + Público), escolhendo modo claro ou escuro antes de gerar. */
+function DownloadInsightsPdfButton({ clientId, clientName }: { clientId: string; clientName: string }) {
+  const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [loading, setLoading] = useState(false);
+  const generate = useServerFn(generateInsightsPdf);
+
+  async function download() {
+    setLoading(true);
+    try {
+      const r = await generate({ data: { clientId, clientName, theme } });
+      const bytes = Uint8Array.from(atob(r.pdfBase64), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `insights-instagram-${clientName.toLowerCase().replace(/\s+/g, "-")}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      toast.success("PDF gerado!");
+      setOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Não consegui gerar o PDF.");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        title="Baixar em PDF"
+        className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition hover:opacity-80"
+        style={{ backgroundColor: "var(--lz-hero-badge-bg)", color: "var(--lz-accent-ink)" }}
+      >
+        <Download size={14} />
+      </button>
+      {open && (
+        <Modal open onClose={() => setOpen(false)} title="Baixar Insights em PDF">
+          <p className="text-xs text-foreground/50 mb-3">Capa, Visão geral, Atividade e Público (quando disponível), com a marca da agência.</p>
+          <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Aparência do PDF</div>
+          <div className="flex gap-2 mb-4">
+            <button onClick={() => setTheme("light")}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-md transition"
+              style={theme === "light" ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" } : { background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
+              <Sun size={13} /> Claro
+            </button>
+            <button onClick={() => setTheme("dark")}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-md transition"
+              style={theme === "dark" ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" } : { background: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
+              <Moon size={13} /> Escuro
+            </button>
+          </div>
+          <button onClick={download} disabled={loading}
+            className="w-full py-2.5 rounded-md text-sm font-bold disabled:opacity-50 transition-opacity hover:opacity-90 inline-flex items-center justify-center gap-2"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+            {loading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            {loading ? "Gerando..." : "Baixar PDF"}
+          </button>
+        </Modal>
+      )}
+    </>
+  );
+}
+
 function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; clientName: string }) {
   const me = useMe().data;
   const source = useInstagramInsightsSource(clientId);
@@ -433,7 +501,7 @@ function InstagramInsightsTabs({ clientId, clientName }: { clientId: string; cli
       source={source}
       clientName={clientName}
       brandingLabel={me?.orgName ?? "Modo Criador"}
-      headerRight={<ShareInsightsButton clientId={clientId} />}
+      headerRight={<div className="flex items-center gap-2"><DownloadInsightsPdfButton clientId={clientId} clientName={clientName} /><ShareInsightsButton clientId={clientId} /></div>}
     />
   );
 }

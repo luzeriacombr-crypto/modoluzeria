@@ -1744,6 +1744,94 @@ export const getPublicInstagramAccountMediaInsights = createServerFn({ method: "
     return { itemId: data.mediaId, ...result } as InstagramMediaInsights;
   });
 
+/** Exporta os Insights em PDF — capa + Visão geral + Atividade + Público
+ * (só se a conta tiver demografia liberada), no tema claro ou escuro
+ * escolhido por quem exporta. Reaproveita as mesmas funções de busca que
+ * alimentam a tela (fetchInstagramOverview etc.), sem duplicar chamada à
+ * Graph API. */
+export const generateInsightsPdf = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; clientName: string; theme: "light" | "dark" }) =>
+    z.object({ clientId: z.string().uuid(), clientName: z.string().min(1).max(120), theme: z.enum(["light", "dark"]) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+
+    const [overview, history, mediaList] = await Promise.all([
+      fetchInstagramOverview(context.supabase, data.clientId),
+      fetchInstagramFollowerHistory(context.supabase, data.clientId),
+      fetchInstagramAccountMedia(context.supabase, data.clientId),
+    ]);
+
+    // Top conteúdo: só pega insight de até 8 mídias recentes (roda uma vez,
+    // sob pedido — não precisa da pausa de 250ms usada na tela pra não
+    // estourar limite de taxa quando é a lista inteira).
+    let topContent: { label: string; metricLabel: string; metricValue: number }[] = [];
+    try {
+      const creds = await getClientInstagramCreds(context.supabase, data.clientId);
+      const candidates = mediaList.items.slice(0, 8);
+      const withInsights = await Promise.all(candidates.map(async (m) => {
+        try { return { m, r: await fetchMediaInsights(creds.access_token, m.id, m.mediaProductType) }; }
+        catch { return { m, r: null }; }
+      }));
+      topContent = withInsights
+        .filter((x): x is { m: InstagramAccountMedia; r: NonNullable<Awaited<ReturnType<typeof fetchMediaInsights>>> } =>
+          !!x.r && (x.r.views != null || x.r.reach != null))
+        .sort((a, b) => (b.r.views ?? b.r.reach ?? 0) - (a.r.views ?? a.r.reach ?? 0))
+        .slice(0, 6)
+        .map(({ m, r }) => ({
+          label: (m.caption ?? "(sem legenda)").slice(0, 60),
+          metricLabel: r.views != null ? "Visualizações" : "Alcance",
+          metricValue: r.views ?? r.reach ?? 0,
+        }));
+    } catch { /* PDF sai sem a seção de conteúdo se isso falhar */ }
+
+    const { data: org } = await context.supabase
+      .from("orgs").select("name, logo_path_light, logo_path, color_primary").eq("id", context.orgId).maybeSingle();
+    let logoBytes: Uint8Array | null = null;
+    const logoPath = (org as any)?.logo_path_light ?? (org as any)?.logo_path ?? null;
+    if (logoPath) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: logoFile } = await supabaseAdmin.storage.from("avatars").download(logoPath);
+        if (logoFile) logoBytes = new Uint8Array(await logoFile.arrayBuffer());
+      } catch { /* segue sem logo se não conseguir baixar */ }
+    }
+
+    let followerComparison: { periodLabel: string; earliest: number; latest: number } | null = null;
+    if (history.series.length >= 2 && history.earliestFollowers != null && history.latestFollowers != null && history.earliestDate && history.latestDate) {
+      const days = Math.round((new Date(history.latestDate).getTime() - new Date(history.earliestDate).getTime()) / 86400000);
+      const periodLabel = days <= 1 ? "Ontem" : days < 60 ? `Há ${days} dias` : `Desde ${new Date(history.earliestDate).toLocaleDateString("pt-BR")}`;
+      followerComparison = { periodLabel, earliest: history.earliestFollowers, latest: history.latestFollowers };
+    }
+
+    const { renderInsightsPdf } = await import("./insights-pdf.server");
+    const pdfBytes = await renderInsightsPdf({
+      clientName: data.clientName,
+      username: overview.username,
+      orgName: (org as any)?.name ?? "Modo Criador",
+      logoBytes,
+      brandColorHex: (org as any)?.color_primary ?? null,
+      theme: data.theme,
+      generatedAtLabel: new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }),
+      kpis: { followersCount: overview.followersCount, followersChangePct: overview.followersChangePct, ...overview.kpis },
+      followerComparison,
+      reachSeries: overview.reachSeries,
+      followersSeries: overview.followersSeries,
+      postingFrequency: overview.postingFrequency,
+      engagementByHour: overview.engagementByHour,
+      topContent,
+      demographics: overview.demographics ? {
+        gender: overview.demographics.gender.map((g) => ({ label: g.label, pct: g.pct })),
+        age: overview.demographics.age.map((a) => ({ label: a.label, pct: a.pct })),
+        countries: overview.demographics.countries.map((c) => ({ label: c.label, pct: c.pct })),
+      } : null,
+    });
+
+    return { pdfBase64: Buffer.from(pdfBytes).toString("base64") };
+  });
+
 export type InstagramComment = {
   id: string;
   text: string;
