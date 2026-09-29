@@ -188,8 +188,19 @@ export const importClients = createServerFn({ method: "POST" })
     const isLuzeria = context.orgId === "00000000-0000-0000-0000-000000000001";
     const maxClients = isLuzeria ? Infinity : (plan?.max_clients ?? Infinity);
     const slotsLeft = Math.max(0, maxClients - (currentCount ?? 0));
-    const toImport = data.names.slice(0, slotsLeft);
-    const skipped = data.names.length - toImport.length;
+
+    // Dedupe por nome (case/espaço-insensível) contra TODOS os clientes da
+    // agência, arquivados inclusive — pensado pra dar pra rodar o import de
+    // novo (ex: primeira tentativa trouxe só metade do Trello) sem duplicar
+    // quem já entrou certo da vez passada.
+    const { data: existingClients } = await context.supabase
+      .from("clients").select("name").eq("org_id", context.orgId);
+    const existingNames = new Set(((existingClients ?? []) as any[]).map((c) => (c.name as string).trim().toLowerCase()));
+    const newNames = data.names.filter((n) => !existingNames.has(n.trim().toLowerCase()));
+    const alreadyExists = data.names.length - newNames.length;
+
+    const toImport = newNames.slice(0, slotsLeft);
+    const skipped = newNames.length - toImport.length;
 
     const sourceLabel = data.source === "trello" ? "Trello" : data.source === "clickup" ? "ClickUp" : "Notion";
     const key = monthKey(new Date());
@@ -203,5 +214,5 @@ export const importClients = createServerFn({ method: "POST" })
       await seedMonth(context.supabase, client.id, key);
       imported++;
     }
-    return { imported, skipped };
+    return { imported, skipped, alreadyExists };
   });

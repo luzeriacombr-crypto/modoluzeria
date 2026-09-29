@@ -9,6 +9,7 @@ import { STATUS_META, getStatusMeta, type Status, type BuiltinStatus } from "@/l
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { ClientTemplatesSection } from "@/components/luzeria/ClientTemplatesSection";
 import { MonthRolloverSection } from "@/components/luzeria/MonthRolloverSection";
+import { ImportClientsSection } from "@/components/luzeria/ImportClientsSection";
 import { TRIGGER_TYPES, ACTION_TYPES, CLIENT_LEVEL_TRIGGERS, ITEM_ONLY_ACTIONS, DAYS_TRIGGER_TYPES, type AutomationRule, type TriggerType, type ActionType } from "@/lib/luzeria/automation-rules.functions";
 
 const STATUS_OPTIONS = Object.keys(STATUS_META) as BuiltinStatus[];
@@ -182,6 +183,7 @@ export function AutomationsTab() {
     <div className="space-y-8 max-w-3xl">
       <ClientTemplatesSection />
       <MonthRolloverSection />
+      <ImportClientsSection />
       <AutomationRulesSection />
     </div>
   );

@@ -23,7 +23,7 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
   const [nestedItems, setNestedItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [names, setNames] = useState<string[] | null>(null);
-  const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const [result, setResult] = useState<{ imported: number; skipped: number; alreadyExists: number } | null>(null);
 
   const authUrl = useServerFn(getTrelloAuthUrl);
   const trelloBoards = useServerFn(fetchTrelloBoards);
@@ -125,6 +125,9 @@ export function ImportClientsStep({ onDone, onSkip }: { onDone: () => void; onSk
       <div className="text-center">
         <div className="text-2xl mb-2">✅</div>
         <p className="text-foreground font-semibold mb-1">{result.imported} cliente{result.imported === 1 ? "" : "s"} importado{result.imported === 1 ? "" : "s"}!</p>
+        {result.alreadyExists > 0 && (
+          <p className="text-foreground/50 text-xs mb-1">{result.alreadyExists} já {result.alreadyExists === 1 ? "existia" : "existiam"} (não duplicamos).</p>
+        )}
         {result.skipped > 0 && (
           <p className="text-foreground/50 text-xs mb-4">{result.skipped} não coube{result.skipped === 1 ? "" : "ram"} no limite do seu plano — dá pra adicionar depois ou fazer upgrade.</p>
         )}
