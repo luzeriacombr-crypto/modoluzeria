@@ -151,7 +151,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, brand_advanced_colors, feed_preview_image_path, planejamento_cover_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at, plan_id, subscription_status, trial_ends_at, deactivation_reason").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, logo_size_adjust_px, logo_position_adjust_px, color_primary, color_primary_light, color_sidebar, color_accent_light, brand_advanced_colors, feed_preview_image_path, planejamento_cover_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at, plan_id, subscription_status, trial_ends_at, deactivation_reason").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -223,6 +223,8 @@ export const getMe = createServerFn({ method: "GET" })
       brandAdvancedColors: ((org as any)?.brand_advanced_colors ?? {}) as Record<string, { light?: string | null; dark?: string | null }>,
       orgLogoUrl,
       orgLogoUrlLight,
+      orgLogoSizeAdjustPx: (org as any)?.logo_size_adjust_px ?? 0,
+      orgLogoPositionAdjustPx: (org as any)?.logo_position_adjust_px ?? 0,
       orgFeedPreviewImageUrl,
       orgFeedPreviewImagePath: feedPreviewImagePath ?? null,
       orgPlanejamentoCoverImageUrl,
@@ -283,7 +285,7 @@ export const updateSetorPermissions = createServerFn({ method: "POST" })
 export const updateMyOrg = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: {
-    name?: string; tagline?: string | null; logoPath?: string | null; logoPathLight?: string | null;
+    name?: string; tagline?: string | null; logoPath?: string | null; logoPathLight?: string | null; logoSizeAdjustPx?: number; logoPositionAdjustPx?: number;
     colorPrimary?: string | null; colorPrimaryLight?: string | null; colorSidebar?: string | null;
     colorAccentLight?: string | null;
     taxId?: string | null; feedPreviewImagePath?: string | null; planejamentoCoverImagePath?: string | null; faviconPath?: string | null;
@@ -310,6 +312,11 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       tagline: z.string().trim().max(120).nullable().optional(),
       logoPath: z.string().max(300).nullable().optional(),
       logoPathLight: z.string().max(300).nullable().optional(),
+      // Ajuste fino manual em cima do tamanho calculado pela centralização
+      // óptica (ver logo-optical-center.ts) — positivo encolhe, negativo
+      // aumenta um pouco. Limite generoso mas não permite zerar/inverter.
+      logoSizeAdjustPx: z.number().int().min(-40).max(150).optional(),
+      logoPositionAdjustPx: z.number().int().min(-60).max(60).optional(),
       colorPrimary: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       colorPrimaryLight: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       colorSidebar: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
@@ -355,6 +362,8 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.tagline !== undefined) patch.tagline = data.tagline;
     if (data.logoPath !== undefined) patch.logo_path = data.logoPath;
     if (data.logoPathLight !== undefined) patch.logo_path_light = data.logoPathLight;
+    if (data.logoSizeAdjustPx !== undefined) patch.logo_size_adjust_px = data.logoSizeAdjustPx;
+    if (data.logoPositionAdjustPx !== undefined) patch.logo_position_adjust_px = data.logoPositionAdjustPx;
     if (data.colorPrimary !== undefined) patch.color_primary = data.colorPrimary;
     if (data.colorPrimaryLight !== undefined) patch.color_primary_light = data.colorPrimaryLight;
     if (data.colorSidebar !== undefined) patch.color_sidebar = data.colorSidebar;

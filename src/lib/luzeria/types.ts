@@ -340,6 +340,8 @@ export interface Profile {
   orgTagline?: string | null;
   orgLogoUrl?: string | null;
   orgLogoUrlLight?: string | null;
+  orgLogoSizeAdjustPx?: number;
+  orgLogoPositionAdjustPx?: number;
   orgColorPrimary?: string | null;
   orgColorPrimaryLight?: string | null;
   orgColorSidebar?: string | null;

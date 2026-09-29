@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { hexToRgbChannels, deriveSecondaryHex, contrastRatio, contrastLabel, applyAdvancedColorVars } from "@/lib/luzeria/utils";
 import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO, cargosQO, myPendingInvoiceQO, myInvoiceHistoryQO, contentStatusesQO, clientCategoriesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { useLogoPreview } from "@/lib/luzeria/logo-preview-store";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
@@ -654,6 +655,8 @@ function GeneralSettings() {
             orgTagline={me.orgTagline ?? null}
             orgLogoUrl={me.orgLogoUrl ?? null}
             orgLogoUrlLight={me.orgLogoUrlLight ?? null}
+            orgLogoSizeAdjustPx={me.orgLogoSizeAdjustPx ?? 0}
+            orgLogoPositionAdjustPx={me.orgLogoPositionAdjustPx ?? 0}
             orgColorPrimary={me.orgColorPrimary ?? "#C8D44E"}
             orgColorPrimaryLight={me.orgColorPrimaryLight ?? "#C8D44E"}
             orgColorSidebar={me.orgColorSidebar ?? "#1A3A2E"}
@@ -1648,11 +1651,12 @@ function ClienteTab({ initialSub, canJourney, canMargem, isAdmin }: {
 }
 
 function OrgBrandingSection({
-  orgId, orgName, orgTagline, orgLogoUrl, orgLogoUrlLight, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar,
+  orgId, orgName, orgTagline, orgLogoUrl, orgLogoUrlLight, orgLogoSizeAdjustPx, orgLogoPositionAdjustPx, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar,
   orgColorAccentLight, orgFeedPreviewImageUrl, orgPlanejamentoCoverImageUrl, orgFaviconUrl, borderRadius, heroGradientFrom, heroGradientTo,
   brandAdvancedColors,
 }: {
   orgId: string; orgName: string; orgTagline: string | null; orgLogoUrl: string | null; orgLogoUrlLight: string | null;
+  orgLogoSizeAdjustPx: number; orgLogoPositionAdjustPx: number;
   orgColorPrimary: string; orgColorPrimaryLight: string; orgColorSidebar: string; orgColorAccentLight: string | null;
   orgFeedPreviewImageUrl: string | null; orgPlanejamentoCoverImageUrl: string | null; orgFaviconUrl: string | null; borderRadius: number;
   heroGradientFrom: string | null; heroGradientTo: string | null;
@@ -1667,6 +1671,20 @@ function OrgBrandingSection({
   // decide qual dos dois vai ser salvo quando o campo estiver vazio.
   const [tagline, setTagline] = useState(orgTagline ?? "");
   const [hideTagline, setHideTagline] = useState(orgTagline === "");
+  const [logoSizeAdjustPx, setLogoSizeAdjustPx] = useState(orgLogoSizeAdjustPx);
+  const [logoPositionAdjustPx, setLogoPositionAdjustPx] = useState(orgLogoPositionAdjustPx);
+  const { setLogoPreview, clearLogoPreview } = useLogoPreview();
+  // Prévia ao vivo direto na sidebar de verdade (pedido do Junior) — manda
+  // pra store compartilhada a cada mudança de régua, e limpa ao sair da tela
+  // (senão a sidebar ficaria "presa" mostrando um ajuste não salvo pra
+  // sempre). Também limpa se a logo dessa agência não tem URL (nada a
+  // pré-visualizar).
+  useEffect(() => {
+    if (!orgLogoUrl) return;
+    setLogoPreview(logoSizeAdjustPx, logoPositionAdjustPx);
+    return () => clearLogoPreview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logoSizeAdjustPx, logoPositionAdjustPx, orgLogoUrl]);
   const [colorPrimary, setColorPrimary] = useState(orgColorPrimary);
   const [colorPrimaryLight, setColorPrimaryLight] = useState(orgColorPrimaryLight);
   const [colorSidebar, setColorSidebar] = useState(orgColorSidebar);
@@ -1687,6 +1705,8 @@ function OrgBrandingSection({
 
   useEffect(() => { setName(orgName); }, [orgName]);
   useEffect(() => { setTagline(orgTagline ?? ""); setHideTagline(orgTagline === ""); }, [orgTagline]);
+  useEffect(() => { setLogoSizeAdjustPx(orgLogoSizeAdjustPx); }, [orgLogoSizeAdjustPx]);
+  useEffect(() => { setLogoPositionAdjustPx(orgLogoPositionAdjustPx); }, [orgLogoPositionAdjustPx]);
   useEffect(() => { setColorPrimary(orgColorPrimary); }, [orgColorPrimary]);
   useEffect(() => { setColorPrimaryLight(orgColorPrimaryLight); }, [orgColorPrimaryLight]);
   useEffect(() => { setColorSidebar(orgColorSidebar); }, [orgColorSidebar]);
@@ -1754,6 +1774,8 @@ function OrgBrandingSection({
       data: {
         name: name.trim(),
         tagline: hideTagline ? "" : (tagline.trim() || null),
+        logoSizeAdjustPx,
+        logoPositionAdjustPx,
         colorPrimary: colorPrimary || null,
         colorPrimaryLight: colorPrimaryLight || null,
         colorSidebar: colorSidebar || null,
@@ -2004,6 +2026,50 @@ function OrgBrandingSection({
           Se a sua logo não fica boa no fundo branco do modo claro (por ser branca, ou muito clara), envie uma
           segunda versão aqui — só pra esse tema. Se não enviar, o app usa a mesma logo nos dois.
         </p>
+
+        {orgLogoUrl && (
+          <div className="rounded-xl p-4 bg-black/20 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] uppercase tracking-wide text-foreground/40 font-semibold">Ajuste fino da logo na barra lateral</div>
+              {(logoSizeAdjustPx !== 0 || logoPositionAdjustPx !== 0) && (
+                <button onClick={() => { setLogoSizeAdjustPx(0); setLogoPositionAdjustPx(0); }} className="text-[11px] text-foreground/50 hover:text-foreground transition shrink-0">
+                  Restaurar automático
+                </button>
+              )}
+            </div>
+            <p className="text-[10.5px] text-foreground/35 leading-relaxed -mt-2">
+              A gente já calcula um tamanho e posição automáticos pra cada logo. Se ainda não ficar do jeito que você
+              acha bonito, arraste — é ao vivo, dá pra ver a mudança na barra lateral à esquerda agora mesmo. Clique
+              em Salvar lá embaixo quando ficar bom.
+            </p>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[10.5px] text-foreground/50">Tamanho</label>
+                <span className="text-[10.5px] text-foreground/40 tabular-nums">
+                  {logoSizeAdjustPx === 0 ? "automático" : logoSizeAdjustPx > 0 ? `−${logoSizeAdjustPx}px` : `+${-logoSizeAdjustPx}px`}
+                </span>
+              </div>
+              <input
+                type="range" min={-40} max={150} step={1} value={logoSizeAdjustPx}
+                onChange={(e) => setLogoSizeAdjustPx(parseInt(e.target.value, 10))}
+                className="w-full accent-[rgb(var(--lz-brand-rgb))]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[10.5px] text-foreground/50">Posição (esquerda ↔ direita)</label>
+                <span className="text-[10.5px] text-foreground/40 tabular-nums">
+                  {logoPositionAdjustPx === 0 ? "automático" : logoPositionAdjustPx > 0 ? `${logoPositionAdjustPx}px → direita` : `${-logoPositionAdjustPx}px → esquerda`}
+                </span>
+              </div>
+              <input
+                type="range" min={-60} max={60} step={1} value={logoPositionAdjustPx}
+                onChange={(e) => setLogoPositionAdjustPx(parseInt(e.target.value, 10))}
+                className="w-full accent-[rgb(var(--lz-brand-rgb))]"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="rounded-xl p-4 bg-black/20 space-y-4">
           <Field label="Nome da agência">

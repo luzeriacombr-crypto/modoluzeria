@@ -101,3 +101,19 @@ export function useLogoOpticalBox(url: string | null | undefined, containerWidth
 
   return key ? box : fallback;
 }
+
+/** Ajuste manual (px) em cima do resultado automático — o Junior pediu um
+ * jeito de afinar tamanho E posição com a própria régua visual em vez de só
+ * confiar na conta. `sizeAdjustPx` positivo encolhe, negativo aumenta um
+ * pouco (encolhe simetricamente, metade de cada lado, mantendo o centro
+ * óptico já calculado como ponto de partida); `positionAdjustPx` empurra a
+ * logo inteira depois disso — positivo pra direita, negativo pra esquerda.
+ * Nunca deixa a largura menor que um mínimo de segurança. Compartilhado
+ * entre a Sidebar de verdade e a prévia em Configurações, pra nunca ficarem
+ * calculando isso de jeitos diferentes. */
+export function applyManualAdjust(box: OpticalBox, sizeAdjustPx: number, positionAdjustPx: number): OpticalBox {
+  const MIN_WIDTH = 24;
+  const width = Math.max(MIN_WIDTH, box.width - sizeAdjustPx);
+  const marginLeft = box.marginLeft + (box.width - width) / 2 + positionAdjustPx;
+  return { width, marginLeft };
+}

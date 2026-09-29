@@ -17,7 +17,8 @@ import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { reportAppError } from "@/lib/error-reporting";
 import { toast } from "sonner";
 import { hasSetorPermission, hasPermission, type Client } from "@/lib/luzeria/types";
-import { useLogoOpticalBox } from "@/lib/luzeria/logo-optical-center";
+import { useLogoOpticalBox, applyManualAdjust } from "@/lib/luzeria/logo-optical-center";
+import { useLogoPreview } from "@/lib/luzeria/logo-preview-store";
 
 export const DEFAULT_NAV_LABELS: Record<string, string> = {
   "minhas-demandas": "Minhas demandas", dashboard: "Dashboard", clientes: "Clientes",
@@ -55,7 +56,14 @@ export function Sidebar({
   // logo aparece); 20 = margem mínima de segurança dos dois lados; 130 =
   // teto de altura (rede de segurança pra logo enviada com proporção
   // muito vertical, ex: template de Stories — ver comentário no hook).
-  const logoBox = useLogoOpticalBox(me?.orgLogoUrl, 240, 20, 130);
+  const autoLogoBox = useLogoOpticalBox(me?.orgLogoUrl, 240, 20, 130);
+  // Enquanto o Junior tá mexendo nas réguas de tamanho/posição em
+  // Configurações, a prévia ao vivo (logo-preview-store) manda aqui — sem
+  // ela (telas normais, ou saiu de Configurações), usa o valor salvo.
+  const logoPreview = useLogoPreview();
+  const logoSizeAdjustPx = logoPreview.sizeAdjustPx ?? me?.orgLogoSizeAdjustPx ?? 0;
+  const logoPositionAdjustPx = logoPreview.positionAdjustPx ?? me?.orgLogoPositionAdjustPx ?? 0;
+  const logoBox = applyManualAdjust(autoLogoBox, logoSizeAdjustPx, logoPositionAdjustPx);
   const { data: levelInputs } = useQuery({ ...myAgencyLevelInputsQO(), enabled: !!me && !(me?.disabledFeatures ?? []).includes("agency_levels") });
   const { data: clients = [], isLoading: clientsLoading, isError: clientsError, error: clientsErrObj } = useQuery(clientsQO());
   const { data: customCategories = [] } = useQuery(clientCategoriesQO());
