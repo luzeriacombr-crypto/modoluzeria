@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireActiveProfile, assertNotDemoReadOnly } from "./require-active";
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status, WorkSchedule } from "./types";
-import { isActivityType, getStatusMeta, SETOR_PERMISSION_KEYS } from "./types";
+import { isActivityType, getStatusMeta, SETOR_PERMISSION_KEYS, BRAND_ADVANCED_COLOR_KEYS } from "./types";
 
 /** Fixed id of the original Luzeria Estúdio org — also hardcoded in migrations
  * and in the admin-auth-operations edge function (they can't share a TS import). */
@@ -151,7 +151,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, feed_preview_image_path, planejamento_cover_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at, plan_id, subscription_status, trial_ends_at, deactivation_reason").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, color_primary, color_primary_light, color_sidebar, color_accent_light, brand_advanced_colors, feed_preview_image_path, planejamento_cover_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at, plan_id, subscription_status, trial_ends_at, deactivation_reason").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -220,6 +220,7 @@ export const getMe = createServerFn({ method: "GET" })
       orgColorPrimaryLight: (org as any)?.color_primary_light ?? null,
       orgColorSidebar: (org as any)?.color_sidebar ?? null,
       orgColorAccentLight: (org as any)?.color_accent_light ?? null,
+      brandAdvancedColors: ((org as any)?.brand_advanced_colors ?? {}) as Record<string, { light?: string | null; dark?: string | null }>,
       orgLogoUrl,
       orgLogoUrlLight,
       orgFeedPreviewImageUrl,
@@ -302,6 +303,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     heroGradientTo?: string | null;
     monthRolloverDay?: number | null;
     monthRolloverMode?: "criar" | "avisar";
+    brandAdvancedColors?: Record<string, { light?: string | null; dark?: string | null }>;
   }) =>
     z.object({
       name: z.string().trim().min(1).max(80).optional(),
@@ -337,6 +339,13 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       monthRolloverMode: z.enum(["criar", "avisar"]).optional(),
       heroGradientFrom: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
       heroGradientTo: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+      brandAdvancedColors: z.record(
+        z.enum(BRAND_ADVANCED_COLOR_KEYS),
+        z.object({
+          light: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+          dark: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+        }),
+      ).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -370,6 +379,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
     if (data.monthRolloverMode !== undefined) patch.month_rollover_mode = data.monthRolloverMode;
     if (data.heroGradientFrom !== undefined) patch.hero_gradient_from = data.heroGradientFrom;
     if (data.heroGradientTo !== undefined) patch.hero_gradient_to = data.heroGradientTo;
+    if (data.brandAdvancedColors !== undefined) patch.brand_advanced_colors = data.brandAdvancedColors;
     if (Object.keys(patch).length === 0) return { ok: true };
     const { data: updated, error } = await context.supabase
       .from("orgs").update(patch).eq("id", context.orgId).select("id").maybeSingle();

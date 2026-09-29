@@ -1,3 +1,55 @@
+import type { BrandAdvancedColorKey, BrandAdvancedColors } from "./types";
+
+/** Categoria do modo avançado de cores -> prefixo da CSS custom property
+ * que ela controla (ver src/styles.css). "heroA"/"heroB" viram "R, G, B"
+ * (mesmo formato de --lz-brand-rgb, sufixo "-rgb"); as demais usam o hex
+ * direto, já que são consumidas como cor pronta
+ * (ex: var(--lz-text-title-adv-dark, #FFFFFF)). Compartilhado entre
+ * App.tsx (aplica o valor salvo) e Settings.tsx (pré-visualização ao vivo
+ * antes de salvar) pra nunca desalinhar os dois. */
+export const ADV_COLOR_CSS_VAR: Record<BrandAdvancedColorKey, string> = {
+  textTitle: "--lz-text-title-adv",
+  textBody: "--lz-text-body-adv",
+  textMuted: "--lz-text-muted-adv",
+  buttonBg: "--lz-button-bg-adv",
+  buttonText: "--lz-button-text-adv",
+  accentInk: "--lz-accent-ink-adv",
+  heroA: "--lz-hero-a-adv",
+  heroB: "--lz-hero-b-adv",
+};
+const ADV_COLOR_AS_RGB_CHANNELS: Partial<Record<BrandAdvancedColorKey, boolean>> = {
+  heroA: true,
+  heroB: true,
+};
+
+/** Aplica (ou remove, se vazio) todas as CSS custom properties do modo
+ * avançado de cores em `root` a partir de `colors` — usado tanto por
+ * App.tsx (valores salvos) quanto pela pré-visualização ao vivo em
+ * Settings.tsx (valores ainda não salvos, enquanto a agência edita). */
+export function applyAdvancedColorVars(root: CSSStyleDeclaration, colors: BrandAdvancedColors): void {
+  for (const [key, varPrefix] of Object.entries(ADV_COLOR_CSS_VAR) as [BrandAdvancedColorKey, string][]) {
+    const pair = colors[key];
+    for (const theme of ["light", "dark"] as const) {
+      const hex = pair?.[theme];
+      const prop = `${varPrefix}-${theme}${ADV_COLOR_AS_RGB_CHANNELS[key] ? "-rgb" : ""}`;
+      const value = hex ? (ADV_COLOR_AS_RGB_CHANNELS[key] ? hexToRgbChannels(hex) : hex) : null;
+      if (value) root.setProperty(prop, value);
+      else root.removeProperty(prop);
+    }
+  }
+}
+
+/** Remove todas as CSS custom properties do modo avançado de cores de
+ * `root` — usado no cleanup de unmount/troca de org. */
+export function clearAdvancedColorVars(root: CSSStyleDeclaration): void {
+  for (const varPrefix of Object.values(ADV_COLOR_CSS_VAR)) {
+    root.removeProperty(`${varPrefix}-light`);
+    root.removeProperty(`${varPrefix}-dark`);
+    root.removeProperty(`${varPrefix}-light-rgb`);
+    root.removeProperty(`${varPrefix}-dark-rgb`);
+  }
+}
+
 export function monthKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
@@ -174,6 +226,38 @@ export function readableAccentRgbChannels(hex: string): string | null {
   // YIQ perceived brightness (0-255) — standard lightweight contrast heuristic.
   const yiq = (r * 299 + g * 587 + b * 114) / 1000;
   return yiq >= 130 ? channels : "255, 255, 255";
+}
+
+/** Luminância relativa (WCAG 2.x) de uma cor hex — usada pra calcular taxa
+ * de contraste entre um par de cores escolhido no modo avançado. Fórmula
+ * padrão: canais sRGB com correção de gama, depois a soma ponderada. */
+function relativeLuminance(hex: string): number {
+  const channels = hexToRgbChannels(hex);
+  if (!channels) return 0;
+  const [r, g, b] = channels.split(",").map((s) => {
+    const c = parseInt(s.trim(), 10) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** Taxa de contraste WCAG entre duas cores hex (1:1 a 21:1). */
+export function contrastRatio(hexA: string, hexB: string): number {
+  const la = relativeLuminance(hexA);
+  const lb = relativeLuminance(hexB);
+  const lighter = Math.max(la, lb);
+  const darker = Math.min(la, lb);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/** Texto amigável pro aviso de contraste no modo avançado — nunca bloqueia
+ * a escolha, só avisa (decisão final é da agência). Limiares WCAG AA:
+ * 4.5:1 pra texto normal, 3:1 pra texto grande/elementos de UI. */
+export function contrastLabel(ratio: number): { text: string; level: "bom" | "aceitavel" | "baixo" } {
+  const r = ratio.toFixed(1);
+  if (ratio >= 4.5) return { text: `${r}:1 — bom`, level: "bom" };
+  if (ratio >= 3) return { text: `${r}:1 — aceitável pra texto grande`, level: "aceitavel" };
+  return { text: `${r}:1 — contraste baixo, texto pode ficar difícil de ler`, level: "baixo" };
 }
 
 /** Superfície "de vidro" — brilho suave e neutro pra linhas/cards repetidos

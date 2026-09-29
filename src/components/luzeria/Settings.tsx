@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { hexToRgbChannels, deriveSecondaryHex } from "@/lib/luzeria/utils";
+import { hexToRgbChannels, deriveSecondaryHex, contrastRatio, contrastLabel, applyAdvancedColorVars } from "@/lib/luzeria/utils";
 import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO, cargosQO, myPendingInvoiceQO, myInvoiceHistoryQO, contentStatusesQO, clientCategoriesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
-import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, CUSTOMIZABLE_BUILTIN_STATUS_KEYS, PROTECTED_STATUS_KEYS, type SetorPermissionKey, type Profile } from "@/lib/luzeria/types";
+import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, CUSTOMIZABLE_BUILTIN_STATUS_KEYS, PROTECTED_STATUS_KEYS, type SetorPermissionKey, type Profile, type BrandAdvancedColors } from "@/lib/luzeria/types";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Archive, PlayCircle, ChevronDown, Users, UserCog, Rocket, Zap, Crown, FileDigit, ArrowRight, LayoutGrid, FileText, CheckCircle2, Tags, HelpCircle, Moon, Sun, ImagePlus, Palette, Eye, Sparkles } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Archive, PlayCircle, ChevronDown, Users, UserCog, Rocket, Zap, Crown, FileDigit, ArrowRight, LayoutGrid, FileText, CheckCircle2, Tags, HelpCircle, Moon, Sun, ImagePlus, Palette, Eye, Sparkles, SlidersHorizontal, RotateCcw } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
 import { ContentStatusesSection } from "./ContentStatusesSection";
 import { ClientCategoriesSection } from "./ClientCategoriesSection";
@@ -664,6 +664,7 @@ function GeneralSettings() {
             borderRadius={me.borderRadius ?? 12}
             heroGradientFrom={me.heroGradientFrom ?? null}
             heroGradientTo={me.heroGradientTo ?? null}
+            brandAdvancedColors={me.brandAdvancedColors ?? {}}
           />
         </CollapsibleSection>
       )}
@@ -1018,6 +1019,28 @@ function darkenHex(hex: string, ratio: number): string {
   return `#${mix(r)}${mix(g)}${mix(b)}`;
 }
 
+/** Fundo e texto do botão primário (modo avançado) formam um par — nunca
+ * faz sentido salvar só um lado customizado (a cor automática do outro lado
+ * pode ficar ilegível contra o valor escolhido). Se só um foi mexido,
+ * completa o outro com o padrão automático desse tema antes de salvar. */
+function normalizeButtonPairs(colors: BrandAdvancedColors, brandColor: string): BrandAdvancedColors {
+  const pair = colors.buttonBg || colors.buttonText;
+  if (!pair) return colors;
+  const fill = (theme: "light" | "dark") => {
+    const bg = colors.buttonBg?.[theme];
+    const text = colors.buttonText?.[theme];
+    if (!bg && !text) return { bg, text };
+    return { bg: bg ?? brandColor, text: text ?? "#0D0D0D" };
+  };
+  const light = fill("light");
+  const dark = fill("dark");
+  return {
+    ...colors,
+    buttonBg: { light: light.bg, dark: dark.bg },
+    buttonText: { light: light.text, dark: dark.text },
+  };
+}
+
 function ColorPickerField({ label, value, onChange, presets }: {
   label: string; value: string; onChange: (hex: string) => void; presets: string[];
 }) {
@@ -1072,6 +1095,186 @@ function HeroColorField({ label, value, fallback, onChange }: {
         )}
       </div>
     </Field>
+  );
+}
+
+/** Superfícies fixas de cada tema (não editáveis) usadas como fundo de
+ * referência nos previews e no cálculo de contraste do modo avançado. */
+const THEME_SURFACE = {
+  light: { background: "#F7F7F5", card: "#FFFFFF" },
+  dark: { background: "#0D0D0D", card: "#1C1C1C" },
+} as const;
+
+function ContrastNote({ ratio }: { ratio: number }) {
+  const { text, level } = contrastLabel(ratio);
+  const color = level === "bom" ? "#4ADE80" : level === "aceitavel" ? "#FBBF24" : "#FF6B6B";
+  return <span className="text-[10px] font-semibold" style={{ color }}>{text}</span>;
+}
+
+/** Um seletor de cor do modo avançado: mesma UX do HeroColorField (nulo =
+ * automático, "Automático" reseta), com um preview real da amostra de texto
+ * (ou o próprio swatch) sobre a superfície do tema e, quando `contrastWith`
+ * é passado, a taxa de contraste WCAG contra ela — só um aviso, nunca
+ * bloqueia a escolha. */
+function AdvColorField({ label, value, fallback, onChange, contrastWith, sampleBg, sampleText }: {
+  label: string; value: string | null | undefined; fallback: string; onChange: (hex: string | null) => void;
+  contrastWith?: string; sampleBg: string; sampleText?: string;
+}) {
+  const effective = value ?? fallback;
+  const [hexInput, setHexInput] = useState(effective);
+  useEffect(() => { setHexInput(effective); }, [effective]);
+  const ratio = contrastWith ? contrastRatio(effective, contrastWith) : null;
+
+  return (
+    <Field label={label}>
+      <div className="flex items-center gap-2">
+        <input type="color" value={isValidHex(hexInput) ? hexInput : effective}
+          onChange={(e) => { setHexInput(e.target.value); onChange(e.target.value); }}
+          className="lz-color-swatch h-8 w-8 rounded-md border border-foreground/10 shrink-0"
+          title="Escolher na roda de cores" />
+        <input value={hexInput} onChange={(e) => setHexInput(e.target.value)}
+          onBlur={() => { if (isValidHex(hexInput)) onChange(hexInput.trim()); else setHexInput(effective); }}
+          maxLength={7} className="lz-input font-mono" placeholder={fallback} />
+        {value != null && (
+          <button type="button" onClick={() => onChange(null)}
+            className="text-[10px] text-foreground/40 hover:text-foreground transition shrink-0 whitespace-nowrap">
+            Automático
+          </button>
+        )}
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5" style={{ backgroundColor: sampleBg }}>
+        <span className="text-[11px] font-semibold truncate" style={{ color: sampleText ?? effective }}>
+          Aa Exemplo de texto
+        </span>
+        {ratio != null && <ContrastNote ratio={ratio} />}
+      </div>
+    </Field>
+  );
+}
+
+type AdvPair = { light?: string | null; dark?: string | null } | undefined;
+
+/** Categoria de texto do modo avançado (título/corpo/secundário): um par
+ * claro/escuro, cada um com preview real sobre o card do próprio tema e
+ * aviso de contraste contra esse mesmo card. */
+function AdvancedTextGroup({ title, description, value, onChange, fallbackLight, fallbackDark }: {
+  title: string; description: string; value: AdvPair; onChange: (next: AdvPair) => void;
+  fallbackLight: string; fallbackDark: string;
+}) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold text-foreground/70 mb-0.5">{title}</div>
+      <p className="text-[10.5px] text-foreground/35 mb-2">{description}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <AdvColorField label="Tema claro" value={value?.light} fallback={fallbackLight}
+          onChange={(hex) => onChange({ ...value, light: hex })}
+          sampleBg={THEME_SURFACE.light.card} contrastWith={THEME_SURFACE.light.card} />
+        <AdvColorField label="Tema escuro" value={value?.dark} fallback={fallbackDark}
+          onChange={(hex) => onChange({ ...value, dark: hex })}
+          sampleBg={THEME_SURFACE.dark.card} contrastWith={THEME_SURFACE.dark.card} />
+      </div>
+    </div>
+  );
+}
+
+/** Fundo + texto do botão primário: sempre um par (nunca escolher um lado
+ * sem o outro — daí os dois campos ficarem lado a lado com UM preview de
+ * botão real e UMA taxa de contraste entre eles, por tema). */
+function AdvancedButtonGroup({ value, onChange, brandColor }: {
+  value: BrandAdvancedColors; onChange: (next: BrandAdvancedColors) => void; brandColor: string;
+}) {
+  function renderTheme(theme: "light" | "dark") {
+    const bg = value.buttonBg?.[theme] ?? brandColor;
+    const text = value.buttonText?.[theme] ?? "#0D0D0D";
+    const ratio = contrastRatio(bg, text);
+    return (
+      <div className="rounded-lg p-3" style={{ backgroundColor: THEME_SURFACE[theme].background }}>
+        <div className="text-[10px] uppercase tracking-wide text-foreground/40 mb-2">Tema {theme === "light" ? "claro" : "escuro"}</div>
+        <div className="grid grid-cols-2 gap-3">
+          <AdvColorField label="Fundo" value={value.buttonBg?.[theme]} fallback={brandColor}
+            onChange={(hex) => onChange({ ...value, buttonBg: { ...value.buttonBg, [theme]: hex } })}
+            sampleBg={THEME_SURFACE[theme].card} />
+          <AdvColorField label="Texto" value={value.buttonText?.[theme]} fallback="#0D0D0D"
+            onChange={(hex) => onChange({ ...value, buttonText: { ...value.buttonText, [theme]: hex } })}
+            sampleBg={THEME_SURFACE[theme].card} />
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <span className="inline-block text-[10.5px] font-extrabold px-3 py-1.5 rounded-md" style={{ backgroundColor: bg, color: text }}>
+            Botão principal
+          </span>
+          <ContrastNote ratio={ratio} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div className="text-[11px] font-semibold text-foreground/70 mb-0.5">Botões</div>
+      <p className="text-[10.5px] text-foreground/35 mb-2">Fundo e texto do botão principal — sempre juntos, pra nunca ficar ilegível.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {renderTheme("light")}
+        {renderTheme("dark")}
+      </div>
+    </div>
+  );
+}
+
+/** Destaque (accent ink): badges, ícones ativos, selo de nível. */
+function AdvancedAccentGroup({ value, onChange, brandColor }: {
+  value: AdvPair; onChange: (next: AdvPair) => void; brandColor: string;
+}) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold text-foreground/70 mb-0.5">Destaque</div>
+      <p className="text-[10.5px] text-foreground/35 mb-2">Badges, ícones ativos e selo de nível.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <AdvColorField label="Tema claro" value={value?.light} fallback={darkenHex(brandColor, 0.55)}
+          onChange={(hex) => onChange({ ...value, light: hex })}
+          sampleBg={THEME_SURFACE.light.card} contrastWith={THEME_SURFACE.light.card} />
+        <AdvColorField label="Tema escuro" value={value?.dark} fallback={brandColor}
+          onChange={(hex) => onChange({ ...value, dark: hex })}
+          sampleBg={THEME_SURFACE.dark.card} contrastWith={THEME_SURFACE.dark.card} />
+      </div>
+    </div>
+  );
+}
+
+/** Degradê do cabeçalho do Dashboard — decorativo (não é par cor+texto),
+ * por isso sem aviso de contraste, só o preview do degradê em si. */
+function AdvancedHeroGroup({ heroA, heroB, onChangeA, onChangeB, fallbackA, fallbackB }: {
+  heroA: AdvPair; heroB: AdvPair; onChangeA: (next: AdvPair) => void; onChangeB: (next: AdvPair) => void;
+  fallbackA: string; fallbackB: string;
+}) {
+  function renderTheme(theme: "light" | "dark") {
+    const a = heroA?.[theme] ?? fallbackA;
+    const b = heroB?.[theme] ?? fallbackB;
+    const aRgb = hexToRgbChannels(a) ?? "200, 212, 78";
+    const bRgb = hexToRgbChannels(b) ?? "17, 31, 92";
+    return (
+      <div className="rounded-lg p-3" style={{ backgroundColor: THEME_SURFACE[theme].background }}>
+        <div className="text-[10px] uppercase tracking-wide text-foreground/40 mb-2">Tema {theme === "light" ? "claro" : "escuro"}</div>
+        <div className="grid grid-cols-2 gap-3">
+          <AdvColorField label="Cor 1" value={heroA?.[theme]} fallback={fallbackA}
+            onChange={(hex) => onChangeA({ ...heroA, [theme]: hex })} sampleBg={THEME_SURFACE[theme].card} />
+          <AdvColorField label="Cor 2" value={heroB?.[theme]} fallback={fallbackB}
+            onChange={(hex) => onChangeB({ ...heroB, [theme]: hex })} sampleBg={THEME_SURFACE[theme].card} />
+        </div>
+        <div className="mt-2 h-10 rounded-md overflow-hidden" style={{
+          background: `radial-gradient(120% 140% at 0% 0%, rgba(${aRgb},0.35) 0%, transparent 70%), `
+            + `radial-gradient(80% 120% at 100% 100%, rgba(${bRgb},0.45) 0%, transparent 65%), ${THEME_SURFACE[theme].card}`,
+        }} />
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div className="text-[11px] font-semibold text-foreground/70 mb-0.5">Cabeçalho</div>
+      <p className="text-[10.5px] text-foreground/35 mb-2">Degradê do cabeçalho do Dashboard, por tema.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {renderTheme("light")}
+        {renderTheme("dark")}
+      </div>
+    </div>
   );
 }
 
@@ -1447,11 +1650,13 @@ function ClienteTab({ initialSub, canJourney, canMargem, isAdmin }: {
 function OrgBrandingSection({
   orgId, orgName, orgTagline, orgLogoUrl, orgLogoUrlLight, orgColorPrimary, orgColorPrimaryLight, orgColorSidebar,
   orgColorAccentLight, orgFeedPreviewImageUrl, orgPlanejamentoCoverImageUrl, orgFaviconUrl, borderRadius, heroGradientFrom, heroGradientTo,
+  brandAdvancedColors,
 }: {
   orgId: string; orgName: string; orgTagline: string | null; orgLogoUrl: string | null; orgLogoUrlLight: string | null;
   orgColorPrimary: string; orgColorPrimaryLight: string; orgColorSidebar: string; orgColorAccentLight: string | null;
   orgFeedPreviewImageUrl: string | null; orgPlanejamentoCoverImageUrl: string | null; orgFaviconUrl: string | null; borderRadius: number;
   heroGradientFrom: string | null; heroGradientTo: string | null;
+  brandAdvancedColors: BrandAdvancedColors;
 }) {
   const { updateMyOrg } = useApi();
   const [name, setName] = useState(orgName);
@@ -1469,6 +1674,10 @@ function OrgBrandingSection({
   const [radius, setRadius] = useState(borderRadius);
   const [heroFrom, setHeroFrom] = useState(heroGradientFrom);
   const [heroTo, setHeroTo] = useState(heroGradientTo);
+  const [advColors, setAdvColors] = useState<BrandAdvancedColors>(brandAdvancedColors);
+  // Começa aberto se a agência já tinha algum override salvo (senão ela
+  // "perderia" a customização de vista toda vez que reabrisse Configurações).
+  const [advancedMode, setAdvancedMode] = useState(() => Object.keys(brandAdvancedColors).length > 0);
   const [uploading, setUploading] = useState(false);
   const [uploadingLight, setUploadingLight] = useState(false);
   const [uploadingPreview, setUploadingPreview] = useState(false);
@@ -1485,6 +1694,7 @@ function OrgBrandingSection({
   useEffect(() => { setRadius(borderRadius); }, [borderRadius]);
   useEffect(() => { setHeroFrom(heroGradientFrom); }, [heroGradientFrom]);
   useEffect(() => { setHeroTo(heroGradientTo); }, [heroGradientTo]);
+  useEffect(() => { setAdvColors(brandAdvancedColors); }, [brandAdvancedColors]);
 
   // Pré-visualização ao vivo: enquanto essa seção está aberta, a barra
   // lateral e o resto da UI de verdade (não uma maquete à parte) refletem
@@ -1505,7 +1715,8 @@ function OrgBrandingSection({
     if (sidebar) root.setProperty("--lz-sidebar-rgb", sidebar);
     if (accentLight) root.setProperty("--lz-accent-ink-override", `rgb(${accentLight})`);
     else root.removeProperty("--lz-accent-ink-override");
-  }, [colorPrimary, colorPrimaryLight, colorSidebar, colorAccentLight]);
+    applyAdvancedColorVars(root, advColors);
+  }, [colorPrimary, colorPrimaryLight, colorSidebar, colorAccentLight, advColors]);
 
   // Guarda sempre os valores REALMENTE salvos (as props), pra restaurar
   // certo ao sair da seção sem salvar — sem isso, quem só desse uma olhada
@@ -1514,15 +1725,16 @@ function OrgBrandingSection({
   // desmontagem abaixo, que roda com um closure "congelado" no momento do
   // mount — sem a ref, ele restauraria pra cor salva de quando a tela abriu,
   // não pra mais recente (ex: depois de um Salvar bem-sucedido).
-  const savedColorsRef = useRef({ orgColorPrimary, orgColorPrimaryLight, orgColorSidebar, orgColorAccentLight });
+  const savedColorsRef = useRef({ orgColorPrimary, orgColorPrimaryLight, orgColorSidebar, orgColorAccentLight, brandAdvancedColors });
   useEffect(() => {
-    savedColorsRef.current = { orgColorPrimary, orgColorPrimaryLight, orgColorSidebar, orgColorAccentLight };
-  }, [orgColorPrimary, orgColorPrimaryLight, orgColorSidebar, orgColorAccentLight]);
+    savedColorsRef.current = { orgColorPrimary, orgColorPrimaryLight, orgColorSidebar, orgColorAccentLight, brandAdvancedColors };
+  }, [orgColorPrimary, orgColorPrimaryLight, orgColorSidebar, orgColorAccentLight, brandAdvancedColors]);
 
   useEffect(() => {
     return () => {
-      const { orgColorPrimary, orgColorPrimaryLight, orgColorSidebar, orgColorAccentLight } = savedColorsRef.current;
+      const { orgColorPrimary, orgColorPrimaryLight, orgColorSidebar, orgColorAccentLight, brandAdvancedColors } = savedColorsRef.current;
       const root = document.documentElement.style;
+      applyAdvancedColorVars(root, brandAdvancedColors);
       const primary = orgColorPrimary ? hexToRgbChannels(orgColorPrimary) : null;
       const lightHex = orgColorPrimaryLight && orgColorPrimaryLight !== "#C8D44E"
         ? orgColorPrimaryLight
@@ -1549,11 +1761,20 @@ function OrgBrandingSection({
         borderRadius: radius,
         heroGradientFrom: heroFrom || null,
         heroGradientTo: heroTo || null,
+        // Botão fundo+texto é sempre um par — se a agência só mexeu num
+        // lado, completa o outro com o padrão automático antes de salvar,
+        // pra nunca guardar uma combinação pela metade (uma cor de propósito
+        // + a antiga cor automática do outro lado, ilegível por acidente).
+        brandAdvancedColors: normalizeButtonPairs(advColors, colorPrimary),
       },
     }, {
       onSuccess: () => toast.success("Marca da agência atualizada."),
       onError: (e: any) => toastFriendlyError(e, "Erro ao salvar"),
     });
+  }
+
+  function restoreAdvancedColors() {
+    setAdvColors({});
   }
 
   async function pickLogo(e: React.ChangeEvent<HTMLInputElement>) {
@@ -1812,6 +2033,52 @@ function OrgBrandingSection({
             No modo claro, o gráfico do Dashboard e a linha de "Como estou indo?" escurecem a cor principal sozinhos
             pra manter contraste no fundo claro — a "Cor de destaque" acima escolhe a sua própria cor pra isso, se preferir.
           </p>
+        </div>
+
+        <div className="rounded-xl p-4 bg-black/20 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={advancedMode} onChange={(e) => setAdvancedMode(e.target.checked)} />
+              <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-foreground/60 font-semibold">
+                <SlidersHorizontal size={12} /> Modo avançado
+              </span>
+            </label>
+            {Object.keys(advColors).length > 0 && (
+              <button type="button" onClick={restoreAdvancedColors}
+                className="flex items-center gap-1 text-[10px] text-foreground/40 hover:text-foreground transition">
+                <RotateCcw size={10} /> Restaurar cores originais
+              </button>
+            )}
+          </div>
+          {advancedMode && (
+            <div className="space-y-5">
+              <p className="text-[11px] text-foreground/40 leading-relaxed">
+                Escolha cores específicas por tema pra título, corpo de texto, botões, destaque e cabeçalho.
+                Deixe em branco ("Automático") pra continuar usando o cálculo automático — que já garante contraste
+                mínimo sozinho. Aqui a escolha é sua: o aviso de contraste é só um alerta, nunca impede salvar.
+              </p>
+
+              <AdvancedTextGroup title="Título" description="Texto principal (nomes, cabeçalhos de card)."
+                value={advColors.textTitle} onChange={(v) => setAdvColors((p) => ({ ...p, textTitle: v }))}
+                fallbackLight="#16171B" fallbackDark="#FFFFFF" />
+              <AdvancedTextGroup title="Corpo" description="Texto de conteúdo dentro dos cards."
+                value={advColors.textBody} onChange={(v) => setAdvColors((p) => ({ ...p, textBody: v }))}
+                fallbackLight="#16171B" fallbackDark="#FFFFFF" />
+              <AdvancedTextGroup title="Secundário / esmaecido" description="Legendas, datas, texto de apoio."
+                value={advColors.textMuted} onChange={(v) => setAdvColors((p) => ({ ...p, textMuted: v }))}
+                fallbackLight="#7B7C7D" fallbackDark="#868686" />
+
+              <AdvancedButtonGroup value={advColors} onChange={setAdvColors} brandColor={colorPrimary} />
+
+              <AdvancedAccentGroup value={advColors.accentInk} onChange={(v) => setAdvColors((p) => ({ ...p, accentInk: v }))}
+                brandColor={colorPrimary} />
+
+              <AdvancedHeroGroup heroA={advColors.heroA} heroB={advColors.heroB}
+                onChangeA={(v) => setAdvColors((p) => ({ ...p, heroA: v }))}
+                onChangeB={(v) => setAdvColors((p) => ({ ...p, heroB: v }))}
+                fallbackA={colorPrimaryLight} fallbackB={colorSidebar} />
+            </div>
+          )}
         </div>
 
         {/* Pré-visualização ao vivo — logo depois das cores (é ali que a

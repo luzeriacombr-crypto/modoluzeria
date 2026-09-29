@@ -298,6 +298,14 @@ export interface Client {
   aiPlanningEnabled?: boolean;
 }
 
+/** Categorias expostas no "Modo avançado" de cores (Configurações → Marca
+ * da agência). Cada uma vira um par de tokens CSS (claro/escuro). */
+export const BRAND_ADVANCED_COLOR_KEYS = [
+  "textTitle", "textBody", "textMuted", "buttonBg", "buttonText", "accentInk", "heroA", "heroB",
+] as const;
+export type BrandAdvancedColorKey = typeof BRAND_ADVANCED_COLOR_KEYS[number];
+export type BrandAdvancedColors = Partial<Record<BrandAdvancedColorKey, { light?: string | null; dark?: string | null }>>;
+
 export type Role = "master" | "setor" | "member";
 
 export interface Profile {
@@ -341,6 +349,11 @@ export interface Profile {
    * definir isso deixa a agência escolher a cor final em vez do tom
    * derivado automaticamente. */
   orgColorAccentLight?: string | null;
+  /** Modo avançado de cores: overrides por categoria (título, corpo, texto
+   * secundário, botão fundo/texto, destaque, cabeçalho), cada um com um
+   * valor pro tema claro e um pro escuro — chave ausente ou tema ausente
+   * dentro dela = usa o cálculo automático (default do sistema de temas). */
+  brandAdvancedColors?: BrandAdvancedColors;
   /** Imagem própria da agência usada no og:image do link público de preview
    * de feed, ou null pra usar a imagem padrão do Modo Criador. */
   orgFeedPreviewImageUrl?: string | null;

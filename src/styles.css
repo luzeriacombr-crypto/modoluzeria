@@ -163,9 +163,16 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
    * dark to read as accent text, see readableAccentRgbChannels(). */
   --lz-brand-text-rgb: 200, 212, 78;
   /* Degradê do cabeçalho do Dashboard — mesmo par padrão (clara + barra
-   * lateral) que já era usado antes de virar escolhível. */
-  --lz-hero-a-rgb: 200, 212, 78;
-  --lz-hero-b-rgb: 17, 31, 92;
+   * lateral) que já era usado antes de virar escolhível. App.tsx seta
+   * --lz-hero-a-simple-rgb/--lz-hero-b-simple-rgb (modo simples, a partir de
+   * heroGradientFrom/To); --lz-hero-a-adv-dark-rgb/-b-adv-dark-rgb só
+   * existem quando a agência define um par próprio no modo avançado — daí
+   * ganham prioridade. Precisa ser assim (em vez de App.tsx setar
+   * --lz-hero-a-rgb direto) porque JS via inline style venceria qualquer
+   * fallback CSS na mesma propriedade, impedindo o .light abaixo de aplicar
+   * sua própria versão (--lz-brand-rgb) quando não há override algum. */
+  --lz-hero-a-rgb: var(--lz-hero-a-adv-dark-rgb, var(--lz-hero-a-simple-rgb, 200, 212, 78));
+  --lz-hero-b-rgb: var(--lz-hero-b-adv-dark-rgb, var(--lz-hero-b-simple-rgb, 17, 31, 92));
   --lz-hero-blob-b-rgb: var(--lz-hero-b-rgb);
   --lz-hero-bg:
     radial-gradient(120% 140% at 0% 0%, rgba(var(--lz-hero-a-rgb),0.18) 0%, color-mix(in srgb, rgb(var(--lz-hero-a-rgb)) 10%, transparent) 35%, transparent 70%),
@@ -185,20 +192,24 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
    * escuro, a marca (geralmente um tom vivo/claro) já lê bem direto. No
    * claro, o mesmo tom vivo quase some contra um fundo branco — aqui vira
    * uma versão escurecida da própria cor, só pra manter legibilidade. */
-  --lz-accent-ink: rgb(var(--lz-brand-rgb));
+  /* --lz-accent-ink-adv-dark só existe quando a agência escolhe uma cor
+   * própria pra essa categoria no modo avançado (setada por App.tsx). */
+  --lz-accent-ink: var(--lz-accent-ink-adv-dark, rgb(var(--lz-brand-rgb)));
   /* Luzeria palette */
   --background: #0D0D0D;
-  --foreground: #FFFFFF;
+  /* --lz-text-title-adv-dark / --lz-text-body-adv-dark / --lz-text-muted-adv-dark:
+   * overrides do modo avançado (App.tsx), ausentes por padrão. */
+  --foreground: var(--lz-text-title-adv-dark, #FFFFFF);
   --card: #1C1C1C;
-  --card-foreground: #FFFFFF;
+  --card-foreground: var(--lz-text-body-adv-dark, #FFFFFF);
   --popover: #1C1C1C;
   --popover-foreground: #FFFFFF;
-  --primary: rgb(var(--lz-brand-rgb));
-  --primary-foreground: #0D0D0D;
+  --primary: var(--lz-button-bg-adv-dark, rgb(var(--lz-brand-rgb)));
+  --primary-foreground: var(--lz-button-text-adv-dark, #0D0D0D);
   --secondary: #1C1C1C;
   --secondary-foreground: #FFFFFF;
   --muted: #1C1C1C;
-  --muted-foreground: rgba(255, 255, 255, 0.5);
+  --muted-foreground: var(--lz-text-muted-adv-dark, rgba(255, 255, 255, 0.5));
   --accent: rgb(var(--lz-brand-rgb));
   --accent-foreground: #0D0D0D;
   --destructive: #E5484D;
@@ -273,17 +284,20 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 .light {
   color-scheme: light;
   --background: #F7F7F5;
-  --foreground: #16171B;
+  /* --lz-text-*-adv-light / --lz-button-*-adv-light: overrides do modo
+   * avançado (App.tsx), ausentes por padrão — mesma ideia do --lz-accent-ink
+   * override logo abaixo. */
+  --foreground: var(--lz-text-title-adv-light, #16171B);
   --card: #FFFFFF;
-  --card-foreground: #16171B;
+  --card-foreground: var(--lz-text-body-adv-light, #16171B);
   --popover: #FFFFFF;
   --popover-foreground: #16171B;
-  --primary: rgb(var(--lz-brand-rgb));
-  --primary-foreground: #0D0D0D;
+  --primary: var(--lz-button-bg-adv-light, rgb(var(--lz-brand-rgb)));
+  --primary-foreground: var(--lz-button-text-adv-light, #0D0D0D);
   --secondary: #EFEFEC;
   --secondary-foreground: #16171B;
   --muted: #EFEFEC;
-  --muted-foreground: rgba(22, 23, 27, 0.55);
+  --muted-foreground: var(--lz-text-muted-adv-light, rgba(22, 23, 27, 0.55));
   --accent: rgb(var(--lz-brand-rgb));
   --accent-foreground: #0D0D0D;
   --destructive: #E5484D;
@@ -296,21 +310,25 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   --chart-3: #E07A2E;
   --chart-4: #8B5FC9;
   --chart-5: #4B5563;
-  --lz-accent-ink: color-mix(in srgb, var(--lz-accent-ink-override, rgb(var(--lz-brand-rgb))) 55%, black);
+  /* --lz-accent-ink-adv-light (modo avançado, cor exata escolhida pela
+   * agência) tem prioridade sobre o escurecimento automático abaixo. */
+  --lz-accent-ink: var(--lz-accent-ink-adv-light, color-mix(in srgb, var(--lz-accent-ink-override, rgb(var(--lz-brand-rgb))) 55%, black));
   --lz-hero-pill-bg: transparent;
   --lz-hero-badge-bg: transparent;
-  /* No claro, --lz-hero-a-rgb/--lz-hero-b-rgb podem ter sido customizadas
-   * pra tons escuros (pensados pro fundo escuro do cabeçalho no tema
-   * escuro) — usadas do jeito que estão, a 20% de opacidade sobre um
+  /* No claro, --lz-hero-a-rgb/--lz-hero-b-rgb (modo simples) podem ter sido
+   * customizadas pra tons escuros (pensados pro fundo escuro do cabeçalho
+   * no tema escuro) — usadas do jeito que estão, a 20% de opacidade sobre um
    * fundo claro, viram cinza (cor escura diluída = cinza, não "cor").
    * No claro usamos sempre --lz-brand-rgb (a cor viva de marca, a mesma
-   * do anel de progresso e dos botões) em vez disso. */
-  --lz-hero-blob-b-rgb: var(--lz-brand-rgb);
+   * do anel de progresso e dos botões) em vez disso — a menos que a agência
+   * tenha escolhido um par de cabeçalho próprio pro claro no modo avançado
+   * (--lz-hero-a-adv-light-rgb/-b-adv-light-rgb), que aí vence. */
+  --lz-hero-blob-b-rgb: var(--lz-hero-b-adv-light-rgb, var(--lz-brand-rgb));
   /* Raio bem mais apertado e preso à direita (55% de largura, ancorado em
    * 100% 50%): a esquerda fica 100% limpa (branco puro), só a direita
    * pega o tom de marca. */
   --lz-hero-bg:
-    radial-gradient(55% 130% at 100% 50%, rgba(var(--lz-brand-rgb),0.28) 0%, transparent 60%),
+    radial-gradient(55% 130% at 100% 50%, rgba(var(--lz-hero-a-adv-light-rgb, var(--lz-brand-rgb)),0.28) 0%, transparent 60%),
     var(--card);
   --lz-donut-stop1: color-mix(in srgb, var(--lz-accent-ink-override, rgb(var(--lz-brand-rgb))) 55%, black);
   --lz-donut-stop2: color-mix(in srgb, var(--lz-accent-ink-override, rgb(var(--lz-brand-light-rgb))) 55%, black);

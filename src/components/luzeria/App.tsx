@@ -49,7 +49,7 @@ import { CallInvitePicker } from "./CallInvitePicker";
 import { useScreenShareCall } from "@/hooks/use-screen-share-call";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { hexToRgbChannels, readableAccentRgbChannels, deriveSecondaryHex } from "@/lib/luzeria/utils";
+import { hexToRgbChannels, readableAccentRgbChannels, deriveSecondaryHex, applyAdvancedColorVars, clearAdvancedColorVars } from "@/lib/luzeria/utils";
 import { usePageActivityTracker } from "@/lib/luzeria/page-activity-tracker";
 
 export function App() {
@@ -146,22 +146,34 @@ export function App() {
     if (primary) root.setProperty("--lz-brand-rgb", primary);
     if (light) root.setProperty("--lz-brand-light-rgb", light);
     if (sidebar) root.setProperty("--lz-sidebar-rgb", sidebar);
-    if (heroA) root.setProperty("--lz-hero-a-rgb", heroA);
-    if (heroB) root.setProperty("--lz-hero-b-rgb", heroB);
+    // --lz-hero-a-simple-rgb/-b-simple-rgb (não --lz-hero-a-rgb/-b-rgb
+    // direto): styles.css compõe o valor final com var(--lz-hero-a-rgb,...)
+    // dando prioridade a um override do modo avançado quando existir — um
+    // inline style (aqui) sempre venceria qualquer fallback CSS se a gente
+    // setasse --lz-hero-a-rgb direto, quebrando essa prioridade.
+    if (heroA) root.setProperty("--lz-hero-a-simple-rgb", heroA);
+    if (heroB) root.setProperty("--lz-hero-b-simple-rgb", heroB);
     if (accentLight) root.setProperty("--lz-accent-ink-override", `rgb(${accentLight})`);
     else root.removeProperty("--lz-accent-ink-override");
     if (me.data?.borderRadius != null) root.setProperty("--lz-radius", `${me.data.borderRadius}px`);
+    // Modo avançado de cores: cada categoria tem um par claro/escuro
+    // (ver src/lib/luzeria/types.ts) — a CSS custom property vira
+    // --lz-<categoria>-adv-light / -dark, e o styles.css decide sozinho
+    // qual usar (escopo :root vs .light), então não precisa saber o tema
+    // ativo aqui, só espelhar os dados salvos.
+    applyAdvancedColorVars(root, me.data?.brandAdvancedColors ?? {});
     return () => {
       root.removeProperty("--lz-brand-rgb");
       root.removeProperty("--lz-brand-light-rgb");
       root.removeProperty("--lz-sidebar-rgb");
       root.removeProperty("--lz-brand-text-rgb");
-      root.removeProperty("--lz-hero-a-rgb");
-      root.removeProperty("--lz-hero-b-rgb");
+      root.removeProperty("--lz-hero-a-simple-rgb");
+      root.removeProperty("--lz-hero-b-simple-rgb");
       root.removeProperty("--lz-accent-ink-override");
       root.removeProperty("--lz-radius");
+      clearAdvancedColorVars(root);
     };
-  }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight, me.data?.orgColorSidebar, me.data?.orgColorAccentLight, me.data?.borderRadius, me.data?.heroGradientFrom, me.data?.heroGradientTo]);
+  }, [me.data?.orgId, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight, me.data?.orgColorSidebar, me.data?.orgColorAccentLight, me.data?.borderRadius, me.data?.heroGradientFrom, me.data?.heroGradientTo, me.data?.brandAdvancedColors]);
 
   // Same idea for the tab icon: swap the favicon + apple-touch-icon (used
   // when the client adds the app to their iOS home screen) whenever the org
