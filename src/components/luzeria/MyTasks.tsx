@@ -231,7 +231,7 @@ function RankBadge({ position }: { position: number }) {
         <Icon size={18} strokeWidth={2.2} />
       </button>
       {open && (
-        <span role="tooltip" className="absolute left-0 top-full mt-2 z-30 w-max max-w-[240px] rounded-xl px-3 py-2 text-[12.5px] font-semibold leading-snug shadow-2xl"
+        <span role="tooltip" className="absolute left-0 top-full mt-2 z-30 w-max max-w-[240px] whitespace-normal rounded-xl px-3 py-2 text-[12.5px] font-semibold leading-snug shadow-2xl"
           style={{ background: "#fff", color: "#0D0D0D" }}>
           {info.msg}
         </span>
@@ -265,7 +265,7 @@ function AgencyRankBadge({ rank, streakDays }: { rank: number; streakDays: numbe
       <button type="button" aria-label={msg} aria-expanded={open}
         onClick={() => setOpen((v) => !v)} onBlur={() => setOpen(false)}
         className="inline-flex items-center gap-1.5 rounded-full transition-transform hover:scale-105"
-        style={{ height: 34, padding: "0 11px 0 3px", background: `linear-gradient(180deg, ${bg}38, ${bg}14)`, boxShadow: `0 0 0 1px ${bg}55 inset` }}>
+        style={{ height: 34, padding: "0 11px 0 3px", background: `color-mix(in srgb, ${bg} 30%, white)`, boxShadow: `0 0 0 1px ${bg}55 inset` }}>
         <span className="relative flex items-center justify-center shrink-0" style={{ width: 26, height: 26 }}>
           {veteran && (
             <Flame size={13} className="absolute -top-1.5 -right-1.5 rounded-full p-[1px]" style={{ color: "#FF9B54", background: "#0D0D0D" }} />
@@ -275,10 +275,10 @@ function AgencyRankBadge({ rank, streakDays }: { rank: number; streakDays: numbe
             {rank}
           </span>
         </span>
-        <span className="text-[12.5px] font-extrabold whitespace-nowrap" style={{ color: `color-mix(in srgb, ${bg} 60%, var(--foreground))` }}>Agência Top {rank}</span>
+        <span className="text-[12.5px] font-extrabold whitespace-nowrap" style={{ color: text }}>Agência Top {rank}</span>
       </button>
       {open && (
-        <span role="tooltip" className="absolute left-0 top-full mt-2 z-30 w-max max-w-[240px] rounded-xl px-3 py-2 text-[12.5px] font-semibold leading-snug shadow-2xl"
+        <span role="tooltip" className="absolute left-0 top-full mt-2 z-30 w-max max-w-[240px] whitespace-normal rounded-xl px-3 py-2 text-[12.5px] font-semibold leading-snug shadow-2xl"
           style={{ background: "#fff", color: "#0D0D0D" }}>
           {msg}
         </span>
