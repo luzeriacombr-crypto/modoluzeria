@@ -240,42 +240,42 @@ function RankBadge({ position }: { position: number }) {
   );
 }
 
-/** Cores por faixa do selo de ranking ENTRE agências (Top 1-20, diferente do
+/** Cor por faixa do selo de ranking ENTRE agências (Top 1-20, diferente do
  * RankBadge acima que é o ranking pessoal dentro da própria agência). Top
  * 1/2/3 ganham a cor de medalha; 4-20 usam a mesma cor de marca que o resto
  * dos selos de "Nível" já usa hoje (AgencyLevelIcons), pra parecer familiar. */
 function agencyRankColor(rank: number) {
-  if (rank === 1) return { bg: "#E8B93F", text: "#3A2A05" };
-  if (rank === 2) return { bg: "#C7CBD1", text: "#33363B" };
-  if (rank === 3) return { bg: "#C97B4A", text: "#3A2005" };
-  return { bg: "#C8D44E", text: "#0D0D0D" };
+  if (rank === 1) return "#E8B93F"; // ouro
+  if (rank === 2) return "#C7CBD1"; // prata
+  if (rank === 3) return "#C97B4A"; // bronze
+  return "#C8D44E"; // padrão (4º-20º)
 }
 
-/** Selo "Agência Top N" — posição da AGÊNCIA (não da pessoa) entre todas as
- * agências do Modo Criador, calculado 1x por dia (agency-rank.functions.ts).
- * Empilhado ao lado do RankBadge pessoal na saudação, a pedido do Junior. */
+/** Selo "Top N" — posição da AGÊNCIA (não da pessoa) entre todas as agências
+ * do Modo Criador, calculado 1x por dia (agency-rank.functions.ts). Empilhado
+ * ao lado do RankBadge pessoal na saudação. Estilo "contorno" (v2, a pedido
+ * do Junior — a versão anterior com círculo em degradê "ficou feia/paia").
+ * A cor crua (bg) só lê bem como contorno/texto no escuro; no claro ela
+ * precisa escurecer — mesmo esquema já usado no texto da v1, agora também
+ * no contorno e no ícone (currentColor cobre os dois de uma vez). */
 function AgencyRankBadge({ rank, streakDays }: { rank: number; streakDays: number }) {
   const [open, setOpen] = useState(false);
   const veteran = streakDays >= 7;
-  const { bg, text } = agencyRankColor(rank);
+  const bg = agencyRankColor(rank);
+  const ink = `color-mix(in srgb, ${bg} 60%, var(--foreground))`;
   const msg = `Sua agência está em ${rank}º lugar entre as agências que mais usam o Modo Criador!${veteran ? ` Já são ${streakDays} dias seguidos no Top 20.` : ""}`;
   return (
     <span className="relative inline-flex align-middle ml-2"
       onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       <button type="button" aria-label={msg} aria-expanded={open}
         onClick={() => setOpen((v) => !v)} onBlur={() => setOpen(false)}
-        className="inline-flex items-center gap-1.5 rounded-full transition-transform hover:scale-105"
-        style={{ height: 34, padding: "0 11px 0 3px", background: `color-mix(in srgb, ${bg} 30%, white)`, boxShadow: `0 0 0 1px ${bg}55 inset` }}>
-        <span className="relative flex items-center justify-center shrink-0" style={{ width: 26, height: 26 }}>
-          {veteran && (
-            <Flame size={13} className="absolute -top-1.5 -right-1.5 rounded-full p-[1px]" style={{ color: "#FF9B54", background: "#0D0D0D" }} />
-          )}
-          <span className="flex items-center justify-center rounded-full text-[11px] font-extrabold"
-            style={{ width: 26, height: 26, background: `radial-gradient(circle at 32% 28%, color-mix(in srgb, ${bg} 55%, white), ${bg} 60%, color-mix(in srgb, ${bg} 70%, black))`, color: text }}>
-            {rank}
-          </span>
-        </span>
-        <span className="text-[12.5px] font-extrabold whitespace-nowrap" style={{ color: text }}>Agência Top {rank}</span>
+        className="inline-flex items-center gap-[5px] rounded-full transition-transform hover:scale-105 whitespace-nowrap"
+        style={{ height: 26, padding: "0 10px", border: `1.5px solid ${ink}`, color: ink }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8L6 21l1.6-7L2.2 9.2l7.1-.6L12 2z" />
+        </svg>
+        <span className="text-[12.5px] font-bold">Top {rank}</span>
+        {veteran && <Flame size={11} style={{ color: "#FF9B54" }} />}
       </button>
       {open && (
         <span role="tooltip" className="absolute left-0 top-full mt-2 z-30 w-max max-w-[240px] whitespace-normal rounded-xl px-3 py-2 text-[12.5px] font-semibold leading-snug shadow-2xl"
