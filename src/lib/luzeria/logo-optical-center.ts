@@ -22,7 +22,7 @@ function symmetricFallback(containerWidth: number, minMargin: number): OpticalBo
   return { width: Math.max(0, containerWidth - minMargin * 2), marginLeft: minMargin };
 }
 
-async function computeOpticalBox(url: string, containerWidth: number, minMargin: number): Promise<OpticalBox> {
+async function computeOpticalBox(url: string, containerWidth: number, minMargin: number, maxHeight: number): Promise<OpticalBox> {
   const resp = await fetch(url);
   if (!resp.ok) throw new Error("Falha ao buscar a logo");
   const blob = await resp.blob();
@@ -58,7 +58,20 @@ async function computeOpticalBox(url: string, containerWidth: number, minMargin:
   // usamos o menor dos dois (o lado mais "apertado" manda).
   const boundLeft = centroidX > 0 ? ((center - minMargin) * W) / centroidX : Infinity;
   const boundRight = W - centroidX > 0 ? ((center - minMargin) * W) / (W - centroidX) : Infinity;
-  const width = Math.max(0, Math.min(boundLeft, boundRight, containerWidth - minMargin * 2));
+  let width = Math.max(0, Math.min(boundLeft, boundRight, containerWidth - minMargin * 2));
+
+  // Rede de segurança: uma logo quadrada é bem-vinda (fica grande de
+  // propósito, ver comentário na Sidebar), mas algumas agências sobem um
+  // arquivo tipo template de Stories (retrato, ex: 1080×1920) como "logo" —
+  // sem esse teto, a altura calculada a partir da largura ficaria enorme
+  // (centenas de px) e quebraria o layout da sidebar. Com o teto, o lado
+  // que manda passa a ser a altura: a largura é recalculada a partir dele,
+  // e a margem também precisa ser recalculada (largura menor = mais folga).
+  const height = width * (H / W);
+  if (height > maxHeight) {
+    width = maxHeight * (W / H);
+  }
+
   const scale = width / W;
   const marginLeft = center - centroidX * scale;
 
@@ -68,7 +81,7 @@ async function computeOpticalBox(url: string, containerWidth: number, minMargin:
 /** `url` já deve ser a URL final (assinada) da logo. A parte antes de "?" é
  * usada como chave de cache — URLs assinadas trocam o token a cada
  * re-fetch, mas o arquivo (e portanto o cálculo) continua o mesmo. */
-export function useLogoOpticalBox(url: string | null | undefined, containerWidth: number, minMargin: number): OpticalBox {
+export function useLogoOpticalBox(url: string | null | undefined, containerWidth: number, minMargin: number, maxHeight: number): OpticalBox {
   const key = url ? url.split("?")[0] : null;
   const fallback = symmetricFallback(containerWidth, minMargin);
   const [box, setBox] = useState<OpticalBox>(() => (key && cache.has(key) ? cache.get(key)! : fallback));
@@ -78,13 +91,13 @@ export function useLogoOpticalBox(url: string | null | undefined, containerWidth
     const cached = cache.get(key);
     if (cached) { setBox(cached); return; }
     let cancelled = false;
-    const promise = inflight.get(key) ?? computeOpticalBox(url, containerWidth, minMargin)
+    const promise = inflight.get(key) ?? computeOpticalBox(url, containerWidth, minMargin, maxHeight)
       .catch(() => symmetricFallback(containerWidth, minMargin))
       .then((result) => { cache.set(key, result); inflight.delete(key); return result; });
     inflight.set(key, promise);
     promise.then((result) => { if (!cancelled) setBox(result); });
     return () => { cancelled = true; };
-  }, [url, key, containerWidth, minMargin]);
+  }, [url, key, containerWidth, minMargin, maxHeight]);
 
   return key ? box : fallback;
 }

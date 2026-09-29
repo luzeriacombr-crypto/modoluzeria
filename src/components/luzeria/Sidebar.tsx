@@ -52,8 +52,10 @@ export function Sidebar({
 }: { collapsed?: boolean; onOpenCustomFields: (c: Client) => void; onCreateClient: (category?: string) => void }) {
   const me = useMe().data;
   // 240 = w-[240px] da aside (só importa quando expandida, que é quando a
-  // logo aparece); 20 = margem mínima de segurança dos dois lados.
-  const logoBox = useLogoOpticalBox(me?.orgLogoUrl, 240, 20);
+  // logo aparece); 20 = margem mínima de segurança dos dois lados; 130 =
+  // teto de altura (rede de segurança pra logo enviada com proporção
+  // muito vertical, ex: template de Stories — ver comentário no hook).
+  const logoBox = useLogoOpticalBox(me?.orgLogoUrl, 240, 20, 130);
   const { data: levelInputs } = useQuery({ ...myAgencyLevelInputsQO(), enabled: !!me && !(me?.disabledFeatures ?? []).includes("agency_levels") });
   const { data: clients = [], isLoading: clientsLoading, isError: clientsError, error: clientsErrObj } = useQuery(clientsQO());
   const { data: customCategories = [] } = useQuery(clientCategoriesQO());
