@@ -43,7 +43,7 @@ import { Route as ContratoTokenRouteImport } from './routes/contrato.$token'
 import { Route as ConectarInstagramTokenRouteImport } from './routes/conectar-instagram.$token'
 import { Route as CampanhaTokenRouteImport } from './routes/campanha.$token'
 import { Route as BlogSlugRouteImport } from './routes/blog_.$slug'
-import { Route as AssinarCompletarRouteImport } from './routes/assinar.completar'
+import { Route as AssinarCompletarRouteImport } from './routes/assinar_.completar'
 import { Route as ApiPublicDriveFileRouteImport } from './routes/api.public-drive-file'
 import { Route as ApiMcpRouteImport } from './routes/api.mcp'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
@@ -260,9 +260,9 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssinarCompletarRoute = AssinarCompletarRouteImport.update({
-  id: '/completar',
-  path: '/completar',
-  getParentRoute: () => AssinarRoute,
+  id: '/assinar_/completar',
+  path: '/assinar/completar',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicDriveFileRoute = ApiPublicDriveFileRouteImport.update({
   id: '/api/public-drive-file',
@@ -484,7 +484,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/afiliar': typeof AfiliarRoute
   '/aprovacao-de-conteudo-por-link': typeof AprovacaoDeConteudoPorLinkRoute
-  '/assinar': typeof AssinarRouteWithChildren
+  '/assinar': typeof AssinarRoute
   '/assinatura-eletronica-de-contratos': typeof AssinaturaEletronicaDeContratosRoute
   '/auth': typeof AuthRoute
   '/backup-automatico-drive': typeof BackupAutomaticoDriveRoute
@@ -559,7 +559,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/afiliar': typeof AfiliarRoute
   '/aprovacao-de-conteudo-por-link': typeof AprovacaoDeConteudoPorLinkRoute
-  '/assinar': typeof AssinarRouteWithChildren
+  '/assinar': typeof AssinarRoute
   '/assinatura-eletronica-de-contratos': typeof AssinaturaEletronicaDeContratosRoute
   '/auth': typeof AuthRoute
   '/backup-automatico-drive': typeof BackupAutomaticoDriveRoute
@@ -636,7 +636,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/afiliar': typeof AfiliarRoute
   '/aprovacao-de-conteudo-por-link': typeof AprovacaoDeConteudoPorLinkRoute
-  '/assinar': typeof AssinarRouteWithChildren
+  '/assinar': typeof AssinarRoute
   '/assinatura-eletronica-de-contratos': typeof AssinaturaEletronicaDeContratosRoute
   '/auth': typeof AuthRoute
   '/backup-automatico-drive': typeof BackupAutomaticoDriveRoute
@@ -670,7 +670,7 @@ export interface FileRoutesById {
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/api/mcp': typeof ApiMcpRoute
   '/api/public-drive-file': typeof ApiPublicDriveFileRoute
-  '/assinar/completar': typeof AssinarCompletarRoute
+  '/assinar_/completar': typeof AssinarCompletarRoute
   '/blog_/$slug': typeof BlogSlugRoute
   '/campanha/$token': typeof CampanhaTokenRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
@@ -898,7 +898,7 @@ export interface FileRouteTypes {
     | '/_authenticated/vendas'
     | '/api/mcp'
     | '/api/public-drive-file'
-    | '/assinar/completar'
+    | '/assinar_/completar'
     | '/blog_/$slug'
     | '/campanha/$token'
     | '/conectar-instagram/$token'
@@ -941,7 +941,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AfiliarRoute: typeof AfiliarRoute
   AprovacaoDeConteudoPorLinkRoute: typeof AprovacaoDeConteudoPorLinkRoute
-  AssinarRoute: typeof AssinarRouteWithChildren
+  AssinarRoute: typeof AssinarRoute
   AssinaturaEletronicaDeContratosRoute: typeof AssinaturaEletronicaDeContratosRoute
   AuthRoute: typeof AuthRoute
   BackupAutomaticoDriveRoute: typeof BackupAutomaticoDriveRoute
@@ -962,6 +962,7 @@ export interface RootRouteChildren {
   TermosRoute: typeof TermosRoute
   ApiMcpRoute: typeof ApiMcpRoute
   ApiPublicDriveFileRoute: typeof ApiPublicDriveFileRoute
+  AssinarCompletarRoute: typeof AssinarCompletarRoute
   BlogSlugRoute: typeof BlogSlugRoute
   CampanhaTokenRoute: typeof CampanhaTokenRoute
   ConectarInstagramTokenRoute: typeof ConectarInstagramTokenRoute
@@ -1230,12 +1231,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/assinar/completar': {
-      id: '/assinar/completar'
-      path: '/completar'
+    '/assinar_/completar': {
+      id: '/assinar_/completar'
+      path: '/assinar/completar'
       fullPath: '/assinar/completar'
       preLoaderRoute: typeof AssinarCompletarRouteImport
-      parentRoute: typeof AssinarRoute
+      parentRoute: typeof rootRouteImport
     }
     '/api/public-drive-file': {
       id: '/api/public-drive-file'
@@ -1571,23 +1572,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
-interface AssinarRouteChildren {
-  AssinarCompletarRoute: typeof AssinarCompletarRoute
-}
-
-const AssinarRouteChildren: AssinarRouteChildren = {
-  AssinarCompletarRoute: AssinarCompletarRoute,
-}
-
-const AssinarRouteWithChildren =
-  AssinarRoute._addFileChildren(AssinarRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AfiliarRoute: AfiliarRoute,
   AprovacaoDeConteudoPorLinkRoute: AprovacaoDeConteudoPorLinkRoute,
-  AssinarRoute: AssinarRouteWithChildren,
+  AssinarRoute: AssinarRoute,
   AssinaturaEletronicaDeContratosRoute: AssinaturaEletronicaDeContratosRoute,
   AuthRoute: AuthRoute,
   BackupAutomaticoDriveRoute: BackupAutomaticoDriveRoute,
@@ -1608,6 +1598,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermosRoute: TermosRoute,
   ApiMcpRoute: ApiMcpRoute,
   ApiPublicDriveFileRoute: ApiPublicDriveFileRoute,
+  AssinarCompletarRoute: AssinarCompletarRoute,
   BlogSlugRoute: BlogSlugRoute,
   CampanhaTokenRoute: CampanhaTokenRoute,
   ConectarInstagramTokenRoute: ConectarInstagramTokenRoute,

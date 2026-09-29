@@ -6,7 +6,7 @@ import { completeGoogleSignup } from "@/lib/luzeria/signup.functions";
 import { Check, Lock } from "lucide-react";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 
-export const Route = createFileRoute("/assinar/completar")({
+export const Route = createFileRoute("/assinar_/completar")({
   component: CompleteGoogleSignupPage,
   ssr: false,
 });
