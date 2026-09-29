@@ -118,6 +118,29 @@ export function App() {
     }
   }, [me.data?.orgName]);
 
+  // Efeito sonoro na primeira vez que abre o Modo Criador no dia (pedido do
+  // Junior — tipo o "tudum" da Netflix). 1x por dia por NAVEGADOR
+  // (localStorage), não por conta — trocar de aparelho/navegador toca de
+  // novo, e é isso mesmo. Só marca como "tocado hoje" depois que o play()
+  // realmente resolve: autoplay de áudio pode ser bloqueado pelo navegador
+  // se a aba ainda não teve nenhuma interação — nesse caso a flag não é
+  // gravada, e ele tenta nesse mesmo dia de novo na próxima navegação.
+  useEffect(() => {
+    if (!me.data?.id) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const key = "lz.lastDailySoundDate";
+    try {
+      if (localStorage.getItem(key) === today) return;
+    } catch {
+      return;
+    }
+    const audio = new Audio("/sounds/daily-welcome.mp3");
+    audio.volume = 0.6;
+    audio.play()
+      .then(() => { try { localStorage.setItem(key, today); } catch { /* noop */ } })
+      .catch(() => { /* autoplay bloqueado — tenta de novo na próxima navegação do dia */ });
+  }, [me.data?.id]);
+
   // Same idea for the brand colors: override the CSS variables (which
   // default to Luzeria's green in styles.css) whenever the org has custom
   // colors saved — including Luzeria's own org, once it sets any.
