@@ -59,6 +59,7 @@ import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authentic
 import { Route as AuthenticatedBibliotecaRouteImport } from './routes/_authenticated/biblioteca'
 import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/ajuda'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as ApiWhatsappWebhookRouteImport } from './routes/api.whatsapp.webhook'
 import { Route as ApiSelecaoOgTokenRouteImport } from './routes/api.selecao-og.$token'
 import { Route as ApiIgMediaTokenRouteImport } from './routes/api.ig-media.$token'
 import { Route as ApiCronSnapshotInstagramFollowersRouteImport } from './routes/api.cron.snapshot-instagram-followers'
@@ -343,6 +344,11 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiWhatsappWebhookRoute = ApiWhatsappWebhookRouteImport.update({
+  id: '/api/whatsapp/webhook',
+  path: '/api/whatsapp/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSelecaoOgTokenRoute = ApiSelecaoOgTokenRouteImport.update({
   id: '/api/selecao-og/$token',
   path: '/api/selecao-og/$token',
@@ -553,6 +559,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/snapshot-instagram-followers': typeof ApiCronSnapshotInstagramFollowersRoute
   '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
+  '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
   '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
 }
 export interface FileRoutesByTo {
@@ -628,6 +635,7 @@ export interface FileRoutesByTo {
   '/api/cron/snapshot-instagram-followers': typeof ApiCronSnapshotInstagramFollowersRoute
   '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
+  '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
   '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
 }
 export interface FileRoutesById {
@@ -705,6 +713,7 @@ export interface FileRoutesById {
   '/api/cron/snapshot-instagram-followers': typeof ApiCronSnapshotInstagramFollowersRoute
   '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
+  '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
   '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
 }
 export interface FileRouteTypes {
@@ -782,6 +791,7 @@ export interface FileRouteTypes {
     | '/api/cron/snapshot-instagram-followers'
     | '/api/ig-media/$token'
     | '/api/selecao-og/$token'
+    | '/api/whatsapp/webhook'
     | '/api/selecao-download/$token/$fileId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -857,6 +867,7 @@ export interface FileRouteTypes {
     | '/api/cron/snapshot-instagram-followers'
     | '/api/ig-media/$token'
     | '/api/selecao-og/$token'
+    | '/api/whatsapp/webhook'
     | '/api/selecao-download/$token/$fileId'
   id:
     | '__root__'
@@ -933,6 +944,7 @@ export interface FileRouteTypes {
     | '/api/cron/snapshot-instagram-followers'
     | '/api/ig-media/$token'
     | '/api/selecao-og/$token'
+    | '/api/whatsapp/webhook'
     | '/api/selecao-download/$token/$fileId'
   fileRoutesById: FileRoutesById
 }
@@ -988,6 +1000,7 @@ export interface RootRouteChildren {
   ApiCronSnapshotInstagramFollowersRoute: typeof ApiCronSnapshotInstagramFollowersRoute
   ApiIgMediaTokenRoute: typeof ApiIgMediaTokenRoute
   ApiSelecaoOgTokenRoute: typeof ApiSelecaoOgTokenRoute
+  ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
   ApiSelecaoDownloadTokenFileIdRoute: typeof ApiSelecaoDownloadTokenFileIdRoute
 }
 
@@ -1343,6 +1356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/whatsapp/webhook': {
+      id: '/api/whatsapp/webhook'
+      path: '/api/whatsapp/webhook'
+      fullPath: '/api/whatsapp/webhook'
+      preLoaderRoute: typeof ApiWhatsappWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/selecao-og/$token': {
       id: '/api/selecao-og/$token'
       path: '/api/selecao-og/$token'
@@ -1625,6 +1645,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiCronSnapshotInstagramFollowersRoute,
   ApiIgMediaTokenRoute: ApiIgMediaTokenRoute,
   ApiSelecaoOgTokenRoute: ApiSelecaoOgTokenRoute,
+  ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
   ApiSelecaoDownloadTokenFileIdRoute: ApiSelecaoDownloadTokenFileIdRoute,
 }
 export const routeTree = rootRouteImport

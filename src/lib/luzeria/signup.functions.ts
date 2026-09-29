@@ -20,6 +20,23 @@ const whatsappSchema = z.string()
   .refine((v) => /^[1-9][0-9]\d{8,9}$/.test(v), "WhatsApp inválido. Informe DDD + número, ex: 11987654321.")
   .transform((v) => `55${v}`);
 
+/** Boas-vindas no WhatsApp de quem acabou de cadastrar a agência (modelo
+ * aprovado na Meta, ver whatsapp.server.ts). Best-effort, igual ao e-mail:
+ * roda só depois do cadastro dar certo e nunca derruba o signup. */
+async function sendWelcomeWhatsapp(params: { orgId: string; whatsapp: string; ownerName: string; agencyName: string }) {
+  try {
+    const wa = await import("./whatsapp.server");
+    if (!wa.whatsappConfigured()) return;
+    const firstName = params.ownerName.split(" ")[0] || params.ownerName;
+    const r = await wa.sendTemplate(params.whatsapp, wa.WA_TEMPLATES.welcome, [firstName, params.agencyName], {
+      kind: "welcome", orgId: params.orgId,
+    });
+    if (!r.ok) console.error("Falha ao enviar boas-vindas no WhatsApp:", r.error);
+  } catch (e) {
+    console.error("Falha ao enviar boas-vindas no WhatsApp:", e);
+  }
+}
+
 /** Avisa o Junior (sino + e-mail) quando uma agência nova se cadastra
  * sozinha pelo /assinar — mesmo padrão de requestDemo em
  * demo-request.functions.ts. Best-effort: nunca derruba o signup, que já
@@ -276,6 +293,7 @@ export const publicSignup = createServerFn({ method: "POST" })
         .eq("id", org.id);
 
       await notifyNewAgencySignup(supabaseAdmin, { agencyName: data.agencyName.trim(), ownerName: data.name.trim(), ownerEmail: data.email });
+      await sendWelcomeWhatsapp({ orgId: org.id, whatsapp: data.whatsapp, ownerName: data.name.trim(), agencyName: data.agencyName.trim() });
 
       return { invoiceUrl };
     } catch (e) {
@@ -477,6 +495,7 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
       if (roleErr) throw new Error(roleErr.message);
 
       await notifyNewAgencySignup(supabaseAdmin, { agencyName: data.agencyName.trim(), ownerName: data.name.trim(), ownerEmail: email });
+      await sendWelcomeWhatsapp({ orgId: org.id, whatsapp: data.whatsapp, ownerName: data.name.trim(), agencyName: data.agencyName.trim() });
 
       return { invoiceUrl };
     } catch (e) {

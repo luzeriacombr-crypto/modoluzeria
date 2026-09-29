@@ -6,6 +6,7 @@ import { MessageSquare, ChevronDown, Loader2, Mail, Phone, ExternalLink, Sparkle
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { listInactiveOrgsForReengagement, sendReengagementEmails, getReengagementWhatsappLinks, getMessageTemplateOverrides, saveMessageTemplate } from "@/lib/luzeria/reengagement.functions";
 import type { InactiveOrgRow, MessageTemplateKey } from "@/lib/luzeria/reengagement.functions";
+import { WhatsappCampaignSender } from "./WhatsappCampaignSender";
 
 function formatDate(iso: string | null) {
   if (!iso) return "Nunca";
@@ -345,6 +346,10 @@ export function MessagesPanel({ openPreset, onConsumeOpenPreset }: { openPreset?
                   {genWaLinks.isPending ? <Loader2 size={14} className="animate-spin" /> : <Phone size={14} />}
                   Gerar links de WhatsApp ({selectedIds.length})
                 </button>
+              </div>
+
+              <div className="mt-3">
+                <WhatsappCampaignSender selectedIds={selectedIds} defaultText={body.replace(/^Oi[^\n]*\n+/, "").replaceAll("{nome}", "").replaceAll("{clientes}", "seus clientes")} />
               </div>
             </div>
           )}

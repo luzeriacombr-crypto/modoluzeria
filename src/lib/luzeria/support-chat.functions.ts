@@ -35,6 +35,17 @@ export const getMySupportThread = createServerFn({ method: "GET" })
     };
   });
 
+/** Alerta no WhatsApp pessoal do Junior (best-effort, nunca derruba o chat).
+ * A resposta dele pelo WhatsApp volta pra essa mesma conversa. */
+async function alertAdminOnWhatsapp(threadId: string, orgId: string, label: string, message: string) {
+  try {
+    const { alertAdmin } = await import("./whatsapp.server");
+    await alertAdmin({ label, message, orgId, supportThreadId: threadId });
+  } catch (e) {
+    console.error("[sendSupportMessage] falha ao alertar no WhatsApp:", e);
+  }
+}
+
 /** Prefixo interno que o modelo usa pra sinalizar "não sei responder /
  * pediram uma pessoa" — nunca chega até o usuário (removido antes de
  * gravar a mensagem). */
@@ -78,6 +89,13 @@ export const sendSupportMessage = createServerFn({ method: "POST" })
     // conversa (evita a IA "atropelar" a resposta dele).
     if (threadStatus === "escalated") {
       await db.from("support_threads").update({ updated_at: new Date().toISOString() }).eq("id", threadId);
+      // Mensagem nova numa conversa que já está com ele: avisa no WhatsApp
+      // também, pra ele poder responder de lá.
+      const [{ data: p }, { data: o }] = await Promise.all([
+        db.from("profiles").select("name").eq("id", context.userId).maybeSingle(),
+        db.from("orgs").select("name").eq("id", context.orgId).maybeSingle(),
+      ]);
+      await alertAdminOnWhatsapp(threadId, context.orgId, `${p?.name ?? "Alguém"} (${o?.name ?? "agência"})`, data.text);
       return { threadId, escalated: true, reply: null };
     }
 
@@ -183,6 +201,7 @@ export const sendSupportMessage = createServerFn({ method: "POST" })
       } catch (e) {
         console.error("[sendSupportMessage] falha ao mandar e-mail de escalonamento:", e);
       }
+      await alertAdminOnWhatsapp(threadId, context.orgId, `${profile?.name ?? "Alguém"} (${org?.name ?? "agência"})`, data.text);
     }
 
     return { threadId, escalated: escalate, reply: replyText };
@@ -232,29 +251,10 @@ export const replyToSupportThread = createServerFn({ method: "POST" })
     z.object({ threadId: z.string().uuid(), text: z.string().trim().min(1).max(2000) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context.supabase, context.orgId, context.userId);
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const admin = supabaseAdmin as any;
-    const { data: thread } = await admin
-      .from("support_threads").select("id, user_id").eq("id", data.threadId).maybeSingle();
-    if (!thread) throw new Error("Conversa não encontrada.");
-
-    // Reply e mudança de status usam o client admin — quem responde (o
-    // Junior) não é o dono da thread, então a RLS normal não libera.
-    const { error: insErr } = await admin
-      .from("support_messages").insert({ thread_id: data.threadId, role: "admin", content: data.text });
-    if (insErr) throw new Error(insErr.message);
-
-    await admin
-      .from("support_threads").update({ updated_at: new Date().toISOString() }).eq("id", data.threadId);
-
-    const { error: notifErr } = await admin.from("notifications").insert({
-      user_id: thread.user_id,
-      type: "support_chat_reply",
-      message: "Você tem uma resposta nova no Chat do Modo Criador.",
-    });
-    if (notifErr) console.error("[replyToSupportThread] falha ao notificar usuário:", notifErr);
-
+    // Mesma entrega usada quando o Junior responde direto pelo WhatsApp
+    // (app + notificação + WhatsApp da agência) — ver support-reply.server.ts.
+    const { deliverSupportReply } = await import("./support-reply.server");
+    await deliverSupportReply(data.threadId, data.text);
     return { ok: true };
   });
 

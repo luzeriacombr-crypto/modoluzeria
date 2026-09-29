@@ -79,6 +79,20 @@ export const reportBug = createServerFn({ method: "POST" })
       console.error("[reportBug] failed to send notification email:", e);
     }
 
+    // Alerta no WhatsApp do Junior também. Se a pessoa deixou o WhatsApp
+    // dela, a resposta que ele der no WhatsApp vai direto pra esse número.
+    try {
+      const { alertAdmin } = await import("./whatsapp.server");
+      await alertAdmin({
+        label: `${data.kind === "suggestion" ? "Sugestão" : "Erro"} de ${profile?.name ?? "alguém"} (${org?.name ?? "agência"})`,
+        message: data.message,
+        orgId: context.orgId,
+        replyToPhone: data.whatsapp?.trim() || null,
+      });
+    } catch (e) {
+      console.error("[reportBug] falha ao alertar no WhatsApp:", e);
+    }
+
     return { ok: true };
   });
 
