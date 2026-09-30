@@ -31,6 +31,20 @@ function currentMonthKeyBR(): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+/** Busca todas as linhas de uma consulta, de 1000 em 1000 — o Supabase
+ * devolve no máximo 1000 por vez, e somas do histórico inteiro (carteira,
+ * gráfico) saíam erradas sem aviso quando a agência passava disso. */
+async function fetchAllRows(build: () => any): Promise<any[]> {
+  const PAGE = 1000;
+  const all: any[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build().range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    all.push(...(data ?? []));
+    if (!data || data.length < PAGE) return all;
+  }
+}
+
 type EntryPayment = { month_key: string; paid_at: string };
 
 async function listEntryPayments(supabase: any, entryId: string): Promise<EntryPayment[]> {
@@ -332,27 +346,25 @@ export const getWalletBalance = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }): Promise<{ balanceCents: number }> => {
     await assertFinanceiroAccess(context.supabase, context.userId);
-    const { data: entradas, error: entradasErr } = await (context.supabase as any)
+    const sb = context.supabase as any;
+    const entradas = await fetchAllRows(() => sb
       .from("cash_flow_entries").select("amount_cents")
-      .eq("org_id", context.orgId).eq("direction", "entrada").is("bank_account_id", null);
-    if (entradasErr) throw new Error(entradasErr.message);
-    const entradasTotal = (entradas ?? []).reduce((s: number, r: any) => s + r.amount_cents, 0);
+      .eq("org_id", context.orgId).eq("direction", "entrada").is("bank_account_id", null).order("id"));
+    const entradasTotal = entradas.reduce((s: number, r: any) => s + r.amount_cents, 0);
 
-    const { data: saidas, error: saidasErr } = await (context.supabase as any)
+    const saidas = await fetchAllRows(() => sb
       .from("cash_flow_entries").select("amount_cents, cash_flow_entry_payments(month_key)")
-      .eq("org_id", context.orgId).eq("direction", "saida").is("bank_account_id", null);
-    if (saidasErr) throw new Error(saidasErr.message);
-    const saidasTotal = (saidas ?? []).reduce(
+      .eq("org_id", context.orgId).eq("direction", "saida").is("bank_account_id", null).order("id"));
+    const saidasTotal = saidas.reduce(
       (s: number, r: any) => s + r.amount_cents * (r.cash_flow_entry_payments?.length ?? 0), 0,
     );
 
     // Mensalidades de cliente recebidas em carteira/espécie. Pagamentos
     // antigos (amount_cents null) ficam de fora de propósito.
-    const { data: mensalidades, error: mensalidadesErr } = await (context.supabase as any)
+    const mensalidades = await fetchAllRows(() => sb
       .from("client_payments").select("amount_cents")
-      .eq("org_id", context.orgId).is("bank_account_id", null).not("amount_cents", "is", null);
-    if (mensalidadesErr) throw new Error(mensalidadesErr.message);
-    const mensalidadesTotal = (mensalidades ?? []).reduce((s: number, r: any) => s + r.amount_cents, 0);
+      .eq("org_id", context.orgId).is("bank_account_id", null).not("amount_cents", "is", null).order("id"));
+    const mensalidadesTotal = mensalidades.reduce((s: number, r: any) => s + r.amount_cents, 0);
 
     return { balanceCents: entradasTotal + mensalidadesTotal - saidasTotal };
   });
@@ -381,16 +393,14 @@ export const getCashFlowHistory = createServerFn({ method: "GET" })
     const first = keys[0];
     const last = keys[keys.length - 1];
 
-    const { data: payments, error: payErr } = await sb
+    const payments = await fetchAllRows(() => sb
       .from("client_payments").select("period, amount_cents, clients(contract_value)")
-      .eq("org_id", context.orgId).gte("period", first).lte("period", last);
-    if (payErr) throw new Error(payErr.message);
+      .eq("org_id", context.orgId).gte("period", first).lte("period", last).order("id"));
 
-    const { data: entries, error: entErr } = await sb
+    const entries = await fetchAllRows(() => sb
       .from("cash_flow_entries").select("direction, kind, amount_cents, month_key, start_month, end_month")
       .eq("org_id", context.orgId)
-      .or(`kind.eq.fixo,and(month_key.gte.${first},month_key.lte.${last})`);
-    if (entErr) throw new Error(entErr.message);
+      .or(`kind.eq.fixo,and(month_key.gte.${first},month_key.lte.${last})`).order("id"));
 
     return keys.map((m) => {
       let entradas = 0;

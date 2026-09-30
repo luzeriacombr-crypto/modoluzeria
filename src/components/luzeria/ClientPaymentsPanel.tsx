@@ -329,6 +329,10 @@ export function ClientPaymentsPanel() {
   const { data: attachments = [] } = useQuery(financeAttachmentsQO(period));
   const attachmentsOf = (clientId: string) => attachments.filter((a) => a.clientId === clientId);
   const [statusFilter, setStatusFilter] = useState<"todos" | "pendentes" | "atrasados" | "pagos">("todos");
+  // Mostra 50 por vez; busca e filtro valem pra lista inteira.
+  const PAGE_SIZE = 50;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  useEffect(() => setVisibleCount(PAGE_SIZE), [search, statusFilter]);
 
   if (isLoading || !data) {
     return <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin text-foreground/40" size={24} /></div>;
@@ -402,7 +406,7 @@ export function ClientPaymentsPanel() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {rows.slice(0, visibleCount).map((r) => {
                 const days = daysUntil(r.nextDueDate);
                 const overdue = days < 0 && !r.paidThisPeriod;
                 const dueSoon = days >= 0 && days <= 7 && !r.paidThisPeriod;
@@ -491,6 +495,12 @@ export function ClientPaymentsPanel() {
             </tbody>
           </table>
           </div>
+          {rows.length > visibleCount && (
+            <button onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+              className="w-full py-2.5 text-[12px] font-semibold text-foreground/60 hover:text-foreground hover:bg-foreground/5 border-t border-foreground/7 transition">
+              Mostrar mais ({rows.length - visibleCount} restantes)
+            </button>
+          )}
         </div>
       )}
       {attachmentsFor && (
