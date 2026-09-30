@@ -248,7 +248,9 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<MonthlyPlanResult> => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
+    // House: a equipe gera o planejamento da marca (o gestor aprova depois).
+    const { data: houseTeam } = isAdmin ? { data: false } : await (context.supabase as any).rpc("is_house_team", { _user_id: context.userId });
+    if (!isAdmin && !houseTeam) throw new Error("Forbidden");
 
     // competitors/content_briefing/recent_roteiros/ai_planning_enabled são
     // colunas novas — cast até os tipos do Supabase serem regenerados.
@@ -573,7 +575,9 @@ export const submitAiPlanningFeedback = createServerFn({ method: "POST" })
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-    if (!isAdmin) throw new Error("Forbidden");
+    // House: a equipe gera o planejamento da marca (o gestor aprova depois).
+    const { data: houseTeam } = isAdmin ? { data: false } : await (context.supabase as any).rpc("is_house_team", { _user_id: context.userId });
+    if (!isAdmin && !houseTeam) throw new Error("Forbidden");
     const { error } = await (context.supabase as any).from("ai_planning_feedback").insert({
       org_id: context.orgId, client_id: data.clientId,
       rating: data.rating, reason: data.reason || null, created_by: context.userId,

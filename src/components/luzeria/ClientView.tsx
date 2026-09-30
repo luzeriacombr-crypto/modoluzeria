@@ -21,6 +21,7 @@ import { ClientReferenceLibraryTab } from "./ClientReferenceLibraryTab";
 import { CampanhasTab } from "./CampanhasTab";
 import { Modal } from "./Modals";
 import type { Client } from "@/lib/luzeria/types";
+import { isHouse } from "@/lib/luzeria/house";
 
 type OrderMode = "personalizada" | "cronologica";
 type OrderDirection = "asc" | "desc";
@@ -253,7 +254,8 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
     },
   } as const;
 
-  const showDocsSubTab = isAdmin;
+  // House: a equipe escreve o planejamento e os roteiros da marca.
+  const showDocsSubTab = isAdmin || isHouse(me);
   const showBibliotecaSubTab = !disabledFeatures.has("reference_library");
 
   // Dentro da cota calculada acima, ESSE cliente precisa estar marcado

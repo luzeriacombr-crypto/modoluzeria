@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, PencilLine, Video, Send } from "lucide-react";
-import { useApi } from "@/lib/luzeria/queries";
+import { useApi, useMe } from "@/lib/luzeria/queries";
+import { isHouse } from "@/lib/luzeria/house";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { formatMonth } from "@/lib/luzeria/utils";
 import type { RoteiroStatus } from "@/lib/luzeria/client-docs.functions";
@@ -42,6 +43,9 @@ export function RoteiroControls({
   body?: string;
 }) {
   const { upsertRoteiroStatus, addContentItem } = useApi();
+  // House: a equipe escreve e pede ajuste; aprovar (e mandar pra produção) é do gestor.
+  const me = useMe().data;
+  const canApprove = !isHouse(me) || me?.role === "master" || me?.role === "setor";
   const { selectedMonthKey, openItem, flash } = useUI();
   const [noteDraft, setNoteDraft] = useState(status?.adjustNote ?? "");
 
@@ -137,7 +141,7 @@ export function RoteiroControls({
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <button
+        {canApprove ? <button
           type="button"
           onClick={() => setApprovalStatus("aprovado")}
           className={chipBase}
@@ -147,7 +151,11 @@ export function RoteiroControls({
           }}
         >
           <CheckCircle2 size={12} /> {willCreateBoardItem ? "Aprovar e criar no board" : "Aprovado"}
-        </button>
+        </button> : current === "aprovado" ? (
+          <span className={chipBase} style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}><CheckCircle2 size={12} /> Aprovado pelo gestor</span>
+        ) : (
+          <span className={chipBase} style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 5%, transparent)", color: "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>Aguardando o gestor aprovar</span>
+        )}
         <button
           type="button"
           onClick={() => setApprovalStatus("ajustar")}
@@ -178,7 +186,7 @@ export function RoteiroControls({
           >
             <CheckCircle2 size={12} /> Enviado pro {contentType === "post" ? "Posts" : "Reels"} — abrir
           </button>
-        ) : !targetMonthKey ? (
+        ) : !targetMonthKey && canApprove ? (
           <button
             type="button"
             onClick={sendToReels}

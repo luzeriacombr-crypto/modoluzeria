@@ -35,9 +35,13 @@ export type ClientDoc = {
   planItems: PlanItemLite[] | null;
 };
 
+/** Admin — ou, numa House, qualquer pessoa ativa da equipe (quem escreve
+ * o planejamento e os roteiros da marca é a equipe; aprovar é do gestor). */
 async function assertAdmin(context: any) {
   const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
-  if (!isAdmin) throw new Error("Forbidden");
+  if (isAdmin) return;
+  const { data: houseTeam } = await context.supabase.rpc("is_house_team", { _user_id: context.userId });
+  if (!houseTeam) throw new Error("Forbidden");
 }
 
 export const listClientDocs = createServerFn({ method: "GET" })
@@ -201,6 +205,10 @@ export const upsertRoteiroStatus = createServerFn({ method: "POST" })
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    if (data.status === "aprovado" || data.contentItemId !== undefined) {
+      const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+      if (!isAdmin) throw new Error("Só o gestor aprova roteiros.");
+    }
     const row: Record<string, any> = {
       doc_id: data.docId, org_id: context.orgId, roteiro_title: data.roteiroTitle, updated_by: context.userId,
     };
