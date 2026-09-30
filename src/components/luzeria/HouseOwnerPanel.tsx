@@ -7,10 +7,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { AlertTriangle, ChevronLeft, ChevronRight, FileText, FolderKanban, Instagram, Settings2, Target, Users, Wallet, X } from "lucide-react";
+import { AlertTriangle, Trophy, ChevronLeft, ChevronRight, FileText, FolderKanban, Instagram, Settings2, Target, Users, Wallet, X } from "lucide-react";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useMe } from "@/lib/luzeria/queries";
 import { getOwnerPanel, saveHouseTargets, type OwnerPanel } from "@/lib/luzeria/house-owner.functions";
+import { getTeamRanking, RANKING_POINTS } from "@/lib/luzeria/house-team.functions";
+import { Avatar } from "./Avatar";
 import { houseDateKey, LEAD_ORIGINS, LEAD_ORIGIN_LABEL } from "@/lib/luzeria/house-checklists";
 import { monthLabel, shiftMonth, PROJECT_TEMPLATES } from "@/lib/luzeria/house-projects";
 
@@ -71,6 +73,7 @@ export function HouseOwnerPanel() {
             <ProjectsCard data={data} onOpen={(id) => navigate({ to: "/projetos", search: { id } as any })} />
             <LateChecklistsCard data={data} />
           </div>
+          <RankingCard monthKey={monthKey} />
           {data.variable && <VariableCard data={data} />}
           <button onClick={() => navigate({ to: "/relatorio", search: { mes: monthKey } as any })}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-bold"
@@ -360,3 +363,56 @@ function TargetsModal({ settings, onClose }: { settings: OwnerPanel["settings"];
   );
 }
 
+
+function RankingCard({ monthKey }: { monthKey: string }) {
+  const fetchRanking = useServerFn(getTeamRanking);
+  const { data: rows = [], isLoading } = useQuery({ queryKey: ["house-ranking", monthKey], queryFn: () => fetchRanking({ data: { monthKey } }), staleTime: 60_000 });
+  const cols: { key: "stories" | "posts" | "contents" | "demands" | "leads" | "scheduled" | "checklists" | "tasks"; label: string; pts: number }[] = [
+    { key: "stories", label: "Stories", pts: RANKING_POINTS.story },
+    { key: "posts", label: "Posts/Reels", pts: RANKING_POINTS.post },
+    { key: "contents", label: "Conteúdos", pts: RANKING_POINTS.content },
+    { key: "demands", label: "Demandas", pts: RANKING_POINTS.demand },
+    { key: "leads", label: "Leads", pts: RANKING_POINTS.lead },
+    { key: "scheduled", label: "Agendados", pts: RANKING_POINTS.scheduled },
+    { key: "checklists", label: "Checklists", pts: RANKING_POINTS.checklist },
+    { key: "tasks", label: "Tarefas", pts: RANKING_POINTS.task },
+  ];
+  return (
+    <Card icon={<Trophy size={14} />} title="Ranking da equipe"
+      right={<span className="text-[10px] text-foreground/40">conta o que cada um registrou ou concluiu como responsável</span>}>
+      {isLoading ? <div className="text-sm text-foreground/40">Carregando…</div> : rows.length === 0 ? (
+        <div className="text-sm text-foreground/45">Sem equipe ativa.</div>
+      ) : (
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full text-sm min-w-[640px]">
+            <thead>
+              <tr className="text-[10.5px] uppercase tracking-wider text-foreground/45">
+                <th className="text-left font-semibold px-2 py-2">Pessoa</th>
+                {cols.map((c) => <th key={c.key} className="text-right font-semibold px-2 py-2" title={`${c.pts} ponto(s) cada`}>{c.label}</th>)}
+                <th className="text-right font-bold px-2 py-2 text-foreground/70">Pontos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={r.userId} className="border-t border-foreground/[0.06]">
+                  <td className="px-2 py-2.5">
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-5 text-center text-xs font-bold tabular-nums" style={{ color: i === 0 && r.points > 0 ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 45%, transparent)" }}>{i + 1}º</span>
+                      <Avatar name={r.name} color={r.color} avatarUrl={r.avatarPath} size={26} />
+                      <span className="font-semibold text-foreground truncate">{r.name}</span>
+                    </span>
+                  </td>
+                  {cols.map((c) => <td key={c.key} className="text-right tabular-nums px-2 py-2.5 text-foreground/75">{r[c.key] || <span className="text-foreground/25">0</span>}</td>)}
+                  <td className="text-right tabular-nums px-2 py-2.5 font-extrabold text-foreground">{r.points}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="text-[10.5px] text-foreground/40 mt-3">
+        Pontos: story 1 · post/reels 2 · conteúdo finalizado 3 · demanda 2 · lead 1 · agendamento 3 · checklist 1 · tarefa de projeto 1.
+      </p>
+    </Card>
+  );
+}

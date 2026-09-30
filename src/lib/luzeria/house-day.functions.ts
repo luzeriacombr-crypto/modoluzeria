@@ -201,13 +201,18 @@ export async function countFromInstagram(clientId: string, todayKey: string): Pr
 async function countFromApp(supabase: any, orgId: string, todayKey: string) {
   const dayStart = spDayStartUtc(todayKey).toISOString();
   const weekStart = spDayStartUtc(weekStartKey(todayKey)).toISOString();
+  // + o que a equipe registrou à mão (postado direto no Instagram).
+  const { data: logs } = await supabase.from("house_activity_logs").select("day, kind, qty")
+    .eq("org_id", orgId).gte("day", weekStartKey(todayKey)).lte("day", todayKey);
+  const manualStories = ((logs ?? []) as any[]).filter((l) => l.kind === "story" && l.day === todayKey).reduce((n, l) => n + l.qty, 0);
+  const manualPosts = ((logs ?? []) as any[]).filter((l) => l.kind !== "story").reduce((n, l) => n + l.qty, 0);
   const [{ count: stories }, { count: posts }] = await Promise.all([
     supabase.from("content_items").select("id", { count: "exact", head: true })
       .eq("org_id", orgId).eq("type", "story").gte("ig_published_at", dayStart).is("deleted_at", null),
     supabase.from("content_items").select("id", { count: "exact", head: true })
       .eq("org_id", orgId).in("type", ["post", "reel"]).gte("ig_published_at", weekStart).is("deleted_at", null),
   ]);
-  return { storiesToday: stories ?? 0, postsWeek: posts ?? 0 };
+  return { storiesToday: (stories ?? 0) + manualStories, postsWeek: (posts ?? 0) + manualPosts };
 }
 
 function nextMonthKey(todayKey: string) {
@@ -221,6 +226,8 @@ export type MyDay = {
   checklist: (ChecklistItem & { done: boolean; late: boolean; mine: boolean })[];
   stories: GoalCount;
   posts: GoalCount;
+  /** O que ESSA pessoa registrou à mão hoje (story/post/reels). */
+  myLogsToday: { story: number; post: number; reel: number };
   planning: { monthKey: string; deadlineDay: number; deadlineDate: string; delivered: boolean; daysLeft: number };
   upcoming: { id: string; title: string; type: string; status: string; dueDate: string; clientId: string; clientName: string; monthKey: string; mine: boolean; assigneeIds: string[] }[];
 };
@@ -261,6 +268,10 @@ export const getMyDay = createServerFn({ method: "GET" })
     const ig = houseClientId ? await countFromInstagram(houseClientId, todayKey) : null;
     const counts = ig ?? await countFromApp(db, context.orgId, todayKey);
     const source = ig ? "instagram" : "app";
+    const { data: myLogs } = await db.from("house_activity_logs").select("kind, qty")
+      .eq("user_id", context.userId).eq("day", todayKey);
+    const myLogsToday = { story: 0, post: 0, reel: 0 };
+    for (const l of (myLogs ?? []) as any[]) myLogsToday[l.kind as "story" | "post" | "reel"] += l.qty;
     // Retrato do dia pro painel do dono (o Instagram não guarda stories antigos).
     if (ig) await recordDailyStats(context.orgId, todayKey, ig.storiesToday, ig.feedToday);
 
@@ -286,11 +297,12 @@ export const getMyDay = createServerFn({ method: "GET" })
     const daysLeft = Math.round((new Date(`${deadlineDate}T12:00:00Z`).getTime() - new Date(`${todayKey}T12:00:00Z`).getTime()) / 86_400_000);
 
     // Próximos conteúdos com prazo (atrasados primeiro).
-    const { data: itemsRows } = await db.from("content_items")
-      .select("id, title, type, status, due_date, months!inner(key, client_id, clients!inner(name)), item_assignees(user_id)")
+    const { data: itemsRows, error: itemsErr } = await db.from("content_items")
+      .select("id, title, type, status, due_date, months!inner(key, client_id, clients!months_client_id_fkey(name)), item_assignees(user_id)")
       .eq("org_id", context.orgId).is("deleted_at", null).not("due_date", "is", null)
       .not("status", "in", "(FINALIZADO,CONCLUIDO)")
       .order("due_date", { ascending: true }).limit(40);
+    if (itemsErr) console.error("Meu dia: falha ao listar próximos conteúdos:", itemsErr.message);
     const upcoming = ((itemsRows ?? []) as any[]).map((r) => {
       const assigneeIds = ((r.item_assignees ?? []) as any[]).map((a) => a.user_id as string);
       return {
@@ -307,6 +319,7 @@ export const getMyDay = createServerFn({ method: "GET" })
       todayKey,
       isWorkday: isoWeekday(todayKey) <= 5,
       checklist,
+      myLogsToday,
       stories: { done: counts.storiesToday, goal: storiesGoal, source },
       posts: { done: counts.postsWeek, goal: postsGoal, source },
       planning: { monthKey: nextKey, deadlineDay, deadlineDate, delivered: (planDocs ?? 0) > 0, daysLeft },

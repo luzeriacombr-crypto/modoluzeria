@@ -158,3 +158,18 @@ export function shiftMonth(monthKey: string, delta: number): string {
   const d = new Date(Date.UTC(y, m - 1 + delta, 1));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
+
+/* ===== Demandas avulsas ===== */
+
+export const DEMAND_KINDS = ["banner", "jingle", "folder", "convite", "cartao", "video", "arte", "outro"] as const;
+export type DemandKind = (typeof DEMAND_KINDS)[number];
+export const DEMAND_KIND_META: Record<DemandKind, { label: string; hint: string }> = {
+  banner: { label: "Banner", hint: "Tamanho (ex: 2x1m), texto, onde vai ficar, fotos/logos." },
+  jingle: { label: "Jingle pra rádio", hint: "Duração, mensagem principal, tom (alegre, sério), emissora." },
+  folder: { label: "Folder", hint: "Formato (A4 dobrado, A5), textos, quantidade, gráfica." },
+  convite: { label: "Convite", hint: "Evento, data, local, horário, digital ou impresso." },
+  cartao: { label: "Cartão de visita", hint: "Nome, cargo, contatos, frente e verso." },
+  video: { label: "Vídeo", hint: "Duração, onde vai passar, roteiro ou ideia, prazo de captação." },
+  arte: { label: "Arte avulsa", hint: "Formato, texto, onde vai ser usada." },
+  outro: { label: "Outro", hint: "Descreva o que precisa ser feito." },
+};

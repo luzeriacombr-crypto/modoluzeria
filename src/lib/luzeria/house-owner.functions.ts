@@ -113,10 +113,16 @@ async function computeMonthNumbers(supabase: any, orgId: string, houseClientId: 
   const trackedDays = (dayRows ?? []).length;
   let storiesDone = ((dayRows ?? []) as any[]).reduce((n, r) => n + (r.stories ?? 0), 0);
   let storiesSource: "instagram" | "app" = "instagram";
+  // Registro manual da equipe (postado direto no Instagram) — soma quando
+  // não há Instagram conectado; com Instagram, ele já conta tudo.
+  const { data: logRows } = await supabase.from("house_activity_logs").select("kind, qty")
+    .eq("org_id", orgId).gte("day", b.first).lte("day", b.last);
+  const manualStories = ((logRows ?? []) as any[]).filter((l) => l.kind === "story").reduce((n, l) => n + l.qty, 0);
+  const manualPosts = ((logRows ?? []) as any[]).filter((l) => l.kind !== "story").reduce((n, l) => n + l.qty, 0);
   if (trackedDays === 0) {
     const { count } = await supabase.from("content_items").select("id", { count: "exact", head: true })
       .eq("org_id", orgId).eq("type", "story").gte("ig_published_at", fromIso).lt("ig_published_at", toIso).is("deleted_at", null);
-    storiesDone = count ?? 0;
+    storiesDone = (count ?? 0) + manualStories;
     storiesSource = "app";
   }
   const workdays = b.isFuture || countFrom > b.until ? 0 : workdaysBetween(countFrom, b.until);
@@ -129,7 +135,7 @@ async function computeMonthNumbers(supabase: any, orgId: string, houseClientId: 
   if (igPosts == null) {
     const { count } = await supabase.from("content_items").select("id", { count: "exact", head: true })
       .eq("org_id", orgId).in("type", ["post", "reel"]).gte("ig_published_at", fromIso).lt("ig_published_at", toIso).is("deleted_at", null);
-    postsDone = count ?? 0;
+    postsDone = (count ?? 0) + manualPosts;
     postsSource = "app";
   }
   const elapsedDays = b.isFuture || countFrom > b.until ? 0

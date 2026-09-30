@@ -1321,6 +1321,13 @@ export function DetailPanel() {
                             setItemStatus.mutate({ data: { id: item.id, status: s } });
                             setStatusOpen(false);
                             flash(item.id);
+                            // House: quem mexe no item sem estar como responsável
+                            // é lembrado de se atribuir (é o que conta no ranking).
+                            if (isHouse(me) && me && !item.assigneeIds.includes(me.id)) {
+                              const selfId = me.id;
+                              requestConfirm("Você não está como responsável por esse item. Quer se atribuir? Assim ele conta pra você no ranking da equipe.", { confirmLabel: "Me atribuir", cancelLabel: "Agora não" })
+                                .then((ok) => { if (ok) addAssignee.mutate({ data: { itemId: item.id, userId: selfId } }); });
+                            }
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all"
                           style={{

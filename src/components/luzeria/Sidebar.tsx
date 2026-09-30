@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Plus, Info, CircleHelp, Instagram, Users, Wallet, UserCog, BookMarked,
-  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images, MessageCircleHeart, BookOpenText, FolderKanban, FileText,
+  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images, MessageCircleHeart, BookOpenText, FolderKanban, FileText, ClipboardList,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, clientCategoriesQO, useApi, useMe, myAgencyLevelInputsQO } from "@/lib/luzeria/queries";
@@ -361,6 +361,11 @@ export function Sidebar({
             ...(house ? [{ id: "leads", label: navLabel("leads", "Leads"), meta: { icon: <MessageCircleHeart size={17} />, label: navLabel("leads", "Leads"), active: pathname === "/leads", kind: "button" as const, onClick: () => navigate({ to: "/leads" }) }, node: (
               <div key="leads">
                 <NavButton icon={<MessageCircleHeart size={15} />} label={navLabel("leads", "Leads")} active={pathname === "/leads"} onClick={() => navigate({ to: "/leads" })} />
+              </div>
+            ) }] : []),
+            ...(house ? [{ id: "demandas", label: navLabel("demandas", "Demandas"), meta: { icon: <ClipboardList size={17} />, label: navLabel("demandas", "Demandas"), active: pathname === "/demandas", kind: "button" as const, onClick: () => navigate({ to: "/demandas" }) }, node: (
+              <div key="demandas">
+                <NavButton icon={<ClipboardList size={15} />} label={navLabel("demandas", "Demandas")} active={pathname === "/demandas"} onClick={() => navigate({ to: "/demandas" })} />
               </div>
             ) }] : []),
             ...(house ? [{ id: "projetos", label: navLabel("projetos", "Projetos"), meta: { icon: <FolderKanban size={17} />, label: navLabel("projetos", "Projetos"), active: pathname === "/projetos", kind: "button" as const, onClick: () => navigate({ to: "/projetos", search: {} as any }) }, node: (

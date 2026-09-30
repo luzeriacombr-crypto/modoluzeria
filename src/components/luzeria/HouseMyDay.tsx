@@ -4,11 +4,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, CalendarClock, Check, ChevronRight, ClipboardList, Instagram, ListChecks, Target } from "lucide-react";
+import { AlertTriangle, CalendarClock, Check, ChevronRight, ClipboardList, Instagram, ListChecks, Target, Plus, Undo2, UserPlus, Hand } from "lucide-react";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useMe, profilesQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getMyDay, setChecklistDone, type MyDay } from "@/lib/luzeria/house-day.functions";
+import { logActivity, undoActivity, listUnassignedItems } from "@/lib/luzeria/house-team.functions";
+import { useApi } from "@/lib/luzeria/queries";
 import { CADENCE_LABEL, checklistDueLabel } from "@/lib/luzeria/house-checklists";
 import { statusLabel, getStatusMeta } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
@@ -38,9 +40,13 @@ export function HouseMyDay() {
         <div className="mt-6 grid gap-4 md:grid-cols-[1.1fr_1fr]">
           <div className="space-y-4">
             <GoalsCard day={day} />
+            <LogCard day={day} />
             <ChecklistCard day={day} />
           </div>
-          <UpcomingCard day={day} />
+          <div className="space-y-4">
+            <UnassignedCard />
+            <UpcomingCard day={day} />
+          </div>
         </div>
       )}
     </div>
@@ -70,7 +76,7 @@ function GoalsCard({ day }: { day: MyDay }) {
       right={day.stories.source === "instagram" ? (
         <span className="inline-flex items-center gap-1 text-[10px] text-foreground/40"><Instagram size={11} /> direto do Instagram</span>
       ) : (
-        <span className="text-[10px] text-foreground/40" title="Conecte o Instagram da marca pra contar também o que for postado direto pelo app do Instagram">contando pelo Modo Criador</span>
+        <span className="text-[10px] text-foreground/40" title="Conecte o Instagram da marca pra contar direto de lá, inclusive o que for postado pelo app do Instagram">Modo Criador + registros da equipe</span>
       )}>
       <div className="space-y-4">
         <GoalBar label="Stories hoje" done={day.stories.done} goal={day.isWorkday ? day.stories.goal : 0}
@@ -229,6 +235,94 @@ function UpcomingCard({ day }: { day: MyDay }) {
           })}
         </ul>
       )}
+    </Card>
+  );
+}
+
+/** Registro rápido do que a pessoa postou direto no Instagram — dá o
+ * crédito no ranking e conta nas metas quando não há Instagram conectado. */
+function LogCard({ day }: { day: MyDay }) {
+  const qc = useQueryClient();
+  const logFn = useServerFn(logActivity);
+  const undoFn = useServerFn(undoActivity);
+  const after = () => { qc.invalidateQueries({ queryKey: myDayQueryKey }); qc.invalidateQueries({ queryKey: ["house-owner-panel"] }); };
+  const add = useMutation({
+    mutationFn: (kind: "story" | "post" | "reel") => logFn({ data: { kind } }),
+    onMutate: (kind) => {
+      const prev = qc.getQueryData<MyDay>(myDayQueryKey);
+      if (prev) qc.setQueryData<MyDay>(myDayQueryKey, { ...prev, myLogsToday: { ...prev.myLogsToday, [kind]: prev.myLogsToday[kind] + 1 } });
+    },
+    onError: (e: any) => { after(); toastFriendlyError(e, "Não consegui registrar"); },
+    onSettled: after,
+  });
+  const undo = useMutation({
+    mutationFn: (kind: "story" | "post" | "reel") => undoFn({ data: { kind } }),
+    onSettled: after,
+  });
+  const items = [
+    { kind: "story" as const, label: "Story" },
+    { kind: "post" as const, label: "Post" },
+    { kind: "reel" as const, label: "Reels" },
+  ];
+  return (
+    <Card icon={<Hand size={14} />} title="Postei agora"
+      right={<span className="text-[10px] text-foreground/40">o que você postou direto no Instagram</span>}>
+      <div className="grid grid-cols-3 gap-2">
+        {items.map((it) => {
+          const n = day.myLogsToday?.[it.kind] ?? 0;
+          return (
+            <div key={it.kind} className="rounded-xl p-2.5 text-center" style={{ background: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}>
+              <button onClick={() => add.mutate(it.kind)}
+                className="w-full inline-flex items-center justify-center gap-1 rounded-lg py-2.5 text-sm font-bold active:scale-95 transition-transform"
+                style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+                <Plus size={15} strokeWidth={2.5} /> {it.label}
+              </button>
+              <div className="flex items-center justify-center gap-1.5 mt-2 text-[11px] text-foreground/55">
+                <span className="tabular-nums">{n} hoje</span>
+                {n > 0 && (
+                  <button onClick={() => undo.mutate(it.kind)} title="Desfazer o último" className="p-0.5 rounded text-foreground/40 hover:text-foreground"><Undo2 size={11} /></button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+/** Lembrete: itens em produção sem ninguém como responsável — quem fez
+ * precisa se atribuir pra contar no ranking. */
+function UnassignedCard() {
+  const me = useMe().data;
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const { selectMonth, openItem } = useUI();
+  const listFn = useServerFn(listUnassignedItems);
+  const { data: items = [] } = useQuery({ queryKey: ["house-unassigned"], queryFn: () => listFn(), staleTime: 60_000 });
+  const { addAssignee } = useApi();
+  if (items.length === 0 || !me) return null;
+  return (
+    <Card icon={<UserPlus size={14} />} title="Sem responsável"
+      right={<span className="text-[10px] text-foreground/40">se foi você, assuma pra contar no ranking</span>}>
+      <ul className="space-y-1">
+        {items.map((it) => (
+          <li key={it.id} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-foreground/[0.03]">
+            <button onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: it.clientId } }); selectMonth(it.monthKey); setTimeout(() => openItem(it.id), 30); }}
+              className="flex-1 min-w-0 text-left text-sm text-foreground/85 truncate">
+              {it.title || "Sem título"}
+              {it.dueDate && <span className="text-[11px] text-foreground/40"> · {it.dueDate.slice(8, 10)}/{it.dueDate.slice(5, 7)}</span>}
+            </button>
+            <button onClick={() => addAssignee.mutate({ data: { itemId: it.id, userId: me.id } }, {
+              onSuccess: () => { qc.invalidateQueries({ queryKey: ["house-unassigned"] }); qc.invalidateQueries({ queryKey: myDayQueryKey }); },
+            })}
+              className="shrink-0 text-[11px] font-bold px-2.5 py-1.5 rounded-md"
+              style={{ backgroundColor: "rgba(var(--lz-brand-rgb),0.15)", color: "var(--lz-accent-ink)" }}>
+              Assumir
+            </button>
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }
