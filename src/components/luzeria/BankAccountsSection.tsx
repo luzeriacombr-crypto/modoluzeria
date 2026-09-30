@@ -36,13 +36,13 @@ const KNOWN_BANKS: { name: string; color: string; initials: string; match?: stri
   { name: "Santander", color: "#EC0000", initials: "SA", logo: "/bancos/santander.png" },
   { name: "Inter", color: "#EA7100", initials: "IN", logo: "/bancos/inter.png" },
   { name: "C6 Bank", color: "#242424", initials: "C6", match: ["c6"], logo: "/bancos/c6-bank.png" },
-  { name: "BTG Pactual", color: "#0B2A5B", initials: "BTG", match: ["btg"] },
-  { name: "PicPay", color: "#11C76F", initials: "PP" },
-  { name: "Mercado Pago", color: "#009EE3", initials: "MP" },
-  { name: "PagBank", color: "#00A868", initials: "PB", match: ["pagseguro"] },
-  { name: "Sicoob", color: "#003641", initials: "SC" },
-  { name: "Sicredi", color: "#3FA110", initials: "SI" },
-  { name: "Banco Pan", color: "#0070F3", initials: "PAN", match: ["pan"] },
+  { name: "BTG Pactual", color: "#001E61", initials: "BTG", match: ["btg"], logo: "/bancos/btg-pactual.png" },
+  { name: "PicPay", color: "#22C25E", initials: "PP", logo: "/bancos/picpay.png" },
+  { name: "Mercado Pago", color: "#009EE3", initials: "MP", logo: "/bancos/mercado-pago.png" },
+  { name: "PagBank", color: "#00A868", initials: "PB", match: ["pagseguro"], logo: "/bancos/pagbank.png" },
+  { name: "Sicoob", color: "#04363F", initials: "SC", logo: "/bancos/sicoob.png" },
+  { name: "Sicredi", color: "#3DAA33", initials: "SI", logo: "/bancos/sicredi.png" },
+  { name: "Banco Pan", color: "#06B2FC", initials: "PAN", match: ["pan"], logo: "/bancos/banco-pan.png" },
 ];
 
 /** Cores pra escolher no ícone de uma conta (pedido do Junior, 30/09). */
