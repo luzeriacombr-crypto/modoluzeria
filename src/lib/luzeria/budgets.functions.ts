@@ -141,6 +141,16 @@ export type Budget = {
   logoVariant: "light" | "dark";
   headerImagePath: string | null;
   headerImageUrl: string | null;
+  /** Imagem de fundo da capa — deixada em branco de propósito pra escrever
+   * "Proposta de Orçamento" + serviço + cliente + data por cima. Sem
+   * imagem, cai no degradê (comportamento antigo). */
+  coverImagePath: string | null;
+  coverImageUrl: string | null;
+  /** Contracapa já vem pronta da agência (ex.: "Você foi chamado pra
+   * criar.") — nada é escrito em cima. Sem imagem, cai no degradê +
+   * `backPhrase` (comportamento antigo). */
+  backCoverImagePath: string | null;
+  backCoverImageUrl: string | null;
   footerText: string | null;
   coverPhrase: string | null;
   introTitle: string | null;
@@ -180,6 +190,8 @@ const budgetInputSchema = z.object({
   items: z.array(itemSchema).max(40),
   logoVariant: z.enum(["light", "dark"]),
   headerImagePath: z.string().max(300).nullable().optional(),
+  coverImagePath: z.string().max(300).nullable().optional(),
+  backCoverImagePath: z.string().max(300).nullable().optional(),
   footerText: z.string().trim().max(200).nullable().optional(),
   coverPhrase: z.string().trim().max(200).nullable().optional(),
   introTitle: z.string().trim().max(160).nullable().optional(),
@@ -206,7 +218,7 @@ export const listBudgets = createServerFn({ method: "GET" })
     const { data, error } = await (context.supabase as any)
       .from("budgets").select("*").eq("org_id", context.orgId).order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    const urls = await signPaths(context.supabase, (data ?? []).map((r: any) => r.header_image_path));
+    const urls = await signPaths(context.supabase, (data ?? []).flatMap((r: any) => [r.header_image_path, r.cover_image_path, r.back_cover_image_path]));
     return (data ?? []).map((r: any) => rowToBudget(r, urls));
   });
 
@@ -216,6 +228,10 @@ function rowToBudget(r: any, urls: Map<string, string>): Budget {
     version: r.version, items: r.items ?? [], logoVariant: r.logo_variant,
     headerImagePath: r.header_image_path,
     headerImageUrl: r.header_image_path ? (urls.get(r.header_image_path) ?? null) : null,
+    coverImagePath: r.cover_image_path,
+    coverImageUrl: r.cover_image_path ? (urls.get(r.cover_image_path) ?? null) : null,
+    backCoverImagePath: r.back_cover_image_path,
+    backCoverImageUrl: r.back_cover_image_path ? (urls.get(r.back_cover_image_path) ?? null) : null,
     footerText: r.footer_text, coverPhrase: r.cover_phrase, introTitle: r.intro_title, introText: r.intro_text,
     fronts: r.fronts ?? [], paymentTerms: r.payment_terms, cronograma: r.cronograma,
     notIncluded: r.not_included, afterApproval: r.after_approval, backPhrase: r.back_phrase,
@@ -240,6 +256,8 @@ export const saveBudget = createServerFn({ method: "POST" })
       items: data.items,
       logo_variant: data.logoVariant,
       header_image_path: data.headerImagePath ?? null,
+      cover_image_path: data.coverImagePath ?? null,
+      back_cover_image_path: data.backCoverImagePath ?? null,
       footer_text: data.footerText?.trim() || null,
       cover_phrase: data.coverPhrase?.trim() || null,
       intro_title: data.introTitle?.trim() || null,
@@ -304,9 +322,11 @@ export const exportBudgetPdf = createServerFn({ method: "POST" })
     }
 
     const logoPath = b.logo_variant === "light" ? (org?.logo_path_light ?? org?.logo_path) : (org?.logo_path ?? org?.logo_path_light);
-    const [logoBytes, headerBytes] = await Promise.all([
+    const [logoBytes, headerBytes, coverImageBytes, backCoverImageBytes] = await Promise.all([
       downloadBytes(logoPath),
       downloadBytes(b.header_image_path),
+      downloadBytes(b.cover_image_path),
+      downloadBytes(b.back_cover_image_path),
     ]);
 
     const brandColor = org?.color_primary ?? "#CDFF00";
@@ -319,6 +339,8 @@ export const exportBudgetPdf = createServerFn({ method: "POST" })
       totalCents: b.total_cents,
       logoBytes,
       headerBytes,
+      coverImageBytes,
+      backCoverImageBytes,
       footerText: b.footer_text,
       gradientFrom: b.gradient_from ?? org?.hero_gradient_from ?? brandColor,
       gradientTo: b.gradient_to ?? org?.hero_gradient_to ?? "#101010",
@@ -335,6 +357,7 @@ export const exportBudgetPdf = createServerFn({ method: "POST" })
       notIncluded: b.not_included,
       afterApproval: b.after_approval,
       backPhrase: b.back_phrase,
+      budgetDate: new Date(b.created_at).toLocaleDateString("pt-BR"),
     });
 
     return { pdfBase64: Buffer.from(pdfBytes).toString("base64") };

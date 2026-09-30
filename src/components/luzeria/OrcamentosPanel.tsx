@@ -320,6 +320,11 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
   const [logoVariant, setLogoVariant] = useState<"light" | "dark">(existing?.logoVariant ?? "dark");
   const [headerImagePath, setHeaderImagePath] = useState<string | null>(existing?.headerImagePath ?? null);
   const [headerImageUrl, setHeaderImageUrl] = useState<string | null>(existing?.headerImageUrl ?? null);
+  const [coverImagePath, setCoverImagePath] = useState<string | null>(existing?.coverImagePath ?? null);
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(existing?.coverImageUrl ?? null);
+  const [backCoverImagePath, setBackCoverImagePath] = useState<string | null>(existing?.backCoverImagePath ?? null);
+  const [backCoverImageUrl, setBackCoverImageUrl] = useState<string | null>(existing?.backCoverImageUrl ?? null);
+  const [uploadingCover, setUploadingCover] = useState<"cover" | "back" | null>(null);
   const [footerText, setFooterText] = useState(existing?.footerText ?? "");
   const [coverPhrase, setCoverPhrase] = useState(existing?.coverPhrase ?? "");
   const [introTitle, setIntroTitle] = useState(existing?.introTitle ?? "Por que esse projeto existe");
@@ -382,10 +387,28 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
     finally { setUploadingHeader(false); }
   }
 
+  async function pickCoverImage(kind: "cover" | "back", e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Escolha uma imagem."); return; }
+    setUploadingCover(kind);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `budgets/${me?.orgId}/${kind}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("avatars").upload(path, file, { contentType: file.type, upsert: true });
+      if (error) throw error;
+      const url = URL.createObjectURL(file);
+      if (kind === "cover") { setCoverImagePath(path); setCoverImageUrl(url); }
+      else { setBackCoverImagePath(path); setBackCoverImageUrl(url); }
+    } catch { toast.error("Erro ao enviar a imagem."); }
+    finally { setUploadingCover(null); }
+  }
+
   function buildPayload() {
     return {
       id: existing?.id, clientName: clientName.trim(), clientSegment: clientSegment.trim() || null,
-      version, items, logoVariant, headerImagePath, footerText: footerText.trim() || null,
+      version, items, logoVariant, headerImagePath, coverImagePath, backCoverImagePath, footerText: footerText.trim() || null,
       coverPhrase: coverPhrase.trim() || null, introTitle: introTitle.trim() || null, introText: introText.trim() || null,
       fronts: fronts.filter((f) => f.title.trim()), paymentTerms: paymentTerms.trim() || null,
       cronograma: cronograma.trim() || null, notIncluded: notIncluded.trim() || null,
@@ -533,7 +556,35 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
       {version === "completo" && (
         <div className="space-y-4 pt-2 border-t border-foreground/10">
           <div className="text-xs font-bold text-foreground/60 uppercase tracking-wide">Proposta completa</div>
-          <label className="block"><span className={label}>Frase da capa</span><input value={coverPhrase} onChange={(e) => setCoverPhrase(e.target.value)} placeholder="Ex: Estruturação de Curso Online" className={inp} /></label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <span className={label}>Capa (imagem de fundo)</span>
+              <p className="text-[10.5px] text-foreground/35 mb-1.5 -mt-1">Deixe espaço em branco — o Modo Criador escreve o título, o cliente e a data por cima.</p>
+              <div className="flex items-center gap-2">
+                <label className="lz-btn-ghost text-xs px-3 py-2 rounded-md cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50">
+                  <Upload size={12} /> {uploadingCover === "cover" ? "Enviando…" : coverImageUrl ? "Trocar" : "Enviar"}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => pickCoverImage("cover", e)} disabled={uploadingCover !== null} />
+                </label>
+                {coverImageUrl && <button onClick={() => { setCoverImagePath(null); setCoverImageUrl(null); }} className="text-[11px] text-foreground/50 hover:text-foreground transition">Remover</button>}
+              </div>
+              {coverImageUrl && <img src={coverImageUrl} alt="" className="mt-2 h-24 rounded-md object-cover border border-foreground/10" />}
+            </div>
+            <div>
+              <span className={label}>Contracapa (imagem completa)</span>
+              <p className="text-[10.5px] text-foreground/35 mb-1.5 -mt-1">Já vem pronta — nada é escrito em cima.</p>
+              <div className="flex items-center gap-2">
+                <label className="lz-btn-ghost text-xs px-3 py-2 rounded-md cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50">
+                  <Upload size={12} /> {uploadingCover === "back" ? "Enviando…" : backCoverImageUrl ? "Trocar" : "Enviar"}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => pickCoverImage("back", e)} disabled={uploadingCover !== null} />
+                </label>
+                {backCoverImageUrl && <button onClick={() => { setBackCoverImagePath(null); setBackCoverImageUrl(null); }} className="text-[11px] text-foreground/50 hover:text-foreground transition">Remover</button>}
+              </div>
+              {backCoverImageUrl && <img src={backCoverImageUrl} alt="" className="mt-2 h-24 rounded-md object-cover border border-foreground/10" />}
+            </div>
+          </div>
+
+          <label className="block"><span className={label}>Título/serviço na capa</span><input value={coverPhrase} onChange={(e) => setCoverPhrase(e.target.value)} placeholder="Ex: Planejamento Estratégico de Marketing" className={inp} /></label>
           <label className="block"><span className={label}>Título da introdução</span><input value={introTitle} onChange={(e) => setIntroTitle(e.target.value)} className={inp} /></label>
           <label className="block"><span className={label}>Texto da introdução</span><textarea value={introText} onChange={(e) => setIntroText(e.target.value)} rows={4} placeholder="Por que esse projeto existe, o contexto do cliente…" className={`${inp} resize-none`} /></label>
 
@@ -568,7 +619,9 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
           <label className="block"><span className={label}>Cronograma</span><textarea value={cronograma} onChange={(e) => setCronograma(e.target.value)} rows={2} className={`${inp} resize-none`} /></label>
           <label className="block"><span className={label}>O que não está incluso</span><textarea value={notIncluded} onChange={(e) => setNotIncluded(e.target.value)} rows={2} className={`${inp} resize-none`} /></label>
           <label className="block"><span className={label}>Após a aprovação</span><textarea value={afterApproval} onChange={(e) => setAfterApproval(e.target.value)} rows={2} className={`${inp} resize-none`} /></label>
-          <label className="block"><span className={label}>Frase da contracapa</span><input value={backPhrase} onChange={(e) => setBackPhrase(e.target.value)} placeholder="Ex: Vamos criar juntos." className={inp} /></label>
+          {!backCoverImageUrl && (
+            <label className="block"><span className={label}>Frase da contracapa</span><input value={backPhrase} onChange={(e) => setBackPhrase(e.target.value)} placeholder="Ex: Vamos criar juntos." className={inp} /></label>
+          )}
         </div>
       )}
 

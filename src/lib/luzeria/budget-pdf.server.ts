@@ -27,6 +27,14 @@ export type BudgetPdfInput = {
   totalCents: number;
   logoBytes: Uint8Array | null;
   headerBytes: Uint8Array | null;
+  /** Fundo da capa, deixado em branco de propósito pela agência pra
+   * escrever "Proposta de Orçamento" + serviço + cliente + data por cima.
+   * Sem imagem, cai no degradê desenhado na hora (fallback antigo). */
+  coverImageBytes: Uint8Array | null;
+  /** Contracapa já pronta da agência — nada é escrito em cima. Sem
+   * imagem, cai no degradê + backPhrase (fallback antigo). */
+  backCoverImageBytes: Uint8Array | null;
+  budgetDate: string;
   footerText: string | null;
   gradientFrom: string;
   gradientTo: string;
@@ -108,6 +116,8 @@ export async function renderBudgetPdf(input: BudgetPdfInput): Promise<Uint8Array
 
   const logoImg = await embedImage(doc, input.logoBytes);
   const headerImg = await embedImage(doc, input.headerBytes);
+  const coverImg = await embedImage(doc, input.coverImageBytes);
+  const backCoverImg = await embedImage(doc, input.backCoverImageBytes);
 
   const gradFrom = hexToRgb01(input.gradientFrom, [0.804, 1, 0]);
   const gradTo = hexToRgb01(input.gradientTo, [0.086, 0.086, 0.055]);
@@ -184,22 +194,55 @@ export async function renderBudgetPdf(input: BudgetPdfInput): Promise<Uint8Array
     page.drawText(totalLabel, { x: MARGIN + CONTENT_W - 12 - totalW, y: y - 6, size: 14, font: fontBold, color: rgb(...INK) });
   } else {
     // ---- Capa ----
-    const cover = doc.addPage([PAGE_W, PAGE_H]);
-    drawVerticalGradient(cover, 0, 0, PAGE_W, PAGE_H, gradFrom, gradTo);
-    const coverLogoH = drawLogo(cover, MARGIN, PAGE_H - 90, 160, 34);
-    let cy = PAGE_H - 90 - Math.max(coverLogoH, 34) - 60;
-    cover.drawText("PROPOSTA DE ORÇAMENTO", { x: MARGIN, y: cy, size: 24, font: fontBold, color: rgb(1, 1, 1) });
-    cy -= 34;
-    if (input.coverPhrase) {
-      for (const line of wrapText(input.coverPhrase, fontRegular, 13, CONTENT_W * 0.8)) {
-        cover.drawText(line, { x: MARGIN, y: cy, size: 13, font: fontRegular, color: rgb(1, 1, 1) });
-        cy -= 18;
+    // Com imagem própria da agência: a arte já vem com espaço em branco de
+    // propósito (pedido do Junior, 30/09) — só escreve por cima, na mesma
+    // posição do exemplo que ele mandou (~1/3 de cima pra baixo). Página
+    // fica na proporção da imagem (não força A4), senão cortaria a arte.
+    // Sem imagem: cai no degradê desenhado na hora (fallback antigo).
+    if (coverImg) {
+      const coverH = PAGE_H;
+      const coverW = PAGE_H * (coverImg.width / coverImg.height);
+      const cover = doc.addPage([coverW, coverH]);
+      cover.drawImage(coverImg, { x: 0, y: 0, width: coverW, height: coverH });
+      const pad = coverW * 0.12;
+      let cy = coverH * 0.68;
+      const coverLogoH = drawLogo(cover, pad, cy, coverW * 0.55, 30);
+      cy -= Math.max(coverLogoH, 30) + 28;
+      for (const line of wrapText("PROPOSTA DE ORÇAMENTO", fontBold, 21, coverW - pad * 2)) {
+        cover.drawText(line, { x: pad, y: cy, size: 21, font: fontBold, color: rgb(1, 1, 1) });
+        cy -= 25;
       }
+      cy -= 6;
+      if (input.coverPhrase) {
+        for (const line of wrapText(input.coverPhrase, fontRegular, 12, coverW - pad * 2)) {
+          cover.drawText(line, { x: pad, y: cy, size: 12, font: fontRegular, color: rgb(1, 1, 1) });
+          cy -= 16;
+        }
+      }
+      cy -= 14;
+      for (const line of wrapText(`${input.clientName}\n${input.clientSegment ?? ""}`, fontBold, 13, coverW - pad * 2).filter(Boolean)) {
+        cover.drawText(line, { x: pad, y: cy, size: 13, font: fontBold, color: rgb(...accent) });
+        cy -= 17;
+      }
+      cover.drawText(sanitizeForPdf(input.budgetDate), { x: pad, y: coverH * 0.045, size: 9.5, font: fontRegular, color: rgb(1, 1, 1) });
+    } else {
+      const cover = doc.addPage([PAGE_W, PAGE_H]);
+      drawVerticalGradient(cover, 0, 0, PAGE_W, PAGE_H, gradFrom, gradTo);
+      const coverLogoH = drawLogo(cover, MARGIN, PAGE_H - 90, 160, 34);
+      let cy = PAGE_H - 90 - Math.max(coverLogoH, 34) - 60;
+      cover.drawText("PROPOSTA DE ORÇAMENTO", { x: MARGIN, y: cy, size: 24, font: fontBold, color: rgb(1, 1, 1) });
+      cy -= 34;
+      if (input.coverPhrase) {
+        for (const line of wrapText(input.coverPhrase, fontRegular, 13, CONTENT_W * 0.8)) {
+          cover.drawText(line, { x: MARGIN, y: cy, size: 13, font: fontRegular, color: rgb(1, 1, 1) });
+          cy -= 18;
+        }
+      }
+      cy -= 30;
+      cover.drawText(sanitizeForPdf(`${input.clientName}${input.clientSegment ? " · " + input.clientSegment : ""}`), {
+        x: MARGIN, y: cy, size: 12, font: fontBold, color: rgb(...accent),
+      });
     }
-    cy -= 30;
-    cover.drawText(sanitizeForPdf(`${input.clientName}${input.clientSegment ? " · " + input.clientSegment : ""}`), {
-      x: MARGIN, y: cy, size: 12, font: fontBold, color: rgb(...accent),
-    });
 
     // ---- Introdução ----
     if (input.introTitle || input.introText) {
@@ -315,16 +358,26 @@ export async function renderBudgetPdf(input: BudgetPdfInput): Promise<Uint8Array
     }
 
     // ---- Contracapa ----
-    const back = doc.addPage([PAGE_W, PAGE_H]);
-    drawVerticalGradient(back, 0, 0, PAGE_W, PAGE_H, gradTo, gradFrom);
-    const backPhrase = input.backPhrase || "Vamos criar juntos.";
-    let by = PAGE_H / 2 + 40;
-    for (const line of wrapText(backPhrase, fontBold, 26, CONTENT_W * 0.85)) {
-      back.drawText(line, { x: MARGIN, y: by, size: 26, font: fontBold, color: rgb(1, 1, 1) });
-      by -= 32;
+    // Com imagem própria: já vem pronta da agência (ex.: "Você foi chamado
+    // pra criar.") — nada é escrito em cima, só entra igual foi desenhada.
+    // Sem imagem: cai no degradê + frase (fallback antigo).
+    if (backCoverImg) {
+      const backH = PAGE_H;
+      const backW = PAGE_H * (backCoverImg.width / backCoverImg.height);
+      const back = doc.addPage([backW, backH]);
+      back.drawImage(backCoverImg, { x: 0, y: 0, width: backW, height: backH });
+    } else {
+      const back = doc.addPage([PAGE_W, PAGE_H]);
+      drawVerticalGradient(back, 0, 0, PAGE_W, PAGE_H, gradTo, gradFrom);
+      const backPhrase = input.backPhrase || "Vamos criar juntos.";
+      let by = PAGE_H / 2 + 40;
+      for (const line of wrapText(backPhrase, fontBold, 26, CONTENT_W * 0.85)) {
+        back.drawText(line, { x: MARGIN, y: by, size: 26, font: fontBold, color: rgb(1, 1, 1) });
+        by -= 32;
+      }
+      by -= 16;
+      drawLogo(back, MARGIN, by + 34, 140, 30);
     }
-    by -= 16;
-    drawLogo(back, MARGIN, by + 34, 140, 30);
     // Cabeçalho/rodapé já foram desenhados em cada página de conteúdo na
     // hora de criá-la (drawHeaderImage/drawFooterText) — capa e contracapa
     // ficam de fora de propósito, são momentos de marca cheios.
