@@ -175,6 +175,9 @@ async function buildBrandContext(admin: any, orgId: string, clientId: string): P
   if (c.competitors?.trim()) parts.push(`Concorrentes:\n${cut(c.competitors.trim(), 800)}`);
   const kText = ((knowledge.data ?? []) as any[]).filter((k) => k.text_content?.trim()).map((k) => `- ${k.title ?? "Nota"}: ${cut(k.text_content.trim(), 1500)}`);
   if (kText.length) parts.push(`Base de conhecimento da empresa:\n${cut(kText.join("\n"), 6000)}`);
+  const { getLuzeriaMethodForOrg } = await import("./luzeria-method.server");
+  const method = await getLuzeriaMethodForOrg(orgId, 2500);
+  if (method) parts.push(method);
   const pb = ((playbook.data ?? []) as any[]).map((p) => `### ${p.title}\n${p.content}`);
   if (pb.length) parts.push(`Método de stories da casa (playbook):\n${cut(pb.join("\n\n"), 3500)}`);
   const recentTitles = ((recent.data ?? []) as any[]).map((r) => `- ${r.title} (${r.type})`);

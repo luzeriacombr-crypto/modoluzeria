@@ -2,7 +2,9 @@ import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { FileText, StickyNote, Trash2, Upload, Loader2 } from "lucide-react";
+import { FileText, StickyNote, Trash2, Upload, Loader2, Lock } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { listLuzeriaMethodTitles } from "@/lib/luzeria/knowledge-template.functions";
 import { orgKnowledgeQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +15,9 @@ const MAX_SIZE = 20 * 1024 * 1024;
 export function OrgKnowledgeSettings() {
   const me = useMe().data;
   const { data: entries = [] } = useQuery(orgKnowledgeQO());
+  // House: o Método Luzeria vem incluído — só os nomes aparecem (conteúdo confidencial).
+  const methodFn = useServerFn(listLuzeriaMethodTitles);
+  const { data: methodTitles = [] } = useQuery({ queryKey: ["luzeria-method-titles"], queryFn: () => methodFn(), enabled: me?.accountType === "house" });
   const { saveOrgKnowledgeText, saveOrgKnowledgeFile, deleteOrgKnowledge } = useApi();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -59,10 +64,31 @@ export function OrgKnowledgeSettings() {
   return (
     <div className="max-w-2xl">
       <div className="rounded-xl p-4 mb-6 text-[13px] text-foreground/70 leading-relaxed" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
-        Texto ou arquivos que ensinam a IA como a sua agência costuma criar conteúdo — guias de voz, padrões, exemplos.
-        Isso entra automaticamente na prévia de planejamento gerada por IA, pra qualquer cliente que tiver essa feature liberada.
+        {me?.accountType === "house" ? (
+          <>Materiais da sua empresa que ensinam a IA a criar conteúdo com a sua cara: guias de voz, apresentações, roteiros que deram certo.
+          Entra automaticamente no planejamento com IA, na reescrita de roteiros e nas ideias de stories.</>
+        ) : (
+          <>Texto ou arquivos que ensinam a IA como a sua agência costuma criar conteúdo — guias de voz, padrões, exemplos.
+          Isso entra automaticamente na prévia de planejamento gerada por IA, pra qualquer cliente que tiver essa feature liberada.</>
+        )}
         PDF, Markdown e texto são lidos de verdade pela IA; .doc/.docx ficam guardados aqui mas ainda não são lidos.
       </div>
+
+      {methodTitles.length > 0 && (
+        <div className="rounded-xl p-5 mb-6" style={{ background: "linear-gradient(135deg, rgba(var(--lz-brand-rgb),0.08), var(--card) 60%)", border: "1px solid rgba(var(--lz-brand-rgb),0.25)" }}>
+          <div className="flex items-center gap-2 text-sm font-bold text-foreground"><Lock size={14} style={{ color: "var(--lz-accent-ink)" }} /> Método Luzeria (incluído)</div>
+          <p className="text-[12px] text-foreground/55 mt-1 mb-3">
+            A IA já usa esse material em todos os planejamentos, roteiros e ideias da sua House. O conteúdo é exclusivo da Luzeria e não fica visível.
+          </p>
+          <ul className="space-y-1.5">
+            {methodTitles.map((t) => (
+              <li key={t} className="flex items-center gap-2 text-sm text-foreground/80">
+                <Lock size={11} className="text-foreground/35 shrink-0" /> {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="rounded-xl p-5 mb-6" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
         <div className="text-[11px] font-bold uppercase tracking-wide text-foreground/35 mb-3">Adicionar texto</div>

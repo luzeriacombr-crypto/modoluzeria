@@ -91,9 +91,8 @@ async function applyHouseSetup(supabaseAdmin: any, orgId: string, clientId: stri
   // Playbook modelo global → cópia própria da House (só se ainda não tiver).
   const { error: pbErr } = await supabaseAdmin.rpc("copy_playbook_template", { _org_id: orgId });
   if (pbErr) console.error("Falha ao copiar o playbook modelo:", pbErr.message);
-  // Base de conhecimento inicial (método da Luzeria, versão geral).
-  const { error: kbErr } = await supabaseAdmin.rpc("copy_knowledge_template", { _org_id: orgId });
-  if (kbErr) console.error("Falha ao copiar a base de conhecimento modelo:", kbErr.message);
+  // Base de conhecimento: o Método Luzeria não é copiado — a IA lê direto
+  // do modelo (confidencial, ver luzeria-method.server.ts).
 }
 
 /** Cria org + marca principal + configurações da House. Não cria usuário —

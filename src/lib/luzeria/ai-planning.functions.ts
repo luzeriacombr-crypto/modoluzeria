@@ -369,6 +369,10 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
         }
       }
     }
+    // House: o Método Luzeria (confidencial) entra junto da base da própria empresa.
+    const { getLuzeriaMethodForOrg } = await import("./luzeria-method.server");
+    const luzeriaMethod = await getLuzeriaMethodForOrg(context.orgId);
+    if (luzeriaMethod) knowledgeTextParts.unshift(luzeriaMethod);
     const knowledgeText = knowledgeTextParts.length
       ? `\n\nBase de conhecimento da agência: pode ter guia de voz/tom, MAS TAMBÉM formatos de conteúdo nomeados e reutilizáveis com exemplos reais de roteiro (ex: "Esse ou Aquele", "Top 5"/lista numerada em contagem regressiva, "Troque isso por isso", POV, resposta direta a pergunta frequente tipo "[pergunta entre aspas]" respondida olhando pra câmera, tela dividida, mito ou verdade). Isso não é só referência de tom, é material pra REAPROVEITAR DE VERDADE: sempre que a base tiver formato nomeado como esses, use pelo menos 2-3 deles na leva de sugestões, adaptados pro nicho e pros produtos/serviços reais do cliente atual (nunca copie o exemplo literal de outro cliente/nicho). São formatos rápidos de gravar e com histórico real de bom engajamento.\n${knowledgeTextParts.join("\n\n")}`
       : "";

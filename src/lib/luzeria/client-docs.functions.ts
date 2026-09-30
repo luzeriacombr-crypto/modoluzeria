@@ -559,6 +559,10 @@ export const regenerateRoteiroDoc = createServerFn({ method: "POST" })
     const knowledgeParts = ((knowledgeRows ?? []) as any[])
       .filter((k) => k.text_content)
       .map((k) => `### ${k.title || "Nota"}\n${safeTruncate(String(k.text_content), 6000)}`);
+    // House: o Método Luzeria (confidencial) entra junto da base da própria empresa.
+    const { getLuzeriaMethodForOrg } = await import("./luzeria-method.server");
+    const luzeriaMethod = await getLuzeriaMethodForOrg(context.orgId);
+    if (luzeriaMethod) knowledgeParts.unshift(luzeriaMethod);
     const knowledgeText = knowledgeParts.length
       ? `\n\nBase de conhecimento da agência (como ela costuma criar conteúdo, use fatos e detalhes concretos daqui pra aprofundar, não só o tom):\n${knowledgeParts.join("\n\n")}`
       : "";

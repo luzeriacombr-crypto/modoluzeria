@@ -66,6 +66,7 @@ import { Route as AuthenticatedDemandasRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
 import { Route as AuthenticatedBibliotecaRouteImport } from './routes/_authenticated/biblioteca'
+import { Route as AuthenticatedBaseModeloRouteImport } from './routes/_authenticated/base-modelo'
 import { Route as AuthenticatedAvulsosRouteImport } from './routes/_authenticated/avulsos'
 import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/ajuda'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -391,6 +392,11 @@ const AuthenticatedBibliotecaRoute = AuthenticatedBibliotecaRouteImport.update({
   path: '/biblioteca',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedBaseModeloRoute = AuthenticatedBaseModeloRouteImport.update({
+  id: '/base-modelo',
+  path: '/base-modelo',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAvulsosRoute = AuthenticatedAvulsosRouteImport.update({
   id: '/avulsos',
   path: '/avulsos',
@@ -584,6 +590,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
   '/avulsos': typeof AuthenticatedAvulsosRoute
+  '/base-modelo': typeof AuthenticatedBaseModeloRoute
   '/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -672,6 +679,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/ajuda': typeof AuthenticatedAjudaRoute
   '/avulsos': typeof AuthenticatedAvulsosRoute
+  '/base-modelo': typeof AuthenticatedBaseModeloRoute
   '/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -762,6 +770,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/ajuda': typeof AuthenticatedAjudaRoute
   '/_authenticated/avulsos': typeof AuthenticatedAvulsosRoute
+  '/_authenticated/base-modelo': typeof AuthenticatedBaseModeloRoute
   '/_authenticated/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -852,6 +861,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/ajuda'
     | '/avulsos'
+    | '/base-modelo'
     | '/biblioteca'
     | '/calendario'
     | '/configuracoes'
@@ -940,6 +950,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/ajuda'
     | '/avulsos'
+    | '/base-modelo'
     | '/biblioteca'
     | '/calendario'
     | '/configuracoes'
@@ -1029,6 +1040,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/ajuda'
     | '/_authenticated/avulsos'
+    | '/_authenticated/base-modelo'
     | '/_authenticated/biblioteca'
     | '/_authenticated/calendario'
     | '/_authenticated/configuracoes'
@@ -1552,6 +1564,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBibliotecaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/base-modelo': {
+      id: '/_authenticated/base-modelo'
+      path: '/base-modelo'
+      fullPath: '/base-modelo'
+      preLoaderRoute: typeof AuthenticatedBaseModeloRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/avulsos': {
       id: '/_authenticated/avulsos'
       path: '/avulsos'
@@ -1769,6 +1788,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAjudaRoute: typeof AuthenticatedAjudaRoute
   AuthenticatedAvulsosRoute: typeof AuthenticatedAvulsosRoute
+  AuthenticatedBaseModeloRoute: typeof AuthenticatedBaseModeloRoute
   AuthenticatedBibliotecaRoute: typeof AuthenticatedBibliotecaRoute
   AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
@@ -1803,6 +1823,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAjudaRoute: AuthenticatedAjudaRoute,
   AuthenticatedAvulsosRoute: AuthenticatedAvulsosRoute,
+  AuthenticatedBaseModeloRoute: AuthenticatedBaseModeloRoute,
   AuthenticatedBibliotecaRoute: AuthenticatedBibliotecaRoute,
   AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
