@@ -3,54 +3,55 @@
 // (support-chat.functions.ts). Editar aqui atualiza os dois lugares.
 
 export type HelpFaqGroup = { category: string; items: { q: string; a: string }[] };
-export type HelpTutorial = { title: string; steps: string[]; images?: { src: string; alt: string }[]; videoUrl?: string };
+export type HelpTutorial = { title: string; category: string; steps: string[]; images?: { src: string; alt: string }[]; videoUrl?: string };
+
+/** Ordem de exibição das categorias na Central de Ajuda. */
+export const TUTORIAL_CATEGORIES = ["Primeiros passos", "Conteúdo e aprovação", "Inteligência Artificial", "Equipe e automações", "Personalização e organização"] as const;
 
 export const FAQ: HelpFaqGroup[] = [
-  {
-    category: "Conteúdo (Posts, Reels e Rotina)",
-    items: [
-      { q: "Como funcionam os cards de Posts e Reels?", a: "Cada post ou reel aparece como um card com capa, status, responsável e prazo. Clique no card pra abrir os detalhes completos (copy, checklist, comentários, arquivos)." },
-      { q: "O que é o campo Estático/Carrossel?", a: "É o formato do post. No resumo em cards só aparece o formato já escolhido — pra mudar, abra o post clicando nele e use a seção \"Formato\"." },
-      { q: "Como funciona a Rotina?", a: "É a lista de tarefas de organização/limpeza da agência, com um calendário por dia. O Admin Master pode editar a lista de tarefas direto na tela." },
-    ],
-  },
   {
     category: "Equipe e automações",
     items: [
       { q: "Como envio uma foto de perfil pra um colega que ainda não tem?", a: "Em Configurações → Equipe, clique no card do colaborador — abre um modal onde o Admin Master pode enviar ou trocar a foto dele." },
       { q: "Esqueci minha senha, e agora?", a: "Peça pro Admin Master da sua agência: Configurações → Equipe → clique no seu card → \"Resetar senha\". Você recebe um link por e-mail." },
-      { q: "Como funcionam as Automações?", a: "Em Configurações → Automações, o Admin Master cria regras do tipo \"quando acontecer X, então fazer Y\". Elas rodam sozinhas, mesmo sem ninguém com a tela aberta. Gatilhos: item criado, status mudou, prazo (antes/vencido), item parado, cliente aprovou o feed ou pediu ajuste, arquivo anexado, falha na publicação do Instagram, roteiro aprovado ou com ajuste, seleção de fotos finalizada, contrato assinado, cliente sem entrega e cobrança a vencer/atrasada. Ações: mudar status, atribuir, notificar, deixar WhatsApp pronto, programar no Instagram, criar tarefa, comentar no item, mover pro próximo mês e enviar e-mail. Dá pra limitar a regra a um cliente ou tipo de conteúdo, pausar, testar a mensagem e ver quantas vezes ela já disparou. Se está começando, use um dos Modelos prontos na própria página." },
-      { q: "Não sei por onde começar nas Automações — tem algum exemplo pronto?", a: "Tem. Em Configurações → Automações, logo abaixo das suas regras, fica a lista de Modelos prontos (cobrar aprovação parada, avisar quando o cliente pedir ajuste, lembrete de prazo, falha no Instagram, mensalidade atrasada, cliente sem entrega, entre outros). É só clicar em Adicionar — depois você pode editar, limitar a um cliente ou pausar." },
-      { q: "Adicionei um colaborador, mas ele não tem acesso de Admin — o que eu esqueci?", a: "Adicionar o colaborador e definir a função dele são duas etapas separadas. Depois de adicionar, clique no card da pessoa em Configurações → Equipe e escolha a Função certa: Membro, Adm Setor ou Adm Master." },
+      { q: "O e-mail de boas-vindas pra um colaborador novo não chegou, o que eu faço?", a: "Primeiro peça pra ele conferir a caixa de spam/lixo eletrônico. Se não estiver lá, vá em Configurações → Equipe, clique no card da pessoa e depois em \"Reenviar e-mail de boas-vindas\"." },
+      { q: "Como funcionam as Automações?", a: "Em Configurações → Automações, o Admin Master cria regras do tipo \"quando acontecer X, então fazer Y\", que rodam sozinhas. Veja o passo a passo completo (com os Modelos prontos) no tutorial \"Criar uma automação\", aqui na aba Tutoriais." },
       { q: "Dá pra restringir o acesso à aba financeira só pros sócios?", a: "Sim, pela Função de cada pessoa. \"Membro\" só vê e mexe no que for atribuído a ele, \"Adm Setor\" pode ter permissões extras configuradas por cargo, e \"Adm Master\" tem acesso total, inclusive ao financeiro. Escolha a função certa pra cada colaborador em Configurações → Equipe." },
     ],
   },
   {
     category: "Clientes e arquivos",
     items: [
-      { q: "Como mando a arte pro cliente aprovar pelo WhatsApp? O Modo Criador envia sozinho no grupo?", a: "O Modo Criador não envia a mensagem sozinho: ele gera o link, e você manda no WhatsApp. Passo a passo: 1) deixe o post/reel com a arte anexada e o status em \"Revisão cliente\" (a partir dessa etapa ele aparece no preview do cliente); 2) abra o cliente, vá na aba \"Preview de Feed\" e clique em \"Compartilhar preview\"; 3) clique em \"Copiar\" e cole o link no WhatsApp do cliente ou do grupo; 4) o cliente abre sem login, vê como o feed vai ficar e pode aprovar ou deixar comentário; 5) você é avisado quando ele aprovar ou pedir ajuste, e a aba mostra \"Feed aprovado pelo cliente\". O link é fixo por cliente (sempre mostra o mês ativo; \"Gerar novo link\" cancela o anterior). Pra agilizar, dá pra criar uma Automação em Configurações → Automações (por exemplo, quando o status virar \"Revisão cliente\", deixar a mensagem de WhatsApp pronta pra você só clicar em enviar)." },
-      { q: "Como meu cliente aprova um post sem ter conta?", a: "Cada cliente tem um link público (aba \"Preview de Feed\" dentro do cliente). Manda esse link — o cliente aprova ou comenta direto, sem login." },
+      { q: "Como meu cliente aprova um post sem ter conta?", a: "Cada cliente tem um link público (aba \"Preview de Feed\" dentro do cliente) — manda esse link e ele aprova ou comenta direto, sem login. Veja o passo a passo completo (incluindo como mandar pelo WhatsApp) no tutorial \"Como o cliente aprova o conteúdo\", aqui na aba Tutoriais." },
       { q: "Como funciona o backup no Google Drive?", a: "Conecte sua conta do Drive em Configurações → Drive. Os arquivos enviados nos posts/reels são organizados automaticamente lá, por cliente e mês." },
-      { q: "Dá pra importar vários clientes de uma vez, sem cadastrar um por um?", a: "Sim. Assim que você tem menos de 2 clientes cadastrados aparece um banner \"Traga seus clientes de onde já estão\" — clique nele (ou no item correspondente do checklist \"Primeiros passos\") e escolha entre mandar uma planilha/CSV/PDF, prints de tela da sua organização atual, ou conectar direto com Trello, ClickUp ou Notion. A IA lê e monta uma lista pra você revisar e confirmar antes de importar de verdade." },
-      { q: "Deu erro de permissão ao conectar o Google Drive, o que eu faço?", a: "O mais comum é estar conectando com uma conta do Google diferente da dona da pasta (por exemplo, uma conta pessoal quando a pasta é de uma conta Workspace da agência) — refaça a conexão escolhendo a conta certa. Confira também se o link da pasta raiz foi copiado com permissão de compartilhamento, não só de visualização restrita." },
-      { q: "Preciso criar a pasta de cada cliente manualmente no Google Drive?", a: "Não. No passo 3 (\"Vincular clientes\") do assistente de conexão do Drive, em Configurações → Drive, o Modo Criador já sugere a pasta certa pra cada cliente comparando os nomes — você só confirma, e o que não tiver pasta ainda é criado automaticamente." },
-      { q: "Como registro um cliente que pausou o contrato, mas não cancelou de vez?", a: "Use a categoria \"Avulso\" pra esse caso. \"Arquivado\" é só pra quem realmente encerrou com a agência." },
+      { q: "Dá pra importar vários clientes de uma vez, sem cadastrar um por um?", a: "Sim — de planilha/CSV/PDF, prints de tela, ou conectando direto com Trello, ClickUp ou Notion. Veja o passo a passo no tutorial \"Importar vários clientes de uma vez\"." },
+      { q: "Importei clientes do Trello/ClickUp/Notion, mas não vieram todos — por quê?", a: "A IA lê a estrutura do seu board pra separar um cliente por lista/coluna, e isso às vezes não bate 100% com boards organizados de um jeito diferente. Confira se cada cliente está numa lista/coluna própria e tente importar de novo; se continuar faltando gente, manda uma mensagem pelo ícone de interrogação (?) que a gente ajuda a resolver." },
+      { q: "Deu erro de permissão ao conectar o Google Drive, o que eu faço?", a: "O mais comum é estar conectando com uma conta do Google diferente da dona da pasta. Veja o passo a passo completo no tutorial \"Resolver erro de permissão ao conectar o Google Drive\"." },
     ],
   },
   {
     category: "Instagram e outras redes",
     items: [
       { q: "Preciso pedir login e senha do Instagram do meu cliente?", a: "Não necessariamente. Na Ficha do Cliente, seção Instagram, tem um botão \"Gerar link\" — ele cria um link com a marca da sua agência pro próprio cliente conectar o Instagram dele, sem passar a senha pra você. Se preferir, ainda dá pra conectar direto fazendo login com a conta do cliente." },
-      { q: "Dá pra editar a bio ou a foto de perfil do Instagram do cliente pelo Modo Criador?", a: "Não — essa é uma limitação da própria API da Meta, não dá pra fazer isso por nenhum app de terceiros. Precisa ser direto no aplicativo do Instagram." },
+      { q: "Não consigo programar ou publicar no Instagram — o botão não aparece ou dá erro. O que eu confiro?", a: "Duas coisas resolvem quase sempre: (1) o cliente precisa ter o Instagram conectado na Ficha do Cliente; (2) o conteúdo precisa estar com status \"Pronto para publicar\" e com a \"Data de publicação\" preenchida, pra liberar o botão \"Programar publicação\". Veja o passo a passo completo no tutorial \"Programar ou publicar direto no Instagram\"." },
       { q: "Além do Instagram, dá pra publicar em outra rede social?", a: "Por enquanto só no Instagram (posts, carrosséis, reels e stories). Facebook, TikTok e LinkedIn ainda não estão liberados pra todas as agências." },
       { q: "Consigo excluir um post, reel ou story que já foi publicado pelo Modo Criador?", a: "Pelo Modo Criador ainda não: a Meta não permite que o app apague publicações do Instagram com o tipo de conexão que usamos. O caminho é abrir o item, ir na seção \"No Instagram\" e clicar em \"Ver no Instagram\"; o post abre lá e você exclui direto no app (três pontinhos → Excluir)." },
-      { q: "Os relatórios de alcance, curtidas e outras métricas do Instagram do meu cliente aparecem no Modo Criador?", a: "Ainda não pra contas de cliente — essa permissão específica de insights depende de uma aprovação separada da Meta, que ainda está em análise. Assim que for liberada, passa a funcionar pra todas as agências automaticamente." },
+      { q: "Os relatórios de alcance, curtidas e outras métricas do Instagram do meu cliente aparecem no Modo Criador?", a: "Sim, em \"Instagram\" no menu lateral — veja o tutorial \"Ver publicações programadas, publicadas e os Insights de um cliente\". Uma parte mais completa de insights ainda depende de uma aprovação separada da Meta, em análise." },
+    ],
+  },
+  {
+    category: "Personalização e organização",
+    items: [
+      { q: "Como coloco a logo e as cores da minha agência no Modo Criador?", a: "Em Configurações → Geral, seção \"Marca da agência\". Veja o passo a passo completo no tutorial \"Personalizar a logo e as cores da agência\"." },
+      { q: "Dá pra organizar tarefas ou projetos que não são post, reel ou story (ex: identidade visual, um evento)?", a: "Dá, com limitações: pra algo pontual, use \"Registrar nova atividade\" dentro do cliente. Pra um projeto com várias etapas, crie uma \"Campanha\" nesse cliente. Hoje isso é organizado por cliente e mês, sem um quadro kanban arrastável nem visão geral da agência — veja o tutorial \"Organizar tarefas e projetos além de posts, reels e stories\" pra entender o que dá pra fazer hoje." },
     ],
   },
   {
     category: "Conta e assinatura",
     items: [
-      { q: "Preciso cadastrar cartão de crédito pra testar o Modo Criador?", a: "Não. Os 30 dias de teste grátis não pedem cartão nem PIX. No último dia do teste avisamos você pra decidir se quer continuar." },
+      { q: "Preciso cadastrar cartão de crédito pra testar o Modo Criador?", a: "Não. Os 30 dias de teste grátis (45 se você entrou por indicação) não pedem cartão nem PIX. No último dia do teste avisamos você pra decidir se quer continuar." },
+      { q: "Clicar em \"Assinar\" vai me cobrar na hora?", a: "Não. Clicar em \"Assinar\" pede uma confirmação antes, mostrando a data real de vencimento — se você ainda está no teste grátis, essa data só cai no fim do seu teste, nunca hoje. Nada é cobrado automaticamente: só é gerada uma fatura (boleto/PIX/cartão) que você mesmo escolhe pagar quando quiser continuar." },
+      { q: "Posso excluir minha conta?", a: "Sim, quem é Admin Master pode fazer isso sozinho em Configurações → Plano e Cobrança, na seção \"Excluir conta\" (no fim da página) — precisa digitar o nome da agência pra confirmar, e não dá pra desfazer. Se você só está no teste grátis, nem precisa excluir: ele acaba sozinho e não há cobrança." },
     ],
   },
   {
@@ -66,6 +67,7 @@ export const FAQ: HelpFaqGroup[] = [
 export const TUTORIALS: HelpTutorial[] = [
   {
     title: "Importar vários clientes de uma vez",
+    category: "Primeiros passos",
     steps: [
       "Enquanto você tiver menos de 2 clientes cadastrados, aparece um banner \"Traga seus clientes de onde já estão\" no topo — ou acesse pelo item correspondente no checklist \"Primeiros passos\".",
       "Escolha a origem: Arquivo (planilha, CSV ou PDF), Prints de tela da sua organização atual, ou conectar direto com Trello, ClickUp ou Notion.",
@@ -76,6 +78,7 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Conectar o Google Drive",
+    category: "Primeiros passos",
     steps: [
       "Vá em Configurações → Drive. É um assistente de 3 passos: Conectar conta, Pasta raiz, Vincular clientes.",
       "Passo 1: clique em conectar e faça login com a conta Google da agência.",
@@ -86,6 +89,7 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Resolver erro de permissão ao conectar o Google Drive",
+    category: "Primeiros passos",
     steps: [
       "O erro mais comum acontece quando a conta Google usada pra conectar é diferente da dona da pasta (por exemplo, uma conta pessoal quando a pasta é de uma conta Workspace da agência).",
       "Refaça a conexão em Configurações → Drive, e na tela de login do Google escolha a conta certa (se aparecer mais de uma opção salva no navegador).",
@@ -95,6 +99,7 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Conectar o Instagram de um cliente sem pedir a senha dele",
+    category: "Primeiros passos",
     steps: [
       "Abra a Ficha do Cliente e ache a seção \"Instagram\".",
       "Clique em \"Gerar link\" — isso cria um link com a marca da sua agência.",
@@ -105,6 +110,7 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Definir a função de um colaborador (Membro, Adm Setor ou Adm Master)",
+    category: "Equipe e automações",
     steps: [
       "Adicionar o colaborador na equipe e definir a função dele são duas etapas separadas — é fácil esquecer a segunda.",
       "Vá em Configurações → Equipe e clique no card da pessoa.",
@@ -114,6 +120,7 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Criar um conteúdo pro cliente (briefing, materiais e responsáveis)",
+    category: "Conteúdo e aprovação",
     steps: [
       "Abra o cliente e clique em \"Adicionar Posts\" (ou Reels/Stories) — o item já nasce na hora e abre pra você preencher.",
       "Dê um título clicando em \"Clique para inserir um título\".",
@@ -128,7 +135,22 @@ export const TUTORIALS: HelpTutorial[] = [
     ],
   },
   {
+    title: "Como o cliente aprova o conteúdo (WhatsApp e Preview de Feed)",
+    category: "Conteúdo e aprovação",
+    steps: [
+      "Deixe o post/reel com a arte anexada e o status em \"Revisão cliente\" — só a partir dessa etapa ele aparece no preview do cliente.",
+      "Abra o cliente e vá na aba \"Preview de Feed\".",
+      "Clique em \"Compartilhar preview\" e depois em \"Copiar\".",
+      "Cole o link no WhatsApp do cliente (ou do grupo) — ele abre sem precisar de login.",
+      "O cliente vê como o feed vai ficar e pode aprovar ou deixar um comentário direto ali.",
+      "Você é avisado quando ele aprovar ou pedir ajuste — a aba passa a mostrar \"Feed aprovado pelo cliente\".",
+      "O link é fixo por cliente (sempre mostra o mês ativo) — clique em \"Gerar novo link\" só se quiser cancelar o anterior.",
+      "Quer que a mensagem de WhatsApp já fique pronta sozinha? Crie uma automação em Configurações → Automações, com o gatilho \"Quando o status virar\" → \"Revisão cliente\" e a ação \"Deixar mensagem de WhatsApp pronta\".",
+    ],
+  },
+  {
     title: "Programar ou publicar direto no Instagram",
+    category: "Conteúdo e aprovação",
     steps: [
       "O conteúdo precisa estar com status \"Pronto para publicar\" e o cliente com o Instagram conectado (Ficha do Cliente).",
       "Dentro do item, role até \"Data de publicação\" e defina a data e o horário reais — é isso que aparece pro cliente no preview.",
@@ -140,6 +162,7 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Configurar a Base de Conhecimento pra treinar a IA",
+    category: "Inteligência Artificial",
     steps: [
       "Vá em Configurações → Base de conhecimento.",
       "Clique em \"Adicionar texto\", dê um título opcional e cole o conteúdo — pode ser um guia de tom de voz, padrões de legenda ou um roteiro que deu certo e você quer que a IA use de referência.",
@@ -150,6 +173,7 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Preencher a Ficha do Cliente pra IA ter mais contexto",
+    category: "Inteligência Artificial",
     steps: [
       "Abra o cliente, vá na aba \"Ficha do Cliente\" e role até o final da aba \"Geral\".",
       "Em \"Concorrentes\", liste um perfil por linha (ex: @perfil_concorrente ou nome da empresa) — a IA pesquisa o que eles andam postando na hora de gerar um planejamento.",
@@ -160,6 +184,7 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Colar um roteiro feito fora do Modo Criador e formatar com IA",
+    category: "Inteligência Artificial",
     steps: [
       "Abra o cliente, vá em \"Mais\" e depois na aba \"Roteiros & Planejamento\".",
       "Clique em \"Formatar com IA\".",
@@ -172,6 +197,7 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Exportar roteiros em PDF pra imprimir",
+    category: "Conteúdo e aprovação",
     steps: [
       "Na aba \"Roteiros & Planejamento\" do cliente, ache o roteiro salvo e clique no ícone \"Exportar em PDF\".",
       "Escolha o que entra: \"Todos os roteiros\", \"Somente Reels\", \"Somente aprovados\" ou \"Selecionar quais\" (aparece uma lista pra marcar um por um).",
@@ -181,6 +207,7 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Ver publicações programadas, publicadas e os Insights de um cliente",
+    category: "Conteúdo e aprovação",
     steps: [
       "Clique em \"Instagram\" no menu lateral (só admins veem esse item).",
       "Na aba \"Atividade\", escolha o cliente no filtro (ou deixe em \"Todos os clientes\").",
@@ -192,6 +219,7 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Gerar uma prévia de planejamento com IA (novidade)",
+    category: "Inteligência Artificial",
     steps: [
       "Regra de acesso: sem assinatura registrada (teste grátis) ou no plano Solo, dá pra usar em até 2 clientes. No plano Pro ou superior, sem limite. Isso é por plano/pagamento, não por nível do Programa de Níveis.",
       "Na primeira vez que usar num cliente novo, se a agência estiver no limite (teste grátis ou Solo), aparece uma confirmação avisando que vai gastar uma das vagas. Clientes que já usaram antes continuam gerando de graça, sem confirmar de novo.",
@@ -207,6 +235,7 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Criar uma automação (com modelo pronto ou do zero)",
+    category: "Equipe e automações",
     steps: [
       "Vá em Configurações → Automações (só o Admin Master cria e edita).",
       "Mais rápido: role até \"Modelos prontos\", escolha um (ex: \"Avisar falha na publicação do Instagram\") e clique em Adicionar — a regra já nasce com o texto pronto.",
@@ -219,12 +248,36 @@ export const TUTORIALS: HelpTutorial[] = [
   },
   {
     title: "Instalar o Modo Criador como app no celular",
+    category: "Primeiros passos",
     steps: [
       "No iPhone (Safari): toque no botão de compartilhar na barra do navegador, role até \"Adicionar à Tela de Início\", confira o nome e toque em Adicionar.",
       "No Android (Chrome): toque no menu de três pontinhos no canto superior direito, depois em \"Instalar aplicativo\" ou \"Adicionar à tela inicial\".",
       "Pronto — o ícone da sua agência aparece na tela inicial, abrindo igual um app de verdade.",
       "Isso só funciona nesse aparelho e navegador específico — repita em cada celular que a equipe da agência usar.",
       "Depois de instalado, ative as notificações no sininho dentro do app pra saber na hora de comentário novo, prazo próximo ou aprovação de cliente.",
+    ],
+  },
+  {
+    title: "Personalizar a logo e as cores da agência",
+    category: "Personalização e organização",
+    steps: [
+      "Vá em Configurações → Geral e abra a seção \"Marca da agência\".",
+      "Em \"Logo · modo escuro\" e \"Logo · modo claro\" (opcional), clique em \"Enviar logo\" pra subir cada versão — se não subir a versão clara, o app usa a escura também em telas claras.",
+      "Se precisar, ajuste o tamanho e a posição da logo na barra lateral em \"Ajuste fino da logo na barra lateral\", ou clique em \"Restaurar automático\".",
+      "Preencha \"Nome da agência\" e, se quiser, o \"Slogan\" (ou marque a opção de não mostrar nenhum).",
+      "Em \"Identidade visual\", escolha a \"Cor principal\", \"Cor clara (fundos suaves)\", \"Cor da barra lateral\" e \"Cor de destaque nos gráficos\".",
+      "Quer controlar a cor de elementos específicos (título, corpo do texto, botões, gradiente do topo)? Marque \"Modo avançado\" — dá pra voltar tudo com \"Restaurar cores originais\" quando quiser.",
+    ],
+  },
+  {
+    title: "Organizar tarefas e projetos além de posts, reels e stories",
+    category: "Personalização e organização",
+    steps: [
+      "Pra algo pontual dentro de um cliente (uma reunião, uma entrega avulsa), abra o cliente → \"Mais\" → \"Atividades\" e clique em \"Registrar nova atividade\".",
+      "Pra um projeto maior com várias etapas (ex: identidade visual, um evento), crie uma \"Campanha\" pra esse cliente em \"Mais\" → \"Campanhas\" — dá pra colocar briefing, materiais, valor e a pasta do Drive.",
+      "Dentro da campanha, adicione quantos itens quiser como tarefas — não precisam ser post/reel de verdade.",
+      "Marque um item como \"Interno\" se ele for só controle da equipe e não deve aparecer pro cliente em Posts/Reels/Preview de Feed.",
+      "Hoje isso é organizado por cliente e por mês, sem um quadro kanban arrastável nem uma visão geral da agência inteira — se sua agência sente falta disso, manda a sugestão pelo ícone de interrogação (?) no topo.",
     ],
   },
 ];

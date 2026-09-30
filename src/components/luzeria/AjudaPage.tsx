@@ -10,6 +10,7 @@ import {
   FilePlus2, Save, IdCard, Building2, History, FolderOpen, Wand2, ClipboardPaste, Copy, FileDown,
   ListFilter, Type, Download, Filter, Share2, KeyRound, AlertCircle, TrendingDown, TrendingUp, Search,
   Star, Code2, FlaskConical, Clock, MoreVertical, Smartphone, Repeat, Bell, MessageSquareText, Sparkles,
+  LifeBuoy, Eye, SlidersHorizontal, Palette, FolderKanban, EyeOff,
   type LucideIcon,
 } from "lucide-react";
 import { useMe, useApi, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/queries";
@@ -17,7 +18,7 @@ import type { MyBugReport, AllBugReport, BugReportStatus, BugReportKind } from "
 import { ForumTab } from "./ForumTab";
 import { SupportChatAdminPanel } from "./SupportChatWidget";
 import { SupportChatTopicsPanel } from "./SupportChatTopicsPanel";
-import { FAQ, TUTORIALS as TUTORIALS_BASE, type HelpTutorial } from "@/lib/luzeria/help-content";
+import { FAQ, TUTORIALS as TUTORIALS_BASE, TUTORIAL_CATEGORIES, type HelpTutorial } from "@/lib/luzeria/help-content";
 
 type Tab = "faq" | "tutoriais" | "minhas" | "todas" | "chats" | "temas" | "forum";
 
@@ -48,6 +49,7 @@ const STEP_ICONS: Record<string, LucideIcon[]> = {
   "Conectar o Instagram de um cliente sem pedir a senha dele": [Instagram, Link2, Share2, CheckCircle2, LogIn],
   "Definir a função de um colaborador (Membro, Adm Setor ou Adm Master)": [Users, MousePointerClick, ShieldCheck, CheckCircle2],
   "Criar um conteúdo pro cliente (briefing, materiais e responsáveis)": [Plus, Pencil, FileText, ImageIcon, UploadCloud, MessageSquareText, UserPlus, UserCog, GitBranch, Zap],
+  "Como o cliente aprova o conteúdo (WhatsApp e Preview de Feed)": [GitBranch, Eye, Share2, MessageCircle, CheckCircle2, Bell, RotateCcw, Zap],
   "Programar ou publicar direto no Instagram": [CheckCircle2, CalendarClock, Send, CalendarCheck, XCircle, Facebook],
   "Configurar a Base de Conhecimento pra treinar a IA": [Settings, FilePlus2, FileText, Save, Sparkles],
   "Preencher a Ficha do Cliente pra IA ter mais contexto": [IdCard, Building2, FileText, History, Save],
@@ -57,6 +59,8 @@ const STEP_ICONS: Record<string, LucideIcon[]> = {
   "Gerar uma prévia de planejamento com IA (novidade)": [KeyRound, AlertCircle, TrendingDown, FileText, Sparkles, MessageSquareText, Search, ClipboardList, Star, TrendingUp],
   "Criar uma automação (com modelo pronto ou do zero)": [Settings, Zap, GitBranch, Filter, Code2, FlaskConical, Clock],
   "Instalar o Modo Criador como app no celular": [Share2, MoreVertical, Smartphone, Repeat, Bell],
+  "Personalizar a logo e as cores da agência": [Settings, UploadCloud, SlidersHorizontal, Type, Palette, Wand2],
+  "Organizar tarefas e projetos além de posts, reels e stories": [ClipboardList, FolderKanban, Plus, EyeOff, Lightbulb],
 };
 
 export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
@@ -64,11 +68,12 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
   const disabled = new Set(me?.disabledFeatures ?? []);
   const forumEnabled = me?.role === "master" && !disabled.has("forum");
   const validTabs = ["faq", "tutoriais", "minhas", "todas", "chats", "temas", ...(forumEnabled ? ["forum"] : [])];
-  const [tab, setTab] = useState<Tab>(validTabs.includes(initialTab ?? "") ? (initialTab as Tab) : "faq");
+  const [tab, setTab] = useState<Tab>(validTabs.includes(initialTab ?? "") ? (initialTab as Tab) : "tutoriais");
+  const [tutorialCategory, setTutorialCategory] = useState<string | null>(null);
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "faq", label: "Perguntas frequentes" },
     { id: "tutoriais", label: "Tutoriais" },
+    { id: "faq", label: "Perguntas frequentes" },
     { id: "minhas", label: "Minhas solicitações" },
     ...(me?.isPlatformAdmin ? [{ id: "todas" as Tab, label: "Todas as solicitações" }] : []),
     ...(me?.isPlatformAdmin ? [{ id: "chats" as Tab, label: "Chats" }] : []),
@@ -78,8 +83,17 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
 
   return (
     <div className={`p-10 mx-auto ${tab === "forum" || tab === "chats" || tab === "temas" ? "max-w-6xl" : "max-w-4xl"}`}>
-      <h1 className="text-[32px] font-bold text-foreground tracking-tight">Central de ajuda</h1>
-      <p className="text-sm text-foreground/50 mt-2">Dúvidas frequentes, tutoriais, o histórico do que você já reportou e o fórum entre agências.</p>
+      <div className="relative overflow-hidden rounded-2xl mb-6" style={{ background: "var(--lz-hero-bg)", border: "1px solid rgba(var(--lz-hero-a-rgb),0.18)" }}>
+        <div className="pointer-events-none absolute -top-16 -left-16 h-56 w-56 rounded-full opacity-30 blur-3xl" style={{ background: "rgb(var(--lz-hero-a-rgb))" }} />
+        <div className="pointer-events-none absolute -bottom-20 right-6 h-60 w-60 rounded-full opacity-25 blur-3xl" style={{ background: "rgb(var(--lz-hero-blob-b-rgb))" }} />
+        <div className="relative p-8 md:p-10">
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider" style={{ backgroundColor: "var(--lz-hero-badge-bg)", color: "var(--lz-accent-ink)" }}>
+            <LifeBuoy size={11} /> Central de ajuda
+          </div>
+          <h1 className="mt-3 text-foreground font-bold text-[32px] md:text-[40px] leading-tight tracking-tight">Como podemos ajudar?</h1>
+          <p className="mt-2 text-foreground/60 text-sm max-w-lg">Tutoriais passo a passo com print de tela, respostas rápidas, e o histórico do que você já reportou.</p>
+        </div>
+      </div>
 
       {/* Auditoria de UX (2.5): pra platform-admin (7 abas: as 3 de todo
           mundo + Todas as solicitações/Chats/Assuntos, só dele) essa linha
@@ -117,8 +131,27 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
       )}
 
       {tab === "tutoriais" && (
-        <div className="space-y-3">
-          {TUTORIALS.map((t) => <TutorialItem key={t.title} tutorial={t} />)}
+        <div>
+          <div className="flex items-center gap-2 mb-6 overflow-x-auto overflow-y-hidden pb-1">
+            <CategoryPill label="Todos" active={tutorialCategory === null} onClick={() => setTutorialCategory(null)} />
+            {TUTORIAL_CATEGORIES.map((cat) => (
+              <CategoryPill key={cat} label={cat} active={tutorialCategory === cat} onClick={() => setTutorialCategory(cat)} />
+            ))}
+          </div>
+          <div className="space-y-8">
+            {TUTORIAL_CATEGORIES.filter((cat) => !tutorialCategory || tutorialCategory === cat).map((cat) => {
+              const items = TUTORIALS.filter((t) => t.category === cat);
+              if (items.length === 0) return null;
+              return (
+                <div key={cat}>
+                  <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3">{cat}</h2>
+                  <div className="space-y-3">
+                    {items.map((t) => <TutorialItem key={t.title} tutorial={t} />)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -144,6 +177,21 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
       </button>
       {open && <p className="text-foreground/60 text-sm leading-relaxed px-5 pb-4">{answer}</p>}
     </div>
+  );
+}
+
+function CategoryPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors"
+      style={{
+        backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
+        color: active ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
