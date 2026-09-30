@@ -111,7 +111,7 @@ import {
   listBudgetProducts, addBudgetProduct, updateBudgetProduct, removeBudgetProduct,
   listBudgets, saveBudget, removeBudget, exportBudgetPdf,
 } from "./budgets.functions";
-import { listCashFlowEntries, addCashFlowEntry, updateCashFlowEntry, removeCashFlowEntry, setCashFlowEntryPaid, getWalletBalance } from "./cash-flow.functions";
+import { listCashFlowEntries, addCashFlowEntry, updateCashFlowEntry, removeCashFlowEntry, setCashFlowEntryPaid, getWalletBalance, getCashFlowHistory } from "./cash-flow.functions";
 import { listBankAccounts, addBankAccount, updateBankAccount, removeBankAccount } from "./bank-accounts.functions";
 import {
   listContractRequests, createContractRequest, cancelContractRequest,
@@ -366,6 +366,8 @@ export const bankAccountsQO = () =>
   queryOptions({ queryKey: ["bank-accounts"], queryFn: () => listBankAccounts() });
 export const walletBalanceQO = () =>
   queryOptions({ queryKey: ["wallet-balance"], queryFn: () => getWalletBalance() });
+export const cashFlowHistoryQO = () =>
+  queryOptions({ queryKey: ["cash-flow-entries", "history"], queryFn: () => getCashFlowHistory({ data: {} }) });
 export const budgetProductsQO = () =>
   queryOptions({ queryKey: ["budget-products"], queryFn: () => listBudgetProducts() });
 export const budgetsQO = () =>
@@ -1366,12 +1368,12 @@ export function useApi() {
     }),
     markClientPaymentReceived: useMutation({
       mutationFn: useServerFn(markClientPaymentReceived),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["client-payments"] }); qc.invalidateQueries({ queryKey: ["client-payment-history"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); },
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["client-payments"] }); qc.invalidateQueries({ queryKey: ["client-payment-history"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); qc.invalidateQueries({ queryKey: ["cash-flow-entries", "history"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao marcar pagamento."),
     }),
     unmarkClientPaymentReceived: useMutation({
       mutationFn: useServerFn(unmarkClientPaymentReceived),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["client-payments"] }); qc.invalidateQueries({ queryKey: ["client-payment-history"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); },
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["client-payments"] }); qc.invalidateQueries({ queryKey: ["client-payment-history"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); qc.invalidateQueries({ queryKey: ["cash-flow-entries", "history"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao desfazer marcação."),
     }),
     // As 4 mutations abaixo também invalidam "bank-accounts" e "wallet-balance":

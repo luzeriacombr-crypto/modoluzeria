@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, X, AlertCircle, Pencil, Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, X, AlertCircle, Pencil, Check, ChevronDown, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { bankAccountsQO, cashFlowEntriesQO, clientPaymentsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { currentMonthKey, prevMonthKey, nextMonthKey, formatMonth, parseBRLToCents } from "@/lib/luzeria/utils";
@@ -10,6 +10,7 @@ import type { BankAccount } from "@/lib/luzeria/bank-accounts.functions";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
 import { Modal } from "./Modals";
 import { BankAccountsSection } from "./BankAccountsSection";
+import { CashFlowHistoryChart, ExpensesByCategory, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "./FinanceCharts";
 
 const selectCls = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
 
@@ -24,6 +25,49 @@ export function BankAccountSelect({ accounts, value, onChange }: { accounts: Ban
       ))}
     </select>
   );
+}
+
+function CategorySelect({ options, value, onChange }: { options: string[]; value: string | null; onChange: (v: string | null) => void }) {
+  // Categoria que não está na lista (ex: lista mudou depois) continua
+  // aparecendo pra não sumir na edição.
+  const all = value && !options.includes(value) ? [...options, value] : options;
+  return (
+    <select value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} className={selectCls}>
+      <option value="">Sem categoria</option>
+      {all.map((c) => <option key={c} value={c}>{c}</option>)}
+    </select>
+  );
+}
+
+/** Planilha do mês (abre no Excel/Google Planilhas): mensalidades de
+ * clientes, outras entradas e saídas, com categoria, conta e status. `;`
+ * como separador e BOM no começo pro Excel em português ler acentos e
+ * colunas certo. */
+function exportMonthCsv(monthKey: string, clients: ClientPaymentRow[], entries: CashFlowEntry[], bankName: (id: string | null) => string | null) {
+  const brl = (cents: number) => (cents / 100).toFixed(2).replace(".", ",");
+  const rows: string[][] = [["Tipo", "Descrição", "Categoria", "Valor (R$)", "Conta", "Status", "Vencimento"]];
+  clients.forEach((c) => {
+    if (c.contractValue == null) return;
+    rows.push([
+      "Entrada", `Mensalidade — ${c.name}`, "Mensalidade de cliente",
+      brl(c.paidAmountCents ?? Math.round(c.contractValue * 100)), "",
+      c.paidThisPeriod ? "Recebido" : "Pendente", c.paymentDueDay ? `dia ${c.paymentDueDay}` : "",
+    ]);
+  });
+  entries.forEach((e) => {
+    rows.push([
+      e.direction === "entrada" ? "Entrada" : e.kind === "investimento" ? "Investimento" : e.kind === "fixo" ? "Saída fixa" : "Saída variável",
+      e.label, e.category ?? "", brl(e.amountCents), bankName(e.bankAccountId) ?? "Carteira/espécie",
+      e.direction === "entrada" ? "Recebido" : e.paidAt ? "Pago" : "A pagar", e.dueDay ? `dia ${e.dueDay}` : "",
+    ]);
+  });
+  const csv = "\uFEFF" + rows.map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(";")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `financeiro-${monthKey}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function money(cents: number) {
@@ -55,12 +99,14 @@ export function CashFlowSection() {
   const [incomeLabel, setIncomeLabel] = useState("");
   const [incomeAmount, setIncomeAmount] = useState("");
   const [incomeBankAccountId, setIncomeBankAccountId] = useState<string | null>(null);
+  const [incomeCategory, setIncomeCategory] = useState<string | null>(null);
   const [expenseLabel, setExpenseLabel] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseKind, setExpenseKind] = useState<"fixo" | "variavel" | "investimento">("fixo");
   const [expenseDueDay, setExpenseDueDay] = useState("");
   const [expenseBankAccountId, setExpenseBankAccountId] = useState<string | null>(null);
   const [expenseNotes, setExpenseNotes] = useState("");
+  const [expenseCategory, setExpenseCategory] = useState<string | null>(null);
   const [fillingClient, setFillingClient] = useState<ClientPaymentRow | null>(null);
   const [editingEntry, setEditingEntry] = useState<CashFlowEntry | null>(null);
   const [clientsOpen, setClientsOpen] = useState(true);
@@ -93,8 +139,8 @@ export function CashFlowSection() {
     const cents = parseBRLToCents(incomeAmount);
     if (!incomeLabel.trim() || !cents) { toast.error("Preencha descrição e valor."); return; }
     addCashFlowEntry.mutate(
-      { data: { direction: "entrada", label: incomeLabel.trim(), amountCents: cents, kind: "variavel", monthKey, bankAccountId: incomeBankAccountId } },
-      { onSuccess: () => { setIncomeLabel(""); setIncomeAmount(""); setIncomeBankAccountId(null); setAddingIncome(false); } },
+      { data: { direction: "entrada", label: incomeLabel.trim(), amountCents: cents, kind: "variavel", monthKey, bankAccountId: incomeBankAccountId, category: incomeCategory } },
+      { onSuccess: () => { setIncomeLabel(""); setIncomeAmount(""); setIncomeBankAccountId(null); setIncomeCategory(null); setAddingIncome(false); } },
     );
   }
 
@@ -108,9 +154,10 @@ export function CashFlowSection() {
           direction: "saida", label: expenseLabel.trim(), amountCents: cents, kind: expenseKind, monthKey, dueDay,
           bankAccountId: expenseBankAccountId,
           notes: expenseKind === "investimento" ? expenseNotes.trim() || null : null,
+          category: expenseKind === "investimento" ? null : expenseCategory,
         },
       },
-      { onSuccess: () => { setExpenseLabel(""); setExpenseAmount(""); setExpenseKind("fixo"); setExpenseDueDay(""); setExpenseBankAccountId(null); setExpenseNotes(""); setAddingExpense(false); } },
+      { onSuccess: () => { setExpenseLabel(""); setExpenseAmount(""); setExpenseKind("fixo"); setExpenseDueDay(""); setExpenseBankAccountId(null); setExpenseNotes(""); setExpenseCategory(null); setAddingExpense(false); } },
     );
   }
 
@@ -153,6 +200,13 @@ export function CashFlowSection() {
         >
           <ChevronRight size={16} />
         </button>
+        <button
+          onClick={() => exportMonthCsv(monthKey, clients, entries, bankAccountName)}
+          title="Baixar planilha do mês (abre no Excel ou Google Planilhas)"
+          className="ml-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-foreground/60 hover:text-foreground bg-foreground/5 hover:bg-foreground/10 rounded-md px-2.5 py-1.5 transition"
+        >
+          <Download size={13} /> Exportar
+        </button>
       </div>
 
       {/* Resumo */}
@@ -191,6 +245,11 @@ export function CashFlowSection() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="lg:col-span-2"><CashFlowHistoryChart /></div>
+        <ExpensesByCategory expenses={expenses} monthKey={monthKey} />
+      </div>
+
       <BankAccountsSection />
 
       {/* Entradas / Saídas */}
@@ -219,6 +278,7 @@ export function CashFlowSection() {
                   <BankAccountSelect accounts={bankAccounts} value={incomeBankAccountId} onChange={setIncomeBankAccountId} />
                 </div>
               </div>
+              <CategorySelect options={INCOME_CATEGORIES} value={incomeCategory} onChange={setIncomeCategory} />
               <div className="flex justify-end gap-2">
                 <button onClick={() => setAddingIncome(false)} className="text-xs text-foreground/50 hover:text-foreground px-2 py-1.5">Cancelar</button>
                 <button onClick={saveIncome} disabled={addCashFlowEntry.isPending} className="lz-btn-primary text-xs px-4 py-1.5 rounded-md disabled:opacity-50">Salvar</button>
@@ -277,6 +337,7 @@ export function CashFlowSection() {
                   <div key={it.id} className="flex items-center gap-2.5 px-2.5 py-2 rounded-md" style={{ background: "color-mix(in srgb, var(--foreground) 2.5%, transparent)" }}>
                     <span className="flex-1 min-w-0 text-[13px] text-foreground truncate">
                       {it.label}
+                      {it.category && <span className="text-foreground/35 font-normal"> · {it.category}</span>}
                       {it.dueDay && <span className="text-foreground/35 font-normal"> · vence dia {it.dueDay}</span>}
                       <span className="text-foreground/35 font-normal"> · {bankAccountName(it.bankAccountId) ?? "carteira/espécie"}</span>
                     </span>
@@ -316,6 +377,9 @@ export function CashFlowSection() {
                 </div>
               </div>
               <BankAccountSelect accounts={bankAccounts} value={expenseBankAccountId} onChange={setExpenseBankAccountId} />
+              {expenseKind !== "investimento" && (
+                <CategorySelect options={EXPENSE_CATEGORIES} value={expenseCategory} onChange={setExpenseCategory} />
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={() => setExpenseKind("fixo")}
@@ -379,6 +443,7 @@ export function CashFlowSection() {
                 </span>
                 <span className="flex-1 min-w-0 text-[13px] text-foreground truncate" title={ex.notes ?? undefined}>
                   {ex.label}
+                  {ex.category && <span className="text-foreground/35 font-normal"> · {ex.category}</span>}
                   {ex.dueDay && <span className="text-foreground/35 font-normal"> · vence dia {ex.dueDay}</span>}
                   <span className="text-foreground/35 font-normal"> · {bankAccountName(ex.bankAccountId) ?? "carteira/espécie"}</span>
                   {ex.notes && <span className="text-foreground/35 font-normal"> · {ex.notes}</span>}
@@ -425,6 +490,7 @@ function EditEntryModal({ entry, monthKey, onClose }: { entry: CashFlowEntry; mo
   const [dueDay, setDueDay] = useState(entry.dueDay != null ? String(entry.dueDay) : "");
   const [bankAccountId, setBankAccountId] = useState<string | null>(entry.bankAccountId);
   const [notes, setNotes] = useState(entry.notes ?? "");
+  const [category, setCategory] = useState<string | null>(entry.category);
 
   function save() {
     const cents = parseBRLToCents(amount);
@@ -436,6 +502,7 @@ function EditEntryModal({ entry, monthKey, onClose }: { entry: CashFlowEntry; mo
           dueDay: dueDay ? parseInt(dueDay, 10) : null,
           bankAccountId,
           notes: kind === "investimento" ? notes.trim() || null : null,
+          category: kind === "investimento" ? null : category,
         },
       },
       { onSuccess: () => { toast.success("Lançamento atualizado."); onClose(); } },
@@ -468,6 +535,12 @@ function EditEntryModal({ entry, monthKey, onClose }: { entry: CashFlowEntry; mo
           <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Conta</span>
           <BankAccountSelect accounts={bankAccounts} value={bankAccountId} onChange={setBankAccountId} />
         </label>
+        {kind !== "investimento" && (
+          <label className="block">
+            <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Categoria</span>
+            <CategorySelect options={entry.direction === "entrada" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES} value={category} onChange={setCategory} />
+          </label>
+        )}
         {entry.direction === "saida" && (
           <div className="flex gap-2">
             <button

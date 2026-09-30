@@ -14,6 +14,8 @@ async function assertFinanceiroAccess(supabase: any, userId: string) {
   if (!hasPerm) throw new Error("Forbidden");
 }
 
+const hexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional();
+
 export type BankAccount = {
   id: string;
   name: string;
@@ -23,6 +25,8 @@ export type BankAccount = {
    * continua existindo pra os lançamentos antigos ligados a ela não
    * passarem a somar na Carteira. */
   archived: boolean;
+  /** Cor do ícone escolhida pela agência ("#RRGGBB"); null = automática. */
+  color: string | null;
 };
 
 export const listBankAccounts = createServerFn({ method: "GET" })
@@ -31,23 +35,24 @@ export const listBankAccounts = createServerFn({ method: "GET" })
     await assertFinanceiroAccess(context.supabase, context.userId);
     const { data, error } = await (context.supabase as any)
       .from("bank_accounts")
-      .select("id, name, balance_cents, updated_at, archived_at")
+      .select("id, name, balance_cents, updated_at, archived_at, color")
       .eq("org_id", context.orgId)
       .order("created_at");
     if (error) throw new Error(error.message);
-    return (data ?? []).map((r: any) => ({ id: r.id, name: r.name, balanceCents: r.balance_cents, updatedAt: r.updated_at, archived: r.archived_at != null }));
+    return (data ?? []).map((r: any) => ({ id: r.id, name: r.name, balanceCents: r.balance_cents, updatedAt: r.updated_at, archived: r.archived_at != null, color: r.color ?? null }));
   });
 
 export const addBankAccount = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { name: string; balanceCents: number }) =>
-    z.object({ name: z.string().trim().min(1).max(60), balanceCents: z.number().int() }).parse(d))
+  .inputValidator((d: { name: string; balanceCents: number; color?: string | null }) =>
+    z.object({ name: z.string().trim().min(1).max(60), balanceCents: z.number().int(), color: hexColor }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
     const { error } = await (context.supabase as any).from("bank_accounts").insert({
       org_id: context.orgId,
       name: data.name.trim(),
       balance_cents: data.balanceCents,
+      color: data.color ?? null,
       created_by: context.userId,
     });
     if (error) throw new Error(error.message);
@@ -56,12 +61,12 @@ export const addBankAccount = createServerFn({ method: "POST" })
 
 export const updateBankAccount = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string; name: string; balanceCents: number }) =>
-    z.object({ id: z.string().uuid(), name: z.string().trim().min(1).max(60), balanceCents: z.number().int() }).parse(d))
+  .inputValidator((d: { id: string; name: string; balanceCents: number; color?: string | null }) =>
+    z.object({ id: z.string().uuid(), name: z.string().trim().min(1).max(60), balanceCents: z.number().int(), color: hexColor }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
     const { error } = await (context.supabase as any).from("bank_accounts")
-      .update({ name: data.name.trim(), balance_cents: data.balanceCents, updated_at: new Date().toISOString() })
+      .update({ name: data.name.trim(), balance_cents: data.balanceCents, color: data.color ?? null, updated_at: new Date().toISOString() })
       .eq("id", data.id).eq("org_id", context.orgId);
     if (error) throw new Error(error.message);
     return { ok: true };

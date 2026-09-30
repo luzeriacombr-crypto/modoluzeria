@@ -70,6 +70,8 @@ export type CashFlowEntry = {
   /** Conta bancária de onde saiu/pra onde entrou (bank_accounts.id) — nulo
    * significa "carteira/espécie" (dinheiro fora de qualquer conta). */
   bankAccountId: string | null;
+  /** Categoria (ex: "Impostos e taxas"); null = sem categoria. */
+  category: string | null;
   /** Observação livre — pensado pra investimento (ex: "CDB Nubank, resgate em 2027"). */
   notes: string | null;
 };
@@ -83,7 +85,7 @@ export const listCashFlowEntries = createServerFn({ method: "GET" })
     await assertFinanceiroAccess(context.supabase, context.userId);
     const { data: rows, error } = await (context.supabase as any)
       .from("cash_flow_entries")
-      .select("id, direction, label, amount_cents, kind, month_key, start_month, due_day, created_at, bank_account_id, notes")
+      .select("id, direction, label, amount_cents, kind, month_key, start_month, due_day, created_at, bank_account_id, notes, category")
       .eq("org_id", context.orgId)
       // Fixa só conta entre start_month e end_month — antes aparecia em
       // todos os meses, até nos anteriores à criação.
@@ -103,13 +105,13 @@ export const listCashFlowEntries = createServerFn({ method: "GET" })
       id: r.id, direction: r.direction, label: r.label, amountCents: r.amount_cents,
       kind: r.kind, monthKey: r.month_key, startMonth: r.start_month, dueDay: r.due_day,
       paidAt: paidByEntry.get(r.id) ?? null, createdAt: r.created_at,
-      bankAccountId: r.bank_account_id, notes: r.notes,
+      bankAccountId: r.bank_account_id, notes: r.notes, category: r.category ?? null,
     }));
   });
 
 export const addCashFlowEntry = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { direction: "entrada" | "saida"; label: string; amountCents: number; kind: "fixo" | "variavel" | "investimento"; monthKey: string; dueDay?: number | null; bankAccountId?: string | null; notes?: string | null }) =>
+  .inputValidator((d: { direction: "entrada" | "saida"; label: string; amountCents: number; kind: "fixo" | "variavel" | "investimento"; monthKey: string; dueDay?: number | null; bankAccountId?: string | null; notes?: string | null; category?: string | null }) =>
     z.object({
       direction: z.enum(["entrada", "saida"]),
       label: z.string().trim().min(1).max(140),
@@ -123,6 +125,7 @@ export const addCashFlowEntry = createServerFn({ method: "POST" })
       dueDay: z.number().int().min(1).max(31).nullable().optional(),
       bankAccountId: z.string().uuid().nullable().optional(),
       notes: z.string().trim().max(500).nullable().optional(),
+      category: z.string().trim().max(40).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
@@ -143,6 +146,7 @@ export const addCashFlowEntry = createServerFn({ method: "POST" })
       due_day: data.dueDay ?? null,
       bank_account_id: data.bankAccountId ?? null,
       notes: data.notes?.trim() || null,
+      category: kind === "investimento" ? null : data.category?.trim() || null,
       created_by: context.userId,
     });
     if (error) throw new Error(error.message);
@@ -161,7 +165,7 @@ export const addCashFlowEntry = createServerFn({ method: "POST" })
  * marcar o dia de vencimento) — antes só dava pra apagar e lançar de novo. */
 export const updateCashFlowEntry = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { id: string; label: string; amountCents: number; kind: "fixo" | "variavel" | "investimento"; monthKey: string; dueDay?: number | null; bankAccountId?: string | null; notes?: string | null }) =>
+  .inputValidator((d: { id: string; label: string; amountCents: number; kind: "fixo" | "variavel" | "investimento"; monthKey: string; dueDay?: number | null; bankAccountId?: string | null; notes?: string | null; category?: string | null }) =>
     z.object({
       id: z.string().uuid(),
       label: z.string().trim().min(1).max(140),
@@ -171,6 +175,7 @@ export const updateCashFlowEntry = createServerFn({ method: "POST" })
       dueDay: z.number().int().min(1).max(31).nullable().optional(),
       bankAccountId: z.string().uuid().nullable().optional(),
       notes: z.string().trim().max(500).nullable().optional(),
+      category: z.string().trim().max(40).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
@@ -188,6 +193,7 @@ export const updateCashFlowEntry = createServerFn({ method: "POST" })
       due_day: data.dueDay ?? null,
       bank_account_id: newBank,
       notes: data.notes?.trim() || null,
+      category: data.kind === "investimento" ? null : data.category?.trim() || null,
     };
 
     // Entrada avulsa é sempre variável e já conta como recebida (ver
@@ -333,6 +339,60 @@ export const getWalletBalance = createServerFn({ method: "GET" })
     const mensalidadesTotal = (mensalidades ?? []).reduce((s: number, r: any) => s + r.amount_cents, 0);
 
     return { balanceCents: entradasTotal + mensalidadesTotal - saidasTotal };
+  });
+
+export type CashFlowMonthSummary = {
+  monthKey: string;
+  /** Mensalidades recebidas (valor gravado; pagamentos antigos usam o valor
+   * do contrato) + outras entradas do mês. */
+  entradasCents: number;
+  /** Saídas fixas e variáveis do mês — sem investimento, igual ao card
+   * "Gastos previstos do mês". */
+  saidasCents: number;
+};
+
+/** Resumo dos últimos N meses (terminando no mês atual) pro gráfico de
+ * entradas x saídas do Financeiro. */
+export const getCashFlowHistory = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d?: { months?: number }) =>
+    z.object({ months: z.number().int().min(2).max(12).optional() }).parse(d ?? {}))
+  .handler(async ({ data, context }): Promise<CashFlowMonthSummary[]> => {
+    await assertFinanceiroAccess(context.supabase, context.userId);
+    const sb = context.supabase as any;
+    const keys: string[] = [currentMonthKeyBR()];
+    for (let i = 1; i < (data.months ?? 6); i++) keys.unshift(prevMonthKey(keys[0]));
+    const first = keys[0];
+    const last = keys[keys.length - 1];
+
+    const { data: payments, error: payErr } = await sb
+      .from("client_payments").select("period, amount_cents, clients(contract_value)")
+      .eq("org_id", context.orgId).gte("period", first).lte("period", last);
+    if (payErr) throw new Error(payErr.message);
+
+    const { data: entries, error: entErr } = await sb
+      .from("cash_flow_entries").select("direction, kind, amount_cents, month_key, start_month, end_month")
+      .eq("org_id", context.orgId)
+      .or(`kind.eq.fixo,and(month_key.gte.${first},month_key.lte.${last})`);
+    if (entErr) throw new Error(entErr.message);
+
+    return keys.map((m) => {
+      let entradas = 0;
+      let saidas = 0;
+      (payments ?? []).forEach((p: any) => {
+        if (p.period !== m) return;
+        entradas += p.amount_cents ?? Math.round((p.clients?.contract_value ?? 0) * 100);
+      });
+      (entries ?? []).forEach((e: any) => {
+        const active = e.kind === "fixo"
+          ? e.start_month <= m && (e.end_month == null || e.end_month >= m)
+          : e.month_key === m;
+        if (!active) return;
+        if (e.direction === "entrada") entradas += e.amount_cents;
+        else if (e.kind !== "investimento") saidas += e.amount_cents;
+      });
+      return { monthKey: m, entradasCents: entradas, saidasCents: saidas };
+    });
   });
 
 /** Exclui um lançamento, sempre devolvendo pro saldo o que ele já tinha

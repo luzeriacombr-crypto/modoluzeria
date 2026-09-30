@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, MessageCircle, Check, Undo2, Pencil, History, ChevronDown, X, QrCode } from "lucide-react";
+import { Loader2, MessageCircle, Check, Undo2, Pencil, History, ChevronDown, X, QrCode, Search } from "lucide-react";
 import { toast } from "sonner";
 import { bankAccountsQO, clientPaymentsQO, clientPaymentHistoryQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -323,12 +323,29 @@ export function ClientPaymentsPanel() {
   const period = currentPeriod();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [markingRow, setMarkingRow] = useState<ClientPaymentRow | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"todos" | "pendentes" | "atrasados" | "pagos">("todos");
 
   if (isLoading || !data) {
     return <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin text-foreground/40" size={24} /></div>;
   }
 
-  const rows = [...data.clients].sort((a, b) => daysUntil(a.nextDueDate) - daysUntil(b.nextDueDate));
+  const allRows = [...data.clients].sort((a, b) => daysUntil(a.nextDueDate) - daysUntil(b.nextDueDate));
+  const isOverdue = (r: ClientPaymentRow) => !r.paidThisPeriod && daysUntil(r.nextDueDate) < 0;
+  const counts = {
+    todos: allRows.length,
+    pendentes: allRows.filter((r) => !r.paidThisPeriod).length,
+    atrasados: allRows.filter(isOverdue).length,
+    pagos: allRows.filter((r) => r.paidThisPeriod).length,
+  };
+  const term = search.trim().toLowerCase();
+  const rows = allRows.filter((r) => {
+    if (term && !r.name.toLowerCase().includes(term)) return false;
+    if (statusFilter === "pendentes") return !r.paidThisPeriod;
+    if (statusFilter === "atrasados") return isOverdue(r);
+    if (statusFilter === "pagos") return r.paidThisPeriod;
+    return true;
+  });
 
   return (
     <div className="space-y-4">
@@ -336,9 +353,35 @@ export function ClientPaymentsPanel() {
       <PixKeyForm pixKey={data.pixKey} isMaster={isMaster} />
       <MessageTemplateForm template={data.messageTemplate} isMaster={isMaster} />
 
-      {rows.length === 0 ? (
+      {allRows.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[12rem] max-w-xs">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/35" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente" className={inp + " pl-8"} />
+          </div>
+          <div className="flex items-center gap-1 flex-wrap">
+            {([
+              ["todos", "Todos"], ["pendentes", "Pendentes"], ["atrasados", "Atrasados"], ["pagos", "Pagos"],
+            ] as const).map(([key, label]) => (
+              <button key={key} onClick={() => setStatusFilter(key)}
+                className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md transition"
+                style={statusFilter === key
+                  ? { backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }
+                  : { backgroundColor: "color-mix(in srgb, var(--foreground) 5%, transparent)", color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
+                {label} · {counts[key]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {allRows.length === 0 ? (
         <div className="text-center py-12 text-sm text-foreground/40">
           Nenhum cliente cadastrado ainda.
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="text-center py-10 text-sm text-foreground/40 bg-card border border-foreground/7 rounded-xl">
+          Nenhum cliente nesse filtro.
         </div>
       ) : (
         <div className="bg-card border border-foreground/7 rounded-xl overflow-hidden">

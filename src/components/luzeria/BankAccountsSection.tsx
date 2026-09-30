@@ -19,28 +19,50 @@ function relativeDate(iso: string): string {
   return `atualizado em ${new Date(iso).toLocaleDateString("pt-BR")}`;
 }
 
-/** Bancos mais comuns pré-cadastrados (pedido do Junior, 30/09) — cor
- * oficial de cada um (sem reproduzir a logo, só a cor de marca) e uma
+/** Bancos mais usados no Brasil, pré-cadastrados (pedido do Junior,
+ * 30/09) — cor de marca de cada um (sem reproduzir a logo, só a cor) e uma
  * sigla mais reconhecível que as 2 primeiras letras do nome. Escolher um
- * aqui só preenche o campo "Nome" — a pessoa ainda pode editar antes de
- * salvar (ex: "Nubank PJ"). */
-const KNOWN_BANKS: { name: string; color: string; initials: string }[] = [
+ * aqui preenche nome e cor — dá pra editar os dois antes de salvar (ex:
+ * "Nubank PJ"). `match` são outros jeitos comuns de escrever o nome. */
+const KNOWN_BANKS: { name: string; color: string; initials: string; match?: string[] }[] = [
   { name: "Nubank", color: "#820AD1", initials: "NU" },
-  { name: "Inter", color: "#FF7A00", initials: "IN" },
-  { name: "Caixa", color: "#005CA9", initials: "CX" },
-  { name: "Banco do Brasil", color: "#004A93", initials: "BB" },
+  { name: "Itaú", color: "#EC7000", initials: "IT", match: ["itau"] },
   { name: "Bradesco", color: "#CC092F", initials: "BR" },
+  { name: "Banco do Brasil", color: "#0038A8", initials: "BB" },
+  { name: "Caixa", color: "#005CA9", initials: "CX" },
+  { name: "Santander", color: "#EC0000", initials: "SA" },
+  { name: "Inter", color: "#FF7A00", initials: "IN" },
+  { name: "C6 Bank", color: "#242424", initials: "C6", match: ["c6"] },
+  { name: "BTG Pactual", color: "#0B2A5B", initials: "BTG", match: ["btg"] },
+  { name: "PicPay", color: "#11C76F", initials: "PP" },
+  { name: "Mercado Pago", color: "#009EE3", initials: "MP" },
+  { name: "PagBank", color: "#00A868", initials: "PB", match: ["pagseguro"] },
+  { name: "Sicoob", color: "#003641", initials: "SC" },
+  { name: "Sicredi", color: "#3FA110", initials: "SI" },
+  { name: "Banco Pan", color: "#0070F3", initials: "PAN", match: ["pan"] },
 ];
 
-/** Cor do avatar: cor oficial se o nome bater com um banco conhecido
- * (mesmo com sufixo, tipo "Nubank PJ"), senão cor determinística a partir
- * do nome — sem depender de campo novo no banco de dados. */
+/** Cores pra escolher no ícone de uma conta (pedido do Junior, 30/09). */
+const COLOR_CHOICES = ["#820AD1", "#EC7000", "#CC092F", "#0038A8", "#005CA9", "#009EE3", "#11C76F", "#3FA110", "#003641", "#242424", "#B79CFF", "#F5A623"];
+
+/** Cor do avatar: a escolhida pela agência; senão a oficial se o nome bater
+ * com um banco conhecido (mesmo com sufixo, tipo "Nubank PJ"); senão uma
+ * cor determinística a partir do nome. */
 const AVATAR_COLORS = ["#FF6B35", "#EC7000", "#6FA4FF", "#B79CFF", "#D1D82F", "#5BA88A"];
-function knownBank(name: string) {
-  const n = name.trim().toLowerCase();
-  return KNOWN_BANKS.find((b) => n.includes(b.name.toLowerCase()));
+function normalize(s: string) {
+  return s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
-function avatarColor(name: string): string {
+function knownBank(name: string) {
+  const n = normalize(name);
+  return KNOWN_BANKS.find((b) => [b.name, ...(b.match ?? [])].some((k) => {
+    const key = normalize(k);
+    // Siglas curtas ("pan", "c6") só batem como palavra inteira — senão
+    // "Panamericano"/"Japan" viravam Banco Pan.
+    return key.length <= 3 ? new RegExp(`(^|\\s)${key}(\\s|$)`).test(n) : n.includes(key);
+  }));
+}
+function avatarColor(name: string, color?: string | null): string {
+  if (color) return color;
   const known = knownBank(name);
   if (known) return known.color;
   let h = 0;
@@ -49,6 +71,23 @@ function avatarColor(name: string): string {
 }
 function avatarInitials(name: string): string {
   return knownBank(name)?.initials ?? name.slice(0, 2).toUpperCase();
+}
+/** Texto escuro em cor clara (ex: amarelo), branco no resto. */
+function avatarTextColor(bg: string): string {
+  const n = parseInt(bg.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? "#0D0D0D" : "#FFFFFF";
+}
+
+function BankAvatar({ name, color }: { name: string; color?: string | null }) {
+  const bg = avatarColor(name, color);
+  const initials = avatarInitials(name);
+  return (
+    <div className={`h-8 w-8 rounded-lg flex items-center justify-center font-extrabold shrink-0 ${initials.length > 2 ? "text-[9px]" : "text-[11px]"}`}
+      style={{ background: bg, color: avatarTextColor(bg) }}>
+      {initials}
+    </div>
+  );
 }
 
 const inp = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
@@ -78,6 +117,7 @@ export function BankAccountsSection() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [balance, setBalance] = useState("");
+  const [color, setColor] = useState<string | null>(null);
 
   const totalCents = accounts.reduce((s, a) => s + a.balanceCents, 0);
 
@@ -85,6 +125,7 @@ export function BankAccountsSection() {
     setEditingId(a.id);
     setName(a.name);
     setBalance((a.balanceCents / 100).toFixed(2).replace(".", ","));
+    setColor(a.color ?? avatarColor(a.name));
   }
 
   function cancel() {
@@ -92,15 +133,16 @@ export function BankAccountsSection() {
     setEditingId(null);
     setName("");
     setBalance("");
+    setColor(null);
   }
 
   function save() {
     const cents = parseAmount(balance);
     if (!name.trim() || cents == null) { toast.error("Preencha o nome do banco e o saldo."); return; }
     if (editingId) {
-      api.updateBankAccount.mutate({ data: { id: editingId, name: name.trim(), balanceCents: cents } }, { onSuccess: cancel });
+      api.updateBankAccount.mutate({ data: { id: editingId, name: name.trim(), balanceCents: cents, color } }, { onSuccess: cancel });
     } else {
-      api.addBankAccount.mutate({ data: { name: name.trim(), balanceCents: cents } }, { onSuccess: cancel });
+      api.addBankAccount.mutate({ data: { name: name.trim(), balanceCents: cents, color } }, { onSuccess: cancel });
     }
   }
 
@@ -131,7 +173,7 @@ export function BankAccountsSection() {
               {KNOWN_BANKS.map((b) => (
                 <button
                   key={b.name}
-                  onClick={() => setName(b.name)}
+                  onClick={() => { setName(b.name); setColor(b.color); }}
                   className="inline-flex items-center gap-1.5 rounded-full pl-1 pr-2.5 py-1 text-[11px] font-semibold text-foreground/70 hover:text-foreground transition"
                   style={{ background: "color-mix(in srgb, var(--foreground) 5%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)" }}
                 >
@@ -141,8 +183,27 @@ export function BankAccountsSection() {
               ))}
             </div>
           )}
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Nubank PJ" className={inp} />
+          <div className="flex items-center gap-2">
+            <BankAvatar name={name || "?"} color={color} />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Nubank PJ" className={inp} />
+          </div>
           <input value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="Saldo atual (R$)" className={inp} />
+          <div>
+            <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Cor do ícone</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {COLOR_CHOICES.map((c) => (
+                <button key={c} type="button" onClick={() => setColor(c)} aria-label={`Cor ${c}`}
+                  className="h-6 w-6 rounded-full transition"
+                  style={{ background: c, boxShadow: color?.toLowerCase() === c.toLowerCase() ? "0 0 0 2px var(--card), 0 0 0 4px var(--foreground)" : undefined }} />
+              ))}
+              {/* Qualquer outra cor, pelo seletor nativo do navegador. */}
+              <label className="h-6 px-2 rounded-full inline-flex items-center text-[10.5px] font-semibold text-foreground/60 hover:text-foreground cursor-pointer"
+                style={{ background: "color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
+                Outra
+                <input type="color" value={color ?? avatarColor(name || "?")} onChange={(e) => setColor(e.target.value.toUpperCase())} className="sr-only" />
+              </label>
+            </div>
+          </div>
           <div className="flex justify-end gap-2">
             <button onClick={cancel} className="text-xs text-foreground/50 hover:text-foreground px-2 py-1.5">Cancelar</button>
             <button onClick={save} disabled={api.addBankAccount.isPending || api.updateBankAccount.isPending} className="lz-btn-primary text-xs px-4 py-1.5 rounded-md disabled:opacity-50">
@@ -170,9 +231,7 @@ export function BankAccountsSection() {
           </div>
           {accounts.map((a) => (
             <div key={a.id} className="group flex items-center gap-2.5 px-3 py-2.5 rounded-lg" style={{ background: "color-mix(in srgb, var(--foreground) 2.5%, transparent)" }}>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center text-[11px] font-extrabold text-white shrink-0" style={{ background: avatarColor(a.name) }}>
-                {avatarInitials(a.name)}
-              </div>
+              <BankAvatar name={a.name} color={a.color} />
               <div className="flex-1 min-w-0">
                 <div className="text-[12.5px] font-bold text-foreground truncate">{a.name}</div>
                 <div className="text-[10.5px] text-foreground/40">{relativeDate(a.updatedAt)}</div>
