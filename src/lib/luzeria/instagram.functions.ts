@@ -508,7 +508,7 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
   // item extra do carrossel junto com a arte de verdade.
   const { data: files } = await supabaseAdmin
     .from("item_files")
-    .select("drive_file_id, mime_type")
+    .select("drive_file_id, mime_type, name, size_bytes")
     .eq("item_id", itemId)
     .eq("kind", "media")
     .order("sort_order").order("created_at");
@@ -528,6 +528,14 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
         : "Anexe uma imagem ou vídeo ao post antes de publicar.",
     );
   }
+  // Barra antes de tentar vídeo acima do limite da Meta — senão o Instagram
+  // só devolve um "ERROR" genérico depois de processar (caso real: Story
+  // de 112 MB em 11/09).
+  const { videoSizeProblem } = await import("./instagram-limits");
+  const sizeProblem = videoSizeProblem(item.type, relevantFiles.map((f: any) => ({
+    mimeType: f.mime_type, sizeBytes: f.size_bytes ? Number(f.size_bytes) : null,
+  })));
+  if (sizeProblem) throw new Error(sizeProblem);
 
   const { getAccessToken, withDriveOrg } = await import("./drive.functions");
   const tempPaths: string[] = [];
@@ -596,12 +604,124 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       if (lastStatus === "FINISHED") return;
       if (lastStatus === "ERROR" || lastStatus === "EXPIRED") {
         console.error("[Instagram] container processing failed:", statusJson);
-        throw new Error(`O Instagram falhou ao processar ${label} (${statusJson.status ?? lastStatus}).`);
+        const err = new Error(`O Instagram falhou ao processar ${label} (${statusJson.status ?? lastStatus}).`);
+        // Marca pra createVideoContainerAndWait saber que vale tentar de novo.
+        (err as any).igProcessingFailed = true;
+        throw err;
       }
       await new Promise((r) => setTimeout(r, intervalMs));
     }
     console.error("[Instagram] container timed out, last status:", lastStatus);
     throw new Error(`O Instagram está demorando pra processar ${label}. Tente publicar de novo em instantes.`);
+  }
+
+  /** Se a Meta recusar o envio direto uma vez nesta publicação, os próximos
+   * vídeos (ex.: outros itens do carrossel) já vão direto pelo video_url. */
+  let resumableUnavailable = false;
+
+  /** Envio direto (resumable): cria o container sem URL e nós mesmos mandamos
+   * os bytes do Drive pro servidor da Meta (rupload), em streaming. Evita
+   * depender da Meta conseguir baixar o vídeo pela nossa rota de proxy — era
+   * daí que vinham os "ERROR" esporádicos (download da Meta cortado no meio;
+   * o mesmo arquivo publicava normalmente minutos depois). */
+  async function createResumableVideoContainer(driveFileId: string, params: Record<string, string>): Promise<string> {
+    const initRes = await fetch(`${IG_GRAPH_API}/${creds!.instagram_business_account_id}/media`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ ...params, upload_type: "resumable", access_token: creds!.access_token }),
+    });
+    const initJson: any = await initRes.json().catch(() => null);
+    if (!initRes.ok || !initJson?.id || !initJson?.uri) {
+      resumableUnavailable = true;
+      throw Object.assign(new Error(`envio direto recusado: ${JSON.stringify(initJson?.error ?? initJson).slice(0, 200)}`), { resumableRejected: true });
+    }
+    const driveRes: Response = await withDriveOrg(clientOrgId!, async () => {
+      const token = await getAccessToken();
+      return fetch(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(driveFileId)}?alt=media&supportsAllDrives=true`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+    });
+    if (!driveRes.ok || !driveRes.body) {
+      await driveRes.body?.cancel().catch(() => {});
+      throw new Error(`Falha ao baixar o vídeo do Drive (${driveRes.status}).`);
+    }
+    const size = driveRes.headers.get("content-length");
+    if (!size) {
+      await driveRes.body.cancel().catch(() => {});
+      throw Object.assign(new Error("envio direto: Drive não informou o tamanho do arquivo"), { resumableRejected: true });
+    }
+    const upRes = await fetch(initJson.uri, {
+      method: "POST",
+      headers: {
+        Authorization: `OAuth ${creds!.access_token}`,
+        offset: "0",
+        file_size: size,
+        "content-length": size,
+        "content-type": "application/octet-stream",
+      },
+      body: driveRes.body,
+      duplex: "half",
+    } as any).catch((e: any) => {
+      throw Object.assign(new Error(`envio direto: falha de rede (${e?.message})`), { resumableRejected: true });
+    });
+    const upJson: any = await upRes.json().catch(() => null);
+    if (!upRes.ok || !upJson?.success) {
+      resumableUnavailable = true;
+      throw Object.assign(new Error(`envio direto falhou (${upRes.status}): ${JSON.stringify(upJson).slice(0, 200)}`), { resumableRejected: true });
+    }
+    return initJson.id as string;
+  }
+
+  /** Método antigo: a Meta baixa o vídeo pela nossa rota de proxy (video_url). */
+  async function createUrlVideoContainer(file: { drive_file_id: string; mime_type: string | null }, params: Record<string, string>): Promise<string> {
+    // uploadFileToTemp confere se o arquivo existe no Drive e devolve a URL do proxy.
+    const { url } = await uploadFileToTemp(file);
+    const res = await fetch(`${IG_GRAPH_API}/${creds!.instagram_business_account_id}/media`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ ...params, video_url: url, access_token: creds!.access_token }),
+    });
+    const json: any = await res.json();
+    if (!res.ok || !json.id) throw new Error(json?.error?.message ?? "O Instagram recusou o vídeo.");
+    return json.id as string;
+  }
+
+  /** Cria o container do vídeo e espera a Meta processar. Tenta primeiro o
+   * envio direto (cai pro video_url se a Meta não aceitar) e, se o
+   * processamento der "ERROR", tenta de novo na hora — até 3 vezes, a última
+   * sempre pelo video_url — em vez de desistir e esperar a próxima rodada do
+   * cron (~10 min). */
+  async function createVideoContainerAndWait(
+    file: { drive_file_id: string; mime_type: string | null },
+    params: Record<string, string>,
+    label: string,
+  ): Promise<string> {
+    const maxAttempts = 3;
+    for (let attempt = 1; ; attempt++) {
+      let containerId: string | null = null;
+      // Post de vídeo único vai sem media_type (comportamento antigo) — o
+      // envio direto exige media_type, então nesse caso segue pelo video_url.
+      if (!resumableUnavailable && params.media_type && attempt < maxAttempts) {
+        try {
+          containerId = await createResumableVideoContainer(file.drive_file_id, params);
+        } catch (e: any) {
+          // Erro de Drive (arquivo sumiu, token expirado) sobe direto — o
+          // video_url também falharia. Só recusa/falha da Meta cai pro fallback.
+          if (!e?.resumableRejected) throw e;
+          console.error("[Instagram] envio direto do vídeo falhou, usando video_url:", e?.message);
+        }
+      }
+      if (!containerId) containerId = await createUrlVideoContainer(file, params);
+      try {
+        await waitForContainer(containerId, true, label);
+        return containerId;
+      } catch (e: any) {
+        if (!e?.igProcessingFailed || attempt >= maxAttempts) throw e;
+        console.warn(`[Instagram] processamento do vídeo falhou (tentativa ${attempt}/${maxAttempts}), tentando de novo`);
+        await new Promise((r) => setTimeout(r, 5000));
+      }
+    }
   }
 
   try {
@@ -613,6 +733,10 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
       // A legenda vai só no pai. Limite de 10 itens é da própria Meta.
       const childIds: string[] = [];
       for (const file of relevantFiles.slice(0, 10)) {
+        if ((file.mime_type ?? "").startsWith("video/")) {
+          childIds.push(await createVideoContainerAndWait(file, { media_type: "VIDEO", is_carousel_item: "true" }, "um item do carrossel"));
+          continue;
+        }
         const { url, isVideoFile } = await uploadFileToTemp(file);
         const childRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
           method: "POST",
@@ -650,7 +774,7 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     } else {
       // Post com 1 imagem só, Reel ou Story — mídia única.
       const first = relevantFiles[0];
-      const { url, isVideoFile } = await uploadFileToTemp(first);
+      const isVideoFile = (first.mime_type ?? "").startsWith("video/");
       const igMediaType = item.type === "reel" ? "REELS" : item.type === "story" ? "STORIES" : null;
       // Stories não aceitam legenda pela API — o texto precisa já estar na
       // própria imagem/vídeo.
@@ -667,24 +791,28 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
         const signed = await signCoverPaths(supabaseAdmin, [(item as any).cover_path]);
         coverUrl = signed.get((item as any).cover_path) ?? null;
       }
-      const containerRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          ...(isVideoFile ? { video_url: url } : { image_url: url }),
-          ...(igMediaType ? { media_type: igMediaType } : {}),
-          ...(coverUrl ? { cover_url: coverUrl } : {}),
-          ...(sendsCaption ? { caption: item.caption ?? "" } : {}),
-          ...(collaborators.length > 0 ? { collaborators: JSON.stringify(collaborators) } : {}),
-          access_token: creds.access_token,
-        }),
-      });
-      const containerJson: any = await containerRes.json();
-      if (!containerRes.ok || !containerJson.id) {
-        throw new Error(containerJson?.error?.message ?? `O Instagram recusou ${isVideoFile ? "o vídeo" : "a imagem"}.`);
+      const params: Record<string, string> = {
+        ...(igMediaType ? { media_type: igMediaType } : {}),
+        ...(coverUrl ? { cover_url: coverUrl } : {}),
+        ...(sendsCaption ? { caption: item.caption ?? "" } : {}),
+        ...(collaborators.length > 0 ? { collaborators: JSON.stringify(collaborators) } : {}),
+      };
+      if (isVideoFile) {
+        creationId = await createVideoContainerAndWait(first, params, "o vídeo");
+      } else {
+        const { url } = await uploadFileToTemp(first);
+        const containerRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ ...params, image_url: url, access_token: creds.access_token }),
+        });
+        const containerJson: any = await containerRes.json();
+        if (!containerRes.ok || !containerJson.id) {
+          throw new Error(containerJson?.error?.message ?? "O Instagram recusou a imagem.");
+        }
+        await waitForContainer(containerJson.id, false, "a imagem");
+        creationId = containerJson.id;
       }
-      await waitForContainer(containerJson.id, isVideoFile, isVideoFile ? "o vídeo" : "a imagem");
-      creationId = containerJson.id;
     }
 
     const publishRes = await fetch(`${IG_GRAPH_API}/${creds.instagram_business_account_id}/media_publish`, {
@@ -983,34 +1111,67 @@ export function explainPublishError(raw: string): string {
   return "Não foi possível publicar no Instagram. Tente de novo; se persistir, fale com o suporte." + tech;
 }
 
-/** Marca a falha no item e avisa os masters da agência — só na primeira
- * falha de uma sequência (se `hadPreviousError` já vinha setado, a
- * publicação vai continuar tentando de novo a cada rodada do cron sem
- * notificar de novo toda vez, senão viraria spam). Limpo automaticamente
- * assim que uma publicação (manual ou programada) desse item dá certo, no
- * fim de runInstagramPublish. */
-async function markScheduledPublishFailure(
-  supabaseAdmin: any,
-  item: { id: string; title: string; orgId: string | undefined; hadPreviousError: boolean },
-  errorMessage: string,
-) {
+/** Falhas que costumam se resolver sozinhas na próxima rodada do cron
+ * (~10 min): processamento do vídeo na Meta, demora ou rede. */
+function isTransientPublishError(message: string): boolean {
+  return /falhou ao processar|demorando pra processar|Falha temporária de comunicação/i.test(message);
+}
+
+async function notifyOrgMasters(supabaseAdmin: any, orgId: string, fields: { type: string; item_id: string; message: string }) {
+  const { data: masterRoles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "master");
+  const masterIds = new Set((masterRoles ?? []).map((r: any) => r.user_id));
+  const { data: orgProfiles } = await supabaseAdmin.from("profiles").select("id").eq("org_id", orgId);
+  const masterProfileIds = (orgProfiles ?? []).map((p: any) => p.id).filter((id: string) => masterIds.has(id));
+  if (masterProfileIds.length === 0) return;
+  await supabaseAdmin.from("notifications").insert(masterProfileIds.map((userId: string) => ({ user_id: userId, ...fields })));
+}
+
+/** Quantas notificações de falha esse item já gerou desde `sinceIso`. */
+async function countFailureNotifications(supabaseAdmin: any, itemId: string, sinceIso: string): Promise<number> {
+  const { count } = await supabaseAdmin.from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("item_id", itemId).eq("type", "instagram_publish_failed")
+    .gte("created_at", sinceIso);
+  return count ?? 0;
+}
+
+type ScheduledFailureInfo = { id: string; title: string; orgId: string | undefined; previousErrorAt: string | null };
+
+/** Marca a falha no item e avisa os masters da agência — no máximo uma vez
+ * por sequência de falhas (o cron tenta de novo a cada rodada; avisar toda
+ * vez viraria spam). Falha passageira (ex.: "ERROR" no processamento do
+ * vídeo) só avisa se repetir na rodada seguinte — quase sempre a nova
+ * tentativa já publica e ninguém precisa ser incomodado. Falha que não se
+ * resolve sozinha (token, arquivo, permissão) avisa na hora. O erro é limpo
+ * automaticamente quando a publicação dá certo, no fim de runInstagramPublish. */
+async function markScheduledPublishFailure(supabaseAdmin: any, item: ScheduledFailureInfo, errorMessage: string) {
   await supabaseAdmin.from("content_items")
     .update({ ig_last_error: errorMessage, ig_last_error_at: new Date().toISOString() })
     .eq("id", item.id);
-  if (item.hadPreviousError || !item.orgId) return;
-  const { data: masterRoles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "master");
-  const masterIds = new Set((masterRoles ?? []).map((r: any) => r.user_id));
-  const { data: orgProfiles } = await supabaseAdmin.from("profiles").select("id").eq("org_id", item.orgId);
-  const masterProfileIds = (orgProfiles ?? []).map((p: any) => p.id).filter((id: string) => masterIds.has(id));
-  if (masterProfileIds.length === 0) return;
-  await supabaseAdmin.from("notifications").insert(
-    masterProfileIds.map((userId: string) => ({
-      user_id: userId,
-      type: "instagram_publish_failed",
-      item_id: item.id,
-      message: `Falha ao publicar "${item.title}" no Instagram: ${errorMessage}`,
-    })),
-  );
+  if (!item.orgId) return;
+  const hadPreviousError = !!item.previousErrorAt;
+  if (!hadPreviousError && isTransientPublishError(errorMessage)) return;
+  // Já avisou nessa sequência? A notificação da falha anterior é criada logo
+  // depois do ig_last_error_at dela, então cai dentro dessa janela.
+  if (hadPreviousError && (await countFailureNotifications(supabaseAdmin, item.id, item.previousErrorAt!)) > 0) return;
+  await notifyOrgMasters(supabaseAdmin, item.orgId, {
+    type: "instagram_publish_failed",
+    item_id: item.id,
+    message: `Falha ao publicar "${item.title}" no Instagram${hadPreviousError ? " (depois de mais de uma tentativa)" : ""}: ${errorMessage}`,
+  });
+}
+
+/** Publicou depois de ter falhado e alguém já tinha sido avisado da falha —
+ * avisa que resolveu, pra ninguém ir publicar na mão em dobro. */
+async function notifyScheduledPublishRecovered(supabaseAdmin: any, item: ScheduledFailureInfo) {
+  if (!item.orgId || !item.previousErrorAt) return;
+  const since = new Date(new Date(item.previousErrorAt).getTime() - 24 * 60 * 60 * 1000).toISOString();
+  if ((await countFailureNotifications(supabaseAdmin, item.id, since)) === 0) return;
+  await notifyOrgMasters(supabaseAdmin, item.orgId, {
+    type: "instagram_publish_recovered",
+    item_id: item.id,
+    message: `"${item.title}" foi publicado no Instagram numa nova tentativa automática.`,
+  });
 }
 
 /** Called by the external cron (GitHub Actions, every few minutes — Vercel
@@ -1025,30 +1186,33 @@ export async function runScheduledInstagramPublishes() {
   // ig_last_error ainda não está nos tipos gerados do Supabase.
   const { data: due } = await (supabaseAdmin as any)
     .from("content_items")
-    .select("id, title, ig_last_error, months(clients!months_client_id_fkey(org_id))")
+    .select("id, title, ig_last_error, ig_last_error_at, months(clients!months_client_id_fkey(org_id))")
     .eq("ig_auto_publish", true)
     .eq("status", "PRONTO_PARA_PUBLICAR")
     .lte("scheduled_at", now.toISOString());
 
   const { data: repeatCandidates } = await (supabaseAdmin as any)
     .from("content_items")
-    .select("id, title, ig_last_error, scheduled_at, ig_repeat_mode, ig_repeat_slots, ig_repeat_last_fired_date, months(clients!months_client_id_fkey(org_id))")
+    .select("id, title, ig_last_error, ig_last_error_at, scheduled_at, ig_repeat_mode, ig_repeat_slots, ig_repeat_last_fired_date, months(clients!months_client_id_fkey(org_id))")
     .eq("type", "story")
     .eq("status", "PRONTO_PARA_PUBLICAR")
     .not("ig_repeat_mode", "is", null);
   const dueRepeats = (repeatCandidates ?? []).filter((it: any) => isRepeatDue(it, now));
 
   const results: { itemId: string; ok: boolean; error?: string }[] = [];
+  const failureInfo = (row: any): ScheduledFailureInfo => ({
+    id: row.id, title: row.title, orgId: row.months?.clients?.org_id,
+    previousErrorAt: row.ig_last_error ? (row.ig_last_error_at ?? new Date(0).toISOString()) : null,
+  });
   for (const row of due ?? []) {
     try {
       await runInstagramPublish(row.id);
+      await notifyScheduledPublishRecovered(supabaseAdmin, failureInfo(row)).catch(() => {});
       results.push({ itemId: row.id, ok: true });
     } catch (e: any) {
       const errorMessage = e?.message ?? String(e);
       console.error("[Instagram cron] falha ao publicar", row.id, e);
-      await markScheduledPublishFailure(supabaseAdmin, {
-        id: row.id, title: row.title, orgId: (row as any).months?.clients?.org_id, hadPreviousError: !!row.ig_last_error,
-      }, errorMessage);
+      await markScheduledPublishFailure(supabaseAdmin, failureInfo(row), errorMessage);
       results.push({ itemId: row.id, ok: false, error: errorMessage });
     }
   }
@@ -1056,13 +1220,12 @@ export async function runScheduledInstagramPublishes() {
     try {
       await runInstagramPublish(row.id);
       await supabaseAdmin.from("content_items").update({ ig_repeat_last_fired_date: saoPauloParts(now).dateStr }).eq("id", row.id);
+      await notifyScheduledPublishRecovered(supabaseAdmin, failureInfo(row)).catch(() => {});
       results.push({ itemId: row.id, ok: true });
     } catch (e: any) {
       const errorMessage = e?.message ?? String(e);
       console.error("[Instagram cron] falha ao repetir story", row.id, e);
-      await markScheduledPublishFailure(supabaseAdmin, {
-        id: row.id, title: row.title, orgId: (row as any).months?.clients?.org_id, hadPreviousError: !!row.ig_last_error,
-      }, errorMessage);
+      await markScheduledPublishFailure(supabaseAdmin, failureInfo(row), errorMessage);
       results.push({ itemId: row.id, ok: false, error: errorMessage });
     }
   }

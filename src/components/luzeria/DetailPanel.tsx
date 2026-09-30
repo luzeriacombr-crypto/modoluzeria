@@ -10,6 +10,7 @@ import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettings
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getInstagramConnectionStatus, getStoryRepeatStatus, setStoryRepeatRule, getInstagramPostLink } from "@/lib/luzeria/instagram.functions";
+import { videoSizeProblem } from "@/lib/luzeria/instagram-limits";
 import { getFacebookConnectionStatus, getFacebookItemEngagement } from "@/lib/luzeria/facebook.functions";
 import { TikTokPublishPanel } from "./TikTokSections";
 import { LinkedInPublishPanel } from "./LinkedInSections";
@@ -789,6 +790,9 @@ export function DetailPanel() {
   const effectiveMonthKey = isAvulso && monthKeys.length > 0 ? monthKeys[0] : selectedMonthKey;
   const { data: month } = useQuery({ ...monthQO(selectedClientId ?? "", effectiveMonthKey), enabled: !!selectedClientId && !!selectedItemId });
   const me = useMe().data;
+  // Mesma query da seção de arquivos (cache compartilhado) — só pra avisar
+  // de vídeo acima do limite da Meta na seção "Publicar".
+  const { data: publishFiles = [] } = useQuery(itemFilesQO(selectedItemId));
   const { setItemStatus, updateItem, setItemEditor, setItemReelType, setItemPostFormat, addAssignee, removeAssignee, addCommentWithMentions, addAudioComment, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish, publishToFacebook, setFacebookAutoPublish, setItemCampaign } = useApi();
   const { data: appSettings } = useQuery(appSettingsQO());
   const { data: campaigns = [] } = useQuery({ ...campaignsQO(selectedClientId ?? ""), enabled: !!selectedClientId });
@@ -1575,6 +1579,14 @@ export function DetailPanel() {
                     </p>
                   </div>
                 )}
+                {(() => {
+                  const sizeProblem = videoSizeProblem(item.type, publishFiles);
+                  return sizeProblem ? (
+                    <div className="rounded-lg px-3.5 py-3 mb-3 border border-red-500/30 bg-red-500/10 text-[12px] text-red-400 leading-relaxed">
+                      {sizeProblem}
+                    </div>
+                  ) : null;
+                })()}
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={async () => {
