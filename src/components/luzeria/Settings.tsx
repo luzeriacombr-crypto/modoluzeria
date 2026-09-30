@@ -41,6 +41,7 @@ const SalesPageEditorTab = lazy(() => import("./SalesLandingEditorTab").then((m)
 const BlogAdminTab = lazy(() => import("./BlogAdminTab").then((m) => ({ default: m.BlogAdminTab })));
 const JourneyStagesTab = lazy(() => import("./JourneyStagesTab").then((m) => ({ default: m.JourneyStagesTab })));
 const ClientPaymentsPanel = lazy(() => import("./ClientPaymentsPanel").then((m) => ({ default: m.ClientPaymentsPanel })));
+const OrcamentosPanel = lazy(() => import("./OrcamentosPanel").then((m) => ({ default: m.OrcamentosPanel })));
 const ClientOperationsOverview = lazy(() => import("./ClientOperationsOverview").then((m) => ({ default: m.ClientOperationsOverview })));
 const ProductionAuditTab = lazy(() => import("./ProductionAuditTab").then((m) => ({ default: m.ProductionAuditTab })));
 const OrgKnowledgeSettings = lazy(() => import("./OrgKnowledgeSettings").then((m) => ({ default: m.OrgKnowledgeSettings })));
@@ -53,8 +54,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "auditoria" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "afiliados" | "revenda" | "indicacoes" | "plataforma" | "updates" | "site" | "blog" | "journey" | "cliente" | "knowledge";
-const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "afiliados", "revenda", "indicacoes", "plataforma", "updates", "site", "blog", "journey", "cliente", "knowledge"];
+type SettingsTab = "team" | "report" | "auditoria" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "orcamentos" | "afiliados" | "revenda" | "indicacoes" | "plataforma" | "updates" | "site" | "blog" | "journey" | "cliente" | "knowledge";
+const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "orcamentos", "afiliados", "revenda", "indicacoes", "plataforma", "updates", "site", "blog", "journey", "cliente", "knowledge"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -76,7 +77,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
     "updates",
     ...(hasSetorPermission(me, "settings_journey") ? (["journey", "cliente"] as SettingsTab[]) : []),
     ...(hasSetorPermission(me, "team_reports") ? (["report", "auditoria"] as SettingsTab[]) : []),
-    ...(hasPermission(me, "view_financeiro") ? (["cobranca", "margem", "pagamentos", "cliente"] as SettingsTab[]) : []),
+    ...(hasPermission(me, "view_financeiro") ? (["cobranca", "margem", "pagamentos", "orcamentos", "cliente"] as SettingsTab[]) : []),
     ...(hasPermission(me, "manage_team") ? (["team"] as SettingsTab[]) : []),
     // Estas duas permissões apareciam no editor de cargos com rótulo e
     // descrição, mas nunca eram conferidas em lugar nenhum: o master
@@ -120,7 +121,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             {tab === "team" || tab === "report" || tab === "auditoria" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
              tab === "integrations" ? "Conecte o Google Drive da agência, a sua Google Agenda e acompanhe o Instagram de cada cliente." :
              tab === "automations" ? "Lembretes automáticos e rotinas que o sistema executa sozinho." :
-             tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" ? "Seu plano, indicações e o financeiro da agência." :
+             tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" || tab === "orcamentos" ? "Seu plano, indicações e o financeiro da agência." :
              tab === "plataforma" ? "Todas as agências do Modo Criador, mensagens de ativação e pedidos de demonstração." :
              tab === "cliente" || tab === "margem" || tab === "journey" ? "Visão geral, jornada e margem de cada cliente." :
              tab === "updates" ? "O que mudou no Modo Criador." :
@@ -152,7 +153,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           tab === (id as any) ||
           (id === "team" && (tab === "report" || tab === "auditoria")) ||
           (id === "cliente" && (tab === "margem" || tab === "journey")) ||
-          (id === "cobranca" && (tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos"));
+          (id === "cobranca" && (tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" || tab === "orcamentos"));
         const current = tabItems.find((t) => isActive(t.id))?.id ?? tabItems[0]?.id;
         return (
           <>
@@ -200,7 +201,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
 
       <Suspense fallback={<TabLoadingFallback />}>
       {tab === "general" ? <GeneralSettings /> :
-       tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" ? (
+       tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" || tab === "orcamentos" ? (
         <div>
           {/* Auditoria de UX (2.2 / "afiliados vs indicações confusos"):
               antes disso as 3 sub-seções (Afiliados, Revenda, Indique e
@@ -211,12 +212,14 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               (pra não confundir "indicar outra agência" com "ser afiliado").
               "Entradas e saídas" (pagamentos) morava dentro de "Clientes" —
               pedido do Junior (29/09) pra juntar tudo que é financeiro da
-              agência (plano, indicações, fluxo de caixa) numa aba só. */}
+              agência (plano, indicações, fluxo de caixa) numa aba só.
+              "Orçamentos" (30/09): catálogo de produtos + propostas em PDF. */}
           {isMaster && (
             <div className="flex items-center gap-1 mb-6 -mt-2 flex-wrap">
               <SubTabPill active={tab === "cobranca"} onClick={() => setTab("cobranca")} label="Meu plano" />
               <SubTabPill active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} label="Indique e ganhe" />
               <SubTabPill active={tab === "pagamentos"} onClick={() => setTab("pagamentos")} label="Entradas e saídas" />
+              <SubTabPill active={tab === "orcamentos"} onClick={() => setTab("orcamentos")} label="Orçamentos" />
             </div>
           )}
 
@@ -234,6 +237,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             </div>
           ) : tab === "pagamentos" ? (
             <ClientPaymentsPanel />
+          ) : tab === "orcamentos" ? (
+            <OrcamentosPanel />
           ) : (
             <div className="space-y-10">
               <PlanCardSection />

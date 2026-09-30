@@ -107,6 +107,10 @@ import { listContentStatuses, upsertContentStatus, deleteContentStatus, setConte
 import { listClientCategories, createClientCategory, renameClientCategory, deleteClientCategory } from "./client-categories.functions";
 import { setProfileClientAccess } from "./client-access.functions";
 import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, setContractTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
+import {
+  listBudgetProducts, addBudgetProduct, updateBudgetProduct, removeBudgetProduct,
+  listBudgets, saveBudget, removeBudget, exportBudgetPdf,
+} from "./budgets.functions";
 import { listCashFlowEntries, addCashFlowEntry, updateCashFlowEntry, removeCashFlowEntry, setCashFlowEntryPaid, getWalletBalance } from "./cash-flow.functions";
 import { listBankAccounts, addBankAccount, updateBankAccount, removeBankAccount } from "./bank-accounts.functions";
 import {
@@ -362,6 +366,10 @@ export const bankAccountsQO = () =>
   queryOptions({ queryKey: ["bank-accounts"], queryFn: () => listBankAccounts() });
 export const walletBalanceQO = () =>
   queryOptions({ queryKey: ["wallet-balance"], queryFn: () => getWalletBalance() });
+export const budgetProductsQO = () =>
+  queryOptions({ queryKey: ["budget-products"], queryFn: () => listBudgetProducts() });
+export const budgetsQO = () =>
+  queryOptions({ queryKey: ["budgets"], queryFn: () => listBudgets() });
 
 export const campaignsQO = (clientId: string) =>
   queryOptions({ queryKey: ["campaigns", clientId], queryFn: () => listCampaigns({ data: { clientId } }) });
@@ -1406,6 +1414,35 @@ export function useApi() {
       mutationFn: useServerFn(removeBankAccount),
       onSuccess: () => qc.invalidateQueries({ queryKey: ["bank-accounts"] }),
       onError: (e: any) => toastFriendlyError(e, "Erro ao remover conta."),
+    }),
+    addBudgetProduct: useMutation({
+      mutationFn: useServerFn(addBudgetProduct),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["budget-products"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao adicionar produto."),
+    }),
+    updateBudgetProduct: useMutation({
+      mutationFn: useServerFn(updateBudgetProduct),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["budget-products"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar produto."),
+    }),
+    removeBudgetProduct: useMutation({
+      mutationFn: useServerFn(removeBudgetProduct),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["budget-products"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover produto."),
+    }),
+    saveBudget: useMutation({
+      mutationFn: useServerFn(saveBudget),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["budgets"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar orçamento."),
+    }),
+    removeBudget: useMutation({
+      mutationFn: useServerFn(removeBudget),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["budgets"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover orçamento."),
+    }),
+    exportBudgetPdf: useMutation({
+      mutationFn: useServerFn(exportBudgetPdf),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao gerar PDF."),
     }),
     upsertCampaign: useMutation({
       mutationFn: useServerFn(upsertCampaign),
