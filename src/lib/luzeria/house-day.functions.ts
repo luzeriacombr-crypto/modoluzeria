@@ -151,9 +151,26 @@ export const getChecklistHistory = createServerFn({ method: "GET" })
 
 /* ============== Meu dia ============== */
 
+/** Guarda o maior número visto no dia — stories somem depois de 24h, então
+ * uma leitura mais tarde no mesmo dia nunca pode apagar o que já contou. */
+export async function recordDailyStats(orgId: string, dayKey: string, stories: number, feed: number) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db: any = supabaseAdmin;
+    const { data: cur } = await db.from("house_daily_stats").select("stories, feed").eq("org_id", orgId).eq("day", dayKey).maybeSingle();
+    await db.from("house_daily_stats").upsert({
+      org_id: orgId, day: dayKey,
+      stories: Math.max(stories, cur?.stories ?? 0), feed: Math.max(feed, cur?.feed ?? 0),
+      source: "instagram", updated_at: new Date().toISOString(),
+    }, { onConflict: "org_id,day" });
+  } catch (e) {
+    console.error("Falha ao gravar retrato diário da House:", e);
+  }
+}
+
 type GoalCount = { done: number; goal: number; source: "instagram" | "app" };
 
-async function countFromInstagram(clientId: string, todayKey: string): Promise<{ storiesToday: number; postsWeek: number } | null> {
+export async function countFromInstagram(clientId: string, todayKey: string): Promise<{ storiesToday: number; postsWeek: number; feedToday: number } | null> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: creds } = await (supabaseAdmin as any).from("client_instagram_credentials")
@@ -170,9 +187,11 @@ async function countFromInstagram(clientId: string, todayKey: string): Promise<{
     const media: any = await mediaRes.json();
     const dayStart = spDayStartUtc(todayKey).getTime();
     const weekStart = spDayStartUtc(weekStartKey(todayKey)).getTime();
+    const feed = (media.data ?? []).filter((m: any) => m.media_product_type !== "STORY");
     return {
       storiesToday: (stories.data ?? []).filter((s: any) => new Date(s.timestamp).getTime() >= dayStart).length,
-      postsWeek: (media.data ?? []).filter((m: any) => m.media_product_type !== "STORY" && new Date(m.timestamp).getTime() >= weekStart).length,
+      postsWeek: feed.filter((m: any) => new Date(m.timestamp).getTime() >= weekStart).length,
+      feedToday: feed.filter((m: any) => new Date(m.timestamp).getTime() >= dayStart).length,
     };
   } catch {
     return null;
@@ -202,7 +221,7 @@ export type MyDay = {
   checklist: (ChecklistItem & { done: boolean; late: boolean; mine: boolean })[];
   stories: GoalCount;
   posts: GoalCount;
-  planning: { monthKey: string; deadlineDay: number; delivered: boolean; daysLeft: number };
+  planning: { monthKey: string; deadlineDay: number; deadlineDate: string; delivered: boolean; daysLeft: number };
   upcoming: { id: string; title: string; type: string; status: string; dueDate: string; clientId: string; clientName: string; monthKey: string; mine: boolean; assigneeIds: string[] }[];
 };
 
@@ -242,17 +261,29 @@ export const getMyDay = createServerFn({ method: "GET" })
     const ig = houseClientId ? await countFromInstagram(houseClientId, todayKey) : null;
     const counts = ig ?? await countFromApp(db, context.orgId, todayKey);
     const source = ig ? "instagram" : "app";
+    // Retrato do dia pro painel do dono (o Instagram não guarda stories antigos).
+    if (ig) await recordDailyStats(context.orgId, todayKey, ig.storiesToday, ig.feedToday);
 
     // Planejamento do mês seguinte: entregue se já existe planejamento/roteiro
     // pra ele (target_month_key), ou um planejamento escrito neste mês.
-    const nextKey = nextMonthKey(todayKey);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const today = Number(todayKey.slice(8, 10));
+    // Conta criada depois do prazo deste mês: o planejamento do mês seguinte
+    // não "vence" pra ela — mostra o próximo (prazo no mês que vem).
+    const { data: orgRow } = await (supabaseAdmin as any).from("orgs").select("created_at").eq("id", context.orgId).maybeSingle();
+    const createdKey = orgRow?.created_at ? houseDateKey(new Date(orgRow.created_at)) : "0000-00-00";
+    const thisDeadline = `${todayKey.slice(0, 7)}-${String(deadlineDay).padStart(2, "0")}`;
+    const skipAhead = createdKey > thisDeadline;
+    const nextKey = skipAhead ? nextMonthKey(`${nextMonthKey(todayKey)}-01`) : nextMonthKey(todayKey);
     const monthStart = spDayStartUtc(`${todayKey.slice(0, 7)}-01`).toISOString();
     const { count: planDocs } = await (supabaseAdmin as any).from("client_docs")
       .select("id", { count: "exact", head: true })
       .eq("org_id", context.orgId)
-      .or(`target_month_key.eq.${nextKey},and(type.eq.planejamento,created_at.gte.${monthStart})`);
-    const today = Number(todayKey.slice(8, 10));
+      .or(skipAhead
+        ? `target_month_key.eq.${nextKey}`
+        : `target_month_key.eq.${nextKey},and(type.eq.planejamento,created_at.gte.${monthStart})`);
+    const deadlineDate = skipAhead ? `${nextMonthKey(todayKey)}-${String(deadlineDay).padStart(2, "0")}` : thisDeadline;
+    const daysLeft = Math.round((new Date(`${deadlineDate}T12:00:00Z`).getTime() - new Date(`${todayKey}T12:00:00Z`).getTime()) / 86_400_000);
 
     // Próximos conteúdos com prazo (atrasados primeiro).
     const { data: itemsRows } = await db.from("content_items")
@@ -278,7 +309,7 @@ export const getMyDay = createServerFn({ method: "GET" })
       checklist,
       stories: { done: counts.storiesToday, goal: storiesGoal, source },
       posts: { done: counts.postsWeek, goal: postsGoal, source },
-      planning: { monthKey: nextKey, deadlineDay, delivered: (planDocs ?? 0) > 0, daysLeft: deadlineDay - today },
+      planning: { monthKey: nextKey, deadlineDay, deadlineDate, delivered: (planDocs ?? 0) > 0, daysLeft },
       upcoming,
     };
   });

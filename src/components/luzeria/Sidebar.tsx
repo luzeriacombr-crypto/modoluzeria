@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Plus, Info, CircleHelp, Instagram, Users, Wallet, UserCog, BookMarked,
-  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images, MessageCircleHeart, BookOpenText,
+  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images, MessageCircleHeart, BookOpenText, FolderKanban, FileText,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, clientCategoriesQO, useApi, useMe, myAgencyLevelInputsQO } from "@/lib/luzeria/queries";
@@ -293,10 +293,14 @@ export function Sidebar({
               <NavButton key="minhas-demandas" icon={<LayoutDashboard size={15} />} label={homeLabel}
                 active={pathname === homePath} onClick={() => navigate({ to: homePath })} />
             ), meta: { icon: <LayoutDashboard size={17} />, label: homeLabel, active: pathname === homePath, kind: "button", onClick: () => navigate({ to: homePath }) } },
-            { id: "dashboard", label: navLabel("dashboard", "Dashboard"), node: (
+            // House: o "Dashboard" de agência vira o Painel do dono (só gestor).
+            ...(!house ? [{ id: "dashboard", label: navLabel("dashboard", "Dashboard"), node: (
               <NavButton key="dashboard" icon={<BarChart2 size={15} />} label={navLabel("dashboard", "Dashboard")}
                 active={pathname === "/admin"} onClick={() => navigate({ to: "/admin" })} />
-            ), meta: { icon: <BarChart2 size={17} />, label: navLabel("dashboard", "Dashboard"), active: pathname === "/admin", kind: "button", onClick: () => navigate({ to: "/admin" }) } },
+            ), meta: { icon: <BarChart2 size={17} />, label: navLabel("dashboard", "Dashboard"), active: pathname === "/admin", kind: "button" as const, onClick: () => navigate({ to: "/admin" }) } }] : isAdmin ? [{ id: "painel", label: navLabel("painel", "Painel"), node: (
+              <NavButton key="painel" icon={<BarChart2 size={15} />} label={navLabel("painel", "Painel")}
+                active={pathname === "/painel"} onClick={() => navigate({ to: "/painel" })} />
+            ), meta: { icon: <BarChart2 size={17} />, label: navLabel("painel", "Painel"), active: pathname === "/painel", kind: "button" as const, onClick: () => navigate({ to: "/painel" }) } }] : []),
             singleBrandId ? { id: "clientes", label: clientesLabel, meta: { icon: <Users size={17} />, label: clientesLabel, active: clientsActive, kind: "button" as const, onClick: () => navigate({ to: "/cliente/$clientId", params: { clientId: singleBrandId } }) }, node: (
               <div key="clientes" className="relative">
                 <NavButton icon={<Users size={15} />} label={clientesLabel} active={clientsActive}
@@ -357,6 +361,15 @@ export function Sidebar({
             ...(house ? [{ id: "leads", label: navLabel("leads", "Leads"), meta: { icon: <MessageCircleHeart size={17} />, label: navLabel("leads", "Leads"), active: pathname === "/leads", kind: "button" as const, onClick: () => navigate({ to: "/leads" }) }, node: (
               <div key="leads">
                 <NavButton icon={<MessageCircleHeart size={15} />} label={navLabel("leads", "Leads")} active={pathname === "/leads"} onClick={() => navigate({ to: "/leads" })} />
+              </div>
+            ) }] : []),
+            ...(house ? [{ id: "projetos", label: navLabel("projetos", "Projetos"), meta: { icon: <FolderKanban size={17} />, label: navLabel("projetos", "Projetos"), active: pathname === "/projetos", kind: "button" as const, onClick: () => navigate({ to: "/projetos", search: {} as any }) }, node: (
+              <div key="projetos">
+                <NavButton icon={<FolderKanban size={15} />} label={navLabel("projetos", "Projetos")} active={pathname === "/projetos"} onClick={() => navigate({ to: "/projetos", search: {} as any })} />
+              </div>
+            ) }, { id: "relatorio-mes", label: navLabel("relatorio-mes", "Relatório do mês"), meta: { icon: <FileText size={17} />, label: navLabel("relatorio-mes", "Relatório do mês"), active: pathname === "/relatorio", kind: "button" as const, onClick: () => navigate({ to: "/relatorio", search: {} as any }) }, node: (
+              <div key="relatorio-mes">
+                <NavButton icon={<FileText size={15} />} label={navLabel("relatorio-mes", "Relatório do mês")} active={pathname === "/relatorio"} onClick={() => navigate({ to: "/relatorio", search: {} as any })} />
               </div>
             ) }] : []),
             ...(house ? [{ id: "playbook", label: navLabel("playbook", "Playbook"), meta: { icon: <BookOpenText size={17} />, label: navLabel("playbook", "Playbook"), active: pathname === "/playbook", kind: "button" as const, onClick: () => navigate({ to: "/playbook", search: {} as any }) }, node: (

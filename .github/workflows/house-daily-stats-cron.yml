@@ -1,0 +1,18 @@
+name: House daily stats
+
+on:
+  schedule:
+    # 02:50 UTC = 23:50 em Brasília — pega todos os stories do dia antes de
+    # virar (o Instagram só devolve stories das últimas 24h).
+    - cron: "50 2 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call house-daily-stats endpoint
+        run: |
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.modocriador.com.br/api/cron/house-daily-stats

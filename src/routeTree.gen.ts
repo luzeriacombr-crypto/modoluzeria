@@ -50,8 +50,11 @@ import { Route as ApiMcpRouteImport } from './routes/api.mcp'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AuthenticatedSelecaoDeFotosRouteImport } from './routes/_authenticated/selecao-de-fotos'
 import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated/rotina'
+import { Route as AuthenticatedRelatorioRouteImport } from './routes/_authenticated/relatorio'
+import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticated/projetos'
 import { Route as AuthenticatedPlaybookRouteImport } from './routes/_authenticated/playbook'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
+import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
 import { Route as AuthenticatedMeuDiaRouteImport } from './routes/_authenticated/meu-dia'
 import { Route as AuthenticatedLixeiraRouteImport } from './routes/_authenticated/lixeira'
@@ -78,6 +81,7 @@ import { Route as ApiCronPublishTiktokRouteImport } from './routes/api.cron.publ
 import { Route as ApiCronPublishLinkedinRouteImport } from './routes/api.cron.publish-linkedin'
 import { Route as ApiCronPublishInstagramRouteImport } from './routes/api.cron.publish-instagram'
 import { Route as ApiCronPublishFacebookRouteImport } from './routes/api.cron.publish-facebook'
+import { Route as ApiCronHouseDailyStatsRouteImport } from './routes/api.cron.house-daily-stats'
 import { Route as ApiCronComputeAgencyRanksRouteImport } from './routes/api.cron.compute-agency-ranks'
 import { Route as ApiCronCheckAgencyReferralsRouteImport } from './routes/api.cron.check-agency-referrals'
 import { Route as ApiCronActivationNudgesRouteImport } from './routes/api.cron.activation-nudges'
@@ -303,6 +307,16 @@ const AuthenticatedRotinaRoute = AuthenticatedRotinaRouteImport.update({
   path: '/rotina',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRelatorioRoute = AuthenticatedRelatorioRouteImport.update({
+  id: '/relatorio',
+  path: '/relatorio',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProjetosRoute = AuthenticatedProjetosRouteImport.update({
+  id: '/projetos',
+  path: '/projetos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPlaybookRoute = AuthenticatedPlaybookRouteImport.update({
   id: '/playbook',
   path: '/playbook',
@@ -311,6 +325,11 @@ const AuthenticatedPlaybookRoute = AuthenticatedPlaybookRouteImport.update({
 const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
   id: '/perfil',
   path: '/perfil',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMinhasTarefasRoute =
@@ -450,6 +469,11 @@ const ApiCronPublishFacebookRoute = ApiCronPublishFacebookRouteImport.update({
   path: '/api/cron/publish-facebook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronHouseDailyStatsRoute = ApiCronHouseDailyStatsRouteImport.update({
+  id: '/api/cron/house-daily-stats',
+  path: '/api/cron/house-daily-stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCronComputeAgencyRanksRoute =
   ApiCronComputeAgencyRanksRouteImport.update({
     id: '/api/cron/compute-agency-ranks',
@@ -564,8 +588,11 @@ export interface FileRoutesByFullPath {
   '/lixeira': typeof AuthenticatedLixeiraRoute
   '/meu-dia': typeof AuthenticatedMeuDiaRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
+  '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/playbook': typeof AuthenticatedPlaybookRoute
+  '/projetos': typeof AuthenticatedProjetosRoute
+  '/relatorio': typeof AuthenticatedRelatorioRoute
   '/rotina': typeof AuthenticatedRotinaRoute
   '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
@@ -596,6 +623,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
   '/api/cron/compute-agency-ranks': typeof ApiCronComputeAgencyRanksRoute
+  '/api/cron/house-daily-stats': typeof ApiCronHouseDailyStatsRoute
   '/api/cron/publish-facebook': typeof ApiCronPublishFacebookRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/publish-linkedin': typeof ApiCronPublishLinkedinRoute
@@ -647,8 +675,11 @@ export interface FileRoutesByTo {
   '/lixeira': typeof AuthenticatedLixeiraRoute
   '/meu-dia': typeof AuthenticatedMeuDiaRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
+  '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/playbook': typeof AuthenticatedPlaybookRoute
+  '/projetos': typeof AuthenticatedProjetosRoute
+  '/relatorio': typeof AuthenticatedRelatorioRoute
   '/rotina': typeof AuthenticatedRotinaRoute
   '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
@@ -679,6 +710,7 @@ export interface FileRoutesByTo {
   '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
   '/api/cron/compute-agency-ranks': typeof ApiCronComputeAgencyRanksRoute
+  '/api/cron/house-daily-stats': typeof ApiCronHouseDailyStatsRoute
   '/api/cron/publish-facebook': typeof ApiCronPublishFacebookRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/publish-linkedin': typeof ApiCronPublishLinkedinRoute
@@ -732,8 +764,11 @@ export interface FileRoutesById {
   '/_authenticated/lixeira': typeof AuthenticatedLixeiraRoute
   '/_authenticated/meu-dia': typeof AuthenticatedMeuDiaRoute
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
+  '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/playbook': typeof AuthenticatedPlaybookRoute
+  '/_authenticated/projetos': typeof AuthenticatedProjetosRoute
+  '/_authenticated/relatorio': typeof AuthenticatedRelatorioRoute
   '/_authenticated/rotina': typeof AuthenticatedRotinaRoute
   '/_authenticated/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
@@ -764,6 +799,7 @@ export interface FileRoutesById {
   '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
   '/api/cron/compute-agency-ranks': typeof ApiCronComputeAgencyRanksRoute
+  '/api/cron/house-daily-stats': typeof ApiCronHouseDailyStatsRoute
   '/api/cron/publish-facebook': typeof ApiCronPublishFacebookRoute
   '/api/cron/publish-instagram': typeof ApiCronPublishInstagramRoute
   '/api/cron/publish-linkedin': typeof ApiCronPublishLinkedinRoute
@@ -817,8 +853,11 @@ export interface FileRouteTypes {
     | '/lixeira'
     | '/meu-dia'
     | '/minhas-tarefas'
+    | '/painel'
     | '/perfil'
     | '/playbook'
+    | '/projetos'
+    | '/relatorio'
     | '/rotina'
     | '/selecao-de-fotos'
     | '/vendas'
@@ -849,6 +888,7 @@ export interface FileRouteTypes {
     | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
     | '/api/cron/compute-agency-ranks'
+    | '/api/cron/house-daily-stats'
     | '/api/cron/publish-facebook'
     | '/api/cron/publish-instagram'
     | '/api/cron/publish-linkedin'
@@ -900,8 +940,11 @@ export interface FileRouteTypes {
     | '/lixeira'
     | '/meu-dia'
     | '/minhas-tarefas'
+    | '/painel'
     | '/perfil'
     | '/playbook'
+    | '/projetos'
+    | '/relatorio'
     | '/rotina'
     | '/selecao-de-fotos'
     | '/vendas'
@@ -932,6 +975,7 @@ export interface FileRouteTypes {
     | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
     | '/api/cron/compute-agency-ranks'
+    | '/api/cron/house-daily-stats'
     | '/api/cron/publish-facebook'
     | '/api/cron/publish-instagram'
     | '/api/cron/publish-linkedin'
@@ -984,8 +1028,11 @@ export interface FileRouteTypes {
     | '/_authenticated/lixeira'
     | '/_authenticated/meu-dia'
     | '/_authenticated/minhas-tarefas'
+    | '/_authenticated/painel'
     | '/_authenticated/perfil'
     | '/_authenticated/playbook'
+    | '/_authenticated/projetos'
+    | '/_authenticated/relatorio'
     | '/_authenticated/rotina'
     | '/_authenticated/selecao-de-fotos'
     | '/_authenticated/vendas'
@@ -1016,6 +1063,7 @@ export interface FileRouteTypes {
     | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
     | '/api/cron/compute-agency-ranks'
+    | '/api/cron/house-daily-stats'
     | '/api/cron/publish-facebook'
     | '/api/cron/publish-instagram'
     | '/api/cron/publish-linkedin'
@@ -1074,6 +1122,7 @@ export interface RootRouteChildren {
   ApiCronActivationNudgesRoute: typeof ApiCronActivationNudgesRoute
   ApiCronCheckAgencyReferralsRoute: typeof ApiCronCheckAgencyReferralsRoute
   ApiCronComputeAgencyRanksRoute: typeof ApiCronComputeAgencyRanksRoute
+  ApiCronHouseDailyStatsRoute: typeof ApiCronHouseDailyStatsRoute
   ApiCronPublishFacebookRoute: typeof ApiCronPublishFacebookRoute
   ApiCronPublishInstagramRoute: typeof ApiCronPublishInstagramRoute
   ApiCronPublishLinkedinRoute: typeof ApiCronPublishLinkedinRoute
@@ -1379,6 +1428,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRotinaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorio': {
+      id: '/_authenticated/relatorio'
+      path: '/relatorio'
+      fullPath: '/relatorio'
+      preLoaderRoute: typeof AuthenticatedRelatorioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projetos': {
+      id: '/_authenticated/projetos'
+      path: '/projetos'
+      fullPath: '/projetos'
+      preLoaderRoute: typeof AuthenticatedProjetosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/playbook': {
       id: '/_authenticated/playbook'
       path: '/playbook'
@@ -1391,6 +1454,13 @@ declare module '@tanstack/react-router' {
       path: '/perfil'
       fullPath: '/perfil'
       preLoaderRoute: typeof AuthenticatedPerfilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/painel': {
+      id: '/_authenticated/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof AuthenticatedPainelRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/minhas-tarefas': {
@@ -1575,6 +1645,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronPublishFacebookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/house-daily-stats': {
+      id: '/api/cron/house-daily-stats'
+      path: '/api/cron/house-daily-stats'
+      fullPath: '/api/cron/house-daily-stats'
+      preLoaderRoute: typeof ApiCronHouseDailyStatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/compute-agency-ranks': {
       id: '/api/cron/compute-agency-ranks'
       path: '/api/cron/compute-agency-ranks'
@@ -1683,8 +1760,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedLixeiraRoute: typeof AuthenticatedLixeiraRoute
   AuthenticatedMeuDiaRoute: typeof AuthenticatedMeuDiaRoute
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
+  AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPlaybookRoute: typeof AuthenticatedPlaybookRoute
+  AuthenticatedProjetosRoute: typeof AuthenticatedProjetosRoute
+  AuthenticatedRelatorioRoute: typeof AuthenticatedRelatorioRoute
   AuthenticatedRotinaRoute: typeof AuthenticatedRotinaRoute
   AuthenticatedSelecaoDeFotosRoute: typeof AuthenticatedSelecaoDeFotosRoute
   AuthenticatedVendasRoute: typeof AuthenticatedVendasRoute
@@ -1713,8 +1793,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLixeiraRoute: AuthenticatedLixeiraRoute,
   AuthenticatedMeuDiaRoute: AuthenticatedMeuDiaRoute,
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
+  AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPlaybookRoute: AuthenticatedPlaybookRoute,
+  AuthenticatedProjetosRoute: AuthenticatedProjetosRoute,
+  AuthenticatedRelatorioRoute: AuthenticatedRelatorioRoute,
   AuthenticatedRotinaRoute: AuthenticatedRotinaRoute,
   AuthenticatedSelecaoDeFotosRoute: AuthenticatedSelecaoDeFotosRoute,
   AuthenticatedVendasRoute: AuthenticatedVendasRoute,
@@ -1779,6 +1862,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronActivationNudgesRoute: ApiCronActivationNudgesRoute,
   ApiCronCheckAgencyReferralsRoute: ApiCronCheckAgencyReferralsRoute,
   ApiCronComputeAgencyRanksRoute: ApiCronComputeAgencyRanksRoute,
+  ApiCronHouseDailyStatsRoute: ApiCronHouseDailyStatsRoute,
   ApiCronPublishFacebookRoute: ApiCronPublishFacebookRoute,
   ApiCronPublishInstagramRoute: ApiCronPublishInstagramRoute,
   ApiCronPublishLinkedinRoute: ApiCronPublishLinkedinRoute,

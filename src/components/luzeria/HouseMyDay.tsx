@@ -83,7 +83,7 @@ function GoalsCard({ day }: { day: MyDay }) {
               {planning.delivered ? "Entregue ✓"
                 : planning.daysLeft < 0 ? `Atrasado ${-planning.daysLeft} dia${planning.daysLeft === -1 ? "" : "s"}`
                 : planning.daysLeft === 0 ? "Vence hoje"
-                : `Até dia ${planning.deadlineDay} · faltam ${planning.daysLeft} dia${planning.daysLeft === 1 ? "" : "s"}`}
+                : `Até ${planning.deadlineDate.slice(8, 10)}/${planning.deadlineDate.slice(5, 7)} · faltam ${planning.daysLeft} dia${planning.daysLeft === 1 ? "" : "s"}`}
             </span>
           </div>
           <Bar pct={planning.delivered ? 100 : 0} color={planning.delivered ? undefined : planning.daysLeft < 0 ? "#FF6B6B" : undefined} />
