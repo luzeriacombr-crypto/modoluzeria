@@ -113,6 +113,84 @@ export const TUTORIALS: HelpTutorial[] = [
     ],
   },
   {
+    title: "Criar um conteúdo pro cliente (briefing, materiais e responsáveis)",
+    steps: [
+      "Abra o cliente e clique em \"Adicionar Posts\" (ou Reels/Stories) — o item já nasce na hora e abre pra você preencher.",
+      "Dê um título clicando em \"Clique para inserir um título\".",
+      "Na seção \"Briefing\", escreva o que o editor precisa saber pra produzir essa arte.",
+      "Em \"Imagens de referência\", clique em \"Fazer upload para briefing\" pra anexar exemplos visuais do que você quer.",
+      "Em \"Materiais brutos\", clique em \"Fazer upload de material bruto\" pra subir as fotos/vídeos originais que o editor vai usar — tudo isso já fica organizado no Google Drive do cliente, se estiver conectado.",
+      "Escreva a \"Legenda\" já pensando no que vai ser publicado, se já souber.",
+      "Em \"Responsáveis\", clique no \"+\" e marque quem fica encarregado desse conteúdo — dá pra marcar mais de uma pessoa.",
+      "Em \"Editor\", escolha quem vai produzir (ou já produziu) a arte.",
+      "Mude o \"Status\" conforme o conteúdo avança: Planejamento → Criação de arte → Revisão interna → Revisão cliente. Assim que o status vira \"Revisão cliente\", o item já aparece no Preview de Feed do cliente pra ele aprovar.",
+      "Quer que a atribuição de responsável aconteça sozinha quando o status mudar? Crie uma automação em Configurações → Automações, com o gatilho \"Quando o status virar\" → \"Criação de arte\" e a ação \"Atribuir para\" a pessoa certa.",
+    ],
+  },
+  {
+    title: "Programar ou publicar direto no Instagram",
+    steps: [
+      "O conteúdo precisa estar com status \"Pronto para publicar\" e o cliente com o Instagram conectado (Ficha do Cliente).",
+      "Dentro do item, role até \"Data de publicação\" e defina a data e o horário reais — é isso que aparece pro cliente no preview.",
+      "Quer publicar na hora? Clique em \"Publicar no Instagram agora\".",
+      "Quer deixar programado pra sair sozinho? Clique em \"Programar publicação\" (só libera depois que a data/horário estiverem preenchidos).",
+      "Mudou de ideia? Clique em \"Cancelar programação\" a qualquer momento antes da publicação sair.",
+      "O mesmo fluxo vale pro Facebook, assim que a publicação nessa rede for liberada pra sua agência.",
+    ],
+  },
+  {
+    title: "Configurar a Base de Conhecimento pra treinar a IA",
+    steps: [
+      "Vá em Configurações → Base de conhecimento.",
+      "Clique em \"Adicionar texto\", dê um título opcional e cole o conteúdo — pode ser um guia de tom de voz, padrões de legenda ou um roteiro que deu certo e você quer que a IA use de referência.",
+      "Prefira colar o texto direto ou anexar PDF/Markdown: são os formatos que a IA realmente lê. Arquivo .doc/.docx fica guardado ali, mas ainda não é lido pela IA.",
+      "Clique em \"Salvar nota\".",
+      "Isso entra automaticamente na \"Prévia de planejamento com IA\" de qualquer cliente da agência — quanto mais exemplos reais, melhor o resultado.",
+    ],
+  },
+  {
+    title: "Preencher a Ficha do Cliente pra IA ter mais contexto",
+    steps: [
+      "Abra o cliente, vá na aba \"Ficha do Cliente\" e role até o final da aba \"Geral\".",
+      "Em \"Concorrentes\", liste um perfil por linha (ex: @perfil_concorrente ou nome da empresa) — a IA pesquisa o que eles andam postando na hora de gerar um planejamento.",
+      "Em \"Briefing / sistema de conteúdo\", cole o briefing ou manual de como criar conteúdo pra esse cliente específico.",
+      "Em \"Roteiros recentes\", cole os últimos roteiros já escritos pra ele — ajuda a IA a aprender o padrão e o tom já usado.",
+      "Clique em \"Salvar configuração\".",
+    ],
+  },
+  {
+    title: "Colar um roteiro feito fora do Modo Criador e formatar com IA",
+    steps: [
+      "Abra o cliente, vá em \"Mais\" e depois na aba \"Roteiros & Planejamento\".",
+      "Clique em \"Formatar com IA\".",
+      "Cole o material bruto do cliente no campo que aparece — pode ser transcrição, rascunho ou notas soltas, em qualquer formato.",
+      "Clique em \"Gerar com IA\" — a Luzeria organiza tudo pra você, de graça.",
+      "Revise o texto formatado, ajuste o que quiser, e clique em \"Salvar\".",
+      "Pronto — o cliente já vê tudo organizado no link de preview dele.",
+      "Prefere formatar numa IA própria que você já assina (ChatGPT, Claude)? Clique em \"Copiar modelo\" pra copiar um prompt pronto, cole na sua IA, e depois cole o resultado de volta aqui.",
+    ],
+  },
+  {
+    title: "Exportar roteiros em PDF pra imprimir",
+    steps: [
+      "Na aba \"Roteiros & Planejamento\" do cliente, ache o roteiro salvo e clique no ícone \"Exportar em PDF\".",
+      "Escolha o que entra: \"Todos os roteiros\", \"Somente Reels\", \"Somente aprovados\" ou \"Selecionar quais\" (aparece uma lista pra marcar um por um).",
+      "Deixe \"Exibir legendas\" marcado se quiser que a legenda de cada post/reel também saia no PDF — desmarque se não quiser.",
+      "Clique em \"Baixar PDF\". Ele já sai com a logo da sua agência, pronto pra imprimir e levar no dia da gravação.",
+    ],
+  },
+  {
+    title: "Ver publicações programadas, publicadas e os Insights de um cliente",
+    steps: [
+      "Clique em \"Instagram\" no menu lateral (só admins veem esse item).",
+      "Na aba \"Atividade\", escolha o cliente no filtro (ou deixe em \"Todos os clientes\").",
+      "\"Programados\" mostra o que ainda vai sair; \"Publicados pelo Modo Criador\" mostra tudo que já foi ao ar por aqui.",
+      "Com um cliente selecionado, os Insights dele (seguidores, alcance, visitas ao perfil) aparecem na mesma tela.",
+      "Pra mandar os Insights pro cliente sem ele precisar de login, clique no ícone \"Compartilhar com o cliente (link sem login)\" e depois em \"Copiar link\".",
+      "Pra baixar em PDF, clique no ícone \"Baixar em PDF\", escolha a aparência (Claro/Escuro) e clique em \"Baixar PDF\".",
+    ],
+  },
+  {
     title: "Gerar uma prévia de planejamento com IA (novidade)",
     steps: [
       "Regra de acesso: sem assinatura registrada (teste grátis) ou no plano Solo, dá pra usar em até 2 clientes. No plano Pro ou superior, sem limite. Isso é por plano/pagamento, não por nível do Programa de Níveis.",

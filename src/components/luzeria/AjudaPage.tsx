@@ -2,7 +2,16 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { ChevronDown, ExternalLink, Image as ImageIcon, MessageCircle, Video, Send, Lightbulb, Bug } from "lucide-react";
+import {
+  ChevronDown, ExternalLink, Image as ImageIcon, MessageCircle, Video, Send, Lightbulb, Bug,
+  UploadCloud, FolderInput, ClipboardList, CheckCircle2, Settings, LogIn, FolderTree, FolderCheck,
+  AlertTriangle, RefreshCw, Link2, RotateCcw, Instagram, Facebook, Users, MousePointerClick, ShieldCheck,
+  Plus, Pencil, FileText, UserPlus, UserCog, GitBranch, Zap, CalendarClock, CalendarCheck, XCircle,
+  FilePlus2, Save, IdCard, Building2, History, FolderOpen, Wand2, ClipboardPaste, Copy, FileDown,
+  ListFilter, Type, Download, Filter, Share2, KeyRound, AlertCircle, TrendingDown, TrendingUp, Search,
+  Star, Code2, FlaskConical, Clock, MoreVertical, Smartphone, Repeat, Bell, MessageSquareText, Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 import { useMe, useApi, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/queries";
 import type { MyBugReport, AllBugReport, BugReportStatus, BugReportKind } from "@/lib/luzeria/bug-reports.functions";
 import { ForumTab } from "./ForumTab";
@@ -17,8 +26,38 @@ type Tab = "faq" | "tutoriais" | "minhas" | "todas" | "chats" | "temas" | "forum
 const TUTORIAL_MEDIA: Record<string, { images?: { src: string; alt: string }[]; videoUrl?: string }> = {
   "Conectar o Google Drive": { videoUrl: "https://youtu.be/UhX1xvRlMSM?si=in2xsAV4x2xDNxOw" },
   "Instalar o Modo Criador como app no celular": { videoUrl: "/tutorials/instalar-como-app.mp4" },
+  "Criar um conteúdo pro cliente (briefing, materiais e responsáveis)": {
+    images: [{ src: "/tutorials/conteudo-item-detalhe.jpg", alt: "Detalhe de um conteúdo: Briefing, Materiais brutos, Status, Responsáveis e Editor" }],
+  },
+  "Preencher a Ficha do Cliente pra IA ter mais contexto": {
+    images: [{ src: "/tutorials/ficha-cliente-concorrentes-briefing.jpg", alt: "Campos Concorrentes, Briefing/sistema de conteúdo e Roteiros recentes na Ficha do Cliente" }],
+  },
+  "Colar um roteiro feito fora do Modo Criador e formatar com IA": {
+    images: [{ src: "/tutorials/roteiros-planejamento-ia.jpg", alt: "Aba Roteiros & Planejamento com os botões Formatar com IA e Copiar modelo" }],
+  },
 };
 const TUTORIALS = TUTORIALS_BASE.map((t) => ({ ...t, ...TUTORIAL_MEDIA[t.title] }));
+
+// Ícone por passo — só visual (igual a mídia acima), pra Central de Ajuda
+// ficar mais fácil de escanear. Cada lista precisa bater com o número de
+// passos do tutorial correspondente em help-content.ts.
+const STEP_ICONS: Record<string, LucideIcon[]> = {
+  "Importar vários clientes de uma vez": [UploadCloud, FolderInput, Sparkles, ClipboardList, CheckCircle2],
+  "Conectar o Google Drive": [Settings, LogIn, FolderTree, FolderCheck, CheckCircle2],
+  "Resolver erro de permissão ao conectar o Google Drive": [AlertTriangle, RefreshCw, Link2, RotateCcw],
+  "Conectar o Instagram de um cliente sem pedir a senha dele": [Instagram, Link2, Share2, CheckCircle2, LogIn],
+  "Definir a função de um colaborador (Membro, Adm Setor ou Adm Master)": [Users, MousePointerClick, ShieldCheck, CheckCircle2],
+  "Criar um conteúdo pro cliente (briefing, materiais e responsáveis)": [Plus, Pencil, FileText, ImageIcon, UploadCloud, MessageSquareText, UserPlus, UserCog, GitBranch, Zap],
+  "Programar ou publicar direto no Instagram": [CheckCircle2, CalendarClock, Send, CalendarCheck, XCircle, Facebook],
+  "Configurar a Base de Conhecimento pra treinar a IA": [Settings, FilePlus2, FileText, Save, Sparkles],
+  "Preencher a Ficha do Cliente pra IA ter mais contexto": [IdCard, Building2, FileText, History, Save],
+  "Colar um roteiro feito fora do Modo Criador e formatar com IA": [FolderOpen, Wand2, ClipboardPaste, Sparkles, Pencil, Save, Copy],
+  "Exportar roteiros em PDF pra imprimir": [FileDown, ListFilter, Type, Download],
+  "Ver publicações programadas, publicadas e os Insights de um cliente": [Instagram, Filter, CalendarClock, CheckCircle2, Share2, Download],
+  "Gerar uma prévia de planejamento com IA (novidade)": [KeyRound, AlertCircle, TrendingDown, FileText, Sparkles, MessageSquareText, Search, Star, TrendingUp],
+  "Criar uma automação (com modelo pronto ou do zero)": [Settings, Zap, GitBranch, Filter, Code2, FlaskConical, Clock],
+  "Instalar o Modo Criador como app no celular": [Share2, MoreVertical, Smartphone, Repeat, Bell],
+};
 
 export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
   const me = useMe().data;
@@ -81,28 +120,45 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
         <div className="space-y-4">
           {TUTORIALS.map((t) => (
             <div key={t.title} className="bg-card rounded-lg p-5">
-              <div className="font-bold text-foreground mb-3">{t.title}</div>
-              <ol className="space-y-1.5 list-decimal list-inside">
-                {t.steps.map((s, i) => (
-                  <li key={i} className="text-sm text-foreground/60 leading-relaxed">{s}</li>
-                ))}
+              <div className="font-bold text-foreground mb-4">{t.title}</div>
+              {t.images && t.images.length > 0 && (
+                <div className={`mb-5 grid gap-3 ${t.images.length > 1 ? "sm:grid-cols-2" : ""}`}>
+                  {t.images.map((img) => (
+                    <img key={img.src} src={img.src} alt={img.alt} className="w-full h-auto rounded-md border border-foreground/10" />
+                  ))}
+                </div>
+              )}
+              <ol className="list-none">
+                {t.steps.map((s, i) => {
+                  const Icon = STEP_ICONS[t.title]?.[i];
+                  const isLast = i === t.steps.length - 1;
+                  return (
+                    <li key={i} className="flex gap-3">
+                      <div className="flex flex-col items-center shrink-0">
+                        <div
+                          className="h-7 w-7 rounded-full flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
+                        >
+                          {Icon ? <Icon size={13} /> : <span className="text-[10px] font-bold">{i + 1}</span>}
+                        </div>
+                        {!isLast && (
+                          <div className="w-px flex-1 my-1" style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 10%, transparent)" }} />
+                        )}
+                      </div>
+                      <div className={`text-sm text-foreground/60 leading-relaxed ${isLast ? "pb-1" : "pb-4"}`}>{s}</div>
+                    </li>
+                  );
+                })}
               </ol>
               {t.videoUrl && (
                 <a
                   href={t.videoUrl}
                   target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mt-4 text-xs font-semibold rounded-full transition-opacity hover:opacity-80"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mt-2 text-xs font-semibold rounded-full transition-opacity hover:opacity-80"
                   style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
                 >
                   <Video size={13} /> Assistir vídeo
                 </a>
-              )}
-              {t.images && t.images.length > 0 && (
-                <div className={`mt-4 grid gap-3 ${t.images.length > 1 ? "sm:grid-cols-2" : ""}`}>
-                  {t.images.map((img) => (
-                    <img key={img.src} src={img.src} alt={img.alt} className="w-full h-auto rounded-md border border-foreground/10" />
-                  ))}
-                </div>
               )}
             </div>
           ))}
