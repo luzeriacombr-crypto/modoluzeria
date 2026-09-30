@@ -242,8 +242,15 @@ export const deleteCampaign = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
-    // Itens perdem a etiqueta (ON DELETE SET NULL) mas continuam existindo
-    // normalmente — deletar campanha nunca apaga conteúdo.
+    // Itens públicos perdem a etiqueta (ON DELETE SET NULL) mas continuam
+    // existindo normalmente — deletar campanha nunca apaga conteúdo real.
+    // Já os internos (campaign_internal) só existem como rascunho de
+    // planejamento da própria campanha — sem ela, viram órfãos invisíveis
+    // (não aparecem em Posts/Reels nem em Campanhas), então são apagados
+    // junto.
+    const { error: internalErr } = await context.supabase
+      .from("content_items").delete().eq("campaign_id", data.id).eq("campaign_internal", true);
+    if (internalErr) throw new Error(internalErr.message);
     const { error } = await context.supabase.from("campaigns").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
