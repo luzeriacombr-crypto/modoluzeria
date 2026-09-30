@@ -14,6 +14,15 @@ async function assertFinanceiroAccess(supabase: any, userId: string) {
   if (!hasPerm) throw new Error("Forbidden");
 }
 
+/** Soma/subtrai do saldo em banco quando dinheiro realmente entra/sai de
+ * uma conta específica (não "carteira/espécie") — pedido do Junior pra
+ * deixar automático. Silenciosamente ignora bankAccountId nulo. */
+async function adjustBankAccountBalance(supabase: any, bankAccountId: string | null | undefined, deltaCents: number) {
+  if (!bankAccountId || deltaCents === 0) return;
+  const { error } = await supabase.rpc("adjust_bank_account_balance", { p_account_id: bankAccountId, p_delta_cents: deltaCents });
+  if (error) throw new Error(error.message);
+}
+
 export type CashFlowEntry = {
   id: string;
   direction: "entrada" | "saida";
@@ -101,6 +110,14 @@ export const addCashFlowEntry = createServerFn({ method: "POST" })
       created_by: context.userId,
     });
     if (error) throw new Error(error.message);
+    // Entrada já entra como "recebida" na hora (não tem etapa de "marcar
+    // como paga" — ver comentário no tipo CashFlowEntry), então o saldo do
+    // banco escolhido soma imediatamente. Saída só afeta o saldo quando
+    // marcada como paga (setCashFlowEntryPaid) — dinheiro só sai de
+    // verdade quando a conta é de fato quitada.
+    if (data.direction === "entrada") {
+      await adjustBankAccountBalance(context.supabase, data.bankAccountId, data.amountCents);
+    }
     return { ok: true };
   });
 
@@ -122,7 +139,7 @@ export const updateCashFlowEntry = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
     const { data: existing, error: fetchErr } = await (context.supabase as any)
-      .from("cash_flow_entries").select("direction").eq("id", data.id).eq("org_id", context.orgId).maybeSingle();
+      .from("cash_flow_entries").select("direction, bank_account_id, amount_cents").eq("id", data.id).eq("org_id", context.orgId).maybeSingle();
     if (fetchErr) throw new Error(fetchErr.message);
     if (!existing) throw new Error("Lançamento não encontrado.");
     // Entrada avulsa é sempre variável — mesma regra do addCashFlowEntry.
@@ -137,6 +154,15 @@ export const updateCashFlowEntry = createServerFn({ method: "POST" })
       notes: data.notes?.trim() || null,
     }).eq("id", data.id).eq("org_id", context.orgId);
     if (error) throw new Error(error.message);
+    // Entrada já conta como recebida na hora (ver addCashFlowEntry) — se o
+    // valor ou o banco mudou, desfaz o efeito antigo e aplica o novo.
+    // Saída não mexe aqui: seu efeito no saldo só acontece via "marcar como
+    // paga" (setCashFlowEntryPaid), editar o lançamento não retroage sobre
+    // meses já pagos.
+    if (existing.direction === "entrada") {
+      await adjustBankAccountBalance(context.supabase, existing.bank_account_id, -existing.amount_cents);
+      await adjustBankAccountBalance(context.supabase, data.bankAccountId, data.amountCents);
+    }
     return { ok: true };
   });
 
@@ -150,7 +176,7 @@ export const setCashFlowEntryPaid = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
     const { data: entry, error: fetchErr } = await (context.supabase as any)
-      .from("cash_flow_entries").select("id").eq("id", data.entryId).eq("org_id", context.orgId).maybeSingle();
+      .from("cash_flow_entries").select("id, bank_account_id, amount_cents").eq("id", data.entryId).eq("org_id", context.orgId).maybeSingle();
     if (fetchErr) throw new Error(fetchErr.message);
     if (!entry) throw new Error("Lançamento não encontrado.");
 
@@ -159,11 +185,16 @@ export const setCashFlowEntryPaid = createServerFn({ method: "POST" })
         .from("cash_flow_entry_payments")
         .upsert({ entry_id: data.entryId, month_key: data.monthKey, marked_by: context.userId }, { onConflict: "entry_id,month_key" });
       if (error) throw new Error(error.message);
+      // Dinheiro só sai de verdade quando a saída é quitada — desconta do
+      // banco escolhido só agora, não quando o lançamento foi criado.
+      await adjustBankAccountBalance(context.supabase, entry.bank_account_id, -entry.amount_cents);
     } else {
       const { error } = await (context.supabase as any)
         .from("cash_flow_entry_payments").delete()
         .eq("entry_id", data.entryId).eq("month_key", data.monthKey);
       if (error) throw new Error(error.message);
+      // Desmarcou "pago" nesse mês — devolve pro saldo do banco.
+      await adjustBankAccountBalance(context.supabase, entry.bank_account_id, entry.amount_cents);
     }
     return { ok: true };
   });
@@ -173,7 +204,14 @@ export const removeCashFlowEntry = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
+    const { data: existing } = await (context.supabase as any)
+      .from("cash_flow_entries").select("direction, bank_account_id, amount_cents").eq("id", data.id).eq("org_id", context.orgId).maybeSingle();
     const { error } = await (context.supabase as any).from("cash_flow_entries").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    // Desfaz o crédito que essa entrada tinha somado no banco (saída não
+    // afeta o saldo aqui — só via "marcar como paga", ver updateCashFlowEntry).
+    if (existing?.direction === "entrada") {
+      await adjustBankAccountBalance(context.supabase, existing.bank_account_id, -existing.amount_cents);
+    }
     return { ok: true };
   });

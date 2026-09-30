@@ -352,8 +352,9 @@ export function CashFlowSection() {
                 <span className="text-[13px] font-bold text-foreground w-20 text-right">{money(ex.amountCents)}</span>
                 <button
                   onClick={() => setCashFlowEntryPaid.mutate({ data: { entryId: ex.id, monthKey, paid: !ex.paidAt } })}
+                  disabled={setCashFlowEntryPaid.isPending}
                   title={ex.paidAt ? "Marcar como não paga" : "Marcar como paga"}
-                  className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 transition"
+                  className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 transition disabled:opacity-50"
                   style={ex.paidAt
                     ? { backgroundColor: "rgba(126,217,87,0.15)", color: "#7ED957" }
                     : { backgroundColor: "color-mix(in srgb, var(--foreground) 8%, transparent)", color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}

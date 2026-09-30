@@ -1351,24 +1351,29 @@ export function useApi() {
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-payments"] }),
       onError: (e: any) => toastFriendlyError(e, "Erro ao desfazer marcação."),
     }),
+    // As 4 mutations abaixo também invalidam "bank-accounts": lançar/editar/
+    // apagar uma entrada, ou marcar/desmarcar uma saída como paga, pode
+    // ajustar o saldo do banco escolhido (ver cash-flow.functions.ts) — sem
+    // isso o card "Saldo em banco" ficava com o valor antigo até recarregar
+    // a página, mesmo o banco já tendo sido atualizado.
     addCashFlowEntry: useMutation({
       mutationFn: useServerFn(addCashFlowEntry),
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao lançar."),
     }),
     updateCashFlowEntry: useMutation({
       mutationFn: useServerFn(updateCashFlowEntry),
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao salvar."),
     }),
     setCashFlowEntryPaid: useMutation({
       mutationFn: useServerFn(setCashFlowEntryPaid),
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao marcar pagamento."),
     }),
     removeCashFlowEntry: useMutation({
       mutationFn: useServerFn(removeCashFlowEntry),
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }),
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao remover."),
     }),
     addBankAccount: useMutation({
