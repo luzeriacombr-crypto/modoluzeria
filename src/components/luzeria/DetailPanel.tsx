@@ -9,8 +9,7 @@ import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRi
 import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { getInstagramConnectionStatus, getStoryRepeatStatus, setStoryRepeatRule, getInstagramPostLink } from "@/lib/luzeria/instagram.functions";
-import { videoSizeProblem } from "@/lib/luzeria/instagram-limits";
+import { getInstagramConnectionStatus, getStoryRepeatStatus, setStoryRepeatRule, getInstagramPostLink, getInstagramPublishWarnings } from "@/lib/luzeria/instagram.functions";
 import { getFacebookConnectionStatus, getFacebookItemEngagement } from "@/lib/luzeria/facebook.functions";
 import { TikTokPublishPanel } from "./TikTokSections";
 import { LinkedInPublishPanel } from "./LinkedInSections";
@@ -793,6 +792,16 @@ export function DetailPanel() {
   // Mesma query da seção de arquivos (cache compartilhado) — só pra avisar
   // de vídeo acima do limite da Meta na seção "Publicar".
   const { data: publishFiles = [] } = useQuery(itemFilesQO(selectedItemId));
+  // Tamanho/duração fora do que a Meta aceita — a duração vem do Drive, por
+  // isso é uma chamada ao servidor (só quando o item tem vídeo).
+  const getPublishWarnings = useServerFn(getInstagramPublishWarnings);
+  const publishHasVideo = publishFiles.some((f) => (f.mimeType ?? "").startsWith("video/"));
+  const { data: publishWarnings = [] } = useQuery({
+    queryKey: ["ig-publish-warnings", selectedItemId, publishFiles.map((f) => f.id).join("|")],
+    queryFn: () => getPublishWarnings({ data: { itemId: selectedItemId! } }),
+    enabled: !!selectedItemId && publishHasVideo,
+    staleTime: 5 * 60 * 1000,
+  });
   const { setItemStatus, updateItem, setItemEditor, setItemReelType, setItemPostFormat, addAssignee, removeAssignee, addCommentWithMentions, addAudioComment, updateComment, rateItem, publishToInstagram, setInstagramAutoPublish, publishToFacebook, setFacebookAutoPublish, setItemCampaign } = useApi();
   const { data: appSettings } = useQuery(appSettingsQO());
   const { data: campaigns = [] } = useQuery({ ...campaignsQO(selectedClientId ?? ""), enabled: !!selectedClientId });
@@ -1579,14 +1588,11 @@ export function DetailPanel() {
                     </p>
                   </div>
                 )}
-                {(() => {
-                  const sizeProblem = videoSizeProblem(item.type, publishFiles);
-                  return sizeProblem ? (
-                    <div className="rounded-lg px-3.5 py-3 mb-3 border border-red-500/30 bg-red-500/10 text-[12px] text-red-400 leading-relaxed">
-                      {sizeProblem}
-                    </div>
-                  ) : null;
-                })()}
+                {publishHasVideo && publishWarnings.map((w) => (
+                  <div key={w} className="rounded-lg px-3.5 py-3 mb-3 border border-red-500/30 bg-red-500/10 text-[12px] text-red-400 leading-relaxed">
+                    {w}
+                  </div>
+                ))}
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={async () => {

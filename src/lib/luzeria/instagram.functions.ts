@@ -465,6 +465,34 @@ export async function runInstagramFollowerSnapshots() {
  * cron path); `expectedOrgId`, when given, is a defense-in-depth check that
  * the item truly belongs to the caller's org (used by the manual path —
  * the cron path already selected the item by scanning, so it's omitted). */
+/** Duração (ms) de cada vídeo, lida do próprio Google Drive
+ * (videoMediaMetadata). null quando o Drive ainda não processou o vídeo ou a
+ * leitura falhou — quem chama só checa o que veio. Nunca lança: é só uma
+ * checagem prévia, não pode travar a publicação. */
+async function fetchDriveVideoDurations(orgId: string, driveFileIds: string[]): Promise<(number | null)[]> {
+  if (driveFileIds.length === 0) return [];
+  try {
+    const { getAccessToken, withDriveOrg } = await import("./drive.functions");
+    return await withDriveOrg(orgId, async () => {
+      const token = await getAccessToken();
+      return Promise.all(driveFileIds.map(async (id) => {
+        try {
+          const res = await fetch(
+            `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?fields=videoMediaMetadata(durationMillis)&supportsAllDrives=true`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          const json: any = await res.json().catch(() => null);
+          const ms = Number(json?.videoMediaMetadata?.durationMillis);
+          return res.ok && ms > 0 ? ms : null;
+        } catch { return null; }
+      }));
+    });
+  } catch (e: any) {
+    console.error("[Instagram] não consegui ler a duração dos vídeos no Drive:", e?.message);
+    return driveFileIds.map(() => null);
+  }
+}
+
 async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -536,6 +564,12 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     mimeType: f.mime_type, sizeBytes: f.size_bytes ? Number(f.size_bytes) : null,
   })));
   if (sizeProblem) throw new Error(sizeProblem);
+  const { videoDurationProblem } = await import("./instagram-limits");
+  const durationProblem = videoDurationProblem(item.type, await fetchDriveVideoDurations(
+    clientOrgId,
+    relevantFiles.filter((f: any) => (f.mime_type ?? "").startsWith("video/")).map((f: any) => f.drive_file_id),
+  ));
+  if (durationProblem) throw new Error(durationProblem);
 
   const { getAccessToken, withDriveOrg } = await import("./drive.functions");
   const tempPaths: string[] = [];
@@ -673,10 +707,80 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     return initJson.id as string;
   }
 
-  /** Método antigo: a Meta baixa o vídeo pela nossa rota de proxy (video_url). */
-  async function createUrlVideoContainer(file: { drive_file_id: string; mime_type: string | null }, params: Record<string, string>): Promise<string> {
+  /** Se copiar pro storage falhar uma vez (ex.: vídeo acima do limite de
+   * tamanho do projeto), não tenta de novo nos próximos vídeos/tentativas. */
+  let storageCopyUnavailable = false;
+  const storageUrlByDriveId = new Map<string, string>();
+
+  /** Copia o vídeo do Drive pro storage temporário público (CDN do Supabase),
+   * em streaming — sem carregar o arquivo na memória da função. A Meta então
+   * baixa de um servidor rápido e estável, em vez do nosso proxy
+   * (Drive -> função -> Meta), que é onde o download às vezes cortava. O
+   * arquivo é apagado no finally, depois de publicar. */
+  async function copyVideoToTempStorage(file: { drive_file_id: string; mime_type: string | null }): Promise<string> {
+    const cached = storageUrlByDriveId.get(file.drive_file_id);
+    if (cached) return cached;
+    const driveRes: Response = await withDriveOrg(clientOrgId!, async () => {
+      const token = await getAccessToken();
+      return fetch(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.drive_file_id)}?alt=media&supportsAllDrives=true`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+    });
+    if (!driveRes.ok || !driveRes.body) {
+      await driveRes.body?.cancel().catch(() => {});
+      throw new Error(`Falha ao baixar o vídeo do Drive (${driveRes.status}).`);
+    }
+    const size = driveRes.headers.get("content-length");
+    const mimeType = file.mime_type ?? "video/mp4";
+    const ext = mimeType.includes("quicktime") ? "mov" : "mp4";
+    const path = `${itemId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const upRes = await fetch(`${process.env.SUPABASE_URL}/storage/v1/object/instagram-publish-temp/${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+        "content-type": mimeType,
+        "x-upsert": "true",
+        ...(size ? { "content-length": size } : {}),
+      },
+      body: driveRes.body,
+      duplex: "half",
+    } as any).catch((e: any) => {
+      throw Object.assign(new Error(`cópia pro storage: falha de rede (${e?.message})`), { storageCopyFailed: true });
+    });
+    if (!upRes.ok) {
+      const txt = await upRes.text().catch(() => "");
+      throw Object.assign(new Error(`cópia pro storage recusada (${upRes.status}): ${txt.slice(0, 200)}`), { storageCopyFailed: true });
+    }
+    tempPaths.push(path);
+    const { data: pub } = supabaseAdmin.storage.from("instagram-publish-temp").getPublicUrl(path);
+    storageUrlByDriveId.set(file.drive_file_id, pub.publicUrl);
+    return pub.publicUrl;
+  }
+
+  /** Cria o container com video_url. Prefere a cópia no storage; se não der,
+   * usa a nossa rota de proxy (método antigo, streaming direto do Drive). */
+  async function createUrlVideoContainer(
+    file: { drive_file_id: string; mime_type: string | null },
+    params: Record<string, string>,
+    preferStorage: boolean,
+  ): Promise<string> {
+    let url: string | null = null;
+    if (preferStorage && !storageCopyUnavailable) {
+      try {
+        url = await copyVideoToTempStorage(file);
+      } catch (e: any) {
+        // Erro de Drive (arquivo sumiu, token expirado) sobe direto — o proxy
+        // também falharia. Só falha do storage cai pro proxy.
+        if (!e?.storageCopyFailed) throw e;
+        storageCopyUnavailable = true;
+        console.error("[Instagram] cópia do vídeo pro storage falhou, usando proxy:", e?.message);
+      }
+    }
     // uploadFileToTemp confere se o arquivo existe no Drive e devolve a URL do proxy.
-    const { url } = await uploadFileToTemp(file);
+    if (!url) url = (await uploadFileToTemp(file)).url;
     const res = await fetch(`${IG_GRAPH_API}/${creds!.instagram_business_account_id}/media`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -687,11 +791,11 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     return json.id as string;
   }
 
-  /** Cria o container do vídeo e espera a Meta processar. Tenta primeiro o
-   * envio direto (cai pro video_url se a Meta não aceitar) e, se o
-   * processamento der "ERROR", tenta de novo na hora — até 3 vezes, a última
-   * sempre pelo video_url — em vez de desistir e esperar a próxima rodada do
-   * cron (~10 min). */
+  /** Cria o container do vídeo e espera a Meta processar. Ordem: envio direto
+   * (resumable) -> cópia no storage -> proxy. Se o processamento der "ERROR",
+   * tenta de novo na hora — até 3 vezes, a última sempre pelo proxy (caminho
+   * diferente, caso o problema seja a cópia) — em vez de desistir e esperar a
+   * próxima rodada do cron (~10 min). */
   async function createVideoContainerAndWait(
     file: { drive_file_id: string; mime_type: string | null },
     params: Record<string, string>,
@@ -699,25 +803,26 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
   ): Promise<string> {
     const maxAttempts = 3;
     for (let attempt = 1; ; attempt++) {
+      const lastAttempt = attempt >= maxAttempts;
       let containerId: string | null = null;
       // Post de vídeo único vai sem media_type (comportamento antigo) — o
       // envio direto exige media_type, então nesse caso segue pelo video_url.
-      if (!resumableUnavailable && params.media_type && attempt < maxAttempts) {
+      if (!resumableUnavailable && params.media_type && !lastAttempt) {
         try {
           containerId = await createResumableVideoContainer(file.drive_file_id, params);
         } catch (e: any) {
-          // Erro de Drive (arquivo sumiu, token expirado) sobe direto — o
-          // video_url também falharia. Só recusa/falha da Meta cai pro fallback.
+          // Erro de Drive (arquivo sumiu, token expirado) sobe direto. Só
+          // recusa/falha da Meta cai pro video_url.
           if (!e?.resumableRejected) throw e;
           console.error("[Instagram] envio direto do vídeo falhou, usando video_url:", e?.message);
         }
       }
-      if (!containerId) containerId = await createUrlVideoContainer(file, params);
+      if (!containerId) containerId = await createUrlVideoContainer(file, params, !lastAttempt);
       try {
         await waitForContainer(containerId, true, label);
         return containerId;
       } catch (e: any) {
-        if (!e?.igProcessingFailed || attempt >= maxAttempts) throw e;
+        if (!e?.igProcessingFailed || lastAttempt) throw e;
         console.warn(`[Instagram] processamento do vídeo falhou (tentativa ${attempt}/${maxAttempts}), tentando de novo`);
         await new Promise((r) => setTimeout(r, 5000));
       }
@@ -2304,4 +2409,30 @@ export const getInstagramPostLink = createServerFn({ method: "GET" })
       throw new Error("Não achei esse post no Instagram. Ele pode já ter sido excluído por lá.");
     }
     return { permalink: json.permalink as string };
+  });
+
+/** Avisos antes de publicar (vídeo acima do tamanho ou fora da duração que a
+ * Meta aceita) — pro painel do item mostrar assim que ele fica "Pronto para
+ * publicar", e não só quando a publicação falha. A mesma checagem roda de
+ * novo no servidor na hora de publicar (runInstagramPublish). */
+export const getInstagramPublishWarnings = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string }) => z.object({ itemId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    // Leitura com o cliente do usuário (RLS) — só enxerga item da própria agência.
+    const { data: item } = await context.supabase.from("content_items")
+      .select("id, type").eq("id", data.itemId).maybeSingle();
+    if (!item) return [] as string[];
+    const { data: files } = await context.supabase.from("item_files")
+      .select("drive_file_id, mime_type, size_bytes")
+      .eq("item_id", data.itemId).eq("kind", "media");
+    const videos = ((files ?? []) as any[]).filter((f) => (f.mime_type ?? "").startsWith("video/"));
+    if (videos.length === 0) return [] as string[];
+    const { videoSizeProblem, videoDurationProblem } = await import("./instagram-limits");
+    const warnings: string[] = [];
+    const size = videoSizeProblem(item.type, videos.map((f) => ({ mimeType: f.mime_type, sizeBytes: f.size_bytes ? Number(f.size_bytes) : null })));
+    if (size) warnings.push(size);
+    const duration = videoDurationProblem(item.type, await fetchDriveVideoDurations(context.orgId, videos.map((f) => f.drive_file_id)));
+    if (duration) warnings.push(duration);
+    return warnings;
   });
