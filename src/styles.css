@@ -992,3 +992,17 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 .toaster .lz-toast[data-styled="true"] [data-icon] svg { width: 16px; height: 16px; }
 .toaster .lz-toast [data-description] { color: var(--muted-foreground); font-weight: 400; }
+
+/* Impressão do "Resultado do mês" (Financeiro): imprime só a área do
+ * relatório, em fundo branco, mesmo com o app no tema escuro. */
+@media print {
+  body * { visibility: hidden; }
+  .lz-print-area, .lz-print-area * { visibility: visible; }
+  .lz-print-area {
+    position: absolute; left: 0; top: 0; width: 100%;
+    --foreground: #16171B; --card: #FFFFFF;
+    --lz-chart-in: #2E7D5B; --lz-chart-out: #C4472A;
+    background: #FFFFFF !important; border: none !important;
+  }
+  .lz-no-print { display: none !important; }
+}

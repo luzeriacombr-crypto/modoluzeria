@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Navigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { hexToRgbChannels, deriveSecondaryHex, contrastRatio, contrastLabel, applyAdvancedColorVars } from "@/lib/luzeria/utils";
 import { profilesQO, useApi, useMe, appSettingsQO, orgPlanStatusQO, plansQO, cargosQO, myPendingInvoiceQO, myInvoiceHistoryQO, contentStatusesQO, clientCategoriesQO } from "@/lib/luzeria/queries";
@@ -40,8 +41,6 @@ import { DeleteAccountSection } from "./DeleteAccountSection";
 const SalesPageEditorTab = lazy(() => import("./SalesLandingEditorTab").then((m) => ({ default: m.SalesLandingEditorTab })));
 const BlogAdminTab = lazy(() => import("./BlogAdminTab").then((m) => ({ default: m.BlogAdminTab })));
 const JourneyStagesTab = lazy(() => import("./JourneyStagesTab").then((m) => ({ default: m.JourneyStagesTab })));
-const ClientPaymentsPanel = lazy(() => import("./ClientPaymentsPanel").then((m) => ({ default: m.ClientPaymentsPanel })));
-const OrcamentosPanel = lazy(() => import("./OrcamentosPanel").then((m) => ({ default: m.OrcamentosPanel })));
 const ClientOperationsOverview = lazy(() => import("./ClientOperationsOverview").then((m) => ({ default: m.ClientOperationsOverview })));
 const ProductionAuditTab = lazy(() => import("./ProductionAuditTab").then((m) => ({ default: m.ProductionAuditTab })));
 const OrgKnowledgeSettings = lazy(() => import("./OrgKnowledgeSettings").then((m) => ({ default: m.OrgKnowledgeSettings })));
@@ -214,15 +213,19 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               pedido do Junior (29/09) pra juntar tudo que é financeiro da
               agência (plano, indicações, fluxo de caixa) numa aba só.
               "Orçamentos" (30/09): catálogo de produtos + propostas em PDF. */}
-          {/* Quem tem só o cargo Financeiro (não master) vê o financeiro da
-              agência, mas não o plano/indicações do Modo Criador — antes
-              ficava sem as sub-abas e caía em "Meu plano". */}
-          <div className="flex items-center gap-1 mb-6 -mt-2 flex-wrap">
-            {isMaster && <SubTabPill active={tab === "cobranca"} onClick={() => setTab("cobranca")} label="Meu plano" />}
-            {isMaster && <SubTabPill active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} label="Indique e ganhe" />}
-            <SubTabPill active={tab === "pagamentos" || (!isMaster && tab === "cobranca")} onClick={() => setTab("pagamentos")} label="Entradas e saídas" />
-            <SubTabPill active={tab === "orcamentos"} onClick={() => setTab("orcamentos")} label="Orçamentos" />
-          </div>
+          {/* Entradas e saídas e Orçamentos ganharam página própria
+              (/financeiro, Etapa 3 — 30/09). Links antigos pra essas abas, e
+              quem tem só o cargo Financeiro (não vê plano/indicações),
+              caem lá. Aqui ficam só plano e indicações do Modo Criador. */}
+          {(tab === "pagamentos" || tab === "orcamentos" || !isMaster) && (
+            <Navigate to="/financeiro" search={{ aba: tab === "orcamentos" ? "orcamentos" : "entradas" }} replace />
+          )}
+          {isMaster && (
+            <div className="flex items-center gap-1 mb-6 -mt-2 flex-wrap">
+              <SubTabPill active={tab === "cobranca"} onClick={() => setTab("cobranca")} label="Meu plano" />
+              <SubTabPill active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} label="Indique e ganhe" />
+            </div>
+          )}
 
           {tab === "afiliados" ? (
             <div className="space-y-3">
@@ -236,11 +239,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               <p className="text-xs text-foreground/40">Pra agências que já são clientes do Modo Criador: indique outra agência e ambas ganham um mês grátis.</p>
               <ReferralsTab />
             </div>
-          ) : tab === "pagamentos" || !isMaster ? (
-            <ClientPaymentsPanel />
-          ) : tab === "orcamentos" ? (
-            <OrcamentosPanel />
-          ) : (
+          ) : tab === "pagamentos" || tab === "orcamentos" || !isMaster ? null : (
             <div className="space-y-10">
               <PlanCardSection />
               <div className="pt-2 border-t border-foreground/10">

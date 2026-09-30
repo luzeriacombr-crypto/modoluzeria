@@ -42,6 +42,10 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
     navigate({ to: "/configuracoes", search: { tab: tabId } });
     closeAllSheets();
   }
+  function goToFinance(aba: string) {
+    navigate({ to: "/financeiro", search: { aba } as any });
+    closeAllSheets();
+  }
 
   const isClientPath = pathname.startsWith("/cliente/");
   const tab = showClients ? "clients" : showMenu ? "menu" : "home";
@@ -241,7 +245,9 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
               <>
                 <p className="px-3 pt-4 pb-1 text-xs font-bold uppercase tracking-wider text-foreground/50">{navLabel("financeiro", DEFAULT_NAV_LABELS.financeiro)}</p>
                 {isMaster && <MenuLink icon={<Wallet size={17} />} label={navLabel("cobranca", DEFAULT_NAV_LABELS.cobranca)} onClick={() => goToConfigTab("cobranca")} />}
-                <MenuLink icon={<Wallet size={17} />} label={navLabel("pagamentos", DEFAULT_NAV_LABELS.pagamentos)} onClick={() => goToConfigTab("pagamentos")} />
+                <MenuLink icon={<Wallet size={17} />} label={navLabel("pagamentos", DEFAULT_NAV_LABELS.pagamentos)} onClick={() => goToFinance("entradas")} />
+                <MenuLink icon={<Wallet size={17} />} label={navLabel("resultado", DEFAULT_NAV_LABELS.resultado)} onClick={() => goToFinance("resultado")} />
+                <MenuLink icon={<Wallet size={17} />} label={navLabel("orcamentos", DEFAULT_NAV_LABELS.orcamentos)} onClick={() => goToFinance("orcamentos")} />
               </>
             )}
 

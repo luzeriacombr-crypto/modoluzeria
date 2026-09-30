@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, X, AlertCircle, Pencil, Check, ChevronDown, ChevronLeft, ChevronRight, Download } from "lucide-react";
-import { bankAccountsQO, cashFlowEntriesQO, clientPaymentsQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { bankAccountsQO, cashFlowEntriesQO, clientPaymentsQO, financeAttachmentsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { currentMonthKey, prevMonthKey, nextMonthKey, formatMonth, parseBRLToCents } from "@/lib/luzeria/utils";
 import type { CashFlowEntry } from "@/lib/luzeria/cash-flow.functions";
@@ -10,6 +10,7 @@ import type { BankAccount } from "@/lib/luzeria/bank-accounts.functions";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
 import { Modal } from "./Modals";
 import { BankAccountsSection } from "./BankAccountsSection";
+import { AttachmentsButton, AttachmentsModal } from "./AttachmentsModal";
 import { CashFlowHistoryChart, ExpensesByCategory, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "./FinanceCharts";
 
 const selectCls = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
@@ -109,6 +110,9 @@ export function CashFlowSection() {
   const [expenseCategory, setExpenseCategory] = useState<string | null>(null);
   const [fillingClient, setFillingClient] = useState<ClientPaymentRow | null>(null);
   const [editingEntry, setEditingEntry] = useState<CashFlowEntry | null>(null);
+  const [attachmentsFor, setAttachmentsFor] = useState<CashFlowEntry | null>(null);
+  const { data: attachments = [] } = useQuery(financeAttachmentsQO(monthKey));
+  const attachmentsOf = (entryId: string) => attachments.filter((a) => a.entryId === entryId);
   const [clientsOpen, setClientsOpen] = useState(true);
   const [saidasOpen, setSaidasOpen] = useState(true);
 
@@ -342,6 +346,7 @@ export function CashFlowSection() {
                       <span className="text-foreground/35 font-normal"> · {bankAccountName(it.bankAccountId) ?? "carteira/espécie"}</span>
                     </span>
                     <span className="text-[13px] font-bold text-foreground w-20 text-right">{money(it.amountCents)}</span>
+                    <AttachmentsButton count={attachmentsOf(it.id).length} onClick={() => setAttachmentsFor(it)} />
                     <button onClick={() => setEditingEntry(it)} className="text-foreground/30 hover:text-[var(--lz-accent-ink)] transition"><Pencil size={13} /></button>
                     <button onClick={() => remove(it)} className="text-foreground/30 hover:text-red-400 transition"><X size={14} /></button>
                   </div>
@@ -460,6 +465,7 @@ export function CashFlowSection() {
                 >
                   {ex.paidAt && <Check size={10} />} {ex.paidAt ? "Pago" : "A pagar"}
                 </button>
+                <AttachmentsButton count={attachmentsOf(ex.id).length} onClick={() => setAttachmentsFor(ex)} />
                 <button onClick={() => setEditingEntry(ex)} className="text-foreground/30 hover:text-[var(--lz-accent-ink)] transition"><Pencil size={13} /></button>
                 <button onClick={() => remove(ex)} className="text-foreground/30 hover:text-red-400 transition"><X size={14} /></button>
               </div>
@@ -473,6 +479,10 @@ export function CashFlowSection() {
       )}
       {editingEntry && (
         <EditEntryModal entry={editingEntry} monthKey={monthKey} onClose={() => setEditingEntry(null)} />
+      )}
+      {attachmentsFor && (
+        <AttachmentsModal title={attachmentsFor.label} monthKey={monthKey} target={{ entryId: attachmentsFor.id }}
+          attachments={attachmentsOf(attachmentsFor.id)} onClose={() => setAttachmentsFor(null)} />
       )}
     </div>
   );

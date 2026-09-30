@@ -113,6 +113,7 @@ import {
 } from "./budgets.functions";
 import { listCashFlowEntries, addCashFlowEntry, updateCashFlowEntry, removeCashFlowEntry, setCashFlowEntryPaid, getWalletBalance, getCashFlowHistory } from "./cash-flow.functions";
 import { listBankAccounts, addBankAccount, updateBankAccount, removeBankAccount } from "./bank-accounts.functions";
+import { listFinanceAttachments, saveFinanceAttachment, removeFinanceAttachment, getFinanceAttachmentUrl } from "./finance-attachments.functions";
 import {
   listContractRequests, createContractRequest, cancelContractRequest,
   getPublicContractRequest,
@@ -366,6 +367,10 @@ export const bankAccountsQO = () =>
   queryOptions({ queryKey: ["bank-accounts"], queryFn: () => listBankAccounts() });
 export const walletBalanceQO = () =>
   queryOptions({ queryKey: ["wallet-balance"], queryFn: () => getWalletBalance() });
+// Chave dentro de "cash-flow-entries" pra ser invalidada junto quando um
+// lançamento é editado/excluído (os comprovantes dele podem sumir).
+export const financeAttachmentsQO = (monthKey: string) =>
+  queryOptions({ queryKey: ["cash-flow-entries", "attachments", monthKey], queryFn: () => listFinanceAttachments({ data: { monthKey } }) });
 export const cashFlowHistoryQO = () =>
   queryOptions({ queryKey: ["cash-flow-entries", "history"], queryFn: () => getCashFlowHistory({ data: {} }) });
 export const budgetProductsQO = () =>
@@ -1368,12 +1373,12 @@ export function useApi() {
     }),
     markClientPaymentReceived: useMutation({
       mutationFn: useServerFn(markClientPaymentReceived),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["client-payments"] }); qc.invalidateQueries({ queryKey: ["client-payment-history"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); qc.invalidateQueries({ queryKey: ["cash-flow-entries", "history"] }); },
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["client-payments"] }); qc.invalidateQueries({ queryKey: ["client-payment-history"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); qc.invalidateQueries({ queryKey: ["cash-flow-entries", "history"] }); qc.invalidateQueries({ queryKey: ["cash-flow-entries", "attachments"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao marcar pagamento."),
     }),
     unmarkClientPaymentReceived: useMutation({
       mutationFn: useServerFn(unmarkClientPaymentReceived),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["client-payments"] }); qc.invalidateQueries({ queryKey: ["client-payment-history"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); qc.invalidateQueries({ queryKey: ["cash-flow-entries", "history"] }); },
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["client-payments"] }); qc.invalidateQueries({ queryKey: ["client-payment-history"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); qc.invalidateQueries({ queryKey: ["cash-flow-entries", "history"] }); qc.invalidateQueries({ queryKey: ["cash-flow-entries", "attachments"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao desfazer marcação."),
     }),
     // As 4 mutations abaixo também invalidam "bank-accounts" e "wallet-balance":
@@ -1401,6 +1406,20 @@ export function useApi() {
       mutationFn: useServerFn(removeCashFlowEntry),
       onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao remover."),
+    }),
+    saveFinanceAttachment: useMutation({
+      mutationFn: useServerFn(saveFinanceAttachment),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries", "attachments"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao salvar comprovante."),
+    }),
+    removeFinanceAttachment: useMutation({
+      mutationFn: useServerFn(removeFinanceAttachment),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["cash-flow-entries", "attachments"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao remover comprovante."),
+    }),
+    getFinanceAttachmentUrl: useMutation({
+      mutationFn: useServerFn(getFinanceAttachmentUrl),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao abrir comprovante."),
     }),
     addBankAccount: useMutation({
       mutationFn: useServerFn(addBankAccount),

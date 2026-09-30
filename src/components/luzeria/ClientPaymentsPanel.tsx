@@ -2,13 +2,14 @@ import { Fragment, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, MessageCircle, Check, Undo2, Pencil, History, ChevronDown, X, QrCode, Search } from "lucide-react";
 import { toast } from "sonner";
-import { bankAccountsQO, clientPaymentsQO, clientPaymentHistoryQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { bankAccountsQO, clientPaymentsQO, clientPaymentHistoryQO, financeAttachmentsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { parseBRLToCents } from "@/lib/luzeria/utils";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
 import { BankAccountSelect, CashFlowSection } from "./CashFlowSection";
 import { Modal } from "./Modals";
+import { AttachmentsButton, AttachmentsModal } from "./AttachmentsModal";
 
 const money = (v: number | null) =>
   v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -324,6 +325,9 @@ export function ClientPaymentsPanel() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [markingRow, setMarkingRow] = useState<ClientPaymentRow | null>(null);
   const [search, setSearch] = useState("");
+  const [attachmentsFor, setAttachmentsFor] = useState<ClientPaymentRow | null>(null);
+  const { data: attachments = [] } = useQuery(financeAttachmentsQO(period));
+  const attachmentsOf = (clientId: string) => attachments.filter((a) => a.clientId === clientId);
   const [statusFilter, setStatusFilter] = useState<"todos" | "pendentes" | "atrasados" | "pagos">("todos");
 
   if (isLoading || !data) {
@@ -454,6 +458,8 @@ export function ClientPaymentsPanel() {
                             <MessageCircle size={15} />
                           </button>
                         )}
+                        <AttachmentsButton count={attachmentsOf(r.id).length} onClick={() => setAttachmentsFor(r)}
+                          disabled={!r.paidThisPeriod} disabledTitle="Marque como pago pra anexar o comprovante" />
                         {r.paidThisPeriod ? (
                           <button
                             onClick={async () => { if (await requestConfirm(`Desfazer o pagamento de ${r.name} nesse mês?`)) api.unmarkClientPaymentReceived.mutate({ data: { clientId: r.id, period } }); }}
@@ -486,6 +492,10 @@ export function ClientPaymentsPanel() {
           </table>
           </div>
         </div>
+      )}
+      {attachmentsFor && (
+        <AttachmentsModal title={`Mensalidade — ${attachmentsFor.name}`} monthKey={period} target={{ clientId: attachmentsFor.id }}
+          attachments={attachmentsOf(attachmentsFor.id)} onClose={() => setAttachmentsFor(null)} />
       )}
       {markingRow && <MarkPaymentModal row={markingRow} period={period} onClose={() => setMarkingRow(null)} />}
     </div>

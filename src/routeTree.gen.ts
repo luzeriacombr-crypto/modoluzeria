@@ -54,6 +54,7 @@ import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authen
 import { Route as AuthenticatedLixeiraRouteImport } from './routes/_authenticated/lixeira'
 import { Route as AuthenticatedInstagramRouteImport } from './routes/_authenticated/instagram'
 import { Route as AuthenticatedFuncionalidadesRouteImport } from './routes/_authenticated/funcionalidades'
+import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
 import { Route as AuthenticatedBibliotecaRouteImport } from './routes/_authenticated/biblioteca'
@@ -319,6 +320,11 @@ const AuthenticatedFuncionalidadesRoute =
     path: '/funcionalidades',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedConfiguracoesRoute =
   AuthenticatedConfiguracoesRouteImport.update({
     id: '/configuracoes',
@@ -521,6 +527,7 @@ export interface FileRoutesByFullPath {
   '/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/funcionalidades': typeof AuthenticatedFuncionalidadesRoute
   '/instagram': typeof AuthenticatedInstagramRoute
   '/lixeira': typeof AuthenticatedLixeiraRoute
@@ -598,6 +605,7 @@ export interface FileRoutesByTo {
   '/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/funcionalidades': typeof AuthenticatedFuncionalidadesRoute
   '/instagram': typeof AuthenticatedInstagramRoute
   '/lixeira': typeof AuthenticatedLixeiraRoute
@@ -677,6 +685,7 @@ export interface FileRoutesById {
   '/_authenticated/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/funcionalidades': typeof AuthenticatedFuncionalidadesRoute
   '/_authenticated/instagram': typeof AuthenticatedInstagramRoute
   '/_authenticated/lixeira': typeof AuthenticatedLixeiraRoute
@@ -756,6 +765,7 @@ export interface FileRouteTypes {
     | '/biblioteca'
     | '/calendario'
     | '/configuracoes'
+    | '/financeiro'
     | '/funcionalidades'
     | '/instagram'
     | '/lixeira'
@@ -833,6 +843,7 @@ export interface FileRouteTypes {
     | '/biblioteca'
     | '/calendario'
     | '/configuracoes'
+    | '/financeiro'
     | '/funcionalidades'
     | '/instagram'
     | '/lixeira'
@@ -911,6 +922,7 @@ export interface FileRouteTypes {
     | '/_authenticated/biblioteca'
     | '/_authenticated/calendario'
     | '/_authenticated/configuracoes'
+    | '/_authenticated/financeiro'
     | '/_authenticated/funcionalidades'
     | '/_authenticated/instagram'
     | '/_authenticated/lixeira'
@@ -1333,6 +1345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFuncionalidadesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/financeiro': {
+      id: '/_authenticated/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof AuthenticatedFinanceiroRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/configuracoes': {
       id: '/_authenticated/configuracoes'
       path: '/configuracoes'
@@ -1560,6 +1579,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBibliotecaRoute: typeof AuthenticatedBibliotecaRoute
   AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedFuncionalidadesRoute: typeof AuthenticatedFuncionalidadesRoute
   AuthenticatedInstagramRoute: typeof AuthenticatedInstagramRoute
   AuthenticatedLixeiraRoute: typeof AuthenticatedLixeiraRoute
@@ -1586,6 +1606,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBibliotecaRoute: AuthenticatedBibliotecaRoute,
   AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedFuncionalidadesRoute: AuthenticatedFuncionalidadesRoute,
   AuthenticatedInstagramRoute: AuthenticatedInstagramRoute,
   AuthenticatedLixeiraRoute: AuthenticatedLixeiraRoute,

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
+import { removeAttachmentFiles } from "./finance-attachments.functions";
 
 async function assertFinanceiroAccess(supabase: any, userId: string) {
   const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
@@ -263,6 +264,11 @@ export const unmarkClientPaymentReceived = createServerFn({ method: "POST" })
     z.object({ clientId: z.string().uuid(), period: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
+    // Comprovantes da mensalidade somem junto (a linha por cascade; o
+    // arquivo no bucket precisa ser apagado aqui).
+    const { data: current } = await (context.supabase as any).from("client_payments").select("id")
+      .eq("client_id", data.clientId).eq("period", data.period).eq("org_id", context.orgId).maybeSingle();
+    if (current) await removeAttachmentFiles(context.supabase, { clientPaymentId: current.id });
     const { data: deleted, error } = await (context.supabase as any).from("client_payments")
       .delete().eq("client_id", data.clientId).eq("period", data.period).eq("org_id", context.orgId)
       .select("amount_cents, bank_account_id");

@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile } from "./require-active";
 import { z } from "zod";
 import { prevMonthKey } from "./utils";
+import { removeAttachmentFiles } from "./finance-attachments.functions";
 
 async function assertFinanceiroAccess(supabase: any, userId: string) {
   const { data: isMaster } = await supabase.rpc("is_master", { _user_id: userId });
@@ -241,6 +242,21 @@ export const updateCashFlowEntry = createServerFn({ method: "POST" })
         if (movErr) throw new Error(movErr.message);
         await adjustBankAccountBalance(sb, newBank, -data.amountCents * moved.length);
       }
+      // Comprovantes deste mês em diante acompanham a nova versão (só troca
+      // o vínculo; o arquivo no bucket é o mesmo).
+      const { data: atts } = await sb.from("finance_attachments")
+        .select("month_key, storage_path, file_name, mime_type, size_bytes")
+        .eq("entry_id", data.id).gte("month_key", M);
+      const keepAtts = (atts ?? []).filter((a: any) => data.kind === "fixo" || a.month_key === M);
+      if (keepAtts.length > 0) {
+        const { error: attErr } = await sb.from("finance_attachments").insert(keepAtts.map((a: any) => ({
+          ...a, org_id: context.orgId, entry_id: created.id, created_by: context.userId,
+        })));
+        if (attErr) throw new Error(attErr.message);
+      }
+      const dropAtts = (atts ?? []).filter((a: any) => !keepAtts.includes(a)).map((a: any) => a.storage_path);
+      if (dropAtts.length) await sb.storage.from("finance-attachments").remove(dropAtts);
+      await sb.from("finance_attachments").delete().eq("entry_id", data.id).gte("month_key", M);
       return { ok: true };
     }
 
@@ -412,6 +428,7 @@ export const removeCashFlowEntry = createServerFn({ method: "POST" })
     if (!existing) throw new Error("Lançamento não encontrado.");
 
     if (existing.direction === "entrada") {
+      await removeAttachmentFiles(sb, { entryId: data.id });
       const { error } = await sb.from("cash_flow_entries").delete().eq("id", data.id).eq("org_id", context.orgId);
       if (error) throw new Error(error.message);
       await adjustBankAccountBalance(sb, existing.bank_account_id, -existing.amount_cents);
@@ -422,6 +439,7 @@ export const removeCashFlowEntry = createServerFn({ method: "POST" })
     if (existing.kind === "fixo" && existing.start_month < data.monthKey) {
       const fromHere = payments.filter((p) => p.month_key >= data.monthKey).map((p) => p.month_key);
       await removeEntryPayments(sb, data.id, fromHere, existing.bank_account_id, existing.amount_cents);
+      await removeAttachmentFiles(sb, { entryId: data.id, fromMonth: data.monthKey });
       const { error } = await sb.from("cash_flow_entries").update({ end_month: prevMonthKey(data.monthKey) })
         .eq("id", data.id).eq("org_id", context.orgId);
       if (error) throw new Error(error.message);
@@ -429,6 +447,7 @@ export const removeCashFlowEntry = createServerFn({ method: "POST" })
     }
 
     await removeEntryPayments(sb, data.id, payments.map((p) => p.month_key), existing.bank_account_id, existing.amount_cents);
+    await removeAttachmentFiles(sb, { entryId: data.id });
     const { error } = await sb.from("cash_flow_entries").delete().eq("id", data.id).eq("org_id", context.orgId);
     if (error) throw new Error(error.message);
     return { ok: true };

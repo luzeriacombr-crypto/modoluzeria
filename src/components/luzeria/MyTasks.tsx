@@ -564,7 +564,7 @@ export function MyTasks() {
                 sub={new Date(p.nextDueDate + "T00:00:00").toLocaleDateString("pt-BR")}
                 trail={<span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "rgba(245,166,35,0.14)", color: "#F5A623" }}>
                   {p.daysUntil < 0 ? `Atrasado ${Math.abs(p.daysUntil)}d` : p.daysUntil === 0 ? "Vence hoje" : `em ${p.daysUntil}d`}</span>}
-                onClick={() => navigate({ to: "/configuracoes", search: { tab: "pagamentos" } })} />
+                onClick={() => navigate({ to: "/financeiro", search: { aba: "entradas" } })} />
             ))}
           </RailCard>
         
