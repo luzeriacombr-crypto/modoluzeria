@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart2, Star, Menu, X, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2, Plus, Search, Images, Megaphone } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Star, Menu, X, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2, Plus, Search, Images, Megaphone, MessageCircleHeart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -51,6 +51,7 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
   const isClientPath = pathname.startsWith("/cliente/");
   const house = isHouse(me);
   const canCreateClient = isAdmin && (!house || isMaster);
+  const homePath = house ? "/meu-dia" : "/minhas-tarefas";
   // House com uma marca só: o botão da barra inferior vai direto pra ela.
   const houseBrands = house ? clients.filter((c) => !c.archived) : [];
   const singleBrandId = house && houseBrands.length <= 1 ? (me?.houseClientId ?? houseBrands[0]?.id ?? null) : null;
@@ -197,6 +198,13 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
             </button>
           </div>
           <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-1.5">
+            {house && (
+              <MenuLink
+                icon={<MessageCircleHeart size={17} />}
+                label={navLabel("leads", "Leads")}
+                onClick={() => { navigate({ to: "/leads" }); closeAllSheets(); }}
+              />
+            )}
             {!disabledFeatures.has("reference_library") && (
               <MenuLink
                 icon={<BookMarked size={17} />}
@@ -235,7 +243,7 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
             {!disabledFeatures.has("rotina") && (
               <MenuLink
                 icon={<Sparkles size={17} />}
-                label={navLabel("rotina", "Rotina")}
+                label={navLabel("rotina", house ? "Checklists" : "Rotina")}
                 dataTour="nav-rotina-mobile"
                 onClick={() => { navigate({ to: "/rotina" }); closeAllSheets(); }}
               />
@@ -292,8 +300,8 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
       )}
 
       <nav className="bg-background fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around backdrop-blur-xl border-t border-border" data-tour="mobile-bottom-nav">
-        <NavBtn icon={<LayoutDashboard size={20} />} active={pathname === "/minhas-tarefas" && tab === "home"}
-          onClick={() => { navigate({ to: "/minhas-tarefas" }); closeAllSheets(); }} />
+        <NavBtn icon={<LayoutDashboard size={20} />} active={pathname === homePath && tab === "home"}
+          onClick={() => { navigate({ to: homePath }); closeAllSheets(); }} />
         <NavBtn icon={<BarChart2 size={20} />} active={pathname === "/admin" && tab === "home"}
           onClick={() => { navigate({ to: "/admin" }); closeAllSheets(); }} />
         <NavBtn icon={<Users size={20} />} active={tab === "clients" || (isClientPath && tab === "home")}

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Plus, Info, CircleHelp, Instagram, Users, Wallet, UserCog, BookMarked,
-  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images,
+  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images, MessageCircleHeart,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, clientCategoriesQO, useApi, useMe, myAgencyLevelInputsQO } from "@/lib/luzeria/queries";
@@ -187,6 +187,10 @@ export function Sidebar({
   // House com uma marca só: "Marca" vira link direto, sem lista.
   const houseBrands = house ? clients.filter((c) => !c.archived && c.category !== "Ex-clientes") : [];
   const singleBrandId = house && houseBrands.length <= 1 ? (me?.houseClientId ?? houseBrands[0]?.id ?? null) : null;
+  // House: a home é o "Meu dia" e a Rotina vira os checklists da função.
+  const homePath = house ? "/meu-dia" : "/minhas-tarefas";
+  const homeLabel = house ? navLabel("meu-dia", "Meu dia") : navLabel("minhas-demandas", "Minhas demandas");
+  const rotinaLabel = house ? "Checklists" : "Rotina";
   const clientesLabel = navLabel("clientes", singleBrandId ? term(me, "Cliente") : term(me, "Clientes"));
   function orderSection<T extends { id: string; label: string; node: React.ReactNode }>(sectionKey: string, items: T[]): T[] {
     const order = navOrder[sectionKey];
@@ -278,17 +282,17 @@ export function Sidebar({
           ]) : [];
 
           const equipeItems = orderSection("equipe", [
-            ...(rotinaEnabled ? [{ id: "rotina", label: navLabel("rotina", "Rotina"), node: <div key="rotina" data-tour="nav-rotina"><NavSubButton label={navLabel("rotina", "Rotina")} active={pathname === "/rotina"} onClick={() => navigate({ to: "/rotina" })} /></div> }] : []),
+            ...(rotinaEnabled ? [{ id: "rotina", label: navLabel("rotina", rotinaLabel), node: <div key="rotina" data-tour="nav-rotina"><NavSubButton label={navLabel("rotina", rotinaLabel)} active={pathname === "/rotina"} onClick={() => navigate({ to: "/rotina" })} /></div> }] : []),
             ...(canTeam ? [{ id: "membros", label: navLabel("membros", "Membros"), node: <NavSubButton key="membros" label={navLabel("membros", "Membros")} active={configTabActive("team")} onClick={() => goToConfigTab("team")} /> }] : []),
             ...(canReport ? [{ id: "relatorio", label: navLabel("relatorio", "Relatório"), node: <NavSubButton key="relatorio" label={navLabel("relatorio", "Relatório")} active={configTabActive("report")} onClick={() => goToConfigTab("report")} /> }] : []),
             ...(canReport ? [{ id: "auditoria-producao", label: navLabel("auditoria-producao", "Auditoria de Produção"), node: <NavSubButton key="auditoria-producao" label={navLabel("auditoria-producao", "Auditoria de Produção")} active={configTabActive("auditoria")} onClick={() => goToConfigTab("auditoria")} /> }] : []),
           ]);
 
           const mainItems: { id: string; label: string; node: React.ReactNode; meta: CollapsedMeta }[] = orderSection("main", [
-            { id: "minhas-demandas", label: navLabel("minhas-demandas", "Minhas demandas"), node: (
-              <NavButton key="minhas-demandas" icon={<LayoutDashboard size={15} />} label={navLabel("minhas-demandas", "Minhas demandas")}
-                active={pathname === "/minhas-tarefas"} onClick={() => navigate({ to: "/minhas-tarefas" })} />
-            ), meta: { icon: <LayoutDashboard size={17} />, label: navLabel("minhas-demandas", "Minhas demandas"), active: pathname === "/minhas-tarefas", kind: "button", onClick: () => navigate({ to: "/minhas-tarefas" }) } },
+            { id: "minhas-demandas", label: homeLabel, node: (
+              <NavButton key="minhas-demandas" icon={<LayoutDashboard size={15} />} label={homeLabel}
+                active={pathname === homePath} onClick={() => navigate({ to: homePath })} />
+            ), meta: { icon: <LayoutDashboard size={17} />, label: homeLabel, active: pathname === homePath, kind: "button", onClick: () => navigate({ to: homePath }) } },
             { id: "dashboard", label: navLabel("dashboard", "Dashboard"), node: (
               <NavButton key="dashboard" icon={<BarChart2 size={15} />} label={navLabel("dashboard", "Dashboard")}
                 active={pathname === "/admin"} onClick={() => navigate({ to: "/admin" })} />
@@ -349,6 +353,12 @@ export function Sidebar({
                 )}
               </div>
             ) },
+            // House: leads que chegam pelo Instagram (lançados pelo "+ Lead").
+            ...(house ? [{ id: "leads", label: navLabel("leads", "Leads"), meta: { icon: <MessageCircleHeart size={17} />, label: navLabel("leads", "Leads"), active: pathname === "/leads", kind: "button" as const, onClick: () => navigate({ to: "/leads" }) }, node: (
+              <div key="leads">
+                <NavButton icon={<MessageCircleHeart size={15} />} label={navLabel("leads", "Leads")} active={pathname === "/leads"} onClick={() => navigate({ to: "/leads" })} />
+              </div>
+            ) }] : []),
             ...(!disabled.has("reference_library") ? [{ id: "biblioteca", label: navLabel("biblioteca", "Biblioteca"), meta: { icon: <BookMarked size={17} />, label: navLabel("biblioteca", "Biblioteca"), active: pathname === "/biblioteca", kind: "button" as const, onClick: () => navigate({ to: "/biblioteca" }) }, node: (
               <div key="biblioteca" data-tour="nav-biblioteca">
                 <NavButton icon={<BookMarked size={15} />} label={navLabel("biblioteca", "Biblioteca")} active={pathname === "/biblioteca"} onClick={() => navigate({ to: "/biblioteca" })} />

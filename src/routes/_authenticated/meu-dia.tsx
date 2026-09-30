@@ -3,18 +3,17 @@ import { useEffect } from "react";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { useMe } from "@/lib/luzeria/queries";
 import { isHouse } from "@/lib/luzeria/house";
-import { MyTasks } from "@/components/luzeria/MyTasks";
+import { HouseMyDay } from "@/components/luzeria/HouseMyDay";
 
-export const Route = createFileRoute("/_authenticated/minhas-tarefas")({
-  component: MinhasTarefasPage,
+export const Route = createFileRoute("/_authenticated/meu-dia")({
+  component: MeuDiaPage,
   ssr: false,
 });
 
-function MinhasTarefasPage() {
+function MeuDiaPage() {
   const setView = useUI((s) => s.setView);
   const me = useMe().data;
   useEffect(() => { setView("my"); }, [setView]);
-  // Na House a home é o "Meu dia" (todo login cai aqui primeiro).
-  if (isHouse(me)) return <Navigate to="/meu-dia" replace />;
-  return <MyTasks />;
+  if (me && !isHouse(me)) return <Navigate to="/minhas-tarefas" replace />;
+  return <HouseMyDay />;
 }

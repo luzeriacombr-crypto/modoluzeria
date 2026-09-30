@@ -23,6 +23,7 @@ import { identifyForMonitoring } from "@/lib/luzeria/error-monitoring";
 import { PullToRefresh } from "./PullToRefresh";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
 import { HouseOnboarding } from "./HouseOnboarding";
+import { QuickLeadButton } from "./HouseLeads";
 import { ClientFichaPanel } from "./ClientFichaPanel";
 import { AIPlanningPreview } from "./AIPlanningPreview";
 import { AiPlanningJobsTray } from "./AiPlanningJobsTray";
@@ -396,6 +397,7 @@ export function App() {
       <AppTour />
       <GlobalConfirmDialog />
       <SupportChatWidget />
+      {me.data?.accountType === "house" && <QuickLeadButton />}
       <IncomingCallModal call={call} />
       <ActiveCallOverlay call={call} />
       <NewClientModal open={!!creating} category={creating?.category} onClose={() => setCreating(null)} />
