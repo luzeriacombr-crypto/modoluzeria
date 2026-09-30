@@ -17,7 +17,7 @@ import type { MyBugReport, AllBugReport, BugReportStatus, BugReportKind } from "
 import { ForumTab } from "./ForumTab";
 import { SupportChatAdminPanel } from "./SupportChatWidget";
 import { SupportChatTopicsPanel } from "./SupportChatTopicsPanel";
-import { FAQ, TUTORIALS as TUTORIALS_BASE } from "@/lib/luzeria/help-content";
+import { FAQ, TUTORIALS as TUTORIALS_BASE, type HelpTutorial } from "@/lib/luzeria/help-content";
 
 type Tab = "faq" | "tutoriais" | "minhas" | "todas" | "chats" | "temas" | "forum";
 
@@ -117,51 +117,8 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
       )}
 
       {tab === "tutoriais" && (
-        <div className="space-y-4">
-          {TUTORIALS.map((t) => (
-            <div key={t.title} className="bg-card rounded-lg p-5">
-              <div className="font-bold text-foreground mb-4">{t.title}</div>
-              {t.images && t.images.length > 0 && (
-                <div className={`mb-5 grid gap-3 ${t.images.length > 1 ? "sm:grid-cols-2" : ""}`}>
-                  {t.images.map((img) => (
-                    <img key={img.src} src={img.src} alt={img.alt} className="w-full h-auto rounded-md border border-foreground/10" />
-                  ))}
-                </div>
-              )}
-              <ol className="list-none">
-                {t.steps.map((s, i) => {
-                  const Icon = STEP_ICONS[t.title]?.[i];
-                  const isLast = i === t.steps.length - 1;
-                  return (
-                    <li key={i} className="flex gap-3">
-                      <div className="flex flex-col items-center shrink-0">
-                        <div
-                          className="h-7 w-7 rounded-full flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
-                        >
-                          {Icon ? <Icon size={13} /> : <span className="text-[10px] font-bold">{i + 1}</span>}
-                        </div>
-                        {!isLast && (
-                          <div className="w-px flex-1 my-1" style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 10%, transparent)" }} />
-                        )}
-                      </div>
-                      <div className={`text-sm text-foreground/60 leading-relaxed ${isLast ? "pb-1" : "pb-4"}`}>{s}</div>
-                    </li>
-                  );
-                })}
-              </ol>
-              {t.videoUrl && (
-                <a
-                  href={t.videoUrl}
-                  target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mt-2 text-xs font-semibold rounded-full transition-opacity hover:opacity-80"
-                  style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
-                >
-                  <Video size={13} /> Assistir vídeo
-                </a>
-              )}
-            </div>
-          ))}
+        <div className="space-y-3">
+          {TUTORIALS.map((t) => <TutorialItem key={t.title} tutorial={t} />)}
         </div>
       )}
 
@@ -186,6 +143,64 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
         <ChevronDown size={16} className="shrink-0 text-foreground/50 transition-transform" style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
       </button>
       {open && <p className="text-foreground/60 text-sm leading-relaxed px-5 pb-4">{answer}</p>}
+    </div>
+  );
+}
+
+function TutorialItem({ tutorial: t }: { tutorial: HelpTutorial & { images?: { src: string; alt: string }[]; videoUrl?: string } }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-card rounded-lg overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 text-left px-5 py-4"
+      >
+        <span className="font-bold text-sm text-foreground">{t.title}</span>
+        <ChevronDown size={16} className="shrink-0 text-foreground/50 transition-transform" style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
+      </button>
+      {open && (
+        <div className="px-5 pb-5">
+          {t.images && t.images.length > 0 && (
+            <div className={`mb-5 grid gap-3 ${t.images.length > 1 ? "sm:grid-cols-2" : ""}`}>
+              {t.images.map((img) => (
+                <img key={img.src} src={img.src} alt={img.alt} className="w-full h-auto rounded-md border border-foreground/10" />
+              ))}
+            </div>
+          )}
+          <ol className="list-none">
+            {t.steps.map((s, i) => {
+              const Icon = STEP_ICONS[t.title]?.[i];
+              const isLast = i === t.steps.length - 1;
+              return (
+                <li key={i} className="flex gap-3">
+                  <div className="flex flex-col items-center shrink-0">
+                    <div
+                      className="h-7 w-7 rounded-full flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
+                    >
+                      {Icon ? <Icon size={13} /> : <span className="text-[10px] font-bold">{i + 1}</span>}
+                    </div>
+                    {!isLast && (
+                      <div className="w-px flex-1 my-1" style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 10%, transparent)" }} />
+                    )}
+                  </div>
+                  <div className={`text-sm text-foreground/60 leading-relaxed ${isLast ? "pb-1" : "pb-4"}`}>{s}</div>
+                </li>
+              );
+            })}
+          </ol>
+          {t.videoUrl && (
+            <a
+              href={t.videoUrl}
+              target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mt-2 text-xs font-semibold rounded-full transition-opacity hover:opacity-80"
+              style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" }}
+            >
+              <Video size={13} /> Assistir vídeo
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 }
