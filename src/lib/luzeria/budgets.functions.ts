@@ -143,12 +143,12 @@ export type Budget = {
   headerImageUrl: string | null;
   /** Imagem de fundo da capa — deixada em branco de propósito pra escrever
    * "Proposta de Orçamento" + serviço + cliente + data por cima. Sem
-   * imagem, cai no degradê (comportamento antigo). */
+   * imagem, a capa é uma cor sólida (coverColor). */
   coverImagePath: string | null;
   coverImageUrl: string | null;
   /** Contracapa já vem pronta da agência (ex.: "Você foi chamado pra
-   * criar.") — nada é escrito em cima. Sem imagem, cai no degradê +
-   * `backPhrase` (comportamento antigo). */
+   * criar.") — nada é escrito em cima. Sem imagem, cor sólida (backColor) +
+   * `backPhrase` opcional + logo. */
   backCoverImagePath: string | null;
   backCoverImageUrl: string | null;
   footerText: string | null;
@@ -164,6 +164,10 @@ export type Budget = {
   gradientFrom: string | null;
   gradientTo: string | null;
   accentColor: string | null;
+  /** Cor sólida da capa/contracapa quando não tem imagem; null = cor da
+   * barra lateral da agência. */
+  coverColor: string | null;
+  backColor: string | null;
   totalCents: number;
   createdAt: string;
   updatedAt: string;
@@ -205,6 +209,8 @@ const budgetInputSchema = z.object({
   gradientFrom: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
   gradientTo: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+  coverColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+  backColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
 });
 
 function totalFromItems(items: { priceCents: number }[]): number {
@@ -236,6 +242,7 @@ function rowToBudget(r: any, urls: Map<string, string>): Budget {
     fronts: r.fronts ?? [], paymentTerms: r.payment_terms, cronograma: r.cronograma,
     notIncluded: r.not_included, afterApproval: r.after_approval, backPhrase: r.back_phrase,
     gradientFrom: r.gradient_from, gradientTo: r.gradient_to, accentColor: r.accent_color,
+    coverColor: r.cover_color ?? null, backColor: r.back_color ?? null,
     totalCents: r.total_cents, createdAt: r.created_at, updatedAt: r.updated_at,
   };
 }
@@ -271,6 +278,8 @@ export const saveBudget = createServerFn({ method: "POST" })
       gradient_from: data.gradientFrom ?? null,
       gradient_to: data.gradientTo ?? null,
       accent_color: data.accentColor ?? null,
+      cover_color: data.coverColor ?? null,
+      back_color: data.backColor ?? null,
       total_cents: totalCents,
       updated_at: new Date().toISOString(),
     };
@@ -295,9 +304,12 @@ export const removeBudget = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Gera o PDF de um orçamento já salvo — logo e degradê/cor de destaque
+/** Gera o PDF de um orçamento já salvo — logo, cores de capa/contracapa e destaque
  * caem no padrão da "Marca da agência" quando o orçamento não tem os seus
  * próprios (deixados em branco), mas cada orçamento pode ter as suas. */
+/** Cor da barra lateral padrão do Modo Criador (--lz-sidebar-rgb). */
+const DEFAULT_SOLID_COLOR = "#111F5C";
+
 export const exportBudgetPdf = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
@@ -309,7 +321,7 @@ export const exportBudgetPdf = createServerFn({ method: "POST" })
     if (!b) throw new Error("Orçamento não encontrado.");
 
     const { data: org } = await (context.supabase as any)
-      .from("orgs").select("logo_path, logo_path_light, hero_gradient_from, hero_gradient_to, color_primary")
+      .from("orgs").select("logo_path, logo_path_light, hero_gradient_from, hero_gradient_to, color_primary, color_sidebar")
       .eq("id", context.orgId).maybeSingle();
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -345,6 +357,9 @@ export const exportBudgetPdf = createServerFn({ method: "POST" })
       gradientFrom: b.gradient_from ?? org?.hero_gradient_from ?? brandColor,
       gradientTo: b.gradient_to ?? org?.hero_gradient_to ?? "#101010",
       accentColor: b.accent_color ?? brandColor,
+      // Sem imagem, capa/contracapa são cor sólida — padrão = barra lateral.
+      coverColor: b.cover_color ?? org?.color_sidebar ?? DEFAULT_SOLID_COLOR,
+      backColor: b.back_color ?? org?.color_sidebar ?? DEFAULT_SOLID_COLOR,
       coverPhrase: b.cover_phrase,
       introTitle: b.intro_title,
       introText: b.intro_text,

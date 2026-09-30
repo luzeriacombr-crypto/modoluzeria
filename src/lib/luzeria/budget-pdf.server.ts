@@ -4,7 +4,7 @@
  * "completo" (capa → introdução → entregas por frente → investimento →
  * contracapa, no molde do modelo de proposta da Luzeria). Mesma base de
  * roteiros-pdf.server.ts/contract-pdf.server.ts/insights-pdf.server.ts
- * (pdf-lib puro, sem headless browser). Cores (degradê/destaque) começam
+ * (pdf-lib puro, sem headless browser). Cores (capa/contracapa/destaque) começam
  * com a marca da agência mas são editáveis por orçamento — por isso vêm
  * como parâmetro, não fixas no código. */
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
@@ -29,10 +29,10 @@ export type BudgetPdfInput = {
   headerBytes: Uint8Array | null;
   /** Fundo da capa, deixado em branco de propósito pela agência pra
    * escrever "Proposta de Orçamento" + serviço + cliente + data por cima.
-   * Sem imagem, cai no degradê desenhado na hora (fallback antigo). */
+   * Sem imagem, a capa é uma cor sólida (coverColor). */
   coverImageBytes: Uint8Array | null;
   /** Contracapa já pronta da agência — nada é escrito em cima. Sem
-   * imagem, cai no degradê + backPhrase (fallback antigo). */
+   * imagem, cor sólida (backColor) + backPhrase opcional + logo. */
   backCoverImageBytes: Uint8Array | null;
   budgetDate: string;
   footerText: string | null;
@@ -48,6 +48,9 @@ export type BudgetPdfInput = {
   notIncluded: string | null;
   afterApproval: string | null;
   backPhrase: string | null;
+  /** Cor sólida da capa/contracapa quando não tem imagem (sem degradê). */
+  coverColor: string;
+  backColor: string;
 };
 
 function sanitizeForPdf(text: string): string {
@@ -63,21 +66,6 @@ function hexToRgb01(hex: string | null | undefined, fallback: RGB): RGB {
 
 function money(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function lerp(a: number, b: number, t: number): number { return a + (b - a) * t; }
-
-/** Degradê vertical — pdf-lib não tem fill de gradiente nativo, então
- * desenha em tiras horizontais finas interpolando a cor (técnica padrão
- * pra "gradiente" em PDF gerado programaticamente). */
-function drawVerticalGradient(page: PDFPage, x: number, y: number, w: number, h: number, from: RGB, to: RGB) {
-  const steps = 48;
-  const stripH = h / steps;
-  for (let i = 0; i < steps; i++) {
-    const t = i / (steps - 1);
-    const color = rgb(lerp(from[0], to[0], t), lerp(from[1], to[1], t), lerp(from[2], to[2], t));
-    page.drawRectangle({ x, y: y + h - (i + 1) * stripH - 0.5, width: w, height: stripH + 1, color });
-  }
 }
 
 async function embedImage(doc: PDFDocument, bytes: Uint8Array | null) {
@@ -120,11 +108,14 @@ export async function renderBudgetPdf(input: BudgetPdfInput): Promise<Uint8Array
   const backCoverImg = await embedImage(doc, input.backCoverImageBytes);
 
   const gradFrom = hexToRgb01(input.gradientFrom, [0.804, 1, 0]);
-  const gradTo = hexToRgb01(input.gradientTo, [0.086, 0.086, 0.055]);
   const accent = hexToRgb01(input.accentColor, gradFrom);
   const INK: RGB = [0.09, 0.094, 0.102];
   const INK_SOFT: RGB = [0.227, 0.235, 0.247];
   const GRAY: RGB = [0.541, 0.553, 0.569];
+  const coverColor = hexToRgb01(input.coverColor, [0.067, 0.122, 0.361]);
+  const backColor = hexToRgb01(input.backColor, [0.067, 0.122, 0.361]);
+  /** Texto por cima de cor sólida: escuro em cor clara, branco no resto. */
+  const textOn = (c: RGB): RGB => (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2] > 0.62 ? INK : [1, 1, 1]);
 
   function drawLogo(page: PDFPage, x: number, topY: number, maxW: number, maxH: number): number {
     if (!logoImg) return 0;
@@ -198,7 +189,7 @@ export async function renderBudgetPdf(input: BudgetPdfInput): Promise<Uint8Array
     // propósito (pedido do Junior, 30/09) — só escreve por cima, na mesma
     // posição do exemplo que ele mandou (~1/3 de cima pra baixo). Página
     // fica na proporção da imagem (não força A4), senão cortaria a arte.
-    // Sem imagem: cai no degradê desenhado na hora (fallback antigo).
+    // Sem imagem: cor sólida (ver o else abaixo).
     if (coverImg) {
       const coverH = PAGE_H;
       const coverW = PAGE_H * (coverImg.width / coverImg.height);
@@ -226,22 +217,26 @@ export async function renderBudgetPdf(input: BudgetPdfInput): Promise<Uint8Array
       }
       cover.drawText(sanitizeForPdf(input.budgetDate), { x: pad, y: coverH * 0.045, size: 9.5, font: fontRegular, color: rgb(1, 1, 1) });
     } else {
+      // Sem imagem: cor sólida (antes era um degradê gerado na hora, que o
+      // Junior achou feio). Padrão = cor da barra lateral da agência.
       const cover = doc.addPage([PAGE_W, PAGE_H]);
-      drawVerticalGradient(cover, 0, 0, PAGE_W, PAGE_H, gradFrom, gradTo);
+      cover.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: rgb(...coverColor) });
+      const ink = rgb(...textOn(coverColor));
       const coverLogoH = drawLogo(cover, MARGIN, PAGE_H - 90, 160, 34);
       let cy = PAGE_H - 90 - Math.max(coverLogoH, 34) - 60;
-      cover.drawText("PROPOSTA DE ORÇAMENTO", { x: MARGIN, y: cy, size: 24, font: fontBold, color: rgb(1, 1, 1) });
+      cover.drawText("PROPOSTA DE ORÇAMENTO", { x: MARGIN, y: cy, size: 24, font: fontBold, color: ink });
       cy -= 34;
       if (input.coverPhrase) {
         for (const line of wrapText(input.coverPhrase, fontRegular, 13, CONTENT_W * 0.8)) {
-          cover.drawText(line, { x: MARGIN, y: cy, size: 13, font: fontRegular, color: rgb(1, 1, 1) });
+          cover.drawText(line, { x: MARGIN, y: cy, size: 13, font: fontRegular, color: ink });
           cy -= 18;
         }
       }
       cy -= 30;
       cover.drawText(sanitizeForPdf(`${input.clientName}${input.clientSegment ? " · " + input.clientSegment : ""}`), {
-        x: MARGIN, y: cy, size: 12, font: fontBold, color: rgb(...accent),
+        x: MARGIN, y: cy, size: 12, font: fontBold, color: ink,
       });
+      cover.drawText(sanitizeForPdf(input.budgetDate), { x: MARGIN, y: PAGE_H * 0.045, size: 9.5, font: fontRegular, color: ink });
     }
 
     // ---- Introdução ----
@@ -360,22 +355,25 @@ export async function renderBudgetPdf(input: BudgetPdfInput): Promise<Uint8Array
     // ---- Contracapa ----
     // Com imagem própria: já vem pronta da agência (ex.: "Você foi chamado
     // pra criar.") — nada é escrito em cima, só entra igual foi desenhada.
-    // Sem imagem: cai no degradê + frase (fallback antigo).
+    // Sem imagem: cor sólida + frase opcional + logo.
     if (backCoverImg) {
       const backH = PAGE_H;
       const backW = PAGE_H * (backCoverImg.width / backCoverImg.height);
       const back = doc.addPage([backW, backH]);
       back.drawImage(backCoverImg, { x: 0, y: 0, width: backW, height: backH });
     } else {
+      // Cor sólida; frase é opcional — em branco, só a logo (antes entrava
+      // "Vamos criar juntos." sozinho).
       const back = doc.addPage([PAGE_W, PAGE_H]);
-      drawVerticalGradient(back, 0, 0, PAGE_W, PAGE_H, gradTo, gradFrom);
-      const backPhrase = input.backPhrase || "Vamos criar juntos.";
+      back.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: rgb(...backColor) });
       let by = PAGE_H / 2 + 40;
-      for (const line of wrapText(backPhrase, fontBold, 26, CONTENT_W * 0.85)) {
-        back.drawText(line, { x: MARGIN, y: by, size: 26, font: fontBold, color: rgb(1, 1, 1) });
-        by -= 32;
+      if (input.backPhrase) {
+        for (const line of wrapText(input.backPhrase, fontBold, 26, CONTENT_W * 0.85)) {
+          back.drawText(line, { x: MARGIN, y: by, size: 26, font: fontBold, color: rgb(...textOn(backColor)) });
+          by -= 32;
+        }
+        by -= 16;
       }
-      by -= 16;
       drawLogo(back, MARGIN, by + 34, 140, 30);
     }
     // Cabeçalho/rodapé já foram desenhados em cada página de conteúdo na

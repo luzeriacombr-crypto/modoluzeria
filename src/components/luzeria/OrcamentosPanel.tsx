@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -12,23 +12,74 @@ import type { BudgetProduct, BudgetProductPlan, Budget, BudgetItem, BudgetFront 
 function money(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
+/** Valor em reais digitado no formato brasileiro → centavos. Com vírgula,
+ * ponto é milhar ("2.000,50"); sem vírgula, ponto seguido de 3 dígitos
+ * também é milhar ("2.000") e qualquer outro é decimal ("10.50"). */
 function parseAmount(raw: string): number | null {
-  const n = parseFloat(raw.replace(/\./g, "").replace(",", "."));
+  const clean = raw.trim().replace(/[^\d.,]/g, "");
+  if (!clean) return null;
+  const normalized = clean.includes(",") || /^\d{1,3}(\.\d{3})+$/.test(clean)
+    ? clean.replace(/\./g, "").replace(",", ".")
+    : clean;
+  const n = parseFloat(normalized);
   if (Number.isNaN(n) || n < 0) return null;
   return Math.round(n * 100);
 }
+function formatAmount(cents: number): string {
+  return cents ? (cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+}
 const inp = "bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
 const label = "block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5";
+const hint = "text-[10.5px] text-foreground/35 mt-1.5 leading-relaxed";
+
+/** Cor sólida da capa/contracapa: seletor do navegador (no Chrome tem
+ * conta-gotas pra pegar cor de qualquer lugar da tela) + campo de código. */
+function ColorField({ label: text, value, onChange, isDefault, onReset }: {
+  label: string; value: string; onChange: (v: string) => void; isDefault: boolean; onReset: () => void;
+}) {
+  const [code, setCode] = useState(value.toUpperCase());
+  useEffect(() => setCode(value.toUpperCase()), [value]);
+  return (
+    <div className="mt-2">
+      <span className="block text-[10.5px] text-foreground/45 mb-1">{text}</span>
+      <div className="flex items-center gap-2">
+        <label className="h-9 w-9 rounded-md border border-foreground/15 cursor-pointer shrink-0 overflow-hidden" style={{ background: value }} title="Escolher cor (tem conta-gotas no Chrome)">
+          <input type="color" value={value} onChange={(e) => onChange(e.target.value.toUpperCase())} className="opacity-0 w-full h-full cursor-pointer" />
+        </label>
+        <input value={code} maxLength={7}
+          onChange={(e) => {
+            const v = e.target.value.trim();
+            setCode(v);
+            const hex = v.startsWith("#") ? v : `#${v}`;
+            if (/^#[0-9a-fA-F]{6}$/.test(hex)) onChange(hex.toUpperCase());
+          }}
+          className={`${inp} w-24 font-mono text-xs`} placeholder="#111F5C" />
+        {isDefault
+          ? <span className="text-[10px] text-foreground/35">cor da barra lateral</span>
+          : <button onClick={onReset} className="text-[10.5px] text-foreground/45 hover:text-foreground transition">Voltar à padrão</button>}
+      </div>
+    </div>
+  );
+}
 
 /** Input de preço com "R$" fixo à esquerda — usado nos campos de valor do
- * catálogo/orçamento pra deixar claro que é um campo monetário. */
-function PriceInput({ value, onChange, className, placeholder = "0,00" }: {
-  value: string; onChange: (v: string) => void; className?: string; placeholder?: string;
+ * catálogo/orçamento pra deixar claro que é um campo monetário. Guarda o
+ * texto digitado e só formata ao sair do campo: antes reformatava a cada
+ * tecla ("2" virava "2,00", o "0" seguinte virava "2,000" = R$ 2) e nunca
+ * passava de R$ 2. */
+function PriceInput({ cents, onChange, className, placeholder = "0,00" }: {
+  cents: number; onChange: (cents: number) => void; className?: string; placeholder?: string;
 }) {
+  const [text, setText] = useState(formatAmount(cents));
+  const [focused, setFocused] = useState(false);
+  useEffect(() => { if (!focused) setText(formatAmount(cents)); }, [cents, focused]);
   return (
     <div className={`relative ${className ?? ""}`}>
       <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-medium text-foreground/40">R$</span>
-      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+      <input value={text} inputMode="decimal" placeholder={placeholder}
+        onFocus={() => setFocused(true)}
+        onChange={(e) => { setText(e.target.value); onChange(parseAmount(e.target.value) ?? 0); }}
+        onBlur={() => { setFocused(false); setText(formatAmount(parseAmount(text) ?? 0)); }}
         className={`${inp} w-full pl-8`} />
     </div>
   );
@@ -225,7 +276,7 @@ function ProductForm({ product, onClose }: { product: BudgetProduct | null; onCl
   const me = useMe().data;
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
-  const [price, setPrice] = useState(product ? (product.priceCents / 100).toFixed(2).replace(".", ",") : "");
+  const [priceCents, setPriceCents] = useState<number>(product?.priceCents ?? 0);
   const [icon, setIcon] = useState(product?.icon ?? "");
   const [photoPath, setPhotoPath] = useState<string | null>(product?.photoPath ?? null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(product?.photoUrl ?? null);
@@ -256,9 +307,10 @@ function ProductForm({ product, onClose }: { product: BudgetProduct | null; onCl
   function removePlan(i: number) { setPlans((p) => p.filter((_, idx) => idx !== i)); }
 
   function save() {
-    const cents = parseAmount(price);
-    if (!name.trim() || cents == null) { toast.error("Preencha o nome e o valor."); return; }
     const cleanPlans = plans.filter((p) => p.label.trim()).map((p) => ({ ...p, label: p.label.trim() }));
+    // Valor pode ficar zerado quando o produto só tem planos/variações.
+    if (!name.trim() || (priceCents <= 0 && cleanPlans.length === 0)) { toast.error("Preencha o nome e o valor."); return; }
+    const cents = priceCents;
     const payload = { name: name.trim(), description: description.trim() || null, priceCents: cents, icon: icon.trim() || null, photoPath, plans: cleanPlans };
     if (product) {
       updateBudgetProduct.mutate({ data: { id: product.id, ...payload } }, { onSuccess: onClose });
@@ -279,7 +331,7 @@ function ProductForm({ product, onClose }: { product: BudgetProduct | null; onCl
         <div className="flex-1 space-y-2">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do produto/serviço" className={`${inp} w-full`} />
           <div className="flex gap-2">
-            <PriceInput value={price} onChange={setPrice} className="flex-1" />
+            <PriceInput cents={priceCents} onChange={setPriceCents} className="flex-1" />
             <input value={icon} onChange={(e) => setIcon(e.target.value.slice(0, 4))} placeholder="Emoji" className={`${inp} w-20 text-center`} />
           </div>
         </div>
@@ -297,8 +349,8 @@ function ProductForm({ product, onClose }: { product: BudgetProduct | null; onCl
               <div key={i} className="flex gap-1.5 items-center">
                 <input value={p.label} onChange={(e) => updatePlan(i, { label: e.target.value })} placeholder="Ex: Essencial" className={`${inp} flex-1`} />
                 <PriceInput
-                  value={p.priceCents ? (p.priceCents / 100).toFixed(2).replace(".", ",") : ""}
-                  onChange={(v) => updatePlan(i, { priceCents: parseAmount(v) ?? 0 })}
+                  cents={p.priceCents}
+                  onChange={(c) => updatePlan(i, { priceCents: c })}
                   className="w-28 shrink-0"
                 />
                 <button onClick={() => removePlan(i)} className="text-foreground/30 hover:text-red-400 transition p-1 shrink-0"><X size={14} /></button>
@@ -349,6 +401,11 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
   const [notIncluded, setNotIncluded] = useState(existing?.notIncluded ?? "");
   const [afterApproval, setAfterApproval] = useState(existing?.afterApproval ?? "");
   const [backPhrase, setBackPhrase] = useState(existing?.backPhrase ?? "");
+  // Cor sólida da capa/contracapa quando não tem imagem; null = cor da
+  // barra lateral da agência (mesmo padrão do servidor).
+  const defaultSolid = me?.orgColorSidebar ?? "#111F5C";
+  const [coverColor, setCoverColor] = useState<string | null>(existing?.coverColor ?? null);
+  const [backColor, setBackColor] = useState<string | null>(existing?.backColor ?? null);
   const [uploadingHeader, setUploadingHeader] = useState(false);
   const [saving, setSaving] = useState<"save" | "pdf" | null>(null);
 
@@ -427,6 +484,7 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
       fronts: fronts.filter((f) => f.title.trim()), paymentTerms: paymentTerms.trim() || null,
       cronograma: cronograma.trim() || null, notIncluded: notIncluded.trim() || null,
       afterApproval: afterApproval.trim() || null, backPhrase: backPhrase.trim() || null,
+      coverColor, backColor,
     };
   }
 
@@ -517,8 +575,8 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
                 <div className="flex gap-1.5 items-center">
                   <input value={it.label} onChange={(e) => updateItem(i, { label: e.target.value })} placeholder="Descrição do item" className={`${inp} flex-1`} />
                   <PriceInput
-                    value={it.priceCents ? (it.priceCents / 100).toFixed(2).replace(".", ",") : ""}
-                    onChange={(v) => updateItem(i, { priceCents: parseAmount(v) ?? 0 })}
+                    cents={it.priceCents}
+                    onChange={(c) => updateItem(i, { priceCents: c })}
                     className="w-32 shrink-0"
                   />
                   <button onClick={() => removeItem(i)} className="text-foreground/30 hover:text-red-400 transition p-1 shrink-0"><X size={14} /></button>
@@ -562,19 +620,34 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
             </label>
             {headerImageUrl && <button onClick={() => { setHeaderImagePath(null); setHeaderImageUrl(null); }} className="text-[11px] text-foreground/50 hover:text-foreground transition">Remover</button>}
           </div>
+          <p className={hint}>Faixa horizontal no topo das páginas de conteúdo. Ideal: 2000 × 370 px, PNG com fundo transparente.</p>
         </label>
       </div>
 
-      <label className="block"><span className={label}>Rodapé (opcional)</span><input value={footerText} onChange={(e) => setFooterText(e.target.value)} placeholder="Ex: Sua Agência · contato@suaagencia.com.br" className={`${inp} w-full`} /></label>
+      <label className="block">
+        <span className={label}>Rodapé (opcional)</span>
+        <input value={footerText} onChange={(e) => setFooterText(e.target.value)} placeholder="Ex: Sua Agência · @suaagencia · (99) 99999-9999 · suaagencia.com.br" className={`${inp} w-full`} />
+        <p className={hint}>Uma linha curta (até ~90 caracteres) no pé das páginas de conteúdo: nome da agência, @ do Instagram, WhatsApp e site ou e-mail.</p>
+      </label>
 
       {version === "completo" && (
         <div className="space-y-4 pt-2 border-t border-foreground/10">
           <div className="text-xs font-bold text-foreground/60 uppercase tracking-wide">Proposta completa</div>
 
+          <BudgetPreview
+            clientName={clientName} clientSegment={clientSegment} coverPhrase={coverPhrase}
+            introTitle={introTitle} introText={introText} fronts={fronts} items={items} totalCents={totalCents}
+            paymentTerms={paymentTerms} backPhrase={backPhrase} footerText={footerText}
+            coverImageUrl={coverImageUrl} backCoverImageUrl={backCoverImageUrl} headerImageUrl={headerImageUrl}
+            coverColor={coverColor ?? defaultSolid} backColor={backColor ?? defaultSolid}
+            accent={me?.orgColorPrimary ?? "#CDFF00"}
+            logoUrl={logoVariant === "light" ? (me?.orgLogoUrlLight ?? me?.orgLogoUrl ?? null) : (me?.orgLogoUrl ?? me?.orgLogoUrlLight ?? null)}
+          />
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <span className={label}>Capa (imagem de fundo)</span>
-              <p className="text-[10.5px] text-foreground/35 mb-1.5 -mt-1">Deixe espaço em branco — o Modo Criador escreve o título, o cliente e a data por cima.</p>
+              <span className={label}>Capa (imagem de fundo, opcional)</span>
+              <p className="text-[10.5px] text-foreground/35 mb-1.5 -mt-1">Em pé, tamanho A4: 1240 × 1754 px. Deixe livre a área do meio pra baixo, à esquerda — o Modo Criador escreve o título, o cliente e a data por cima.</p>
               <div className="flex items-center gap-2">
                 <label className="lz-btn-ghost text-xs px-3 py-2 rounded-md cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50">
                   <Upload size={12} /> {uploadingCover === "cover" ? "Enviando…" : coverImageUrl ? "Trocar" : "Enviar"}
@@ -582,11 +655,13 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
                 </label>
                 {coverImageUrl && <button onClick={() => { setCoverImagePath(null); setCoverImageUrl(null); }} className="text-[11px] text-foreground/50 hover:text-foreground transition">Remover</button>}
               </div>
-              {coverImageUrl && <img src={coverImageUrl} alt="" className="mt-2 h-24 rounded-md object-cover border border-foreground/10" />}
+              {coverImageUrl
+                ? <img src={coverImageUrl} alt="" className="mt-2 h-24 rounded-md object-cover border border-foreground/10" />
+                : <ColorField label="Sem imagem, cor da capa" value={coverColor ?? defaultSolid} onChange={setCoverColor} isDefault={coverColor == null} onReset={() => setCoverColor(null)} />}
             </div>
             <div>
-              <span className={label}>Contracapa (imagem completa)</span>
-              <p className="text-[10.5px] text-foreground/35 mb-1.5 -mt-1">Já vem pronta — nada é escrito em cima.</p>
+              <span className={label}>Contracapa (imagem completa, opcional)</span>
+              <p className="text-[10.5px] text-foreground/35 mb-1.5 -mt-1">Em pé, tamanho A4: 1240 × 1754 px. Já vem pronta — nada é escrito em cima.</p>
               <div className="flex items-center gap-2">
                 <label className="lz-btn-ghost text-xs px-3 py-2 rounded-md cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50">
                   <Upload size={12} /> {uploadingCover === "back" ? "Enviando…" : backCoverImageUrl ? "Trocar" : "Enviar"}
@@ -594,7 +669,9 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
                 </label>
                 {backCoverImageUrl && <button onClick={() => { setBackCoverImagePath(null); setBackCoverImageUrl(null); }} className="text-[11px] text-foreground/50 hover:text-foreground transition">Remover</button>}
               </div>
-              {backCoverImageUrl && <img src={backCoverImageUrl} alt="" className="mt-2 h-24 rounded-md object-cover border border-foreground/10" />}
+              {backCoverImageUrl
+                ? <img src={backCoverImageUrl} alt="" className="mt-2 h-24 rounded-md object-cover border border-foreground/10" />
+                : <ColorField label="Sem imagem, cor da contracapa" value={backColor ?? defaultSolid} onChange={setBackColor} isDefault={backColor == null} onReset={() => setBackColor(null)} />}
             </div>
           </div>
 
@@ -634,7 +711,11 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
           <label className="block"><span className={label}>O que não está incluso</span><textarea value={notIncluded} onChange={(e) => setNotIncluded(e.target.value)} rows={2} className={`${inp} w-full resize-none`} /></label>
           <label className="block"><span className={label}>Após a aprovação</span><textarea value={afterApproval} onChange={(e) => setAfterApproval(e.target.value)} rows={2} className={`${inp} w-full resize-none`} /></label>
           {!backCoverImageUrl && (
-            <label className="block"><span className={label}>Frase da contracapa</span><input value={backPhrase} onChange={(e) => setBackPhrase(e.target.value)} placeholder="Ex: Vamos criar juntos." className={`${inp} w-full`} /></label>
+            <label className="block">
+              <span className={label}>Frase da contracapa (opcional)</span>
+              <input value={backPhrase} onChange={(e) => setBackPhrase(e.target.value)} placeholder="Ex: Vamos criar juntos." className={`${inp} w-full`} />
+              <p className={hint}>Em branco, a contracapa fica só com a logo.</p>
+            </label>
           )}
         </div>
       )}
@@ -684,6 +765,136 @@ function ProductPicker({ products, onPick }: { products: BudgetProduct[]; onPick
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Prévia do PDF (orçamento completo)
+// ---------------------------------------------------------------------------
+
+/** Texto por cima de cor sólida: escuro em cor clara, branco no resto (mesma
+ * regra do PDF, textOn em budget-pdf.server.ts). */
+function inkOn(hex: string): string {
+  const n = parseInt(hex.slice(1), 16);
+  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum > 0.62 ? "#17181A" : "#FFFFFF";
+}
+
+type PreviewProps = {
+  clientName: string; clientSegment: string; coverPhrase: string; introTitle: string; introText: string;
+  fronts: BudgetFront[]; items: BudgetItem[]; totalCents: number; paymentTerms: string; backPhrase: string; footerText: string;
+  coverImageUrl: string | null; backCoverImageUrl: string | null; headerImageUrl: string | null;
+  coverColor: string; backColor: string; accent: string; logoUrl: string | null;
+};
+
+/** Miniaturas A4 aproximadas das páginas do PDF completo — só pra dar a
+ * ideia de como está ficando (pedido do Junior, 30/09). As posições e
+ * tamanhos seguem budget-pdf.server.ts escalados (1pt = K px); o PDF de
+ * verdade continua sendo gerado no servidor ao baixar. */
+function BudgetPreview(p: PreviewProps) {
+  const W = 132, H = Math.round(W * 841.89 / 595.28), K = W / 595.28;
+  const pt = (v: number) => `${(v * K).toFixed(2)}px`;
+  const page = "relative shrink-0 overflow-hidden rounded-[3px] shadow-md border border-foreground/10";
+  const pageStyle = { width: W, height: H };
+  const date = new Date().toLocaleDateString("pt-BR");
+  const Logo = ({ maxW, maxH }: { maxW: number; maxH: number }) => p.logoUrl
+    ? <img src={p.logoUrl} alt="" style={{ maxWidth: pt(maxW), maxHeight: pt(maxH) }} className="object-contain object-left" />
+    : null;
+  const coverInk = p.coverImageUrl ? "#FFFFFF" : inkOn(p.coverColor);
+  const pages: { title: string; node: React.ReactNode }[] = [];
+
+  // Capa
+  pages.push({ title: "Capa", node: (
+    <div className={page} style={{ ...pageStyle, background: p.coverImageUrl ? undefined : p.coverColor }}>
+      {p.coverImageUrl && <img src={p.coverImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+      <div className="absolute flex flex-col" style={p.coverImageUrl
+        ? { left: "12%", right: "12%", top: "32%", color: coverInk }
+        : { left: pt(56), right: pt(56), top: pt(90), color: coverInk }}>
+        <Logo maxW={p.coverImageUrl ? 330 : 160} maxH={34} />
+        <div style={{ fontSize: pt(p.coverImageUrl ? 21 : 24), fontWeight: 800, marginTop: pt(p.coverImageUrl ? 28 : 60), lineHeight: 1.15 }}>PROPOSTA DE ORÇAMENTO</div>
+        {p.coverPhrase && <div style={{ fontSize: pt(12.5), marginTop: pt(8), lineHeight: 1.3 }}>{p.coverPhrase}</div>}
+        <div style={{ fontSize: pt(13), fontWeight: 700, marginTop: pt(p.coverImageUrl ? 14 : 30), color: p.coverImageUrl ? p.accent : coverInk }}>
+          {p.clientName || "Nome do cliente"}{p.clientSegment ? ` · ${p.clientSegment}` : ""}
+        </div>
+      </div>
+      <div className="absolute" style={{ left: p.coverImageUrl ? "12%" : pt(56), bottom: "3.5%", fontSize: pt(9.5), color: coverInk }}>{date}</div>
+    </div>
+  ) });
+
+  // Introdução
+  if (p.introTitle.trim() || p.introText.trim()) {
+    pages.push({ title: "Introdução", node: (
+      <div className={page} style={{ ...pageStyle, background: p.accent, color: "#17181A" }}>
+        <div className="absolute" style={{ left: pt(56), right: pt(56), top: pt(115) }}>
+          {p.introTitle && <div style={{ fontSize: pt(22), fontWeight: 800, lineHeight: 1.2, marginBottom: pt(14) }}>{p.introTitle}</div>}
+          <div style={{ fontSize: pt(12), lineHeight: 1.5, whiteSpace: "pre-line" }} className="line-clamp-[18]">{p.introText}</div>
+        </div>
+      </div>
+    ) });
+  }
+
+  // Conteúdo: entregas + investimento
+  const Header = () => p.headerImageUrl
+    ? <img src={p.headerImageUrl} alt="" className="mx-auto object-contain" style={{ maxWidth: "100%", maxHeight: pt(90), marginBottom: pt(16) }} />
+    : null;
+  const Footer = () => p.footerText
+    ? <div className="absolute inset-x-0 text-center truncate px-1" style={{ bottom: pt(24), fontSize: pt(8.5), color: "#8A8D91" }}>{p.footerText}</div>
+    : null;
+  pages.push({ title: "Entregas e investimento", node: (
+    <div className={page} style={{ ...pageStyle, background: "#FFFFFF", color: "#17181A" }}>
+      <div className="absolute overflow-hidden" style={{ left: pt(56), right: pt(56), top: pt(56), bottom: pt(56) }}>
+        <Header />
+        <div style={{ fontSize: pt(16), fontWeight: 800, marginBottom: pt(12) }}>O QUE VOCÊS VÃO RECEBER</div>
+        {p.fronts.filter((f) => f.title.trim()).map((f, i) => (
+          <div key={i} style={{ marginBottom: pt(12) }}>
+            <div style={{ fontSize: pt(10), fontWeight: 800, color: p.accent, marginBottom: pt(4) }}>{f.title.toUpperCase()}</div>
+            {f.items.map((it, j) => (
+              <div key={j} style={{ fontSize: pt(11.5), fontWeight: 700, marginBottom: pt(5) }}>{it.title || "—"}</div>
+            ))}
+          </div>
+        ))}
+        <div style={{ fontSize: pt(14), fontWeight: 800, margin: `${pt(10)} 0 ${pt(6)}` }}>ENTREGÁVEIS</div>
+        {p.items.map((it, i) => <div key={i} style={{ fontSize: pt(10.5), fontWeight: 700, marginBottom: pt(4) }}>{it.label || "—"}</div>)}
+        <div style={{ border: "1px solid #17181A", marginTop: pt(12), padding: pt(14) }}>
+          <span style={{ background: p.accent, color: "#FFFFFF", fontSize: pt(9), fontWeight: 800, padding: `${pt(3)} ${pt(6)}` }}>INVESTIMENTO</span>
+          <div style={{ fontSize: pt(13), fontWeight: 800, marginTop: pt(8) }}>Valor total: {money(p.totalCents)}</div>
+          {p.paymentTerms && <div style={{ fontSize: pt(8.5), color: "#8A8D91", marginTop: pt(4) }} className="line-clamp-2">{p.paymentTerms}</div>}
+        </div>
+      </div>
+      <Footer />
+    </div>
+  ) });
+
+  // Contracapa
+  const backInk = inkOn(p.backColor);
+  pages.push({ title: "Contracapa", node: (
+    <div className={page} style={{ ...pageStyle, background: p.backCoverImageUrl ? undefined : p.backColor }}>
+      {p.backCoverImageUrl
+        ? <img src={p.backCoverImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        : (
+          <div className="absolute flex flex-col" style={{ left: pt(56), right: pt(90), top: "44%", color: backInk }}>
+            {p.backPhrase && <div style={{ fontSize: pt(26), fontWeight: 800, lineHeight: 1.2, marginBottom: pt(16) }}>{p.backPhrase}</div>}
+            <Logo maxW={140} maxH={30} />
+          </div>
+        )}
+    </div>
+  ) });
+
+  return (
+    <div className="rounded-lg p-3" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)" }}>
+      <div className="flex items-center justify-between mb-2">
+        <span className={label}>Prévia do PDF</span>
+        <span className="text-[10px] text-foreground/35">aproximada — o PDF final sai ao baixar</span>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {pages.map((pg) => (
+          <div key={pg.title} className="shrink-0">
+            {pg.node}
+            <div className="text-[9.5px] text-foreground/40 mt-1 text-center" style={{ width: W }}>{pg.title}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
