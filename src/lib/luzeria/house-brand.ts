@@ -12,21 +12,26 @@ export const BRAND_BRIEFING_FIELDS = [
 ] as const;
 
 export type BrandBriefingKey = (typeof BRAND_BRIEFING_FIELDS)[number]["key"];
-export type BrandBriefing = Partial<Record<BrandBriefingKey, string>>;
+/** `full` = o briefing colado de uma vez (texto livre, opção "Colar tudo"). */
+export type BrandBriefing = Partial<Record<BrandBriefingKey | "full", string>>;
 
 /** Texto que vai pro clients.content_briefing (lido pela prévia de
  * planejamento com IA e pelas ideias de stories). */
 export function composeBriefingText(b: BrandBriefing): string {
-  return BRAND_BRIEFING_FIELDS
+  const parts = BRAND_BRIEFING_FIELDS
     .filter((f) => b[f.key]?.trim())
-    .map((f) => `## ${f.label}\n${b[f.key]!.trim()}`)
-    .join("\n\n");
+    .map((f) => `## ${f.label}\n${b[f.key]!.trim()}`);
+  if (b.full?.trim()) parts.unshift(`## Briefing completo\n${b.full.trim()}`);
+  return parts.join("\n\n");
 }
 
 /** Quanto do briefing está preenchido (0 a 1) — pro aviso no Meu dia. */
 export function briefingCompleteness(b: BrandBriefing | null | undefined, description?: string | null): number {
   const filled = BRAND_BRIEFING_FIELDS.filter((f) => b?.[f.key]?.trim()).length + (description?.trim() ? 1 : 0);
-  return filled / (BRAND_BRIEFING_FIELDS.length + 1);
+  const byFields = filled / (BRAND_BRIEFING_FIELDS.length + 1);
+  // Um briefing colado de uma vez também conta (600+ caracteres = completo).
+  const byFull = Math.min(1, (b?.full?.trim().length ?? 0) / 600);
+  return Math.max(byFields, byFull);
 }
 
 export type StoryIdea = {

@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Wand2 } from "lucide-react";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { getBrandBriefing, saveBrandBriefing } from "@/lib/luzeria/house-ai.functions";
+import { getBrandBriefing, saveBrandBriefing, organizeBriefingWithAI } from "@/lib/luzeria/house-ai.functions";
 import { BRAND_BRIEFING_FIELDS, briefingCompleteness, type BrandBriefing } from "@/lib/luzeria/house-brand";
 
 export const brandBriefingKey = ["house-brand-briefing"];
@@ -26,12 +26,36 @@ export function HouseBrandBriefing() {
   const [competitors, setCompetitors] = useState("");
   const [briefing, setBriefing] = useState<BrandBriefing>({});
   const [dirty, setDirty] = useState(false);
+  // "Colar tudo de uma vez" (texto corrido) ou "Parte por parte" (campos).
+  const [mode, setMode] = useState<"colar" | "partes">("colar");
+  const organizeFn = useServerFn(organizeBriefingWithAI);
 
   useEffect(() => {
     if (!data) return;
     setNiche(data.niche); setDescription(data.description); setCompetitors(data.competitors); setBriefing(data.briefing ?? {});
     setDirty(false);
+    const hasFields = BRAND_BRIEFING_FIELDS.some((f) => data.briefing?.[f.key]?.trim());
+    setMode(hasFields && !data.briefing?.full?.trim() ? "partes" : "colar");
   }, [data]);
+
+  const organize = useMutation({
+    mutationFn: () => organizeFn({ data: { text: briefing.full ?? "" } }),
+    onSuccess: (r) => {
+      // Preenche só o que a IA achou — não apaga o que já estava escrito.
+      if (r.niche && !niche.trim()) setNiche(r.niche);
+      if (r.description && !description.trim()) setDescription(r.description);
+      if (r.competitors && !competitors.trim()) setCompetitors(r.competitors);
+      setBriefing((b) => {
+        const next = { ...b };
+        for (const f of BRAND_BRIEFING_FIELDS) if (r.briefing[f.key] && !b[f.key]?.trim()) next[f.key] = r.briefing[f.key];
+        return next;
+      });
+      setDirty(true);
+      setMode("partes");
+      toast.success("Organizado! Confira os campos e salve.");
+    },
+    onError: (e: any) => toastFriendlyError(e, "Não consegui organizar"),
+  });
 
   const save = useMutation({
     mutationFn: () => saveFn({ data: { niche, description, competitors, briefing } }),
@@ -74,6 +98,32 @@ export function HouseBrandBriefing() {
           </div>
         </div>
       </div>
+      <div className="inline-flex items-center gap-1 bg-background rounded-full p-1 border border-foreground/[0.08] mb-5">
+        {([["colar", "Colar tudo de uma vez"], ["partes", "Parte por parte"]] as const).map(([m, label]) => (
+          <button key={m} onClick={() => setMode(m)}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition ${mode === m ? "bg-[rgb(var(--lz-brand-rgb))] text-black" : "text-foreground/55 hover:text-foreground"}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === "colar" ? (
+        <div>
+          <p className="text-[12px] text-foreground/55 mb-2">
+            Cole aqui o que você já tem: apresentação da empresa, briefing antigo, texto do site, anotações de reunião, conversa de WhatsApp… do jeito que estiver.
+          </p>
+          <textarea value={briefing.full ?? ""} onChange={(e) => { setBriefing((b) => ({ ...b, full: e.target.value })); setDirty(true); }}
+            rows={12} maxLength={20000} className={inp}
+            placeholder={"Ex: A Clínica é especializada em... Atendemos principalmente... Nosso diferencial é... Não gostamos de..."} />
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            <button onClick={() => organize.mutate()} disabled={(briefing.full?.trim().length ?? 0) < 40 || organize.isPending}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-md text-sm font-bold border border-foreground/15 text-foreground/85 hover:bg-foreground/5 disabled:opacity-40">
+              {organize.isPending ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />} Organizar nos campos com IA
+            </button>
+            <span className="text-[11px] text-foreground/45">opcional: a IA separa o texto nos campos pra você conferir</span>
+          </div>
+        </div>
+      ) : (
       <div className="grid gap-4 md:grid-cols-2">
         {field("Segmento", "Ex: clínica de estética, odontologia, academia.", niche, setNiche, 1)}
         {field("Concorrentes", "Um por linha: @perfil ou nome.", competitors, setCompetitors, 2)}
@@ -84,6 +134,7 @@ export function HouseBrandBriefing() {
           </div>
         ))}
       </div>
+      )}
       <div className="flex items-center gap-3 mt-5">
         <button onClick={() => save.mutate()} disabled={!dirty || save.isPending}
           className="px-5 py-2.5 rounded-md text-sm font-bold disabled:opacity-40"

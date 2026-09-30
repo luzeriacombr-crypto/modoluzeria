@@ -16,7 +16,10 @@ async function houseBrand(context: { supabase: any; orgId: string }) {
 
 /* ============== Briefing da marca ============== */
 
-const briefingSchema = z.object(Object.fromEntries(BRAND_BRIEFING_FIELDS.map((f) => [f.key, z.string().max(4000).optional()])) as Record<string, z.ZodOptional<z.ZodString>>);
+const briefingSchema = z.object({
+  ...(Object.fromEntries(BRAND_BRIEFING_FIELDS.map((f) => [f.key, z.string().max(4000).optional()])) as Record<string, z.ZodOptional<z.ZodString>>),
+  full: z.string().max(20000).optional(),
+});
 
 export const getBrandBriefing = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
@@ -58,6 +61,57 @@ export const saveBrandBriefing = createServerFn({ method: "POST" })
     }).eq("id", clientId).eq("org_id", context.orgId);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/** "Colar tudo de uma vez": a IA separa um briefing corrido nos campos
+ * (pra pessoa revisar antes de salvar). Não grava nada. */
+const ORGANIZE_TOOL = {
+  name: "report_briefing_fields",
+  description: "Separa o briefing nos campos.",
+  input_schema: {
+    type: "object",
+    properties: {
+      segmento: { type: "string" },
+      sobre: { type: "string", description: "O que a empresa faz, história, onde fica" },
+      concorrentes: { type: "string", description: "Um por linha" },
+      ...Object.fromEntries(BRAND_BRIEFING_FIELDS.map((f) => [f.key, { type: "string", description: f.hint }])),
+    },
+  },
+};
+
+export const organizeBriefingWithAI = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { text: string }) => z.object({ text: z.string().trim().min(40).max(20000) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { planId } = await houseBrand(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: plan } = await (supabaseAdmin as any).from("plans").select("features").eq("id", planId).maybeSingle();
+    if (!plan?.features?.ai_planning) throw new Error("Organizar com IA faz parte do plano House + IA. Você pode salvar o texto como está.");
+    const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
+    const res = await getAnthropicClient().messages.create({
+      model: PLANNING_MODEL,
+      max_tokens: 3000,
+      thinking: { type: "disabled" },
+      tools: [ORGANIZE_TOOL],
+      tool_choice: { type: "tool", name: ORGANIZE_TOOL.name },
+      messages: [{ role: "user", content: [{ type: "text", text: [
+        "Separe o briefing abaixo nos campos da ferramenta. Use SOMENTE o que está no texto: não invente nada.",
+        "Campo sem informação no texto fica vazio. Mantenha as palavras de quem escreveu, só organize e resuma quando estiver repetitivo.",
+        "Nunca use o caractere travessão (—).",
+        "",
+        "BRIEFING:",
+        data.text,
+      ].join("\n") }] }],
+    } as any);
+    const toolUse = [...(res as any).content].reverse().find((b: any) => b.type === "tool_use" && b.name === ORGANIZE_TOOL.name);
+    const out = (toolUse?.input ?? {}) as Record<string, string>;
+    const clean = (v: unknown) => (typeof v === "string" ? v.replace(/\s*—\s*/g, ", ").trim() : "");
+    return {
+      niche: clean(out.segmento),
+      description: clean(out.sobre),
+      competitors: clean(out.concorrentes),
+      briefing: Object.fromEntries(BRAND_BRIEFING_FIELDS.map((f) => [f.key, clean(out[f.key])])) as BrandBriefing,
+    };
   });
 
 /* ============== Ideias de stories ============== */
