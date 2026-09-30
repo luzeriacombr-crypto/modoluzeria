@@ -50,7 +50,9 @@ export type ClientPaymentRow = {
 
 export const listClientPayments = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .handler(async ({ context }) => {
+  .inputValidator((d?: { period?: string }) =>
+    z.object({ period: z.string().regex(/^\d{4}-\d{2}$/).optional() }).parse(d ?? {}))
+  .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
 
     const { data: org } = await context.supabase.from("orgs").select("pix_key, payment_message_template").eq("id", context.orgId).maybeSingle();
@@ -70,7 +72,11 @@ export const listClientPayments = createServerFn({ method: "GET" })
     if (clientIds.length === 0) return { pixKey: org?.pix_key ?? null, messageTemplate: org?.payment_message_template ?? null, clients: [] as ClientPaymentRow[] };
 
     const now = new Date();
-    const period = monthKey(now);
+    // Pedido do Junior (30/09): navegar meses anteriores/futuros no resumo
+    // do Financeiro (CashFlowSection) — sem `data.period`, cai no mês atual
+    // (comportamento de sempre, usado pela tabela de cobrança em
+    // ClientPaymentsPanel, que continua sempre "agora" de propósito).
+    const period = data.period ?? monthKey(now);
 
     const { data: payments } = await context.supabase
       .from("client_payments").select("client_id, paid_at").eq("period", period).in("client_id", clientIds);

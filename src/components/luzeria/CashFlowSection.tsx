@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, X, AlertCircle, Pencil, Check, ChevronDown } from "lucide-react";
+import { Plus, X, AlertCircle, Pencil, Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { bankAccountsQO, cashFlowEntriesQO, clientPaymentsQO, useApi } from "@/lib/luzeria/queries";
+import { currentMonthKey, prevMonthKey, nextMonthKey, formatMonth } from "@/lib/luzeria/utils";
 import type { CashFlowEntry } from "@/lib/luzeria/cash-flow.functions";
 import type { BankAccount } from "@/lib/luzeria/bank-accounts.functions";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
@@ -26,11 +27,6 @@ function money(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function currentMonthKey(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
 const inp = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
 
 /** Fluxo de caixa simples da agência: as mensalidades de cliente
@@ -39,8 +35,13 @@ const inp = "w-full bg-background border border-foreground/10 rounded-md px-3 py
  * saídas) é lançado na mão aqui, fixo (recorrente) ou variável (só desse
  * mês). Mockup aprovado: claude.ai/artifact/7UyrDvHKAXxav7d6ay67DP. */
 export function CashFlowSection() {
-  const monthKey = currentMonthKey();
-  const { data: payments } = useQuery(clientPaymentsQO());
+  // Pedido do Junior (30/09): dava pra ver só o mês atual — agora navega
+  // livre entre meses passados (histórico) e futuros (projeção, assumindo
+  // os mesmos clientes recorrentes de hoje). "Saldo em banco"/Carteira
+  // ficam de fora de propósito: são um saldo atual, não um retrato do mês.
+  const [monthKey, setMonthKey] = useState(currentMonthKey());
+  const isFuture = monthKey > currentMonthKey();
+  const { data: payments } = useQuery(clientPaymentsQO(monthKey));
   const { data: entries = [] } = useQuery(cashFlowEntriesQO(monthKey));
   const { data: bankAccounts = [] } = useQuery(bankAccountsQO());
   const { addCashFlowEntry, removeCashFlowEntry, setCashFlowEntryPaid } = useApi();
@@ -124,6 +125,27 @@ export function CashFlowSection() {
 
   return (
     <div className="space-y-4">
+      {/* Navegação de mês — vale pro resumo e pra Entradas/Saídas abaixo;
+       * Saldo em banco/Carteira ficam sempre no valor atual. */}
+      <div className="flex items-center justify-center gap-3">
+        <button
+          onClick={() => setMonthKey(prevMonthKey(monthKey))}
+          className="h-8 w-8 flex items-center justify-center rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <span className="inline-flex items-center gap-2 rounded-md px-4 py-1.5 text-xs font-bold uppercase tracking-wide" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+          {formatMonth(monthKey)}
+          {isFuture && <span className="text-[9px] font-extrabold tracking-wider opacity-70">· PROJEÇÃO</span>}
+        </span>
+        <button
+          onClick={() => setMonthKey(nextMonthKey(monthKey))}
+          className="h-8 w-8 flex items-center justify-center rounded-md text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition"
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
       {/* Resumo */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-card border border-foreground/7 rounded-xl p-4">

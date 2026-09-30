@@ -64,6 +64,12 @@ export function nextMonthKey(key: string): string {
   return monthKey(d);
 }
 
+export function prevMonthKey(key: string): string {
+  const [y, m] = key.split("-").map(Number);
+  const d = new Date(y, m - 2, 1); // m-1 (0-based this month) - 1 = prev month
+  return monthKey(d);
+}
+
 const MONTHS_PT = [
   "Janeiro",
   "Fevereiro",

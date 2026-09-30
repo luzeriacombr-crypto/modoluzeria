@@ -345,8 +345,8 @@ export const leadContactsQO = (leadId: string | null) =>
 export const clientOperationsOverviewQO = () =>
   queryOptions({ queryKey: ["client-operations-overview"], queryFn: () => getClientOperationsOverview() });
 
-export const clientPaymentsQO = () =>
-  queryOptions({ queryKey: ["client-payments"], queryFn: () => listClientPayments() });
+export const clientPaymentsQO = (period?: string) =>
+  queryOptions({ queryKey: ["client-payments", period ?? "current"], queryFn: () => listClientPayments({ data: { period } }) });
 
 export const clientPaymentHistoryQO = (clientId: string | null) =>
   queryOptions({
