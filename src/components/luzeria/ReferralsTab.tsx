@@ -63,8 +63,8 @@ export function ReferralsTab() {
     <div className="space-y-8 max-w-2xl">
       <div className="bg-gradient-to-br from-white/[0.08] to-white/[0.03] border border-foreground/15 rounded-2xl p-8 backdrop-blur-sm">
         <p className="text-sm text-foreground/50 mb-6">
-          Indique outra agência — quando a indicação for confirmada, você ganha 1 mês grátis (até 3
-          acumulados). Seu amigo ganha 15 dias extras de teste.{" "}
+          Indique outra agência — quando a indicação for confirmada, você ganha 1 mês grátis, sem
+          limite de indicações. Seu amigo ganha 15 dias extras de teste.{" "}
           <a href="/programa-de-indicacao" target="_blank" rel="noopener noreferrer" className="underline text-[var(--lz-accent-ink)]">
             Ver regulamento completo
           </a>.

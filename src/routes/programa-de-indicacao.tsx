@@ -94,7 +94,7 @@ function ReferralProgramPage() {
               Por indicação confirmada — vira saldo na sua conta, aplicado automaticamente na próxima cobrança.
             </p>
             <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: LIME }}>
-              <Check size={13} /> Até 3 meses acumulados
+              <Check size={13} /> Sem limite de meses acumulados
             </div>
           </div>
           <div className="border border-white/10 rounded-2xl p-6 bg-white/[0.03]">
@@ -198,7 +198,7 @@ function ReferralProgramPage() {
             "Antes de aplicar o bônus de trial, verificamos se o e-mail usado no cadastro já existe no sistema — como dono de agência ou como membro de qualquer agência. Se já existir, o bônus não é concedido, mas o cadastro segue normalmente.",
             "Para a indicação valer, dentro do período de teste do indicado, a agência dele precisa ter pelo menos 1 cliente e pelo menos 1 membro da equipe cadastrados. Sem isso, a indicação não gera crédito.",
             <>O crédito de <b className="text-white/90">1 mês grátis</b> para quem indicou só é confirmado depois que o indicado passar do trial, tiver a primeira cobrança de assinatura confirmada, e permanecer como cliente pagante ativo por <b className="text-white/90">60 dias corridos</b>.</>,
-            <>Cada agência pode acumular no máximo <b className="text-white/90">3 meses grátis</b> de saldo por vez, vindos de indicações diferentes.</>,
+            <>Não há limite de meses grátis acumulados — cada indicação confirmada soma mais <b className="text-white/90">1 mês</b> ao seu saldo.</>,
             "O crédito é aplicado como saldo interno na conta de quem indicou, consumido automaticamente (1 mês por ciclo) na cobrança mensal seguinte, e não pode ser convertido em dinheiro, transferido para outra conta ou usado como desconto parcial.",
             "Se a assinatura de quem indicou for cancelada antes da confirmação do crédito, o crédito não é perdido — ele fica pendente e é liberado quando a assinatura for reativada, respeitando as regras acima.",
             "A Luzeria Estúdio pode alterar ou encerrar o Programa de Indicação a qualquer momento, sem afetar créditos já confirmados.",

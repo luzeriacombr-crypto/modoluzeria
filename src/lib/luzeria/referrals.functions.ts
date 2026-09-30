@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
 
-const MAX_REFERRAL_CREDIT = 3;
 const REFERRED_VALIDATION_DAYS_ACTIVE = 60;
 
 /** Verdadeiro se o e-mail já existe em QUALQUER conta do sistema — dono de
@@ -107,7 +106,9 @@ export async function runAgencyReferralChecks(): Promise<{ validated: number; ex
   async function confirmCredit(referral: { id: string; referrer_org_id: string }) {
     const { data: referrer } = await supabaseAdmin
       .from("orgs").select("referral_credit_balance").eq("id", referral.referrer_org_id).maybeSingle();
-    const newBalance = Math.min((referrer?.referral_credit_balance ?? 0) + 1, MAX_REFERRAL_CREDIT);
+    // Pedido do Junior (29/09): sem limite de meses acumulados — cada
+    // indicação confirmada soma mais 1, indefinidamente.
+    const newBalance = (referrer?.referral_credit_balance ?? 0) + 1;
     await supabaseAdmin.from("orgs").update({ referral_credit_balance: newBalance }).eq("id", referral.referrer_org_id);
     await supabaseAdmin.from("referral_credit_ledger").insert({
       org_id: referral.referrer_org_id, referral_id: referral.id,
