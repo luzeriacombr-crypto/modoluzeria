@@ -233,14 +233,14 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
                 <p className="px-3 pt-4 pb-1 text-xs font-bold uppercase tracking-wider text-foreground/50">{navLabel("cliente", DEFAULT_NAV_LABELS.cliente)}</p>
                 {isAdmin && <MenuLink icon={<IdCard size={17} />} label={navLabel("cliente-overview", DEFAULT_NAV_LABELS["cliente-overview"])} onClick={() => goToConfigTab("cliente")} />}
                 {canJourney && <MenuLink icon={<IdCard size={17} />} label={navLabel("jornada", DEFAULT_NAV_LABELS.jornada)} onClick={() => goToConfigTab("journey")} />}
-                {canFinanceiro && <MenuLink icon={<IdCard size={17} />} label={navLabel("margem", DEFAULT_NAV_LABELS.margem)} onClick={() => goToConfigTab("margem")} />}
+                {isAdmin && canFinanceiro && <MenuLink icon={<IdCard size={17} />} label={navLabel("margem", DEFAULT_NAV_LABELS.margem)} onClick={() => goToConfigTab("margem")} />}
               </>
             )}
 
             {canFinanceiro && (
               <>
                 <p className="px-3 pt-4 pb-1 text-xs font-bold uppercase tracking-wider text-foreground/50">{navLabel("financeiro", DEFAULT_NAV_LABELS.financeiro)}</p>
-                <MenuLink icon={<Wallet size={17} />} label={navLabel("cobranca", DEFAULT_NAV_LABELS.cobranca)} onClick={() => goToConfigTab("cobranca")} />
+                {isMaster && <MenuLink icon={<Wallet size={17} />} label={navLabel("cobranca", DEFAULT_NAV_LABELS.cobranca)} onClick={() => goToConfigTab("cobranca")} />}
                 <MenuLink icon={<Wallet size={17} />} label={navLabel("pagamentos", DEFAULT_NAV_LABELS.pagamentos)} onClick={() => goToConfigTab("pagamentos")} />
               </>
             )}

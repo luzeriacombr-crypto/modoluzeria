@@ -214,14 +214,15 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               pedido do Junior (29/09) pra juntar tudo que é financeiro da
               agência (plano, indicações, fluxo de caixa) numa aba só.
               "Orçamentos" (30/09): catálogo de produtos + propostas em PDF. */}
-          {isMaster && (
-            <div className="flex items-center gap-1 mb-6 -mt-2 flex-wrap">
-              <SubTabPill active={tab === "cobranca"} onClick={() => setTab("cobranca")} label="Meu plano" />
-              <SubTabPill active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} label="Indique e ganhe" />
-              <SubTabPill active={tab === "pagamentos"} onClick={() => setTab("pagamentos")} label="Entradas e saídas" />
-              <SubTabPill active={tab === "orcamentos"} onClick={() => setTab("orcamentos")} label="Orçamentos" />
-            </div>
-          )}
+          {/* Quem tem só o cargo Financeiro (não master) vê o financeiro da
+              agência, mas não o plano/indicações do Modo Criador — antes
+              ficava sem as sub-abas e caía em "Meu plano". */}
+          <div className="flex items-center gap-1 mb-6 -mt-2 flex-wrap">
+            {isMaster && <SubTabPill active={tab === "cobranca"} onClick={() => setTab("cobranca")} label="Meu plano" />}
+            {isMaster && <SubTabPill active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} label="Indique e ganhe" />}
+            <SubTabPill active={tab === "pagamentos" || (!isMaster && tab === "cobranca")} onClick={() => setTab("pagamentos")} label="Entradas e saídas" />
+            <SubTabPill active={tab === "orcamentos"} onClick={() => setTab("orcamentos")} label="Orçamentos" />
+          </div>
 
           {tab === "afiliados" ? (
             <div className="space-y-3">
@@ -235,7 +236,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               <p className="text-xs text-foreground/40">Pra agências que já são clientes do Modo Criador: indique outra agência e ambas ganham um mês grátis.</p>
               <ReferralsTab />
             </div>
-          ) : tab === "pagamentos" ? (
+          ) : tab === "pagamentos" || !isMaster ? (
             <ClientPaymentsPanel />
           ) : tab === "orcamentos" ? (
             <OrcamentosPanel />
@@ -284,7 +285,10 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         <ClienteTab
           initialSub={tab === "margem" ? "margem" : tab === "journey" ? "jornada" : "overview"}
           canJourney={hasSetorPermission(me, "settings_journey")}
-          canMargem={hasPermission(me, "view_financeiro")}
+          // Margem usa custo-hora derivado do salário da equipe — o servidor
+          // só libera pra master/setor (is_admin). Sem o isAdmin aqui, quem
+          // tinha só o cargo Financeiro via a aba e recebia erro.
+          canMargem={isAdmin && hasPermission(me, "view_financeiro")}
           isAdmin={isAdmin}
         />
        ) :

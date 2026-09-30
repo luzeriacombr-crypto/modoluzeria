@@ -19,6 +19,10 @@ export type BankAccount = {
   name: string;
   balanceCents: number;
   updatedAt: string;
+  /** Conta removida pelo usuário — some da tela e da escolha de banco, mas
+   * continua existindo pra os lançamentos antigos ligados a ela não
+   * passarem a somar na Carteira. */
+  archived: boolean;
 };
 
 export const listBankAccounts = createServerFn({ method: "GET" })
@@ -27,11 +31,11 @@ export const listBankAccounts = createServerFn({ method: "GET" })
     await assertFinanceiroAccess(context.supabase, context.userId);
     const { data, error } = await (context.supabase as any)
       .from("bank_accounts")
-      .select("id, name, balance_cents, updated_at")
+      .select("id, name, balance_cents, updated_at, archived_at")
       .eq("org_id", context.orgId)
       .order("created_at");
     if (error) throw new Error(error.message);
-    return (data ?? []).map((r: any) => ({ id: r.id, name: r.name, balanceCents: r.balance_cents, updatedAt: r.updated_at }));
+    return (data ?? []).map((r: any) => ({ id: r.id, name: r.name, balanceCents: r.balance_cents, updatedAt: r.updated_at, archived: r.archived_at != null }));
   });
 
 export const addBankAccount = createServerFn({ method: "POST" })
@@ -68,7 +72,11 @@ export const removeBankAccount = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
-    const { error } = await (context.supabase as any).from("bank_accounts").delete().eq("id", data.id).eq("org_id", context.orgId);
+    // Arquiva em vez de apagar: apagar de verdade deixava bank_account_id
+    // nulo nos lançamentos ligados (FK com SET NULL) e eles passavam a
+    // somar na Carteira.
+    const { error } = await (context.supabase as any).from("bank_accounts")
+      .update({ archived_at: new Date().toISOString() }).eq("id", data.id).eq("org_id", context.orgId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

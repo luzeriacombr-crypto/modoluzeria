@@ -232,7 +232,7 @@ export function Sidebar({
           const clienteItems = orderSection("cliente", [
             ...(isAdmin ? [{ id: "cliente-overview", label: navLabel("cliente-overview", "Visão Geral"), node: <NavSubButton key="cliente-overview" label={navLabel("cliente-overview", "Visão Geral")} active={configTabActive("cliente")} onClick={() => goToConfigTab("cliente")} /> }] : []),
             ...(canJourney ? [{ id: "jornada", label: navLabel("jornada", "Jornada do cliente"), node: <NavSubButton key="jornada" label={navLabel("jornada", "Jornada do cliente")} active={configTabActive("journey")} onClick={() => goToConfigTab("journey")} /> }] : []),
-            ...(canFinanceiro ? [{ id: "margem", label: navLabel("margem", "Margem por cliente"), node: <NavSubButton key="margem" label={navLabel("margem", "Margem por cliente")} active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} /> }] : []),
+            ...(isAdmin && canFinanceiro ? [{ id: "margem", label: navLabel("margem", "Margem por cliente"), node: <NavSubButton key="margem" label={navLabel("margem", "Margem por cliente")} active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} /> }] : []),
           ]);
 
           // Afiliados e Revenda saíram do menu: as três entradas abriam a
@@ -243,8 +243,13 @@ export function Sidebar({
           // do Junior (29/09) pra juntar tudo que é financeiro da agência
           // (plano, indicações, fluxo de caixa) num grupo só.
           const financeiroItems = canFinanceiro ? orderSection("financeiro", [
-            { id: "cobranca", label: navLabel("cobranca", "Meu plano"), node: <NavSubButton key="cobranca" label={navLabel("cobranca", "Meu plano")} active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} /> },
-            { id: "indicacoes", label: navLabel("indicacoes", "Indique e ganhe"), node: <NavSubButton key="indicacoes" label={navLabel("indicacoes", "Indique e ganhe")} active={configTabActive("indicacoes")} onClick={() => goToConfigTab("indicacoes")} /> },
+            // Plano e indicações são da assinatura da agência no Modo
+            // Criador — só o master. Quem tem só o cargo Financeiro vê o
+            // financeiro da agência (entradas/saídas e orçamentos).
+            ...(isMaster ? [
+              { id: "cobranca", label: navLabel("cobranca", "Meu plano"), node: <NavSubButton key="cobranca" label={navLabel("cobranca", "Meu plano")} active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} /> },
+              { id: "indicacoes", label: navLabel("indicacoes", "Indique e ganhe"), node: <NavSubButton key="indicacoes" label={navLabel("indicacoes", "Indique e ganhe")} active={configTabActive("indicacoes")} onClick={() => goToConfigTab("indicacoes")} /> },
+            ] : []),
             { id: "pagamentos", label: navLabel("pagamentos", "Entradas e saídas"), node: <NavSubButton key="pagamentos" label={navLabel("pagamentos", "Entradas e saídas")} active={configTabActive("pagamentos")} onClick={() => goToConfigTab("pagamentos")} /> },
             { id: "orcamentos", label: navLabel("orcamentos", "Orçamentos"), node: <NavSubButton key="orcamentos" label={navLabel("orcamentos", "Orçamentos")} active={configTabActive("orcamentos")} onClick={() => goToConfigTab("orcamentos")} /> },
           ]) : [];

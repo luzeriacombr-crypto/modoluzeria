@@ -70,6 +70,20 @@ export function prevMonthKey(key: string): string {
   return monthKey(d);
 }
 
+/** Converte valor em reais digitado no formato brasileiro pra centavos.
+ * Com vírgula, ponto é separador de milhar ("1.050,00"). Sem vírgula, ponto
+ * seguido de 3 dígitos também é milhar ("1.500"); qualquer outro ponto é
+ * decimal ("10.50") — antes "10.50" virava R$ 1.050,00. Null se inválido. */
+export function parseBRLToCents(raw: string): number | null {
+  const clean = raw.trim().replace(/[^\d.,]/g, "");
+  const normalized = clean.includes(",") || /^\d{1,3}(\.\d{3})+$/.test(clean)
+    ? clean.replace(/\./g, "").replace(",", ".")
+    : clean;
+  const n = parseFloat(normalized);
+  if (!n || n <= 0) return null;
+  return Math.round(n * 100);
+}
+
 const MONTHS_PT = [
   "Janeiro",
   "Fevereiro",

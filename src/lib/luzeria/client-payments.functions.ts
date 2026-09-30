@@ -13,20 +13,18 @@ function monthKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/** Próxima ocorrência do dia de vencimento a partir de hoje — se o dia
- * já passou nesse mês, cai pro mês seguinte. Dias 29-31 em meses mais
- * curtos caem no último dia daquele mês. */
-function nextDueDate(day: number, now: Date): string {
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const daysInThisMonth = new Date(y, m + 1, 0).getDate();
-  const thisMonthDay = Math.min(day, daysInThisMonth);
-  const thisMonthDate = new Date(y, m, thisMonthDay);
-  const today = new Date(y, m, now.getDate());
-  if (thisMonthDate >= today) return thisMonthDate.toISOString().slice(0, 10);
-  const daysInNextMonth = new Date(y, m + 2, 0).getDate();
-  const nextMonthDay = Math.min(day, daysInNextMonth);
-  return new Date(y, m + 1, nextMonthDay).toISOString().slice(0, 10);
+/** Data de vencimento a mostrar pro cliente, no horário de Brasília (o
+ * servidor roda em UTC). Se a mensalidade do mês ainda não foi paga, é o
+ * vencimento DESTE mês — mesmo que o dia já tenha passado, pra aparecer
+ * como atrasado (antes pulava pro mês seguinte e o "ATRASADO" nunca
+ * aparecia). Se já foi paga, é o vencimento do mês seguinte. Dias 29-31 em
+ * meses mais curtos caem no último dia do mês. */
+function dueDateFor(day: number, paidThisMonth: boolean): string {
+  const now = new Date(Date.now() - 3 * 3600 * 1000);
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth() + (paidThisMonth ? 1 : 0);
+  const daysInMonth = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m, Math.min(day, daysInMonth))).toISOString().slice(0, 10);
 }
 
 export type ClientPaymentRow = {
@@ -39,6 +37,9 @@ export type ClientPaymentRow = {
   nextDueDate: string | null;
   paidThisPeriod: boolean;
   paidAt: string | null;
+  /** Valor que de fato entrou (gravado ao marcar o pagamento). Null em
+   * pagamentos antigos, de antes do valor passar a ser gravado. */
+  paidAmountCents: number | null;
   whatsappPhone: string | null;
   postsDoneThisMonth: number;
   /** true quando falta preencher valor e/ou dia de vencimento — sem isso,
@@ -71,7 +72,8 @@ export const listClientPayments = createServerFn({ method: "GET" })
     const clientIds = (clients ?? []).map((c: any) => c.id);
     if (clientIds.length === 0) return { pixKey: org?.pix_key ?? null, messageTemplate: org?.payment_message_template ?? null, clients: [] as ClientPaymentRow[] };
 
-    const now = new Date();
+    // Horário de Brasília — o servidor roda em UTC.
+    const now = new Date(Date.now() - 3 * 3600 * 1000);
     // Pedido do Junior (30/09): navegar meses anteriores/futuros no resumo
     // do Financeiro (CashFlowSection) — sem `data.period`, cai no mês atual
     // (comportamento de sempre, usado pela tabela de cobrança em
@@ -79,9 +81,9 @@ export const listClientPayments = createServerFn({ method: "GET" })
     const period = data.period ?? monthKey(now);
 
     const { data: payments } = await context.supabase
-      .from("client_payments").select("client_id, paid_at").eq("period", period).in("client_id", clientIds);
-    const paidByClient = new Map<string, string>();
-    (payments ?? []).forEach((p: any) => paidByClient.set(p.client_id, p.paid_at));
+      .from("client_payments").select("client_id, paid_at, amount_cents").eq("period", period).in("client_id", clientIds);
+    const paidByClient = new Map<string, { paidAt: string; amountCents: number | null }>();
+    (payments ?? []).forEach((p: any) => paidByClient.set(p.client_id, { paidAt: p.paid_at, amountCents: p.amount_cents }));
 
     const { data: contacts } = await context.supabase
       .from("client_contacts").select("client_id, phone, position").in("client_id", clientIds).order("position");
@@ -108,14 +110,16 @@ export const listClientPayments = createServerFn({ method: "GET" })
 
     const rows: ClientPaymentRow[] = (clients ?? []).map((c: any) => {
       const monthId = monthIdByClient.get(c.id);
-      const paidAt = paidByClient.get(c.id) ?? null;
+      const paid = paidByClient.get(c.id) ?? null;
+      const paidAt = paid?.paidAt ?? null;
       return {
         id: c.id, name: c.name, color: c.color, icon: c.icon,
         contractValue: c.contract_value ?? null,
         paymentDueDay: c.payment_due_day ?? null,
-        nextDueDate: c.payment_due_day ? nextDueDate(c.payment_due_day, now) : null,
+        nextDueDate: c.payment_due_day ? dueDateFor(c.payment_due_day, !!paidAt) : null,
         paidThisPeriod: !!paidAt,
         paidAt,
+        paidAmountCents: paid?.amountCents ?? null,
         whatsappPhone: phoneByClient.get(c.id) ?? null,
         postsDoneThisMonth: monthId ? (doneCountByMonth.get(monthId) ?? 0) : 0,
         missingValue: c.contract_value == null,
@@ -144,7 +148,8 @@ export const listClientPaymentHistory = createServerFn({ method: "GET" })
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
-    const now = new Date();
+    // Horário de Brasília — o servidor roda em UTC.
+    const now = new Date(Date.now() - 3 * 3600 * 1000);
     const periods: string[] = [];
     for (let i = 0; i < 12; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);

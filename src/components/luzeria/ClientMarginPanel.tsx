@@ -160,8 +160,8 @@ export function ClientMarginPanel() {
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    <InfoTip text="Valor mensal do contrato, cadastrado na ficha do cliente. Aparece '—' quando ainda não foi preenchido." />
-                    Contrato
+                    <InfoTip text="Quanto o cliente paga no período escolhido: valor mensal do contrato × meses do período (em Avulsos, o valor fechado do trabalho). Aparece '—' quando ainda não foi preenchido." />
+                    Receita no período
                   </span>
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
@@ -184,7 +184,7 @@ export function ClientMarginPanel() {
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    <InfoTip text="Valor do contrato menos o custo estimado. Vermelho quando negativo, verde quando positivo. Aparece '—' quando o contrato não está preenchido." />
+                    <InfoTip text="Receita no período menos o custo estimado. Vermelho quando negativo, verde quando positivo. Aparece '—' quando o contrato não está preenchido." />
                     Margem
                   </span>
                 </th>
@@ -199,7 +199,12 @@ export function ClientMarginPanel() {
                       {r.clientName}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-foreground/70 text-right">{money(r.contractValue)}</td>
+                  <td className="px-4 py-3 text-sm text-foreground/70 text-right">
+                    {money(r.periodRevenue)}
+                    {r.periodRevenue != null && r.contractValue != null && r.periodRevenue !== r.contractValue && (
+                      <div className="text-[10px] text-foreground/35">{money(r.contractValue)}/mês</div>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm text-right">
                     <button onClick={() => setBreakdownFor({ clientId: r.clientId, clientName: r.clientName })}
                       className="text-foreground/70 hover:text-[var(--lz-accent-ink)] hover:underline transition">

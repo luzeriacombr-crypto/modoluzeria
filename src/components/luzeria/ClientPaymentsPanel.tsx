@@ -4,6 +4,7 @@ import { Loader2, MessageCircle, Check, Undo2, Pencil, History, ChevronDown, X, 
 import { toast } from "sonner";
 import { bankAccountsQO, clientPaymentsQO, clientPaymentHistoryQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { parseBRLToCents } from "@/lib/luzeria/utils";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
 import { BankAccountSelect, CashFlowSection } from "./CashFlowSection";
@@ -273,21 +274,8 @@ function MarkPaymentModal({ row, period, onClose }: { row: ClientPaymentRow; per
     if (bankAccounts.length > 0) setBankAccountId((cur) => cur ?? bankAccounts[0].id);
   }, [bankAccounts]);
 
-  function parseAmount(raw: string): number | null {
-    const clean = raw.trim().replace(/[^\d.,]/g, "");
-    // Com vírgula, ponto é separador de milhar ("1.050,00"). Sem vírgula,
-    // ponto seguido de 3 dígitos é milhar ("1.500") e o resto é decimal
-    // ("10.50") — antes os dois casos viravam milhar.
-    const normalized = clean.includes(",") || /^\d{1,3}(\.\d{3})+$/.test(clean)
-      ? clean.replace(/\./g, "").replace(",", ".")
-      : clean;
-    const n = parseFloat(normalized);
-    if (!n || n <= 0) return null;
-    return Math.round(n * 100);
-  }
-
   function confirm() {
-    const cents = parseAmount(amount);
+    const cents = parseBRLToCents(amount);
     if (!cents) { toast.error("Informe o valor recebido."); return; }
     api.markClientPaymentReceived.mutate(
       { data: { clientId: row.id, period, amountCents: cents, bankAccountId } },
@@ -388,7 +376,7 @@ export function ClientPaymentsPanel() {
                       {dueSoon && <span className="ml-1.5 text-[10px] font-bold" style={{ color: "#F5A623" }}>EM {days}D</span>}
                       <div className="mt-0.5"><DueDayEditor clientId={r.id} clientName={r.name} day={r.paymentDueDay} isMaster={isMaster} /></div>
                     </td>
-                    <td className="px-4 py-3 text-foreground/70">{money(r.contractValue)}</td>
+                    <td className="px-4 py-3 text-foreground/70">{r.paidAmountCents != null ? money(r.paidAmountCents / 100) : money(r.contractValue)}</td>
                     <td className="px-4 py-3 text-foreground/70">{r.postsDoneThisMonth}</td>
                     <td className="px-4 py-3">
                       <span

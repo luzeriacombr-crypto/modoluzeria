@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, X, AlertCircle, Pencil, Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { bankAccountsQO, cashFlowEntriesQO, clientPaymentsQO, useApi } from "@/lib/luzeria/queries";
-import { currentMonthKey, prevMonthKey, nextMonthKey, formatMonth } from "@/lib/luzeria/utils";
+import { bankAccountsQO, cashFlowEntriesQO, clientPaymentsQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { currentMonthKey, prevMonthKey, nextMonthKey, formatMonth, parseBRLToCents } from "@/lib/luzeria/utils";
 import type { CashFlowEntry } from "@/lib/luzeria/cash-flow.functions";
 import type { BankAccount } from "@/lib/luzeria/bank-accounts.functions";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
@@ -16,8 +17,10 @@ export function BankAccountSelect({ accounts, value, onChange }: { accounts: Ban
   return (
     <select value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} className={selectCls}>
       <option value="">Carteira / espécie</option>
-      {accounts.map((a) => (
-        <option key={a.id} value={a.id}>{a.name}</option>
+      {/* Conta removida (arquivada) só aparece se já é a escolhida — pra
+       * editar um lançamento antigo sem trocar a conta dele sem querer. */}
+      {accounts.filter((a) => !a.archived || a.id === value).map((a) => (
+        <option key={a.id} value={a.id}>{a.name}{a.archived ? " (removida)" : ""}</option>
       ))}
     </select>
   );
@@ -45,6 +48,7 @@ export function CashFlowSection() {
   const { data: entries = [] } = useQuery(cashFlowEntriesQO(monthKey));
   const { data: bankAccounts = [] } = useQuery(bankAccountsQO());
   const { addCashFlowEntry, removeCashFlowEntry, setCashFlowEntryPaid } = useApi();
+  const isMaster = useMe().data?.role === "master";
 
   const [addingIncome, setAddingIncome] = useState(false);
   const [addingExpense, setAddingExpense] = useState(false);
@@ -70,7 +74,9 @@ export function CashFlowSection() {
   const expenses = entries.filter((e) => e.direction === "saida");
 
   const clientsTotalCents = clients.reduce((s, c) => s + Math.round((c.contractValue ?? 0) * 100), 0);
-  const clientsReceivedCents = clients.reduce((s, c) => s + (c.paidThisPeriod ? Math.round((c.contractValue ?? 0) * 100) : 0), 0);
+  // Recebido usa o valor que de fato entrou (gravado ao marcar o pagamento);
+  // pagamentos antigos, sem valor gravado, caem no valor do contrato.
+  const clientsReceivedCents = clients.reduce((s, c) => s + (c.paidThisPeriod ? (c.paidAmountCents ?? Math.round((c.contractValue ?? 0) * 100)) : 0), 0);
   const clientsPaidCount = clients.filter((c) => c.paidThisPeriod).length;
   const incomesTotalCents = incomes.reduce((s, i) => s + i.amountCents, 0);
   const recebimentoPrevistoCents = clientsTotalCents + incomesTotalCents;
@@ -83,14 +89,8 @@ export function CashFlowSection() {
   const gastosTotalCents = fixosCents + variaveisCents;
   const saldoCents = recebimentoPrevistoCents - gastosTotalCents;
 
-  function parseAmount(raw: string): number | null {
-    const n = parseFloat(raw.replace(/\./g, "").replace(",", "."));
-    if (!n || n <= 0) return null;
-    return Math.round(n * 100);
-  }
-
   function saveIncome() {
-    const cents = parseAmount(incomeAmount);
+    const cents = parseBRLToCents(incomeAmount);
     if (!incomeLabel.trim() || !cents) { toast.error("Preencha descrição e valor."); return; }
     addCashFlowEntry.mutate(
       { data: { direction: "entrada", label: incomeLabel.trim(), amountCents: cents, kind: "variavel", monthKey, bankAccountId: incomeBankAccountId } },
@@ -99,7 +99,7 @@ export function CashFlowSection() {
   }
 
   function saveExpense() {
-    const cents = parseAmount(expenseAmount);
+    const cents = parseBRLToCents(expenseAmount);
     if (!expenseLabel.trim() || !cents) { toast.error("Preencha descrição e valor."); return; }
     const dueDay = expenseDueDay ? parseInt(expenseDueDay, 10) : null;
     addCashFlowEntry.mutate(
@@ -116,11 +116,20 @@ export function CashFlowSection() {
 
   function bankAccountName(id: string | null): string | null {
     if (!id) return null;
-    return bankAccounts.find((a) => a.id === id)?.name ?? null;
+    const account = bankAccounts.find((a) => a.id === id);
+    if (!account) return null;
+    return account.archived ? `${account.name} (removida)` : account.name;
   }
 
-  function remove(entry: CashFlowEntry) {
-    removeCashFlowEntry.mutate({ data: { id: entry.id } });
+  async function remove(entry: CashFlowEntry) {
+    // Fixa criada antes deste mês não é apagada: só para de contar daqui
+    // em diante, e os meses anteriores ficam como estavam.
+    const endsHere = entry.kind === "fixo" && entry.startMonth != null && entry.startMonth < monthKey;
+    const message = endsHere
+      ? `Parar de contar "${entry.label}" a partir de ${formatMonth(monthKey)}? Os meses anteriores continuam no histórico.`
+      : `Excluir "${entry.label}"?${entry.direction === "entrada" || entry.paidAt ? " O valor volta pro saldo da conta." : ""}`;
+    if (!(await requestConfirm(message, { danger: true }))) return;
+    removeCashFlowEntry.mutate({ data: { id: entry.id, monthKey } });
   }
 
   return (
@@ -189,17 +198,19 @@ export function CashFlowSection() {
         <div className="bg-card border border-foreground/7 rounded-xl p-4">
           <div className="flex items-center justify-between mb-1">
             <div className="text-sm font-bold text-foreground">Entradas</div>
-            <button
+            {/* Entrada soma no saldo na hora — num mês futuro ela ainda não
+             * aconteceu, então não dá pra lançar. */}
+            {!isFuture && <button
               onClick={() => setAddingIncome((v) => !v)}
               className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-md"
               style={{ background: "rgba(var(--lz-brand-rgb),0.14)", color: "var(--lz-accent-ink)" }}
             >
               <Plus size={12} /> Nova entrada
-            </button>
+            </button>}
           </div>
           <p className="text-[11px] text-foreground/35 mb-3">Mensalidades de clientes entram sozinhas aqui — o resto você lança na mão.</p>
 
-          {addingIncome && (
+          {addingIncome && !isFuture && (
             <div className="rounded-lg p-3 mb-3 space-y-2" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
               <input value={incomeLabel} onChange={(e) => setIncomeLabel(e.target.value)} placeholder="Ex: Projeto avulso — Cliente X" className={inp} />
               <div className="flex gap-2">
@@ -234,7 +245,8 @@ export function CashFlowSection() {
                   <span className="flex-1 min-w-0 text-[13px] text-foreground truncate">{c.name}</span>
                   {missing ? (
                     <button
-                      onClick={() => setFillingClient(c)}
+                      // Valor e vencimento do cliente só o master pode definir.
+                      onClick={() => isMaster ? setFillingClient(c) : toast.info("Só o master da agência pode definir valor e vencimento do cliente.")}
                       className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-1 rounded"
                       style={{ backgroundColor: "rgba(240,166,90,0.15)", color: "#F0A65A" }}
                     >
@@ -249,7 +261,7 @@ export function CashFlowSection() {
                       >
                         {c.paidThisPeriod ? "Recebido" : "Pendente"}
                       </span>
-                      <span className="text-[13px] font-bold text-foreground w-20 text-right">{c.contractValue != null ? money(Math.round(c.contractValue * 100)) : "—"}</span>
+                      <span className="text-[13px] font-bold text-foreground w-20 text-right">{c.paidAmountCents != null ? money(c.paidAmountCents) : c.contractValue != null ? money(Math.round(c.contractValue * 100)) : "—"}</span>
                     </>
                   )}
                 </div>
@@ -415,12 +427,12 @@ function EditEntryModal({ entry, monthKey, onClose }: { entry: CashFlowEntry; mo
   const [notes, setNotes] = useState(entry.notes ?? "");
 
   function save() {
-    const cents = parseFloat(amount.replace(/\./g, "").replace(",", ".")) * 100;
-    if (!label.trim() || !cents || cents <= 0) { toast.error("Preencha descrição e valor."); return; }
+    const cents = parseBRLToCents(amount);
+    if (!label.trim() || !cents) { toast.error("Preencha descrição e valor."); return; }
     api.updateCashFlowEntry.mutate(
       {
         data: {
-          id: entry.id, label: label.trim(), amountCents: Math.round(cents), kind, monthKey,
+          id: entry.id, label: label.trim(), amountCents: cents, kind, monthKey,
           dueDay: dueDay ? parseInt(dueDay, 10) : null,
           bankAccountId,
           notes: kind === "investimento" ? notes.trim() || null : null,
@@ -433,6 +445,11 @@ function EditEntryModal({ entry, monthKey, onClose }: { entry: CashFlowEntry; mo
   return (
     <Modal open onClose={onClose} title={`Editar ${entry.direction === "saida" ? "saída" : "entrada"}`}>
       <div className="space-y-3">
+        {entry.kind === "fixo" && entry.startMonth != null && entry.startMonth < monthKey && (
+          <p className="text-[11px] text-foreground/45 leading-relaxed">
+            Mudanças de valor, conta ou tipo valem a partir de {formatMonth(monthKey)}. Os meses anteriores continuam como estavam.
+          </p>
+        )}
         <label className="block">
           <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Descrição</span>
           <input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} className={inp} />
@@ -500,9 +517,9 @@ function FillPaymentInfoModal({ client, onClose }: { client: ClientPaymentRow; o
   function save() {
     const patch: Record<string, any> = {};
     if (client.missingValue) {
-      const n = parseFloat(value.replace(/\./g, "").replace(",", "."));
-      if (!n || n <= 0) { toast.error("Informe um valor válido."); return; }
-      patch.contract_value = n;
+      const cents = parseBRLToCents(value);
+      if (!cents) { toast.error("Informe um valor válido."); return; }
+      patch.contract_value = cents / 100;
     }
     if (client.missingDueDay) {
       const d = parseInt(dueDay, 10);

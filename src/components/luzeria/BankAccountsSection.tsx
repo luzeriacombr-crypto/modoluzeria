@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Wallet } from "lucide-react";
 import { bankAccountsQO, walletBalanceQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { parseBRLToCents } from "@/lib/luzeria/utils";
 import type { BankAccount } from "@/lib/luzeria/bank-accounts.functions";
 
 function money(cents: number) {
@@ -52,10 +53,15 @@ function avatarInitials(name: string): string {
 
 const inp = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
 
+/** Saldo pode ser zero ou negativo (conta no vermelho), diferente de um
+ * lançamento — por isso trata o sinal e o zero antes do parse comum. */
 function parseAmount(raw: string): number | null {
-  const n = parseFloat(raw.replace(/\./g, "").replace(",", "."));
-  if (Number.isNaN(n)) return null;
-  return Math.round(n * 100);
+  const trimmed = raw.trim();
+  if (/^-?\s*0+([.,]0+)?$/.test(trimmed)) return 0;
+  const negative = trimmed.startsWith("-");
+  const cents = parseBRLToCents(trimmed.replace(/^-/, ""));
+  if (cents == null) return null;
+  return negative ? -cents : cents;
 }
 
 /** "Saldo em banco" (Financeiro): registro MANUAL de contas bancárias da
@@ -63,7 +69,8 @@ function parseAmount(raw: string): number | null {
  * própria agência atualiza de vez em quando. Pedido do Junior junto da
  * reformulação de "Pagamentos" → "Financeiro". */
 export function BankAccountsSection() {
-  const { data: accounts = [] } = useQuery(bankAccountsQO());
+  const { data: allAccounts = [] } = useQuery(bankAccountsQO());
+  const accounts = allAccounts.filter((a) => !a.archived);
   const { data: wallet } = useQuery(walletBalanceQO());
   const walletCents = wallet?.balanceCents ?? 0;
   const api = useApi();
@@ -98,7 +105,7 @@ export function BankAccountsSection() {
   }
 
   async function remove(a: BankAccount) {
-    if (await requestConfirm(`Remover "${a.name}" do saldo em banco?`, { danger: true })) {
+    if (await requestConfirm(`Remover "${a.name}" do saldo em banco? Os lançamentos que já usaram essa conta continuam no histórico.`, { danger: true })) {
       api.removeBankAccount.mutate({ data: { id: a.id } });
     }
   }

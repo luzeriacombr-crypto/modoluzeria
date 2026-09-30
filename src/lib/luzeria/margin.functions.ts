@@ -129,13 +129,21 @@ export const getClientMargins = createServerFn({ method: "GET" })
       const estimatedHours = hoursByClient.get(c.id) ?? 0;
       const estimatedCost = anyRateAvailable ? (costByClient.get(c.id) ?? 0) : null;
       const contractValue = c.contract_value as number | null;
-      const margin = contractValue != null && estimatedCost != null ? contractValue - estimatedCost : null;
+      // Contrato é mensal, mas o custo soma o período inteiro (30/90/180
+      // dias) — antes 1 mês de receita era comparado com até 6 meses de
+      // custo. Avulso é valor fechado do trabalho, não mensalidade, então
+      // não multiplica.
+      const periodRevenue = contractValue == null ? null
+        : c.category === "Avulsos" ? contractValue
+        : Math.round(contractValue * (data.days / 30) * 100) / 100;
+      const margin = periodRevenue != null && estimatedCost != null ? periodRevenue - estimatedCost : null;
       return {
         clientId: c.id,
         clientName: c.name,
         clientColor: c.color,
         clientIcon: c.icon,
         contractValue,
+        periodRevenue,
         deliveredCount: deliveredByClient.get(c.id) ?? 0,
         estimatedHours: Math.round(estimatedHours * 10) / 10,
         estimatedCost,
