@@ -29,17 +29,26 @@ const CRIADOR = [
  * precisar de interação. O som pode não tocar se o navegador ainda não
  * registrou nenhuma interação na aba (política de autoplay) — a animação
  * aparece do mesmo jeito. */
-export function DailySplash({ onDone }: { onDone: () => void }) {
+const DEFAULT_SOUND_URL = "/sounds/daily-welcome.mp3";
+const DEFAULT_DURATION_MS = 1700;
+/** Toda a coreografia (ícone, cascata de letras, fade final) foi cronometrada
+ * pra caber nesses 1700ms de propósito — reescalar pra uma duração diferente
+ * (configurável em Configurações → Plataforma) precisa multiplicar TODOS os
+ * tempos pelo mesmo fator, senão a proporção entre as partes quebra. Ver
+ * --lz-splash-scale em styles.css. */
+export function DailySplash({ onDone, soundUrl = DEFAULT_SOUND_URL, durationMs = DEFAULT_DURATION_MS }: { onDone: () => void; soundUrl?: string; durationMs?: number }) {
   useEffect(() => {
-    const audio = new Audio("/sounds/daily-welcome.mp3");
+    const audio = new Audio(soundUrl);
     audio.volume = 0.3; // pedido do Junior: mais sutil, ~50% mais baixo que o teste inicial
     audio.play().catch(() => { /* autoplay bloqueado — a animação aparece do mesmo jeito */ });
-    const t = setTimeout(onDone, 1700);
+    const t = setTimeout(onDone, durationMs);
     return () => clearTimeout(t);
-  }, [onDone]);
+  }, [onDone, soundUrl, durationMs]);
+
+  const scale = durationMs / DEFAULT_DURATION_MS;
 
   return (
-    <div className="lz-daily-splash" role="presentation" aria-hidden="true">
+    <div className="lz-daily-splash" role="presentation" aria-hidden="true" style={{ "--lz-splash-scale": scale } as React.CSSProperties}>
       <svg viewBox="0 0 473 154" className="lz-daily-splash-logo" xmlns="http://www.w3.org/2000/svg">
         <path className="lz-splash-icon" d={ICON_PATH} fill="#CDFF00" />
         {MODO.map((d, i) => (

@@ -907,6 +907,10 @@ export interface StatusDurationStat {
 export interface AppSettings {
   requireRatingOnFinalize: boolean;
   demoWhatsappMessage: string | null;
+  /** Splash "letra a letra" (DailySplash.tsx) — som e duração são
+   * configuráveis só pela Luzeria (plataforma), não por agência. */
+  dailySplashSoundUrl: string | null;
+  dailySplashDurationMs: number;
 }
 
 /** Item agrupado por dia da semana para o kanban "Minha Semana". */

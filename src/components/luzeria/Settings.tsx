@@ -34,6 +34,7 @@ const NewUserJourneyReportPanel = lazy(() => import("./NewUserJourneyReportPanel
 const AiPlanningFeedbackPanel = lazy(() => import("./AiPlanningFeedbackPanel").then((m) => ({ default: m.AiPlanningFeedbackPanel })));
 const ClientMarginPanel = lazy(() => import("./ClientMarginPanel").then((m) => ({ default: m.ClientMarginPanel })));
 const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => ({ default: m.DemoRequestsPanel })));
+const DailySplashSettingsPanel = lazy(() => import("./DailySplashSettingsPanel").then((m) => ({ default: m.DailySplashSettingsPanel })));
 const MessagesPanel = lazy(() => import("./MessagesPanel").then((m) => ({ default: m.MessagesPanel })));
 import { DeleteAccountSection } from "./DeleteAccountSection";
 const SalesPageEditorTab = lazy(() => import("./SalesLandingEditorTab").then((m) => ({ default: m.SalesLandingEditorTab })));
@@ -262,6 +263,9 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           </div>
           <div className="pt-2 border-t border-foreground/10">
             <AiPlanningFeedbackPanel />
+          </div>
+          <div className="pt-2 border-t border-foreground/10">
+            <DailySplashSettingsPanel />
           </div>
         </div>
        ) : null) :

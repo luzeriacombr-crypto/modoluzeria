@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { PanelLeftClose, PanelLeftOpen, ChevronsLeft, ChevronsRight, Settings as SettingsIcon, Video } from "lucide-react";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
-import { useMe } from "@/lib/luzeria/queries";
+import { useMe, appSettingsQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { useTheme } from "@/lib/luzeria/theme-store";
 import { useCallStore } from "@/lib/luzeria/call-store";
@@ -49,7 +49,7 @@ import { CallInvitePicker } from "./CallInvitePicker";
 import { DailySplash } from "./DailySplash";
 import { useScreenShareCall } from "@/hooks/use-screen-share-call";
 import { useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { hexToRgbChannels, readableAccentRgbChannels, deriveSecondaryHex, applyAdvancedColorVars, clearAdvancedColorVars } from "@/lib/luzeria/utils";
 import { usePageActivityTracker } from "@/lib/luzeria/page-activity-tracker";
 
@@ -146,6 +146,9 @@ export function App() {
     try { localStorage.setItem("lz.lastDailySoundDate", new Date().toISOString().slice(0, 10)); } catch { /* noop */ }
     setDailySplashActive(false);
   }
+  // Som e duração são configuráveis só pela Luzeria (Configurações →
+  // Plataforma) — sem customização, usa os padrões embutidos no componente.
+  const { data: appSettings } = useQuery({ ...appSettingsQO(), enabled: dailySplashActive });
 
   // Same idea for the brand colors: override the CSS variables (which
   // default to Luzeria's green in styles.css) whenever the org has custom
@@ -242,7 +245,13 @@ export function App() {
   }, [me.data?.orgLogoUrl, me.data?.orgLogoUrlLight, me.data?.orgName, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight]);
 
   if (dailySplashActive) {
-    return <DailySplash onDone={finishDailySplash} />;
+    return (
+      <DailySplash
+        onDone={finishDailySplash}
+        soundUrl={appSettings?.dailySplashSoundUrl ?? undefined}
+        durationMs={appSettings?.dailySplashDurationMs}
+      />
+    );
   }
 
   if (me.isLoading) {

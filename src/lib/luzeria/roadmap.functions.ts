@@ -767,18 +767,38 @@ export const getAppSettings = createServerFn({ method: "GET" })
     const { data: rows } = await db.from("app_settings").select("key, value");
     const map = new Map<string, any>();
     (rows ?? []).forEach((r: any) => map.set(r.key, r.value));
+
+    const soundPath = map.get("daily_splash_sound")?.path as string | null | undefined;
+    let dailySplashSoundUrl: string | null = null;
+    if (soundPath) {
+      const { data: signed } = await db.storage.from("avatars").createSignedUrl(soundPath, 60 * 60 * 24 * 365);
+      dailySplashSoundUrl = signed?.signedUrl ?? null;
+    }
+
     return {
       requireRatingOnFinalize: map.get("require_rating_on_finalize")?.enabled !== false,
       demoWhatsappMessage: map.get("demo_whatsapp_message")?.text ?? null,
+      dailySplashSoundUrl,
+      dailySplashDurationMs: map.get("daily_splash_duration_ms")?.ms ?? 1700,
     };
   });
 
 export const updateAppSettings = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { requireRatingOnFinalize?: boolean; demoWhatsappMessage?: string | null }) =>
+  .inputValidator((d: {
+    requireRatingOnFinalize?: boolean; demoWhatsappMessage?: string | null;
+    dailySplashSoundPath?: string | null; dailySplashDurationMs?: number;
+  }) =>
     z.object({
       requireRatingOnFinalize: z.boolean().optional(),
       demoWhatsappMessage: z.string().trim().max(2000).nullable().optional(),
+      // null = volta pro som padrão (/sounds/daily-welcome.mp3, embutido no
+      // app); string = path no bucket "avatars" de um som enviado pelo
+      // Junior. Faixa de duração generosa mas com teto — texto/letras ficam
+      // ilegíveis se for rápido demais, e uma splash de vários segundos
+      // deixaria de ser "rapidinha".
+      dailySplashSoundPath: z.string().max(300).nullable().optional(),
+      dailySplashDurationMs: z.number().int().min(800).max(4000).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
@@ -786,8 +806,9 @@ export const updateAppSettings = createServerFn({ method: "POST" })
     // app_settings não tem org_id (é uma tabela global, RLS só exige
     // is_master) — sem esse check, o master de qualquer agência poderia
     // sobrescrever o texto de abordagem que o Junior usa com os próprios
-    // leads, então esse campo específico fica restrito à Luzeria mesmo.
-    if (data.demoWhatsappMessage !== undefined) {
+    // leads (ou a splash/som de todo mundo), então esses campos ficam
+    // restritos à Luzeria mesmo.
+    if (data.demoWhatsappMessage !== undefined || data.dailySplashSoundPath !== undefined || data.dailySplashDurationMs !== undefined) {
       const { LUZERIA_ORG_ID } = await import("./api.functions");
       if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
     }
@@ -805,6 +826,24 @@ export const updateAppSettings = createServerFn({ method: "POST" })
       const { error } = await db.from("app_settings").upsert({
         key: "demo_whatsapp_message",
         value: { text: data.demoWhatsappMessage || null },
+        updated_at: new Date().toISOString(),
+        updated_by: context.userId,
+      }, { onConflict: "key" });
+      if (error) throw new Error(error.message);
+    }
+    if (data.dailySplashSoundPath !== undefined) {
+      const { error } = await db.from("app_settings").upsert({
+        key: "daily_splash_sound",
+        value: { path: data.dailySplashSoundPath },
+        updated_at: new Date().toISOString(),
+        updated_by: context.userId,
+      }, { onConflict: "key" });
+      if (error) throw new Error(error.message);
+    }
+    if (data.dailySplashDurationMs !== undefined) {
+      const { error } = await db.from("app_settings").upsert({
+        key: "daily_splash_duration_ms",
+        value: { ms: data.dailySplashDurationMs },
         updated_at: new Date().toISOString(),
         updated_by: context.userId,
       }, { onConflict: "key" });
