@@ -422,6 +422,19 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   50% { transform: scale(1.1); }
   100% { transform: scale(1); }
 }
+@keyframes lz-goal-hit {
+  0% { transform: scale(0.8) rotate(-4deg); opacity: 0; }
+  50% { transform: scale(1.15) rotate(3deg); }
+  70% { transform: scale(0.97) rotate(-1deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@utility lz-goal-hit {
+  animation: lz-goal-hit 700ms cubic-bezier(.34,1.56,.64,1);
+  display: inline-block;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lz-goal-hit { animation-duration: 1ms !important; }
+}
 /* Splash diária (DailySplash.tsx) — animação "letra a letra" escolhida entre
  * as 5 opções do artefato claude.ai/artifact/2zXuCoJEXsnY62FHqk8LdM. Sempre
  * escura (é a cor real da splash, não muda com o tema do app). */

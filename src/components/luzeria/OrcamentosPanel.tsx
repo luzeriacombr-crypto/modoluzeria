@@ -17,8 +17,22 @@ function parseAmount(raw: string): number | null {
   if (Number.isNaN(n) || n < 0) return null;
   return Math.round(n * 100);
 }
-const inp = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
+const inp = "bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
 const label = "block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5";
+
+/** Input de preço com "R$" fixo à esquerda — usado nos campos de valor do
+ * catálogo/orçamento pra deixar claro que é um campo monetário. */
+function PriceInput({ value, onChange, className, placeholder = "0,00" }: {
+  value: string; onChange: (v: string) => void; className?: string; placeholder?: string;
+}) {
+  return (
+    <div className={`relative ${className ?? ""}`}>
+      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-medium text-foreground/40">R$</span>
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+        className={`${inp} w-full pl-8`} />
+    </div>
+  );
+}
 
 type View = { name: "lista" } | { name: "catalogo" } | { name: "construtor"; budgetId: string | null };
 
@@ -263,14 +277,14 @@ function ProductForm({ product, onClose }: { product: BudgetProduct | null; onCl
           </label>
         </div>
         <div className="flex-1 space-y-2">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do produto/serviço" className={inp} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do produto/serviço" className={`${inp} w-full`} />
           <div className="flex gap-2">
-            <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Preço (R$)" className={`${inp} flex-1`} />
+            <PriceInput value={price} onChange={setPrice} className="flex-1" />
             <input value={icon} onChange={(e) => setIcon(e.target.value.slice(0, 4))} placeholder="Emoji" className={`${inp} w-20 text-center`} />
           </div>
         </div>
       </div>
-      <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição curta do que está incluso" rows={2} className={`${inp} resize-none`} />
+      <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição curta do que está incluso" rows={2} className={`${inp} w-full resize-none`} />
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
@@ -282,10 +296,10 @@ function ProductForm({ product, onClose }: { product: BudgetProduct | null; onCl
             {plans.map((p, i) => (
               <div key={i} className="flex gap-1.5 items-center">
                 <input value={p.label} onChange={(e) => updatePlan(i, { label: e.target.value })} placeholder="Ex: Essencial" className={`${inp} flex-1`} />
-                <input
+                <PriceInput
                   value={p.priceCents ? (p.priceCents / 100).toFixed(2).replace(".", ",") : ""}
-                  onChange={(e) => updatePlan(i, { priceCents: parseAmount(e.target.value) ?? 0 })}
-                  placeholder="R$" className={`${inp} w-24`}
+                  onChange={(v) => updatePlan(i, { priceCents: parseAmount(v) ?? 0 })}
+                  className="w-28 shrink-0"
                 />
                 <button onClick={() => removePlan(i)} className="text-foreground/30 hover:text-red-400 transition p-1 shrink-0"><X size={14} /></button>
               </div>
@@ -481,8 +495,8 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
 
       {/* Cliente */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <label className="block"><span className={label}>Cliente</span><input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Nome do cliente/prospect" className={inp} /></label>
-        <label className="block"><span className={label}>Segmento (opcional)</span><input value={clientSegment} onChange={(e) => setClientSegment(e.target.value)} placeholder="Ex: Assistência técnica" className={inp} /></label>
+        <label className="block"><span className={label}>Cliente</span><input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Nome do cliente/prospect" className={`${inp} w-full`} /></label>
+        <label className="block"><span className={label}>Segmento (opcional)</span><input value={clientSegment} onChange={(e) => setClientSegment(e.target.value)} placeholder="Ex: Assistência técnica" className={`${inp} w-full`} /></label>
       </div>
 
       {/* Itens */}
@@ -502,16 +516,16 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
               <div key={i} className="rounded-lg p-2.5" style={{ background: "color-mix(in srgb, var(--foreground) 2.5%, transparent)" }}>
                 <div className="flex gap-1.5 items-center">
                   <input value={it.label} onChange={(e) => updateItem(i, { label: e.target.value })} placeholder="Descrição do item" className={`${inp} flex-1`} />
-                  <input
+                  <PriceInput
                     value={it.priceCents ? (it.priceCents / 100).toFixed(2).replace(".", ",") : ""}
-                    onChange={(e) => updateItem(i, { priceCents: parseAmount(e.target.value) ?? 0 })}
-                    placeholder="R$" className={`${inp} w-28`}
+                    onChange={(v) => updateItem(i, { priceCents: parseAmount(v) ?? 0 })}
+                    className="w-32 shrink-0"
                   />
                   <button onClick={() => removeItem(i)} className="text-foreground/30 hover:text-red-400 transition p-1 shrink-0"><X size={14} /></button>
                 </div>
                 <input
                   value={it.description ?? ""} onChange={(e) => updateItem(i, { description: e.target.value || null })}
-                  placeholder="Detalhe (opcional)" className={`${inp} mt-1.5 text-xs`}
+                  placeholder="Detalhe (opcional)" className={`${inp} w-full mt-1.5 text-xs`}
                 />
               </div>
             ))}
@@ -551,7 +565,7 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
         </label>
       </div>
 
-      <label className="block"><span className={label}>Rodapé (opcional)</span><input value={footerText} onChange={(e) => setFooterText(e.target.value)} placeholder="Ex: Sua Agência · contato@suaagencia.com.br" className={inp} /></label>
+      <label className="block"><span className={label}>Rodapé (opcional)</span><input value={footerText} onChange={(e) => setFooterText(e.target.value)} placeholder="Ex: Sua Agência · contato@suaagencia.com.br" className={`${inp} w-full`} /></label>
 
       {version === "completo" && (
         <div className="space-y-4 pt-2 border-t border-foreground/10">
@@ -584,9 +598,9 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
             </div>
           </div>
 
-          <label className="block"><span className={label}>Título/serviço na capa</span><input value={coverPhrase} onChange={(e) => setCoverPhrase(e.target.value)} placeholder="Ex: Planejamento Estratégico de Marketing" className={inp} /></label>
-          <label className="block"><span className={label}>Título da introdução</span><input value={introTitle} onChange={(e) => setIntroTitle(e.target.value)} className={inp} /></label>
-          <label className="block"><span className={label}>Texto da introdução</span><textarea value={introText} onChange={(e) => setIntroText(e.target.value)} rows={4} placeholder="Por que esse projeto existe, o contexto do cliente…" className={`${inp} resize-none`} /></label>
+          <label className="block"><span className={label}>Título/serviço na capa</span><input value={coverPhrase} onChange={(e) => setCoverPhrase(e.target.value)} placeholder="Ex: Planejamento Estratégico de Marketing" className={`${inp} w-full`} /></label>
+          <label className="block"><span className={label}>Título da introdução</span><input value={introTitle} onChange={(e) => setIntroTitle(e.target.value)} className={`${inp} w-full`} /></label>
+          <label className="block"><span className={label}>Texto da introdução</span><textarea value={introText} onChange={(e) => setIntroText(e.target.value)} rows={4} placeholder="Por que esse projeto existe, o contexto do cliente…" className={`${inp} w-full resize-none`} /></label>
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -603,8 +617,8 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
                   {front.items.map((it, ii) => (
                     <div key={ii} className="flex gap-1.5 pl-3 border-l-2 border-foreground/10">
                       <div className="flex-1 space-y-1">
-                        <input value={it.title} onChange={(e) => updateFrontItem(fi, ii, { title: e.target.value })} placeholder="Título da entrega" className={`${inp} text-xs`} />
-                        <input value={it.description ?? ""} onChange={(e) => updateFrontItem(fi, ii, { description: e.target.value || null })} placeholder="Detalhe" className={`${inp} text-xs`} />
+                        <input value={it.title} onChange={(e) => updateFrontItem(fi, ii, { title: e.target.value })} placeholder="Título da entrega" className={`${inp} w-full text-xs`} />
+                        <input value={it.description ?? ""} onChange={(e) => updateFrontItem(fi, ii, { description: e.target.value || null })} placeholder="Detalhe" className={`${inp} w-full text-xs`} />
                       </div>
                       <button onClick={() => removeFrontItem(fi, ii)} className="text-foreground/30 hover:text-red-400 transition p-1 shrink-0"><X size={13} /></button>
                     </div>
@@ -615,12 +629,12 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
             </div>
           </div>
 
-          <label className="block"><span className={label}>Forma de pagamento</span><textarea value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} rows={2} placeholder="Ex: 40% na assinatura, 30% na entrega parcial, 30% na entrega final" className={`${inp} resize-none`} /></label>
-          <label className="block"><span className={label}>Cronograma</span><textarea value={cronograma} onChange={(e) => setCronograma(e.target.value)} rows={2} className={`${inp} resize-none`} /></label>
-          <label className="block"><span className={label}>O que não está incluso</span><textarea value={notIncluded} onChange={(e) => setNotIncluded(e.target.value)} rows={2} className={`${inp} resize-none`} /></label>
-          <label className="block"><span className={label}>Após a aprovação</span><textarea value={afterApproval} onChange={(e) => setAfterApproval(e.target.value)} rows={2} className={`${inp} resize-none`} /></label>
+          <label className="block"><span className={label}>Forma de pagamento</span><textarea value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} rows={2} placeholder="Ex: 40% na assinatura, 30% na entrega parcial, 30% na entrega final" className={`${inp} w-full resize-none`} /></label>
+          <label className="block"><span className={label}>Cronograma</span><textarea value={cronograma} onChange={(e) => setCronograma(e.target.value)} rows={2} className={`${inp} w-full resize-none`} /></label>
+          <label className="block"><span className={label}>O que não está incluso</span><textarea value={notIncluded} onChange={(e) => setNotIncluded(e.target.value)} rows={2} className={`${inp} w-full resize-none`} /></label>
+          <label className="block"><span className={label}>Após a aprovação</span><textarea value={afterApproval} onChange={(e) => setAfterApproval(e.target.value)} rows={2} className={`${inp} w-full resize-none`} /></label>
           {!backCoverImageUrl && (
-            <label className="block"><span className={label}>Frase da contracapa</span><input value={backPhrase} onChange={(e) => setBackPhrase(e.target.value)} placeholder="Ex: Vamos criar juntos." className={inp} /></label>
+            <label className="block"><span className={label}>Frase da contracapa</span><input value={backPhrase} onChange={(e) => setBackPhrase(e.target.value)} placeholder="Ex: Vamos criar juntos." className={`${inp} w-full`} /></label>
           )}
         </div>
       )}
