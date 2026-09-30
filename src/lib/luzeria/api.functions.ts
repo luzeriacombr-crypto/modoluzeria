@@ -1723,7 +1723,7 @@ export const listClients = createServerFn({ method: "GET" })
     // colunas novas — cast até os tipos do Supabase serem regenerados
     // depois da migração rodar.
     const { data, error } = await (context.supabase as any).from("clients")
-      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, stories_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, contract_start_date, contract_end_date, hidden_tabs, cnpj_cpf, address, legal_responsible_name, legal_responsible_cpf, ai_planning_enabled, competitors, content_briefing, recent_roteiros")
+      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, stories_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, contract_start_date, contract_end_date, hidden_tabs, cnpj_cpf, address, legal_responsible_name, legal_responsible_cpf, ai_planning_enabled, competitors, content_briefing, recent_roteiros, avulso_delivered_at")
       .order("name");
     if (error) throw new Error(error.message);
     const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
@@ -1762,7 +1762,42 @@ export const listClients = createServerFn({ method: "GET" })
       contractStartDate: isMaster ? (c.contract_start_date ?? null) : undefined,
       contractEndDate: isMaster ? (c.contract_end_date ?? null) : undefined,
       hiddenTabs: c.hidden_tabs ?? null,
+      avulsoDeliveredAt: c.avulso_delivered_at ?? null,
     })) as Client[];
+  });
+
+/** Marca/desmarca uma demanda avulsa como entregue (página /avulsos) —
+ * mesmo nível de permissão de quem já pode gerenciar clientes. */
+export const setAvulsoDelivered = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string; delivered: boolean }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await (context.supabase as any).from("clients")
+      .update({ avulso_delivered_at: data.delivered ? new Date().toISOString() : null })
+      .eq("id", data.clientId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Pra página /avulsos: o mês "principal" de cada demanda avulsa (o mais
+ * antigo com conteúdo, mesmo critério do monthKeys[0] usado no ClientView)
+ * — uma query só pra todos os avulsos, em vez de uma listMonthKeys por
+ * cliente. */
+export const listAvulsoMonths = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientIds: string[] }) => d)
+  .handler(async ({ data, context }): Promise<Record<string, string>> => {
+    if (data.clientIds.length === 0) return {};
+    const { data: rows, error } = await context.supabase
+      .from("months").select("client_id, key").in("client_id", data.clientIds).order("key");
+    if (error) throw new Error(error.message);
+    const result: Record<string, string> = {};
+    for (const r of rows ?? []) {
+      if (!(r.client_id in result)) result[r.client_id] = r.key;
+    }
+    return result;
   });
 
 export const setNotifyStoriesInTasks = createServerFn({ method: "POST" })

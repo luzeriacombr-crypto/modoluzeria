@@ -589,34 +589,36 @@ function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCa
           />
         </div>
       </div>
-      {grouped.map(([cat, list]) => (
-        <CategoryGroup
-          key={cat}
-          name={cat}
-          color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
-          defaultOpen={false}
-          forceOpen={search.trim().length > 0 || list.some((c) => pathname === `/cliente/${c.id}`)}
-          count={list.length}
-          onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
-          addTitle={cat === "Avulsos" ? "Nova demanda avulsa" : "Novo cliente"}
-        >
-          {list.map((c) => (
-            <ClientRow
-              key={c.id}
-              client={c}
-              active={pathname === `/cliente/${c.id}`}
-              onOpenCustomFields={() => onOpenCustomFields(c)}
-              canManage={isAdmin}
-              categories={allCategories}
-            />
-          ))}
-          {cat === "Avulsos" && list.length === 0 && (
-            <div className="px-3 py-2 text-[11px] text-white/30">
-              {isAdmin ? "Nenhuma demanda avulsa. Use o + para criar." : "Sem demandas avulsas."}
-            </div>
-          )}
-        </CategoryGroup>
-      ))}
+      {grouped.map(([cat, list]) =>
+        // Avulsos virou uma página própria (/avulsos, com "projetos em
+        // aberto"/"entregues" e seletor de mês) em vez de uma lista longa
+        // aqui dentro — pedido do Junior (30/09). A pasta agora é um link
+        // direto, não expande mais inline.
+        cat === "Avulsos" ? (
+          <AvulsosNavRow key={cat} count={list.length} onAdd={isAdmin ? () => onCreateClient(cat) : undefined} />
+        ) : (
+          <CategoryGroup
+            key={cat}
+            name={cat}
+            color={CATEGORY_COLOR[cat] ?? "#5BA88A"}
+            defaultOpen={false}
+            forceOpen={search.trim().length > 0 || list.some((c) => pathname === `/cliente/${c.id}`)}
+            count={list.length}
+            onAdd={isAdmin && cat !== "Ex-clientes" ? () => onCreateClient(cat) : undefined}
+          >
+            {list.map((c) => (
+              <ClientRow
+                key={c.id}
+                client={c}
+                active={pathname === `/cliente/${c.id}`}
+                onOpenCustomFields={() => onOpenCustomFields(c)}
+                canManage={isAdmin}
+                categories={allCategories}
+              />
+            ))}
+          </CategoryGroup>
+        ),
+      )}
       {isAdmin && (
         <button
           onClick={onCreateCategory}
@@ -812,10 +814,10 @@ function NavCustomizeModal({ onClose, mainItems, financeiroItems, equipeItems, n
 }
 
 function CategoryGroup({
-  name, color, children, defaultOpen, forceOpen, count, onAdd, addTitle,
+  name, color, children, defaultOpen, forceOpen, count, onAdd,
 }: {
   name: string; color: string; children: React.ReactNode;
-  defaultOpen?: boolean; forceOpen?: boolean; count?: number; onAdd?: () => void; addTitle?: string;
+  defaultOpen?: boolean; forceOpen?: boolean; count?: number; onAdd?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? true);
   const isOpen = forceOpen || open;
@@ -833,7 +835,7 @@ function CategoryGroup({
         </button>
         {onAdd && (
           <button onClick={(e) => { e.stopPropagation(); onAdd(); }}
-            title={addTitle ?? "Novo cliente"}
+            title="Novo cliente"
             className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5">
             <Plus size={13} />
           </button>
@@ -841,6 +843,36 @@ function CategoryGroup({
       </div>
       {isOpen && <div className="mt-0.5 lz-stagger">{children}</div>}
     </div>
+  );
+}
+
+/** Linha "Avulsos" dentro de Clientes — em vez de expandir uma lista
+ * inline (como as outras categorias), leva direto pra página /avulsos. */
+function AvulsosNavRow({ count, onAdd }: { count: number; onAdd?: () => void }) {
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const active = pathname === "/avulsos";
+  return (
+    <button
+      onClick={() => navigate({ to: "/avulsos" })}
+      className="w-full flex items-center gap-1.5 px-2 py-1.5 mb-2 rounded-md transition-colors group"
+      style={{ color: active ? "#FFFFFF" : "rgba(255,255,255,0.8)", background: active ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent" }}
+    >
+      <ChevronRight size={12} className="text-white/40 shrink-0" />
+      <Folder size={14} style={{ color: CATEGORY_COLOR["Avulsos"] }} className="shrink-0" />
+      <span className="text-[12px] font-semibold tracking-tight truncate uppercase flex-1 text-left">Avulsos</span>
+      <span className="text-[10px] text-white/40">{count}</span>
+      {onAdd && (
+        <span role="button" tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); onAdd(); }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); onAdd(); } }}
+          title="Nova demanda avulsa"
+          className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5"
+        >
+          <Plus size={13} />
+        </span>
+      )}
+    </button>
   );
 }
 

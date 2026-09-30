@@ -37,6 +37,7 @@ import {
   upsertClientLink, deleteClientLink,
   upsertClientContact, deleteClientContact,
   listMyMentions, markMentionRead,
+  setAvulsoDelivered, listAvulsoMonths,
 } from "./api.functions";
 import {
   updateChecklist, rateItem,
@@ -200,6 +201,13 @@ export const monthKeysQO = (clientId: string) =>
     queryKey: ["monthKeys", clientId],
     queryFn: () => listMonthKeys({ data: { clientId } }),
     enabled: !!clientId,
+  });
+/** Pra página /avulsos: mês principal de cada demanda avulsa, numa query só. */
+export const avulsoMonthsQO = (clientIds: string[]) =>
+  queryOptions({
+    queryKey: ["avulso-months", clientIds],
+    queryFn: () => listAvulsoMonths({ data: { clientIds } }),
+    enabled: clientIds.length > 0,
   });
 export const notificationsQO = () =>
   queryOptions({ queryKey: ["notifications"], queryFn: () => listNotifications(), refetchInterval: 60_000 });
@@ -879,6 +887,11 @@ export function useApi() {
         qc.invalidateQueries({ queryKey: ["my-tasks"] });
         toast.success("Preferência salva.");
       },
+    }),
+    setAvulsoDelivered: useMutation({
+      mutationFn: useServerFn(setAvulsoDelivered),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }),
+      onError: (e: any) => toastFriendlyError(e, "Erro ao atualizar status do projeto."),
     }),
     setWhatsappGroupLink: useMutation({
       mutationFn: useServerFn(setWhatsappGroupLink),

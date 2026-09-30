@@ -296,6 +296,11 @@ export interface Client {
   /** Feature em teste (prévia de planejamento por IA) — liberada por
    * cliente, não por org; hoje só true na Luzeria Estúdio. */
   aiPlanningEnabled?: boolean;
+  /** Só relevante pra category === "Avulsos": quando preenchido, o projeto
+   * avulso aparece em "Projetos entregues" na página /avulsos em vez de
+   * "Projetos em aberto". Null/undefined = ainda em aberto. Marcação manual,
+   * não deriva de nenhum status de item de conteúdo. */
+  avulsoDeliveredAt?: string | null;
 }
 
 /** Categorias expostas no "Modo avançado" de cores (Configurações → Marca
