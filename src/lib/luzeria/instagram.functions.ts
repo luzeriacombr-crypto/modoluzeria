@@ -550,11 +550,26 @@ async function runInstagramPublish(itemId: string, expectedOrgId?: string) {
     return mime.startsWith("image/") || mime.startsWith("video/"); // post ou story
   });
   if (relevantFiles.length === 0) {
-    throw new Error(
-      item.type === "reel" ? "Anexe um vídeo ao reel antes de publicar."
-        : item.type === "story" ? "Anexe uma imagem ou vídeo à story antes de publicar."
-        : "Anexe uma imagem ou vídeo ao post antes de publicar.",
-    );
+    const missing = item.type === "reel" ? "Anexe um vídeo ao reel antes de publicar."
+      : item.type === "story" ? "Anexe uma imagem ou vídeo à story antes de publicar."
+      : "Anexe uma imagem ou vídeo ao post antes de publicar.";
+    // Caso real (Kawayne, 29/09): a arte estava anexada em "Imagens de
+    // referência"/"Materiais brutos", que nunca vão pro Instagram — a
+    // mensagem genérica de "anexe" confundia, porque tinha arquivo no item.
+    const { data: otherFiles } = await supabaseAdmin
+      .from("item_files").select("kind").eq("item_id", itemId).in("kind", ["briefing", "raw"]);
+    const kinds = new Set(((otherFiles ?? []) as any[]).map((f) => f.kind));
+    // Só quando "Arquivos" está vazio — se tem arquivo lá, mas do tipo errado
+    // (ex.: imagem num reel), a mensagem genérica já é a certa.
+    if ((files ?? []).length === 0 && kinds.size > 0) {
+      const where = [kinds.has("briefing") ? "\"Imagens de referência\"" : null, kinds.has("raw") ? "\"Materiais brutos\"" : null]
+        .filter(Boolean).join(" e ");
+      throw new Error(
+        `Os arquivos deste item estão em ${where}, que são só para uso interno e não vão para o Instagram. ` +
+        `Anexe a arte final (${item.type === "reel" ? "vídeo" : "imagem ou vídeo"}) na seção "Arquivos" do item e tente publicar de novo.`,
+      );
+    }
+    throw new Error(missing);
   }
   // Barra antes de tentar vídeo acima do limite da Meta — senão o Instagram
   // só devolve um "ERROR" genérico depois de processar (caso real: Story
