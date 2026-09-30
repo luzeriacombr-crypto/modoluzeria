@@ -23,7 +23,8 @@ import { getInstagramConnectionStatus, getInstagramConnectUrl, disconnectInstagr
 import { getFacebookConnectionStatus, getFacebookConnectUrl, disconnectFacebook } from "@/lib/luzeria/facebook.functions";
 import { TikTokConnectSection } from "./TikTokSections";
 import { LinkedInConnectSection } from "./LinkedInSections";
-import { term } from "@/lib/luzeria/house";
+import { term, isHouse } from "@/lib/luzeria/house";
+import { HouseBrandBriefing } from "./HouseBrandBriefing";
 import { useDrivePicker } from "@/lib/luzeria/use-drive-picker";
 
 function formatHours(h: number | null) {
@@ -114,6 +115,8 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
   // servidor, ai-planning.functions.ts) — já usa a feature em produção com
   // todos os clientes desde a fase de teste.
   const isLuzeriaOrg = me?.orgId === LUZERIA_ORG_ID;
+  // House: a marca principal ganha o bloco guiado "Briefing da marca".
+  const isHouseBrand = isHouse(me) && me?.houseClientId === clientId;
 
   const [description, setDescription] = useState("");
   useEffect(() => { setDescription(ficha?.description ?? ""); }, [ficha?.description]);
@@ -219,9 +222,10 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         ))}
       </div>
 
+      {activeTab === "geral" && isHouseBrand && <HouseBrandBriefing />}
       {activeTab === "geral" && (
         <div className="grid gap-3 grid-cols-1 @[760px]:grid-cols-2">
-        <FichaCard label="Sobre" wide>
+        {!isHouseBrand && <FichaCard label="Sobre" wide>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -244,9 +248,9 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             placeholder={isAdmin ? "Tom de voz, nicho, observações, instruções do cliente…" : "Sem descrição."}
             className="w-full bg-card border border-foreground/8 rounded-md px-3 py-2.5 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 resize-none disabled:opacity-70"
           />
-        </FichaCard>
-        <FichaCard label="Configuração do cliente" wide>
-          <ClientConfigBlock client={client} profiles={profiles} canEdit={isAdmin} isMaster={isMaster && !(me?.disabledFeatures ?? []).includes("client_finance")} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
+        </FichaCard>}
+        <FichaCard label={isHouseBrand ? "Configuração da marca" : "Configuração do cliente"} wide>
+          <ClientConfigBlock client={client} hideBriefing={isHouseBrand} profiles={profiles} canEdit={isAdmin} isMaster={isMaster && !(me?.disabledFeatures ?? []).includes("client_finance")} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
         </FichaCard>
         {isAdmin && (
           <FichaCard label="Stories">
@@ -401,8 +405,8 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
 }
 
 /* ============== CONFIGURAÇÃO (antigo Perfil) ============== */
-function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
-  client: any; profiles: any[]; canEdit: boolean; isMaster?: boolean; onSave: (patch: Record<string, any>) => void;
+function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave, hideBriefing }: {
+  client: any; profiles: any[]; canEdit: boolean; isMaster?: boolean; onSave: (patch: Record<string, any>) => void; hideBriefing?: boolean;
 }) {
   const [niche, setNiche] = useState<string>(client.customFields.niche ?? "");
   const [postsPerWeek, setPostsPerWeek] = useState<string | number>(client.customFields.postsPerWeek ?? 0);
@@ -481,12 +485,14 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
 
   function save() {
     onSave({
-      niche, posts_per_week: Number(postsPerWeek) || 0,
+      // House: segmento, concorrentes e briefing são editados no bloco
+      // "Briefing da marca" — não sobrescreve com o valor antigo daqui.
+      ...(hideBriefing ? {} : { niche, competitors, content_briefing: contentBriefing }),
+      posts_per_week: Number(postsPerWeek) || 0,
       reels_per_week: Number(reelsPerWeek) || 0,
       stories_per_week: Number(storiesPerWeek) || 0,
       fixed_responsible_id: responsible || null,
-      review_day: reviewDay, notes, competitors,
-      content_briefing: contentBriefing, recent_roteiros: recentRoteiros,
+      review_day: reviewDay, notes, recent_roteiros: recentRoteiros,
       cnpj_cpf: cnpjCpf.trim() || null,
       address: address.trim() || null,
       legal_responsible_name: legalResponsibleName.trim() || null,
@@ -553,9 +559,9 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
           </ConfigField>
         </div>
       )}
-      <ConfigField label="Nicho">
+      {!hideBriefing && <ConfigField label="Nicho">
         <input value={niche} disabled={!canEdit} onChange={(e) => setNiche(e.target.value)} className={inp} />
-      </ConfigField>
+      </ConfigField>}
       <ConfigField label="Dia de revisão">
         <input value={reviewDay} disabled={!canEdit} onChange={(e) => setReviewDay(e.target.value)} className={inp} />
       </ConfigField>
@@ -635,7 +641,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
           <textarea value={notes} disabled={!canEdit} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} />
         </ConfigField>
       </div>
-      <div className="sm:col-span-2">
+      {!hideBriefing && <div className="sm:col-span-2">
         <ConfigField label="Concorrentes">
           <textarea
             value={competitors} disabled={!canEdit} onChange={(e) => setCompetitors(e.target.value)}
@@ -643,8 +649,8 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
             rows={3} className={inp + " resize-none"}
           />
         </ConfigField>
-      </div>
-      <div className="sm:col-span-2">
+      </div>}
+      {!hideBriefing && <div className="sm:col-span-2">
         <ConfigField label="Briefing / sistema de conteúdo">
           <textarea
             value={contentBriefing} disabled={!canEdit} onChange={(e) => setContentBriefing(e.target.value)}
@@ -652,7 +658,7 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
             rows={5} className={inp + " resize-none"}
           />
         </ConfigField>
-      </div>
+      </div>}
       <div className="sm:col-span-2">
         <ConfigField label="Roteiros recentes">
           <textarea

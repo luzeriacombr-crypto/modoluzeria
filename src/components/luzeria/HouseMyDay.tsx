@@ -14,6 +14,7 @@ import { useApi } from "@/lib/luzeria/queries";
 import { CADENCE_LABEL, checklistDueLabel } from "@/lib/luzeria/house-checklists";
 import { statusLabel, getStatusMeta } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
+import { HouseStoryIdeas } from "./HouseStoryIdeas";
 
 export const myDayQueryKey = ["house-my-day"];
 
@@ -41,6 +42,7 @@ export function HouseMyDay() {
           <div className="space-y-4">
             <GoalsCard day={day} />
             <LogCard day={day} />
+            <HouseStoryIdeas />
             <ChecklistCard day={day} />
           </div>
           <div className="space-y-4">
