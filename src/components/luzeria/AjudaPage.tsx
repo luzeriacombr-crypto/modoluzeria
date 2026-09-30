@@ -54,7 +54,7 @@ const STEP_ICONS: Record<string, LucideIcon[]> = {
   "Colar um roteiro feito fora do Modo Criador e formatar com IA": [FolderOpen, Wand2, ClipboardPaste, Sparkles, Pencil, Save, Copy],
   "Exportar roteiros em PDF pra imprimir": [FileDown, ListFilter, Type, Download],
   "Ver publicações programadas, publicadas e os Insights de um cliente": [Instagram, Filter, CalendarClock, CheckCircle2, Share2, Download],
-  "Gerar uma prévia de planejamento com IA (novidade)": [KeyRound, AlertCircle, TrendingDown, FileText, Sparkles, MessageSquareText, Search, Star, TrendingUp],
+  "Gerar uma prévia de planejamento com IA (novidade)": [KeyRound, AlertCircle, TrendingDown, FileText, Sparkles, MessageSquareText, Search, ClipboardList, Star, TrendingUp],
   "Criar uma automação (com modelo pronto ou do zero)": [Settings, Zap, GitBranch, Filter, Code2, FlaskConical, Clock],
   "Instalar o Modo Criador como app no celular": [Share2, MoreVertical, Smartphone, Repeat, Bell],
 };
