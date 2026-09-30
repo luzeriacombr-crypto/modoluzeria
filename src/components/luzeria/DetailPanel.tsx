@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Facebook, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus, Play, Film, HardDrive, Heart } from "lucide-react";
+import { X, Send, ExternalLink, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, Calendar, AlertOctagon, ListChecks, Star, RotateCcw, Trash2, Upload, Loader2, ImagePlus, Image as ImageIcon, Instagram, Facebook, Clock, Pencil, Expand, Download, CheckSquare, Square, Repeat, UserPlus, Play, Film, HardDrive, Heart, BookOpenText } from "lucide-react";
 import { clientsQO, monthQO, monthKeysQO, profilesQO, useApi, useMe, appSettingsQO, driveThumbnailQO, itemFilesQO, campaignsQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -15,6 +15,7 @@ import { TikTokPublishPanel } from "./TikTokSections";
 import { LinkedInPublishPanel } from "./LinkedInSections";
 import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { approveItemInternal } from "@/lib/luzeria/house.functions";
+import { getPlaybookStepLinks } from "@/lib/luzeria/playbook.functions";
 import { isHouse } from "@/lib/luzeria/house";
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
 import { downloadDriveFile, downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
@@ -823,6 +824,10 @@ export function DetailPanel() {
   // House: "Aprovação do gestor" — o master aprova aqui dentro, com o mesmo
   // efeito da aprovação pelo link público (vai pra Agendamento e liga o
   // "Programar post" se já tiver data).
+  // House: atalho "Como fazer" pra página do playbook ligada à etapa atual.
+  const navigateHowTo = useNavigate();
+  const stepLinksFn = useServerFn(getPlaybookStepLinks);
+  const { data: stepLinks } = useQuery({ queryKey: ["playbook-step-links"], queryFn: () => stepLinksFn(), enabled: isHouse(me), staleTime: 5 * 60_000 });
   const qcApprove = useQueryClient();
   const approveInternalFn = useServerFn(approveItemInternal);
   const approveInternal = useMutation({
@@ -1329,6 +1334,12 @@ export function DetailPanel() {
                   </div>
                 )}
               </div>
+              {stepLinks?.[item.status] && (
+                <button onClick={() => { openItem(null); navigateHowTo({ to: "/playbook", search: { pagina: stepLinks[item.status].pageId } as any }); }}
+                  className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold border border-foreground/12 text-foreground/70 hover:text-foreground hover:bg-foreground/5 transition">
+                  <BookOpenText size={13} /> Como fazer: {stepLinks[item.status].title}
+                </button>
+              )}
               {isHouse(me) && me?.role === "master" && item.status === "REVISAO_CLIENTE" && (
                 <button onClick={() => approveInternal.mutate(item.id)} disabled={approveInternal.isPending}
                   className="mt-2 w-full flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"

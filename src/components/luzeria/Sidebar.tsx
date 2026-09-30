@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, MoreHorizontal, LayoutDashboard, ChevronDown, ChevronRight, Folder, BarChart2,
   Plus, Info, CircleHelp, Instagram, Users, Wallet, UserCog, BookMarked,
-  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images, MessageCircleHeart,
+  Settings2, X, ArrowUp, ArrowDown, RotateCcw, Handshake, IdCard, Trash2, Images, MessageCircleHeart, BookOpenText,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { clientsQO, clientCategoriesQO, useApi, useMe, myAgencyLevelInputsQO } from "@/lib/luzeria/queries";
@@ -357,6 +357,11 @@ export function Sidebar({
             ...(house ? [{ id: "leads", label: navLabel("leads", "Leads"), meta: { icon: <MessageCircleHeart size={17} />, label: navLabel("leads", "Leads"), active: pathname === "/leads", kind: "button" as const, onClick: () => navigate({ to: "/leads" }) }, node: (
               <div key="leads">
                 <NavButton icon={<MessageCircleHeart size={15} />} label={navLabel("leads", "Leads")} active={pathname === "/leads"} onClick={() => navigate({ to: "/leads" })} />
+              </div>
+            ) }] : []),
+            ...(house ? [{ id: "playbook", label: navLabel("playbook", "Playbook"), meta: { icon: <BookOpenText size={17} />, label: navLabel("playbook", "Playbook"), active: pathname === "/playbook", kind: "button" as const, onClick: () => navigate({ to: "/playbook", search: {} as any }) }, node: (
+              <div key="playbook">
+                <NavButton icon={<BookOpenText size={15} />} label={navLabel("playbook", "Playbook")} active={pathname === "/playbook"} onClick={() => navigate({ to: "/playbook", search: {} as any })} />
               </div>
             ) }] : []),
             ...(!disabled.has("reference_library") ? [{ id: "biblioteca", label: navLabel("biblioteca", "Biblioteca"), meta: { icon: <BookMarked size={17} />, label: navLabel("biblioteca", "Biblioteca"), active: pathname === "/biblioteca", kind: "button" as const, onClick: () => navigate({ to: "/biblioteca" }) }, node: (

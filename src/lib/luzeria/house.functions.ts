@@ -88,7 +88,9 @@ async function applyHouseSetup(supabaseAdmin: any, orgId: string, clientId: stri
     });
   }
 
-  // Fase 3: copiar o playbook modelo global pra essa House aqui.
+  // Playbook modelo global → cópia própria da House (só se ainda não tiver).
+  const { error: pbErr } = await supabaseAdmin.rpc("copy_playbook_template", { _org_id: orgId });
+  if (pbErr) console.error("Falha ao copiar o playbook modelo:", pbErr.message);
 }
 
 /** Cria org + marca principal + configurações da House. Não cria usuário —

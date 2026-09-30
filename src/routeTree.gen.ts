@@ -50,6 +50,7 @@ import { Route as ApiMcpRouteImport } from './routes/api.mcp'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AuthenticatedSelecaoDeFotosRouteImport } from './routes/_authenticated/selecao-de-fotos'
 import { Route as AuthenticatedRotinaRouteImport } from './routes/_authenticated/rotina'
+import { Route as AuthenticatedPlaybookRouteImport } from './routes/_authenticated/playbook'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMinhasTarefasRouteImport } from './routes/_authenticated/minhas-tarefas'
 import { Route as AuthenticatedMeuDiaRouteImport } from './routes/_authenticated/meu-dia'
@@ -300,6 +301,11 @@ const AuthenticatedSelecaoDeFotosRoute =
 const AuthenticatedRotinaRoute = AuthenticatedRotinaRouteImport.update({
   id: '/rotina',
   path: '/rotina',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPlaybookRoute = AuthenticatedPlaybookRouteImport.update({
+  id: '/playbook',
+  path: '/playbook',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
@@ -559,6 +565,7 @@ export interface FileRoutesByFullPath {
   '/meu-dia': typeof AuthenticatedMeuDiaRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
+  '/playbook': typeof AuthenticatedPlaybookRoute
   '/rotina': typeof AuthenticatedRotinaRoute
   '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
@@ -641,6 +648,7 @@ export interface FileRoutesByTo {
   '/meu-dia': typeof AuthenticatedMeuDiaRoute
   '/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/perfil': typeof AuthenticatedPerfilRoute
+  '/playbook': typeof AuthenticatedPlaybookRoute
   '/rotina': typeof AuthenticatedRotinaRoute
   '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
@@ -725,6 +733,7 @@ export interface FileRoutesById {
   '/_authenticated/meu-dia': typeof AuthenticatedMeuDiaRoute
   '/_authenticated/minhas-tarefas': typeof AuthenticatedMinhasTarefasRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
+  '/_authenticated/playbook': typeof AuthenticatedPlaybookRoute
   '/_authenticated/rotina': typeof AuthenticatedRotinaRoute
   '/_authenticated/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
@@ -809,6 +818,7 @@ export interface FileRouteTypes {
     | '/meu-dia'
     | '/minhas-tarefas'
     | '/perfil'
+    | '/playbook'
     | '/rotina'
     | '/selecao-de-fotos'
     | '/vendas'
@@ -891,6 +901,7 @@ export interface FileRouteTypes {
     | '/meu-dia'
     | '/minhas-tarefas'
     | '/perfil'
+    | '/playbook'
     | '/rotina'
     | '/selecao-de-fotos'
     | '/vendas'
@@ -974,6 +985,7 @@ export interface FileRouteTypes {
     | '/_authenticated/meu-dia'
     | '/_authenticated/minhas-tarefas'
     | '/_authenticated/perfil'
+    | '/_authenticated/playbook'
     | '/_authenticated/rotina'
     | '/_authenticated/selecao-de-fotos'
     | '/_authenticated/vendas'
@@ -1367,6 +1379,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRotinaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/playbook': {
+      id: '/_authenticated/playbook'
+      path: '/playbook'
+      fullPath: '/playbook'
+      preLoaderRoute: typeof AuthenticatedPlaybookRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/perfil': {
       id: '/_authenticated/perfil'
       path: '/perfil'
@@ -1665,6 +1684,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMeuDiaRoute: typeof AuthenticatedMeuDiaRoute
   AuthenticatedMinhasTarefasRoute: typeof AuthenticatedMinhasTarefasRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
+  AuthenticatedPlaybookRoute: typeof AuthenticatedPlaybookRoute
   AuthenticatedRotinaRoute: typeof AuthenticatedRotinaRoute
   AuthenticatedSelecaoDeFotosRoute: typeof AuthenticatedSelecaoDeFotosRoute
   AuthenticatedVendasRoute: typeof AuthenticatedVendasRoute
@@ -1694,6 +1714,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMeuDiaRoute: AuthenticatedMeuDiaRoute,
   AuthenticatedMinhasTarefasRoute: AuthenticatedMinhasTarefasRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
+  AuthenticatedPlaybookRoute: AuthenticatedPlaybookRoute,
   AuthenticatedRotinaRoute: AuthenticatedRotinaRoute,
   AuthenticatedSelecaoDeFotosRoute: AuthenticatedSelecaoDeFotosRoute,
   AuthenticatedVendasRoute: AuthenticatedVendasRoute,

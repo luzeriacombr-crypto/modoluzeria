@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart2, Star, Menu, X, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2, Plus, Search, Images, Megaphone, MessageCircleHeart } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Star, Menu, X, Sparkles, CircleHelp, Instagram, ChevronRight, BookMarked, Wallet, UserCog, Handshake, IdCard, Trash2, Plus, Search, Images, Megaphone, MessageCircleHeart, BookOpenText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -198,6 +198,13 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
             </button>
           </div>
           <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-1.5">
+            {house && (
+              <MenuLink
+                icon={<BookOpenText size={17} />}
+                label={navLabel("playbook", "Playbook")}
+                onClick={() => { navigate({ to: "/playbook", search: {} as any }); closeAllSheets(); }}
+              />
+            )}
             {house && (
               <MenuLink
                 icon={<MessageCircleHeart size={17} />}

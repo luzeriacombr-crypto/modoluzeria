@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronUp, Home, Link2 } from "lucide-react";
+import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronUp, Home, Link2, BookOpenText } from "lucide-react";
 import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, orgPageViewsQO, useApi } from "@/lib/luzeria/queries";
 import { agencyPointsFromBillingRow, getAgencyLevel } from "@/lib/luzeria/agency-level";
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
@@ -404,6 +404,10 @@ export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivat
           >
             <Link2 size={13} /> Gerar link de convite
           </button>
+          <a href="/playbook?modelo=1"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold text-xs border border-foreground/15 text-foreground/80 hover:text-foreground hover:bg-foreground/5 transition">
+            <BookOpenText size={13} /> Playbook modelo
+          </a>
         </div>
       </div>
 
