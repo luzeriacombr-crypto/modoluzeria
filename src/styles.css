@@ -416,6 +416,50 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   50% { transform: scale(1.1); }
   100% { transform: scale(1); }
 }
+/* Splash diária (DailySplash.tsx) — animação "letra a letra" escolhida entre
+ * as 5 opções do artefato claude.ai/artifact/2zXuCoJEXsnY62FHqk8LdM. Sempre
+ * escura (é a cor real da splash, não muda com o tema do app). */
+.lz-daily-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #0A0A08;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: lz-splash-fade-out 300ms ease-in 1400ms forwards;
+}
+.lz-daily-splash-logo {
+  width: min(58vw, 320px);
+  height: auto;
+  overflow: visible;
+}
+.lz-splash-icon, .lz-splash-letter {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.lz-splash-icon {
+  animation: lz-splash-pop-icon 320ms cubic-bezier(.3,.6,.3,1.2) both;
+}
+.lz-splash-letter {
+  animation: lz-splash-letter-in 340ms cubic-bezier(.2,.7,.3,1) both;
+  animation-delay: calc(320ms + var(--i) * 55ms);
+}
+@keyframes lz-splash-pop-icon {
+  0% { opacity: 0; transform: scale(.5); }
+  60% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes lz-splash-letter-in {
+  0% { opacity: 0; transform: translateY(7px) scale(.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes lz-splash-fade-out {
+  to { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lz-daily-splash, .lz-splash-icon, .lz-splash-letter { animation-duration: 1ms !important; animation-delay: 0s !important; }
+}
 @keyframes lz-highlight {
   0% { background-color: rgba(var(--lz-brand-light-rgb), 0.15); }
   100% { background-color: transparent; }

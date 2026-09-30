@@ -46,6 +46,7 @@ import { SupportChatWidget } from "./SupportChatWidget";
 import { IncomingCallModal } from "./IncomingCallModal";
 import { ActiveCallOverlay } from "./ActiveCallOverlay";
 import { CallInvitePicker } from "./CallInvitePicker";
+import { DailySplash } from "./DailySplash";
 import { useScreenShareCall } from "@/hooks/use-screen-share-call";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -118,28 +119,33 @@ export function App() {
     }
   }, [me.data?.orgName]);
 
-  // Efeito sonoro na primeira vez que abre o Modo Criador no dia (pedido do
-  // Junior — tipo o "tudum" da Netflix). 1x por dia por NAVEGADOR
-  // (localStorage), não por conta — trocar de aparelho/navegador toca de
-  // novo, e é isso mesmo. Só marca como "tocado hoje" depois que o play()
-  // realmente resolve: autoplay de áudio pode ser bloqueado pelo navegador
-  // se a aba ainda não teve nenhuma interação — nesse caso a flag não é
-  // gravada, e ele tenta nesse mesmo dia de novo na próxima navegação.
+  // Splash + efeito sonoro na primeira vez que abre o Modo Criador no dia
+  // (pedido do Junior — tipo o "tudum" da Netflix, animação "letra a letra"
+  // escolhida em claude.ai/artifact/2zXuCoJEXsnY62FHqk8LdM). Mostrada NO
+  // LUGAR do carregamento inicial (em vez de depois dele) — o app já demora
+  // um pouco pra carregar de qualquer jeito, então a splash preenche esse
+  // tempo em vez de somar um atraso extra por cima. 1x por dia por
+  // NAVEGADOR/APARELHO (localStorage) — trocar de aparelho, inclusive
+  // celular, mostra de novo, e é isso mesmo. O som toca junto (DailySplash
+  // cuida disso, bem baixo), mas pode não tocar se o navegador bloquear
+  // autoplay por ainda não ter tido nenhuma interação nessa aba — a
+  // animação aparece do mesmo jeito, só o som que pode faltar nesse caso.
+  //
+  // Decide em useEffect (não no useState inicial) de propósito: essa página
+  // é renderizada no servidor (SSR), onde localStorage não existe — decidir
+  // isso já na primeira renderização causava erro de hidratação (o servidor
+  // manda uma árvore, o cliente calculava outra) e a splash nunca aparecia.
+  const [dailySplashActive, setDailySplashActive] = useState(false);
   useEffect(() => {
-    if (!me.data?.id) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const key = "lz.lastDailySoundDate";
     try {
-      if (localStorage.getItem(key) === today) return;
-    } catch {
-      return;
-    }
-    const audio = new Audio("/sounds/daily-welcome.mp3");
-    audio.volume = 0.6;
-    audio.play()
-      .then(() => { try { localStorage.setItem(key, today); } catch { /* noop */ } })
-      .catch(() => { /* autoplay bloqueado — tenta de novo na próxima navegação do dia */ });
-  }, [me.data?.id]);
+      const today = new Date().toISOString().slice(0, 10);
+      if (localStorage.getItem("lz.lastDailySoundDate") !== today) setDailySplashActive(true);
+    } catch { /* noop */ }
+  }, []);
+  function finishDailySplash() {
+    try { localStorage.setItem("lz.lastDailySoundDate", new Date().toISOString().slice(0, 10)); } catch { /* noop */ }
+    setDailySplashActive(false);
+  }
 
   // Same idea for the brand colors: override the CSS variables (which
   // default to Luzeria's green in styles.css) whenever the org has custom
@@ -234,6 +240,10 @@ export function App() {
       localStorage.removeItem("lz_org_branding");
     }
   }, [me.data?.orgLogoUrl, me.data?.orgLogoUrlLight, me.data?.orgName, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight]);
+
+  if (dailySplashActive) {
+    return <DailySplash onDone={finishDailySplash} />;
+  }
 
   if (me.isLoading) {
     return <LuzeriaLoader />;
