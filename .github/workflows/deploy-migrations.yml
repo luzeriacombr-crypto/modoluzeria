@@ -6,8 +6,12 @@ name: Deploy Supabase migrations
 # `supabase db push` tentava reaplicar todas e falhava em toda execução.
 # Cada arquivo novo roda via `supabase db query` (Management API, só
 # precisa do access token). Se a migração já foi aplicada na mão antes
-# do push (acontece), o erro "already exists" vira aviso, não falha.
-# Se falhar de outro jeito, o job fica vermelho e mostra o erro.
+# do push (acontece quase sempre), o erro "already exists" vira aviso,
+# não falha. Se falhar de outro jeito, o job fica vermelho e mostra o erro.
+#
+# Atenção: o GitHub roda o step com `bash -e`, então todo comando que
+# pode falhar precisa de `|| rc=$?` — senão o script morre ali mesmo,
+# sem imprimir a saída (foi o que deixou os runs de 30/09 vermelhos).
 
 on:
   push:
@@ -63,15 +67,17 @@ jobs:
           fail=0
           for f in $FILES; do
             echo "::group::$f"
-            out="$(supabase db query --linked --file "$f" 2>&1)"
-            rc=$?
+            rc=0
+            out="$(supabase db query --linked --file "$f" 2>&1)" || rc=$?
+            echo "$out"
             if [ $rc -eq 0 ]; then
               echo "aplicada."
-            elif echo "$out" | grep -qiE "already exists|duplicate"; then
-              echo "::notice::$f já estava aplicada (provavelmente na mão) — ignorada."
+            # Só erros de objeto já existente (tabela, coluna, policy...).
+            # "duplicate key" de INSERT não entra: aí é falha de verdade.
+            elif echo "$out" | grep -qiE "already exists|42P07|42701|42710"; then
+              echo "::warning::$f já estava aplicada (provavelmente na mão) — ignorada. Confira a saída acima."
             else
-              echo "$out"
-              echo "::error::$f falhou ao aplicar."
+              echo "::error::$f falhou ao aplicar (código $rc)."
               fail=1
             fi
             echo "::endgroup::"
