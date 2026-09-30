@@ -24,9 +24,9 @@ export const DEFAULT_NAV_LABELS: Record<string, string> = {
   "minhas-demandas": "Minhas demandas", dashboard: "Dashboard", clientes: "Clientes",
   calendario: "Calendário", biblioteca: "Biblioteca",
   instagram: "Instagram", financeiro: "Financeiro", equipe: "Equipe", ajuda: "Ajuda",
-  cobranca: "Seu plano", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda",
+  cobranca: "Meu plano", margem: "Margem por cliente", afiliados: "Afiliados", revenda: "Revenda", indicacoes: "Indique e ganhe",
   rotina: "Rotina", membros: "Membros", relatorio: "Relatório", "auditoria-producao": "Auditoria de Produção", jornada: "Jornada do cliente",
-  vendas: "Vendas", lixeira: "Lixeira", pagamentos: "Pagamentos", cliente: "Visão Geral", "cliente-overview": "Visão Geral",
+  vendas: "Vendas", lixeira: "Lixeira", pagamentos: "Entradas e saídas", cliente: "Visão Geral", "cliente-overview": "Visão Geral",
   "selecao-de-fotos": "Seleção de Fotos",
 };
 
@@ -239,11 +239,13 @@ export function Sidebar({
           // mesma tela (a aba de cobrança renderiza todas as seções), então
           // eram três caminhos pro mesmo lugar. As seções continuam lá
           // dentro, e as URLs ?tab=afiliados / ?tab=revenda seguem válidas.
-          // Pagamentos morava em "Visão Geral" — Junior achou que não fazia
-          // sentido lá, é claramente financeiro.
+          // Entradas e saídas (pagamentos) morava em "Visão Geral" — pedido
+          // do Junior (29/09) pra juntar tudo que é financeiro da agência
+          // (plano, indicações, fluxo de caixa) num grupo só.
           const financeiroItems = canFinanceiro ? orderSection("financeiro", [
-            { id: "cobranca", label: navLabel("cobranca", "Seu plano"), node: <NavSubButton key="cobranca" label={navLabel("cobranca", "Seu plano")} active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} /> },
-            { id: "pagamentos", label: navLabel("pagamentos", "Pagamentos"), node: <NavSubButton key="pagamentos" label={navLabel("pagamentos", "Pagamentos")} active={configTabActive("pagamentos")} onClick={() => goToConfigTab("pagamentos")} /> },
+            { id: "cobranca", label: navLabel("cobranca", "Meu plano"), node: <NavSubButton key="cobranca" label={navLabel("cobranca", "Meu plano")} active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} /> },
+            { id: "indicacoes", label: navLabel("indicacoes", "Indique e ganhe"), node: <NavSubButton key="indicacoes" label={navLabel("indicacoes", "Indique e ganhe")} active={configTabActive("indicacoes")} onClick={() => goToConfigTab("indicacoes")} /> },
+            { id: "pagamentos", label: navLabel("pagamentos", "Entradas e saídas"), node: <NavSubButton key="pagamentos" label={navLabel("pagamentos", "Entradas e saídas")} active={configTabActive("pagamentos")} onClick={() => goToConfigTab("pagamentos")} /> },
           ]) : [];
 
           const equipeItems = orderSection("equipe", [
@@ -339,10 +341,10 @@ export function Sidebar({
                 </NavGroup>
               </div>
             ) }] : []),
-            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Financeiro"), meta: { icon: <Wallet size={17} />, label: navLabel("financeiro", "Financeiro"), active: configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda") || configTabActive("pagamentos"), kind: "flyout" as const }, node: (
+            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Financeiro"), meta: { icon: <Wallet size={17} />, label: navLabel("financeiro", "Financeiro"), active: configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda") || configTabActive("pagamentos") || configTabActive("indicacoes"), kind: "flyout" as const }, node: (
               <div key="financeiro" data-tour="nav-financeiro">
                 <NavGroup icon={<Wallet size={15} />} label={navLabel("financeiro", "Financeiro")}
-                  active={configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda") || configTabActive("pagamentos")}>
+                  active={configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda") || configTabActive("pagamentos") || configTabActive("indicacoes")}>
                   {financeiroItems.map((it) => it.node)}
                 </NavGroup>
               </div>

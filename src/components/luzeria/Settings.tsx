@@ -120,9 +120,9 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             {tab === "team" || tab === "report" || tab === "auditoria" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
              tab === "integrations" ? "Conecte o Google Drive da agência, a sua Google Agenda e acompanhe o Instagram de cada cliente." :
              tab === "automations" ? "Lembretes automáticos e rotinas que o sistema executa sozinho." :
-             tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" ? "Seu plano, uso, CNPJ/CPF e upgrade." :
+             tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" ? "Seu plano, indicações e o financeiro da agência." :
              tab === "plataforma" ? "Todas as agências do Modo Criador, mensagens de ativação e pedidos de demonstração." :
-             tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? "Visão geral, jornada, margem e financeiro de cada cliente." :
+             tab === "cliente" || tab === "margem" || tab === "journey" ? "Visão geral, jornada e margem de cada cliente." :
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
              tab === "blog" ? "Escreva e edite os artigos do blog (modocriador.com.br/blog)." :
@@ -142,7 +142,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "integrations", label: "Integrações" },
           { id: "automations", label: "Automações" },
           { id: "cliente", label: "Clientes" },
-          { id: "cobranca", label: "Plano e Cobrança" },
+          { id: "cobranca", label: "Financeiro" },
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
           { id: "knowledge", label: "Base de conhecimento" },
@@ -151,8 +151,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         const isActive = (id: string) =>
           tab === (id as any) ||
           (id === "team" && (tab === "report" || tab === "auditoria")) ||
-          (id === "cliente" && (tab === "margem" || tab === "journey" || tab === "pagamentos")) ||
-          (id === "cobranca" && (tab === "afiliados" || tab === "revenda" || tab === "indicacoes"));
+          (id === "cliente" && (tab === "margem" || tab === "journey")) ||
+          (id === "cobranca" && (tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos"));
         const current = tabItems.find((t) => isActive(t.id))?.id ?? tabItems[0]?.id;
         return (
           <>
@@ -200,7 +200,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
 
       <Suspense fallback={<TabLoadingFallback />}>
       {tab === "general" ? <GeneralSettings /> :
-       tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" ? (
+       tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" ? (
         <div>
           {/* Auditoria de UX (2.2 / "afiliados vs indicações confusos"):
               antes disso as 3 sub-seções (Afiliados, Revenda, Indique e
@@ -208,11 +208,15 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               editando a URL na mão (?tab=afiliados etc), então na prática
               ninguém fora do próprio time via essas telas. Agora têm abas
               de verdade, com 1 frase explicando o público de cada uma
-              (pra não confundir "indicar outra agência" com "ser afiliado"). */}
+              (pra não confundir "indicar outra agência" com "ser afiliado").
+              "Entradas e saídas" (pagamentos) morava dentro de "Clientes" —
+              pedido do Junior (29/09) pra juntar tudo que é financeiro da
+              agência (plano, indicações, fluxo de caixa) numa aba só. */}
           {isMaster && (
             <div className="flex items-center gap-1 mb-6 -mt-2 flex-wrap">
               <SubTabPill active={tab === "cobranca"} onClick={() => setTab("cobranca")} label="Meu plano" />
               <SubTabPill active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} label="Indique e ganhe" />
+              <SubTabPill active={tab === "pagamentos"} onClick={() => setTab("pagamentos")} label="Entradas e saídas" />
             </div>
           )}
 
@@ -228,6 +232,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               <p className="text-xs text-foreground/40">Pra agências que já são clientes do Modo Criador: indique outra agência e ambas ganham um mês grátis.</p>
               <ReferralsTab />
             </div>
+          ) : tab === "pagamentos" ? (
+            <ClientPaymentsPanel />
           ) : (
             <div className="space-y-10">
               <PlanCardSection />
@@ -269,9 +275,9 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           </div>
         </div>
        ) : null) :
-       tab === "cliente" || tab === "margem" || tab === "journey" || tab === "pagamentos" ? (
+       tab === "cliente" || tab === "margem" || tab === "journey" ? (
         <ClienteTab
-          initialSub={tab === "margem" ? "margem" : tab === "journey" ? "jornada" : tab === "pagamentos" ? "pagamentos" : "overview"}
+          initialSub={tab === "margem" ? "margem" : tab === "journey" ? "jornada" : "overview"}
           canJourney={hasSetorPermission(me, "settings_journey")}
           canMargem={hasPermission(me, "view_financeiro")}
           isAdmin={isAdmin}
@@ -1630,15 +1636,14 @@ function SubTabPill({ active, onClick, label }: { active: boolean; onClick: () =
 }
 
 function ClienteTab({ initialSub, canJourney, canMargem, isAdmin }: {
-  initialSub: "overview" | "jornada" | "margem" | "pagamentos"; canJourney: boolean; canMargem: boolean; isAdmin: boolean;
+  initialSub: "overview" | "jornada" | "margem"; canJourney: boolean; canMargem: boolean; isAdmin: boolean;
 }) {
   const subs = [
     ...(isAdmin ? [{ id: "overview" as const, label: "Visão Geral" }] : []),
     ...(canJourney ? [{ id: "jornada" as const, label: "Jornada" }] : []),
     ...(canMargem ? [{ id: "margem" as const, label: "Margem" }] : []),
-    ...(canMargem ? [{ id: "pagamentos" as const, label: "Financeiro" }] : []),
   ];
-  const [sub, setSub] = useState<"overview" | "jornada" | "margem" | "pagamentos">(
+  const [sub, setSub] = useState<"overview" | "jornada" | "margem">(
     subs.some((s) => s.id === initialSub) ? initialSub : (subs[0]?.id ?? "overview"),
   );
   return (
@@ -1648,8 +1653,7 @@ function ClienteTab({ initialSub, canJourney, canMargem, isAdmin }: {
       </div>
       {sub === "overview" ? <ClientOperationsOverview /> :
        sub === "jornada" ? <JourneyStagesTab /> :
-       sub === "margem" ? <ClientMarginPanel /> :
-       sub === "pagamentos" ? <ClientPaymentsPanel /> : null}
+       sub === "margem" ? <ClientMarginPanel /> : null}
     </div>
   );
 }
