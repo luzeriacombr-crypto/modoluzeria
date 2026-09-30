@@ -112,6 +112,8 @@ export function NotificationsBell() {
                     selectMonth(n.monthKey);
                     setTimeout(() => { openItem(n.itemId); flash(n.itemId); }, 50);
                     setTimeout(() => flash(null), 2050);
+                  } else if (n.type === "tutorial_nudge") {
+                    navigate({ to: "/ajuda", search: { tab: "tutoriais" } });
                   } else if (n.type === "bug_report_new") {
                     navigate({ to: "/ajuda", search: { tab: "todas" } });
                   } else if (n.type === "bug_report_status") {

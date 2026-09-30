@@ -1,4 +1,4 @@
-// Três réguas rodando 1x/dia via cron (api.cron.activation-nudges):
+// Quatro réguas rodando 1x/dia via cron (api.cron.activation-nudges):
 //
 // 1. runClientActivationNudges — nos dias 2 e 4 desde o cadastro, se a
 //    agência ainda não tiver nenhum cliente, avisa (notificação in-app +
@@ -21,7 +21,12 @@
 //    fatura venceu. Dá 7 dias de tolerância (orgs.payment_grace_started_at)
 //    — durante esse tempo o app mostra o popup/faixinha de cobrança
 //    (frontend, via getOrgPlanStatus) — e só desativa depois de esgotado.
-import type { ActivationChecklistItem } from "./activation-nudge-email.server";
+//
+// 4. runTutorialNudge — notificação única "Precisa de ajuda? Visite nossos
+//    tutoriais" (pedido do Junior em 30/09/2026) pra agência nova (criada há
+//    até 14 dias) OU com pouca atividade (menos de 2 clientes OU menos de 5
+//    conteúdos criados no total), mandada só uma vez (tutorial_nudge_sent_at).
+import type { ChecklistItem as ActivationChecklistItem } from "./email-templates.server";
 
 export async function runClientActivationNudges(): Promise<{ sent: number; errors: number }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -250,4 +255,75 @@ export async function runPaymentGraceEnforcement(): Promise<{ started: number; d
   }
 
   return { started, deactivated, errors };
+}
+
+export async function runTutorialNudge(): Promise<{ sent: number; errors: number }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { LUZERIA_ORG_ID } = await import("./api.functions");
+  const now = new Date();
+  const daysSince = (iso: string) => (now.getTime() - new Date(iso).getTime()) / 86_400_000;
+
+  const { data: orgs, error } = await (supabaseAdmin as any)
+    .from("orgs")
+    .select("id, is_reseller, reseller_org_id, created_at")
+    .is("tutorial_nudge_sent_at", null)
+    .neq("id", LUZERIA_ORG_ID);
+  if (error) throw new Error(error.message);
+
+  const organic = (orgs ?? []).filter((o: any) => !o.is_reseller && !o.reseller_org_id);
+  if (organic.length === 0) return { sent: 0, errors: 0 };
+
+  const orgIds = organic.map((o: any) => o.id);
+  const { data: clientRows } = await supabaseAdmin
+    .from("clients").select("org_id").eq("archived", false).neq("category", "Ex-clientes").in("org_id", orgIds);
+  const clientCountByOrg = new Map<string, number>();
+  (clientRows ?? []).forEach((c: any) => clientCountByOrg.set(c.org_id, (clientCountByOrg.get(c.org_id) ?? 0) + 1));
+
+  const { data: itemRows } = await supabaseAdmin.from("content_items").select("org_id").in("org_id", orgIds);
+  const itemCountByOrg = new Map<string, number>();
+  (itemRows ?? []).forEach((it: any) => itemCountByOrg.set(it.org_id, (itemCountByOrg.get(it.org_id) ?? 0) + 1));
+
+  // "Nova ou pouco ativa": conta criada há até 14 dias, OU (independente da
+  // idade) ainda com menos de 2 clientes ou menos de 5 conteúdos criados —
+  // pega tanto quem acabou de chegar quanto quem já tem um tempo de conta
+  // mas ainda tá travado no começo (caso real: Barna, cliente que se perdeu
+  // na lógica básica do app numa call de onboarding).
+  const toNudge = organic.filter((org: any) => {
+    const isNew = daysSince(org.created_at) <= 14;
+    const lowActivity = (clientCountByOrg.get(org.id) ?? 0) < 2 || (itemCountByOrg.get(org.id) ?? 0) < 5;
+    return isNew || lowActivity;
+  });
+  if (toNudge.length === 0) return { sent: 0, errors: 0 };
+
+  const { data: masterRoles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "master");
+  const masterIds = new Set((masterRoles ?? []).map((r: any) => r.user_id));
+  const { data: profiles } = await supabaseAdmin
+    .from("profiles").select("id, org_id, created_at").in("org_id", toNudge.map((o: any) => o.id));
+  const ownerByOrg = new Map<string, string>();
+  (profiles ?? [])
+    .filter((p: any) => masterIds.has(p.id))
+    .sort((a: any, b: any) => a.created_at.localeCompare(b.created_at))
+    .forEach((p: any) => {
+      if (!ownerByOrg.has(p.org_id)) ownerByOrg.set(p.org_id, p.id);
+    });
+
+  let sent = 0;
+  let errors = 0;
+  for (const org of toNudge) {
+    const ownerId = ownerByOrg.get(org.id);
+    if (!ownerId) continue;
+    try {
+      await (supabaseAdmin as any).from("notifications").insert({
+        user_id: ownerId,
+        type: "tutorial_nudge",
+        message: "Precisa de ajuda? Visite nossos tutoriais.",
+      });
+      await (supabaseAdmin as any).from("orgs").update({ tutorial_nudge_sent_at: now.toISOString() }).eq("id", org.id);
+      sent++;
+    } catch (e) {
+      console.error(`Falha ao enviar nudge de tutoriais pra org ${org.id}:`, e);
+      errors++;
+    }
+  }
+  return { sent, errors };
 }
