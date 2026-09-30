@@ -40,6 +40,7 @@ const MessagesPanel = lazy(() => import("./MessagesPanel").then((m) => ({ defaul
 import { DeleteAccountSection } from "./DeleteAccountSection";
 const SalesPageEditorTab = lazy(() => import("./SalesLandingEditorTab").then((m) => ({ default: m.SalesLandingEditorTab })));
 const BlogAdminTab = lazy(() => import("./BlogAdminTab").then((m) => ({ default: m.BlogAdminTab })));
+const EmailTemplatesPanel = lazy(() => import("./EmailTemplatesPanel").then((m) => ({ default: m.EmailTemplatesPanel })));
 const JourneyStagesTab = lazy(() => import("./JourneyStagesTab").then((m) => ({ default: m.JourneyStagesTab })));
 const ClientOperationsOverview = lazy(() => import("./ClientOperationsOverview").then((m) => ({ default: m.ClientOperationsOverview })));
 const ProductionAuditTab = lazy(() => import("./ProductionAuditTab").then((m) => ({ default: m.ProductionAuditTab })));
@@ -53,8 +54,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "auditoria" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "orcamentos" | "afiliados" | "revenda" | "indicacoes" | "plataforma" | "updates" | "site" | "blog" | "journey" | "cliente" | "knowledge";
-const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "orcamentos", "afiliados", "revenda", "indicacoes", "plataforma", "updates", "site", "blog", "journey", "cliente", "knowledge"];
+type SettingsTab = "team" | "report" | "auditoria" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "orcamentos" | "afiliados" | "revenda" | "indicacoes" | "plataforma" | "updates" | "site" | "blog" | "emails" | "journey" | "cliente" | "knowledge";
+const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "orcamentos", "afiliados", "revenda", "indicacoes", "plataforma", "updates", "site", "blog", "emails", "journey", "cliente", "knowledge"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -126,6 +127,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
              tab === "updates" ? "O que mudou no Modo Criador." :
              tab === "site" ? "Textos, imagens e cores do site de vendas (modocriador.com.br)." :
              tab === "blog" ? "Escreva e edite os artigos do blog (modocriador.com.br/blog)." :
+             tab === "emails" ? "Como os e-mails automáticos chegam pras agências, os textos de cada um e a entrega." :
              tab === "knowledge" ? "Texto e arquivos que ensinam a IA como sua agência cria conteúdo." :
              "Ajustes gerais da operação."}
           </p>
@@ -146,7 +148,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           { id: "updates", label: "Atualizações" },
           { id: "general", label: "Geral" },
           { id: "knowledge", label: "Base de conhecimento" },
-          ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }, { id: "blog", label: "Blog" }] : []),
+          ...(me.isPlatformAdmin ? [{ id: "site", label: "Site" }, { id: "blog", label: "Blog" }, { id: "emails", label: "E-mails" }] : []),
         ].filter((t) => allowedTabs.includes(t.id as SettingsTab));
         const isActive = (id: string) =>
           tab === (id as any) ||
@@ -294,6 +296,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "updates" ? <UpdatesTab /> :
        tab === "site" ? (me.isPlatformAdmin ? <SalesPageEditorTab /> : null) :
        tab === "blog" ? (me.isPlatformAdmin ? <BlogAdminTab /> : null) :
+       tab === "emails" ? (me.isPlatformAdmin ? <EmailTemplatesPanel /> : null) :
        tab === "integrations" ? <IntegrationsTab disabledFeatures={me.disabledFeatures ?? []} /> :
        tab === "automations" ? <AutomationsTab /> :
        tab === "knowledge" ? <OrgKnowledgeSettings /> :

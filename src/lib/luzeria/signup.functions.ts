@@ -210,11 +210,10 @@ export const publicSignup = createServerFn({ method: "POST" })
 
       try {
         const { sendEmail } = await import("./resend.server");
-        const { buildWelcomeEmailHtml } = await import("./welcome-email.server");
+        const { renderEmail, loadEmailOverrides, firstName, APP_URL } = await import("./email-templates.server");
         await sendEmail({
           to: data.email,
-          subject: "Bem-vindo(a) ao Modo Criador 🎉",
-          html: buildWelcomeEmailHtml({ name: data.name.trim() }),
+          ...renderEmail("welcome", { vars: { nome: firstName(data.name) }, buttonUrl: APP_URL, overrides: await loadEmailOverrides() }),
         });
       } catch (e) {
         console.error("Falha ao enviar e-mail de boas-vindas:", e);
@@ -407,11 +406,10 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
 
       try {
         const { sendEmail } = await import("./resend.server");
-        const { buildWelcomeEmailHtml } = await import("./welcome-email.server");
+        const { renderEmail, loadEmailOverrides, firstName, APP_URL } = await import("./email-templates.server");
         await sendEmail({
           to: email,
-          subject: "Bem-vindo(a) ao Modo Criador 🎉",
-          html: buildWelcomeEmailHtml({ name: data.name.trim() }),
+          ...renderEmail("welcome", { vars: { nome: firstName(data.name) }, buttonUrl: APP_URL, overrides: await loadEmailOverrides() }),
         });
       } catch (e) {
         console.error("Falha ao enviar e-mail de boas-vindas:", e);

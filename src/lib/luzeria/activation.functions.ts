@@ -71,7 +71,8 @@ export async function runClientActivationNudges(): Promise<{ sent: number; error
     });
 
   const { sendEmail } = await import("./resend.server");
-  const { buildActivationNudgeEmailHtml } = await import("./activation-nudge-email.server");
+  const { renderEmail, loadEmailOverrides, checklistParts, firstName, APP_URL } = await import("./email-templates.server");
+  const overrides = await loadEmailOverrides();
 
   let sent = 0;
   let errors = 0;
@@ -85,11 +86,12 @@ export async function runClientActivationNudges(): Promise<{ sent: number; error
         message: "Você ainda não cadastrou nenhum cliente no Modo Criador. Bora começar?",
       });
       if (owner.email) {
-        await sendEmail({
-          to: owner.email,
-          subject: `${owner.name.split(" ")[0]}, já cadastrou algum cliente?`,
-          html: buildActivationNudgeEmailHtml({ name: owner.name, missing: ["client"] }),
+        const checklist = checklistParts(["client"]);
+        const email = renderEmail("activation_nudge", {
+          vars: { nome: firstName(owner.name) }, buttonUrl: APP_URL, overrides,
+          extraHtml: checklist.html, extraText: checklist.text,
         });
+        await sendEmail({ to: owner.email, ...email });
       }
       const column = milestone === "day2" ? "client_nudge_day2_sent_at" : "client_nudge_day4_sent_at";
       await (supabaseAdmin as any).from("orgs").update({ [column]: now.toISOString() }).eq("id", org.id);
@@ -146,7 +148,15 @@ export async function runInactivityDeactivation(): Promise<{ warned5d: number; w
     });
 
   const { sendEmail } = await import("./resend.server");
-  const { buildInactivityEmailHtml } = await import("./inactivity-email.server");
+  const { renderEmail, loadEmailOverrides, checklistParts, firstName, APP_URL, WHATSAPP_URL } = await import("./email-templates.server");
+  const overrides = await loadEmailOverrides();
+  const trialEndingEmail = (name: string, missing: ActivationChecklistItem[], days: number) => {
+    const checklist = checklistParts(missing);
+    return renderEmail("trial_ending", {
+      vars: { nome: firstName(name), dias: `${days} dia${days === 1 ? "" : "s"}` }, buttonUrl: APP_URL, overrides,
+      extraHtml: checklist.html, extraText: checklist.text,
+    });
+  };
 
   let warned5d = 0, warned2d = 0, deactivated = 0, errors = 0;
   for (const org of eligible) {
@@ -162,28 +172,19 @@ export async function runInactivityDeactivation(): Promise<{ warned5d: number; w
         if (owner?.email) {
           await sendEmail({
             to: owner.email,
-            subject: `${owner.name.split(" ")[0]}, sua conta no Modo Criador foi pausada`,
-            html: buildInactivityEmailHtml({ name: owner.name, missing, daysLeft: null }),
+            ...renderEmail("account_paused", { vars: { nome: firstName(owner.name) }, buttonUrl: WHATSAPP_URL, overrides }),
           });
         }
         deactivated++;
       } else if (daysLeft <= 2 && !org.inactivity_warning_2d_sent_at) {
         if (owner?.email) {
-          await sendEmail({
-            to: owner.email,
-            subject: `${owner.name.split(" ")[0]}, seu teste no Modo Criador termina em 2 dias`,
-            html: buildInactivityEmailHtml({ name: owner.name, missing, daysLeft: 2 }),
-          });
+          await sendEmail({ to: owner.email, ...trialEndingEmail(owner.name, missing, 2) });
         }
         await (supabaseAdmin as any).from("orgs").update({ inactivity_warning_2d_sent_at: now.toISOString() }).eq("id", org.id);
         warned2d++;
       } else if (daysLeft <= 5 && !org.inactivity_warning_5d_sent_at) {
         if (owner?.email) {
-          await sendEmail({
-            to: owner.email,
-            subject: `${owner.name.split(" ")[0]}, seu teste no Modo Criador termina em 5 dias`,
-            html: buildInactivityEmailHtml({ name: owner.name, missing, daysLeft: 5 }),
-          });
+          await sendEmail({ to: owner.email, ...trialEndingEmail(owner.name, missing, 5) });
         }
         await (supabaseAdmin as any).from("orgs").update({ inactivity_warning_5d_sent_at: now.toISOString() }).eq("id", org.id);
         warned5d++;

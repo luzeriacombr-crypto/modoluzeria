@@ -29,6 +29,8 @@ export type InactiveOrgRow = {
   teamCount: number;
   lastActiveAt: string | null;
   lastMessageSentAt: string | null;
+  /** Clicou em "não quero mais receber" num e-mail de reativação. */
+  marketingOptOut: boolean;
 };
 
 export const listInactiveOrgsForReengagement = createServerFn({ method: "GET" })
@@ -55,7 +57,7 @@ export const listInactiveOrgsForReengagement = createServerFn({ method: "GET" })
 
     const { data: orgs, error } = await supabaseAdmin
       .from("orgs")
-      .select("id, name, whatsapp, created_at, subscription_status, is_reseller, reseller_org_id")
+      .select("id, name, whatsapp, created_at, subscription_status, is_reseller, reseller_org_id, marketing_emails_opt_out_at")
       .neq("id", LUZERIA_ORG_ID);
     if (error) throw new Error(error.message);
 
@@ -133,6 +135,7 @@ export const listInactiveOrgsForReengagement = createServerFn({ method: "GET" })
         teamCount: teamByOrg.get(o.id) ?? 1,
         lastActiveAt: lastActiveByOrg.get(o.id) ?? null,
         lastMessageSentAt: lastMessageByOrg.get(o.id) ?? null,
+        marketingOptOut: !!o.marketing_emails_opt_out_at,
       }))
       .sort((a, b) => (a.lastActiveAt ?? "").localeCompare(b.lastActiveAt ?? ""));
   });
@@ -141,13 +144,18 @@ function esc(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function buildReengagementEmailHtml(body: string) {
+function buildReengagementEmailHtml(body: string, unsubscribeUrl: string) {
   const text = esc(body).replace(/\n/g, "<br>");
-  return `<!doctype html><html><body style="margin:0;padding:24px 16px;background:#F2F2ED;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"></head><body style="margin:0;padding:24px 16px;background:#F2F2ED;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
 <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;background:#FFFFFF;border-radius:16px;">
 <tr><td style="padding:28px 32px;font-size:14px;line-height:1.6;color:#16171B;">${text}</td></tr>
-</table></td></tr></table></body></html>`;
+</table>
+<p style="max-width:480px;font-size:11px;line-height:1.5;color:#9AA089;margin:16px auto 0;text-align:center;">
+Você recebeu este e-mail porque criou uma conta no Modo Criador.
+<a href="${unsubscribeUrl}" style="color:#9AA089;text-decoration:underline;">Não quero mais receber estes e-mails</a>.
+</p>
+</td></tr></table></body></html>`;
 }
 
 export const sendReengagementEmails = createServerFn({ method: "POST" })
@@ -177,18 +185,33 @@ export const sendReengagementEmails = createServerFn({ method: "POST" })
       .from("clients").select("org_id").eq("archived", false).neq("category", "Ex-clientes").in("org_id", data.orgIds);
     const clientsByOrg = new Map<string, number>();
     (clientRows ?? []).forEach((c: any) => clientsByOrg.set(c.org_id, (clientsByOrg.get(c.org_id) ?? 0) + 1));
+    const { data: optedOut } = await (supabaseAdmin as any)
+      .from("orgs").select("id").in("id", data.orgIds).not("marketing_emails_opt_out_at", "is", null);
+    const optedOutIds = new Set(((optedOut ?? []) as any[]).map((o) => o.id as string));
+    const { makeUnsubscribeUrl } = await import("./email-unsubscribe.server");
 
     const results: { orgId: string; ok: boolean; error?: string }[] = [];
     for (const orgId of data.orgIds) {
       const owner = ownerByOrg.get(orgId);
       if (!owner?.email) { results.push({ orgId, ok: false, error: "Sem e-mail de responsável." }); continue; }
+      if (optedOutIds.has(orgId)) { results.push({ orgId, ok: false, error: "Pediu pra não receber estes e-mails." }); continue; }
       try {
         const firstName = owner.name?.trim().split(" ")[0] ?? "";
         const clientCount = clientsByOrg.get(orgId) ?? 0;
         const personalized = data.body
           .replaceAll("{nome}", firstName ? ` ${firstName}` : "")
           .replaceAll("{clientes}", `${clientCount} cliente${clientCount === 1 ? "" : "s"}`);
-        await sendEmail({ to: owner.email, subject: data.subject, html: buildReengagementEmailHtml(personalized) });
+        const unsubscribeUrl = makeUnsubscribeUrl(orgId);
+        await sendEmail({
+          to: owner.email,
+          subject: data.subject,
+          html: buildReengagementEmailHtml(personalized, unsubscribeUrl),
+          text: `${personalized}\n\n—\nNão quer mais receber estes e-mails? ${unsubscribeUrl}`,
+          headers: {
+            "List-Unsubscribe": `<${unsubscribeUrl}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
+        });
         await supabaseAdmin.from("agency_reengagement_messages").insert({
           org_id: orgId, channel: "email", subject: data.subject, body: personalized, sent_by: context.userId,
         });

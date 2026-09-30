@@ -64,6 +64,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api.whatsapp.webhook'
 import { Route as ApiSelecaoOgTokenRouteImport } from './routes/api.selecao-og.$token'
 import { Route as ApiIgMediaTokenRouteImport } from './routes/api.ig-media.$token'
+import { Route as ApiDescadastrarTokenRouteImport } from './routes/api.descadastrar.$token'
 import { Route as ApiCronSnapshotInstagramFollowersRouteImport } from './routes/api.cron.snapshot-instagram-followers'
 import { Route as ApiCronSendPushNotificationsRouteImport } from './routes/api.cron.send-push-notifications'
 import { Route as ApiCronSendAutomationEmailsRouteImport } from './routes/api.cron.send-automation-emails'
@@ -371,6 +372,11 @@ const ApiIgMediaTokenRoute = ApiIgMediaTokenRouteImport.update({
   path: '/api/ig-media/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDescadastrarTokenRoute = ApiDescadastrarTokenRouteImport.update({
+  id: '/api/descadastrar/$token',
+  path: '/api/descadastrar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCronSnapshotInstagramFollowersRoute =
   ApiCronSnapshotInstagramFollowersRouteImport.update({
     id: '/api/cron/snapshot-instagram-followers',
@@ -571,6 +577,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/send-automation-emails': typeof ApiCronSendAutomationEmailsRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
   '/api/cron/snapshot-instagram-followers': typeof ApiCronSnapshotInstagramFollowersRoute
+  '/api/descadastrar/$token': typeof ApiDescadastrarTokenRoute
   '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
   '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
@@ -649,6 +656,7 @@ export interface FileRoutesByTo {
   '/api/cron/send-automation-emails': typeof ApiCronSendAutomationEmailsRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
   '/api/cron/snapshot-instagram-followers': typeof ApiCronSnapshotInstagramFollowersRoute
+  '/api/descadastrar/$token': typeof ApiDescadastrarTokenRoute
   '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
   '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
@@ -729,6 +737,7 @@ export interface FileRoutesById {
   '/api/cron/send-automation-emails': typeof ApiCronSendAutomationEmailsRoute
   '/api/cron/send-push-notifications': typeof ApiCronSendPushNotificationsRoute
   '/api/cron/snapshot-instagram-followers': typeof ApiCronSnapshotInstagramFollowersRoute
+  '/api/descadastrar/$token': typeof ApiDescadastrarTokenRoute
   '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
   '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
@@ -809,6 +818,7 @@ export interface FileRouteTypes {
     | '/api/cron/send-automation-emails'
     | '/api/cron/send-push-notifications'
     | '/api/cron/snapshot-instagram-followers'
+    | '/api/descadastrar/$token'
     | '/api/ig-media/$token'
     | '/api/selecao-og/$token'
     | '/api/whatsapp/webhook'
@@ -887,6 +897,7 @@ export interface FileRouteTypes {
     | '/api/cron/send-automation-emails'
     | '/api/cron/send-push-notifications'
     | '/api/cron/snapshot-instagram-followers'
+    | '/api/descadastrar/$token'
     | '/api/ig-media/$token'
     | '/api/selecao-og/$token'
     | '/api/whatsapp/webhook'
@@ -966,6 +977,7 @@ export interface FileRouteTypes {
     | '/api/cron/send-automation-emails'
     | '/api/cron/send-push-notifications'
     | '/api/cron/snapshot-instagram-followers'
+    | '/api/descadastrar/$token'
     | '/api/ig-media/$token'
     | '/api/selecao-og/$token'
     | '/api/whatsapp/webhook'
@@ -1022,6 +1034,7 @@ export interface RootRouteChildren {
   ApiCronSendAutomationEmailsRoute: typeof ApiCronSendAutomationEmailsRoute
   ApiCronSendPushNotificationsRoute: typeof ApiCronSendPushNotificationsRoute
   ApiCronSnapshotInstagramFollowersRoute: typeof ApiCronSnapshotInstagramFollowersRoute
+  ApiDescadastrarTokenRoute: typeof ApiDescadastrarTokenRoute
   ApiIgMediaTokenRoute: typeof ApiIgMediaTokenRoute
   ApiSelecaoOgTokenRoute: typeof ApiSelecaoOgTokenRoute
   ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
@@ -1415,6 +1428,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiIgMediaTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/descadastrar/$token': {
+      id: '/api/descadastrar/$token'
+      path: '/api/descadastrar/$token'
+      fullPath: '/api/descadastrar/$token'
+      preLoaderRoute: typeof ApiDescadastrarTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/snapshot-instagram-followers': {
       id: '/api/cron/snapshot-instagram-followers'
       path: '/api/cron/snapshot-instagram-followers'
@@ -1685,6 +1705,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronSendPushNotificationsRoute: ApiCronSendPushNotificationsRoute,
   ApiCronSnapshotInstagramFollowersRoute:
     ApiCronSnapshotInstagramFollowersRoute,
+  ApiDescadastrarTokenRoute: ApiDescadastrarTokenRoute,
   ApiIgMediaTokenRoute: ApiIgMediaTokenRoute,
   ApiSelecaoOgTokenRoute: ApiSelecaoOgTokenRoute,
   ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,

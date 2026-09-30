@@ -113,7 +113,7 @@ export function MessagesPanel({ openPreset, onConsumeOpenPreset }: { openPreset?
     mutationFn: useServerFn(sendReengagementEmails),
     onSuccess: (r: any) => {
       if (r.failed.length === 0) toast.success(`E-mail enviado pra ${r.sent} agência${r.sent === 1 ? "" : "s"}.`);
-      else toast.warning(`${r.sent} enviado(s), ${r.failed.length} falharam (provavelmente sem e-mail de responsável).`);
+      else toast.warning(`${r.sent} enviado(s), ${r.failed.length} falharam (sem e-mail de responsável ou descadastradas).`);
     },
     onError: (e: any) => toastFriendlyError(e, "Não consegui enviar os e-mails."),
   });
@@ -290,6 +290,9 @@ export function MessagesPanel({ openPreset, onConsumeOpenPreset }: { openPreset?
                         <p className="text-foreground truncate">{r.orgName}</p>
                         <p className="text-[11px] text-foreground/40 truncate">{r.ownerEmail ?? "sem e-mail"} · {r.clientCount} cliente{r.clientCount === 1 ? "" : "s"} · {r.teamCount === 1 ? "só o dono" : `${r.teamCount} na equipe`} · último acesso: {formatDate(r.lastActiveAt)}</p>
                       </div>
+                      {r.marketingOptOut && (
+                        <span className="text-[10px] font-semibold text-red-400 shrink-0 whitespace-nowrap" title="Clicou em &quot;não quero mais receber&quot; num e-mail de reativação. O e-mail não é enviado pra essa agência.">descadastrou</span>
+                      )}
                       {r.lastMessageSentAt && (
                         <span className="text-[10px] text-foreground/30 shrink-0 whitespace-nowrap">msg. {formatDate(r.lastMessageSentAt)}</span>
                       )}

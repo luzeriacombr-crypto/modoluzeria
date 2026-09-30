@@ -567,16 +567,23 @@ export const resendPendingInvoiceEmail = createServerFn({ method: "POST" })
     const valueLabel = `R$ ${(payment.value).toFixed(2).replace(".", ",")}`;
     const dueLabel = payment.dueDate ? new Date(payment.dueDate + "T12:00:00").toLocaleDateString("pt-BR") : null;
     const { sendEmail } = await import("./resend.server");
-    await sendEmail({
-      to: myEmail as string,
-      subject: `Sua fatura do Modo Criador${dueLabel ? ` — vence em ${dueLabel}` : ""}`,
-      html: `
-        <p>Oi! Aqui está de novo o link da sua fatura em aberto do Modo Criador (${(org as any).name}).</p>
-        <p><strong>Valor:</strong> ${valueLabel}${dueLabel ? `<br><strong>Vencimento:</strong> ${dueLabel}` : ""}</p>
-        <p><a href="${payment.invoiceUrl}">Ver fatura e pagar (PIX, boleto ou cartão)</a></p>
-        ${payment.bankSlipUrl ? `<p><a href="${payment.bankSlipUrl}">Baixar o boleto em PDF</a></p>` : ""}
-      `,
+    const { renderEmail, loadEmailOverrides } = await import("./email-templates.server");
+    const { data: me } = await context.supabase.from("profiles").select("name").eq("id", context.userId).maybeSingle();
+    const email = renderEmail("invoice", {
+      vars: {
+        nome: (me?.name ?? "").trim().split(" ")[0] ?? "",
+        agencia: (org as any).name,
+        valor: valueLabel,
+        vencimento: dueLabel ?? "em breve",
+      },
+      buttonUrl: payment.invoiceUrl ?? "https://www.modocriador.com.br/auth",
+      overrides: await loadEmailOverrides(),
+      extraHtml: payment.bankSlipUrl
+        ? `<p style="font-size:13px; margin:0; text-align:center;"><a href="${payment.bankSlipUrl}" style="color:#6B7A2E; font-weight:700;">Baixar o boleto em PDF</a></p>`
+        : undefined,
+      extraText: payment.bankSlipUrl ? `Boleto em PDF: ${payment.bankSlipUrl}` : undefined,
     });
+    await sendEmail({ to: myEmail as string, ...email });
     return { ok: true };
   });
 
@@ -1575,11 +1582,13 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       ]);
       if (inviter?.name && org?.name) {
         const { sendEmail } = await import("./resend.server");
-        const { buildTeamInviteEmailHtml } = await import("./team-invite-email.server");
+        const { renderEmail, loadEmailOverrides, firstName, APP_URL } = await import("./email-templates.server");
         await sendEmail({
           to: data.email,
-          subject: `${inviter.name.trim().split(" ")[0]} te convidou pro Modo Criador`,
-          html: buildTeamInviteEmailHtml({ name: data.name, email: data.email, inviterName: inviter.name, agencyName: org.name }),
+          ...renderEmail("team_invite", {
+            vars: { nome: firstName(data.name), convidou: firstName(inviter.name), agencia: org.name.trim(), email: data.email.trim() },
+            buttonUrl: APP_URL, overrides: await loadEmailOverrides(),
+          }),
         });
       }
     } catch (e) {
@@ -1636,15 +1645,12 @@ export const adminSendPasswordReset = createServerFn({ method: "POST" })
     // never sends anything. Delivery happens here, via Resend, since only
     // the Node side has RESEND_API_KEY.
     const { sendEmail } = await import("./resend.server");
+    const { renderEmail, loadEmailOverrides, firstName } = await import("./email-templates.server");
     await sendEmail({
       to: result.email,
-      subject: "Redefinição de senha — Modo Criador",
-      html: `
-        <p>Olá, ${result.name ?? ""}!</p>
-        <p>Foi solicitada uma redefinição de senha para sua conta no Modo Criador.</p>
-        <p><a href="${result.actionLink}">Clique aqui para criar uma nova senha</a></p>
-        <p>Se você não pediu isso, pode ignorar este e-mail.</p>
-      `,
+      ...renderEmail("password_reset", {
+        vars: { nome: firstName(result.name) }, buttonUrl: result.actionLink, overrides: await loadEmailOverrides(),
+      }),
     });
     return { ok: true, email: result.email };
   });
@@ -1673,11 +1679,10 @@ export const adminResendWelcomeEmail = createServerFn({ method: "POST" })
       throw new Error("Forbidden");
     }
     const { sendEmail } = await import("./resend.server");
-    const { buildWelcomeEmailHtml } = await import("./welcome-email.server");
+    const { renderEmail, loadEmailOverrides, firstName, APP_URL } = await import("./email-templates.server");
     await sendEmail({
       to: target.email,
-      subject: "Bem-vindo(a) ao Modo Criador 🎉",
-      html: buildWelcomeEmailHtml({ name: target.name }),
+      ...renderEmail("welcome", { vars: { nome: firstName(target.name) }, buttonUrl: APP_URL, overrides: await loadEmailOverrides() }),
     });
     return { ok: true, email: target.email };
   });
