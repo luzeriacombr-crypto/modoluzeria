@@ -24,15 +24,18 @@ function relativeDate(iso: string): string {
  * sigla mais reconhecível que as 2 primeiras letras do nome. Escolher um
  * aqui preenche nome e cor — dá pra editar os dois antes de salvar (ex:
  * "Nubank PJ"). `match` são outros jeitos comuns de escrever o nome. */
-const KNOWN_BANKS: { name: string; color: string; initials: string; match?: string[] }[] = [
-  { name: "Nubank", color: "#820AD1", initials: "NU" },
-  { name: "Itaú", color: "#EC7000", initials: "IT", match: ["itau"] },
-  { name: "Bradesco", color: "#CC092F", initials: "BR" },
-  { name: "Banco do Brasil", color: "#0038A8", initials: "BB" },
-  { name: "Caixa", color: "#005CA9", initials: "CX" },
-  { name: "Santander", color: "#EC0000", initials: "SA" },
-  { name: "Inter", color: "#FF7A00", initials: "IN" },
-  { name: "C6 Bank", color: "#242424", initials: "C6", match: ["c6"] },
+// `logo`: ícone quadrado em public/bancos/ (fundo na cor da marca, símbolo
+// centralizado com o mesmo respiro em todos — arquivos enviados pelo Junior
+// em 30/09). Sem logo, o ícone é a cor + sigla.
+const KNOWN_BANKS: { name: string; color: string; initials: string; match?: string[]; logo?: string }[] = [
+  { name: "Nubank", color: "#820AD1", initials: "NU", logo: "/bancos/nubank.png" },
+  { name: "Itaú", color: "#FF6200", initials: "IT", match: ["itau"], logo: "/bancos/itau.png" },
+  { name: "Bradesco", color: "#CC092F", initials: "BR", logo: "/bancos/bradesco.png" },
+  { name: "Banco do Brasil", color: "#0038A8", initials: "BB", logo: "/bancos/banco-do-brasil.png" },
+  { name: "Caixa", color: "#005CA9", initials: "CX", logo: "/bancos/caixa.png" },
+  { name: "Santander", color: "#EC0000", initials: "SA", logo: "/bancos/santander.png" },
+  { name: "Inter", color: "#EA7100", initials: "IN", logo: "/bancos/inter.png" },
+  { name: "C6 Bank", color: "#242424", initials: "C6", match: ["c6"], logo: "/bancos/c6-bank.png" },
   { name: "BTG Pactual", color: "#0B2A5B", initials: "BTG", match: ["btg"] },
   { name: "PicPay", color: "#11C76F", initials: "PP" },
   { name: "Mercado Pago", color: "#009EE3", initials: "MP" },
@@ -80,6 +83,8 @@ function avatarTextColor(bg: string): string {
 }
 
 function BankAvatar({ name, color }: { name: string; color?: string | null }) {
+  const logo = knownBank(name)?.logo;
+  if (logo) return <img src={logo} alt={name} className="h-8 w-8 rounded-lg shrink-0 object-cover" loading="lazy" />;
   const bg = avatarColor(name, color);
   const initials = avatarInitials(name);
   return (
@@ -177,7 +182,9 @@ export function BankAccountsSection() {
                   className="inline-flex items-center gap-1.5 rounded-full pl-1 pr-2.5 py-1 text-[11px] font-semibold text-foreground/70 hover:text-foreground transition"
                   style={{ background: "color-mix(in srgb, var(--foreground) 5%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)" }}
                 >
-                  <span className="h-4 w-4 rounded-full" style={{ background: b.color }} />
+                  {b.logo
+                    ? <img src={b.logo} alt="" className="h-4 w-4 rounded-full" />
+                    : <span className="h-4 w-4 rounded-full" style={{ background: b.color }} />}
                   {b.name}
                 </button>
               ))}
@@ -188,7 +195,9 @@ export function BankAccountsSection() {
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Nubank PJ" className={inp} />
           </div>
           <input value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="Saldo atual (R$)" className={inp} />
-          <div>
+          {knownBank(name)?.logo ? (
+            <p className="text-[10.5px] text-foreground/40">Usa a logo do banco como ícone.</p>
+          ) : <div>
             <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Cor do ícone</span>
             <div className="flex flex-wrap items-center gap-1.5">
               {COLOR_CHOICES.map((c) => (
@@ -203,7 +212,7 @@ export function BankAccountsSection() {
                 <input type="color" value={color ?? avatarColor(name || "?")} onChange={(e) => setColor(e.target.value.toUpperCase())} className="sr-only" />
               </label>
             </div>
-          </div>
+          </div>}
           <div className="flex justify-end gap-2">
             <button onClick={cancel} className="text-xs text-foreground/50 hover:text-foreground px-2 py-1.5">Cancelar</button>
             <button onClick={save} disabled={api.addBankAccount.isPending || api.updateBankAccount.isPending} className="lz-btn-primary text-xs px-4 py-1.5 rounded-md disabled:opacity-50">
