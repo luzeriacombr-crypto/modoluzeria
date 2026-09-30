@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Folder, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, RotateCcw } from "lucide-react";
-import { clientsQO, avulsoMonthsQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { Folder, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, RotateCcw, FolderInput } from "lucide-react";
+import { clientsQO, clientCategoriesQO, avulsoMonthsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { formatMonth, currentMonthKey } from "@/lib/luzeria/utils";
 import { Avatar } from "./Avatar";
 import type { Client } from "@/lib/luzeria/types";
+
+const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 
 /** Página /avulsos — antes as demandas avulsas só apareciam numa lista
  * única dentro de "Clientes" na barra lateral. Pedido do Junior (30/09):
@@ -15,9 +17,20 @@ import type { Client } from "@/lib/luzeria/types";
  * já usado no ClientView: monthKeys[0]), não a um mês escolhido à mão. */
 export function AvulsosPage() {
   const { data: clients = [] } = useQuery(clientsQO());
+  const { data: customCategories = [] } = useQuery(clientCategoriesQO());
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
-  const { setAvulsoDelivered } = useApi();
+  const { setAvulsoDelivered, updateClient } = useApi();
+
+  // Um avulso pode virar cliente recorrente — pedido do Junior (30/09) pra
+  // poder mover pra Social Media/Pack Digital (ou outra categoria) direto
+  // daqui, sem precisar abrir o cliente e usar o menu de "..." de lá.
+  const moveTargets = useMemo(() => {
+    const set = new Set<string>(CATEGORY_ORDER);
+    customCategories.forEach((c) => set.add(c.name));
+    set.delete("Avulsos");
+    return [...set];
+  }, [customCategories]);
 
   const avulsos = useMemo(() => clients.filter((c) => c.category === "Avulsos" && !c.archived), [clients]);
   const avulsoIds = useMemo(() => avulsos.map((c) => c.id), [avulsos]);
@@ -88,6 +101,8 @@ export function AvulsosPage() {
             onToggleDelivered={(c) => setAvulsoDelivered.mutate({ data: { clientId: c.id, delivered: true } })}
             toggleIcon={<CheckCircle2 size={13} />}
             toggleTitle="Marcar como entregue"
+            moveTargets={moveTargets}
+            onMove={(c, category) => updateClient.mutate({ data: { id: c.id, patch: { category } } })}
           />
           <ProjectFolder
             label="Projetos entregues"
@@ -99,6 +114,8 @@ export function AvulsosPage() {
             onToggleDelivered={(c) => setAvulsoDelivered.mutate({ data: { clientId: c.id, delivered: false } })}
             toggleIcon={<RotateCcw size={13} />}
             toggleTitle="Reabrir projeto"
+            moveTargets={moveTargets}
+            onMove={(c, category) => updateClient.mutate({ data: { id: c.id, patch: { category } } })}
           />
         </div>
       )}
@@ -107,10 +124,11 @@ export function AvulsosPage() {
 }
 
 function ProjectFolder({
-  label, open, onToggleOpen, projects, emptyLabel, isAdmin, onToggleDelivered, toggleIcon, toggleTitle,
+  label, open, onToggleOpen, projects, emptyLabel, isAdmin, onToggleDelivered, toggleIcon, toggleTitle, moveTargets, onMove,
 }: {
   label: string; open: boolean; onToggleOpen?: () => void; projects: Client[]; emptyLabel: string;
   isAdmin: boolean; onToggleDelivered: (c: Client) => void; toggleIcon: React.ReactNode; toggleTitle: string;
+  moveTargets: string[]; onMove: (c: Client, category: string) => void;
 }) {
   return (
     <div className="rounded-xl border border-foreground/7 bg-card overflow-hidden">
@@ -131,23 +149,64 @@ function ProjectFolder({
             <div className="px-4 py-3 text-xs text-foreground/35">{emptyLabel}</div>
           ) : (
             projects.map((c) => (
-              <div key={c.id} className="flex items-center gap-3 px-4 py-2.5">
-                <Link to="/cliente/$clientId" params={{ clientId: c.id }} className="flex-1 min-w-0 flex items-center gap-2.5">
-                  <Avatar name={c.name} color={c.color} size={30} avatarUrl={c.photoUrl} />
-                  <span className="text-sm font-medium text-foreground truncate">{c.name}</span>
-                </Link>
-                {isAdmin && (
-                  <button
-                    onClick={() => onToggleDelivered(c)}
-                    title={toggleTitle}
-                    className="shrink-0 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition"
-                  >
-                    {toggleIcon} {toggleTitle}
-                  </button>
-                )}
-              </div>
+              <ProjectRow
+                key={c.id} client={c} isAdmin={isAdmin}
+                onToggleDelivered={() => onToggleDelivered(c)} toggleIcon={toggleIcon} toggleTitle={toggleTitle}
+                moveTargets={moveTargets} onMove={(category) => onMove(c, category)}
+              />
             ))
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectRow({
+  client: c, isAdmin, onToggleDelivered, toggleIcon, toggleTitle, moveTargets, onMove,
+}: {
+  client: Client; isAdmin: boolean; onToggleDelivered: () => void; toggleIcon: React.ReactNode; toggleTitle: string;
+  moveTargets: string[]; onMove: (category: string) => void;
+}) {
+  const [moving, setMoving] = useState(false);
+  return (
+    <div className="px-4 py-2.5">
+      <div className="flex items-center gap-3">
+        <Link to="/cliente/$clientId" params={{ clientId: c.id }} className="flex-1 min-w-0 flex items-center gap-2.5">
+          <Avatar name={c.name} color={c.color} size={30} avatarUrl={c.photoUrl} />
+          <span className="text-sm font-medium text-foreground truncate">{c.name}</span>
+        </Link>
+        {isAdmin && (
+          <>
+            <button
+              onClick={() => setMoving((o) => !o)}
+              title="Virou cliente recorrente? Mover pra outra categoria"
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition"
+            >
+              <FolderInput size={13} /> Mover
+            </button>
+            <button
+              onClick={onToggleDelivered}
+              title={toggleTitle}
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition"
+            >
+              {toggleIcon} {toggleTitle}
+            </button>
+          </>
+        )}
+      </div>
+      {moving && (
+        <div className="flex flex-wrap items-center gap-1.5 mt-2 ml-[42px]">
+          <span className="text-[10.5px] text-foreground/35 mr-1">Mover pra:</span>
+          {moveTargets.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => { onMove(cat); setMoving(false); }}
+              className="rounded-full px-2.5 py-1 text-[10.5px] font-semibold text-foreground/60 hover:text-foreground border border-foreground/10 hover:border-foreground/25 transition"
+            >
+              {cat}
+            </button>
+          ))}
         </div>
       )}
     </div>
