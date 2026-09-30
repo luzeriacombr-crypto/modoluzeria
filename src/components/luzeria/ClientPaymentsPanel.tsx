@@ -1,11 +1,13 @@
 import { Fragment, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, MessageCircle, Check, Undo2, Pencil, History, ChevronDown, X, QrCode } from "lucide-react";
-import { clientPaymentsQO, clientPaymentHistoryQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { toast } from "sonner";
+import { bankAccountsQO, clientPaymentsQO, clientPaymentHistoryQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useUI } from "@/lib/luzeria/ui-store";
 import type { ClientPaymentRow } from "@/lib/luzeria/client-payments.functions";
-import { CashFlowSection } from "./CashFlowSection";
+import { BankAccountSelect, CashFlowSection } from "./CashFlowSection";
+import { Modal } from "./Modals";
 
 const money = (v: number | null) =>
   v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -250,9 +252,77 @@ function PaymentHistoryPanel({ clientId }: { clientId: string }) {
           </div>
           {h.paidAt && <div className="text-[9.5px] text-foreground/35 mt-0.5">{formatDateTime(h.paidAt)}</div>}
           {h.amountCents != null && <div className="text-[9.5px] text-foreground/35">{money(h.amountCents / 100)}</div>}
+          {h.amountCents != null && <div className="text-[9.5px] text-foreground/35 truncate">{h.bankAccountName ?? "carteira/espécie"}</div>}
         </div>
       ))}
     </div>
+  );
+}
+
+/** Abre no ✓ de "marcar pagamento recebido": pergunta em qual banco o
+ * dinheiro caiu (ou carteira/espécie) e o valor recebido, que já vem com o
+ * valor do contrato. O valor soma no saldo da conta escolhida. */
+function MarkPaymentModal({ row, period, onClose }: { row: ClientPaymentRow; period: string; onClose: () => void }) {
+  const api = useApi();
+  const { data: bankAccounts = [] } = useQuery(bankAccountsQO());
+  const [bankAccountId, setBankAccountId] = useState<string | null>(null);
+  const [amount, setAmount] = useState(row.contractValue != null ? row.contractValue.toFixed(2).replace(".", ",") : "");
+  // Banco começa no primeiro cadastrado (é o caso mais comum); sem banco
+  // nenhum, fica em carteira/espécie.
+  useEffect(() => {
+    if (bankAccounts.length > 0) setBankAccountId((cur) => cur ?? bankAccounts[0].id);
+  }, [bankAccounts]);
+
+  function parseAmount(raw: string): number | null {
+    const clean = raw.trim().replace(/[^\d.,]/g, "");
+    // Com vírgula, ponto é separador de milhar ("1.050,00"). Sem vírgula,
+    // ponto seguido de 3 dígitos é milhar ("1.500") e o resto é decimal
+    // ("10.50") — antes os dois casos viravam milhar.
+    const normalized = clean.includes(",") || /^\d{1,3}(\.\d{3})+$/.test(clean)
+      ? clean.replace(/\./g, "").replace(",", ".")
+      : clean;
+    const n = parseFloat(normalized);
+    if (!n || n <= 0) return null;
+    return Math.round(n * 100);
+  }
+
+  function confirm() {
+    const cents = parseAmount(amount);
+    if (!cents) { toast.error("Informe o valor recebido."); return; }
+    api.markClientPaymentReceived.mutate(
+      { data: { clientId: row.id, period, amountCents: cents, bankAccountId } },
+      { onSuccess: () => { toast.success("Pagamento registrado."); onClose(); } },
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Registrar pagamento">
+      <div className="space-y-3">
+        <p className="text-sm text-foreground/60">
+          Mensalidade de <span className="font-semibold text-foreground">{row.name}</span> ({periodLabel(period)}).
+        </p>
+        <label className="block">
+          <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Onde caiu o pagamento?</span>
+          <BankAccountSelect accounts={bankAccounts} value={bankAccountId} onChange={setBankAccountId} />
+        </label>
+        <label className="block">
+          <span className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Valor recebido (R$)</span>
+          <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="Ex: 1.500,00" className={inp}
+            onKeyDown={(e) => { if (e.key === "Enter") confirm(); }} />
+        </label>
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <button onClick={onClose} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2 transition">Cancelar</button>
+          <button
+            onClick={confirm}
+            disabled={api.markClientPaymentReceived.isPending}
+            className="rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+          >
+            {api.markClientPaymentReceived.isPending ? "Salvando…" : "Confirmar"}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -264,6 +334,7 @@ export function ClientPaymentsPanel() {
   const openFicha = useUI((s) => s.openFicha);
   const period = currentPeriod();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [markingRow, setMarkingRow] = useState<ClientPaymentRow | null>(null);
 
   if (isLoading || !data) {
     return <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin text-foreground/40" size={24} /></div>;
@@ -361,7 +432,7 @@ export function ClientPaymentsPanel() {
                           </button>
                         ) : (
                           <button
-                            onClick={() => api.markClientPaymentReceived.mutate({ data: { clientId: r.id, period } })}
+                            onClick={() => setMarkingRow(r)}
                             className="p-1.5 rounded text-foreground/40 hover:text-[#5BA88A] hover:bg-foreground/5" title="Marcar pagamento recebido"
                           >
                             <Check size={15} />
@@ -385,6 +456,7 @@ export function ClientPaymentsPanel() {
           </div>
         </div>
       )}
+      {markingRow && <MarkPaymentModal row={markingRow} period={period} onClose={() => setMarkingRow(null)} />}
     </div>
   );
 }

@@ -130,6 +130,9 @@ export type ClientPaymentHistoryRow = {
   period: string;
   paidAt: string | null;
   amountCents: number | null;
+  /** Nome do banco onde caiu; null = carteira/espécie (ou pagamento antigo,
+   * sem valor gravado — ver `amountCents`). */
+  bankAccountName: string | null;
 };
 
 /** Últimos 12 períodos (mês atual incluso) pra um cliente — junta os meses
@@ -147,18 +150,19 @@ export const listClientPaymentHistory = createServerFn({ method: "GET" })
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       periods.push(monthKey(d));
     }
-    const { data: payments, error } = await context.supabase
+    const { data: payments, error } = await (context.supabase as any)
       .from("client_payments")
-      .select("period, paid_at, amount_cents")
+      .select("period, paid_at, amount_cents, bank_accounts(name)")
       .eq("client_id", data.clientId)
       .in("period", periods);
     if (error) throw new Error(error.message);
-    const byPeriod = new Map<string, { paidAt: string; amountCents: number | null }>();
-    (payments ?? []).forEach((p: any) => byPeriod.set(p.period, { paidAt: p.paid_at, amountCents: p.amount_cents }));
+    const byPeriod = new Map<string, { paidAt: string; amountCents: number | null; bankAccountName: string | null }>();
+    (payments ?? []).forEach((p: any) => byPeriod.set(p.period, { paidAt: p.paid_at, amountCents: p.amount_cents, bankAccountName: p.bank_accounts?.name ?? null }));
     return periods.map((period): ClientPaymentHistoryRow => ({
       period,
       paidAt: byPeriod.get(period)?.paidAt ?? null,
       amountCents: byPeriod.get(period)?.amountCents ?? null,
+      bankAccountName: byPeriod.get(period)?.bankAccountName ?? null,
     }));
   });
 
@@ -206,33 +210,60 @@ export const setContractTemplate = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+async function adjustBankAccountBalance(supabase: any, bankAccountId: string | null | undefined, deltaCents: number) {
+  if (!bankAccountId || deltaCents === 0) return;
+  const { error } = await supabase.rpc("adjust_bank_account_balance", { p_account_id: bankAccountId, p_delta_cents: deltaCents });
+  if (error) throw new Error(error.message);
+}
+
+/** Marca a mensalidade como recebida já dizendo onde o dinheiro caiu —
+ * bankAccountId null = carteira/espécie. O valor soma no saldo do banco
+ * escolhido e fica gravado em amount_cents (histórico congelado). */
 export const markClientPaymentReceived = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; period: string; amountCents?: number | null }) =>
+  .inputValidator((d: { clientId: string; period: string; amountCents: number; bankAccountId: string | null }) =>
     z.object({
       clientId: z.string().uuid(),
       period: z.string().regex(/^\d{4}-\d{2}$/),
-      amountCents: z.number().int().min(0).nullable().optional(),
+      amountCents: z.number().int().positive(),
+      bankAccountId: z.string().uuid().nullable(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
-    const { error } = await context.supabase.from("client_payments")
-      .upsert(
-        { client_id: data.clientId, org_id: context.orgId, period: data.period, amount_cents: data.amountCents ?? null, marked_by: context.userId, paid_at: new Date().toISOString() },
-        { onConflict: "client_id,period" },
-      );
-    if (error) throw new Error(error.message);
+    if (data.bankAccountId) {
+      const { data: account } = await (context.supabase as any)
+        .from("bank_accounts").select("id").eq("id", data.bankAccountId).eq("org_id", context.orgId).maybeSingle();
+      if (!account) throw new Error("Conta bancária não encontrada.");
+    }
+    // `bank_account_id` é coluna nova — cast até os tipos do Supabase
+    // serem regenerados depois da migração rodar.
+    const { error } = await (context.supabase as any).from("client_payments").insert({
+      client_id: data.clientId, org_id: context.orgId, period: data.period,
+      amount_cents: data.amountCents, bank_account_id: data.bankAccountId,
+      marked_by: context.userId, paid_at: new Date().toISOString(),
+    });
+    if (error) {
+      if (error.code === "23505") throw new Error("Esse pagamento já foi marcado.");
+      throw new Error(error.message);
+    }
+    await adjustBankAccountBalance(context.supabase, data.bankAccountId, data.amountCents);
     return { ok: true };
   });
 
+/** Desfaz a marcação e tira o valor do mesmo banco em que tinha entrado.
+ * Pagamentos antigos (sem valor gravado) só somem, sem mexer em saldo. */
 export const unmarkClientPaymentReceived = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string; period: string }) =>
     z.object({ clientId: z.string().uuid(), period: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFinanceiroAccess(context.supabase, context.userId);
-    const { error } = await context.supabase.from("client_payments")
-      .delete().eq("client_id", data.clientId).eq("period", data.period);
+    const { data: deleted, error } = await (context.supabase as any).from("client_payments")
+      .delete().eq("client_id", data.clientId).eq("period", data.period).eq("org_id", context.orgId)
+      .select("amount_cents, bank_account_id");
     if (error) throw new Error(error.message);
+    const row = deleted?.[0];
+    if (!row) throw new Error("Pagamento não encontrado.");
+    if (row.amount_cents) await adjustBankAccountBalance(context.supabase, row.bank_account_id, -row.amount_cents);
     return { ok: true };
   });

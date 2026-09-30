@@ -223,7 +223,15 @@ export const getWalletBalance = createServerFn({ method: "GET" })
       (s: number, r: any) => s + r.amount_cents * (r.cash_flow_entry_payments?.length ?? 0), 0,
     );
 
-    return { balanceCents: entradasTotal - saidasTotal };
+    // Mensalidades de cliente recebidas em carteira/espécie. Pagamentos
+    // antigos (amount_cents null) ficam de fora de propósito.
+    const { data: mensalidades, error: mensalidadesErr } = await (context.supabase as any)
+      .from("client_payments").select("amount_cents")
+      .eq("org_id", context.orgId).is("bank_account_id", null).not("amount_cents", "is", null);
+    if (mensalidadesErr) throw new Error(mensalidadesErr.message);
+    const mensalidadesTotal = (mensalidades ?? []).reduce((s: number, r: any) => s + r.amount_cents, 0);
+
+    return { balanceCents: entradasTotal + mensalidadesTotal - saidasTotal };
   });
 
 export const removeCashFlowEntry = createServerFn({ method: "POST" })

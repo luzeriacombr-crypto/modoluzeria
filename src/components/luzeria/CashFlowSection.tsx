@@ -12,7 +12,7 @@ import { BankAccountsSection } from "./BankAccountsSection";
 
 const selectCls = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]";
 
-function BankAccountSelect({ accounts, value, onChange }: { accounts: BankAccount[]; value: string | null; onChange: (v: string | null) => void }) {
+export function BankAccountSelect({ accounts, value, onChange }: { accounts: BankAccount[]; value: string | null; onChange: (v: string | null) => void }) {
   return (
     <select value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} className={selectCls}>
       <option value="">Carteira / espécie</option>
