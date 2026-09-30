@@ -3251,7 +3251,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     (months ?? []).forEach((m) => monthByClient.set(m.client_id, m.id));
     const { data: items } = monthIds.length
       ? await context.supabase
-          .from("content_items").select("id, month_id, type, status, title").in("month_id", monthIds)
+          .from("content_items").select("id, month_id, type, status, title, campaign_internal").in("month_id", monthIds)
       : { data: [] as any[] };
 
     type Row = {
@@ -3265,9 +3265,13 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       // "Entregues"/meta só considera post/reel — gravação, roteiro e
       // outras atividades internas não fazem parte do combinado
       // (posts_per_week + reels_per_week), então contá-las aqui inflava a
-      // "% batida" sem relação com o que o cliente contratou.
+      // "% batida" sem relação com o que o cliente contratou. Item marcado
+      // "Tornar interno" (Campanhas) também some — ele já é invisível na
+      // grade de Posts/Reels e no Feed do cliente (ClientView.tsx,
+      // FeedPreview.tsx), então contar ele aqui inflava "Falta" com
+      // rascunho de campanha que ninguém vê no lugar óbvio.
       const hiddenTypes = hiddenTypesByClient.get(c.id) ?? orgDisabled;
-      const its = mid ? (items ?? []).filter((it: any) => it.month_id === mid && (it.type === "post" || it.type === "reel") && !hiddenTypes.has(`${it.type}s`)) : [];
+      const its = mid ? (items ?? []).filter((it: any) => it.month_id === mid && (it.type === "post" || it.type === "reel") && !hiddenTypes.has(`${it.type}s`) && !it.campaign_internal) : [];
       const posts = its.filter((i) => i.type === "post").length;
       const reels = its.filter((i) => i.type === "reel").length;
       const total = its.length;
@@ -3307,6 +3311,7 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     const pendingItems: typeof doneItems = [];
     (items ?? []).forEach((it: any) => {
       if (it.type !== "post" && it.type !== "reel") return;
+      if (it.campaign_internal) return;
       const c = monthIdToClient.get(it.month_id);
       if (!c) return;
       if ((hiddenTypesByClient.get(c.id) ?? orgDisabled).has(`${it.type}s`)) return;
